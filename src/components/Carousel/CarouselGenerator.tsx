@@ -44,7 +44,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -206,6 +206,9 @@ const CarouselGenerator: React.FC = () => {
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [showStylePanel, setShowStylePanel] = useState(false);
+  const [showCaptionPanel, setShowCaptionPanel] = useState(false);
+  const [postCaption, setPostCaption] = useState('');
+  const [generatingCaption, setGeneratingCaption] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string>('ellosuit-editorial');
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
@@ -452,6 +455,32 @@ const CarouselGenerator: React.FC = () => {
       toast({ title: 'Erro ao melhorar prompt', variant: 'destructive' });
     } finally {
       setEnhancingPrompt(false);
+    }
+  };
+
+  // ===== GENERATE CAPTION =====
+  const generateCaption = async () => {
+    if (generatingCaption) return;
+    setGeneratingCaption(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: {
+          action: 'generate-caption',
+          topic: topic.trim(),
+          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+          cardCount: carouselData?.cards?.length || 7,
+        },
+      });
+      if (!error && data?.caption) {
+        setPostCaption(data.caption);
+      } else {
+        const fallback = `${carouselData?.title || topic}\n\n📌 Salve esse post para consultar depois!\n\n#${topic.split(' ').slice(0, 3).map(w => w.replace(/[^a-zA-ZÀ-ú0-9]/g, '')).filter(Boolean).join(' #')}`;
+        setPostCaption(fallback);
+      }
+    } catch {
+      toast({ title: 'Erro ao gerar legenda', variant: 'destructive' });
+    } finally {
+      setGeneratingCaption(false);
     }
   };
 
@@ -1885,6 +1914,105 @@ const CarouselGenerator: React.FC = () => {
               )}
             </AnimatePresence>
 
+            {/* Caption panel — bottom sheet on mobile, side panel on desktop */}
+            <AnimatePresence>
+              {showCaptionPanel && (
+                <>
+                  {/* Desktop side panel */}
+                  <motion.div
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 30 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="hidden md:block flex-shrink-0 overflow-hidden"
+                  >
+                    <div className="w-[340px] h-full max-h-[80vh] overflow-y-auto rounded-2xl p-5" style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-purple-400" />
+                          <h3 className="text-sm font-semibold text-white">Legenda da Publicação</h3>
+                        </div>
+                        <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                          <X className="h-4 w-4 text-white/50" />
+                        </button>
+                      </div>
+                      <textarea
+                        value={postCaption}
+                        onChange={(e) => setPostCaption(e.target.value)}
+                        placeholder={generatingCaption ? 'Gerando legenda...' : 'Escreva ou gere uma legenda para o post...'}
+                        rows={12}
+                        className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-3 py-3 rounded-xl resize-none outline-none mb-3"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      />
+                      <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
+                      <div className="flex gap-2">
+                        <button onClick={generateCaption} disabled={generatingCaption}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                          style={{ backgroundColor: 'rgba(139,92,246,0.12)', color: 'rgba(173,95,255,0.9)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                          {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                          {generatingCaption ? 'Gerando...' : 'Gerar com IA'}
+                        </button>
+                        <button onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
+                          disabled={!postCaption}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-all disabled:opacity-30"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <Copy className="h-3 w-3" /> Copiar
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Mobile bottom sheet */}
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-[51] rounded-t-2xl overflow-hidden"
+                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)', maxHeight: '75dvh' }}
+                  >
+                    <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-400" />
+                        <h3 className="text-sm font-semibold text-white">Legenda</h3>
+                      </div>
+                      <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                        <X className="h-4 w-4 text-white/50" />
+                      </button>
+                    </div>
+                    <div className="overflow-y-auto px-5 pb-8" style={{ maxHeight: 'calc(75dvh - 60px)' }}>
+                      <textarea
+                        value={postCaption}
+                        onChange={(e) => setPostCaption(e.target.value)}
+                        placeholder={generatingCaption ? 'Gerando legenda...' : 'Escreva ou gere uma legenda...'}
+                        rows={8}
+                        className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-3 py-3 rounded-xl resize-none outline-none mt-3 mb-2"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      />
+                      <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
+                      <div className="flex gap-2">
+                        <button onClick={generateCaption} disabled={generatingCaption}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                          style={{ backgroundColor: 'rgba(139,92,246,0.12)', color: 'rgba(173,95,255,0.9)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                          {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                          {generatingCaption ? 'Gerando...' : 'Gerar com IA'}
+                        </button>
+                        <button onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
+                          disabled={!postCaption}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-all disabled:opacity-30"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <Copy className="h-3 w-3" /> Copiar
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
             </div>{/* end center area flex */}
 
             {/* Action buttons below */}
@@ -1898,6 +2026,11 @@ const CarouselGenerator: React.FC = () => {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
                 <Palette className="h-3.5 w-3.5" /> Estilo
+              </button>
+              <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
+                <FileText className="h-3.5 w-3.5" /> Legenda
               </button>
               <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"

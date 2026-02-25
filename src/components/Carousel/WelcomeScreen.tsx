@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 import '@/styles/carousel-loader.css';
@@ -8,8 +8,76 @@ interface WelcomeScreenProps {
   onStart: (initialTopic?: string, shouldEnhance?: boolean) => void;
 }
 
+const PLACEHOLDER_SUGGESTIONS = [
+  'Crie um post sobre facetas e resinas...',
+  'Crie um post sobre como cuidar do MEI em 2026...',
+  '5 dicas de skincare para o verão...',
+  'Como aumentar suas vendas no Instagram...',
+  'Carrossel sobre alimentação saudável para iniciantes...',
+  'Tendências de marketing digital para 2026...',
+];
+
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [inputValue, setInputValue] = useState('');
+  const [placeholderText, setPlaceholderText] = useState('');
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const animationRef = useRef<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const animatePlaceholder = useCallback(async () => {
+    let suggestionIndex = 0;
+
+    const typeAndErase = () => {
+      if (isUserTyping) return;
+      
+      const currentSuggestion = PLACEHOLDER_SUGGESTIONS[suggestionIndex];
+      let charIndex = 0;
+      let isErasing = false;
+
+      const tick = () => {
+        if (isUserTyping) return;
+
+        if (!isErasing) {
+          charIndex++;
+          setPlaceholderText(currentSuggestion.slice(0, charIndex));
+          if (charIndex === currentSuggestion.length) {
+            timeoutRef.current = setTimeout(() => {
+              isErasing = true;
+              tick();
+            }, 2000);
+            return;
+          }
+          timeoutRef.current = setTimeout(tick, 50 + Math.random() * 40);
+        } else {
+          charIndex--;
+          setPlaceholderText(currentSuggestion.slice(0, charIndex));
+          if (charIndex === 0) {
+            suggestionIndex = (suggestionIndex + 1) % PLACEHOLDER_SUGGESTIONS.length;
+            timeoutRef.current = setTimeout(tick, 400);
+            return;
+          }
+          timeoutRef.current = setTimeout(tick, 25);
+        }
+      };
+
+      tick();
+    };
+
+    timeoutRef.current = setTimeout(typeAndErase, 1200);
+  }, [isUserTyping]);
+
+  useEffect(() => {
+    if (!isUserTyping) {
+      animatePlaceholder();
+    }
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [isUserTyping, animatePlaceholder]);
+
+  useEffect(() => {
+    setIsUserTyping(inputValue.length > 0);
+  }, [inputValue]);
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
@@ -23,9 +91,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       handleSubmit();
     }
   };
-
-
-
 
   return (
     <motion.div
@@ -63,7 +128,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           transition={{ delay: 0.45, duration: 0.6 }}
           style={{ fontFamily: "'Inter', sans-serif" }}
         >
-          Construa carrosséis com um prompt
+          Crie algo com ellocontent
         </motion.h1>
 
         <motion.p
@@ -72,10 +137,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.65, duration: 0.5 }}
         >
-          Crie carrosséis profissionais com IA em poucos cliques.
+          Desenvolva carrosséis com um prompt.
         </motion.p>
 
-        {/* Input card — dark, opaque like Lovable */}
+        {/* Input card */}
         <motion.div
           className="w-full"
           initial={{ opacity: 0, y: 15 }}
@@ -94,7 +159,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Descreva o tema do seu carrossel..."
+              placeholder={placeholderText || ' '}
               rows={3}
               className="w-full bg-transparent text-white/90 placeholder-white/20 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none"
               style={{ fontFamily: "'Inter', sans-serif" }}
@@ -102,7 +167,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
             {/* Bottom bar */}
             <div className="flex items-center justify-end px-3 pb-3">
-              {/* Send button */}
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim()}

@@ -1452,7 +1452,9 @@ const CarouselGenerator: React.FC = () => {
                       brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
                       dateLabel={dateLabel} setDateLabel={setDateLabel}
                       showHeader={showHeader} setShowHeader={setShowHeader}
-                      logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
+                      logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+                      globalFontScale={Math.round((carouselData?.cards?.[0]?.fontScale ?? 1) * 100)}
+                      onChangeGlobalFontScale={(v) => updateAllCards({ fontScale: v / 100 })} />
                   </div>
                 </motion.div>
               )}

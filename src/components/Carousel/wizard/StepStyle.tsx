@@ -137,27 +137,17 @@ const StepStyle: React.FC<Props> = ({
       {activeSection === 'presets' && (
         <div className="space-y-4">
           <p className="text-xs font-medium text-white/40">Layout do carrossel</p>
-          <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
+          <div className="flex gap-2 flex-wrap">
             {STYLE_PRESETS.map(preset => {
               const isActive = bgColor === preset.bgColor && accentColor === preset.accentColor;
               return (
                 <button key={preset.id} onClick={() => applyPreset(preset)}
-                  className={`text-left rounded-xl overflow-hidden transition-all border ${
-                    isActive ? 'border-white/30' : 'border-white/[0.06] hover:border-white/15'
+                  className={`px-4 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    isActive
+                      ? 'bg-white text-black'
+                      : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
                   }`}>
-                  <div className="p-4 h-28" style={{ backgroundColor: preset.bgColor }}>
-                    <span style={{ color: preset.textColor, fontFamily: FONT_OPTIONS[preset.fontIndex]?.value, fontSize: 12, fontWeight: 700 }}>
-                      {preset.emoji} {preset.name}
-                    </span>
-                    <div className="flex flex-col gap-1 mt-3">
-                      <div className="h-1.5 rounded-sm w-3/4" style={{ backgroundColor: preset.textColor, opacity: 0.5 }} />
-                      <div className="h-1 rounded-sm w-1/2" style={{ backgroundColor: preset.textColor, opacity: 0.25 }} />
-                      <div className="h-8 rounded-md mt-1" style={{ backgroundColor: preset.accentColor, opacity: 0.3 }} />
-                    </div>
-                  </div>
-                  <div className="px-4 py-2.5 bg-white/[0.02]">
-                    <p className="text-[10px] text-white/30 leading-tight">{preset.description}</p>
-                  </div>
+                  {preset.emoji} {preset.name}
                 </button>
               );
             })}
@@ -261,15 +251,6 @@ const StepStyle: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Preview */}
-      <div className="flex gap-3 items-center p-5 rounded-xl" style={{ backgroundColor: bgColor, border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex-1">
-          <p style={{ fontFamily: FONT_OPTIONS[selectedFont]?.value, color: textColor, fontSize: 18, fontWeight: 700 }}>
-            Preview do <span style={{ color: accentColor }}>estilo</span>
-          </p>
-          <p style={{ color: textColor, opacity: 0.5, fontSize: 11 }}>{brandName} · @{userName || 'usuario'}</p>
-        </div>
-      </div>
     </div>
   );
 };

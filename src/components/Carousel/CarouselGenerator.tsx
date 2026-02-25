@@ -1357,10 +1357,12 @@ const CarouselGenerator: React.FC = () => {
   // ==================== UI ====================
   const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
 
-  // Voice guide: speak on step change
+  // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
-    speakStep(wizardStep);
-  }, [wizardStep, speakStep]);
+    if (!showWelcome) {
+      speakStep(wizardStep);
+    }
+  }, [wizardStep, speakStep, showWelcome]);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>

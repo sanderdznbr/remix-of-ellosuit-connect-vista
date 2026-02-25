@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       const profile = igData.profile || {};
       const posts = (igData.posts || []).slice(0, 12);
 
-      // Helper to proxy an image URL to base64 data URI
+      // Lightweight proxy: use streaming to reduce CPU, skip huge images
       async function proxyImageToBase64(imageUrl: string): Promise<string | null> {
         try {
           const imgRes = await fetch(imageUrl, {
@@ -59,10 +59,15 @@ Deno.serve(async (req) => {
           if (!imgRes.ok) return null;
           const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
           const arrayBuffer = await imgRes.arrayBuffer();
+          // Skip images larger than 500KB to avoid CPU spike
+          if (arrayBuffer.byteLength > 500_000) return imageUrl;
           const uint8 = new Uint8Array(arrayBuffer);
+          // Use chunks to reduce CPU pressure
+          const chunkSize = 8192;
           let binary = '';
-          for (let i = 0; i < uint8.length; i++) {
-            binary += String.fromCharCode(uint8[i]);
+          for (let i = 0; i < uint8.length; i += chunkSize) {
+            const chunk = uint8.subarray(i, Math.min(i + chunkSize, uint8.length));
+            binary += String.fromCharCode(...chunk);
           }
           const b64 = btoa(binary);
           return `data:${contentType};base64,${b64}`;
@@ -110,17 +115,13 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Proxy images to base64 in small batches to avoid CPU limits
-      const limitedRaw = rawImages.slice(0, 8);
+      // Limit images and process in small batches to stay within CPU budget
+      const limitedRaw = rawImages.slice(0, 5);
       const images: typeof rawImages = [];
-      // Process in batches of 3 to stay within CPU budget
-      for (let batchStart = 0; batchStart < limitedRaw.length; batchStart += 3) {
-        const batch = limitedRaw.slice(batchStart, batchStart + 3);
-        const results = await Promise.all(batch.map(async (img) => {
-          const b64 = await proxyImageToBase64(img.thumb || img.url);
-          return { ...img, url: b64 || img.url, thumb: b64 || img.thumb };
-        }));
-        images.push(...results);
+      // Process ONE at a time to avoid CPU spikes
+      for (const img of limitedRaw) {
+        const b64 = await proxyImageToBase64(img.thumb || img.url);
+        images.push({ ...img, url: b64 || img.url, thumb: b64 || img.thumb });
       }
 
       return new Response(JSON.stringify({
@@ -388,50 +389,17 @@ Responda APENAS em JSON válido:
       const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
       const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
 
-      // Helper: proxy any image URL to base64 data URI for reliable AI ingestion
-      async function proxyToBase64(url: string): Promise<string | null> {
-        if (!url) return null;
-        if (url.startsWith('data:image/')) return url; // already base64
-        try {
-          const res = await fetch(url, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-          });
-          if (!res.ok) return null;
-          const ct = res.headers.get('content-type') || 'image/jpeg';
-          const buf = await res.arrayBuffer();
-          const u8 = new Uint8Array(buf);
-          let bin = '';
-          for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
-          return `data:${ct};base64,${btoa(bin)}`;
-        } catch (e) {
-          console.error('Proxy failed for:', url.slice(0, 80), e);
-          return null;
-        }
-      }
-
-      // Proxy reference images to base64 SEQUENTIALLY to avoid CPU spikes (WORKER_LIMIT)
-      const allFaceRefs: (string | null)[] = [];
-      if (hasFaceRefs) {
-        for (const url of faceReferenceUrls.slice(0, 1)) {
-          allFaceRefs.push(await proxyToBase64(url));
-        }
-      }
-      const allStyleRefs: (string | null)[] = [];
-      if (hasStyleRefs) {
-        for (const url of styleReferenceUrls.slice(0, 1)) {
-          allStyleRefs.push(await proxyToBase64(url));
-        }
-      }
-      const allGeneralRefs: (string | null)[] = [];
-      if (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) {
-        for (const url of referenceImageUrls.slice(0, 1)) {
-          allGeneralRefs.push(await proxyToBase64(url));
-        }
-      }
-
-      const validFaceRefs = allFaceRefs.filter(Boolean) as string[];
-      const validStyleRefs = allStyleRefs.filter(Boolean) as string[];
-      const validGeneralRefs = allGeneralRefs.filter(Boolean) as string[];
+      // Pass image URLs directly to AI gateway - no CPU-heavy base64 proxy needed
+      // The AI gateway accepts URLs natively, avoiding WORKER_LIMIT errors
+      const validFaceRefs = hasFaceRefs 
+        ? faceReferenceUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+        : [];
+      const validStyleRefs = hasStyleRefs 
+        ? styleReferenceUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+        : [];
+      const validGeneralRefs = (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs)
+        ? referenceImageUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+        : [];
 
       console.log('Proxied refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length });
 

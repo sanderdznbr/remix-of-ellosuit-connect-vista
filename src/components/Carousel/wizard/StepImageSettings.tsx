@@ -40,6 +40,12 @@ const IMAGE_TYPES = [
   { value: '3d-render', label: '🧊 3D Render', desc: 'Render 3D' },
 ];
 
+const HIGGSFIELD_MODELS = [
+  { value: 'higgsfield-ai/soul/standard', label: '🌟 Soul Standard', desc: 'Flagship — melhor qualidade geral' },
+  { value: 'reve/text-to-image', label: '🎭 Reve', desc: 'Versátil, estilo variado' },
+  { value: 'bytedance/seedream/v4/edit', label: '✏️ Seedream Edit', desc: 'Edição avançada de imagens' },
+];
+
 const LIGHTING_STYLES = [
   { value: 'cinematic', label: '🎬 Cinemático' },
   { value: 'natural', label: '☀️ Natural' },
@@ -75,7 +81,7 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
       {/* Model */}
       <div>
         <label className="text-xs font-semibold text-foreground mb-2 block">Modelo de IA</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={() => update({ model: 'auto' })}
             className={`p-3 rounded-xl text-left transition-all border ${settings.model === 'auto' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
             <span className="text-sm font-bold">🤖 Automático</span>
@@ -89,10 +95,31 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
           <button onClick={() => update({ model: 'nano-banana' })}
             className={`p-3 rounded-xl text-left transition-all border ${settings.model === 'nano-banana' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
             <span className="text-sm font-bold">🎨 Nano Banana Pro</span>
-            <span className="block text-[10px] text-muted-foreground mt-0.5">Melhor qualidade</span>
+            <span className="block text-[10px] text-muted-foreground mt-0.5">Melhor qualidade Gemini</span>
+          </button>
+          <button onClick={() => update({ model: 'higgsfield' })}
+            className={`p-3 rounded-xl text-left transition-all border ${settings.model === 'higgsfield' ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+            <span className="text-sm font-bold">🔥 Higgsfield</span>
+            <span className="block text-[10px] text-muted-foreground mt-0.5">Multi-modelo externo (Soul, Reve...)</span>
           </button>
         </div>
       </div>
+
+      {/* Higgsfield sub-model selector */}
+      {settings.model === 'higgsfield' && (
+        <div>
+          <label className="text-xs font-semibold text-foreground mb-2 block">Modelo Higgsfield</label>
+          <div className="grid grid-cols-1 gap-2">
+            {HIGGSFIELD_MODELS.map(m => (
+              <button key={m.value} onClick={() => update({ higgsFieldModel: m.value })}
+                className={`p-3 rounded-xl text-left transition-all border ${settings.higgsFieldModel === m.value ? 'ring-2 ring-primary border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+                <span className="text-sm font-bold">{m.label}</span>
+                <span className="block text-[10px] text-muted-foreground mt-0.5">{m.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Fidelity */}
       <div>

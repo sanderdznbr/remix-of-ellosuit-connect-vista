@@ -9,7 +9,8 @@ export interface ReferenceImage {
 }
 
 export interface ImageSettings {
-  model: 'gemini' | 'nano-banana' | 'auto';
+  model: 'gemini' | 'nano-banana' | 'higgsfield' | 'auto';
+  higgsFieldModel: string; // e.g. 'higgsfield-ai/soul/standard', 'reve/text-to-image'
   fidelity: 'high' | 'balanced' | 'creative'; // how closely to match references
   negativePrompt: string;
   bodyPosition: string;
@@ -50,6 +51,7 @@ export interface WizardData {
 
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   model: 'auto',
+  higgsFieldModel: 'higgsfield-ai/soul/standard',
   fidelity: 'balanced',
   negativePrompt: '',
   bodyPosition: '',

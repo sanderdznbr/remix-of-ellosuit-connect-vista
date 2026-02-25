@@ -95,6 +95,12 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
       {referenceImages.filter(r => r.category === 'general').length > 0 && (
         <p className="text-xs text-white/30">{referenceImages.filter(r => r.category === 'general').length} imagens selecionadas</p>
       )}
+
+      {/* Skip / deselect all */}
+      <button onClick={() => setReferenceImages(prev => prev.filter(r => r.category !== 'general'))}
+        className="w-full py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-dashed border-white/[0.08] hover:border-white/15 transition-all">
+        Pular — não gostei de nenhuma
+      </button>
     </div>
   );
 };

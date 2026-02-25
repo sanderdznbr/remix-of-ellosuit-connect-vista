@@ -582,14 +582,21 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
-  const searchImages = async (kws?: string[]) => {
-    setSearchingImages(true);
+  const [imageSearchPage, setImageSearchPage] = useState(1);
+  const [loadingMoreImages, setLoadingMoreImages] = useState(false);
+
+  const searchImages = async (kws?: string[], page = 1, append = false) => {
+    if (append) setLoadingMoreImages(true); else setSearchingImages(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-carousel', { body: { action: 'search-images', topic: topic.trim(), keywords: kws || keywords.split(',').map(k => k.trim()).filter(Boolean) } });
+      const { data, error } = await supabase.functions.invoke('generate-carousel', { body: { action: 'search-images', topic: topic.trim(), keywords: kws || keywords.split(',').map(k => k.trim()).filter(Boolean), perPage: 12, page } });
       if (error) throw error;
-      if (data?.images) setPexelsImages(data.images);
+      if (data?.images) {
+        if (append) setPexelsImages(prev => [...prev, ...data.images]);
+        else setPexelsImages(data.images);
+        setImageSearchPage(page);
+      }
     } catch (err) { console.error(err); }
-    finally { setSearchingImages(false); }
+    finally { setSearchingImages(false); setLoadingMoreImages(false); }
   };
 
   const setCardImage = (cardIndex: number, imageUrl: string) => {
@@ -1121,16 +1128,8 @@ const CarouselGenerator: React.FC = () => {
             <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
               {/* Center: preview with card navigation */}
               <div className="flex flex-col items-center bg-muted/20 p-2 shrink-0 md:flex-1 md:overflow-auto">
-                <div className="flex items-center justify-center w-full relative" style={{ minHeight: 0 }}>
-                  {/* Large prev button */}
-                  <button
-                    onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
-                    disabled={validIndex === 0}
-                    className="absolute left-1 md:left-4 z-10 p-2 md:p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-background disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
-                  </button>
-
+                {/* Card preview */}
+                <div className="flex items-center justify-center w-full flex-1" style={{ minHeight: 0 }}>
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
                       transform: `scale(${Math.min((typeof window !== 'undefined' ? window.innerWidth * 0.85 : 300) / PREVIEW_W, 1.6)})`,
@@ -1142,27 +1141,34 @@ const CarouselGenerator: React.FC = () => {
                       {renderCardPreview(ec, validIndex)}
                     </div>
                   </div>
-
-                  {/* Large next button */}
-                  <button
-                    onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
-                    disabled={validIndex === carouselData.cards.length - 1}
-                    className="absolute right-1 md:right-4 z-10 p-2 md:p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-background disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
-                  </button>
                 </div>
-                {/* Card navigation dots */}
-                <div className="flex items-center gap-1.5 py-2 shrink-0">
-                  <div className="flex items-center gap-1">
+                {/* Bottom navigation bar */}
+                <div className="flex items-center justify-center gap-3 py-3 shrink-0 w-full">
+                  <button
+                    onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
+                    disabled={validIndex === 0}
+                    className="p-2.5 rounded-full bg-background border border-border shadow-md hover:bg-muted disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <div className="flex items-center gap-1.5">
                     {carouselData.cards.map((_, i) => (
                       <button key={i} onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(carouselData.cards[i]?.imagePrompt || carouselData.cards[i]?.title || ''); }}
                         className={`w-2.5 h-2.5 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
                     ))}
+                    <span className="text-xs text-muted-foreground font-medium ml-1.5">{validIndex + 1}/{carouselData.cards.length}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium ml-1">{validIndex + 1}/{carouselData.cards.length}</span>
+                  <button
+                    onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
+                    disabled={validIndex === carouselData.cards.length - 1}
+                    className="p-2.5 rounded-full bg-background border border-border shadow-md hover:bg-muted disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
                 </div>
               </div>
+
+
 
               {/* Right sidebar - scrollable on mobile */}
               <CarouselEditorSidebar
@@ -1220,15 +1226,23 @@ const CarouselGenerator: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 mb-2"><Search className="h-4 w-4 text-muted-foreground" /><p className="text-sm font-medium text-foreground">Pexels</p></div>
               {!pexelsImages.length && !searchingImages && <Button variant="outline" onClick={() => searchImages()} className="w-full gap-2 rounded-xl"><Search className="h-4 w-4" /> Buscar</Button>}
-              {searchingImages && <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Buscando...</div>}
+              {searchingImages && !loadingMoreImages && <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Buscando...</div>}
               {pexelsImages.length > 0 && (
-                <><div className="grid grid-cols-4 gap-2 max-h-[250px] overflow-y-auto rounded-xl">
-                  {pexelsImages.map((img) => (
-                    <button key={img.id} onClick={() => setCardImage(showImagePicker, img.url)} className="rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
-                      <img src={img.thumb} alt={img.alt} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div><p className="text-[10px] text-muted-foreground text-center mt-1">Fotos por Pexels</p></>
+                <>
+                  <div className="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto rounded-xl">
+                    {pexelsImages.map((img) => (
+                      <button key={img.id} onClick={() => setCardImage(showImagePicker, img.url)} className="rounded-xl overflow-hidden aspect-square hover:opacity-80 transition-opacity ring-1 ring-border">
+                        <img src={img.thumb} alt={img.alt} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-[10px] text-muted-foreground">Fotos por Pexels</p>
+                    <Button variant="outline" size="sm" onClick={() => searchImages(undefined, imageSearchPage + 1, true)} disabled={loadingMoreImages} className="gap-1 rounded-xl text-xs">
+                      {loadingMoreImages ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />} Buscar mais
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           </div>

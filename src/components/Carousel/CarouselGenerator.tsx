@@ -556,13 +556,12 @@ const CarouselGenerator: React.FC = () => {
             realImagesUsed++;
           } else {
             // No selected images left — search Brave for a unique image for this card
-            const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
-            const searchQuery = `${cleanTopic} ${cardDesc}`.slice(0, 80);
+            const searchQuery = cleanTopic; // Use only the clean topic, not AI-generated descriptions
             imagePromises.push({
               index: i,
               promise: (async () => {
                 try {
-                  // Search Brave for this specific card
+                  // Search Brave for this specific card using clean topic only
                   const { data: searchData } = await supabase.functions.invoke('generate-carousel', {
                     body: { action: 'web-search', query: searchQuery },
                   });
@@ -575,6 +574,7 @@ const CarouselGenerator: React.FC = () => {
                     return foundImages[randomIdx];
                   }
                   // Brave found nothing — fall back to AI generation
+                  const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
                   return await generateImage({
                     prompt: buildImagePrompt(`${cleanTopic}: ${cardDesc}`),
                     negativePrompt: imageSettings.negativePrompt || undefined,

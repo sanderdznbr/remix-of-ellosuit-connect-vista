@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
       if (BRAVE_API_KEY) {
         console.log('[web-search] Trying Brave Search first for:', searchQuery);
         try {
-          const photoQuery = `${searchQuery} photo high quality`;
+          const photoQuery = searchQuery;
           const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(photoQuery)}&count=50&safesearch=strict&size=Large`;
           const braveRes = await fetch(braveUrl, { headers: { 'X-Subscription-Token': BRAVE_API_KEY } });
           if (braveRes.ok) {

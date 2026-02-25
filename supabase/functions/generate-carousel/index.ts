@@ -213,28 +213,11 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Strategy 3: Pexels fallback (only if others found too few)
-      if (images.length < 5) {
-        const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
-        if (PEXELS_API_KEY) {
-          console.log('[web-search] Falling back to Pexels');
-          try {
-            const pexelsRes = await fetch(
-              `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=15&orientation=portrait`,
-              { headers: { 'Authorization': PEXELS_API_KEY } }
-            );
-            if (pexelsRes.ok) {
-              const pexelsData = await pexelsRes.json();
-              const pexelsImages = (pexelsData.photos || []).map((p: any) => ({
-                id: p.id, url: p.src.large2x || p.src.large, thumb: p.src.medium,
-                alt: p.alt || searchQuery, photographer: p.photographer, source: 'pexels',
-                width: p.width, height: p.height,
-              }));
-              images = [...images, ...pexelsImages];
-              console.log('[web-search] Pexels added', pexelsImages.length, 'images');
-            }
-          } catch (e) { console.error('[web-search] Pexels exception:', e); }
-        }
+      // If no images found at all, return error
+      if (images.length === 0) {
+        return new Response(JSON.stringify({ error: 'Nenhuma imagem encontrada. Verifique sua conexão ou entre em contato com o suporte.' }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       return new Response(JSON.stringify({ success: true, images, query: searchQuery }), {
@@ -659,41 +642,38 @@ STYLE REQUIREMENTS:
       });
     }
 
-    // ===== SEARCH IMAGES (Pexels) =====
+    // ===== SEARCH IMAGES (Brave) =====
     if (action === 'search-images') {
-      const PEXELS_API_KEY = Deno.env.get('PEXELS_API_KEY');
-      if (!PEXELS_API_KEY) {
-        return new Response(JSON.stringify({ error: 'PEXELS_API_KEY not configured' }), {
+      const BRAVE_API_KEY = Deno.env.get('BRAVE_SEARCH_API_KEY');
+      if (!BRAVE_API_KEY) {
+        return new Response(JSON.stringify({ error: 'Serviço de busca de imagens indisponível. Entre em contato com o suporte.' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       const searchQuery = query || keywords?.join(' ') || topic;
       const perPage = body.perPage || 12;
-      const page = body.page || 1;
-      const response = await fetch(
-        `https://api.pexels.com/v1/search?query=${encodeURIComponent(searchQuery)}&per_page=${perPage}&page=${page}&orientation=portrait`,
-        { headers: { 'Authorization': PEXELS_API_KEY } }
-      );
+      const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(searchQuery)}&count=${perPage}&safesearch=strict&size=Large`;
+      const response = await fetch(braveUrl, { headers: { 'X-Subscription-Token': BRAVE_API_KEY } });
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('Pexels error:', response.status, errText);
-        return new Response(JSON.stringify({ error: 'Erro ao buscar imagens' }), {
+        console.error('Brave search error:', response.status, errText);
+        return new Response(JSON.stringify({ error: 'Erro ao buscar imagens. Entre em contato com o suporte.' }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       const data = await response.json();
-      const images = (data.photos || []).map((p: any) => ({
-        id: p.id,
-        url: p.src.large2x || p.src.large,
-        thumb: p.src.medium,
-        alt: p.alt || '',
-        photographer: p.photographer,
+      const images = (data.results || []).map((item: any, idx: number) => ({
+        id: `brave-${idx}`,
+        url: item.properties?.url || item.thumbnail?.src,
+        thumb: item.thumbnail?.src || item.properties?.url,
+        alt: item.title || '',
+        photographer: item.source || 'Google',
       }));
 
-      return new Response(JSON.stringify({ success: true, images, page, totalResults: data.total_results || 0 }), {
+      return new Response(JSON.stringify({ success: true, images, page: 1, totalResults: images.length }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

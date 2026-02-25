@@ -201,29 +201,7 @@ CRITICAL for image_search_terms: Each term MUST be in ENGLISH and describe a spe
       }
     }
 
-    // Strategy 2: Pexels fallback
-    if (images.length < 3) {
-      const pexelsKey = Deno.env.get('PEXELS_API_KEY');
-      if (pexelsKey) {
-        for (const term of searchTerms.slice(0, 2)) {
-          try {
-            const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(term)}&per_page=5&orientation=landscape`;
-            const pexelsRes = await fetch(pexelsUrl, {
-              headers: { 'Authorization': pexelsKey },
-            });
-            if (pexelsRes.ok) {
-              const pexelsData = await pexelsRes.json();
-              const urls = (pexelsData.photos || []).map((p: any) => p.src?.large2x || p.src?.large || p.src?.original).filter(Boolean);
-              images.push(...urls);
-            }
-          } catch (e) {
-            console.error('[IMAGES] Pexels error:', e);
-          }
-        }
-      }
-    }
-
-    // Strategy 3: Generate images with AI if search found too few
+    // Strategy 2: Generate images with AI if search found too few
     if (images.length < 2) {
       const lovableKey = Deno.env.get('LOVABLE_API_KEY');
       if (lovableKey) {

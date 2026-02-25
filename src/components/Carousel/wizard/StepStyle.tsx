@@ -65,6 +65,17 @@ export const STYLE_PRESETS: StylePreset[] = [
     layoutType: 'classic', imagePosition: 'center', textAlignment: 'left',
     coverStyle: 'overlay', contentDensity: 'balanced',
   },
+  {
+    id: 'beta-test2',
+    name: 'Beta Test 2',
+    description: 'Estilo clean com fundo claro, tipografia bold e acentos em coral.',
+    emoji: '🧪',
+    bgColor: '#F5F0EB', accentColor: '#E94560', textColor: '#1A1A2E',
+    fontIndex: 8,
+    layoutPattern: ['light', 'accent', 'light', 'dark', 'light'],
+    layoutType: 'bold-header', imagePosition: 'top', textAlignment: 'center',
+    coverStyle: 'bold-center', contentDensity: 'spacious',
+  },
 ];
 
 export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';

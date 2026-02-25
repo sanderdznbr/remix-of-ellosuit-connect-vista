@@ -4,11 +4,12 @@ const STEP_VOICE_MESSAGES: Record<number, string> = {
   0: 'Escreva qual será o tema da sua postagem no campo abaixo. Pode ser um assunto, uma notícia, ou qualquer ideia que você queira transformar em carrossel.',
   1: 'Agora escolha quantos slides você quer no seu carrossel. Deslize o controle para definir a quantidade.',
   2: 'Aqui estão as imagens encontradas na web sobre o seu tema. Toque nas fotos que você quer usar no carrossel.',
-  3: 'Se o post precisa mostrar algum rosto específico, você pode subir fotos ou buscar o perfil no Instagram. Caso contrário, pode pular.',
-  4: 'Caso o post tenha relação com alguma marca, anexe logos ou referências visuais aqui. Se não tiver, pode pular.',
-  5: 'Escolha as cores do seu carrossel. Você pode selecionar uma paleta pronta ou personalizar cada cor.',
-  6: 'Agora selecione a fonte que será usada nos textos do carrossel.',
-  7: 'Por último, configure a marca que aparecerá no cabeçalho dos cards. Você também pode adicionar sua logomarca.',
+  3: 'Se o post precisa mostrar algum rosto específico, você pode subir fotos aqui. Caso contrário, pode pular.',
+  4: 'Se o post envolve algum produto específico, envie fotos dele para que a inteligência artificial adapte o conteúdo. Se não tiver, pode pular.',
+  5: 'Caso o post tenha relação com alguma marca, anexe logos ou referências visuais aqui. Se não tiver, pode pular.',
+  6: 'Escolha as cores do seu carrossel. Você pode selecionar uma paleta pronta ou personalizar cada cor.',
+  7: 'Agora selecione a fonte que será usada nos textos do carrossel.',
+  8: 'Por último, configure a marca que aparecerá no cabeçalho dos cards. Você também pode adicionar sua logomarca.',
 };
 
 export function useCarouselVoice() {

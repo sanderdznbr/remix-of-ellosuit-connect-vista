@@ -26,6 +26,10 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const isCrmWhatsAppMobile = isMobile && isCrmWhatsApp;
   const isCrmContextDesktop = !isMobile && isCrmContext;
   const isOnActivatePage = location.pathname.includes('/ativar');
+  const isCarouselPage = location.pathname.includes('/carrossel');
+
+  // Fullscreen pages: no header, no navbar
+  const isFullscreen = isCrmWhatsAppMobile || isCarouselPage;
 
   // Desktop CRM context: full-screen with sidebar, no header
   if (isCrmContextDesktop) {
@@ -41,9 +45,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
+    <div className="flex flex-col h-[100dvh] overflow-hidden" style={{ backgroundColor: isCarouselPage ? '#3000E3' : undefined }}>
       {/* Free plan banner - above header */}
-      {isFree && !isLoading && !isOnActivatePage && (
+      {isFree && !isLoading && !isOnActivatePage && !isFullscreen && (
         <div 
           className="bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-center gap-3 cursor-pointer hover:opacity-90 transition-opacity shrink-0"
           onClick={() => navigate('/checkout/ativar')}
@@ -56,18 +60,17 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         </div>
       )}
 
-      {/* Desktop: Mega Menu Header | Mobile: App Header (hidden on CRM WhatsApp) */}
-      {/* Admin master always sees MegaMenuHeader, even on mobile */}
-      {isCrmWhatsAppMobile ? null : isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
+      {/* Desktop: Mega Menu Header | Mobile: App Header */}
+      {isFullscreen ? null : isMobile ? <MobileAppHeader /> : <MegaMenuHeader />}
 
-      <main className={`flex-1 min-h-0 w-full ${isMobile && !isCrmWhatsAppMobile ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none flex flex-col`} style={{ scrollbarGutter: 'stable' }}>
+      <main className={`flex-1 min-h-0 w-full ${isMobile && !isFullscreen ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} overflow-y-auto overscroll-none flex flex-col`} style={{ scrollbarGutter: 'stable' }}>
         <PageTransition>
           {children}
         </PageTransition>
       </main>
 
-      {/* Mobile Bottom Nav (hidden on CRM WhatsApp) */}
-      {isMobile && !isCrmWhatsAppMobile && <MobileBottomNav />}
+      {/* Mobile Bottom Nav */}
+      {isMobile && !isFullscreen && <MobileBottomNav />}
 
       {/* Push Notification Permission Prompt */}
       <PushNotificationPrompt />

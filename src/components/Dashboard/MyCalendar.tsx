@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Video, Settings, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import CalendarKPIs from './CalendarKPIs';
+import CalendarNotificationConfig from './CalendarNotificationConfig';
 import { useToast } from '@/hooks/use-toast';
 
 import AppointmentModal from './AppointmentModal';
@@ -355,6 +356,9 @@ const MyCalendar = ({ onNavigate }: MyCalendarProps) => {
 
       {/* KPIs - Below calendar */}
       <CalendarKPIs events={events} />
+
+      {/* Notification config */}
+      <CalendarNotificationConfig />
 
       {/* All modals */}
       <EventTypeSelector

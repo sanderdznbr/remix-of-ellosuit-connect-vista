@@ -618,24 +618,9 @@ Deno.serve(async (req) => {
         if (!targetSessionId || !companyId) {
           console.log(`Could not find session for message batch. sessionId=${sessionId}, instanceName=${instanceName}`);
           
-          // Last resort: try to find ANY connected session that matches this sessionId pattern
-          // The Baileys server may be sending a stale/old session ID
-          if (sessionId) {
-            const { data: connectedSessions } = await supabase
-              .from('whatsapp_sessions')
-              .select('id, company_id, phone_number')
-              .eq('status', 'connected')
-              .limit(10);
-            
-            if (connectedSessions && connectedSessions.length > 0) {
-              // Use the first connected session as fallback
-              const fallbackSession = connectedSessions[0];
-              targetSessionId = fallbackSession.id;
-              companyId = fallbackSession.company_id;
-              sessionPhone = fallbackSession.phone_number || '';
-              console.log(`[Session] Last-resort fallback: using connected session ${fallbackSession.id} for stale sessionId ${sessionId}`);
-            }
-          }
+          // REMOVED dangerous last-resort fallback that could route messages to wrong company
+          // If sessionId is stale, we should NOT guess - just drop the message
+          console.log(`[Session] No fallback available. Dropping message for stale sessionId=${sessionId}`);
           
           if (!targetSessionId || !companyId) {
             break;

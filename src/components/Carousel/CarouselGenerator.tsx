@@ -902,16 +902,12 @@ const CarouselGenerator: React.FC = () => {
 
         {/* Generating state - fullscreen black */}
         {(generating || generatingAllImages) && (
-          <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center gap-6">
+          <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center">
             <div className="carousel-loader-wrapper">
               {'Generating'.split('').map((letter, i) => (
                 <span key={i} className="carousel-loader-letter" style={{ animationDelay: `${i * 0.1}s` }}>{letter}</span>
               ))}
               <div className="carousel-loader-spinner" />
-            </div>
-            <div className="text-center mt-4">
-              <p className="text-sm text-white/60">{imageGenProgress || 'Criando seu carrossel com IA...'}</p>
-              <p className="text-xs text-white/30 mt-2">Isso pode levar até 2 minutos</p>
             </div>
           </div>
         )}

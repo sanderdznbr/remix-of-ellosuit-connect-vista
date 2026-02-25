@@ -318,6 +318,54 @@ const CarouselGenerator: React.FC = () => {
     return parts.filter(Boolean).join('. ');
   };
 
+  // ===== GENERATE IMAGE (routes to Gemini or Higgsfield) =====
+  const generateImage = async (opts: {
+    prompt: string;
+    faceReferenceUrls?: string[];
+    styleReferenceUrls?: string[];
+    negativePrompt?: string;
+  }): Promise<string | null> => {
+    const resolvedModel = imageSettings.model === 'auto'
+      ? ((opts.faceReferenceUrls?.length ?? 0) > 0 ? 'nano-banana' : 'gemini')
+      : imageSettings.model;
+
+    // === HIGGSFIELD PATH ===
+    if (resolvedModel === 'higgsfield') {
+      const { data, error } = await supabase.functions.invoke('higgsfield-generate', {
+        body: {
+          action: 'generate-and-wait',
+          prompt: opts.prompt,
+          model_id: imageSettings.higgsFieldModel || 'higgsfield-ai/soul/standard',
+          aspect_ratio: '3:4',
+          resolution: '720p',
+          max_wait_seconds: 120,
+        },
+      });
+      if (error) throw error;
+      if (data?.success && data?.imageUrl) return data.imageUrl;
+      if (data?.error) throw new Error(data.error);
+      return null;
+    }
+
+    // === GEMINI / NANO BANANA PATH ===
+    const { data, error } = await supabase.functions.invoke('generate-carousel', {
+      body: {
+        action: 'generate-ai-image',
+        prompt: opts.prompt,
+        imageSize: '3:4',
+        topic: opts.prompt,
+        faceReferenceUrls: opts.faceReferenceUrls,
+        styleReferenceUrls: opts.styleReferenceUrls,
+        imageModel: imageSettings.model,
+        negativePrompt: opts.negativePrompt,
+        fidelity: imageSettings.fidelity,
+      },
+    });
+    if (error) throw error;
+    if (data?.success && data?.imageUrl) return data.imageUrl;
+    return null;
+  };
+
   // ===== ENHANCE PROMPT =====
   const enhancePrompt = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico primeiro', variant: 'destructive' }); return; }
@@ -497,20 +545,12 @@ const CarouselGenerator: React.FC = () => {
               index: i,
               promise: (async () => {
                 try {
-                  const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
-                    body: {
-                      action: 'generate-ai-image',
-                      prompt: buildImagePrompt(imgPrompt) + (isCover ? '. NO TEXT OR WORDS IN THE IMAGE.' : ''),
-                      imageSize: '3:4',
-                      topic: imgPrompt,
-                      faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-                      styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
-                      imageModel: imageSettings.model,
-                      negativePrompt: finalNegative,
-                      fidelity: imageSettings.fidelity,
-                    },
+                  return await generateImage({
+                    prompt: buildImagePrompt(imgPrompt) + (isCover ? '. NO TEXT OR WORDS IN THE IMAGE.' : ''),
+                    faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+                    styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+                    negativePrompt: finalNegative,
                   });
-                  if (!imgError && imgData?.success && imgData?.imageUrl) return imgData.imageUrl as string;
                 } catch (err) { console.error('Image gen error for card', i, err); }
                 return null;
               })(),
@@ -529,18 +569,10 @@ const CarouselGenerator: React.FC = () => {
               index: i,
               promise: (async () => {
                 try {
-                  const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
-                    body: {
-                      action: 'generate-ai-image',
-                      prompt: buildImagePrompt(imgPrompt),
-                      imageSize: '3:4',
-                      topic: imgPrompt,
-                      imageModel: imageSettings.model,
-                      negativePrompt: imageSettings.negativePrompt || undefined,
-                      fidelity: imageSettings.fidelity,
-                    },
+                  return await generateImage({
+                    prompt: buildImagePrompt(imgPrompt),
+                    negativePrompt: imageSettings.negativePrompt || undefined,
                   });
-                  if (!imgError && imgData?.success && imgData?.imageUrl) return imgData.imageUrl as string;
                 } catch (err) { console.error('Image gen error for card', i, err); }
                 return null;
               })(),
@@ -620,22 +652,14 @@ const CarouselGenerator: React.FC = () => {
         ...referenceImages.filter(r => r.category === 'style').map(r => r.url),
         ...(editorRefImage ? [editorRefImage] : []),
       ];
-      const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: {
-          action: 'generate-ai-image',
-          prompt: buildImagePrompt(promptText),
-          imageSize: '3:4',
-          topic: promptText,
-          faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-          styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
-          imageModel: imageSettings.model,
-          negativePrompt: imageSettings.negativePrompt || undefined,
-          fidelity: imageSettings.fidelity,
-        },
+      const imageUrl = await generateImage({
+        prompt: buildImagePrompt(promptText),
+        faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+        styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+        negativePrompt: imageSettings.negativePrompt || undefined,
       });
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Erro');
-      setCardImage(cardIndex, data.imageUrl);
+      if (!imageUrl) throw new Error('Não foi possível gerar a imagem');
+      setCardImage(cardIndex, imageUrl);
       setAiImagePrompt('');
       toast({ title: 'Imagem gerada!' });
     } catch (err: any) {

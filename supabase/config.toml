@@ -93,3 +93,6 @@ verify_jwt = false
 [functions.facebook-auth]
 verify_jwt = false
 
+[functions.higgsfield-generate]
+verify_jwt = false
+

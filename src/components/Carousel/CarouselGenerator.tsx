@@ -1282,9 +1282,9 @@ const CarouselGenerator: React.FC = () => {
 
             {/* Card strip - horizontal thumbnails */}
             <div className="w-full max-w-5xl mt-6 relative z-10">
-              <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory px-4 justify-center">
+              <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory px-4 justify-center">
                 {carouselData.cards.map((card, i) => {
-                  const thumbW = 150;
+                  const thumbW = 120;
                   const thumbH = thumbW * (CARD_H / CARD_W);
                   return (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
@@ -1296,7 +1296,7 @@ const CarouselGenerator: React.FC = () => {
                       transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
                     }}>
                       <div style={{ width: thumbW, height: thumbH, overflow: 'hidden', borderRadius: 10 }}>
-                        <div style={{ transform: `scale(${thumbW / CARD_W})`, transformOrigin: 'top left', width: CARD_W, height: CARD_H }}>
+                        <div style={{ transform: `scale(${thumbW / PREVIEW_W})`, transformOrigin: 'top left', width: PREVIEW_W, height: PREVIEW_H }}>
                           {renderCardPreview(card, i, false)}
                         </div>
                       </div>

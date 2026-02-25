@@ -136,6 +136,7 @@ const CarouselGenerator: React.FC = () => {
   const [generatingAiImage, setGeneratingAiImage] = useState(false);
   const [aiImagePrompt, setAiImagePrompt] = useState('');
   const [editingCard, setEditingCard] = useState<number | null>(null);
+  const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [showRefPanel, setShowRefPanel] = useState(false);
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
@@ -662,6 +663,74 @@ const CarouselGenerator: React.FC = () => {
     if (activeCardIndex >= cards.length) setActiveCardIndex(cards.length - 1);
   };
 
+  const regenerateCard = async (cardIndex: number) => {
+    if (!carouselData) return;
+    const card = carouselData.cards[cardIndex];
+    if (card.type === 'cover' || card.type === 'cta') return; // Only content cards
+    setRegeneratingCard(cardIndex);
+    try {
+      // 1. Regenerate text content for this card
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: {
+          action: 'generate-content',
+          topic: topic.trim(),
+          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+          cardCount: 3, // Generate minimal (cover + 1 content + cta)
+          imageCardIndices: [1],
+          ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+          regenerateCardIndex: cardIndex, // hint to backend
+        },
+      });
+      
+      let newBody = card.bodyTop || card.body || '';
+      let newBottomText = card.bodyBottom || '';
+      let newImagePrompt = card.imagePrompt || '';
+      
+      if (!error && data?.success && data?.data?.cards) {
+        // Pick a content card from the result
+        const contentCards = data.data.cards.filter((c: any) => c.type === 'content');
+        if (contentCards.length > 0) {
+          const src = contentCards[0];
+          newBody = src.bodyTop || src.body || newBody;
+          newBottomText = src.bodyBottom || newBottomText;
+          newImagePrompt = src.imagePrompt || src.title || newImagePrompt;
+        }
+      }
+
+      // 2. Regenerate image
+      let newImageUrl = card.imageUrl;
+      const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
+      const imgPrompt = `${cleanTopic}: ${newImagePrompt || newBody.slice(0, 100)}`;
+      try {
+        const { data: imgData, error: imgError } = await supabase.functions.invoke('generate-carousel', {
+          body: { action: 'web-search', query: imgPrompt.slice(0, 80) },
+        });
+        if (!imgError && imgData?.images?.length > 0) {
+          // Pick a random image from results
+          const randomIdx = Math.floor(Math.random() * Math.min(imgData.images.length, 5));
+          newImageUrl = imgData.images[randomIdx]?.url || newImageUrl;
+        }
+      } catch { /* keep old image */ }
+
+      // 3. Update card
+      const newCards = [...carouselData.cards];
+      newCards[cardIndex] = {
+        ...newCards[cardIndex],
+        bodyTop: newBody,
+        bodyBottom: newBottomText,
+        imagePrompt: newImagePrompt,
+        imageUrl: newImageUrl,
+        isAiImage: false,
+      };
+      setCarouselData({ ...carouselData, cards: newCards });
+      toast({ title: '✨ Card regenerado!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao regenerar', description: err.message, variant: 'destructive' });
+    } finally {
+      setRegeneratingCard(null);
+    }
+  };
+
   const handleFileUpload = (cardIndex: number, file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => { if (e.target?.result) setCardImage(cardIndex, e.target.result as string); };
@@ -785,11 +854,14 @@ const CarouselGenerator: React.FC = () => {
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 16, backgroundColor: bg }}>
         {renderHeader()}
         <div style={{ position: 'absolute', top: `${60 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, bottom: `${30 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, overflow: 'hidden' }}>
-          <div style={{ paddingTop: `${10 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden' }}>
-            <p style={{ fontFamily: serif, fontSize: `${58 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 5 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, 58 * fs, s)}</p>
+          {/* Top text area - limited when image present */}
+          <div style={{ paddingTop: `${10 * s}px`, flex: hasImage ? '0 0 auto' : '1', display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden', maxHeight: hasImage ? '40%' : undefined }}>
+            <p style={{ fontFamily: serif, fontSize: `${(hasImage ? 44 : 58) * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 4 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 44 : 58) * fs, s)}</p>
           </div>
-          {hasImage && <div style={{ marginTop: `${20 * s}px`, ...(card.isAiImage !== false ? { flex: 1, minHeight: 0 } : {}), borderRadius: `${16 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', ...(card.isAiImage !== false ? { height: '100%', objectFit: 'cover' as const } : { height: 'auto', objectFit: 'contain' as const, maxHeight: '100%' }) }} /></div>}
-          {bottomText && <div style={{ paddingTop: `${18 * s}px`, overflow: 'hidden' }}><p style={{ fontFamily: serif, fontSize: `${44 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 3 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 44 * fs, s)}</p></div>}
+          {/* Image area - takes remaining space */}
+          {hasImage && <div style={{ marginTop: `${16 * s}px`, flex: '1 1 auto', minHeight: 0, borderRadius: `${16 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+          {/* Bottom text */}
+          {bottomText && <div style={{ paddingTop: `${12 * s}px`, flex: '0 0 auto', overflow: 'hidden', maxHeight: hasImage ? '18%' : undefined }}><p style={{ fontFamily: serif, fontSize: `${(hasImage ? 34 : 44) * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 2 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 34 : 44) * fs, s)}</p></div>}
         </div>
       </div>
     );
@@ -1001,8 +1073,13 @@ const CarouselGenerator: React.FC = () => {
                       {renderCardPreview(card, i)}
                     </div>
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                      <button onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
-                      {carouselData.cards.length > 2 && <button onClick={() => removeCard(i)} className="p-1.5 bg-red-600/80 rounded-lg text-white hover:bg-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
+                      <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-black/90"><Edit3 className="h-3.5 w-3.5" /></button>
+                      {card.type === 'content' && (
+                        <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }} disabled={regeneratingCard === i} className="p-1.5 bg-black/70 rounded-lg text-white hover:bg-primary/80 disabled:opacity-50">
+                          {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
+                      {carouselData.cards.length > 2 && <button onClick={(e) => { e.stopPropagation(); removeCard(i); }} className="p-1.5 bg-red-600/80 rounded-lg text-white hover:bg-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
                     </div>
                     <p className="text-center text-xs text-muted-foreground mt-2 font-medium">{i + 1}/{carouselData.cards.length}</p>
                   </div>

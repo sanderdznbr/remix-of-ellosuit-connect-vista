@@ -262,46 +262,9 @@ REGRAS:
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
-CONTEXTO IMPORTANTE - O QUE É A ELLOSUIT (USE ESSES DADOS SEMPRE QUE O TÓPICO ENVOLVER A ELLOSUIT):
-A Ellosuit é uma plataforma SaaS completa de gestão empresarial, CRM e marketing com inteligência artificial. Ela foi projetada para empresas, agências e empreendedores que precisam centralizar operações, automatizar atendimento e escalar vendas.
-
-MÓDULOS E FUNCIONALIDADES DA ELLOSUIT:
-1. **Hub Omni (Comunicação e Atendimento)**:
-   - CRM inteligente: gestão completa de clientes, leads, pipeline de vendas com campos personalizados e tags
-   - Agentes de IA: chatbots personalizáveis que atendem no WhatsApp e chat web 24h/dia, com personalidade configurável, base de conhecimento e tom de voz da marca
-   - WhatsApp Business integrado: envio de mensagens, campanhas em massa, chatbots automatizados e atendimento humano no mesmo painel
-   - Email marketing: criação de campanhas, templates visuais, rastreamento de aberturas e cliques com analytics detalhados
-   - Automações de fluxo: triggers inteligentes (novo lead, mensagem recebida, etc.) com ações automatizadas
-
-2. **Hub Flow (Marketing e Produtividade)**:
-   - Gerador de Carrosséis com IA: criação automatizada de posts editoriais para Instagram com busca de referências na web
-   - Calendário inteligente: agendamento de reuniões, eventos e compromissos com buffer e links de booking públicos
-   - Reuniões por vídeo (LiveKit): videoconferência integrada com gravação, transcrição e compartilhamento de tela
-   - Biblioteca de Marca: repositório centralizado de logos, ícones e screenshots para consistência visual
-   - Email Designer: editor visual drag-and-drop para criar emails profissionais
-
-3. **Hub Track (Rastreamento e Analytics)**:
-   - Documentos rastreáveis: envie PDFs e saiba quando o destinatário abriu, quanto tempo leu e quais páginas visitou
-   - Links rastreáveis: URLs encurtadas com analytics de cliques, dispositivos e localização
-   - Dashboard Ello Vision: central de inteligência com IA que analisa métricas de engajamento, identifica riscos de churn e sugere ações estratégicas
-
-4. **Hub Suite (Gestão Empresarial)**:
-   - Banco de dados unificado: todos os contatos centralizados com campos customizáveis, importação/exportação e filtros avançados
-   - Contratos e propostas: templates editáveis, geração automática de documentos com dados do CRM
-   - Gestão de documentos: pastas organizadas, upload, compartilhamento e controle de versões
-   - Serviços e produtos: catálogo de serviços com precificação, custos e margens
-   - Recibos e notas: emissão automatizada com numeração sequencial
-
-5. **Recursos Transversais**:
-   - Notificações em tempo real: alertas de emails abertos, mensagens recebidas, eventos próximos
-   - Permissões por usuário: controle granular de acesso por módulo e ação (admin, manager, member)
-   - Multi-empresa: um usuário pode gerenciar múltiplas empresas no mesmo painel
-   - API aberta: webhooks e integrações com ferramentas externas
-   - Modo escuro/claro com identidade visual por hub
-
-A Ellosuit ajuda empresas e empreendedores a automatizar processos, melhorar atendimento ao cliente e escalar vendas usando IA. Sempre que o tópico mencionar "Ellosuit", use esse conhecimento DETALHADO para gerar conteúdo PRECISO, ESPECÍFICO e PROFISSIONAL sobre cada funcionalidade relevante.
-
 Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
+
+IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
 
 REGRAS DE LAYOUT (siga EXATAMENTE):
 - Card 1 (cover): Título impactante em CAIXA ALTA (máx 10 palavras) + subtítulo curto descritivo

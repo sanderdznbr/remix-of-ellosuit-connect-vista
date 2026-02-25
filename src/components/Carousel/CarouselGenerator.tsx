@@ -1040,12 +1040,7 @@ const CarouselGenerator: React.FC = () => {
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">Exportar</span>
               </button>
-              <button onClick={() => setShowPublishDialog(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
-                <ExternalLink className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Publicar</span>
-              </button>
+              {/* Publicar button hidden until fully functional */}
             </div>
           </div>
         </div>

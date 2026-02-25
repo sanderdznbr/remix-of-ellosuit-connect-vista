@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '@/styles/carousel-loader.css';
+import '@/styles/cube-loader.css';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -966,11 +967,10 @@ const CarouselGenerator: React.FC = () => {
             {/* Subtle ambient glow accents */}
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
-            <div className="absolute top-[40%] left-[50%] -translate-x-1/2 w-[600px] h-[2px] pointer-events-none opacity-[0.03]" style={{ background: 'linear-gradient(90deg, transparent, rgba(140,90,240,0.5), transparent)' }} />
 
             {/* Header */}
-            <div className="px-8 pt-6 pb-4 w-full relative z-10">
-              <div className="flex items-center justify-between mb-6">
+            <div className="px-6 lg:px-8 pt-6 pb-4 w-full relative z-10">
+              <div className="flex items-center justify-between mb-6 max-w-[1200px] mx-auto">
                 <div className="flex items-center gap-3">
                   <button onClick={() => navigate('/dashboard')} className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors">
                     <ArrowLeft className="h-5 w-5 text-white/40" />
@@ -1006,35 +1006,52 @@ const CarouselGenerator: React.FC = () => {
               </div>
             </div>
 
-            {/* Content — fixed min-height to prevent layout shifts */}
-            <div className="w-full px-8 flex-1 overflow-y-auto pb-6 relative z-10" style={{ minHeight: '500px', maxHeight: 'calc(100vh - 200px)' }}>
-              {wizardStep === 0 && (
-                <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
-                  cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
-                  enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
-                  searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
-              )}
-              {wizardStep === 1 && (
-                <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                  famousList={famousList} setFamousList={setFamousList}
-                  famousImages={famousImages} setFamousImages={setFamousImages}
-                  brandAssets={brandAssets}
-                  webImages={webSearchResult?.images} />
-              )}
-              {wizardStep === 2 && (
-                <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
-              )}
-              {wizardStep === 3 && (
-                <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
-                  textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                  brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
-                  dateLabel={dateLabel} setDateLabel={setDateLabel}
-                  showHeader={showHeader} setShowHeader={setShowHeader} />
-              )}
+            {/* Two-column layout: inputs left, cube animation right */}
+            <div className="flex-1 flex flex-row relative z-10 max-w-[1200px] mx-auto w-full px-6 lg:px-8 gap-0 overflow-hidden" style={{ minHeight: '500px', maxHeight: 'calc(100vh - 200px)' }}>
+              {/* LEFT: inputs (constrained width) */}
+              <div className="flex-1 max-w-[560px] overflow-y-auto pb-6 pr-4">
+                {wizardStep === 0 && (
+                  <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
+                    cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
+                    enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
+                    searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
+                )}
+                {wizardStep === 1 && (
+                  <StepReferences referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                    famousList={famousList} setFamousList={setFamousList}
+                    famousImages={famousImages} setFamousImages={setFamousImages}
+                    brandAssets={brandAssets}
+                    webImages={webSearchResult?.images} />
+                )}
+                {wizardStep === 2 && (
+                  <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
+                )}
+                {wizardStep === 3 && (
+                  <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
+                    textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                    brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
+                    dateLabel={dateLabel} setDateLabel={setDateLabel}
+                    showHeader={showHeader} setShowHeader={setShowHeader} />
+                )}
+              </div>
+
+              {/* RIGHT: 3D cube animation */}
+              <div className="hidden lg:flex flex-1 items-center justify-center">
+                <div className="cube-loader">
+                  <div className="cube">
+                    <div className="face"></div>
+                    <div className="face"></div>
+                    <div className="face"></div>
+                    <div className="face"></div>
+                    <div className="face"></div>
+                    <div className="face"></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Bottom nav bar — fixed */}
-            <div className="flex items-center justify-between px-8 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+            <div className="flex items-center justify-between px-6 lg:px-8 py-4 max-w-[1200px] mx-auto w-full" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
               <button onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
                 disabled={wizardStep === 0}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all disabled:opacity-0">
@@ -1062,7 +1079,7 @@ const CarouselGenerator: React.FC = () => {
 
             {/* Saved carousels */}
             {carouselHistory.length > 0 && (
-              <div className="px-8 mt-8 pb-8">
+              <div className="px-6 lg:px-8 mt-8 pb-8 max-w-[1200px] mx-auto w-full">
                 <div className="flex items-center gap-2 mb-4">
                   <History className="h-4 w-4 text-white/15" />
                   <h2 className="text-xs font-medium text-white/25 tracking-wider uppercase">Seus Carrosséis</h2>

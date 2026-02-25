@@ -110,16 +110,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Proxy all images to base64 in parallel (limit to 16 for performance)
-      const limitedRaw = rawImages.slice(0, 16);
-      const images = await Promise.all(limitedRaw.map(async (img) => {
-        const b64 = await proxyImageToBase64(img.thumb || img.url);
-        return {
-          ...img,
-          url: b64 || img.url,
-          thumb: b64 || img.thumb,
-        };
-      }));
+      // Proxy images to base64 in small batches to avoid CPU limits
+      const limitedRaw = rawImages.slice(0, 8);
+      const images: typeof rawImages = [];
+      // Process in batches of 3 to stay within CPU budget
+      for (let batchStart = 0; batchStart < limitedRaw.length; batchStart += 3) {
+        const batch = limitedRaw.slice(batchStart, batchStart + 3);
+        const results = await Promise.all(batch.map(async (img) => {
+          const b64 = await proxyImageToBase64(img.thumb || img.url);
+          return { ...img, url: b64 || img.url, thumb: b64 || img.thumb };
+        }));
+        images.push(...results);
+      }
 
       return new Response(JSON.stringify({
         success: true,
@@ -408,9 +410,9 @@ Responda APENAS em JSON válido:
       }
 
       // Proxy ALL reference images to base64 in parallel (critical for Instagram URLs)
-      const allFaceRefs = hasFaceRefs ? await Promise.all(faceReferenceUrls.slice(0, 4).map(proxyToBase64)) : [];
-      const allStyleRefs = hasStyleRefs ? await Promise.all(styleReferenceUrls.slice(0, 3).map(proxyToBase64)) : [];
-      const allGeneralRefs = (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) ? await Promise.all(referenceImageUrls.slice(0, 4).map(proxyToBase64)) : [];
+      const allFaceRefs = hasFaceRefs ? await Promise.all(faceReferenceUrls.slice(0, 2).map(proxyToBase64)) : [];
+      const allStyleRefs = hasStyleRefs ? await Promise.all(styleReferenceUrls.slice(0, 2).map(proxyToBase64)) : [];
+      const allGeneralRefs = (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs) ? await Promise.all(referenceImageUrls.slice(0, 2).map(proxyToBase64)) : [];
 
       const validFaceRefs = allFaceRefs.filter(Boolean) as string[];
       const validStyleRefs = allStyleRefs.filter(Boolean) as string[];

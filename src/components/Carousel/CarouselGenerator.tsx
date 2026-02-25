@@ -945,22 +945,29 @@ const CarouselGenerator: React.FC = () => {
     }
 
     if (card.type === 'cta') {
+      // CTA: if there's an image with dark overlay, force white text regardless of bg
+      const ctaHasImage = !!card.imageUrl;
+      const ctaTxt = ctaHasImage ? '#FFFFFF' : mainTxt;
+      const ctaSecondaryTxt = ctaHasImage ? 'rgba(255,255,255,0.75)' : secondaryTxt;
+      // CTA button text: ensure contrast against accentColor
+      const accentLum = computeLuminance(accentColor);
+      const ctaBtnTxt = accentLum > 0.35 ? '#1A1A1A' : '#FFFFFF';
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
-          {card.imageUrl && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
-          {!card.imageUrl && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}
+          {ctaHasImage && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
+          {!ctaHasImage && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}
           {renderHeader()}
           <div style={{ position: 'absolute', inset: `${80 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', zIndex: 10 }}>
             {/* Decorative line */}
             <div style={{ width: `${60 * s}px`, height: `${4 * s}px`, backgroundColor: accentColor, borderRadius: `${4 * s}px`, marginBottom: `${40 * s}px` }} />
-            <h2 style={{ fontFamily: serif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: mainTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
-            {card.body && <p style={{ fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: mainTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
+            <h2 style={{ fontFamily: serif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: ctaTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
+            {card.body && <p style={{ fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: ctaTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
             {/* CTA button-like element */}
             <div style={{ padding: `${20 * s}px ${56 * s}px`, backgroundColor: accentColor, borderRadius: `${12 * s}px`, display: 'inline-flex', alignItems: 'center', gap: `${12 * s}px` }}>
-              <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `${2.5 * s}px` }}>SAIBA MAIS →</p>
+              <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 800, color: ctaBtnTxt, textTransform: 'uppercase', letterSpacing: `${2.5 * s}px` }}>SAIBA MAIS →</p>
             </div>
-            {userName && <p style={{ fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 600, color: mainTxt, opacity: 0.5, marginTop: `${36 * s}px`, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>@{userName}</p>}
+            {userName && <p style={{ fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 600, color: ctaTxt, opacity: 0.5, marginTop: `${36 * s}px`, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>@{userName}</p>}
           </div>
           {renderLogo()}
         </div>

@@ -824,7 +824,7 @@ const CarouselGenerator: React.FC = () => {
     const layout = card.layout || 'dark';
     const isLight = layout === 'light';
     const isAccent = layout === 'accent';
-    const bg = isAccent ? accentColor : isLight ? '#F8F4EF' : bgColor;
+    const bg = isAccent ? accentColor : bgColor;
     const mainTxt = isAccent ? '#FFFFFF' : isLight ? '#1A1A1A' : textColor;
     const secondaryTxt = isAccent ? 'rgba(255,255,255,0.75)' : isLight ? '#666' : 'rgba(255,255,255,0.75)';
     const accentTxt = isAccent ? '#FFFFFF' : accentColor;
@@ -861,13 +861,19 @@ const CarouselGenerator: React.FC = () => {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
-          {card.imageUrl && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)' }} /></>)}
+          {card.imageUrl && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
+          {!card.imageUrl && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}
           {renderHeader()}
-          <div style={{ position: 'absolute', inset: `${100 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', zIndex: 10 }}>
-            <div style={{ width: `${80 * s}px`, height: `${80 * s}px`, borderRadius: '50%', backgroundColor: isAccent ? 'rgba(255,255,255,0.15)' : accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${36 * s}px`, color: '#FFF', fontFamily: sans, marginBottom: `${40 * s}px` }}>✦</div>
-            <h2 style={{ fontFamily: serif, fontSize: `${68 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: mainTxt, marginBottom: `${30 * s}px` }}>{card.title}</h2>
-            {card.body && <p style={{ fontFamily: serif, fontSize: `${34 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: mainTxt, fontStyle: 'italic', opacity: 0.8, maxWidth: `${900 * s}px` }}>"{card.body}"</p>}
-            {userName && <div style={{ marginTop: `${50 * s}px`, padding: `${16 * s}px ${36 * s}px`, border: `${2.5 * s}px solid ${mainTxt}`, borderRadius: `${50 * s}px` }}><p style={{ fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 700, color: mainTxt, textTransform: 'uppercase', letterSpacing: `${2 * s}px` }}>@{userName}</p></div>}
+          <div style={{ position: 'absolute', inset: `${80 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', zIndex: 10 }}>
+            {/* Decorative line */}
+            <div style={{ width: `${60 * s}px`, height: `${4 * s}px`, backgroundColor: accentColor, borderRadius: `${4 * s}px`, marginBottom: `${40 * s}px` }} />
+            <h2 style={{ fontFamily: serif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: mainTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
+            {card.body && <p style={{ fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: mainTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
+            {/* CTA button-like element */}
+            <div style={{ padding: `${20 * s}px ${56 * s}px`, backgroundColor: accentColor, borderRadius: `${12 * s}px`, display: 'inline-flex', alignItems: 'center', gap: `${12 * s}px` }}>
+              <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 800, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `${2.5 * s}px` }}>SAIBA MAIS →</p>
+            </div>
+            {userName && <p style={{ fontFamily: sans, fontSize: `${20 * s * fs}px`, fontWeight: 600, color: mainTxt, opacity: 0.5, marginTop: `${36 * s}px`, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>@{userName}</p>}
           </div>
         </div>
       );

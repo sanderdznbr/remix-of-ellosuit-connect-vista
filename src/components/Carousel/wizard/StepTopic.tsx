@@ -1,6 +1,6 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Wand2, Globe, Search } from 'lucide-react';
+import { Loader2, Wand2, Globe, Search, PenTool } from 'lucide-react';
 
 interface Props {
   topic: string;
@@ -16,12 +16,15 @@ interface Props {
   searchingWeb?: boolean;
   onSearchWeb?: () => void;
   webSearchResult?: { summary: string; citations: string[] } | null;
+  skipWebSearch?: boolean;
+  onToggleSkipWebSearch?: () => void;
 }
 
 const StepTopic: React.FC<Props> = ({
   topic, setTopic,
   enhancingPrompt, onEnhance,
   searchingWeb, webSearchResult,
+  skipWebSearch, onToggleSkipWebSearch,
 }) => {
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
@@ -33,7 +36,9 @@ const StepTopic: React.FC<Props> = ({
 
       <div className="relative">
         <Textarea value={topic} onChange={(e) => setTopic(e.target.value)}
-          placeholder="Ex: 5 dicas de contabilidade para pequenas empresas..."
+          placeholder={skipWebSearch 
+            ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
+            : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
           className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-12" />
         <button onClick={onEnhance} disabled={enhancingPrompt || !topic.trim()}
           className="absolute bottom-3 right-3 p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/40 hover:text-white/70 transition-all disabled:opacity-20"
@@ -42,8 +47,35 @@ const StepTopic: React.FC<Props> = ({
         </button>
       </div>
 
+      {/* Toggle: Web search vs Prompt-only */}
+      <button
+        onClick={onToggleSkipWebSearch}
+        className="flex items-center gap-3 w-full p-3.5 rounded-xl transition-all text-left"
+        style={{
+          backgroundColor: skipWebSearch ? 'rgba(139,92,246,0.1)' : 'rgba(255,255,255,0.02)',
+          border: `1px solid ${skipWebSearch ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+        }}
+      >
+        <div className="p-2 rounded-lg" style={{ backgroundColor: skipWebSearch ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.04)' }}>
+          {skipWebSearch ? <PenTool className="h-4 w-4 text-purple-400" /> : <Search className="h-4 w-4 text-white/30" />}
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-white/80">
+            {skipWebSearch ? 'Modo Manual — Usando seu texto' : 'Modo Pesquisa — Busca automática'}
+          </p>
+          <p className="text-xs text-white/30 mt-0.5">
+            {skipWebSearch 
+              ? 'Ideal quando o Google não conhece o assunto. Descreva tudo no prompt acima.'
+              : 'Busca informações reais na web para enriquecer o conteúdo.'}
+          </p>
+        </div>
+        <div className="w-10 h-5 rounded-full relative transition-all" style={{ backgroundColor: skipWebSearch ? '#8B5CF6' : 'rgba(255,255,255,0.1)' }}>
+          <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: skipWebSearch ? '22px' : '2px' }} />
+        </div>
+      </button>
+
       {/* Web search result (shown after auto-search) */}
-      {webSearchResult && (
+      {webSearchResult && !skipWebSearch && (
         <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-3">
           <div className="flex items-center gap-2 text-emerald-400/80 text-xs font-medium">
             <Search className="h-3.5 w-3.5" />

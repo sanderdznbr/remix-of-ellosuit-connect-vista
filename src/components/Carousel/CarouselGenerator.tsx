@@ -219,6 +219,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Web search state
   const [searchingWeb, setSearchingWeb] = useState(false);
+  const [skipWebSearch, setSkipWebSearch] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
 
   const handleSearchWeb = async () => {
@@ -1410,13 +1411,13 @@ const CarouselGenerator: React.FC = () => {
       <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
         {!carouselData && !generating && !generatingAllImages && (
-          <div className="flex-1 flex flex-col w-full relative overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Subtle ambient glow accents */}
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
 
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
-            <div className="flex-1 flex flex-row relative z-10 w-full overflow-hidden">
+            <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
               {/* LEFT column: centered content */}
               <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto">
                 <div className="w-full max-w-[520px] space-y-6">
@@ -1450,7 +1451,8 @@ const CarouselGenerator: React.FC = () => {
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
                         enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
-                        searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult} />
+                        searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult}
+                        skipWebSearch={skipWebSearch} onToggleSkipWebSearch={() => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }} />
                     )}
                     {wizardStep === 1 && (
                       <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />
@@ -1517,7 +1519,7 @@ const CarouselGenerator: React.FC = () => {
                           </button>
                         )}
                         <button onClick={async () => {
-                            if (wizardStep === 0 && !webSearchResult && topic.trim()) {
+                            if (wizardStep === 0 && !webSearchResult && !skipWebSearch && topic.trim()) {
                               await handleSearchWeb();
                             }
                             if (wizardStep === 1) {

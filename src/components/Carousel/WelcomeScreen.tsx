@@ -19,65 +19,54 @@ const PLACEHOLDER_SUGGESTIONS = [
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [inputValue, setInputValue] = useState('');
-  const [placeholderText, setPlaceholderText] = useState('');
-  const [isUserTyping, setIsUserTyping] = useState(false);
-  const animationRef = useRef<number | null>(null);
+  const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isUserTyping = inputValue.length > 0;
 
-  const animatePlaceholder = useCallback(async () => {
+  useEffect(() => {
+    if (isUserTyping) {
+      setAnimatedPlaceholder('');
+      return;
+    }
+
     let suggestionIndex = 0;
+    let charIndex = 0;
+    let erasing = false;
+    let cancelled = false;
 
-    const typeAndErase = () => {
-      if (isUserTyping) return;
-      
-      const currentSuggestion = PLACEHOLDER_SUGGESTIONS[suggestionIndex];
-      let charIndex = 0;
-      let isErasing = false;
+    const tick = () => {
+      if (cancelled) return;
+      const text = PLACEHOLDER_SUGGESTIONS[suggestionIndex];
 
-      const tick = () => {
-        if (isUserTyping) return;
-
-        if (!isErasing) {
-          charIndex++;
-          setPlaceholderText(currentSuggestion.slice(0, charIndex));
-          if (charIndex === currentSuggestion.length) {
-            timeoutRef.current = setTimeout(() => {
-              isErasing = true;
-              tick();
-            }, 2000);
-            return;
-          }
-          timeoutRef.current = setTimeout(tick, 50 + Math.random() * 40);
+      if (!erasing) {
+        charIndex++;
+        setAnimatedPlaceholder(text.slice(0, charIndex));
+        if (charIndex >= text.length) {
+          erasing = true;
+          timeoutRef.current = setTimeout(tick, 2200);
         } else {
-          charIndex--;
-          setPlaceholderText(currentSuggestion.slice(0, charIndex));
-          if (charIndex === 0) {
-            suggestionIndex = (suggestionIndex + 1) % PLACEHOLDER_SUGGESTIONS.length;
-            timeoutRef.current = setTimeout(tick, 400);
-            return;
-          }
+          timeoutRef.current = setTimeout(tick, 55 + Math.random() * 35);
+        }
+      } else {
+        charIndex--;
+        setAnimatedPlaceholder(text.slice(0, charIndex));
+        if (charIndex <= 0) {
+          erasing = false;
+          suggestionIndex = (suggestionIndex + 1) % PLACEHOLDER_SUGGESTIONS.length;
+          timeoutRef.current = setTimeout(tick, 500);
+        } else {
           timeoutRef.current = setTimeout(tick, 25);
         }
-      };
-
-      tick();
+      }
     };
 
-    timeoutRef.current = setTimeout(typeAndErase, 1200);
-  }, [isUserTyping]);
+    timeoutRef.current = setTimeout(tick, 1000);
 
-  useEffect(() => {
-    if (!isUserTyping) {
-      animatePlaceholder();
-    }
     return () => {
+      cancelled = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [isUserTyping, animatePlaceholder]);
-
-  useEffect(() => {
-    setIsUserTyping(inputValue.length > 0);
-  }, [inputValue]);
+  }, [isUserTyping]);
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
@@ -94,13 +83,50 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
   return (
     <motion.div
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-[70] flex flex-col overflow-hidden"
       style={{ backgroundColor: '#0a0a0f' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Top Navbar */}
+      <motion.nav
+        className="relative z-20 flex items-center justify-between px-5 md:px-8 py-4"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        {/* Left: Logo + Links */}
+        <div className="flex items-center gap-6 md:gap-8">
+          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6" />
+          <div className="hidden md:flex items-center gap-5">
+            {['Preços', 'Recursos', 'Comunidade', 'Suporte'].map((item) => (
+              <button
+                key={item}
+                className="text-white/50 hover:text-white/80 text-sm font-medium transition-colors cursor-pointer"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Login / Começar */}
+        <div className="flex items-center gap-3">
+          <button
+            className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5"
+          >
+            Login
+          </button>
+          <button
+            className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            Começar
+          </button>
+        </div>
+      </motion.nav>
+
       {/* Orb */}
       <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
@@ -109,17 +135,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center text-center px-4 md:px-6 -mt-8 md:-mt-12 w-full max-w-xl">
-        {/* Logo */}
-        <motion.img
-          src={ellocontentLogo}
-          alt="elloContent"
-          className="h-6 md:h-8 mb-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        />
-
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-4 md:px-6 -mt-8 md:-mt-12 w-full max-w-xl mx-auto">
         {/* Title */}
         <motion.h1
           className="text-white text-xl md:text-3xl font-semibold leading-snug mb-2"
@@ -155,15 +171,27 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
             }}
           >
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholderText || ' '}
-              rows={3}
-              className="w-full bg-transparent text-white/90 placeholder-white/20 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            />
+            {/* Textarea with animated placeholder overlay */}
+            <div className="relative">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={3}
+                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              />
+              {/* Animated placeholder */}
+              {!isUserTyping && (
+                <div
+                  className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0"
+                  style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}
+                >
+                  {animatedPlaceholder}
+                  <span className="inline-block w-[2px] h-[1em] bg-white/30 ml-0.5 animate-pulse align-middle" />
+                </div>
+              )}
+            </div>
 
             {/* Bottom bar */}
             <div className="flex items-center justify-end px-3 pb-3">

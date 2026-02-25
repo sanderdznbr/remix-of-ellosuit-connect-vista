@@ -61,6 +61,7 @@ interface CarouselCard {
   imagePrompt?: string;
   searchTerms?: string[];
   needsImage?: boolean;
+  isAiImage?: boolean;
   layout?: 'dark' | 'light' | 'accent';
   fontScale?: number;
   paddingScale?: number;
@@ -506,7 +507,7 @@ const CarouselGenerator: React.FC = () => {
             });
           } else if (webImagePool.length > webImageIndex) {
             // Content cards: use real web photo
-            updatedCards[i] = { ...updatedCards[i], imageUrl: webImagePool[webImageIndex] };
+            updatedCards[i] = { ...updatedCards[i], imageUrl: webImagePool[webImageIndex], isAiImage: false };
             webImageIndex++;
             realImagesUsed++;
           } else {
@@ -543,7 +544,7 @@ const CarouselGenerator: React.FC = () => {
         const imageResults = await Promise.all(imagePromises.map(p => p.promise));
         imagePromises.forEach((p, idx) => {
           const url = imageResults[idx];
-          if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url };
+          if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
         });
       } else {
         setImageGenProgress(`📸 ${realImagesUsed} fotos reais aplicadas!`);
@@ -781,7 +782,7 @@ const CarouselGenerator: React.FC = () => {
           <div style={{ paddingTop: `${20 * s}px`, flex: hasImage ? undefined : 1, display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center', overflow: 'hidden' }}>
             <p style={{ fontFamily: serif, fontSize: `${48 * s * fs}px`, fontWeight: 700, lineHeight: 1.18, color: mainTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 5 : 10, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(topText, accentTxt, mainTxt, 48 * fs, s)}</p>
           </div>
-          {hasImage && <div style={{ marginTop: `${24 * s}px`, flex: 1, minHeight: 0, borderRadius: `${16 * s}px`, overflow: 'hidden' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
+          {hasImage && <div style={{ marginTop: `${24 * s}px`, flex: 1, minHeight: 0, borderRadius: `${16 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: card.isAiImage ? undefined : (isLight ? '#E8E4DF' : 'rgba(255,255,255,0.08)') }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: card.isAiImage !== false ? 'cover' : 'contain' }} /></div>}
           {bottomText && <div style={{ paddingTop: `${24 * s}px`, overflow: 'hidden' }}><p style={{ fontFamily: serif, fontSize: `${36 * s * fs}px`, fontWeight: 600, lineHeight: 1.3, color: hasImage ? mainTxt : secondaryTxt, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: hasImage ? 3 : 5, WebkitBoxOrient: 'vertical' as any }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, 36 * fs, s)}</p></div>}
         </div>
       </div>

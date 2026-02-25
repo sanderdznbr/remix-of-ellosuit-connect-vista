@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { ArrowUp } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface WelcomeScreenProps {
-  onStart: () => void;
+  onStart: (initialTopic?: string) => void;
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
+  const [inputValue, setInputValue] = useState('');
+
+  const handleSubmit = () => {
+    if (inputValue.trim()) {
+      onStart(inputValue.trim());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <motion.div
       className="fixed inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden"
@@ -17,28 +33,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Horizon gradient glow — like Lovable */}
-      <div
-        className="absolute left-0 right-0 h-[300px] md:h-[400px] pointer-events-none"
-        style={{
-          bottom: '15%',
-          background: 'radial-gradient(ellipse 80% 50% at 50% 100%, rgba(123,80,220,0.25) 0%, rgba(71,30,236,0.12) 40%, transparent 70%)',
-        }}
-      />
-
-      {/* Giant orb — mostly hidden, only top ~30% visible */}
+      {/* Giant orb — mostly hidden */}
       <div className="absolute bottom-[-350px] md:bottom-[-550px] lg:bottom-[-700px] left-1/2 -translate-x-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 95vw, 1200px)', height: 'clamp(500px, 95vw, 1200px)' }}>
           <div className="carousel-loader-spinner" />
         </div>
-        <div
-          className="absolute inset-0 rounded-full blur-[150px] md:blur-[250px] opacity-25"
-          style={{ background: 'radial-gradient(circle, rgba(123,80,220,0.6) 0%, rgba(71,30,236,0.2) 40%, transparent 70%)' }}
-        />
       </div>
 
-      {/* Content — positioned upper-center */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 -mt-16 md:-mt-24">
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6 -mt-10 md:-mt-16 w-full max-w-2xl">
         {/* ElloContent Logo */}
         <motion.img
           src={ellocontentLogo}
@@ -65,52 +68,75 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
         >
-          Crie carrosséis profissionais com inteligência artificial em poucos cliques.
+          Crie carrosséis profissionais com IA em poucos cliques.
         </motion.p>
 
-        <motion.button
-          onClick={onStart}
-          className="group relative px-8 py-3 rounded-full text-white font-semibold text-base overflow-hidden cursor-pointer"
-          style={{
-            background: 'linear-gradient(135deg, #7B50DC 0%, #471eec 100%)',
-            boxShadow: '0 0 30px rgba(123,80,220,0.35), 0 0 60px rgba(123,80,220,0.1)',
-          }}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1.1, duration: 0.5, type: 'spring', stiffness: 200 }}
-          whileHover={{ scale: 1.05, boxShadow: '0 0 50px rgba(123,80,220,0.5), 0 0 90px rgba(123,80,220,0.2)' }}
-          whileTap={{ scale: 0.97 }}
+        {/* Input box — Lovable style */}
+        <motion.div
+          className="w-full relative"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 0.6 }}
         >
-          <motion.div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          <div
+            className="relative w-full rounded-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)',
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}
-            animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear', repeatDelay: 1 }}
-          />
-          <span className="relative z-10">Vamos começar? 🚀</span>
+          >
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Descreva o tema do seu carrossel..."
+              rows={3}
+              className="w-full bg-transparent text-white/90 placeholder-white/25 text-base px-5 py-4 pr-14 resize-none outline-none"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!inputValue.trim()}
+              className="absolute right-3 bottom-3 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: inputValue.trim() ? '#7B50DC' : 'rgba(255,255,255,0.1)',
+              }}
+            >
+              <ArrowUp className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Skip link */}
+        <motion.button
+          onClick={() => onStart()}
+          className="mt-4 text-white/25 hover:text-white/50 text-xs transition-colors cursor-pointer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.3, duration: 0.5 }}
+        >
+          ou pular e configurar manualmente
         </motion.button>
       </div>
 
       {/* Subtle particles */}
-      {[...Array(5)].map((_, i) => (
+      {[...Array(4)].map((_, i) => (
         <motion.div
           key={i}
           className="absolute rounded-full pointer-events-none"
           style={{
             width: 2 + Math.random() * 3,
             height: 2 + Math.random() * 3,
-            backgroundColor: `rgba(123,80,220,${0.15 + Math.random() * 0.2})`,
-            bottom: `${15 + Math.random() * 25}%`,
-            left: `${15 + Math.random() * 70}%`,
+            backgroundColor: `rgba(123,80,220,${0.1 + Math.random() * 0.15})`,
+            bottom: `${10 + Math.random() * 20}%`,
+            left: `${20 + Math.random() * 60}%`,
           }}
           animate={{
-            y: [0, -20, 0],
-            opacity: [0.2, 0.5, 0.2],
+            y: [0, -15, 0],
+            opacity: [0.15, 0.4, 0.15],
           }}
           transition={{
-            duration: 4 + Math.random() * 3,
+            duration: 5 + Math.random() * 3,
             repeat: Infinity,
             delay: Math.random() * 2,
             ease: 'easeInOut',

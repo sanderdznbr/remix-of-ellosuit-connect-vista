@@ -1367,7 +1367,10 @@ const CarouselGenerator: React.FC = () => {
       {/* ===== WELCOME SCREEN ===== */}
       <AnimatePresence>
         {showWelcome && (
-          <WelcomeScreen onStart={() => setShowWelcome(false)} />
+          <WelcomeScreen onStart={(initialTopic?: string) => {
+            if (initialTopic) setTopic(initialTopic);
+            setShowWelcome(false);
+          }} />
         )}
       </AnimatePresence>
 

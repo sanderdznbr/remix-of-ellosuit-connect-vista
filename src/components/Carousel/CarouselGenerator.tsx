@@ -19,6 +19,7 @@ import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
 import StepReferences from './wizard/StepReferences';
 import StepImageSettings from './wizard/StepImageSettings';
+import StepImageAdvanced from './wizard/StepImageAdvanced';
 import StepStyle, { STYLE_PRESETS, StylePreset } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -93,7 +94,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Referências', 'Imagem', 'Estilo'];
+  const WIZARD_STEPS = ['Tema', 'Referências', 'Imagem', 'Câmera', 'Estilo'];
 
   // Step 1: Topic
   const [topic, setTopic] = useState('');
@@ -1015,6 +1016,9 @@ const CarouselGenerator: React.FC = () => {
                       <StepImageSettings settings={imageSettings} onChange={setImageSettings} />
                     )}
                     {wizardStep === 3 && (
+                      <StepImageAdvanced settings={imageSettings} onChange={setImageSettings} />
+                    )}
+                    {wizardStep === 4 && (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
@@ -1059,7 +1063,7 @@ const CarouselGenerator: React.FC = () => {
                 <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
                   <div className="carousel-loader-spinner" />
                   <span className="text-white/60 text-3xl font-light z-[1]">
-                    {wizardStep === 0 ? '0%' : wizardStep === 1 ? '50%' : wizardStep === 2 ? '75%' : '100%'}
+                    {wizardStep === 0 ? '0%' : wizardStep === 1 ? '25%' : wizardStep === 2 ? '50%' : wizardStep === 3 ? '75%' : '100%'}
                   </span>
                 </div>
               </div>

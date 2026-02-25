@@ -1084,22 +1084,31 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Carousel viewport */}
-                <div className="relative" style={{ aspectRatio: '4/5', backgroundColor: '#000' }}>
-                  {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex)}
+            {/* Carousel viewport */}
+                <div className="relative overflow-hidden" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000' }}>
+                  <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                    <div style={{
+                      width: CARD_W,
+                      height: CARD_H,
+                      transform: `scale(${369 / CARD_W})`,
+                      transformOrigin: 'top left',
+                    }}>
+                      {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, true)}
+                    </div>
+                  </div>
                   {/* Swipe indicators */}
                   {activeCardIndex > 0 && (
                     <button onClick={() => setActiveCardIndex(activeCardIndex - 1)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
                       style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-                      <ChevronLeft className="h-4 w-4 text-white" />
+                      <ChevronLeft className="h-3.5 w-3.5 text-white" />
                     </button>
                   )}
                   {activeCardIndex < carouselData.cards.length - 1 && (
                     <button onClick={() => setActiveCardIndex(activeCardIndex + 1)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
                       style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-                      <ChevronRight className="h-4 w-4 text-white" />
+                      <ChevronRight className="h-3.5 w-3.5 text-white" />
                     </button>
                   )}
                 </div>

@@ -8,9 +8,10 @@ interface Props {
   referenceImages: ReferenceImage[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
   webImages?: string[];
+  onSkip?: () => void;
 }
 
-const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages }) => {
+const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages, onSkip }) => {
   const [refSearchQuery, setRefSearchQuery] = useState('');
   const [searchingReferences, setSearchingReferences] = useState(false);
   const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
@@ -37,8 +38,8 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Selecione fotos para o post</h2>
-        <p className="text-sm text-white/40">Escolha imagens relacionadas ao assunto. Clique para selecionar.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Encontramos algumas imagens na web</h2>
+        <p className="text-sm text-white/40">Alguma te interessa estar no post? Clique para selecionar.</p>
       </div>
 
       {allImages.length > 0 ? (
@@ -97,8 +98,11 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
       )}
 
       {/* Skip / deselect all */}
-      <button onClick={() => setReferenceImages(prev => prev.filter(r => r.category !== 'general'))}
-        className="w-full py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-dashed border-white/[0.08] hover:border-white/15 transition-all">
+      <button onClick={() => {
+        setReferenceImages(prev => prev.filter(r => r.category !== 'general'));
+        onSkip?.();
+      }}
+        className="w-full py-3.5 rounded-xl text-sm font-semibold text-white/60 hover:text-white/80 border-2 border-white/[0.12] hover:border-white/25 bg-white/[0.04] hover:bg-white/[0.08] transition-all">
         Pular — não gostei de nenhuma
       </button>
     </div>

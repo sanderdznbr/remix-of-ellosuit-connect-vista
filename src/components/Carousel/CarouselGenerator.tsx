@@ -715,7 +715,7 @@ const CarouselGenerator: React.FC = () => {
     const bg = isAccent ? accentColor : isLight ? '#F8F4EF' : bgColor;
     const mainTxt = isLight ? '#1A1A1A' : textColor;
     const secondaryTxt = isAccent ? 'rgba(255,255,255,0.75)' : isLight ? '#666' : 'rgba(255,255,255,0.75)';
-    const accentTxt = isAccent ? '#FFD4A0' : isLight ? accentColor : accentColor;
+    const accentTxt = accentColor;
     const headerTxt = isLight ? '#999' : 'rgba(255,255,255,0.5)';
 
     const renderHeader = () => {
@@ -1045,7 +1045,16 @@ const CarouselGenerator: React.FC = () => {
             <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
               {/* Center: preview with card navigation */}
               <div className="flex flex-col items-center bg-muted/20 p-2 shrink-0 md:flex-1 md:overflow-auto">
-                <div className="flex items-center justify-center w-full" style={{ minHeight: 0 }}>
+                <div className="flex items-center justify-center w-full relative" style={{ minHeight: 0 }}>
+                  {/* Large prev button */}
+                  <button
+                    onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
+                    disabled={validIndex === 0}
+                    className="absolute left-1 md:left-4 z-10 p-2 md:p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-background disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
+                  </button>
+
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
                       transform: `scale(${Math.min((typeof window !== 'undefined' ? window.innerWidth * 0.85 : 300) / PREVIEW_W, 1.6)})`,
@@ -1057,23 +1066,24 @@ const CarouselGenerator: React.FC = () => {
                       {renderCardPreview(ec, validIndex)}
                     </div>
                   </div>
+
+                  {/* Large next button */}
+                  <button
+                    onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
+                    disabled={validIndex === carouselData.cards.length - 1}
+                    className="absolute right-1 md:right-4 z-10 p-2 md:p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-background disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
+                  </button>
                 </div>
                 {/* Card navigation dots */}
-                <div className="flex items-center gap-2 py-2 shrink-0">
-                  <button onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
-                    disabled={validIndex === 0} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
+                <div className="flex items-center gap-1.5 py-2 shrink-0">
                   <div className="flex items-center gap-1">
                     {carouselData.cards.map((_, i) => (
                       <button key={i} onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(carouselData.cards[i]?.imagePrompt || carouselData.cards[i]?.title || ''); }}
-                        className={`w-2 h-2 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${i === validIndex ? 'bg-primary scale-125' : 'bg-border hover:bg-muted-foreground'}`} />
                     ))}
                   </div>
-                  <button onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
-                    disabled={validIndex === carouselData.cards.length - 1} className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30">
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
                   <span className="text-xs text-muted-foreground font-medium ml-1">{validIndex + 1}/{carouselData.cards.length}</span>
                 </div>
               </div>

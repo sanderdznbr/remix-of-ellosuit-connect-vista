@@ -1101,7 +1101,7 @@ const CarouselGenerator: React.FC = () => {
                     )}
                     {wizardStep === 2 && (
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        webImages={webSearchResult?.images} />
+                        webImages={webSearchResult?.images} onSkip={() => setWizardStep(3)} />
                     )}
                     {wizardStep === 3 && (
                       <StepFaceRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}

@@ -111,7 +111,7 @@ const GeneratingAnimation: React.FC<Props> = ({
         if (prev >= CODE_LINES.length) return 0;
         return prev + 1;
       });
-    }, 600);
+    }, 250);
     return () => clearInterval(interval);
   }, [CODE_LINES.length]);
 
@@ -255,104 +255,6 @@ const GeneratingAnimation: React.FC<Props> = ({
             style={{ background: 'linear-gradient(transparent, #050508)' }} />
         </div>
 
-        {/* Mini card previews — real count */}
-        <div className="p-6" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-          <p className="text-white/20 text-[10px] font-mono uppercase tracking-widest mb-3">
-            Cards sendo criados ({showMiniCards.length}/{displayCardCount})
-          </p>
-          <div className={`grid ${gridCols} gap-2`}>
-            {Array.from({ length: displayCardCount }).map((_, i) => {
-              const isActive = showMiniCards.includes(i);
-              const type = cardTypes[i] || 'content';
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={isActive ? { opacity: 1, scale: 1 } : { opacity: 0.1, scale: 0.8 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  className="aspect-[4/5] rounded-lg overflow-hidden relative"
-                  style={{
-                    background: isActive ? (miniCardColors[i] || miniCardColors[0]) : 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  {isActive && (
-                    <>
-                      <motion.div
-                        className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full z-10"
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-                        style={{ backgroundColor: '#28C840' }}
-                      />
-
-                      {type === 'cover' && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                          <motion.div className="w-5 h-1.5 rounded-full mb-2" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-                            initial={{ width: 0 }} animate={{ width: 20 }} transition={{ duration: 0.8, delay: 0.3 }} />
-                          <motion.div className="h-1.5 rounded-full mb-1" style={{ backgroundColor: 'rgba(255,255,255,0.35)', width: '70%' }}
-                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: 0.6 }} />
-                          <motion.div className="h-1 rounded-full mb-2" style={{ backgroundColor: 'rgba(255,255,255,0.2)', width: '50%' }}
-                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.9 }} />
-                        </div>
-                      )}
-
-                      {type === 'content' && (
-                        <div className="absolute inset-0 p-1.5 flex flex-col">
-                          <motion.div className="w-3 h-3 rounded-full mb-1.5 flex items-center justify-center"
-                            style={{ backgroundColor: `${accentColor}80` }}
-                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
-                            <span className="text-white text-[5px] font-bold">{i}</span>
-                          </motion.div>
-                          <motion.div className="h-1 rounded-full mb-1" style={{ backgroundColor: 'rgba(255,255,255,0.3)', width: '80%' }}
-                            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.4 }} />
-                          {[65, 90, 75].map((w, j) => (
-                            <motion.div key={j} className="h-0.5 rounded-full mb-0.5"
-                              style={{ backgroundColor: 'rgba(255,255,255,0.1)', width: `${w}%` }}
-                              initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.3, delay: 0.6 + j * 0.15 }} />
-                          ))}
-                        </div>
-                      )}
-
-                      {type === 'image' && (
-                        <div className="absolute inset-0 flex flex-col">
-                          <motion.div className="flex-1 relative overflow-hidden"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                            <motion.div className="absolute inset-0"
-                              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)' }}
-                              animate={{ x: ['-100%', '100%'] }}
-                              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} />
-                          </motion.div>
-                        </div>
-                      )}
-
-                      {type === 'cta' && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                          <motion.div className="w-4 h-4 rounded-full mb-1.5 flex items-center justify-center"
-                            style={{ backgroundColor: `${accentColor}66` }}
-                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.3 }}>
-                            <span className="text-[6px]">🚀</span>
-                          </motion.div>
-                          <motion.div className="h-2.5 rounded-full px-2 flex items-center justify-center"
-                            style={{ backgroundColor: `${accentColor}99`, width: '65%' }}
-                            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.9 }}>
-                            <div className="h-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.5)', width: '70%' }} />
-                          </motion.div>
-                        </div>
-                      )}
-
-                      {i === showMiniCards.length - 1 && (
-                        <motion.div className="absolute bottom-1 left-1.5 w-0.5 h-2 rounded-full"
-                          style={{ backgroundColor: accentColor }}
-                          animate={{ opacity: [1, 0, 1] }}
-                          transition={{ duration: 0.8, repeat: Infinity }} />
-                      )}
-                    </>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </motion.div>
   );

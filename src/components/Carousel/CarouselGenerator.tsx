@@ -504,7 +504,13 @@ const CarouselGenerator: React.FC = () => {
 
     // === GEMINI / NANO BANANA PATH ===
     const styleImageGen = activeMarketplaceStyle?.imageGeneration;
-    const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
+    
+    // Add timeout to prevent infinite loading (90s max per image)
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Image generation timeout (90s)')), 90000)
+    );
+    
+    const invokePromise = supabase.functions.invoke('generate-carousel-image', {
       body: {
         prompt: opts.prompt,
         imageSize: '3:4',
@@ -517,6 +523,8 @@ const CarouselGenerator: React.FC = () => {
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
       },
     });
+    
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
     if (error) throw error;
     if (data?.success && data?.imageUrl) return data.imageUrl;
     return null;
@@ -861,8 +869,10 @@ const CarouselGenerator: React.FC = () => {
             const cardTextParts: string[] = [];
             
             // CRITICAL: Force Portuguese language and tie to user's topic
-            cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`);
+            cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
+            cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
+            cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             
             if (isCover) {
               cardTextParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${updatedCards.length}).`);

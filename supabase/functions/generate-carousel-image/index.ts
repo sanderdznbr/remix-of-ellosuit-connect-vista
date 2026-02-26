@@ -53,9 +53,11 @@ INSTRUÇÕES CRÍTICAS:
 - Gere a imagem COMPLETA de um post de Instagram (1080x1350, retrato 4:5) com TODOS os elementos visuais integrados: tipografia, elementos decorativos, tratamento fotográfico e composição conforme as regras de estilo acima.
 - A imagem deve ser um POST PRONTO PARA PUBLICAR, não apenas uma fotografia.
 - TODO o conteúdo textual fornecido acima DEVE ser renderizado diretamente na imagem com tipografia apropriada.
-- TODO texto na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use inglês.
+- TODO texto na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use inglês, NÃO use espanhol. APENAS português do Brasil.
 - Siga as referências de estilo EXATAMENTE — replique a mesma estética de colagem editorial de revista, a mesma hierarquia tipográfica, a mesma paleta de cores, os mesmos elementos decorativos.
-- Se o card indica que NÃO é capa/hero, use uma composição DIFERENTE — use layouts editoriais de conteúdo com blocos de texto mistos, fotos menores e arranjos variados.`;
+- Se o card indica que NÃO é capa/hero, use uma composição DIFERENTE — use layouts editoriais de conteúdo com blocos de texto mistos, fotos menores e arranjos variados.
+- A imagem NÃO deve ter bordas coloridas no topo nem na base. A composição deve ir de ponta a ponta (full bleed), sem margens ou barras.
+- IGNORE completamente quaisquer nomes de usuário (@), marcas, logotipos, nomes de empresas ou informações pessoais que apareçam nas imagens de referência. Use as referências APENAS para extrair o ESTILO VISUAL (paleta de cores, tipografia, composição, elementos decorativos). NUNCA copie textos, @handles, nomes de pessoas ou empresas das referências.`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 
@@ -100,7 +102,7 @@ STYLE REQUIREMENTS:
     }
 
     if (validStyleRefs.length > 0) {
-      textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). Match the visual style, color palette, and aesthetic of these references.`;
+      textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). Match the visual style, color palette, layout composition, and aesthetic of these references. CRITICAL: Extract ONLY the visual style (colors, typography style, layout, decorative elements). DO NOT copy any text content, usernames, @ handles, brand names, company names, or personal information from the reference images. Replace any such information with the content provided above.`;
     }
 
     messageContent.push({ type: 'text', text: textPrompt });
@@ -164,7 +166,7 @@ STYLE REQUIREMENTS:
       const retryContent: any[] = [];
       if (stylePrompt) {
         // For marketplace styles: retry with simplified style prompt but keep the essence
-        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. Siga o estilo editorial descrito acima fielmente.` });
+        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. Siga o estilo editorial descrito acima fielmente. NÃO copie nomes, @handles ou informações pessoais das referências. SEM bordas no topo ou base da imagem.` });
       } else {
         retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });
       }
@@ -177,7 +179,7 @@ STYLE REQUIREMENTS:
     // Attempt 3: text-only fallback — still keep style if marketplace
     if (!generatedImage) {
       const fallbackPrompt = stylePrompt
-        ? `${stylePrompt}\n\n${imagePrompt}\n\nGere a composição editorial completa com tipografia em PORTUGUÊS BRASILEIRO.`
+        ? `${stylePrompt}\n\n${imagePrompt}\n\nGere a composição editorial completa com tipografia em PORTUGUÊS BRASILEIRO. NÃO use espanhol. NÃO copie informações pessoais das referências. SEM bordas.`
         : `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.`;
       try {
         generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: fallbackPrompt }], 3);

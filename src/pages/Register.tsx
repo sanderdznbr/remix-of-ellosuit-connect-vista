@@ -145,7 +145,7 @@ export default function Register() {
             body: { template_key: 'welcome', recipient_email: email, recipient_name: username || email.split('@')[0] },
           }).catch(() => {});
         } catch {}
-        navigate('/plans');
+        navigate('/');
       }
     } catch {
       setError('Erro inesperado. Tente novamente.');

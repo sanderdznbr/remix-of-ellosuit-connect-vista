@@ -115,7 +115,7 @@ export default function ForgotPassword() {
         navigate('/');
         return;
       }
-      navigate('/dashboard');
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Erro ao redefinir senha.');
     } finally {

@@ -13,7 +13,6 @@ import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import '@/styles/carousel-loader.css';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileAuthScreen from '@/components/Mobile/MobileAuthScreen';
-import { useAdminMaster } from '@/hooks/useAdminMaster';
 
 const AuthScreen = () => {
   const { isMobile } = useIsMobile();
@@ -31,23 +30,18 @@ const AuthScreen = () => {
   const [companyName, setCompanyName] = useState('');
   
   const { user, signIn, signUp, signInWithGoogle } = useAuth();
-  const { isAdminMaster, loading: adminLoading } = useAdminMaster();
   const navigate = useNavigate();
   const location = useLocation();
 
   const getReturnPath = () => {
-    const urlParams = new URLSearchParams(location.search);
-    const returnTo = urlParams.get('returnTo');
-    if (returnTo === 'tarefas') return '/tarefas';
-    if (isAdminMaster) return '/dashboard/admin';
-    return '/dashboard';
+    return '/';
   };
 
   useEffect(() => {
-    if (user && !adminLoading) {
+    if (user) {
       navigate(getReturnPath(), { replace: true });
     }
-  }, [user, adminLoading, isAdminMaster, navigate, location.search]);
+  }, [user, navigate]);
 
   if (isMobile) {
     return <MobileAuthScreen />;

@@ -19,23 +19,28 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
   const email = user?.email || '';
 
-  // Fetch recent projects for sidebar
+  // Fetch recent projects + credit balance
   useEffect(() => {
-    const fetchRecent = async () => {
+    const fetchData = async () => {
       if (!user) return;
       try {
-        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
         if (!cu) return;
-        const { data } = await supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5);
-        setRecentProjects(data || []);
+        const [{ data: carousels }, { data: credits }] = await Promise.all([
+          supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
+          supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
+        ]);
+        setRecentProjects(carousels || []);
+        setCreditBalance(credits?.balance ?? 0);
       } catch {}
     };
-    fetchRecent();
+    fetchData();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -172,10 +177,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-white/40">Créditos</span>
-            <span className="text-white/70 font-medium">0 restantes</span>
+            <span className="text-white/70 font-medium">{creditBalance !== null ? `${Math.floor(creditBalance)} restantes` : '...'}</span>
           </div>
           <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-            <div className="h-full rounded-full bg-purple-500/60" style={{ width: '0%' }} />
+            <div className="h-full rounded-full bg-purple-500/60" style={{ width: `${Math.min(100, ((creditBalance ?? 0) / 100) * 100)}%` }} />
           </div>
         </div>
 

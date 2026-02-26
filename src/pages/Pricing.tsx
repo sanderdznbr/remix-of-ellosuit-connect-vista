@@ -192,7 +192,14 @@ function PricingContent({ isLoggedIn }: { isLoggedIn: boolean }) {
             <p className="text-white/30 text-xs mb-6">{plan.subtitle}</p>
 
             <button
-              onClick={() => navigate(isLoggedIn ? '#' : '/auth')}
+              onClick={() => {
+                const planKey = plan.name.toLowerCase();
+                if (planKey === 'enterprise') {
+                  window.open('mailto:contato@ellocontent.com?subject=Plano Enterprise', '_blank');
+                } else {
+                  navigate(isLoggedIn ? `/checkout?plano=${planKey}` : '/auth');
+                }
+              }}
               className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer mb-6 ${plan.ctaStyle}`}
             >
               {plan.cta}

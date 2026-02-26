@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowUp, Clock, ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import '@/styles/carousel-loader.css';
@@ -24,6 +24,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isUserTyping = inputValue.length > 0;
@@ -39,6 +40,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         if (!companyData) return;
         const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(10);
         setRecentCarousels(data || []);
+        // Fetch credit balance
+        const { data: balanceData } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', companyData.company_id).single();
+        setCreditBalance(balanceData?.balance || 0);
       } catch (err) { console.error(err); }
     };
     fetchRecent();
@@ -96,7 +100,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         </motion.h1>
 
         <motion.p
-          className="text-xs md:text-sm max-w-xs mb-8"
+          className="text-xs md:text-sm max-w-xs mb-4"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
@@ -104,6 +108,21 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         >
           Desenvolva carrosséis com um prompt.
         </motion.p>
+
+        {creditBalance !== null && (
+          <motion.div
+            className="flex items-center gap-1.5 mb-6 px-3 py-1.5 rounded-full"
+            style={{ backgroundColor: 'rgba(123, 80, 220, 0.1)', border: '1px solid rgba(123, 80, 220, 0.2)' }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.45, duration: 0.3 }}
+          >
+            <Sparkles className="w-3 h-3" style={{ color: '#7B50DC' }} />
+            <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              {Math.floor(creditBalance)} créditos
+            </span>
+          </motion.div>
+        )}
 
         <motion.div
           className="w-full max-w-xl"

@@ -614,6 +614,29 @@ const CarouselGenerator: React.FC = () => {
   // ===== GENERATE =====
   const generateContent = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
+
+    // Check credit balance before generating
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+        if (cu) {
+          const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
+          const creditsNeeded = cardCount; // 1 credit per card
+          if (balance && balance.balance < creditsNeeded) {
+            toast({
+              title: 'Créditos insuficientes',
+              description: `Você precisa de ${creditsNeeded} créditos mas tem ${Math.floor(balance.balance)}. Adquira mais créditos.`,
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Credit check failed, proceeding anyway:', err);
+    }
+
     setGenerating(true);
     // Clear previous carousel data to prevent reusing old images
     setCarouselData(null);
@@ -792,11 +815,20 @@ const CarouselGenerator: React.FC = () => {
         if (userData.user) {
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
+            // Consume credits (1 per card generated)
+            try {
+              await supabase.rpc('consume_ai_credits', {
+                p_company_id: companyData.company_id,
+                p_agent_id: companyData.company_id, // using company_id as placeholder
+                p_amount: finalData.cards.length,
+                p_description: `Carrossel: ${finalData.title || topic} (${finalData.cards.length} cards)`,
+              });
+            } catch (creditErr) { console.warn('Credit consumption failed:', creditErr); }
+
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings };
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
-              // Capture real rendered card as cover after a delay (refs need to mount)
               setTimeout(() => captureCoverImage(inserted.id, companyData.company_id).catch(() => {}), 2000);
             }
           }

@@ -1730,6 +1730,107 @@ export type Database = {
           },
         ]
       }
+      ellocontent_subscriptions: {
+        Row: {
+          beehive_secure_id: string | null
+          beehive_secure_url: string | null
+          beehive_status: string | null
+          beehive_transaction_id: string | null
+          canceled_at: string | null
+          card_brand: string | null
+          card_last_digits: string | null
+          company_id: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          customer_document: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          expires_at: string | null
+          extra_credit_price: number
+          id: string
+          metadata: Json | null
+          monthly_credits: number
+          monthly_price: number
+          paid_at: string | null
+          payment_method: string | null
+          plan_name: string
+          starts_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beehive_secure_id?: string | null
+          beehive_secure_url?: string | null
+          beehive_status?: string | null
+          beehive_transaction_id?: string | null
+          canceled_at?: string | null
+          card_brand?: string | null
+          card_last_digits?: string | null
+          company_id: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          expires_at?: string | null
+          extra_credit_price?: number
+          id?: string
+          metadata?: Json | null
+          monthly_credits?: number
+          monthly_price: number
+          paid_at?: string | null
+          payment_method?: string | null
+          plan_name: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beehive_secure_id?: string | null
+          beehive_secure_url?: string | null
+          beehive_status?: string | null
+          beehive_transaction_id?: string | null
+          canceled_at?: string | null
+          card_brand?: string | null
+          card_last_digits?: string | null
+          company_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          expires_at?: string | null
+          extra_credit_price?: number
+          id?: string
+          metadata?: Json | null
+          monthly_credits?: number
+          monthly_price?: number
+          paid_at?: string | null
+          payment_method?: string | null
+          plan_name?: string
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ellocontent_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_campaigns: {
         Row: {
           company_id: string | null
@@ -5887,7 +5988,15 @@ export type Database = {
         | "manage_crm"
         | "view_tracking"
         | "manage_tracking"
-      plan_type: "free" | "base" | "pro" | "business" | "enterprise" | "custom"
+      plan_type:
+        | "free"
+        | "base"
+        | "pro"
+        | "business"
+        | "enterprise"
+        | "custom"
+        | "starter"
+        | "growth"
       resource_type:
         | "users"
         | "storage_gb"
@@ -6071,7 +6180,16 @@ export const Constants = {
         "view_tracking",
         "manage_tracking",
       ],
-      plan_type: ["free", "base", "pro", "business", "enterprise", "custom"],
+      plan_type: [
+        "free",
+        "base",
+        "pro",
+        "business",
+        "enterprise",
+        "custom",
+        "starter",
+        "growth",
+      ],
       resource_type: [
         "users",
         "storage_gb",

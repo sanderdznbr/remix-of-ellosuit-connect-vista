@@ -29,7 +29,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
 
-  // Fetch recent carousels metadata
+  // Fetch recent carousels metadata + covers via RPC
   useEffect(() => {
     const fetchRecent = async () => {
       if (!user) return;
@@ -39,19 +39,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(3);
         setRecentCarousels(data || []);
 
-        // Fetch cover images individually
+        // Fetch cover images via RPC (extracts only the URL server-side, much faster)
         if (data && data.length > 0) {
-          for (const item of data) {
-            supabase.from('generated_carousels').select('carousel_data').eq('id', item.id).single().then(({ data: full }) => {
-              if (full?.carousel_data) {
-                const cd = typeof full.carousel_data === 'string' ? JSON.parse(full.carousel_data) : full.carousel_data;
-                const firstCard = cd?.cards?.[0];
-                const img = firstCard?.imageUrl || firstCard?.image_url || '';
-                if (img) {
-                  setCoverImages(prev => ({ ...prev, [item.id]: img }));
-                }
-              }
-            });
+          const ids = data.map(d => d.id);
+          const { data: covers } = await supabase.rpc('get_carousel_cover_images', { carousel_ids: ids });
+          if (covers) {
+            const map: Record<string, string> = {};
+            for (const c of covers) {
+              if (c.cover_image) map[c.carousel_id] = c.cover_image;
+            }
+            setCoverImages(map);
           }
         }
       } catch (err) { console.error(err); }

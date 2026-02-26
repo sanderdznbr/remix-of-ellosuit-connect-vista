@@ -5797,6 +5797,13 @@ export type Database = {
         }
         Returns: Json
       }
+      get_carousel_cover_images: {
+        Args: { carousel_ids: string[] }
+        Returns: {
+          carousel_id: string
+          cover_image: string
+        }[]
+      }
       increment_email_count: {
         Args: { p_company_id: string; p_user_id: string }
         Returns: undefined

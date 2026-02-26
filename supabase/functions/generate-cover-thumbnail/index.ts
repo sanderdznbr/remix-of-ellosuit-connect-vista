@@ -104,38 +104,10 @@ async function processCarouselWithAI(
   const firstCard = cards?.[0];
   if (!firstCard) return { success: false, error: "No cards found" };
 
-  const sc = carousel.style_config || {};
-  const cardTitle = firstCard.title || carousel.title || "";
-  const cardSubtitle = firstCard.subtitle || "";
-  const bgColor = sc.bgColor || "#1a1a2e";
-  const textColor = sc.textColor || "#ffffff";
-  const accentColor = sc.accentColor || "#7B50DC";
-
-  // Check if card has an existing image we can use as base
+  // Check if card has an existing AI-generated image we can use directly
   const hasImage = firstCard.imageUrl && (firstCard.imageUrl.startsWith("data:") || firstCard.imageUrl.startsWith("http"));
 
-  if (lovableApiKey && hasImage) {
-    // Use AI to edit the existing image with text overlay
-    try {
-      const result = await generateCoverWithAI(
-        lovableApiKey,
-        firstCard.imageUrl,
-        cardTitle,
-        cardSubtitle,
-        bgColor,
-        textColor,
-        accentColor
-      );
-
-      if (result) {
-        return await uploadAndSave(supabase, supabaseUrl, carousel, result);
-      }
-    } catch (err) {
-      console.error("AI cover generation failed, falling back:", err.message);
-    }
-  }
-
-  // Fallback: if card has imageUrl, just use it directly
+  // Priority 1: Use the actual AI-generated image from the first card (no modifications)
   if (hasImage && firstCard.imageUrl.startsWith("data:")) {
     return await uploadBase64AndSave(supabase, supabaseUrl, carousel, firstCard.imageUrl);
   }
@@ -149,85 +121,28 @@ async function processCarouselWithAI(
         const ct = resp.headers.get("content-type") || "image/jpeg";
         return await uploadBase64AndSave(supabase, supabaseUrl, carousel, `data:${ct};base64,${base64}`);
       }
-    } catch {}
-  }
-
-  // Last resort: generate a cover purely from text using AI
-  if (lovableApiKey) {
-    try {
-      const prompt = `Create a professional social media carousel cover slide with dark background color ${bgColor}. 
-The main title text "${cardTitle}" should be prominent, bold, and in ${textColor} color.
-The subtitle "${cardSubtitle}" should be smaller below it.
-Use accent color ${accentColor} for decorative elements.
-The design should be modern, clean, portrait orientation (9:16 aspect ratio), suitable for Instagram carousel.
-Make it look like a professional branded social media post.`;
-
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
-          messages: [{ role: "user", content: prompt }],
-          modalities: ["image", "text"],
-        }),
-      });
-
-      const data = await response.json();
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (imageUrl) {
-        return await uploadBase64AndSave(supabase, supabaseUrl, carousel, imageUrl);
-      }
     } catch (err) {
-      console.error("AI text-only cover generation failed:", err.message);
+      console.error("Failed to fetch first card image:", err.message);
     }
   }
 
-  return { success: false, error: "No image source available and AI generation failed" };
-}
+  // Priority 2: Check other cards for any AI image
+  for (let i = 1; i < (cards?.length || 0); i++) {
+    const card = cards[i];
+    if (card?.imageUrl && card.imageUrl.startsWith("http")) {
+      try {
+        const resp = await fetch(card.imageUrl);
+        if (resp.ok) {
+          const buf = await resp.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          const ct = resp.headers.get("content-type") || "image/jpeg";
+          return await uploadBase64AndSave(supabase, supabaseUrl, carousel, `data:${ct};base64,${base64}`);
+        }
+      } catch {}
+    }
+  }
 
-async function generateCoverWithAI(
-  apiKey: string,
-  imageUrl: string,
-  title: string,
-  subtitle: string,
-  bgColor: string,
-  textColor: string,
-  accentColor: string
-) {
-  const prompt = `Edit this image to create a professional social media carousel cover slide.
-Add a dark gradient overlay from bottom (stronger) to top (lighter).
-Add the following text overlaid on the image:
-- Main title: "${title}" - make it bold, large, prominent, in white color, positioned in the lower-center area
-- Subtitle: "${subtitle}" - smaller text below the title, in a slightly dimmer white
-The text should be readable and the overall design should look like a polished Instagram carousel cover.
-Keep the original image visible but darkened slightly as a background.`;
-
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-image",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-      modalities: ["image", "text"],
-    }),
-  });
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+  return { success: false, error: "No image source available in carousel cards" };
 }
 
 async function uploadBase64AndSave(supabase: any, supabaseUrl: string, carousel: any, dataUri: string) {

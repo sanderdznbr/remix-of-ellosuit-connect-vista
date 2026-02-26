@@ -109,7 +109,13 @@ STYLE REQUIREMENTS:
     }
 
     if (validStyleRefs.length > 0) {
-      textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). Match the visual style, color palette, layout composition, and aesthetic of these references. CRITICAL: Extract ONLY the visual style (colors, typography style, layout, decorative elements). DO NOT copy any text content, usernames, @ handles, brand names, company names, or personal information from the reference images. Replace any such information with the content provided above.`;
+      textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). You MUST replicate these references with MAXIMUM FIDELITY:
+1. Match the EXACT visual style: same color palette, same typography weight/style/hierarchy, same decorative elements (lines, shapes, textures, overlays)
+2. Match the EXACT layout composition: same grid structure, same text placement zones, same image-to-text ratio
+3. Match the EXACT aesthetic treatment: same photo filters, same contrast levels, same grain/texture effects, same border treatments
+4. The result should look like it belongs to the SAME SERIES as the reference images — a viewer should immediately recognize it as the same brand/style
+5. CRITICAL: Extract ONLY the visual style. DO NOT copy any text content, usernames, @ handles, brand names, company names, or personal information. Replace with the content provided above.
+6. Each card should have a UNIQUE layout variation within the same style system — do NOT make every card identical to the first reference.`;
     }
 
     messageContent.push({ type: 'text', text: textPrompt });

@@ -2142,7 +2142,7 @@ const CarouselGenerator: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
               {/* Left: preview with card navigation */}
               <motion.div
                 initial={{ x: 0 }}
@@ -2207,8 +2207,8 @@ const CarouselGenerator: React.FC = () => {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 300, opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="md:w-[380px] shrink-0"
-                style={{ backgroundColor: '#111118', borderLeft: '1px solid rgba(255,255,255,0.06)' }}
+                className="md:w-[380px] shrink-0 overflow-y-auto md:overflow-y-auto"
+                style={{ backgroundColor: '#111118', borderLeft: '1px solid rgba(255,255,255,0.06)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
               >
                 <CarouselEditorSidebar
                   card={ec}

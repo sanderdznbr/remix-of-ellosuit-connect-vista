@@ -84,6 +84,7 @@ const plans = [
     ],
   },
 ];
+
 export default function Pricing() {
   const navigate = useNavigate();
 
@@ -147,7 +148,7 @@ export default function Pricing() {
           Preços
         </h1>
         <p className="text-white/40 text-sm md:text-base max-w-md mx-auto">
-          Comece de graça. Faça upgrade para ter a capacidade que sua equipe precisa.
+          Escolha o plano ideal para escalar sua produção de conteúdo.
         </p>
       </motion.div>
 

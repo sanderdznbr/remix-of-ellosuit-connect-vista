@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Loader2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ const TOTAL_STEPS = 3;
 
 const STEP_SUBTITLES = [
   'Conte-nos sobre você',
-  'Dados do seu negócio',
+  'Verifique via WhatsApp',
   'Crie seu acesso',
 ];
 
@@ -64,10 +64,9 @@ export default function Register() {
         if (!companyName.trim()) { setError('Informe o nome da empresa.'); return false; }
         return true;
       case 1:
-        if (!document.trim() || document.replace(/\D/g, '').length < 11) { setError('Informe um CPF ou CNPJ válido.'); return false; }
-        if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Informe um telefone válido.'); return false; }
-        if (!email.trim()) { setError('Informe seu email para verificação.'); return false; }
-        if (!emailVerified) { setError('Verifique seu email antes de continuar.'); return false; }
+        if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Informe um telefone válido com WhatsApp.'); return false; }
+        if (!email.trim()) { setError('Informe seu email.'); return false; }
+        if (!emailVerified) { setError('Verifique seu WhatsApp antes de continuar.'); return false; }
         return true;
       case 2:
         if (password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return false; }
@@ -89,18 +88,18 @@ export default function Register() {
   };
 
   const handleSendCode = async () => {
-    if (!email.trim()) { setError('Informe seu email antes de enviar o código.'); return; }
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Informe seu telefone com WhatsApp antes de enviar o código.'); return; }
     setSendingCode(true);
     setError(null);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('send-email-code', {
-        body: { email, phone: phone.replace(/\D/g, '') },
+      const { data, error: fnError } = await supabase.functions.invoke('send-phone-code', {
+        body: { phone: phone.replace(/\D/g, '') },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
       setCodeSent(true);
     } catch (err: any) {
-      setError(err.message || 'Erro ao enviar código. Tente novamente.');
+      setError(err.message || 'Erro ao enviar código via WhatsApp. Tente novamente.');
     } finally {
       setSendingCode(false);
     }
@@ -111,9 +110,9 @@ export default function Register() {
     setVerifyingCode(true);
     setError(null);
     try {
-      const identifier = phone.replace(/\D/g, '') || email;
+      const cleanPhone = phone.replace(/\D/g, '');
       const { data, error: fnError } = await supabase.functions.invoke('verify-phone-code', {
-        body: { phone: identifier, code: verificationCode },
+        body: { phone: cleanPhone, code: verificationCode },
       });
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);
@@ -240,26 +239,25 @@ export default function Register() {
             </div>
           )}
 
-          {/* Step 1 — Business + Email Verification */}
+          {/* Step 1 — WhatsApp Verification */}
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <Label className={labelClass}>CPF ou CNPJ</Label>
-                <Input
-                  value={document}
-                  onChange={(e) => setDocument(formatDocument(e.target.value))}
-                  placeholder="000.000.000-00"
-                  className={`${inputClass} mt-1.5`}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <Label className={labelClass}>Telefone</Label>
+                <Label className={labelClass}>Telefone (WhatsApp)</Label>
                 <Input
                   value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  onChange={(e) => {
+                    setPhone(formatPhone(e.target.value));
+                    if (emailVerified) {
+                      setEmailVerified(false);
+                      setCodeSent(false);
+                      setVerificationCode('');
+                    }
+                  }}
                   placeholder="(11) 99999-9999"
                   className={`${inputClass} mt-1.5`}
+                  autoFocus
+                  disabled={emailVerified}
                 />
               </div>
               <div>
@@ -267,31 +265,23 @@ export default function Register() {
                 <Input
                   type="email"
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailVerified) {
-                      setEmailVerified(false);
-                      setCodeSent(false);
-                      setVerificationCode('');
-                    }
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="voce@suaempresa.com"
                   className={`${inputClass} mt-1.5`}
-                  disabled={emailVerified}
                 />
               </div>
 
-              {/* Email verification inline */}
+              {/* WhatsApp verification inline */}
               {!emailVerified ? (
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
-                      <Mail className="h-4 w-4 text-purple-400" />
+                    <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+                      <MessageCircle className="h-4 w-4 text-green-400" />
                     </div>
                     <p className="text-sm text-white/50">
                       {codeSent
-                        ? <>Código enviado para <span className="font-semibold text-white">{email}</span>. Verifique sua caixa de entrada e spam.</>
-                        : 'Enviaremos um código por email para verificar sua identidade'}
+                        ? <>Código enviado para <span className="font-semibold text-white">{phone}</span> via WhatsApp.</>
+                        : 'Enviaremos um código via WhatsApp para verificar sua identidade'}
                     </p>
                   </div>
 
@@ -301,12 +291,12 @@ export default function Register() {
                       onClick={handleSendCode}
                       variant="outline"
                       className="w-full h-10 rounded-xl text-sm border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-                      disabled={sendingCode || !email.trim()}
+                      disabled={sendingCode || !phone.trim() || phone.replace(/\D/g, '').length < 10}
                     >
                       {sendingCode ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
                       ) : (
-                        'Enviar código de verificação'
+                        'Enviar código via WhatsApp'
                       )}
                     </Button>
                   ) : (
@@ -335,7 +325,7 @@ export default function Register() {
                       <button
                         type="button"
                         onClick={handleSendCode}
-                        className="text-xs text-purple-400 hover:underline w-full text-center"
+                        className="text-xs text-green-400 hover:underline w-full text-center"
                       >
                         Reenviar código
                       </button>
@@ -343,9 +333,9 @@ export default function Register() {
                   )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-purple-400 font-medium rounded-2xl border border-purple-500/20 bg-purple-500/10 p-4">
+                <div className="flex items-center gap-2 text-sm text-green-400 font-medium rounded-2xl border border-green-500/20 bg-green-500/10 p-4">
                   <Check className="h-4 w-4" />
-                  Email verificado com sucesso!
+                  WhatsApp verificado com sucesso!
                 </div>
               )}
             </div>
@@ -355,9 +345,9 @@ export default function Register() {
           {step === 2 && (
             <div className="space-y-5">
               <div className="flex items-center gap-2 text-sm text-white/50 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <Mail className="h-4 w-4" />
-                <span>{email}</span>
-                <Check className="h-4 w-4 text-purple-400 ml-auto" />
+                <MessageCircle className="h-4 w-4 text-green-400" />
+                <span>{phone}</span>
+                <Check className="h-4 w-4 text-green-400 ml-auto" />
               </div>
               <div>
                 <Label className={labelClass}>Senha</Label>

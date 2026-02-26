@@ -100,16 +100,7 @@ const AuthScreen = () => {
         return;
       }
       if (data?.user) {
-        supabase.functions.invoke('send-system-email', {
-          body: { template_key: 'welcome', recipient_email: email, recipient_name: username || email.split('@')[0] },
-        }).catch(() => {});
-        
-        if (!data.session) {
-          setSuccess('Cadastro realizado! Verifique seu email.');
-          setMode('signin');
-        } else {
-          navigate(getReturnPath(), { replace: true });
-        }
+        navigate(getReturnPath(), { replace: true });
       }
     } catch {
       setError('Erro inesperado. Tente novamente.');

@@ -983,13 +983,15 @@ const CarouselGenerator: React.FC = () => {
           if (companyData) {
             // Consume credits (1 per card generated)
             try {
-              await supabase.rpc('consume_ai_credits', {
+              const result = await supabase.rpc('consume_ai_credits', {
                 p_company_id: companyData.company_id,
-                p_agent_id: companyData.company_id, // using company_id as placeholder
+                p_agent_id: null,
                 p_amount: finalData.cards.length,
                 p_description: `Carrossel: ${finalData.title || topic} (${finalData.cards.length} cards)`,
               });
-            } catch (creditErr) { console.warn('Credit consumption failed:', creditErr); }
+              if (result.error) console.error('Credit consumption RPC error:', result.error);
+              else console.log('Credits consumed:', result.data);
+            } catch (creditErr) { console.error('Credit consumption failed:', creditErr); }
 
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();

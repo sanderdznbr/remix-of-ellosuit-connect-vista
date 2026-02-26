@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Clock } from 'lucide-react';
+import { ArrowUp, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import '@/styles/carousel-loader.css';
@@ -24,6 +24,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isUserTyping = inputValue.length > 0;
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
@@ -35,7 +36,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       try {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
         if (!companyData) return;
-        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(4);
+        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(10);
         setRecentCarousels(data || []);
       } catch (err) { console.error(err); }
     };
@@ -161,39 +162,64 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         </motion.button>
       </div>
 
-      {/* Recent projects — pinned to bottom */}
+      {/* Recent projects — pinned to bottom with horizontal slider */}
       <motion.div
         className="relative z-10 px-4 md:px-8 pb-6 shrink-0"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.4 }}
       >
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-[1200px] mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-6">
               <span className="text-sm font-medium pb-1 border-b-2 border-purple-500" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
             </div>
-            {recentCarousels.length > 0 && onViewAllProjects && (
-              <button
-                onClick={onViewAllProjects}
-                className="text-xs font-medium transition-colors cursor-pointer"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
-              >
-                Ver todos →
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {recentCarousels.length > 4 && (
+                <>
+                  <button
+                    onClick={() => scrollContainerRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => scrollContainerRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+              {recentCarousels.length > 0 && onViewAllProjects && (
+                <button
+                  onClick={onViewAllProjects}
+                  className="text-xs font-medium transition-colors cursor-pointer ml-2"
+                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                >
+                  Ver todos →
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
               const cover = item.cover_url;
               return (
                 <div
                   key={item.id}
-                  className="rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group max-h-[220px]"
+                  className="rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group shrink-0"
                   style={{
-                    aspectRatio: '1080 / 1350',
+                    width: '160px',
+                    height: '200px',
                     background: cover
                       ? `url(${cover}) center/cover no-repeat`
                       : sc.bgColor
@@ -212,8 +238,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             })}
             {recentCarousels.length === 0 && (
               <div
-                className="rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer max-h-[220px]"
-                style={{ aspectRatio: '1080 / 1350', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
+                className="rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
+                style={{ width: '160px', height: '200px', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
                 onClick={() => onStartCarousel()}
               >
                 <Clock className="w-4 h-4" />

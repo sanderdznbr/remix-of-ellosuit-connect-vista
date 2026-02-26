@@ -485,6 +485,37 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
+  // ===== CAPTURE COVER FROM RENDERED CARD =====
+  const captureCoverImage = async (carouselId: string, companyId: string) => {
+    try {
+      // Wait for export refs to be ready
+      await new Promise(r => setTimeout(r, 300));
+      const el = cardRefs.current[0];
+      if (!el) return;
+      const canvas = await html2canvas(el, {
+        width: CARD_W,
+        height: CARD_H,
+        scale: 0.5, // 540x675 — good quality but small file
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: bgColor || '#0A0A1A',
+        logging: false,
+        imageTimeout: 10000,
+      });
+      // Convert to JPEG blob for smaller file size
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      if (!blob) return;
+      const fileName = `${companyId}/${carouselId}.jpg`;
+      await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+      if (urlData?.publicUrl) {
+        await supabase.from('generated_carousels').update({ cover_url: urlData.publicUrl }).eq('id', carouselId);
+      }
+    } catch (err) {
+      console.error('Cover capture error:', err);
+    }
+  };
+
   // ===== SAVE / LOAD =====
   const saveCarousel = async () => {
     if (!carouselData) return;
@@ -497,14 +528,14 @@ const CarouselGenerator: React.FC = () => {
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).eq('id', currentCarouselId);
-        // Generate cover thumbnail in background
-        supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: currentCarouselId } }).catch(() => {});
+        // Capture real rendered card as cover in background
+        captureCoverImage(currentCarouselId, companyData.company_id).catch(() => {});
         toast({ title: 'Carrossel atualizado!' });
       } else {
         const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).select('id').single();
         setCurrentCarouselId(inserted?.id || null);
-        // Generate cover thumbnail in background
-        if (inserted?.id) supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: inserted.id } }).catch(() => {});
+        // Capture real rendered card as cover in background
+        if (inserted?.id) captureCoverImage(inserted.id, companyData.company_id).catch(() => {});
         toast({ title: 'Carrossel salvo!' });
       }
     } catch (err: any) {
@@ -734,7 +765,8 @@ const CarouselGenerator: React.FC = () => {
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
-              supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: inserted.id } }).catch(() => {});
+              // Capture real rendered card as cover after a delay (refs need to mount)
+              setTimeout(() => captureCoverImage(inserted.id, companyData.company_id).catch(() => {}), 2000);
             }
           }
         }

@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { ArrowLeft, ShoppingBag, Check, Sparkles, Crown } from 'lucide-react';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import CommunityPosts from '@/components/Marketplace/CommunityPosts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X } from 'lucide-react';
 
@@ -124,103 +125,108 @@ const MarketplaceStyleDetail: React.FC = () => {
             <p className="text-white/30 text-lg">Estilo não encontrado</p>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left: Images */}
-            <div className="lg:w-3/5">
-              <div className="aspect-video rounded-2xl overflow-hidden bg-white/[0.03] mb-4">
-                {style.preview_images?.[activeImage] ? (
-                  <img
-                    src={style.preview_images[activeImage]}
-                    alt={style.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-white/10" />
-                  </div>
-                )}
-              </div>
-              {style.preview_images?.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {style.preview_images.map((img, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setActiveImage(i)}
-                      className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
-                        i === activeImage
-                          ? 'border-purple-500 opacity-100'
-                          : 'border-transparent opacity-50 hover:opacity-80'
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right: Info */}
-            <div className="lg:w-2/5 flex flex-col">
-              <div className="flex items-center gap-2 mb-3">
-                {style.is_featured && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-[10px] font-bold">
-                    <Crown className="w-3 h-3" /> DESTAQUE
-                  </span>
-                )}
-                <span className="px-2 py-0.5 rounded bg-white/[0.06] text-white/40 text-[10px]">
-                  {style.category}
-                </span>
-              </div>
-
-              <h1 className="text-3xl font-bold text-white mb-3">{style.name}</h1>
-
-              {style.description && (
-                <p className="text-sm text-white/40 mb-6 leading-relaxed">{style.description}</p>
-              )}
-
-              {style.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-8">
-                  {style.tags.map(tag => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] text-white/30 border border-white/[0.06]"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-auto space-y-5">
-                {!owned ? (
-                  <>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-white">
-                        R$ {style.price_brl?.toFixed(2) || '0,00'}
-                      </span>
+          <>
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left: Images */}
+              <div className="lg:w-3/5">
+                <div className="aspect-video rounded-2xl overflow-hidden bg-white/[0.03] mb-4">
+                  {style.preview_images?.[activeImage] ? (
+                    <img
+                      src={style.preview_images[activeImage]}
+                      alt={style.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Sparkles className="w-12 h-12 text-white/10" />
                     </div>
-                    <button
-                      onClick={handlePurchase}
-                      disabled={purchasing}
-                      className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      {purchasing ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-4 h-4" /> Comprar estilo
-                        </>
-                      )}
-                    </button>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2 py-3.5 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
-                    <Check className="w-5 h-5" /> Você já possui este estilo
+                  )}
+                </div>
+                {style.preview_images?.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {style.preview_images.map((img, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveImage(i)}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                          i === activeImage
+                            ? 'border-purple-500 opacity-100'
+                            : 'border-transparent opacity-50 hover:opacity-80'
+                        }`}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
+
+              {/* Right: Info */}
+              <div className="lg:w-2/5 flex flex-col">
+                <div className="flex items-center gap-2 mb-3">
+                  {style.is_featured && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-[10px] font-bold">
+                      <Crown className="w-3 h-3" /> DESTAQUE
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 rounded bg-white/[0.06] text-white/40 text-[10px]">
+                    {style.category}
+                  </span>
+                </div>
+
+                <h1 className="text-3xl font-bold text-white mb-3">{style.name}</h1>
+
+                {style.description && (
+                  <p className="text-sm text-white/40 mb-6 leading-relaxed">{style.description}</p>
+                )}
+
+                {style.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-8">
+                    {style.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] text-white/30 border border-white/[0.06]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-auto space-y-5">
+                  {!owned ? (
+                    <>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-white">
+                          R$ {style.price_brl?.toFixed(2) || '0,00'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={handlePurchase}
+                        disabled={purchasing}
+                        className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {purchasing ? (
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <ShoppingBag className="w-4 h-4" /> Comprar estilo
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 py-3.5 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+                      <Check className="w-5 h-5" /> Você já possui este estilo
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+
+            {/* Community Posts */}
+            {id && <CommunityPosts styleId={id} />}
+          </>
         )}
       </div>
     </div>

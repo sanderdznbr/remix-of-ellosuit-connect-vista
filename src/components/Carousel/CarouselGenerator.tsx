@@ -415,16 +415,18 @@ const CarouselGenerator: React.FC = () => {
             title: carouselData.title || topic, topic, 
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
             carousel_data: carouselData as any, style_config: styleConfig as any, 
-            card_count: carouselData.cards.length 
-          }).eq('id', currentCarouselId);
+            card_count: carouselData.cards.length,
+            marketplace_style_id: activeMarketplaceStyle?.id || null,
+          } as any).eq('id', currentCarouselId);
         } else {
           const { data: inserted } = await supabase.from('generated_carousels').insert({ 
             company_id: companyData.company_id, user_id: userData.user.id, 
             title: carouselData.title || topic, topic, 
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
             carousel_data: carouselData as any, style_config: styleConfig as any, 
-            card_count: carouselData.cards.length 
-          }).select('id').single();
+            card_count: carouselData.cards.length,
+            marketplace_style_id: activeMarketplaceStyle?.id || null,
+          } as any).select('id').single();
           if (inserted) {
             setCurrentCarouselId(inserted.id);
             captureCoverImage(inserted.id, companyData.company_id, carouselData).catch(() => {});
@@ -713,12 +715,12 @@ const CarouselGenerator: React.FC = () => {
       if (!companyData) throw new Error('Empresa não encontrada');
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
       if (currentCarouselId) {
-        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).eq('id', currentCarouselId);
+        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
         captureCoverImage(currentCarouselId, companyData.company_id).catch(() => {});
         toast({ title: 'Carrossel atualizado!' });
       } else {
-        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).select('id').single();
+        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
         setCurrentCarouselId(inserted?.id || null);
         // Capture real rendered card as cover in background
         if (inserted?.id) captureCoverImage(inserted.id, companyData.company_id).catch(() => {});
@@ -1123,7 +1125,7 @@ const CarouselGenerator: React.FC = () => {
             } catch (creditErr) { console.error('Credit consumption failed:', creditErr); }
 
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();
+            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
               setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);

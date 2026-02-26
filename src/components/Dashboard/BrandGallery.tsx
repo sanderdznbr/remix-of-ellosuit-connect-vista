@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FolderPlus, Upload, ArrowLeft, Trash2, Loader2, 
-  Image as ImageIcon, Pencil, X, Folder, Eye, Download
+  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -72,12 +72,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose }) => {
   );
 };
 
-// --- Preview Modal Component ---
-interface PreviewModalProps {
-  file: BrandFile;
-  onClose: () => void;
-}
-
+// --- Preview Modal ---
+interface PreviewModalProps { file: BrandFile; onClose: () => void; }
 const PreviewModal: React.FC<PreviewModalProps> = ({ file, onClose }) => {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -86,27 +82,16 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ file, onClose }) => {
   }, [onClose]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center"
-        onClick={e => e.stopPropagation()}
-      >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+        className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
         <div className="absolute -top-10 right-0 flex gap-2">
           <a href={file.file_url} target="_blank" rel="noopener noreferrer"
             className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors">
             <Download className="w-4 h-4" />
           </a>
-          <button onClick={onClose}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -141,16 +126,18 @@ const BrandGallery: React.FC = () => {
   const [newFolderColor, setNewFolderColor] = useState('#7B50DC');
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingExternal, setIsDraggingExternal] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuProps['items'] } | null>(null);
   const [previewFile, setPreviewFile] = useState<BrandFile | null>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [draggingFiles, setDraggingFiles] = useState<string[]>([]);
+  const [dropTargetFolder, setDropTargetFolder] = useState<string | null>(null);
   const dragCounter = useRef(0);
 
   useEffect(() => {
     const fetch = async () => {
       if (!user) return;
-      const { data } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+      const { data } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (data) setCompanyId(data.company_id);
     };
     fetch();
@@ -236,26 +223,109 @@ const BrandGallery: React.FC = () => {
     toast.success('Arquivo excluído');
   };
 
-  // Drag and drop handlers
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter.current++;
-    if (e.dataTransfer.types.includes('Files')) setIsDragging(true);
-  };
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    dragCounter.current--;
-    if (dragCounter.current === 0) setIsDragging(false);
-  };
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    setIsDragging(false);
-    dragCounter.current = 0;
-    if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files);
+  // Move files to folder
+  const moveFilesToFolder = async (fileIds: string[], folderId: string) => {
+    try {
+      for (const id of fileIds) {
+        await supabase.from('brand_assets').update({ folder_id: folderId }).eq('id', id);
+      }
+      setSelectedFiles(new Set());
+      fetchData();
+      const folder = folders.find(f => f.id === folderId);
+      toast.success(`${fileIds.length} arquivo(s) movido(s) para ${folder?.name || 'pasta'}`);
+    } catch {
+      toast.error('Erro ao mover arquivos');
+    }
   };
 
-  // Context menu handlers
+  // Toggle file selection
+  const toggleSelect = (fileId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedFiles(prev => {
+      const next = new Set(prev);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      return next;
+    });
+  };
+
+  // Internal drag: start
+  const handleFileDragStart = (e: React.DragEvent, fileId: string) => {
+    e.stopPropagation();
+    const ids = selectedFiles.has(fileId) ? Array.from(selectedFiles) : [fileId];
+    setDraggingFiles(ids);
+    e.dataTransfer.setData('text/plain', JSON.stringify(ids));
+    e.dataTransfer.effectAllowed = 'move';
+    // Ghost image
+    const ghost = document.createElement('div');
+    ghost.textContent = `${ids.length} arquivo(s)`;
+    ghost.style.cssText = 'position:absolute;top:-999px;padding:6px 14px;background:#7B50DC;color:white;border-radius:8px;font-size:12px;font-weight:600;';
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 40, 16);
+    setTimeout(() => document.body.removeChild(ghost), 0);
+  };
+
+  const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggingFiles.length > 0) {
+      e.dataTransfer.dropEffect = 'move';
+      setDropTargetFolder(folderId);
+    }
+  };
+
+  const handleFolderDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDropTargetFolder(null);
+  };
+
+  const handleFolderDrop = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetFolder(null);
+    if (draggingFiles.length > 0) {
+      moveFilesToFolder(draggingFiles, folderId);
+      setDraggingFiles([]);
+    } else {
+      // Maybe external file drop onto folder
+      try {
+        const raw = e.dataTransfer.getData('text/plain');
+        const ids = JSON.parse(raw);
+        if (Array.isArray(ids) && ids.length) moveFilesToFolder(ids, folderId);
+      } catch {
+        // External files dropped on folder
+        if (e.dataTransfer.files?.length) {
+          // Upload directly to this folder - handled via normal upload with folder context
+        }
+      }
+    }
+  };
+
+  const handleFileDragEnd = () => {
+    setDraggingFiles([]);
+    setDropTargetFolder(null);
+  };
+
+  // External drag (files from OS)
+  const handleExternalDragEnter = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types.includes('Files') && draggingFiles.length === 0) setIsDraggingExternal(true);
+  };
+  const handleExternalDragLeave = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) setIsDraggingExternal(false);
+  };
+  const handleExternalDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
+  const handleExternalDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setIsDraggingExternal(false);
+    dragCounter.current = 0;
+    if (e.dataTransfer.files?.length && draggingFiles.length === 0) uploadFiles(e.dataTransfer.files);
+  };
+
+  // Context menus
   const handleBackgroundContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     setContextMenu({
@@ -291,29 +361,31 @@ const BrandGallery: React.FC = () => {
     });
   };
 
+  // Clear selection on background click
+  const handleBackgroundClick = () => {
+    if (selectedFiles.size > 0) setSelectedFiles(new Set());
+  };
+
   const currentFiles = currentFolder
     ? files.filter(f => f.folder_id === currentFolder.id)
     : files.filter(f => !f.folder_id);
 
+  const hasSelection = selectedFiles.size > 0;
+
   return (
     <div
-      ref={dropRef}
       className="flex-1 flex flex-col h-full overflow-hidden relative"
       style={{ backgroundColor: '#0a0a0f' }}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
+      onDragEnter={handleExternalDragEnter}
+      onDragLeave={handleExternalDragLeave}
+      onDragOver={handleExternalDragOver}
+      onDrop={handleExternalDrop}
     >
-      {/* Drag overlay */}
+      {/* External drag overlay */}
       <AnimatePresence>
-        {isDragging && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-40 flex items-center justify-center bg-purple-600/10 border-2 border-dashed border-purple-500/50 rounded-xl m-4 backdrop-blur-sm"
-          >
+        {isDraggingExternal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-40 flex items-center justify-center bg-purple-600/10 border-2 border-dashed border-purple-500/50 rounded-xl m-4 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-2">
               <Upload className="w-10 h-10 text-purple-400" />
               <p className="text-sm font-medium text-purple-300">Solte os arquivos aqui para enviar</p>
@@ -326,17 +398,26 @@ const BrandGallery: React.FC = () => {
       <div className="px-6 pt-6 pb-4 shrink-0">
         <div className="flex items-center gap-3 mb-1">
           {currentFolder && (
-            <button onClick={() => setCurrentFolder(null)} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-colors cursor-pointer">
+            <button onClick={() => { setCurrentFolder(null); setSelectedFiles(new Set()); }}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-colors cursor-pointer">
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
           <h1 className="text-xl font-bold text-white">
             {currentFolder ? currentFolder.name : 'Galeria de Marca'}
           </h1>
+          {hasSelection && (
+            <span className="ml-2 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-purple-500/20 text-purple-300">
+              {selectedFiles.size} selecionado(s)
+            </span>
+          )}
         </div>
         <p className="text-sm text-white/30">
           {currentFolder ? `${currentFiles.length} arquivo(s)` : `${folders.length} pasta(s) · ${files.length} arquivo(s)`}
         </p>
+        {hasSelection && !currentFolder && (
+          <p className="text-xs text-purple-400/70 mt-1">Arraste os arquivos selecionados para uma pasta</p>
+        )}
       </div>
 
       {/* Actions bar */}
@@ -352,6 +433,12 @@ const BrandGallery: React.FC = () => {
           Upload
           <input id="brand-gallery-upload" type="file" accept="image/*,video/*,.pdf" multiple className="hidden" onChange={e => uploadFiles(e.target.files)} disabled={uploading} />
         </label>
+        {hasSelection && (
+          <button onClick={() => setSelectedFiles(new Set())}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/40 hover:text-white/70 transition-all cursor-pointer">
+            <X className="w-4 h-4" /> Limpar seleção
+          </button>
+        )}
       </div>
 
       {/* New folder dialog */}
@@ -385,9 +472,9 @@ const BrandGallery: React.FC = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div
-        className="flex-1 overflow-y-auto px-6 pb-6"
+      <div className="flex-1 overflow-y-auto px-6 pb-6"
         onContextMenu={handleBackgroundContextMenu}
+        onClick={handleBackgroundClick}
       >
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -400,22 +487,31 @@ const BrandGallery: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
                 {folders.map(folder => (
                   <div key={folder.id}
-                    className="group relative rounded-xl p-4 cursor-pointer hover:bg-white/[0.04] transition-all border border-white/[0.04] hover:border-white/[0.08]"
-                    onClick={() => setCurrentFolder(folder)}
+                    className={`group relative rounded-xl p-4 cursor-pointer transition-all border ${
+                      dropTargetFolder === folder.id
+                        ? 'bg-purple-500/10 border-purple-500/40 scale-[1.02]'
+                        : 'border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.04]'
+                    }`}
+                    onClick={(e) => { e.stopPropagation(); setCurrentFolder(folder); }}
                     onContextMenu={e => handleFolderContextMenu(e, folder)}
+                    onDragOver={e => handleFolderDragOver(e, folder.id)}
+                    onDragLeave={handleFolderDragLeave}
+                    onDrop={e => handleFolderDrop(e, folder.id)}
                   >
                     <Folder className="w-10 h-10 mb-2" style={{ color: folder.color }} fill={folder.color} fillOpacity={0.15} />
                     {editingFolder === folder.id ? (
                       <input value={editName} onChange={e => setEditName(e.target.value)}
                         className="w-full bg-transparent text-sm text-white outline-none border-b border-white/20"
-                        autoFocus
-                        onClick={e => e.stopPropagation()}
+                        autoFocus onClick={e => e.stopPropagation()}
                         onKeyDown={e => { if (e.key === 'Enter') renameFolder(folder.id); if (e.key === 'Escape') setEditingFolder(null); }}
                         onBlur={() => renameFolder(folder.id)} />
                     ) : (
                       <p className="text-sm font-medium text-white/80 truncate">{folder.name}</p>
                     )}
                     <p className="text-[10px] text-white/30 mt-0.5">{folder.fileCount || 0} arquivos</p>
+                    {dropTargetFolder === folder.id && (
+                      <div className="absolute inset-0 rounded-xl border-2 border-dashed border-purple-400/50 pointer-events-none" />
+                    )}
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={e => { e.stopPropagation(); setEditingFolder(folder.id); setEditName(folder.name); }}
                         className="p-1 rounded hover:bg-white/10 text-white/30 hover:text-white/60 cursor-pointer">
@@ -434,30 +530,61 @@ const BrandGallery: React.FC = () => {
             {/* Files grid */}
             {currentFiles.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                {currentFiles.map(file => (
-                  <div key={file.id}
-                    className="group relative rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] transition-all cursor-pointer"
-                    onClick={() => setPreviewFile(file)}
-                    onContextMenu={e => handleFileContextMenu(e, file)}
-                  >
-                    <div className="aspect-square">
-                      {file.file_type === 'image' ? (
-                        <img src={file.file_url} alt={file.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon className="w-8 h-8 text-white/20" />
-                        </div>
+                {currentFiles.map(file => {
+                  const isSelected = selectedFiles.has(file.id);
+                  const isBeingDragged = draggingFiles.includes(file.id);
+                  return (
+                    <div key={file.id}
+                      draggable
+                      onDragStart={e => handleFileDragStart(e, file.id)}
+                      onDragEnd={handleFileDragEnd}
+                      className={`group relative rounded-xl overflow-hidden transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-purple-500/10 border-2 border-purple-500/40 ring-1 ring-purple-500/20'
+                          : 'bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12]'
+                      } ${isBeingDragged ? 'opacity-40 scale-95' : ''}`}
+                      onClick={e => {
+                        if (e.ctrlKey || e.metaKey || e.shiftKey || !currentFolder) {
+                          toggleSelect(file.id, e);
+                        } else {
+                          e.stopPropagation();
+                          setPreviewFile(file);
+                        }
+                      }}
+                      onContextMenu={e => handleFileContextMenu(e, file)}
+                    >
+                      {/* Selection checkbox */}
+                      {(!currentFolder || hasSelection) && (
+                        <button
+                          onClick={e => toggleSelect(file.id, e)}
+                          className={`absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded-md flex items-center justify-center transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-purple-500 text-white'
+                              : 'bg-black/50 text-white/30 opacity-0 group-hover:opacity-100'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3" />}
+                        </button>
                       )}
+                      <div className="aspect-square">
+                        {file.file_type === 'image' ? (
+                          <img src={file.file_url} alt={file.name} className="w-full h-full object-cover" draggable={false} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ImageIcon className="w-8 h-8 text-white/20" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2 py-1.5">
+                        <p className="text-[10px] text-white/50 truncate">{file.name}</p>
+                      </div>
+                      <button onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
-                    <div className="px-2 py-1.5">
-                      <p className="text-[10px] text-white/50 truncate">{file.name}</p>
-                    </div>
-                    <button onClick={e => { e.stopPropagation(); deleteFile(file.id); }}
-                      className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               !loading && (
@@ -483,9 +610,7 @@ const BrandGallery: React.FC = () => {
 
       {/* Preview modal */}
       <AnimatePresence>
-        {previewFile && (
-          <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
-        )}
+        {previewFile && <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
       </AnimatePresence>
     </div>
   );

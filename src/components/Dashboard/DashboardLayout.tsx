@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHome from './DashboardHome';
 import DashboardProjects from './DashboardProjects';
@@ -93,10 +94,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                     <div className="h-full rounded-full bg-purple-500/60" style={{ width: '0%' }} />
                   </div>
                 </div>
-                <button onClick={() => { setProfileOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                <button onClick={() => { setProfileOpen(false); toast.info('Perfil em breve!'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                   <User className="w-4 h-4" /> Perfil
                 </button>
-                <button onClick={() => { setProfileOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                <button onClick={() => { setProfileOpen(false); toast.info('Configurações em breve!'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                   <Settings className="w-4 h-4" /> Configurações
                 </button>
                 <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">

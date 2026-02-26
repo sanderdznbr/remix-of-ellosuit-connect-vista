@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -193,13 +194,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               </div>
               <div className="py-1">
                 <button
-                  onClick={() => { setShowProfileMenu(false); /* TODO: profile page */ }}
+                  onClick={() => { setShowProfileMenu(false); toast.info('Perfil em breve!'); }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
                 >
                   <User className="w-4 h-4" /> Perfil
                 </button>
                 <button
-                  onClick={() => { setShowProfileMenu(false); /* TODO: settings page */ }}
+                  onClick={() => { setShowProfileMenu(false); toast.info('Configurações em breve!'); }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
                 >
                   <Settings className="w-4 h-4" /> Configurações

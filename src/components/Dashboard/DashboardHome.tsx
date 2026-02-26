@@ -23,11 +23,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
+  const [coverImages, setCoverImages] = useState<Record<string, string>>({});
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUserTyping = inputValue.length > 0;
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
 
+  // Fetch recent carousels metadata
   useEffect(() => {
     const fetchRecent = async () => {
       if (!user) return;
@@ -36,6 +38,22 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         if (!companyData) return;
         const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(3);
         setRecentCarousels(data || []);
+
+        // Fetch cover images individually
+        if (data && data.length > 0) {
+          for (const item of data) {
+            supabase.from('generated_carousels').select('carousel_data').eq('id', item.id).single().then(({ data: full }) => {
+              if (full?.carousel_data) {
+                const cd = typeof full.carousel_data === 'string' ? JSON.parse(full.carousel_data) : full.carousel_data;
+                const firstCard = cd?.cards?.[0];
+                const img = firstCard?.imageUrl || firstCard?.image_url || '';
+                if (img) {
+                  setCoverImages(prev => ({ ...prev, [item.id]: img }));
+                }
+              }
+            });
+          }
+        }
       } catch (err) { console.error(err); }
     };
     fetchRecent();
@@ -73,9 +91,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Orb — positioned at bottom, only top half visible */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[50%] pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 'min(900px, 110vw)', height: 'min(900px, 110vw)' }}>
+      {/* Orb — large, positioned lower so only ~40% visible */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] pointer-events-none">
+        <div className="carousel-loader-wrapper" style={{ width: 'min(1200px, 130vw)', height: 'min(1200px, 130vw)' }}>
           <div className="carousel-loader-spinner" />
         </div>
       </div>
@@ -183,20 +201,27 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             )}
           </div>
 
+          {/* 1350:1080 = 5:4 aspect ratio */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
+              const cover = coverImages[item.id];
               return (
                 <div
                   key={item.id}
-                  className="aspect-[4/3] rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group"
+                  className="rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group"
                   style={{
-                    background: sc.bgColor ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)` : 'rgba(255,255,255,0.04)',
+                    aspectRatio: '1350 / 1080',
+                    background: cover
+                      ? `url(${cover}) center/cover no-repeat`
+                      : sc.bgColor
+                        ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
+                        : 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
                 >
-                  <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
+                  <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
                     <p className="text-xs font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
                     <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>
                   </div>
@@ -205,8 +230,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             })}
             {recentCarousels.length === 0 && (
               <div
-                className="aspect-[4/3] rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
-                style={{ border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
+                className="rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
+                style={{ aspectRatio: '1350 / 1080', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
                 onClick={() => onStartCarousel()}
               >
                 <Clock className="w-5 h-5" />

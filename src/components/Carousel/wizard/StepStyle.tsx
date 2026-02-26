@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, ChevronUp, Upload, X } from 'lucide-react';
+import LogoPositionPicker from './LogoPositionPicker';
 
 const FONT_OPTIONS = [
   { label: 'Playfair Display', value: "'Playfair Display', 'Georgia', serif" },
@@ -89,7 +90,7 @@ export const STYLE_PRESETS: StylePreset[] = [
   },
 ];
 
-export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type LogoPosition = 'top-left' | 'top-center' | 'top-right' | 'middle-left' | 'middle-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 interface Props {
   bgColor: string;
@@ -309,26 +310,7 @@ const StepStyle: React.FC<Props> = ({
               }} />
 
               {logoUrl && (
-                <div>
-                  <p className="text-[10px] font-medium text-white/30 mb-2">Posição</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {([
-                      { key: 'top-left' as LogoPosition, label: '↖ Superior Esq.' },
-                      { key: 'top-right' as LogoPosition, label: '↗ Superior Dir.' },
-                      { key: 'bottom-left' as LogoPosition, label: '↙ Inferior Esq.' },
-                      { key: 'bottom-right' as LogoPosition, label: '↘ Inferior Dir.' },
-                    ]).map(pos => (
-                      <button key={pos.key} onClick={() => setLogoPosition(pos.key)}
-                        className={`px-3 py-2 rounded-lg text-[10px] font-medium transition-all border ${
-                          logoPosition === pos.key
-                            ? 'bg-white/[0.1] border-white/20 text-white'
-                            : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:bg-white/[0.05]'
-                        }`}>
-                        {pos.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
               )}
             </div>
           )}

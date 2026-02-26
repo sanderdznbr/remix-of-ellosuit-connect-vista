@@ -109,20 +109,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           Desenvolva carrosséis com um prompt.
         </motion.p>
 
-        {creditBalance !== null && (
-          <motion.div
-            className="flex items-center gap-1.5 mb-6 px-3 py-1.5 rounded-full"
-            style={{ backgroundColor: 'rgba(123, 80, 220, 0.1)', border: '1px solid rgba(123, 80, 220, 0.2)' }}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.45, duration: 0.3 }}
-          >
-            <Sparkles className="w-3 h-3" style={{ color: '#7B50DC' }} />
-            <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {Math.floor(creditBalance)} créditos
-            </span>
-          </motion.div>
-        )}
 
         <motion.div
           className="w-full max-w-xl"

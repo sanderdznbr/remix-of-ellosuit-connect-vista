@@ -1593,34 +1593,7 @@ const CarouselGenerator: React.FC = () => {
 
       {/* Only render content after welcome is dismissed to prevent flicker */}
       {!showWelcome && <>
-      {/* ===== DARK HEADER when carousel is generated ===== */}
-      {carouselData && !generatingAllImages && editingCard === null && (
-        <div className="sticky top-0 z-30" style={{ backgroundColor: 'transparent', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-          <div className="flex items-center gap-3 px-4 py-3 max-w-7xl mx-auto">
-            <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); }} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-              <ArrowLeft className="h-5 w-5 text-white/70" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-lg font-bold truncate text-white">{carouselData.title || topic || 'Carrossel'}</h1>
-              <p className="text-xs text-white/40">{carouselData.cards.length} cards</p>
-            </div>
-            <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end">
-              <button onClick={saveCarousel} disabled={savingCarousel || isGuest}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
-                {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-                <span className="hidden sm:inline">{isGuest ? 'Bloqueado' : currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
-              </button>
-              <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : exportAllCards} disabled={exporting}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
-                style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
-                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-                <span className="hidden sm:inline">{isGuest ? 'Cadastre-se' : 'Exportar'}</span>
-              </button>
-              {/* Publicar button hidden until fully functional */}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Header removed — Save/Export moved to action buttons area */}
 
       {/* Normal header for editor mode */}
       {carouselData && !generatingAllImages && editingCard !== null && null}
@@ -1887,6 +1860,15 @@ const CarouselGenerator: React.FC = () => {
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
           <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+            {/* Menu button */}
+            {user && (
+              <button
+                onClick={() => setSidebarDrawerOpen(true)}
+                className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <Menu className="w-5 h-5 text-white/60" />
+              </button>
+            )}
             {/* Subtle background glow effects */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
@@ -2230,7 +2212,19 @@ const CarouselGenerator: React.FC = () => {
             )}
 
             {/* Action buttons below */}
-            <div className="flex items-center justify-center gap-3 mt-6 w-full relative z-10">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap">
+              <button onClick={saveCarousel} disabled={savingCarousel || isGuest}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
+                {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+                {isGuest ? 'Bloqueado' : currentCarouselId ? 'Atualizar' : 'Salvar'}
+              </button>
+              <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : exportAllCards} disabled={exporting}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
+                style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                {isGuest ? 'Cadastre-se' : 'Exportar'}
+              </button>
+              <div className="w-px h-5 bg-white/10" />
               <button data-tour="btn-add" onClick={addCard} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>

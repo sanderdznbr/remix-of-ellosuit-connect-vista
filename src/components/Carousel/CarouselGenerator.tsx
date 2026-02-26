@@ -950,20 +950,63 @@ const CarouselGenerator: React.FC = () => {
         let completed = 0;
         const totalAi = imagePromises.length;
         setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
-        const trackedPromises = imagePromises.map((p) =>
-          p.promise.then((url) => {
+
+        // PRIORITY: Generate cover image FIRST (index 0) before others to avoid rate-limit failures
+        const coverPromise = imagePromises.find(p => p.index === 0);
+        const otherPromises = imagePromises.filter(p => p.index !== 0);
+
+        if (coverPromise) {
+          try {
+            const coverUrl = await coverPromise.promise;
             completed++;
             setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-            if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
-            return url;
-          }).catch((err) => {
+            if (coverUrl) {
+              updatedCards[coverPromise.index] = { ...updatedCards[coverPromise.index], imageUrl: coverUrl, isAiImage: true };
+            }
+          } catch (err) {
             completed++;
-            console.error('Image generation failed for card', p.index, err);
+            console.error('Cover image generation failed:', err);
             setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-            return null;
-          })
-        );
-        await Promise.all(trackedPromises);
+          }
+        }
+
+        // Then generate remaining images in parallel
+        if (otherPromises.length > 0) {
+          const trackedPromises = otherPromises.map((p) =>
+            p.promise.then((url) => {
+              completed++;
+              setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+              if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
+              return url;
+            }).catch((err) => {
+              completed++;
+              console.error('Image generation failed for card', p.index, err);
+              setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+              return null;
+            })
+          );
+          await Promise.all(trackedPromises);
+        }
+
+        // RETRY: If cover still has no image, try once more (rate limit may have cleared)
+        if (!updatedCards[0]?.imageUrl && coverPromise) {
+          console.log('Cover image retry...');
+          setImageGenProgress(`🎨 Tentando gerar capa novamente...`);
+          try {
+            const retryUrl = await generateImage({
+              prompt: buildImagePrompt(updatedCards[0]?.imagePrompt || updatedCards[0]?.title || cleanTopic) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+              faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+              styleReferenceUrls: [...styleRefUrls, ...(productImages.length > 0 ? productImages.map(p => p.url) : [])].length > 0 ? [...styleRefUrls, ...(productImages.length > 0 ? productImages.map(p => p.url) : [])] : undefined,
+              negativePrompt: isFullBleedStyle ? (activeMarketplaceStyle?.imageGeneration?.negative_prompt || '') : baseNegativePrompt,
+            });
+            if (retryUrl) {
+              updatedCards[0] = { ...updatedCards[0], imageUrl: retryUrl, isAiImage: true };
+              console.log('Cover retry succeeded!');
+            }
+          } catch (retryErr) {
+            console.error('Cover retry also failed:', retryErr);
+          }
+        }
       } else {
         setImageGenProgress(`📸 ${realImagesUsed} fotos reais aplicadas!`);
       }

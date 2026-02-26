@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Clock } from 'lucide-react';
+import { ArrowUp, Clock, FileText } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 import '@/styles/carousel-loader.css';
 
 const PLACEHOLDER_SUGGESTIONS = [
@@ -19,10 +20,25 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel }) => {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
+  const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUserTyping = inputValue.length > 0;
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
+
+  // Fetch recent carousels
+  useEffect(() => {
+    const fetchRecent = async () => {
+      if (!user) return;
+      try {
+        const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+        if (!companyData) return;
+        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(8);
+        setRecentCarousels(data || []);
+      } catch (err) { console.error(err); }
+    };
+    fetchRecent();
+  }, [user]);
 
   useEffect(() => {
     if (isUserTyping) { setAnimatedPlaceholder(''); return; }
@@ -157,13 +173,30 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel }) => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Empty state */}
-            <div className="aspect-[4/3] rounded-xl border border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-white/20 hover:text-white/30 hover:border-white/20 transition-colors cursor-pointer"
-              onClick={() => onStartCarousel()}
-            >
-              <Clock className="w-5 h-5" />
-              <span className="text-xs">Criar primeiro carrossel</span>
-            </div>
+            {recentCarousels.map((item) => {
+              const sc = item.style_config || {};
+              return (
+                <div
+                  key={item.id}
+                  className="aspect-[4/3] rounded-xl border border-white/10 hover:border-white/20 transition-all cursor-pointer overflow-hidden relative group"
+                  style={{ background: sc.bgColor ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)` : 'rgba(255,255,255,0.04)' }}
+                  onClick={() => onStartCarousel()}
+                >
+                  <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/60 to-transparent">
+                    <p className="text-white text-xs font-medium truncate">{item.title || item.topic}</p>
+                    <p className="text-white/40 text-[10px] mt-0.5">{item.card_count || '?'} cards</p>
+                  </div>
+                </div>
+              );
+            })}
+            {recentCarousels.length === 0 && (
+              <div className="aspect-[4/3] rounded-xl border border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-white/20 hover:text-white/30 hover:border-white/20 transition-colors cursor-pointer"
+                onClick={() => onStartCarousel()}
+              >
+                <Clock className="w-5 h-5" />
+                <span className="text-xs">Criar primeiro carrossel</span>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

@@ -1816,54 +1816,6 @@ const CarouselGenerator: React.FC = () => {
                 </svg>
               </button>
             </div>
-
-            {/* Saved carousels */}
-            {carouselHistory.length > 0 && (
-              <div className="px-6 lg:px-8 mt-8 pb-8 max-w-[1200px] mx-auto w-full">
-                <div className="flex items-center gap-2 mb-4">
-                  <History className="h-4 w-4 text-white/15" />
-                  <h2 className="text-xs font-medium text-white/25 tracking-wider uppercase">Seus Carrosséis</h2>
-                </div>
-                {loadingHistory ? (
-                  <div className="flex items-center justify-center py-8 gap-2 text-white/20"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {carouselHistory.map((item) => {
-                      const coverImage = item.carousel_data?.cards?.[0]?.imageUrl;
-                      const coverBg = item.style_config?.bgColor || '#1a1a2e';
-                      const coverTitle = item.carousel_data?.cards?.[0]?.topText || item.title;
-                      return (
-                        <button key={item.id} onClick={() => loadCarousel(item)}
-                          className="group relative rounded-xl overflow-hidden text-left transition-all hover:-translate-y-0.5"
-                          style={{ border: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#141414' }}>
-                          <div className="aspect-[4/5] overflow-hidden relative" style={{ backgroundColor: coverBg }}>
-                            {coverImage ? (
-                              <img src={coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center p-3">
-                                <p className="text-white/30 text-xs font-medium text-center line-clamp-4">{coverTitle}</p>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                            <button onClick={(e) => { e.stopPropagation(); deleteCarousel(item.id); }}
-                              className="absolute top-2 right-2 p-1.5 rounded-md bg-black/50 hover:bg-red-600 text-white/30 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <div className="p-3">
-                            <p className="text-xs font-medium text-white/60 truncate">{item.title}</p>
-                            <div className="flex items-center gap-1.5 text-[10px] text-white/20 mt-1">
-                              <span>{new Date(item.created_at).toLocaleDateString('pt-BR')}</span>
-                              <span>• {item.card_count} cards</span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 

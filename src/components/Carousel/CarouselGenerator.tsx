@@ -274,6 +274,46 @@ const CarouselGenerator: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [currentCarouselId, setCurrentCarouselId] = useState<string | null>(null);
 
+  // Full reset for starting a brand-new carousel
+  const resetWizardState = useCallback(() => {
+    setWizardStep(0);
+    setTopic('');
+    setKeywords('');
+    setCardCount(7);
+    setImageCardCount(4);
+    setEnhancingPrompt(false);
+    setReferenceImages([]);
+    setFamousList([]);
+    setFamousImages([]);
+    setProductImages([]);
+    setProductAnalysis(null);
+    setAnalyzingProduct(false);
+    setImageSettings(DEFAULT_IMAGE_SETTINGS);
+    setCarouselData(null);
+    setActiveCardIndex(0);
+    setEditingCard(null);
+    setRegeneratingCard(null);
+    setShowStylePanel(false);
+    setShowCaptionPanel(false);
+    setPostCaption('');
+    setGeneratingCaption(false);
+    setShowRefPanel(false);
+    setEditorRefImage(null);
+    setSidebarDrawerOpen(false);
+    setSearchingWeb(false);
+    setSkipWebSearch(false);
+    setWebSearchResult(null);
+    setCurrentCarouselId(null);
+    setPexelsImages([]);
+    setShowImagePicker(null);
+    setGeneratingAiImage(false);
+    setAiImagePrompt('');
+    setGenerating(false);
+    setTransitionToGenerate(false);
+    setGeneratingAllImages(false);
+    setImageGenProgress('');
+  }, []);
+
   const currentFont = FONT_OPTIONS[selectedFont];
   const serif = currentFont.value;
   const sans = "'Inter', 'Helvetica Neue', sans-serif";
@@ -1568,19 +1608,12 @@ const CarouselGenerator: React.FC = () => {
             transition={{ duration: 0.3 }}
           >
             <DashboardLayout
-              onStartCarousel={(topic?: string) => {
-                // Reset any previously loaded carousel so the wizard starts fresh
-                setCarouselData(null);
-                setEditingCard(null);
-                setActiveCardIndex(0);
-                setCurrentCarouselId(null);
-                setSidebarDrawerOpen(false);
-                if (topic) {
-                  setTopic(topic);
-                  setShowWelcome(false);
+              onStartCarousel={(newTopic?: string) => {
+                resetWizardState();
+                setShowWelcome(false);
+                if (newTopic) {
+                  setTopic(newTopic);
                   setTimeout(() => enhancePrompt(), 300);
-                } else {
-                  setShowWelcome(false);
                 }
               }}
               onLoadCarousel={async (item: any) => {
@@ -2246,7 +2279,7 @@ const CarouselGenerator: React.FC = () => {
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda
               </button>
-              <button onClick={() => { setCarouselData(null); setCurrentCarouselId(null); setWizardStep(0); }}
+              <button onClick={() => { resetWizardState(); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                 Novo

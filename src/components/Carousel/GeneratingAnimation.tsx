@@ -175,8 +175,26 @@ const GeneratingAnimation: React.FC<Props> = ({
         </div>
 
         {imageGenProgress && (
-          <motion.div className="md:hidden mt-6 flex flex-col items-center gap-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <p className="text-white text-lg font-bold">{imageGenProgress}</p>
+          <motion.div className="md:hidden mt-6 flex flex-col items-center gap-2 w-full max-w-[260px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <p className="text-white text-base font-bold">{imageGenProgress}</p>
+            {(() => {
+              const match = imageGenProgress.match(/(\d+)\/(\d+)/);
+              if (!match) return null;
+              const current = parseInt(match[1]);
+              const total = parseInt(match[2]);
+              const pct = total > 0 ? (current / total) * 100 : 0;
+              return (
+                <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: accentColor }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              );
+            })()}
           </motion.div>
         )}
 
@@ -191,7 +209,27 @@ const GeneratingAnimation: React.FC<Props> = ({
               className="flex flex-col items-center gap-2"
             >
               {imageGenProgress ? (
-                <p className="hidden md:block text-white/70 text-sm font-medium">{imageGenProgress}</p>
+                <div className="hidden md:flex flex-col items-center gap-2 w-full max-w-[300px]">
+                  <p className="text-white/70 text-sm font-medium">{imageGenProgress}</p>
+                  {(() => {
+                    const match = imageGenProgress.match(/(\d+)\/(\d+)/);
+                    if (!match) return null;
+                    const current = parseInt(match[1]);
+                    const total = parseInt(match[2]);
+                    const pct = total > 0 ? (current / total) * 100 : 0;
+                    return (
+                      <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: accentColor }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
               ) : (
                 <>
                   <span className="text-2xl">{STEPS[activeStep]?.icon}</span>

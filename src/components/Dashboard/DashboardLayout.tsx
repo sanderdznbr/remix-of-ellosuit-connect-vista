@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHome from './DashboardHome';
 import DashboardProjects from './DashboardProjects';
+import BrandGallery from './BrandGallery';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -50,6 +51,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
       case 'starred':
         return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
+      case 'gallery':
+        return <BrandGallery />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

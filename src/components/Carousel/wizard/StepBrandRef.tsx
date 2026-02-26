@@ -1,68 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, X, Check, Loader2 } from 'lucide-react';
+import { Upload, X, Check, Loader2, Folder } from 'lucide-react';
 import { ReferenceImage } from './types';
 import { extractColorsFromImage, isMonochromeImage, buildPaletteFromColors } from '@/utils/extractColorsFromImage';
 import { motion, AnimatePresence } from 'framer-motion';
+import GalleryPicker from './GalleryPicker';
 
 interface Props {
   referenceImages: ReferenceImage[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
   brandAssets: { id: string; name: string; file_url: string; category: string }[];
-  // Color suggestion callbacks
   onSuggestColors?: (palette: { bg: string; accent: string; text: string }) => void;
 }
 
 const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, brandAssets, onSuggestColors }) => {
   const styleRefs = referenceImages.filter(r => r.category === 'style');
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [extracting, setExtracting] = useState(false);
   const [suggestedPalette, setSuggestedPalette] = useState<{ bg: string; accent: string; text: string } | null>(null);
   const [extractedColors, setExtractedColors] = useState<string[]>([]);
   const [dismissed, setDismissed] = useState(false);
 
-  // When a new style image is added, try to extract colors
   const latestStyleRef = styleRefs[styleRefs.length - 1];
   const [lastAnalyzedUrl, setLastAnalyzedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!latestStyleRef || latestStyleRef.url === lastAnalyzedUrl || dismissed) return;
-    
     const analyze = async () => {
       setExtracting(true);
       setSuggestedPalette(null);
       setExtractedColors([]);
       try {
         const mono = await isMonochromeImage(latestStyleRef.url);
-        if (mono) {
-          // Black & white logo — skip suggestion
-          setExtracting(false);
-          setLastAnalyzedUrl(latestStyleRef.url);
-          return;
-        }
+        if (mono) { setExtracting(false); setLastAnalyzedUrl(latestStyleRef.url); return; }
         const colors = await extractColorsFromImage(latestStyleRef.url, 5);
         setExtractedColors(colors);
         const palette = buildPaletteFromColors(colors);
         if (palette) setSuggestedPalette(palette);
         setLastAnalyzedUrl(latestStyleRef.url);
-      } catch (err) {
-        console.error('Color extraction error:', err);
-      } finally {
-        setExtracting(false);
-      }
+      } catch (err) { console.error('Color extraction error:', err); }
+      finally { setExtracting(false); }
     };
     analyze();
   }, [latestStyleRef?.url, lastAnalyzedUrl, dismissed]);
 
-  const acceptPalette = () => {
-    if (suggestedPalette && onSuggestColors) {
-      onSuggestColors(suggestedPalette);
-    }
-    setSuggestedPalette(null);
-  };
+  const acceptPalette = () => { if (suggestedPalette && onSuggestColors) onSuggestColors(suggestedPalette); setSuggestedPalette(null); };
+  const rejectPalette = () => { setSuggestedPalette(null); setDismissed(true); };
 
-  const rejectPalette = () => {
-    setSuggestedPalette(null);
-    setDismissed(true);
+  const handleGalleryFiles = (files: { url: string; name: string }[]) => {
+    setDismissed(false);
+    const newRefs: ReferenceImage[] = files.map(f => ({
+      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const,
+    }));
+    setReferenceImages(prev => [...prev, ...newRefs]);
   };
 
   return (
@@ -80,7 +70,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         <input type="file" accept="image/*" multiple className="hidden"
           onChange={(e) => {
             if (!e.target.files) return;
-            setDismissed(false); // reset dismiss on new upload
+            setDismissed(false);
             Array.from(e.target.files).forEach(file => {
               const reader = new FileReader();
               reader.onload = (ev) => {
@@ -95,6 +85,14 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
             });
           }} />
       </label>
+
+      {/* Gallery picker button */}
+      <button onClick={() => setGalleryOpen(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+        <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+      </button>
+
+      <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de marca" />
 
       {/* Extracting indicator */}
       {extracting && (
@@ -122,8 +120,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
               <span className="text-lg">🎨</span>
               <p className="text-sm font-semibold text-white">Estilo sugerido com base na marca</p>
             </div>
-
-            {/* Extracted colors row */}
             {extractedColors.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-white/30">Cores detectadas:</span>
@@ -134,8 +130,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
                 </div>
               </div>
             )}
-
-            {/* Palette preview */}
             <div className="flex gap-1 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
               <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: suggestedPalette.bg }}>
                 <span className="text-[9px] font-mono" style={{ color: suggestedPalette.text }}>Fundo</span>
@@ -147,8 +141,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
                 <span className="text-[9px] font-mono" style={{ color: suggestedPalette.text }}>Texto</span>
               </div>
             </div>
-
-            {/* Accept / Reject */}
             <div className="flex gap-2">
               <button onClick={acceptPalette}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
@@ -163,7 +155,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
           </motion.div>
         )}
       </AnimatePresence>
-
 
       {styleRefs.length > 0 && (
         <div>

@@ -638,6 +638,44 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_asset_folders: {
+        Row: {
+          color: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_asset_folders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_assets: {
         Row: {
           category: string
@@ -646,6 +684,7 @@ export type Database = {
           description: string | null
           file_type: string
           file_url: string
+          folder_id: string | null
           id: string
           name: string
           tags: string[] | null
@@ -658,6 +697,7 @@ export type Database = {
           description?: string | null
           file_type?: string
           file_url: string
+          folder_id?: string | null
           id?: string
           name: string
           tags?: string[] | null
@@ -670,6 +710,7 @@ export type Database = {
           description?: string | null
           file_type?: string
           file_url?: string
+          folder_id?: string | null
           id?: string
           name?: string
           tags?: string[] | null
@@ -681,6 +722,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_assets_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "brand_asset_folders"
             referencedColumns: ["id"]
           },
         ]

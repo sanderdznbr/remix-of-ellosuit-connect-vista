@@ -143,7 +143,7 @@ export default function ForgotPassword() {
         transition={{ delay: 0.2, duration: 0.5 }}
       >
         <div className="flex items-center gap-6">
-          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6" />
+          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6 cursor-pointer" onClick={() => navigate('/')} />
         </div>
         <button
           onClick={() => navigate('/auth')}

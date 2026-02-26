@@ -116,7 +116,7 @@ const MobileAuthScreen = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
       >
-        <img src={ellocontentLogo} alt="elloContent" className="h-5 object-contain" />
+        <img src={ellocontentLogo} alt="elloContent" className="h-5 object-contain cursor-pointer" onClick={() => navigate('/')} />
       </motion.div>
 
       <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-6 py-8">

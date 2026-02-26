@@ -4,6 +4,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ShoppingBag, Sparkles, Check, Search, Crown, Zap } from 'lucide-react';
+import AdminStyleCreator from './AdminStyleCreator';
 
 interface MarketplaceStyle {
   id: string;
@@ -108,6 +109,9 @@ const MarketplaceContent: React.FC = () => {
           <h1 className="text-2xl font-bold text-white mb-1">Marketplace</h1>
           <p className="text-sm text-white/40">Navegue por diferentes estilos</p>
         </div>
+
+        {/* Admin Panel - only visible for admin@gmail.com */}
+        <AdminStyleCreator onStylesChanged={fetchStyles} />
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-8">

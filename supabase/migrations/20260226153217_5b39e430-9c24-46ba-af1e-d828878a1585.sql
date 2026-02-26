@@ -1,0 +1,1 @@
+ALTER TABLE public.generated_carousels ADD COLUMN IF NOT EXISTS is_starred boolean NOT NULL DEFAULT false;

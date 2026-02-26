@@ -46,9 +46,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const renderContent = () => {
     switch (activeTab) {
       case 'projects':
-        return <DashboardProjects onStartCarousel={onStartCarousel} filterMode="all" searchQuery={searchQuery} />;
+        return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
       case 'starred':
-        return <DashboardProjects onStartCarousel={onStartCarousel} filterMode="starred" searchQuery={searchQuery} />;
+        return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

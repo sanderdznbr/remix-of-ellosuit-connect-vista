@@ -2205,6 +2205,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           id: string
+          is_starred: boolean
           keywords: string[] | null
           style_config: Json | null
           title: string
@@ -2219,6 +2220,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           id?: string
+          is_starred?: boolean
           keywords?: string[] | null
           style_config?: Json | null
           title: string
@@ -2233,6 +2235,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           id?: string
+          is_starred?: boolean
           keywords?: string[] | null
           style_config?: Json | null
           title?: string

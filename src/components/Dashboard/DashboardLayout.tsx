@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHome from './DashboardHome';
 import DashboardProjects from './DashboardProjects';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
+import { useNavigate } from 'react-router-dom';
+import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface DashboardLayoutProps {
   onStartCarousel: (topic?: string) => void;
@@ -11,10 +16,19 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { isMobile } = useIsMobile();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'U';
+  const email = user?.email || '';
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setSearchQuery('');
+    setSidebarOpen(false);
   };
 
   const handleSearch = (query: string) => {
@@ -22,6 +36,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
     if (query) {
       setActiveTab('projects');
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   const renderContent = () => {
@@ -34,6 +53,85 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <DashboardHome onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }
   };
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
+        {/* Mobile Header */}
+        <header className="flex items-center justify-between px-4 h-14 shrink-0 border-b border-white/[0.06] relative z-50" style={{ backgroundColor: '#0a0a0f' }}>
+          {/* Left: hamburger to open sidebar */}
+          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/70 cursor-pointer">
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Center: logo */}
+          <img src={ellocontentLogo} alt="elloContent" className="h-5" />
+
+          {/* Right: profile avatar */}
+          <button onClick={() => setProfileOpen(!profileOpen)} className="relative cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">
+              {username.charAt(0).toUpperCase()}
+            </div>
+          </button>
+        </header>
+
+        {/* Profile dropdown (mobile) */}
+        {profileOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+            <div className="absolute top-14 right-3 w-64 rounded-xl border border-white/[0.08] shadow-2xl z-50 overflow-hidden" style={{ backgroundColor: '#111116' }}>
+              <div className="px-4 py-3 border-b border-white/[0.06]">
+                <p className="text-sm text-white/70 font-medium truncate">{email}</p>
+              </div>
+              <div className="py-1">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/40">Créditos</span>
+                    <span className="text-white/70 font-medium">0 restantes</span>
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
+                    <div className="h-full rounded-full bg-purple-500/60" style={{ width: '0%' }} />
+                  </div>
+                </div>
+                <button onClick={() => { setProfileOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                  <User className="w-4 h-4" /> Perfil
+                </button>
+                <button onClick={() => { setProfileOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                  <Settings className="w-4 h-4" /> Configurações
+                </button>
+                <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                  <CreditCard className="w-4 h-4" /> Plano & Créditos
+                </button>
+              </div>
+              <div className="border-t border-white/[0.06] py-1">
+                <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                  <LogOut className="w-4 h-4" /> Sair
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Sidebar drawer overlay */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
+            <div className="relative w-[280px] h-full animate-in slide-in-from-left duration-200">
+              <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} />
+              <button onClick={() => setSidebarOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
+          {renderContent()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>

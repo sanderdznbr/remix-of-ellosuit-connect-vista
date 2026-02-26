@@ -138,6 +138,15 @@ function PricingContent({ isLoggedIn }: { isLoggedIn: boolean }) {
         </nav>
       )}
 
+      {/* Mobile header for logged-in users */}
+      {isLoggedIn && (
+        <div className="md:hidden flex items-center justify-between px-4 pt-4 pb-2">
+          <button onClick={() => navigate('/')} className="text-white/40 text-sm cursor-pointer">← Voltar</button>
+          <img src={ellocontentLogo} alt="elloContent" className="h-4" />
+          <div className="w-12" />
+        </div>
+      )}
+
       {/* Header */}
       <motion.div
         className="text-center pt-12 pb-16 px-4"
@@ -223,12 +232,21 @@ function PricingContent({ isLoggedIn }: { isLoggedIn: boolean }) {
 
 export default function Pricing() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isLoggedIn = !!user;
+
+  const handleTabChange = (tab: string) => {
+    if (tab === 'home') navigate('/');
+    else if (tab === 'projects') navigate('/');
+    else if (tab === 'pricing') navigate('/precos');
+  };
 
   if (isLoggedIn) {
     return (
       <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-        <DashboardSidebar activeTab="pricing" onTabChange={() => {}} onSearch={() => {}} />
+        <div className="hidden md:block">
+          <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
+        </div>
         <PricingContent isLoggedIn />
       </div>
     );

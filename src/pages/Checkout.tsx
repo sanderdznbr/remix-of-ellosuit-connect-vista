@@ -309,12 +309,21 @@ function CheckoutContent() {
 
 export default function Checkout() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isLoggedIn = !!user;
+
+  const handleTabChange = (tab: string) => {
+    if (tab === 'home') navigate('/');
+    else if (tab === 'projects') navigate('/');
+    else if (tab === 'pricing') navigate('/precos');
+  };
 
   if (isLoggedIn) {
     return (
       <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-        <DashboardSidebar activeTab="pricing" onTabChange={() => {}} onSearch={() => {}} />
+        <div className="hidden md:block">
+          <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
+        </div>
         <CheckoutContent />
       </div>
     );

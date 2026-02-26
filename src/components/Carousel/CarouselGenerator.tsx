@@ -221,6 +221,7 @@ const CarouselGenerator: React.FC = () => {
   // CarouselTour removed
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
+  const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
 
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -386,19 +387,27 @@ const CarouselGenerator: React.FC = () => {
   // ===== BUILD IMAGE PROMPT with settings =====
   const buildImagePrompt = (basePrompt: string): string => {
     const parts: string[] = [];
-    
-    // Image type
-    const typeMap: Record<string, string> = {
-      'photo': 'Professional photorealistic photograph',
-      'cinematic': 'Cinematic film still, movie-quality',
-      'illustration': 'High-quality digital illustration, artistic',
-      'print': 'Screenshot/print of a digital interface, UI design',
-      '3d-render': 'Professional 3D render, octane render quality',
-    };
-    parts.push(typeMap[imageSettings.imageType] || 'Professional photograph');
 
-    // Main description
-    parts.push(basePrompt);
+    // If marketplace style has imageGeneration config, use its prompt_style as the foundation
+    const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+    if (styleImageGen?.prompt_style) {
+      parts.push(styleImageGen.prompt_style);
+      if (styleImageGen.prompt_prefix) {
+        parts.push(styleImageGen.prompt_prefix);
+      }
+      parts.push(`CONTENT FOR THIS CARD: ${basePrompt}`);
+    } else {
+      // Default: use image type
+      const typeMap: Record<string, string> = {
+        'photo': 'Professional photorealistic photograph',
+        'cinematic': 'Cinematic film still, movie-quality',
+        'illustration': 'High-quality digital illustration, artistic',
+        'print': 'Screenshot/print of a digital interface, UI design',
+        '3d-render': 'Professional 3D render, octane render quality',
+      };
+      parts.push(typeMap[imageSettings.imageType] || 'Professional photograph');
+      parts.push(basePrompt);
+    }
 
     // Body position
     if (imageSettings.bodyPosition) {
@@ -494,6 +503,7 @@ const CarouselGenerator: React.FC = () => {
     }
 
     // === GEMINI / NANO BANANA PATH ===
+    const styleImageGen = activeMarketplaceStyle?.imageGeneration;
     const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
       body: {
         prompt: opts.prompt,
@@ -503,7 +513,8 @@ const CarouselGenerator: React.FC = () => {
         styleReferenceUrls: opts.styleReferenceUrls,
         imageModel: resolvedModel,
         negativePrompt: opts.negativePrompt,
-        fidelity: imageSettings.fidelity,
+        fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
+        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
       },
     });
     if (error) throw error;
@@ -747,6 +758,7 @@ const CarouselGenerator: React.FC = () => {
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(productContext ? { productContext } : {}),
+          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
         },
       });
       if (error) throw error;
@@ -804,7 +816,9 @@ const CarouselGenerator: React.FC = () => {
       const usedImageUrls = new Set<string>();
 
       // Standard negative prompt for all AI images
-      const baseNegativePrompt = 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
+      // Use marketplace style's negative prompt if available, otherwise default
+      const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+      const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
@@ -1756,8 +1770,8 @@ const CarouselGenerator: React.FC = () => {
                         accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor}
                         selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                        onApplyPreset={(preset) => { setActivePresetId(preset.id); }}
-                        onApplyMarketplaceStyle={(config) => { /* marketplace style applied via color setters */ }}
+                        onApplyPreset={(preset) => { setActivePresetId(preset.id); setActiveMarketplaceStyle(null); }}
+                        onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); }}
                       />
                     )}
                     {wizardStep === 8 && (

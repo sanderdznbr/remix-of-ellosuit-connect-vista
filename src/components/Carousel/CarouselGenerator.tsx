@@ -1427,9 +1427,14 @@ const CarouselGenerator: React.FC = () => {
                   setShowWelcome(false);
                 }
               }}
-              onLoadCarousel={(item: any) => {
-                loadCarousel(item);
-                setShowWelcome(false);
+              onLoadCarousel={async (item: any) => {
+                try {
+                  const { data } = await supabase.from('generated_carousels').select('*').eq('id', item.id).single();
+                  if (data) {
+                    loadCarousel(data);
+                    setShowWelcome(false);
+                  }
+                } catch (err) { console.error(err); }
               }}
             />
           </motion.div>

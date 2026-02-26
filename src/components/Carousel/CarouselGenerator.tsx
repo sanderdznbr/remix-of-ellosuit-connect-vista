@@ -865,15 +865,33 @@ const CarouselGenerator: React.FC = () => {
           const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
           const allStyleRefs = [...styleRefUrls, ...productRefUrls];
           
+          // When marketplace style is active, add preview images as references so AI can see the style
+          const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+          const marketplaceRefUrls: string[] = [];
+          if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+            // Build absolute URLs from relative paths and pick 3 varied references
+            const origin = window.location.origin;
+            const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+              .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+            // Pick varied samples: first, middle, last
+            if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
+            if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+            if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+          }
+          
           imagePromises.push({
             index: i,
             promise: (async () => {
               try {
+                // For marketplace styles: text is baked in the image, don't add "NO TEXT"
+                const promptSuffix = isFullBleedMarketplace
+                  ? ''
+                  : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.';
                 return await generateImage({
-                  prompt: buildImagePrompt(imgPrompt) + '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.',
+                  prompt: buildImagePrompt(imgPrompt) + promptSuffix,
                   faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-                  styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
-                  negativePrompt: finalNegative,
+                  styleReferenceUrls: [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined,
+                  negativePrompt: isFullBleedMarketplace ? (activeMarketplaceStyle?.imageGeneration?.negative_prompt || '') : finalNegative,
                 });
               } catch (err) { console.error('Image gen error for card', i, err); }
               return null;
@@ -1436,7 +1454,31 @@ const CarouselGenerator: React.FC = () => {
     );
   };
 
+  // Full-bleed render for marketplace styles — AI generates complete image with text baked in
+  const renderMarketplaceFullBleedCard = (card: CarouselCard, index: number, isExport = false) => {
+    const w = isExport ? CARD_W : PREVIEW_W;
+    const h = isExport ? CARD_H : PREVIEW_H;
+    return (
+      <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+        style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: '#0A0A0A' }}>
+        {card.imageUrl ? (
+          <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${16 * (isExport ? 1 : PREVIEW_W / CARD_W)}px` }}>Gerando...</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderCardPreview = (card: CarouselCard, index: number, isExport = false) => {
+    // Marketplace full-bleed mode: AI generates complete images with text baked in
+    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+    if (isMarketplaceFullBleed) return renderMarketplaceFullBleedCard(card, index, isExport);
+
     const isBetaTest2 = activePresetId === 'beta-test2';
     const isBetaTest3 = activePresetId === 'beta-test3';
     if (isBetaTest2) return renderBetaTest2Card(card, index, isExport);

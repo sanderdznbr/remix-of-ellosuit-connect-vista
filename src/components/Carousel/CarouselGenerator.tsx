@@ -1721,7 +1721,7 @@ const CarouselGenerator: React.FC = () => {
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
-          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Subtle background glow effects */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
@@ -1764,7 +1764,25 @@ const CarouselGenerator: React.FC = () => {
                 </div>
 
             {/* Carousel viewport */}
-                <div className="relative overflow-hidden" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000' }}>
+                <div className="relative overflow-hidden" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000' }}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    (e.currentTarget as any)._touchStartX = touch.clientX;
+                  }}
+                  onTouchEnd={(e) => {
+                    const startX = (e.currentTarget as any)._touchStartX;
+                    if (startX == null) return;
+                    const endX = e.changedTouches[0].clientX;
+                    const diff = startX - endX;
+                    if (Math.abs(diff) > 40) {
+                      if (diff > 0 && activeCardIndex < carouselData.cards.length - 1) {
+                        setActiveCardIndex(activeCardIndex + 1);
+                      } else if (diff < 0 && activeCardIndex > 0) {
+                        setActiveCardIndex(activeCardIndex - 1);
+                      }
+                    }
+                  }}
+                >
                   <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
                     <div style={{
                       width: PREVIEW_W,
@@ -2042,8 +2060,8 @@ const CarouselGenerator: React.FC = () => {
             </div>
 
             {/* Card strip - horizontal thumbnails */}
-            <div data-tour="card-strip" className="w-full max-w-5xl mt-6 relative z-10">
-              <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory px-4 justify-center">
+            <div data-tour="card-strip" className="w-full max-w-5xl mt-6 relative z-10 overflow-x-hidden">
+              <div className="flex gap-3 pb-4 px-4 justify-center flex-wrap">
                 {carouselData.cards.map((card, i) => {
                   const thumbW = 120;
                   const thumbH = thumbW * (CARD_H / CARD_W);

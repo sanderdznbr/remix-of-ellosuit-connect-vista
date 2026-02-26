@@ -10,8 +10,8 @@ export const useAuth = () => {
   // Função para notificar iOS sobre login bem-sucedido
   const notifyIOSLoginSuccess = () => {
     try {
-      if (window.webkit?.messageHandlers?.usuarioLogado) {
-        window.webkit.messageHandlers.usuarioLogado.postMessage("ok");
+      if ((window as any).webkit?.messageHandlers?.usuarioLogado) {
+        (window as any).webkit.messageHandlers.usuarioLogado.postMessage("ok");
         console.log('✅ iOS notificado sobre login bem-sucedido');
       }
     } catch (error) {

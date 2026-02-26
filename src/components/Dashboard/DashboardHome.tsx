@@ -35,7 +35,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       try {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
         if (!companyData) return;
-        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, carousel_data').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(3);
+        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(3);
         setRecentCarousels(data || []);
       } catch (err) { console.error(err); }
     };
@@ -70,16 +70,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
-  };
-
-  const getCoverImage = (item: any): string | null => {
-    try {
-      const cards = item.carousel_data?.cards;
-      if (cards && cards.length > 0 && cards[0].imageUrl) {
-        return cards[0].imageUrl;
-      }
-    } catch {}
-    return null;
   };
 
   return (
@@ -200,20 +190,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
-              const coverImg = getCoverImage(item);
               return (
                 <div
                   key={item.id}
                   className="aspect-[4/3] rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group"
                   style={{
-                    background: coverImg ? undefined : (sc.bgColor ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)` : 'rgba(255,255,255,0.04)'),
+                    background: sc.bgColor ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)` : 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
                 >
-                  {coverImg && (
-                    <img src={coverImg} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />
-                  )}
                   <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
                     <p className="text-xs font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
                     <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>

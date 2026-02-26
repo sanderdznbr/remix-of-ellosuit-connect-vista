@@ -63,6 +63,7 @@ import SocialPublishDialog from './SocialPublishDialog';
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
+import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
@@ -218,6 +219,7 @@ const CarouselGenerator: React.FC = () => {
   const [showRefPanel, setShowRefPanel] = useState(false);
   // CarouselTour removed
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
+  const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
 
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -1631,14 +1633,37 @@ const CarouselGenerator: React.FC = () => {
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
 
-            {/* Menu button to open sidebar/dashboard */}
+            {/* Menu button to open sidebar drawer */}
             {user && (
               <button
-                onClick={() => setShowWelcome(true)}
+                onClick={() => setSidebarDrawerOpen(true)}
                 className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
                 <Menu className="w-5 h-5 text-white/60" />
               </button>
+            )}
+
+            {/* Sidebar drawer overlay */}
+            {sidebarDrawerOpen && (
+              <div className="fixed inset-0 z-[80] flex">
+                <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarDrawerOpen(false)} />
+                <div className="relative w-[280px] h-full animate-in slide-in-from-left duration-200">
+                  <DashboardSidebar
+                    activeTab=""
+                    onTabChange={(tab) => {
+                      setSidebarDrawerOpen(false);
+                      setShowWelcome(true);
+                    }}
+                    onSearch={() => {
+                      setSidebarDrawerOpen(false);
+                      setShowWelcome(true);
+                    }}
+                  />
+                  <button onClick={() => setSidebarDrawerOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}

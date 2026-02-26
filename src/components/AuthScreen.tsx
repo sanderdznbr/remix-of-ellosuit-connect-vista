@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -7,9 +8,9 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertCircle, Loader2 } from 'lucide-react';
-import ellosuitLogo from '@/assets/ellosuit-logo.png';
-import authHero from '@/assets/auth-hero.jpg';
+import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import '@/styles/carousel-loader.css';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileAuthScreen from '@/components/Mobile/MobileAuthScreen';
 import { useAdminMaster } from '@/hooks/useAdminMaster';
@@ -22,6 +23,7 @@ const AuthScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,7 +69,6 @@ const AuthScreen = () => {
         }
         return;
       }
-      // Salvar preferência de "manter conectado"
       if (rememberMe) {
         localStorage.setItem('ellosuit_remember_me', 'true');
         sessionStorage.removeItem('ellosuit_session_active');
@@ -105,7 +106,6 @@ const AuthScreen = () => {
         return;
       }
       if (data?.user) {
-        // Send welcome email
         supabase.functions.invoke('send-system-email', {
           body: { template_key: 'welcome', recipient_email: email, recipient_name: username || email.split('@')[0] },
         }).catch(() => {});
@@ -140,59 +140,101 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-sm space-y-6">
-          {/* Logo */}
-          <div className="flex justify-center mb-2">
-            <img
-              src={ellosuitLogo}
-              alt="ELLOsuit"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+      {/* Orb animation */}
+      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
+          <div className="carousel-loader-spinner" />
+        </div>
+      </div>
 
+      {/* Top Navbar */}
+      <motion.nav
+        className="relative z-20 flex items-center justify-between px-5 md:px-8 py-4"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        <div className="flex items-center gap-6 md:gap-8">
+          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6" />
+        </div>
+        <div className="flex items-center gap-3">
+          {mode === 'signin' ? (
+            <button
+              onClick={() => navigate('/register')}
+              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              Cadastre-se
+            </button>
+          ) : (
+            <button
+              onClick={switchMode}
+              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              Entrar
+            </button>
+          )}
+        </div>
+      </motion.nav>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-4">
+        <motion.div
+          className="w-full max-w-sm space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+        >
+          {/* Title */}
           <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">
-              {mode === 'signin' ? 'Bem vindo de volta!' : 'Crie sua conta'}
+            <h1 className="text-2xl font-bold text-white">
+              {mode === 'signin' ? 'Bem-vindo de volta!' : 'Crie sua conta'}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {mode === 'signin' ? 'Entre no seu ellosuit' : 'Comece agora gratuitamente'}
+            <p className="text-sm text-white/40">
+              {mode === 'signin' ? 'Entre no seu ellocontent' : 'Comece agora gratuitamente'}
             </p>
           </div>
 
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="text-red-300">{error}</AlertDescription>
             </Alert>
           )}
           {success && (
-            <Alert className="bg-green-50 border-green-200">
-              <AlertCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">{success}</AlertDescription>
+            <Alert className="bg-green-500/10 border-green-500/30">
+              <AlertCircle className="h-4 w-4 text-green-400" />
+              <AlertDescription className="text-green-300">{success}</AlertDescription>
             </Alert>
           )}
 
           {mode === 'signin' ? (
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleSignIn} className="space-y-3">
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="h-11 bg-muted/50 border-border"
+                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
                 required
               />
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Senha"
-                className="h-11 bg-muted/50 border-border"
-                required
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Senha"
+                  className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl pr-11 focus-visible:ring-purple-500/50"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -200,13 +242,13 @@ const AuthScreen = () => {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-border accent-primary"
+                    className="h-3.5 w-3.5 rounded border-white/20 accent-purple-500"
                   />
-                  <span className="text-xs text-muted-foreground">Manter conectado</span>
+                  <span className="text-xs text-white/40">Manter conectado</span>
                 </label>
                 <button
                   type="button"
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-purple-400 hover:text-purple-300 hover:underline"
                   onClick={() => navigate('/forgot-password')}
                 >
                   Esqueci minha senha
@@ -215,7 +257,8 @@ const AuthScreen = () => {
 
               <Button
                 type="submit"
-                className="w-full h-10 rounded-full bg-primary text-primary-foreground hover:opacity-90 text-sm"
+                className="w-full h-10 rounded-full text-sm font-medium transition-all duration-200"
+                style={{ backgroundColor: '#7B50DC' }}
                 disabled={isLoading}
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}
@@ -227,14 +270,14 @@ const AuthScreen = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Nome de usuário"
-                className="h-11 bg-muted/50 border-border"
+                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
                 required
               />
               <Input
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Nome da empresa"
-                className="h-11 bg-muted/50 border-border"
+                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
                 required
               />
               <Input
@@ -242,21 +285,31 @@ const AuthScreen = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="h-11 bg-muted/50 border-border"
+                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
                 required
               />
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Senha (mín. 6 caracteres)"
-                className="h-11 bg-muted/50 border-border"
-                required
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Senha (mín. 6 caracteres)"
+                  className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl pr-11 focus-visible:ring-purple-500/50"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <Button
                 type="submit"
-                className="w-full h-10 rounded-full bg-primary text-primary-foreground hover:opacity-90 text-sm"
+                className="w-full h-10 rounded-full text-sm font-medium transition-all duration-200"
+                style={{ backgroundColor: '#7B50DC' }}
                 disabled={isLoading}
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar Conta'}
@@ -267,10 +320,10 @@ const AuthScreen = () => {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <Separator />
+              <div className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">ou</span>
+              <span className="px-3 text-white/30" style={{ backgroundColor: '#0a0a0f' }}>ou</span>
             </div>
           </div>
 
@@ -278,7 +331,7 @@ const AuthScreen = () => {
           <div className="space-y-2.5">
             <Button
               variant="outline"
-              className="w-full h-10 rounded-full border-border text-sm font-normal"
+              className="w-full h-10 rounded-full border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-sm font-normal"
               onClick={handleSocialLogin}
               disabled={isLoading}
             >
@@ -293,11 +346,11 @@ const AuthScreen = () => {
 
             <Button
               variant="outline"
-              className="w-full h-10 rounded-full border-border text-sm font-normal"
+              className="w-full h-10 rounded-full border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-sm font-normal"
               onClick={handleSocialLogin}
               disabled={isLoading}
             >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="white">
                 <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
               Continue com Apple
@@ -305,7 +358,7 @@ const AuthScreen = () => {
 
             <Button
               variant="outline"
-              className="w-full h-10 rounded-full border-border text-sm font-normal"
+              className="w-full h-10 rounded-full border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white text-sm font-normal"
               onClick={handleSocialLogin}
               disabled={isLoading}
             >
@@ -317,13 +370,13 @@ const AuthScreen = () => {
           </div>
 
           {/* Toggle mode */}
-          <p className="text-center text-xs text-muted-foreground pt-2">
+          <p className="text-center text-xs text-white/30 pt-2">
             {mode === 'signin' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}{' '}
             {mode === 'signin' ? (
               <button
                 type="button"
                 onClick={() => navigate('/register')}
-                className="text-primary font-medium hover:underline"
+                className="text-purple-400 font-medium hover:underline"
               >
                 Cadastre-se
               </button>
@@ -331,7 +384,7 @@ const AuthScreen = () => {
               <button
                 type="button"
                 onClick={switchMode}
-                className="text-primary font-medium hover:underline"
+                className="text-purple-400 font-medium hover:underline"
               >
                 Entrar
               </button>
@@ -340,27 +393,18 @@ const AuthScreen = () => {
 
           {/* Coming Soon Popup */}
           {showComingSoon && (
-            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-foreground text-background px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-              🚀 Funcionalidade disponível em breve no lançamento do app!
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+              🚀 Disponível em breve no lançamento!
             </div>
           )}
 
           {/* Legal links */}
-          <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-4 pb-2">
-            <a href="https://www.ellosuit.online/privacy" className="underline hover:text-foreground transition-colors">Política de Privacidade</a>
+          <div className="flex justify-center gap-4 text-xs text-white/20 pt-4 pb-2">
+            <a href="https://www.ellosuit.online/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
             <span>•</span>
-            <a href="https://www.ellosuit.online/terms" className="underline hover:text-foreground transition-colors">Termos de Uso</a>
+            <a href="https://www.ellosuit.online/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
           </div>
-        </div>
-      </div>
-
-      {/* Right side - Hero image */}
-      <div className="hidden lg:block flex-1 relative">
-        <img
-          src={authHero}
-          alt="Ellosuit Dashboard"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        </motion.div>
       </div>
     </div>
   );

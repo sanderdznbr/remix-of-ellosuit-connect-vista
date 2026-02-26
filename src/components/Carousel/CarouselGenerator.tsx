@@ -1014,60 +1014,80 @@ const CarouselGenerator: React.FC = () => {
         const totalAi = imageFactories.length;
         setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
 
-        // STEP 1: Generate cover FIRST (alone, no competition for rate limits)
+        // Helper: generate in batches of N to avoid overwhelming edge functions
+        const generateBatch = async (factories: typeof imageFactories, batchSize: number) => {
+          for (let i = 0; i < factories.length; i += batchSize) {
+            const batch = factories.slice(i, i + batchSize);
+            if (i > 0) await new Promise(r => setTimeout(r, 1500));
+            await Promise.all(
+              batch.map(f =>
+                f.factory().then(url => {
+                  completed++;
+                  setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+                  if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true };
+                  return url;
+                })
+              )
+            );
+          }
+        };
+
         const coverFactory = imageFactories.find(p => p.index === 0);
         const lastCardIndex = Math.max(...imageFactories.map(f => f.index));
         const lastFactory = imageFactories.find(p => p.index === lastCardIndex && p.index !== 0);
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
 
+        // STEP 1: Cover alone
         if (coverFactory) {
           const coverUrl = await coverFactory.factory();
           completed++;
           setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-          if (coverUrl) {
-            updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true };
-          }
+          if (coverUrl) updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true };
         }
 
-        // STEP 2: Generate middle cards in parallel (they are less critical)
+        // STEP 2: Middle cards in batches of 2
         if (middleFactories.length > 0) {
-          const middleResults = await Promise.all(
-            middleFactories.map(f =>
-              f.factory().then(url => {
-                completed++;
-                setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-                if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true };
-                return url;
-              })
-            )
-          );
+          await generateBatch(middleFactories, 2);
         }
 
-        // STEP 3: Generate last card AFTER middle cards (avoids rate limit)
+        // STEP 3: Last card alone with delay
         if (lastFactory) {
+          await new Promise(r => setTimeout(r, 1500));
           const lastUrl = await lastFactory.factory();
           completed++;
           setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-          if (lastUrl) {
-            updatedCards[lastFactory.index] = { ...updatedCards[lastFactory.index], imageUrl: lastUrl, isAiImage: true };
+          if (lastUrl) updatedCards[lastFactory.index] = { ...updatedCards[lastFactory.index], imageUrl: lastUrl, isAiImage: true };
+        }
+
+        // STEP 4: Retry ALL failed cards one by one
+        const failedFactories = imageFactories.filter(f => !updatedCards[f.index]?.imageUrl);
+        if (failedFactories.length > 0) {
+          console.log(`Retrying ${failedFactories.length} failed cards...`);
+          setImageGenProgress(`🔄 Regenerando ${failedFactories.length} imagens que falharam...`);
+          for (const target of failedFactories) {
+            await new Promise(r => setTimeout(r, 3000));
+            setImageGenProgress(`🔄 Tentando card ${target.index + 1} novamente...`);
+            try {
+              const retryUrl = await target.factory();
+              if (retryUrl) {
+                updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
+                console.log(`Retry 1 succeeded for card ${target.index}`);
+              }
+            } catch (e) { console.error(`Retry 1 error card ${target.index}:`, e); }
           }
         }
 
-        // RETRY: If cover or last card still have no image, retry with delay
-        const retryTargets = [
-          ...(coverFactory && !updatedCards[0]?.imageUrl ? [coverFactory] : []),
-          ...(lastFactory && !updatedCards[lastCardIndex]?.imageUrl ? [lastFactory] : []),
-        ];
-        for (const target of retryTargets) {
-          console.log(`Retrying image for card ${target.index}...`);
-          setImageGenProgress(`🎨 Tentando gerar card ${target.index === 0 ? 'capa' : 'final'} novamente...`);
-          await new Promise(r => setTimeout(r, 2000)); // wait for rate limit to clear
-          const retryUrl = await target.factory();
-          if (retryUrl) {
-            updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
-            console.log(`Retry succeeded for card ${target.index}`);
-          } else {
-            console.error(`Retry failed for card ${target.index}`);
+        // STEP 5: Final retry for any still missing
+        const stillFailed = imageFactories.filter(f => !updatedCards[f.index]?.imageUrl);
+        if (stillFailed.length > 0) {
+          console.log(`Final retry for ${stillFailed.length} cards...`);
+          setImageGenProgress(`🔄 Última tentativa para ${stillFailed.length} imagens...`);
+          for (const target of stillFailed) {
+            await new Promise(r => setTimeout(r, 4000));
+            try {
+              const retryUrl = await target.factory();
+              if (retryUrl) updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
+            } catch { /* accept failure */ }
           }
         }
       } else {

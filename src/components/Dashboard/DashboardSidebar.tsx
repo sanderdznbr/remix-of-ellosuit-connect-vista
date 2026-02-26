@@ -150,8 +150,12 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           Galeria de Marca
         </button>
         <button
-          onClick={() => navigate('/marketplace')}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+          onClick={() => { onTabChange('marketplace'); closeSearch(); }}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            activeTab === 'marketplace'
+              ? 'bg-white/[0.08] text-white font-medium'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+          }`}
         >
           <ShoppingBag className="w-4 h-4" />
           Marketplace

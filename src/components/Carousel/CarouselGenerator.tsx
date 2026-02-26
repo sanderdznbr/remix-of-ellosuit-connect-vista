@@ -820,15 +820,19 @@ const CarouselGenerator: React.FC = () => {
       const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
       const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
 
+      // For marketplace full-bleed: ALL cards need AI images (text is baked in)
+      const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
-        if (card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i)) {
+        if (isFullBleedStyle || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i)) {
           totalImages++;
 
           const isCoverOrCta = card.type === 'cover' || card.type === 'cta';
 
           // Try to use a user-selected web image (only for non-cover content cards, limited pool)
-          if (!isCoverOrCta && webImagePool.length > webImageIndex) {
+          // Skip for marketplace full-bleed: ALL cards must be AI-generated with text baked in
+          if (!isFullBleedStyle && !isCoverOrCta && webImagePool.length > webImageIndex) {
             let selectedUrl = webImagePool[webImageIndex];
             webImageIndex++;
             while (usedImageUrls.has(selectedUrl) && webImageIndex < webImagePool.length) {
@@ -843,10 +847,39 @@ const CarouselGenerator: React.FC = () => {
             }
           }
 
-          // ALL other cards: generate via AI (covers, ctas, and content cards without web images)
+      // ALL other cards: generate via AI (covers, ctas, and content cards without web images)
           aiImagesQueued++;
           const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
           let imgPrompt = `${cleanTopic}: ${cardDesc}`;
+          
+          // For marketplace full-bleed styles: include the actual card TEXT content
+          // so the AI bakes typography directly into the image
+          const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+          if (isFullBleedMarketplace) {
+            const isCover = card.type === 'cover' || i === 0;
+            const isCta = card.type === 'cta' || i === updatedCards.length - 1;
+            const cardTextParts: string[] = [];
+            
+            if (isCover) {
+              cardTextParts.push(`THIS IS THE COVER CARD (Card 1 of ${updatedCards.length}).`);
+              cardTextParts.push(`HEADLINE TEXT TO RENDER: "${card.title || cleanTopic}"`);
+              if (card.subtitle) cardTextParts.push(`SUBTITLE TEXT: "${card.subtitle}"`);
+              cardTextParts.push(`This should be the MOST impactful, magazine-cover style card with the largest typography.`);
+            } else if (isCta) {
+              cardTextParts.push(`THIS IS THE FINAL CTA CARD (Card ${i + 1} of ${updatedCards.length}).`);
+              if (card.title) cardTextParts.push(`CTA HEADLINE: "${card.title}"`);
+              if (card.body) cardTextParts.push(`CTA TEXT: "${card.body}"`);
+              cardTextParts.push(`This should be a call-to-action with engaging design, NOT a cover/hero image.`);
+            } else {
+              cardTextParts.push(`THIS IS CONTENT CARD ${i + 1} of ${updatedCards.length} (NOT a cover, NOT a hero).`);
+              const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
+              if (bodyText) cardTextParts.push(`MAIN TEXT TO RENDER IN THE IMAGE: "${bodyText}"`);
+              if (card.bodyBottom) cardTextParts.push(`SECONDARY TEXT: "${card.bodyBottom}"`);
+              cardTextParts.push(`This should look like an INNER content slide, with the text as the main focus. Use varied layout compositions — NOT a hero/cover treatment.`);
+            }
+            
+            imgPrompt = cardTextParts.join('\n');
+          }
           
           // Enhance prompt with product context
           if (productAnalysis?.confirmed) {
@@ -866,7 +899,6 @@ const CarouselGenerator: React.FC = () => {
           const allStyleRefs = [...styleRefUrls, ...productRefUrls];
           
           // When marketplace style is active, add preview images as references so AI can see the style
-          const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
           const marketplaceRefUrls: string[] = [];
           if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
             // Build absolute URLs from relative paths and pick 3 varied references
@@ -2331,17 +2363,22 @@ const CarouselGenerator: React.FC = () => {
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
                 {isGuest ? 'Cadastre-se' : 'Exportar'}
               </button>
-              <div className="w-px h-5 bg-white/10" />
-              <button data-tour="btn-add" onClick={addCard} disabled={isGuest}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                <Plus className="h-3.5 w-3.5" /> Adicionar Card
-              </button>
-              <button data-tour="btn-style" onClick={() => setShowStylePanel(!showStylePanel)} disabled={isGuest}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
-                <Palette className="h-3.5 w-3.5" /> Estilo
-              </button>
+              {/* Hide editing controls when marketplace full-bleed is active */}
+              {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                <>
+                  <div className="w-px h-5 bg-white/10" />
+                  <button data-tour="btn-add" onClick={addCard} disabled={isGuest}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
+                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                    <Plus className="h-3.5 w-3.5" /> Adicionar Card
+                  </button>
+                  <button data-tour="btn-style" onClick={() => setShowStylePanel(!showStylePanel)} disabled={isGuest}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
+                    style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
+                    <Palette className="h-3.5 w-3.5" /> Estilo
+                  </button>
+                </>
+              )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
@@ -2362,7 +2399,15 @@ const CarouselGenerator: React.FC = () => {
                   const thumbH = thumbW * (CARD_H / CARD_W);
                   return (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
-                    onClick={() => { if (isCardLocked(i)) return; setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
+                    onClick={() => {
+                      if (isCardLocked(i)) return;
+                      setActiveCardIndex(i);
+                      // Don't open editor for marketplace full-bleed styles
+                      if (!activeMarketplaceStyle?.imageGeneration?.prompt_style) {
+                        setEditingCard(i);
+                        setAiImagePrompt(card.imagePrompt || card.title || '');
+                      }
+                    }}>
                     <div className="rounded-xl overflow-hidden transition-all" style={{
                       border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
                       boxShadow: i === activeCardIndex ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
@@ -2381,7 +2426,8 @@ const CarouselGenerator: React.FC = () => {
                         <Lock className="w-4 h-4" style={{ color: 'rgba(139,92,246,0.7)' }} />
                       </div>
                     )}
-                    {/* Hover actions */}
+                    {/* Hover actions — hidden for marketplace full-bleed */}
+                    {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
                       <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
                         className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
@@ -2413,6 +2459,7 @@ const CarouselGenerator: React.FC = () => {
                         )}
                       </div>
                     </div>
+                    )}
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
                   );

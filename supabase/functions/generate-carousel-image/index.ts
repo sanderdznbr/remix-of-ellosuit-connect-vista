@@ -47,9 +47,14 @@ Deno.serve(async (req) => {
     if (stylePrompt) {
       textPrompt = `${stylePrompt}
 
-CONTENT/SCENE FOR THIS SPECIFIC CARD: ${imagePrompt}
+${imagePrompt}
 
-Generate the COMPLETE final Instagram post image (1080x1350, 4:5 portrait) with ALL visual elements integrated: typography, decorative elements, photo treatment, and composition as described in the style rules above. The output should be a READY-TO-POST image, not just a photograph.`;
+CRITICAL INSTRUCTIONS:
+- Generate the COMPLETE final Instagram post image (1080x1350, 4:5 portrait) with ALL visual elements integrated: typography, decorative elements, photo treatment, and composition as described in the style rules above.
+- The output should be a READY-TO-POST image, not just a photograph.
+- ALL text content provided above MUST be rendered directly in the image with appropriate typography.
+- Follow the style references EXACTLY — match the same editorial magazine collage aesthetic, the same typography hierarchy, the same color palette, the same decorative elements.
+- If the card says it is NOT a cover/hero, use a DIFFERENT composition than a full-bleed hero photo — use editorial content layouts with mixed text blocks, smaller photos, and varied arrangements.`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 

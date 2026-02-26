@@ -278,20 +278,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                       <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
                     </div>
                   )}
-                  <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-                    <p className="text-[11px] font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>
-                      <button
-                        onClick={(e) => handleDelete(e, item.id)}
-                        className="p-1 rounded-md transition-colors cursor-pointer"
-                        style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.3)' }}
-                        title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
+                  {/* Clean cover — no text overlay */}
                 </div>
               );
             })}

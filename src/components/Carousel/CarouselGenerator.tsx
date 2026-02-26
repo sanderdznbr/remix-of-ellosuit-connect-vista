@@ -634,7 +634,9 @@ const CarouselGenerator: React.FC = () => {
         }
       }
     } catch (err) {
-      console.warn('Credit check failed, proceeding anyway:', err);
+      console.warn('Credit check failed:', err);
+      toast({ title: 'Erro ao verificar créditos', description: 'Tente novamente.', variant: 'destructive' });
+      return;
     }
 
     setGenerating(true);

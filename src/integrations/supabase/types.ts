@@ -2356,6 +2356,7 @@ export type Database = {
           id: string
           is_starred: boolean
           keywords: string[] | null
+          marketplace_style_id: string | null
           style_config: Json | null
           title: string
           topic: string
@@ -2371,6 +2372,7 @@ export type Database = {
           id?: string
           is_starred?: boolean
           keywords?: string[] | null
+          marketplace_style_id?: string | null
           style_config?: Json | null
           title: string
           topic: string
@@ -2386,6 +2388,7 @@ export type Database = {
           id?: string
           is_starred?: boolean
           keywords?: string[] | null
+          marketplace_style_id?: string | null
           style_config?: Json | null
           title?: string
           topic?: string
@@ -2398,6 +2401,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_carousels_marketplace_style_id_fkey"
+            columns: ["marketplace_style_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_styles"
             referencedColumns: ["id"]
           },
         ]

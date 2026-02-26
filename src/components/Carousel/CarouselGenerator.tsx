@@ -241,21 +241,21 @@ const CarouselGenerator: React.FC = () => {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
       
-      const content = data.content;
+      const content = data.content || {};
       setWebSearchResult({
-        summary: content.summary || 'Conteúdo encontrado com sucesso',
+        summary: content?.summary || 'Conteúdo encontrado com sucesso',
         citations: data.citations || [],
         content,
         images: data.images || [],
       });
 
       // Auto-fill topic with richer content
-      if (content.title) {
+      if (content?.title) {
         setTopic(content.title + (content.subtitle ? '\n\n' + content.subtitle : ''));
       }
 
       // Auto-fill keywords from image search terms
-      if (content.image_search_terms?.length > 0) {
+      if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 

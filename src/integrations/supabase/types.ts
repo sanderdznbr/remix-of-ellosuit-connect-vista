@@ -2735,6 +2735,57 @@ export type Database = {
           },
         ]
       }
+      marketplace_styles: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          name: string
+          preview_images: string[]
+          price_brl: number
+          price_credits: number
+          sort_order: number
+          style_config: Json
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          name: string
+          preview_images?: string[]
+          price_brl?: number
+          price_credits?: number
+          sort_order?: number
+          style_config?: Json
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          name?: string
+          preview_images?: string[]
+          price_brl?: number
+          price_credits?: number
+          sort_order?: number
+          style_config?: Json
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_audio_settings: {
         Row: {
           audio_type: string
@@ -3629,6 +3680,48 @@ export type Database = {
             columns: ["booking_link_id"]
             isOneToOne: false
             referencedRelation: "public_booking_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchased_styles: {
+        Row: {
+          company_id: string
+          id: string
+          payment_method: string | null
+          purchased_at: string
+          style_id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          payment_method?: string | null
+          purchased_at?: string
+          style_id: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          payment_method?: string | null
+          purchased_at?: string
+          style_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchased_styles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchased_styles_style_id_fkey"
+            columns: ["style_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_styles"
             referencedColumns: ["id"]
           },
         ]

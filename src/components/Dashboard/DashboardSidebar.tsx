@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText, ImageIcon } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText, ImageIcon, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentIcon from '@/assets/ellocontent_icon.png';
@@ -148,6 +148,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         >
           <ImageIcon className="w-4 h-4" />
           Galeria de Marca
+        </button>
+        <button
+          onClick={() => navigate('/marketplace')}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+        >
+          <ShoppingBag className="w-4 h-4" />
+          Marketplace
         </button>
       </div>
 

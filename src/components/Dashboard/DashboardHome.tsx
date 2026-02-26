@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowUp, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import '@/styles/carousel-loader.css';
@@ -21,6 +21,7 @@ interface DashboardHomeProps {
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects }) => {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState('');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -227,8 +228,18 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                         : 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}
-                  onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
+                  onClick={async () => {
+                    if (onLoadCarousel) {
+                      setLoadingId(item.id);
+                      try { await onLoadCarousel(item); } finally { setLoadingId(null); }
+                    } else { onStartCarousel(); }
+                  }}
                 >
+                  {loadingId === item.id && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
+                      <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
                     <p className="text-[11px] font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
                     <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>

@@ -232,11 +232,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   style={{
                     width: '160px',
                     height: '200px',
-                    background: cover
-                      ? `url(${cover}) center/cover no-repeat`
-                      : sc.bgColor
+                    background: !cover
+                      ? sc.bgColor
                         ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                        : 'rgba(255,255,255,0.04)',
+                        : 'rgba(255,255,255,0.04)'
+                      : 'rgba(255,255,255,0.04)',
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={async () => {
@@ -246,17 +246,27 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                     } else { onStartCarousel(); }
                   }}
                 >
+                  {cover && (
+                    <img
+                      src={cover}
+                      alt={item.title || item.topic}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        // Hide broken image and show fallback
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
                   {loadingId === item.id && (
                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
                       <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
                     </div>
                   )}
-                  {!cover && (
-                    <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-                      <p className="text-[11px] font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>
-                    </div>
-                  )}
+                  <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
+                    <p className="text-[11px] font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
+                    <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>
+                  </div>
                 </div>
               );
             })}

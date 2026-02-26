@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface DashboardSidebarProps {
@@ -16,10 +17,25 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
   const email = user?.email || '';
+
+  // Fetch recent projects for sidebar
+  useEffect(() => {
+    const fetchRecent = async () => {
+      if (!user) return;
+      try {
+        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+        if (!cu) return;
+        const { data } = await supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5);
+        setRecentProjects(data || []);
+      } catch {}
+    };
+    fetchRecent();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -122,7 +138,19 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       <div className="px-2 mt-5 flex-1 overflow-y-auto">
         <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Recentes</p>
         <div className="space-y-0.5">
-          <p className="px-3 py-2 text-xs text-white/20">Nenhum projeto ainda</p>
+          {recentProjects.length === 0 && (
+            <p className="px-3 py-2 text-xs text-white/20">Nenhum projeto ainda</p>
+          )}
+          {recentProjects.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onTabChange('projects')}
+              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors cursor-pointer truncate"
+            >
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{p.title || p.topic}</span>
+            </button>
+          ))}
         </div>
       </div>
 

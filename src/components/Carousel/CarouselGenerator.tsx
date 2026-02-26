@@ -1173,8 +1173,8 @@ const CarouselGenerator: React.FC = () => {
       const margin = 24 * s;
       const posStyle: React.CSSProperties = {
         position: 'absolute', width: size, height: size, objectFit: 'contain', zIndex: 15,
-        ...(logoPosition.includes('top') ? { top: margin } : { bottom: margin }),
-        ...(logoPosition.includes('left') ? { left: margin } : { right: margin }),
+        ...(logoPosition.includes('top') ? { top: margin } : logoPosition.includes('bottom') ? { bottom: margin } : { top: '50%', marginTop: -(size / 2) }),
+        ...(logoPosition.includes('left') ? { left: margin } : logoPosition.includes('right') ? { right: margin } : { left: '50%', marginLeft: -(size / 2) }),
         ...(isDarkBg ? { filter: 'brightness(0) invert(1)' } : {}),
       };
       return <img src={logoUrl} alt="" style={posStyle} />;
@@ -1479,8 +1479,8 @@ const CarouselGenerator: React.FC = () => {
         height: size,
         objectFit: 'contain',
         zIndex: 15,
-        ...(logoPosition.includes('top') ? { top: margin } : { bottom: margin }),
-        ...(logoPosition.includes('left') ? { left: margin } : { right: margin }),
+        ...(logoPosition.includes('top') ? { top: margin } : logoPosition.includes('bottom') ? { bottom: margin } : { top: '50%', marginTop: -(size / 2) }),
+        ...(logoPosition.includes('left') ? { left: margin } : logoPosition.includes('right') ? { right: margin } : { left: '50%', marginLeft: -(size / 2) }),
         // Auto-whiten colorful logos on dark backgrounds
         ...(isDarkBg ? { filter: 'brightness(0) invert(1)' } : {}),
       };

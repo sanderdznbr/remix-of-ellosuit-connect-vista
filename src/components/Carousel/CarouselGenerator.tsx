@@ -44,7 +44,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -1860,13 +1860,13 @@ const CarouselGenerator: React.FC = () => {
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
           <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
-            {/* Menu button */}
+            {/* Home button */}
             {user && (
               <button
-                onClick={() => setSidebarDrawerOpen(true)}
+                onClick={() => setShowWelcome(true)}
                 className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
-                <Menu className="w-5 h-5 text-white/60" />
+                <Home className="w-5 h-5 text-white/60" />
               </button>
             )}
             {/* Subtle background glow effects */}

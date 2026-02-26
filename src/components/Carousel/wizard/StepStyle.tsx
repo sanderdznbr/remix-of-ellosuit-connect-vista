@@ -146,8 +146,8 @@ const StepStyle: React.FC<Props> = ({
   const visibleFonts = showAllFonts ? FONT_OPTIONS : FONT_OPTIONS.slice(0, 12);
 
   return (
-    <div className="space-y-8">
-      {/* Section tabs */}
+    <div className="space-y-6">
+      {/* Section tabs - compact on mobile */}
       <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03]">
         {[
           { key: 'presets' as const, label: 'Estilos' },
@@ -156,7 +156,7 @@ const StepStyle: React.FC<Props> = ({
           { key: 'branding' as const, label: 'Marca' },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveSection(tab.key)}
-            className={`flex-1 py-3 px-4 rounded-lg text-xs font-medium transition-all ${
+            className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
               activeSection === tab.key
                 ? 'bg-white/[0.08] text-white'
                 : 'text-white/30 hover:text-white/50'
@@ -193,7 +193,7 @@ const StepStyle: React.FC<Props> = ({
         <div className="space-y-6">
           <div>
             <p className="text-xs font-medium text-white/40 mb-3">Paletas prontas</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {COLOR_PRESETS.map((p, i) => {
                 const isActive = bgColor === p.bg && accentColor === p.accent && textColor === p.text;
                 return (
@@ -213,7 +213,7 @@ const StepStyle: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: 'Fundo', value: bgColor, onChange: setBgColor },
               { label: 'Destaque', value: accentColor, onChange: setAccentColor },
@@ -333,7 +333,7 @@ const StepStyle: React.FC<Props> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: 'Marca', value: brandName, onChange: setBrandName, ph: 'Nome da marca' },
               { label: '@ Instagram', value: userName, onChange: setUserName, ph: 'seuuser' },

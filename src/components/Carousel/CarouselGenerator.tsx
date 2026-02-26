@@ -2142,22 +2142,22 @@ const CarouselGenerator: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
+            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
               {/* Left: preview with card navigation */}
               <motion.div
                 initial={{ x: 0 }}
                 animate={{ x: 0 }}
-                className="flex flex-col items-center p-4 shrink-0 md:flex-1 md:overflow-auto"
+                className="flex flex-col items-center p-2 md:p-4 shrink-0 md:flex-1 md:overflow-auto relative"
                 style={{ backgroundColor: '#0a0a0f' }}
               >
                 {/* Glow effect */}
                 <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] rounded-full opacity-15 blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
                 
-                {/* Card preview */}
+                {/* Card preview - compact on mobile */}
                 <div className="flex items-center justify-center w-full flex-1" style={{ minHeight: 0 }}>
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
-                      transform: `scale(${Math.min((typeof window !== 'undefined' ? window.innerWidth * 0.45 : 300) / PREVIEW_W, 1.4)})`,
+                      transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth < 768 ? window.innerWidth * 0.6 : window.innerWidth * 0.45) : 300) / PREVIEW_W, 1.4)})`,
                       transformOrigin: 'top center',
                       width: PREVIEW_W,
                       height: PREVIEW_H,
@@ -2168,46 +2168,46 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                 </div>
                 {/* Bottom navigation bar */}
-                <div className="flex items-center justify-center gap-3 py-3 shrink-0 w-full">
+                <div className="flex items-center justify-center gap-2 md:gap-3 py-2 md:py-3 shrink-0 w-full">
                   <button
                     onClick={() => { const prev = Math.max(0, validIndex - 1); setEditingCard(prev); setActiveCardIndex(prev); setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || ''); }}
                     disabled={validIndex === 0}
-                    className="p-2.5 rounded-full border shadow-md disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-white/10"
+                    className="p-2 md:p-2.5 rounded-full border shadow-md disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-white/10"
                     style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <ChevronLeft className="h-5 w-5 text-white/70" />
+                    <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 text-white/70" />
                   </button>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 md:gap-1.5">
                     {carouselData.cards.map((_, i) => (
                       <button key={i} onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(carouselData.cards[i]?.imagePrompt || carouselData.cards[i]?.title || ''); }}
                         className="rounded-full transition-all"
                         style={{
-                          width: i === validIndex ? 10 : 7,
-                          height: i === validIndex ? 10 : 7,
+                          width: i === validIndex ? 8 : 5,
+                          height: i === validIndex ? 8 : 5,
                           backgroundColor: i === validIndex ? '#8B5CF6' : 'rgba(255,255,255,0.2)',
                           transform: i === validIndex ? 'scale(1.2)' : 'scale(1)',
                         }} />
                     ))}
-                    <span className="text-xs font-medium ml-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{validIndex + 1}/{carouselData.cards.length}</span>
+                    <span className="text-[10px] md:text-xs font-medium ml-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{validIndex + 1}/{carouselData.cards.length}</span>
                   </div>
                   <button
                     onClick={() => { const next = Math.min(carouselData.cards.length - 1, validIndex + 1); setEditingCard(next); setActiveCardIndex(next); setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || ''); }}
                     disabled={validIndex === carouselData.cards.length - 1}
-                    className="p-2.5 rounded-full border shadow-md disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-white/10"
+                    className="p-2 md:p-2.5 rounded-full border shadow-md disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-white/10"
                     style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)' }}
                   >
-                    <ChevronRight className="h-5 w-5 text-white/70" />
+                    <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-white/70" />
                   </button>
                 </div>
               </motion.div>
 
               {/* Right sidebar - dark themed, slides in */}
               <motion.div
-                initial={{ x: 300, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 300, opacity: 0 }}
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="md:w-[380px] shrink-0 overflow-y-auto md:overflow-y-auto"
+                className="md:w-[380px] flex-1 md:flex-none shrink-0 overflow-y-auto"
                 style={{ backgroundColor: '#111118', borderLeft: '1px solid rgba(255,255,255,0.06)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
               >
                 <CarouselEditorSidebar

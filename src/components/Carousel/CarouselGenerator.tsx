@@ -1574,6 +1574,7 @@ const CarouselGenerator: React.FC = () => {
                 setEditingCard(null);
                 setActiveCardIndex(0);
                 setCurrentCarouselId(null);
+                setSidebarDrawerOpen(false);
                 if (topic) {
                   setTopic(topic);
                   setShowWelcome(false);
@@ -1611,13 +1612,13 @@ const CarouselGenerator: React.FC = () => {
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
 
-            {/* Menu button to open sidebar drawer */}
+            {/* Home button to return to dashboard */}
             {user && (
               <button
-                onClick={() => setSidebarDrawerOpen(true)}
+                onClick={() => setShowWelcome(true)}
                 className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
-                <Menu className="w-5 h-5 text-white/60" />
+                <Home className="w-5 h-5 text-white/60" />
               </button>
             )}
 

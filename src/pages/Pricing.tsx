@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
+import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import '@/styles/carousel-loader.css';
 
@@ -85,54 +87,56 @@ const plans = [
   },
 ];
 
-export default function Pricing() {
+function PricingContent({ isLoggedIn }: { isLoggedIn: boolean }) {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 overflow-y-auto z-50" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-5 md:px-8 py-4 relative z-20">
-        <div className="flex items-center gap-6 md:gap-8">
-          <img
-            src={ellocontentLogo}
-            alt="elloContent"
-            className="h-5 md:h-6 cursor-pointer"
-            onClick={() => navigate('/')}
-          />
-          <div className="hidden md:flex items-center gap-5">
-            {[
-              { label: 'Preços', path: '/precos' },
-              { label: 'Recursos', path: '#' },
-              { label: 'Comunidade', path: '#' },
-              { label: 'Suporte', path: '#' },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => item.path !== '#' && navigate(item.path)}
-                className={`text-sm font-medium transition-colors cursor-pointer ${
-                  item.path === '/precos' ? 'text-white/90' : 'text-white/50 hover:text-white/80'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
+      {/* Public navbar — only for non-logged-in users */}
+      {!isLoggedIn && (
+        <nav className="flex items-center justify-between px-5 md:px-8 py-4 relative z-20">
+          <div className="flex items-center gap-6 md:gap-8">
+            <img
+              src={ellocontentLogo}
+              alt="elloContent"
+              className="h-5 md:h-6 cursor-pointer"
+              onClick={() => navigate('/')}
+            />
+            <div className="hidden md:flex items-center gap-5">
+              {[
+                { label: 'Preços', path: '/precos' },
+                { label: 'Recursos', path: '#' },
+                { label: 'Comunidade', path: '#' },
+                { label: 'Suporte', path: '#' },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => item.path !== '#' && navigate(item.path)}
+                  className={`text-sm font-medium transition-colors cursor-pointer ${
+                    item.path === '/precos' ? 'text-white/90' : 'text-white/50 hover:text-white/80'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/auth')}
-            className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5"
-          >
-            Login
-          </button>
-          <button
-            onClick={() => navigate('/auth')}
-            className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            Começar
-          </button>
-        </div>
-      </nav>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/auth')}
+              className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => navigate('/auth')}
+              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              Começar
+            </button>
+          </div>
+        </nav>
+      )}
 
       {/* Header */}
       <motion.div
@@ -188,7 +192,7 @@ export default function Pricing() {
             <p className="text-white/30 text-xs mb-6">{plan.subtitle}</p>
 
             <button
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate(isLoggedIn ? '#' : '/auth')}
               className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer mb-6 ${plan.ctaStyle}`}
             >
               {plan.cta}
@@ -206,6 +210,26 @@ export default function Pricing() {
           </motion.div>
         ))}
       </div>
+    </div>
+  );
+}
+
+export default function Pricing() {
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
+
+  if (isLoggedIn) {
+    return (
+      <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
+        <DashboardSidebar activeTab="pricing" onTabChange={() => {}} onSearch={() => {}} />
+        <PricingContent isLoggedIn />
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 overflow-y-auto z-50" style={{ backgroundColor: '#0a0a0f' }}>
+      <PricingContent isLoggedIn={false} />
     </div>
   );
 }

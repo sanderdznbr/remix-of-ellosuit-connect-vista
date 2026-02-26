@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { ChevronDown, ChevronUp, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, X, ShoppingBag, Loader2 } from 'lucide-react';
 import LogoPositionPicker from './LogoPositionPicker';
+import { supabase } from '@/integrations/supabase/client';
 
 const FONT_OPTIONS = [
   { label: 'Playfair Display', value: "'Playfair Display', 'Georgia', serif" },
@@ -110,6 +111,7 @@ interface Props {
   showHeader?: boolean;
   setShowHeader?: (v: boolean) => void;
   onApplyPreset?: (preset: StylePreset) => void;
+  onApplyMarketplaceStyle?: (styleConfig: any) => void;
   logoUrl?: string | null;
   setLogoUrl?: (v: string | null) => void;
   logoPosition?: LogoPosition;
@@ -118,24 +120,77 @@ interface Props {
   onChangeGlobalFontScale?: (v: number) => void;
 }
 
+interface MarketplacePurchasedStyle {
+  id: string;
+  name: string;
+  preview_images: string[];
+  style_config: any;
+}
+
 const StepStyle: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
   selectedFont, setSelectedFont, brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   showHeader = true, setShowHeader,
-  onApplyPreset,
+  onApplyPreset, onApplyMarketplaceStyle,
   logoUrl, setLogoUrl, logoPosition = 'top-left', setLogoPosition,
   globalFontScale = 100, onChangeGlobalFontScale,
 }) => {
   const [showAllFonts, setShowAllFonts] = useState(false);
   const [activeSection, setActiveSection] = useState<'presets' | 'colors' | 'fonts' | 'branding'>('presets');
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [marketplaceStyles, setMarketplaceStyles] = useState<MarketplacePurchasedStyle[]>([]);
+  const [loadingMarketplace, setLoadingMarketplace] = useState(false);
+  const [activeMarketplaceId, setActiveMarketplaceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPurchasedStyles = async () => {
+      setLoadingMarketplace(true);
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+        const { data: purchased } = await supabase
+          .from('purchased_styles')
+          .select('style_id')
+          .eq('user_id', userData.user.id);
+        if (!purchased?.length) return;
+        const styleIds = (purchased as any[]).map(p => p.style_id);
+        const { data: styles } = await supabase
+          .from('marketplace_styles')
+          .select('id, name, preview_images, style_config')
+          .in('id', styleIds)
+          .eq('is_active', true);
+        setMarketplaceStyles((styles as any[]) || []);
+      } catch (err) {
+        console.error('Error fetching marketplace styles:', err);
+      } finally {
+        setLoadingMarketplace(false);
+      }
+    };
+    fetchPurchasedStyles();
+  }, []);
 
   const applyPreset = (preset: StylePreset) => {
+    setActiveMarketplaceId(null);
     setBgColor(preset.bgColor);
     setAccentColor(preset.accentColor);
     setTextColor(preset.textColor);
     setSelectedFont(preset.fontIndex);
     onApplyPreset?.(preset);
+  };
+
+  const applyMarketplaceStyle = (style: MarketplacePurchasedStyle) => {
+    if (activeMarketplaceId === style.id) {
+      setActiveMarketplaceId(null);
+      return;
+    }
+    setActiveMarketplaceId(style.id);
+    const config = style.style_config;
+    if (config?.colors) {
+      if (config.colors.primary) setAccentColor(config.colors.primary);
+      if (config.colors.secondary) setBgColor(config.colors.secondary);
+      if (config.colors.text) setTextColor(config.colors.text);
+    }
+    onApplyMarketplaceStyle?.(config);
   };
 
   const applyColorPreset = (p: typeof COLOR_PRESETS[0]) => {
@@ -169,23 +224,56 @@ const StepStyle: React.FC<Props> = ({
 
       {/* Presets */}
       {activeSection === 'presets' && (
-        <div className="space-y-4">
-          <p className="text-xs font-medium text-white/40">Layout do carrossel</p>
-          <div className="flex gap-2 flex-wrap">
-            {STYLE_PRESETS.map(preset => {
-              const isActive = bgColor === preset.bgColor && accentColor === preset.accentColor;
-              return (
-                <button key={preset.id} onClick={() => applyPreset(preset)}
-                  className={`px-4 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-white text-black'
-                      : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
-                  }`}>
-                  {preset.emoji} {preset.name}
-                </button>
-              );
-            })}
+        <div className="space-y-5">
+          <div>
+            <p className="text-xs font-medium text-white/40 mb-3">Layout do carrossel</p>
+            <div className="flex gap-2 flex-wrap">
+              {STYLE_PRESETS.map(preset => {
+                const isActive = !activeMarketplaceId && bgColor === preset.bgColor && accentColor === preset.accentColor;
+                return (
+                  <button key={preset.id} onClick={() => applyPreset(preset)}
+                    className={`px-4 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-white text-black'
+                        : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
+                    }`}>
+                    {preset.emoji} {preset.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Marketplace purchased styles */}
+          {loadingMarketplace ? (
+            <div className="flex items-center gap-2 text-white/30 text-xs">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando estilos...
+            </div>
+          ) : marketplaceStyles.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-white/40 mb-3 flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5" /> Estilos do Marketplace
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {marketplaceStyles.map(style => {
+                  const isActive = activeMarketplaceId === style.id;
+                  return (
+                    <button key={style.id} onClick={() => applyMarketplaceStyle(style)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                        isActive
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                          : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
+                      }`}>
+                      {style.preview_images?.[0] && (
+                        <img src={style.preview_images[0]} alt="" className="w-5 h-5 rounded object-cover" />
+                      )}
+                      {style.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

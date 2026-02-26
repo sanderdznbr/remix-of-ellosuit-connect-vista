@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
@@ -18,6 +19,7 @@ const PLACEHOLDER_SUGGESTIONS = [
 ];
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
+  const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,15 +117,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
         {/* Right: Login / Começar */}
         <div className="flex items-center gap-3">
           <button
-            className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5"
-          >
-            Login
-          </button>
-          <button
-            className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            Começar
-          </button>
+              onClick={() => navigate('/auth')}
+              className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => navigate('/auth')}
+              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              Começar
+            </button>
         </div>
       </motion.nav>
 

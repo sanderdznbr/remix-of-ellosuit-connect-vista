@@ -103,12 +103,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
         <div className="flex items-center gap-6 md:gap-8">
           <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6" />
           <div className="hidden md:flex items-center gap-5">
-            {['Preços', 'Recursos', 'Comunidade', 'Suporte'].map((item) => (
+            {[
+              { label: 'Preços', path: '/precos' },
+              { label: 'Recursos', path: '#' },
+              { label: 'Comunidade', path: '#' },
+              { label: 'Suporte', path: '#' },
+            ].map((item) => (
               <button
-                key={item}
+                key={item.label}
+                onClick={() => item.path !== '#' && navigate(item.path)}
                 className="text-white/50 hover:text-white/80 text-sm font-medium transition-colors cursor-pointer"
               >
-                {item}
+                {item.label}
               </button>
             ))}
           </div>

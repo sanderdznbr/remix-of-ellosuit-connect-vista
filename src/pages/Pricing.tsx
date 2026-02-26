@@ -94,7 +94,7 @@ export default function Pricing() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="h-screen overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Navbar */}
       <nav className="flex items-center justify-between px-5 md:px-8 py-4 relative z-20">
         <div className="flex items-center gap-6 md:gap-8">

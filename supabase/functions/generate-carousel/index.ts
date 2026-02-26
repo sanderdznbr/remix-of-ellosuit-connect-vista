@@ -332,6 +332,12 @@ Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
 
 IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
 
+PROIBIDO nos imagePrompts e no conteúdo dos cards:
+- NUNCA inclua textos como "Tema do Carrossel:", "Carousel Theme:", ou qualquer rótulo de tema/título do carrossel
+- NUNCA inclua numeração tipo "Card 1 de 20", "1/20", contadores de slides ou indicadores de posição
+- Cada card de conteúdo DEVE ter uma composição visual DIFERENTE da capa — NÃO repita o layout da capa nos cards internos
+- Os imagePrompts dos cards internos devem descrever cenas, composições e layouts VARIADOS e DISTINTOS entre si
+
 REGRAS DE LAYOUT (siga EXATAMENTE):
 - Card 1 (cover): Título impactante em CAIXA ALTA (máx 10 palavras) + subtítulo curto descritivo
 - Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:

@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       ? faceReferenceUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
       : [];
     const validStyleRefs = hasStyleRefs 
-      ? styleReferenceUrls.slice(0, 3).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      ? styleReferenceUrls.slice(0, 4).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
       : [];
     const validGeneralRefs = hasGeneralRefs
       ? referenceImageUrls.slice(0, 2).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))

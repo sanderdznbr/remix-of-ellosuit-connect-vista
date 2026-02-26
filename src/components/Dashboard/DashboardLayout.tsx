@@ -5,9 +5,10 @@ import DashboardProjects from './DashboardProjects';
 
 interface DashboardLayoutProps {
   onStartCarousel: (topic?: string) => void;
+  onLoadCarousel?: (carouselItem: any) => void;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel }) => {
   const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -30,7 +31,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel }) =>
       case 'starred':
         return <DashboardProjects onStartCarousel={onStartCarousel} filterMode="starred" searchQuery={searchQuery} />;
       default:
-        return <DashboardHome onStartCarousel={onStartCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
+        return <DashboardHome onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }
   };
 

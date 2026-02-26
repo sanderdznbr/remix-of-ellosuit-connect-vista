@@ -14,10 +14,11 @@ const PLACEHOLDER_SUGGESTIONS = [
 
 interface DashboardHomeProps {
   onStartCarousel: (topic?: string) => void;
+  onLoadCarousel?: (carouselItem: any) => void;
   onViewAllProjects?: () => void;
 }
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onViewAllProjects }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects }) => {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
@@ -208,7 +209,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onViewAl
                     background: coverImg ? undefined : (sc.bgColor ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)` : 'rgba(255,255,255,0.04)'),
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}
-                  onClick={() => onStartCarousel()}
+                  onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
                 >
                   {coverImg && (
                     <img src={coverImg} alt={item.title} className="absolute inset-0 w-full h-full object-cover" />

@@ -1,6 +1,7 @@
 // Cloud-based carousel generation orchestrator
 // Runs the entire carousel generation (text + images) server-side
 // so it survives connection drops and browser closures
+// Uses a wall-clock guard to avoid silent timeouts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -11,7 +12,15 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
+
+// Wall-clock budget: Supabase Edge Functions timeout at ~150s.
+// We stop new image generations at 120s to leave time for cleanup.
+const MAX_EXECUTION_MS = 120_000;
+const startTime = Date.now();
+
+function timeLeft() {
+  return MAX_EXECUTION_MS - (Date.now() - startTime);
+}
 
 function adminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -26,6 +35,8 @@ async function updateJob(jobId: string, updates: Record<string, any>) {
 async function generateOneImage(params: Record<string, any>): Promise<string | null> {
   const url = `${SUPABASE_URL}/functions/v1/generate-carousel-image`;
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 50_000); // 50s per image max
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -33,7 +44,9 @@ async function generateOneImage(params: Record<string, any>): Promise<string | n
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(params),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) {
       const errText = await res.text();
       console.error('Image gen error:', res.status, errText.slice(0, 200));
@@ -50,6 +63,8 @@ async function generateOneImage(params: Record<string, any>): Promise<string | n
 // Call generate-carousel for text content
 async function generateTextContent(params: Record<string, any>): Promise<any> {
   const url = `${SUPABASE_URL}/functions/v1/generate-carousel`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000); // 60s max for text
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -57,7 +72,9 @@ async function generateTextContent(params: Record<string, any>): Promise<any> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ action: 'generate-content', ...params }),
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
   if (!res.ok) {
     const errText = await res.text();
     throw new Error(`Text generation failed: ${res.status} - ${errText.slice(0, 200)}`);
@@ -172,8 +189,18 @@ Deno.serve(async (req) => {
 
     const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
 
+    // Track if we hit the timeout
+    let timedOut = false;
+
     // Generate images sequentially (cover first, then content, then CTA)
     for (let i = 0; i < cards.length; i++) {
+      // Wall-clock guard: stop if we're running out of time
+      if (timeLeft() < 15_000) {
+        console.warn(`Wall-clock guard triggered at card ${i}/${cards.length}, ${timeLeft()}ms left`);
+        timedOut = true;
+        break;
+      }
+
       const card = cards[i];
       const shouldGenImage = isFullBleed || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i);
 
@@ -237,11 +264,13 @@ Deno.serve(async (req) => {
       const finalPrompt = promptParts.filter(Boolean).join('. ');
       const negPrompt = isFullBleed ? styleNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
 
-      // Generate with retry
+      // Generate with retry (max 2 attempts to save time)
       let imageUrl: string | null = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      const maxRetries = timeLeft() > 60_000 ? 3 : 2;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        if (timeLeft() < 15_000) { timedOut = true; break; }
         if (attempt > 0) {
-          await new Promise(r => setTimeout(r, 3000));
+          await new Promise(r => setTimeout(r, 2000));
           await updateJob(jobId, { progress_message: `Tentativa ${attempt + 1} para imagem ${i + 1}...` });
         }
         imageUrl = await generateOneImage({
@@ -257,6 +286,8 @@ Deno.serve(async (req) => {
         if (imageUrl) break;
       }
 
+      if (timedOut) break;
+
       if (imageUrl) {
         cards[i] = { ...cards[i], imageUrl, isAiImage: true };
       }
@@ -269,8 +300,26 @@ Deno.serve(async (req) => {
 
       // Small delay between images to avoid rate limits
       if (i < cards.length - 1) {
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 1000));
       }
+    }
+
+    // If we timed out, mark job as failed so the user can retry
+    if (timedOut) {
+      const imagesGenerated = cards.filter((c: any) => c.imageUrl).length;
+      await updateJob(jobId, {
+        status: 'failed',
+        error_message: `Tempo limite atingido. ${imagesGenerated}/${cards.length} imagens geradas. Por favor, tente novamente com menos cards.`,
+        carousel_data: { ...textData, cards },
+        completed_at: new Date().toISOString(),
+      });
+      return new Response(JSON.stringify({
+        error: 'timeout',
+        imagesGenerated,
+        total: cards.length,
+      }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // === STEP 3: Save to generated_carousels ===
@@ -301,7 +350,6 @@ Deno.serve(async (req) => {
     const coverImageUrl = cards[0]?.imageUrl;
     if (inserted?.id && coverImageUrl?.startsWith('data:')) {
       try {
-        // Convert base64 to blob and upload
         const base64Data = coverImageUrl.split(',')[1];
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);

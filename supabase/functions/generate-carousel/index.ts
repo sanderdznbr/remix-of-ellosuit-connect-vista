@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel, negativePrompt, fidelity } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel, negativePrompt, fidelity, marketplaceStyleConfig } = body;
 
     // ===== INSTAGRAM PROFILE FETCH =====
     if (action === 'instagram-profile') {
@@ -311,6 +311,20 @@ REGRAS:
 
       const numCards = cardCount || 7;
       const imageCardIndices = body.imageCardIndices || []; // which cards should have images
+      const styleConfig = body.marketplaceStyleConfig;
+      const hasMarketplaceStyle = styleConfig?.imageGeneration?.prompt_style;
+
+      // Build style-specific instructions for imagePrompt generation
+      const styleImagePromptInstructions = hasMarketplaceStyle
+        ? `\n\nESTILO VISUAL OBRIGATÓRIO PARA TODOS OS imagePrompts:
+Cada imagePrompt DEVE seguir rigorosamente este estilo visual:
+${styleConfig.imageGeneration.prompt_style}
+
+${styleConfig.cardVariations ? `VARIAÇÕES DE CARD (alterne entre elas):
+${styleConfig.cardVariations.map((v: any, i: number) => `${i + 1}. Tipo "${v.type}": ${v.description}`).join('\n')}` : ''}
+
+IMPORTANTE: Os imagePrompts devem descrever A IMAGEM COMPLETA com texto, tipografia, elementos decorativos e composição editorial integrados. NÃO gere apenas uma foto - gere a COMPOSIÇÃO FINAL do post como ele apareceria no Instagram.`
+        : '';
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
@@ -323,7 +337,7 @@ REGRAS DE LAYOUT (siga EXATAMENTE):
 - Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:
   - "bodyTop": Parágrafo principal (30-60 palavras), informativo e denso. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 15 palavras destacadas)
   - "bodyBottom": Segundo parágrafo (20-40 palavras), complementar, dados adicionais ou contexto
-  - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes (ex: "homem musculoso fitness com camiseta preta em academia moderna, iluminação dramática", "embalagem de suplemento proteico em fundo escuro")
+  - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. ${hasMarketplaceStyle ? 'DEVE seguir o estilo visual definido abaixo.' : 'Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes'}
   - "searchTerms": Array de termos para buscar fotos de referência na web (ex: ["Toguro fitness", "Cimed logo", "suplemento proteico"]). Inclua nomes reais de pessoas e marcas mencionadas.
   - "needsImage": boolean - true se este card precisa de imagem baseado no conteúdo
 - Card ${numCards} (cta): CTA + mensagem motivacional
@@ -335,6 +349,7 @@ IMPORTANTE sobre imagePrompt e searchTerms:
 - Se menciona MARCAS, inclua o nome + "logo" ou "produto" em searchTerms
 - imagePrompt deve descrever a cena visual detalhadamente (iluminação, composição, estilo)
 - searchTerms são para buscar referências reais na web
+${styleImagePromptInstructions}
 
 Responda APENAS em JSON válido:
 {

@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt } = body;
 
     const imagePrompt = prompt || topic || 'abstract background';
     const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;
@@ -37,12 +37,21 @@ Deno.serve(async (req) => {
       ? referenceImageUrls.slice(0, 2).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
       : [];
 
-    console.log('Image refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length });
+    console.log('Image refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length, hasStylePrompt: !!stylePrompt });
 
     // Build message content
     const messageContent: any[] = [];
 
-    let textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
+    // If a marketplace style prompt is provided, use it as the main instruction
+    let textPrompt: string;
+    if (stylePrompt) {
+      textPrompt = `${stylePrompt}
+
+CONTENT/SCENE FOR THIS SPECIFIC CARD: ${imagePrompt}
+
+Generate the COMPLETE final Instagram post image (1080x1350, 4:5 portrait) with ALL visual elements integrated: typography, decorative elements, photo treatment, and composition as described in the style rules above. The output should be a READY-TO-POST image, not just a photograph.`;
+    } else {
+      textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 
 DESCRIPTION: ${imagePrompt}
 
@@ -51,6 +60,7 @@ STYLE REQUIREMENTS:
 - Rich colors and professional color grading
 - Clean composition suitable for overlay text
 - Ultra high resolution, photorealistic quality`;
+    }
 
     if (negativePrompt) {
       textPrompt += `\n\nDO NOT include any of the following: ${negativePrompt}`;

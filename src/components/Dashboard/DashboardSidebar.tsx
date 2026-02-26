@@ -157,27 +157,36 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           {/* Profile dropdown */}
           {showProfileMenu && (
             <div
-              className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden z-50"
-              style={{ backgroundColor: '#1a1a22' }}
+              className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50"
+              style={{ backgroundColor: '#0d0d12' }}
             >
               <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-sm text-white/80 font-medium truncate">{email}</p>
+                <p className="text-sm text-white/70 font-medium truncate">{email}</p>
               </div>
               <div className="py-1">
-                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <button
+                  onClick={() => { setShowProfileMenu(false); /* TODO: profile page */ }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                >
                   <User className="w-4 h-4" /> Perfil
                 </button>
-                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <button
+                  onClick={() => { setShowProfileMenu(false); /* TODO: settings page */ }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                >
                   <Settings className="w-4 h-4" /> Configurações
                 </button>
-                <button className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <button
+                  onClick={() => { setShowProfileMenu(false); navigate('/precos'); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                >
                   <CreditCard className="w-4 h-4" /> Plano & Créditos
                 </button>
               </div>
               <div className="border-t border-white/[0.06] py-1">
                 <button
                   onClick={handleSignOut}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/70 hover:text-red-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" /> Sair
                 </button>

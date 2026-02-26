@@ -883,7 +883,7 @@ const CarouselGenerator: React.FC = () => {
       // IMPROVED STRATEGY: Use AI for ALL image cards. Only use user-selected web photos 
       // for a limited number of content cards. This ensures every card has a quality image.
       let webImageIndex = 0;
-      const imagePromises: { index: number; promise: Promise<string | null> }[] = [];
+      const imageFactories: { index: number; factory: () => Promise<string | null>; prompt: string }[] = [];
       let totalImages = 0;
       let realImagesUsed = 0;
       let aiImagesQueued = 0;
@@ -991,86 +991,83 @@ const CarouselGenerator: React.FC = () => {
             if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
           }
           
-          imagePromises.push({
+          const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          const capturedFaceRefs = faceRefUrls.length > 0 ? [...faceRefUrls] : undefined;
+          const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
+          const capturedNegative = isFullBleedMarketplace ? (activeMarketplaceStyle?.imageGeneration?.negative_prompt || '') : finalNegative;
+          
+          imageFactories.push({
             index: i,
-            promise: (async () => {
-              try {
-                // For marketplace styles: text is baked in the image, don't add "NO TEXT"
-                const promptSuffix = isFullBleedMarketplace
-                  ? ''
-                  : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.';
-                return await generateImage({
-                  prompt: buildImagePrompt(imgPrompt) + promptSuffix,
-                  faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-                  styleReferenceUrls: [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined,
-                  negativePrompt: isFullBleedMarketplace ? (activeMarketplaceStyle?.imageGeneration?.negative_prompt || '') : finalNegative,
-                });
-              } catch (err) { console.error('Image gen error for card', i, err); }
-              return null;
-            })(),
+            prompt: capturedPrompt,
+            factory: () => generateImage({
+              prompt: capturedPrompt,
+              faceReferenceUrls: capturedFaceRefs,
+              styleReferenceUrls: capturedStyleRefs,
+              negativePrompt: capturedNegative,
+            }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
           });
         }
       }
 
-      if (imagePromises.length > 0) {
+      if (imageFactories.length > 0) {
         let completed = 0;
-        const totalAi = imagePromises.length;
+        const totalAi = imageFactories.length;
         setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
 
-        // PRIORITY: Generate cover image FIRST (index 0) before others to avoid rate-limit failures
-        const coverPromise = imagePromises.find(p => p.index === 0);
-        const otherPromises = imagePromises.filter(p => p.index !== 0);
+        // STEP 1: Generate cover FIRST (alone, no competition for rate limits)
+        const coverFactory = imageFactories.find(p => p.index === 0);
+        const lastCardIndex = Math.max(...imageFactories.map(f => f.index));
+        const lastFactory = imageFactories.find(p => p.index === lastCardIndex && p.index !== 0);
+        const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
 
-        if (coverPromise) {
-          try {
-            const coverUrl = await coverPromise.promise;
-            completed++;
-            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-            if (coverUrl) {
-              updatedCards[coverPromise.index] = { ...updatedCards[coverPromise.index], imageUrl: coverUrl, isAiImage: true };
-            }
-          } catch (err) {
-            completed++;
-            console.error('Cover image generation failed:', err);
-            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+        if (coverFactory) {
+          const coverUrl = await coverFactory.factory();
+          completed++;
+          setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+          if (coverUrl) {
+            updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true };
           }
         }
 
-        // Then generate remaining images in parallel
-        if (otherPromises.length > 0) {
-          const trackedPromises = otherPromises.map((p) =>
-            p.promise.then((url) => {
-              completed++;
-              setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-              if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
-              return url;
-            }).catch((err) => {
-              completed++;
-              console.error('Image generation failed for card', p.index, err);
-              setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
-              return null;
-            })
+        // STEP 2: Generate middle cards in parallel (they are less critical)
+        if (middleFactories.length > 0) {
+          const middleResults = await Promise.all(
+            middleFactories.map(f =>
+              f.factory().then(url => {
+                completed++;
+                setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+                if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true };
+                return url;
+              })
+            )
           );
-          await Promise.all(trackedPromises);
         }
 
-        // RETRY: If cover still has no image, try once more (rate limit may have cleared)
-        if (!updatedCards[0]?.imageUrl && coverPromise) {
-          console.log('Cover image retry...');
-          setImageGenProgress(`🎨 Tentando gerar capa novamente...`);
-          try {
-            const retryUrl = await generateImage({
-              prompt: buildImagePrompt(updatedCards[0]?.imagePrompt || updatedCards[0]?.title || cleanTopic) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
-              faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-              styleReferenceUrls: [...styleRefUrls, ...(productImages.length > 0 ? productImages.map(p => p.url) : [])].length > 0 ? [...styleRefUrls, ...(productImages.length > 0 ? productImages.map(p => p.url) : [])] : undefined,
-              negativePrompt: isFullBleedStyle ? (activeMarketplaceStyle?.imageGeneration?.negative_prompt || '') : baseNegativePrompt,
-            });
-            if (retryUrl) {
-              updatedCards[0] = { ...updatedCards[0], imageUrl: retryUrl, isAiImage: true };
-              console.log('Cover retry succeeded!');
-            }
-          } catch (retryErr) {
-            console.error('Cover retry also failed:', retryErr);
+        // STEP 3: Generate last card AFTER middle cards (avoids rate limit)
+        if (lastFactory) {
+          const lastUrl = await lastFactory.factory();
+          completed++;
+          setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+          if (lastUrl) {
+            updatedCards[lastFactory.index] = { ...updatedCards[lastFactory.index], imageUrl: lastUrl, isAiImage: true };
+          }
+        }
+
+        // RETRY: If cover or last card still have no image, retry with delay
+        const retryTargets = [
+          ...(coverFactory && !updatedCards[0]?.imageUrl ? [coverFactory] : []),
+          ...(lastFactory && !updatedCards[lastCardIndex]?.imageUrl ? [lastFactory] : []),
+        ];
+        for (const target of retryTargets) {
+          console.log(`Retrying image for card ${target.index}...`);
+          setImageGenProgress(`🎨 Tentando gerar card ${target.index === 0 ? 'capa' : 'final'} novamente...`);
+          await new Promise(r => setTimeout(r, 2000)); // wait for rate limit to clear
+          const retryUrl = await target.factory();
+          if (retryUrl) {
+            updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
+            console.log(`Retry succeeded for card ${target.index}`);
+          } else {
+            console.error(`Retry failed for card ${target.index}`);
           }
         }
       } else {

@@ -74,16 +74,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   return (
     <div className="flex-1 flex flex-col relative overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Hero section — fixed height */}
-      <div className="relative flex-shrink-0" style={{ minHeight: '70vh' }}>
-        {/* Orb */}
-        <div className="absolute bottom-[-400px] md:bottom-[-600px] left-1/2 -translate-x-1/2 pointer-events-none">
-          <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
+      {/* Hero + content in single flow */}
+      <div className="relative flex-shrink-0">
+        {/* Orb — background decoration */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] pointer-events-none">
+          <div className="carousel-loader-wrapper" style={{ width: '800px', height: '800px' }}>
             <div className="carousel-loader-spinner" />
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center text-center px-4 md:px-6 w-full max-w-2xl mx-auto relative z-10" style={{ paddingTop: '18vh', paddingBottom: '4rem' }}>
+        <div className="flex flex-col items-center justify-center text-center px-4 md:px-6 w-full max-w-2xl mx-auto relative z-10 pt-16 md:pt-24 pb-10">
           <motion.h1
             className="text-2xl md:text-4xl font-semibold leading-snug mb-2"
             initial={{ opacity: 0, y: 20 }}

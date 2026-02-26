@@ -84,13 +84,17 @@ const StepTopic: React.FC<Props> = ({
           <p className="text-sm text-white/50 leading-relaxed line-clamp-3">{webSearchResult.summary}</p>
           {webSearchResult.citations.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {webSearchResult.citations.slice(0, 3).map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/[0.04] text-white/40 text-[10px] hover:bg-white/[0.08] hover:text-white/60 transition-colors truncate max-w-[200px]">
-                  <Globe className="h-2.5 w-2.5 flex-shrink-0" />
-                  {new URL(url).hostname.replace('www.', '')}
-                </a>
-              ))}
+                  {webSearchResult.citations.slice(0, 3).map((url, i) => {
+                let hostname = url;
+                try { hostname = new URL(url).hostname.replace('www.', ''); } catch { /* keep raw url */ }
+                return (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/[0.04] text-white/40 text-[10px] hover:bg-white/[0.08] hover:text-white/60 transition-colors truncate max-w-[200px]">
+                    <Globe className="h-2.5 w-2.5 flex-shrink-0" />
+                    {hostname}
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>

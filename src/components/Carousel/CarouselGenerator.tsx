@@ -222,7 +222,10 @@ const CarouselGenerator: React.FC = () => {
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
-
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);
@@ -383,6 +386,69 @@ const CarouselGenerator: React.FC = () => {
       }
     }
   }, [searchParams]);
+
+  // ===== AUTO-SAVE: debounced save when carouselData changes =====
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedDataRef = useRef<string>('');
+  
+  useEffect(() => {
+    if (!carouselData || !user || generating || generatingAllImages || isGuest) return;
+    
+    const dataHash = JSON.stringify({ cards: carouselData.cards.map(c => ({ ...c })), title: carouselData.title });
+    if (dataHash === lastSavedDataRef.current) return;
+    
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        setAutoSaveStatus('saving');
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+        const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+        if (!companyData) return;
+        
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+        
+        if (currentCarouselId) {
+          await supabase.from('generated_carousels').update({ 
+            title: carouselData.title || topic, topic, 
+            keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
+            carousel_data: carouselData as any, style_config: styleConfig as any, 
+            card_count: carouselData.cards.length 
+          }).eq('id', currentCarouselId);
+        } else {
+          const { data: inserted } = await supabase.from('generated_carousels').insert({ 
+            company_id: companyData.company_id, user_id: userData.user.id, 
+            title: carouselData.title || topic, topic, 
+            keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
+            carousel_data: carouselData as any, style_config: styleConfig as any, 
+            card_count: carouselData.cards.length 
+          }).select('id').single();
+          if (inserted) {
+            setCurrentCarouselId(inserted.id);
+            captureCoverImage(inserted.id, companyData.company_id, carouselData).catch(() => {});
+          }
+        }
+        
+        lastSavedDataRef.current = dataHash;
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      } catch (err) {
+        console.error('Auto-save error:', err);
+        setAutoSaveStatus('idle');
+      }
+    }, 3000); // 3s debounce
+    
+    return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
+  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = () => setShowExportMenu(false);
+    const timer = setTimeout(() => document.addEventListener('click', handler), 100);
+    return () => { clearTimeout(timer); document.removeEventListener('click', handler); };
+  }, [showExportMenu]);
 
   // ===== BUILD IMAGE PROMPT with settings =====
   const buildImagePrompt = (basePrompt: string): string => {
@@ -1208,40 +1274,54 @@ const CarouselGenerator: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const exportAllCards = async () => {
+  const exportAllCards = async (format: 'png' | 'jpg' | 'webp' = 'png', asZip = false) => {
     if (!carouselData) return;
     setExporting(true);
+    setShowExportMenu(false);
     try {
-      // Wait for fonts and images to be fully loaded before capturing
       await document.fonts.ready;
-      // Small delay to ensure hidden export divs are fully rendered
       await new Promise(r => setTimeout(r, 500));
 
-      for (let i = 0; i < carouselData.cards.length; i++) {
-        const el = cardRefs.current[i];
-        if (!el) continue;
-        const canvas = await html2canvas(el, {
-          width: CARD_W,
-          height: CARD_H,
-          scale: 1,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: bgColor || '#0A0A1A',
-          logging: false,
-          imageTimeout: 15000,
-          onclone: (clonedDoc) => {
-            // Ensure all images in cloned doc have crossOrigin set
-            const imgs = clonedDoc.querySelectorAll('img');
-            imgs.forEach(img => {
-              img.crossOrigin = 'anonymous';
-            });
-          },
-        });
+      const mimeType = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
+      const quality = format === 'png' ? undefined : 0.92;
+
+      if (asZip) {
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+        
+        for (let i = 0; i < carouselData.cards.length; i++) {
+          const el = cardRefs.current[i];
+          if (!el) continue;
+          const canvas = await html2canvas(el, {
+            width: CARD_W, height: CARD_H, scale: 1, useCORS: true, allowTaint: false,
+            backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
+            onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
+          });
+          const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), mimeType, quality));
+          zip.file(`card-${i + 1}.${format}`, blob);
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
         const link = document.createElement('a');
-        link.download = `carousel-card-${i + 1}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.download = `carousel-${(carouselData.title || 'export').replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}.zip`;
+        link.href = URL.createObjectURL(zipBlob);
         link.click();
-        await new Promise(r => setTimeout(r, 400));
+        URL.revokeObjectURL(link.href);
+      } else {
+        for (let i = 0; i < carouselData.cards.length; i++) {
+          const el = cardRefs.current[i];
+          if (!el) continue;
+          const canvas = await html2canvas(el, {
+            width: CARD_W, height: CARD_H, scale: 1, useCORS: true, allowTaint: false,
+            backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
+            onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
+          });
+          const link = document.createElement('a');
+          link.download = `carousel-card-${i + 1}.${format}`;
+          link.href = canvas.toDataURL(mimeType, quality);
+          link.click();
+          await new Promise(r => setTimeout(r, 400));
+        }
       }
       toast({ title: 'Download completo!' });
     } catch (err) {
@@ -2423,17 +2503,42 @@ const CarouselGenerator: React.FC = () => {
 
             {/* Action buttons below */}
             <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap">
-              <button onClick={saveCarousel} disabled={savingCarousel || isGuest}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
-                {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
-                {isGuest ? 'Bloqueado' : currentCarouselId ? 'Atualizar' : 'Salvar'}
-              </button>
-              <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : exportAllCards} disabled={exporting}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
-                style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
-                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-                {isGuest ? 'Cadastre-se' : 'Exportar'}
-              </button>
+              {/* Auto-save indicator */}
+              <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 border border-white/5">
+                {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
+                {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
+              </div>
+              {/* Export dropdown */}
+              <div className="relative">
+                <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : () => setShowExportMenu(!showExportMenu)} disabled={exporting}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
+                  style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                  {isGuest ? 'Cadastre-se' : 'Exportar'}
+                </button>
+                {showExportMenu && !isGuest && (
+                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 rounded-xl border border-white/10 overflow-hidden z-50 w-48"
+                    style={{ backgroundColor: 'rgba(10,10,26,0.95)', backdropFilter: 'blur(12px)' }}>
+                    <button onClick={() => exportAllCards('png', true)}
+                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-2">
+                      <FileText className="h-3.5 w-3.5" /> Baixar ZIP
+                    </button>
+                    <div className="border-t border-white/5" />
+                    <button onClick={() => exportAllCards('png')}
+                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
+                      <ImageIcon className="h-3.5 w-3.5" /> Baixar PNG
+                    </button>
+                    <button onClick={() => exportAllCards('jpg')}
+                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
+                      <ImageIcon className="h-3.5 w-3.5" /> Baixar JPG
+                    </button>
+                    <button onClick={() => exportAllCards('webp')}
+                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
+                      <ImageIcon className="h-3.5 w-3.5" /> Baixar WEBP
+                    </button>
+                  </div>
+                )}
+              </div>
               {/* Hide editing controls when marketplace full-bleed is active */}
               {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                 <>
@@ -2567,13 +2672,12 @@ const CarouselGenerator: React.FC = () => {
                 <h2 className="font-bold text-white text-sm sm:text-base">Editando Card {validIndex + 1}</h2>
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <button onClick={saveCarousel} disabled={savingCarousel}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
-                  {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                  <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
-                </button>
-                <button onClick={exportAllCards} disabled={exporting}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50"
+                <div className="flex items-center gap-1 px-3 py-1.5 text-xs text-white/40">
+                  {autoSaveStatus === 'saving' ? <Loader2 className="h-3 w-3 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3 w-3 text-green-400" /> : <Save className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : ''}</span>
+                </div>
+                <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={exporting}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 relative"
                   style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
                   {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                   <span className="hidden sm:inline">Exportar</span>

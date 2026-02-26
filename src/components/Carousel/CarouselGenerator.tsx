@@ -1228,18 +1228,69 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // 2. Regenerate image using AI with face/style references (like user photos)
+      // 2. Regenerate image using AI with face/style references
       let newImageUrl = card.imageUrl;
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
-      const imgPrompt = `${cleanTopic}: ${newImagePrompt || newBody.slice(0, 100)}`;
       const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+      const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+      
+      let imgPrompt: string;
+      let negPrompt: string;
+      
+      if (isFullBleedMarketplace) {
+        // Build full-bleed prompt with card text context (same as initial generation)
+        const isCover = card.type === 'cover' || cardIndex === 0;
+        const isCta = card.type === 'cta' || cardIndex === carouselData.cards.length - 1;
+        const parts: string[] = [];
+        parts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
+        parts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
+        parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
+        parts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+        
+        if (isCover) {
+          parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
+          parts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);
+          if (card.subtitle) parts.push(`SUBTÍTULO: "${card.subtitle}"`);
+          parts.push(`Deve ser o card mais impactante, estilo capa de revista, com tipografia grande.`);
+        } else if (isCta) {
+          parts.push(`ESTE É O CARD FINAL DE CTA (Card ${cardIndex + 1} de ${carouselData.cards.length}).`);
+          if (card.title) parts.push(`TÍTULO DO CTA: "${card.title}"`);
+          if (newBody) parts.push(`TEXTO DO CTA: "${newBody}"`);
+          parts.push(`Card de encerramento com call-to-action. NÃO é uma capa/hero.`);
+        } else {
+          parts.push(`CARD DE CONTEÚDO ${cardIndex + 1} de ${carouselData.cards.length} (NÃO é capa, NÃO é hero).`);
+          if (newBody) parts.push(`TEXTO PRINCIPAL PARA RENDERIZAR NA IMAGEM: "${newBody}"`);
+          if (newBottomText) parts.push(`TEXTO SECUNDÁRIO: "${newBottomText}"`);
+          parts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
+        }
+        imgPrompt = parts.join('\n');
+        negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+      } else {
+        imgPrompt = `${cleanTopic}: ${newImagePrompt || newBody.slice(0, 100)}`;
+        negPrompt = imageSettings.negativePrompt || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
+      }
+      
+      // Build marketplace style references
+      const marketplaceRefUrls: string[] = [];
+      if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+        const origin = window.location.origin;
+        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+          .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
+        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+        if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+      }
+      
+      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
+      
       try {
         const generatedUrl = await generateImage({
-          prompt: buildImagePrompt(imgPrompt) + '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.',
+          prompt: buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
           faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-          styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
-          negativePrompt: imageSettings.negativePrompt || undefined,
+          styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+          negativePrompt: negPrompt || undefined,
         });
         if (generatedUrl) {
           newImageUrl = generatedUrl;

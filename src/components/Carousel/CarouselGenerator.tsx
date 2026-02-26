@@ -1673,9 +1673,8 @@ const CarouselGenerator: React.FC = () => {
 
                   {/* Navigation buttons */}
                   <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <button onClick={() => setWizardStep(Math.max(0, wizardStep - 1))}
-                      disabled={wizardStep === 0}
-                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all disabled:opacity-0">
+                    <button onClick={() => { if (wizardStep === 0) navigate('/'); else setWizardStep(wizardStep - 1); }}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all">
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
 

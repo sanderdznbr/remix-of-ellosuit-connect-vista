@@ -497,10 +497,14 @@ const CarouselGenerator: React.FC = () => {
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).eq('id', currentCarouselId);
+        // Generate cover thumbnail in background
+        supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: currentCarouselId } }).catch(() => {});
         toast({ title: 'Carrossel atualizado!' });
       } else {
         const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).select('id').single();
         setCurrentCarouselId(inserted?.id || null);
+        // Generate cover thumbnail in background
+        if (inserted?.id) supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: inserted.id } }).catch(() => {});
         toast({ title: 'Carrossel salvo!' });
       }
     } catch (err: any) {
@@ -728,7 +732,10 @@ const CarouselGenerator: React.FC = () => {
           if (companyData) {
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings };
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();
-            if (inserted) setCurrentCarouselId(inserted.id);
+            if (inserted) {
+              setCurrentCarouselId(inserted.id);
+              supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: inserted.id } }).catch(() => {});
+            }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }

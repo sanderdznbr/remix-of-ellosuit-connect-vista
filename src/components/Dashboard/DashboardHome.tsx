@@ -23,34 +23,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
-  const [coverImages, setCoverImages] = useState<Record<string, string>>({});
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUserTyping = inputValue.length > 0;
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
 
-  // Fetch recent carousels metadata + covers via RPC
+  // Fetch recent carousels metadata with cover_url
   useEffect(() => {
     const fetchRecent = async () => {
       if (!user) return;
       try {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
         if (!companyData) return;
-        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(4);
+        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(4);
         setRecentCarousels(data || []);
-
-        // Fetch cover images via RPC (extracts only the URL server-side, much faster)
-        if (data && data.length > 0) {
-          const ids = data.map(d => d.id);
-          const { data: covers } = await supabase.rpc('get_carousel_cover_images', { carousel_ids: ids });
-          if (covers) {
-            const map: Record<string, string> = {};
-            for (const c of covers) {
-              if (c.cover_image) map[c.carousel_id] = c.cover_image;
-            }
-            setCoverImages(map);
-          }
-        }
       } catch (err) { console.error(err); }
     };
     fetchRecent();
@@ -201,7 +187,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
-              const cover = coverImages[item.id];
+              const cover = item.cover_url;
               return (
                 <div
                   key={item.id}

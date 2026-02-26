@@ -2202,6 +2202,7 @@ export type Database = {
           card_count: number
           carousel_data: Json
           company_id: string
+          cover_url: string | null
           created_at: string
           id: string
           keywords: string[] | null
@@ -2215,6 +2216,7 @@ export type Database = {
           card_count?: number
           carousel_data: Json
           company_id: string
+          cover_url?: string | null
           created_at?: string
           id?: string
           keywords?: string[] | null
@@ -2228,6 +2230,7 @@ export type Database = {
           card_count?: number
           carousel_data?: Json
           company_id?: string
+          cover_url?: string | null
           created_at?: string
           id?: string
           keywords?: string[] | null

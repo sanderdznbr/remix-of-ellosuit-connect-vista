@@ -77,8 +77,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden h-full" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Orb — centered higher on screen */}
-      <div className="absolute top-[90%] md:top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 'min(1500px, 170vw)', height: 'min(1500px, 170vw)' }}>
+      <div className="absolute top-[90%] md:top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        <div className="carousel-loader-wrapper w-[170vw] h-[170vw] md:w-[900px] md:h-[900px]">
           <div className="carousel-loader-spinner" />
         </div>
       </div>

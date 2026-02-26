@@ -200,7 +200,7 @@ const StyleCard: React.FC<{
         featured ? 'border-purple-500/30 bg-gradient-to-b from-purple-500/[0.08] to-transparent' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
       }`}
     >
-      <div className="aspect-[4/5] relative overflow-hidden bg-white/[0.03]">
+      <div className="aspect-video relative overflow-hidden bg-white/[0.03]">
         {previewImage ? (
           <img src={previewImage} alt={style.name} className="w-full h-full object-cover" />
         ) : (
@@ -252,7 +252,7 @@ const StyleDetailModal: React.FC<{
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/[0.08]" style={{ backgroundColor: '#111116' }}>
         <div className="flex flex-col md:flex-row">
           <div className="md:w-1/2 p-6">
-            <div className="aspect-[4/5] rounded-xl overflow-hidden bg-white/[0.03] mb-3">
+            <div className="aspect-video rounded-xl overflow-hidden bg-white/[0.03] mb-3">
               {style.preview_images?.[activeImage] ? (
                 <img src={style.preview_images[activeImage]} alt="" className="w-full h-full object-cover" />
               ) : (

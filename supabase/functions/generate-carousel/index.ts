@@ -298,7 +298,7 @@ Respond ONLY with the JSON object, no markdown or explanation.` },
 REGRAS:
 - Expanda o tópico com detalhes específicos, ângulos editoriais interessantes e gancho de engajamento
 - Se mencionar marcas/pessoas reais, adicione contexto relevante sobre eles
-- Se mencionar Ellosuit, contextualize as funcionalidades específicas da plataforma que se aplicam
+- NÃO mencione nenhuma plataforma, produto ou marca que o usuário não tenha mencionado explicitamente
 - Mantenha o tom profissional e editorial
 - O resultado deve ser 2-4 frases, máximo 200 palavras
 - Responda APENAS com o prompt melhorado, sem explicações adicionais

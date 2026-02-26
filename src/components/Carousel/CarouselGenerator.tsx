@@ -587,7 +587,7 @@ const CarouselGenerator: React.FC = () => {
       if (!userData.user) throw new Error('Não autenticado');
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings };
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length }).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
@@ -635,6 +635,10 @@ const CarouselGenerator: React.FC = () => {
       if (sc.userName) setUserName(sc.userName);
       if (sc.dateLabel) setDateLabel(sc.dateLabel);
       if (sc.imageSettings) setImageSettings(sc.imageSettings);
+      if (sc.activePresetId) setActivePresetId(sc.activePresetId);
+      if (sc.logoUrl !== undefined) setLogoUrl(sc.logoUrl);
+      if (sc.logoPosition) setLogoPosition(sc.logoPosition);
+      if (sc.showHeader !== undefined) setShowHeader(sc.showHeader);
     }
     setShowHistory(false);
     setActiveCardIndex(0);
@@ -866,7 +870,7 @@ const CarouselGenerator: React.FC = () => {
               });
             } catch (creditErr) { console.warn('Credit consumption failed:', creditErr); }
 
-            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings };
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);

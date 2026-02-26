@@ -55,6 +55,7 @@ import StepProduct, { ProductAnalysis } from './wizard/StepProduct';
 import StepBrandRef from './wizard/StepBrandRef';
 import StepColors from './wizard/StepColors';
 import StepFonts from './wizard/StepFonts';
+import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
@@ -143,7 +144,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Estilo', 'Fontes', 'Marca Final'];
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -1737,7 +1738,7 @@ const CarouselGenerator: React.FC = () => {
                           setAccentColor(palette.accent);
                           setTextColor(palette.text || '#FFFFFF');
                           // Auto-skip colors step since user accepted brand colors
-                          setTimeout(() => setWizardStep(7), 400);
+                          setTimeout(() => setWizardStep(8), 400);
                         }} />
                     )}
                     {wizardStep === 6 && (
@@ -1746,9 +1747,19 @@ const CarouselGenerator: React.FC = () => {
                         textColor={textColor} setTextColor={setTextColor} />
                     )}
                     {wizardStep === 7 && (
-                      <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
+                      <StepStyleSelect
+                        bgColor={bgColor} setBgColor={setBgColor}
+                        accentColor={accentColor} setAccentColor={setAccentColor}
+                        textColor={textColor} setTextColor={setTextColor}
+                        selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                        onApplyPreset={(preset) => { setActivePresetId(preset.id); }}
+                        onApplyMarketplaceStyle={(config) => { /* marketplace style applied via color setters */ }}
+                      />
                     )}
                     {wizardStep === 8 && (
+                      <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
+                    )}
+                    {wizardStep === 9 && (
                       <StepBranding brandName={brandName} setBrandName={setBrandName}
                         userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel}
@@ -1812,13 +1823,14 @@ const CarouselGenerator: React.FC = () => {
                     <AnimatedCounter target={
                       wizardStep === 0
                         ? (webSearchResult ? 10 : 0)
-                        : wizardStep === 1 ? 18
-                        : wizardStep === 2 ? 30
-                        : wizardStep === 3 ? 42
-                        : wizardStep === 4 ? 52
-                        : wizardStep === 5 ? 62
-                        : wizardStep === 6 ? 75
-                        : wizardStep === 7 ? 88
+                        : wizardStep === 1 ? 16
+                        : wizardStep === 2 ? 28
+                        : wizardStep === 3 ? 38
+                        : wizardStep === 4 ? 48
+                        : wizardStep === 5 ? 56
+                        : wizardStep === 6 ? 65
+                        : wizardStep === 7 ? 74
+                        : wizardStep === 8 ? 86
                         : 99
                     } />
                   </span>

@@ -143,7 +143,7 @@ const StepStyleSelect: React.FC<Props> = ({
                       : 'border-white/[0.06] hover:border-white/15'
                   }`}>
                   {previewImg && (
-                    <div className="aspect-[4/5] bg-white/[0.03]">
+                    <div className="aspect-video bg-white/[0.03]">
                       <img src={previewImg} alt={style.name} className="w-full h-full object-cover" />
                     </div>
                   )}
@@ -310,7 +310,7 @@ const MarketplacePopup: React.FC<{
                   <div key={style.id} className={`relative rounded-xl overflow-hidden border transition-all ${
                     owned ? 'border-green-500/30' : 'border-white/[0.06] hover:border-white/15'
                   }`}>
-                    <div className="aspect-[4/5] bg-white/[0.03]">
+                    <div className="aspect-video bg-white/[0.03]">
                       {previewImg ? (
                         <img src={previewImg} alt={style.name} className="w-full h-full object-cover" />
                       ) : (

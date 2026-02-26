@@ -1427,10 +1427,11 @@ const CarouselGenerator: React.FC = () => {
 
   // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
-    if (!showWelcome) {
+    // Don't speak when loading an already-generated carousel
+    if (!showWelcome && !carouselData) {
       speakStep(wizardStep);
     }
-  }, [wizardStep, speakStep, showWelcome]);
+  }, [wizardStep, speakStep, showWelcome, carouselData]);
 
   return (
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>

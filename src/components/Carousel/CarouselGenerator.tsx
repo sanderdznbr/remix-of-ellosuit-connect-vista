@@ -1873,7 +1873,7 @@ const CarouselGenerator: React.FC = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/50 z-[50]"
+                    className="fixed inset-0 bg-black/60 z-[50]"
                     onClick={() => setShowStylePanel(false)}
                   />
                   <motion.div
@@ -1882,23 +1882,23 @@ const CarouselGenerator: React.FC = () => {
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="fixed bottom-0 left-0 right-0 z-[51] rounded-t-2xl overflow-hidden"
-                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)', maxHeight: '75dvh' }}
+                    className="fixed bottom-0 left-0 right-0 z-[51] rounded-t-2xl flex flex-col"
+                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '88dvh' }}
                   >
                     {/* Drag handle */}
-                    <div className="flex justify-center py-2">
-                      <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                    <div className="flex justify-center py-2.5 shrink-0">
+                      <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
                     </div>
-                    <div className="flex items-center justify-between px-5 pb-3">
+                    <div className="flex items-center justify-between px-4 pb-3 shrink-0">
                       <div className="flex items-center gap-2">
                         <Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} />
                         <h3 className="font-bold text-white text-base">Estilo</h3>
                       </div>
-                      <button onClick={() => setShowStylePanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                      <button onClick={() => setShowStylePanel(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
                         <X className="h-4 w-4 text-white/60" />
                       </button>
                     </div>
-                    <div className="overflow-y-auto px-5 pb-8" style={{ maxHeight: 'calc(75dvh - 60px)' }}>
+                    <div className="overflow-y-auto flex-1 px-4 pb-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}

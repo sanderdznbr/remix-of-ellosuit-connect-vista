@@ -70,8 +70,15 @@ STYLE REQUIREMENTS:
 - Ultra high resolution, photorealistic quality`;
     }
 
+    // Always add hardcoded negative instructions to prevent common AI mistakes
+    textPrompt += `\n\nPROIBIDO (NUNCA inclua na imagem):
+- NÃO escreva "Tema do Carrossel", "Tema:", "Carousel Theme" ou qualquer rótulo de tema
+- NÃO escreva "Card X de Y", "Card 1 de 20", "1/20", numeração de slides ou contadores
+- NÃO replique a composição exata da capa/cover em cards de conteúdo — cada card deve ter layout ÚNICO e DIFERENTE
+- NÃO copie textos, @handles, nomes de pessoas ou empresas das imagens de referência`;
+
     if (negativePrompt) {
-      textPrompt += `\n\nDO NOT include any of the following: ${negativePrompt}`;
+      textPrompt += `\n- ${negativePrompt}`;
     }
 
     if (fidelity === 'high') {

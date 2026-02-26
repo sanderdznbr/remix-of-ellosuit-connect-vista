@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import PublicCarouselGenerator from './pages/PublicCarouselGenerator';
+import Pricing from './pages/Pricing';
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
+            <Route path="/precos" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

@@ -222,6 +222,7 @@ const CarouselGenerator: React.FC = () => {
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
+  const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -306,6 +307,7 @@ const CarouselGenerator: React.FC = () => {
     setEditorRefImage(null);
     setSidebarDrawerOpen(false);
     setActiveMarketplaceStyle(null);
+    setIsLoadedFullBleed(false);
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setWebSearchResult(null);
@@ -481,7 +483,8 @@ const CarouselGenerator: React.FC = () => {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
         if (!companyData) return;
         
-        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+        const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed };
         
         if (currentCarouselId) {
           await supabase.from('generated_carousels').update({ 
@@ -786,7 +789,8 @@ const CarouselGenerator: React.FC = () => {
       if (!userData.user) throw new Error('Não autenticado');
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+      const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
@@ -824,7 +828,10 @@ const CarouselGenerator: React.FC = () => {
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
-    if (item.style_config) {
+    // Detect if this carousel was generated with a marketplace full-bleed style
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
+    setIsLoadedFullBleed(hasMarketplaceStyle);
+    if (item.style_config && !hasMarketplaceStyle) {
       const sc = item.style_config;
       if (sc.bgColor) setBgColor(sc.bgColor);
       if (sc.accentColor) setAccentColor(sc.accentColor);
@@ -1826,7 +1833,7 @@ const CarouselGenerator: React.FC = () => {
 
   const renderCardPreview = (card: CarouselCard, index: number, isExport = false) => {
     // Marketplace full-bleed mode: AI generates complete images with text baked in
-    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
     if (isMarketplaceFullBleed) return renderMarketplaceFullBleedCard(card, index, isExport);
 
     const isBetaTest2 = activePresetId === 'beta-test2';

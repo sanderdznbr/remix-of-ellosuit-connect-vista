@@ -105,10 +105,11 @@ interface TopUpModalProps {
   onClose: () => void;
   currentPlan: string;
   companyId: string;
+  initialTopup?: number;
 }
 
-const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, companyId }) => {
-  const [selectedTopup, setSelectedTopup] = useState(2); // default 50 credits
+const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, companyId, initialTopup = 2 }) => {
+  const [selectedTopup, setSelectedTopup] = useState(initialTopup);
   const [purchasing, setPurchasing] = useState(false);
 
   if (!open) return null;
@@ -143,7 +144,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
       >
         <div className="p-6">
           {/* Logo */}
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 mb-4 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-purple-600 mb-4 flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl font-bold text-white mb-1">Adicionar créditos</h2>
@@ -194,6 +195,8 @@ function LoggedInPricing() {
   const [companyId, setCompanyId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showTopUp, setShowTopUp] = useState(false);
+  const [showTopUpDropdown, setShowTopUpDropdown] = useState(false);
+  const [selectedTopup, setSelectedTopup] = useState(2);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -255,19 +258,12 @@ function LoggedInPricing() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {/* Current plan card */}
                 <div className="rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold text-sm">Você está no plano {planLabel}</p>
-                      {subscription?.current_period_end && (
-                        <p className="text-white/30 text-xs">
-                          Renova em {new Date(subscription.current_period_end).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  <p className="text-white font-semibold text-sm">Você está no plano {planLabel}</p>
+                  {subscription?.current_period_end && (
+                    <p className="text-white/30 text-xs mt-1">
+                      Renova em {new Date(subscription.current_period_end).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
                 </div>
 
                 {/* Credits remaining */}
@@ -278,20 +274,42 @@ function LoggedInPricing() {
                   </div>
                   <div className="w-full h-2 rounded-full bg-white/[0.06] mb-3">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
+                      className="h-full rounded-full bg-purple-500 transition-all"
                       style={{ width: `${Math.min(100, (creditBalance / maxCredits) * 100)}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-white/50">
-                        <Check className="w-3 h-3" /> {maxCredits} créditos mensais inclusos
-                      </div>
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      <Check className="w-3 h-3" /> {maxCredits} créditos mensais inclusos
                     </div>
-                    <button onClick={() => setShowTopUp(true)}
-                      className="px-4 py-1.5 rounded-lg text-xs font-medium border border-white/[0.12] text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer">
-                      Comprar créditos
-                    </button>
+
+                    {/* Dropdown de créditos */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowTopUpDropdown(!showTopUpDropdown)}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium border border-white/[0.12] text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      >
+                        Comprar créditos
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {showTopUpDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowTopUpDropdown(false)} />
+                          <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/[0.08] z-50 py-1 shadow-xl" style={{ backgroundColor: '#1a1a24' }}>
+                            {CREDIT_TOPUPS.map((opt, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setSelectedTopup(i); setShowTopUpDropdown(false); setShowTopUp(true); }}
+                                className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                              >
+                                <span>+{opt.credits} créditos</span>
+                                <span className="text-white/40">R${opt.price.toFixed(2)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -374,7 +392,7 @@ function LoggedInPricing() {
         </div>
       </div>
 
-      <TopUpModal open={showTopUp} onClose={() => { setShowTopUp(false); /* refetch */ window.location.reload(); }} currentPlan={currentPlanKey} companyId={companyId} />
+      <TopUpModal open={showTopUp} onClose={() => { setShowTopUp(false); window.location.reload(); }} currentPlan={currentPlanKey} companyId={companyId} initialTopup={selectedTopup} />
     </div>
   );
 }

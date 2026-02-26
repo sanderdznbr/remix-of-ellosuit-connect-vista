@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Clock, ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
+import { ArrowUp, Clock, ChevronLeft, ChevronRight, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
 
 const PLACEHOLDER_SUGGESTIONS = [
@@ -25,6 +26,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isUserTyping = inputValue.length > 0;
@@ -81,6 +83,19 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (deleteConfirmId === id) {
+      setRecentCarousels(prev => prev.filter(c => c.id !== id));
+      setDeleteConfirmId(null);
+      const { error } = await supabase.from('generated_carousels').delete().eq('id', id);
+      if (error) { toast.error('Erro ao excluir'); } else { toast.success('Projeto excluído'); }
+    } else {
+      setDeleteConfirmId(id);
+      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+    }
   };
 
   return (
@@ -265,7 +280,17 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   )}
                   <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
                     <p className="text-[11px] font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
-                    <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.card_count || '?'} cards</p>
+                      <button
+                        onClick={(e) => handleDelete(e, item.id)}
+                        className="p-1 rounded-md transition-colors cursor-pointer"
+                        style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.3)' }}
+                        title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

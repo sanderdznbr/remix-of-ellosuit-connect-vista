@@ -198,8 +198,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             )}
           </div>
 
-          {/* 1350:1080 = 5:4 aspect ratio */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 1080:1350 = 4:5 portrait aspect ratio */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
               const cover = coverImages[item.id];
@@ -208,7 +208,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   key={item.id}
                   className="rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group"
                   style={{
-                    aspectRatio: '1350 / 1080',
+                    aspectRatio: '1080 / 1350',
                     background: cover
                       ? `url(${cover}) center/cover no-repeat`
                       : sc.bgColor
@@ -228,7 +228,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             {recentCarousels.length === 0 && (
               <div
                 className="rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer"
-                style={{ aspectRatio: '1350 / 1080', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
+                style={{ aspectRatio: '1080 / 1350', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
                 onClick={() => onStartCarousel()}
               >
                 <Clock className="w-5 h-5" />

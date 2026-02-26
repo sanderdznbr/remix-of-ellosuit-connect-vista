@@ -144,7 +144,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Estilo', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Marca Final'];
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -2018,15 +2018,10 @@ const CarouselGenerator: React.FC = () => {
                           setAccentColor(palette.accent);
                           setTextColor(palette.text || '#FFFFFF');
                           // Auto-skip colors step since user accepted brand colors
-                          setTimeout(() => setWizardStep(8), 400);
+                          setTimeout(() => setWizardStep(7), 400);
                         }} />
                     )}
                     {wizardStep === 6 && (
-                      <StepColors bgColor={bgColor} setBgColor={setBgColor}
-                        accentColor={accentColor} setAccentColor={setAccentColor}
-                        textColor={textColor} setTextColor={setTextColor} />
-                    )}
-                    {wizardStep === 7 && (
                       <StepStyleSelect
                         bgColor={bgColor} setBgColor={setBgColor}
                         accentColor={accentColor} setAccentColor={setAccentColor}
@@ -2035,6 +2030,11 @@ const CarouselGenerator: React.FC = () => {
                         onApplyPreset={(preset) => { setActivePresetId(preset.id); setActiveMarketplaceStyle(null); }}
                         onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); }}
                       />
+                    )}
+                    {wizardStep === 7 && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                      <StepColors bgColor={bgColor} setBgColor={setBgColor}
+                        accentColor={accentColor} setAccentColor={setAccentColor}
+                        textColor={textColor} setTextColor={setTextColor} />
                     )}
                     {wizardStep === 8 && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
@@ -2056,8 +2056,8 @@ const CarouselGenerator: React.FC = () => {
                       if (wizardStep === 0) { setShowWelcome(true); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
-                        // Skip fonts step (8) when marketplace style is active
-                        if (prev === 8 && activeMarketplaceStyle?.imageGeneration?.prompt_style) prev = 7;
+                        // Skip colors (7) and fonts (8) when marketplace style is active
+                        if ((prev === 7 || prev === 8) && activeMarketplaceStyle?.imageGeneration?.prompt_style) prev = 6;
                         setWizardStep(prev);
                       }
                     }}
@@ -2082,8 +2082,8 @@ const CarouselGenerator: React.FC = () => {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
                             let next = wizardStep + 1;
-                            // Skip fonts step (8) when marketplace style is active
-                            if (next === 8 && activeMarketplaceStyle?.imageGeneration?.prompt_style) next = 9;
+                            // Skip colors (7) and fonts (8) when marketplace style is active
+                            if (next === 7 && activeMarketplaceStyle?.imageGeneration?.prompt_style) next = 9;
                             setWizardStep(next);
                           }} disabled={!canProceed || searchingWeb}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"

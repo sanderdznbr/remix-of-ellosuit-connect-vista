@@ -763,12 +763,18 @@ const CarouselGenerator: React.FC = () => {
       }
 
       if (imagePromises.length > 0) {
-        setImageGenProgress(`🎨 ${realImagesUsed} fotos reais + ${aiImagesQueued} imagens IA...`);
-        const imageResults = await Promise.all(imagePromises.map(p => p.promise));
-        imagePromises.forEach((p, idx) => {
-          const url = imageResults[idx];
-          if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
-        });
+        let completed = 0;
+        const totalAi = imagePromises.length;
+        setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
+        const trackedPromises = imagePromises.map((p) =>
+          p.promise.then((url) => {
+            completed++;
+            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+            if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
+            return url;
+          })
+        );
+        await Promise.all(trackedPromises);
       } else {
         setImageGenProgress(`📸 ${realImagesUsed} fotos reais aplicadas!`);
       }

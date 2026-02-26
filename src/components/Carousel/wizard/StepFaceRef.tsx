@@ -1,6 +1,7 @@
-import React from 'react';
-import { Upload, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Upload, X, Folder } from 'lucide-react';
 import { ReferenceImage, FamousPerson } from './types';
+import GalleryPicker from './GalleryPicker';
 
 interface Props {
   referenceImages: ReferenceImage[];
@@ -14,6 +15,8 @@ interface Props {
 const StepFaceRef: React.FC<Props> = ({
   referenceImages, setReferenceImages,
 }) => {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
   const handleFaceUpload = (files: FileList | null) => {
     if (!files) return;
     Array.from(files).forEach(file => {
@@ -28,6 +31,13 @@ const StepFaceRef: React.FC<Props> = ({
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleGalleryFiles = (files: { url: string; name: string }[]) => {
+    const newRefs: ReferenceImage[] = files.map(f => ({
+      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'face' as const,
+    }));
+    setReferenceImages(prev => [...prev, ...newRefs]);
   };
 
   const faceRefs = referenceImages.filter(r => r.category === 'face');
@@ -46,6 +56,14 @@ const StepFaceRef: React.FC<Props> = ({
         <span className="text-xs text-white/20">JPG, PNG — múltiplas fotos para melhor resultado</span>
         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFaceUpload(e.target.files)} />
       </label>
+
+      {/* Gallery picker button */}
+      <button onClick={() => setGalleryOpen(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+        <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+      </button>
+
+      <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de rostos" />
 
       {faceRefs.length > 0 && (
         <div>

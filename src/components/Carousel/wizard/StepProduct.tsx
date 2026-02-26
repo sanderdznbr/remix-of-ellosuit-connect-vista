@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw } from 'lucide-react';
+import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw, Folder } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import GalleryPicker from './GalleryPicker';
 
 export interface ProductAnalysis {
   type: 'clothing' | 'object' | 'food' | 'unknown';
   description: string;
-  suggestions: string[]; // e.g. "recreate on different models", "place in lifestyle mockup"
+  suggestions: string[];
   confirmed: boolean;
 }
 
@@ -30,6 +31,8 @@ const StepProduct: React.FC<Props> = ({
   productAnalysis, setProductAnalysis,
   analyzingProduct, setAnalyzingProduct,
 }) => {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
   const handleUpload = (files: FileList | null) => {
     if (!files) return;
     Array.from(files).forEach(file => {
@@ -45,6 +48,16 @@ const StepProduct: React.FC<Props> = ({
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleGalleryFiles = (files: { url: string; name: string }[]) => {
+    // For gallery files, we create a dummy File object since we have URLs
+    const newImages = files.map(f => ({
+      url: f.url,
+      thumb: f.url,
+      file: new File([], f.name), // placeholder file
+    }));
+    setProductImages(prev => [...prev, ...newImages]);
   };
 
   const analyzeProduct = async () => {
@@ -67,7 +80,6 @@ const StepProduct: React.FC<Props> = ({
     }
   };
 
-  // Auto-analyze when first image is uploaded
   React.useEffect(() => {
     if (productImages.length > 0 && !productAnalysis && !analyzingProduct) {
       analyzeProduct();
@@ -94,6 +106,14 @@ const StepProduct: React.FC<Props> = ({
         <span className="text-xs text-white/20">JPG, PNG — várias fotos de ângulos diferentes</span>
         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
       </label>
+
+      {/* Gallery picker button */}
+      <button onClick={() => setGalleryOpen(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+        <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+      </button>
+
+      <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de produto" />
 
       {/* Uploaded images */}
       {productImages.length > 0 && (
@@ -145,9 +165,7 @@ const StepProduct: React.FC<Props> = ({
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
             </div>
-
             <p className="text-xs text-white/30">{TYPE_LABELS[productAnalysis.type]?.desc}</p>
-
             {productAnalysis.suggestions.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {productAnalysis.suggestions.map((s, i) => (
@@ -174,7 +192,6 @@ const StepProduct: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Confirm */}
           {!productAnalysis.confirmed && (
             <button onClick={() => setProductAnalysis({ ...productAnalysis, confirmed: true })}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"

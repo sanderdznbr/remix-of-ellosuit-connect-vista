@@ -451,9 +451,8 @@ const CarouselGenerator: React.FC = () => {
     }
 
     // === GEMINI / NANO BANANA PATH ===
-    const { data, error } = await supabase.functions.invoke('generate-carousel', {
+    const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
       body: {
-        action: 'generate-ai-image',
         prompt: opts.prompt,
         imageSize: '3:4',
         topic: opts.prompt,

@@ -49,7 +49,7 @@ const App = () => (
           <OneSignalProvider>
           <SubscriptionProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<PublicCarouselGenerator />} />
               <Route path="/auth" element={<Index />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

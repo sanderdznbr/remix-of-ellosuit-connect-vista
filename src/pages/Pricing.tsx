@@ -20,7 +20,7 @@ const plans = [
     includedLabel: 'O que está incluso:',
     features: [
       '40 créditos mensais',
-      '~5 carrosséis simples (8 slides)',
+      'Em média 5 carrosséis de 8 slides',
       'Crédito extra: R$2,50',
       'Geração de carrosséis com IA',
       'Exportação em imagem',
@@ -38,9 +38,9 @@ const plans = [
     includedLabel: 'Tudo do Starter, mais:',
     features: [
       '100 créditos mensais',
-      '~12 carrosséis simples (8 slides)',
+      'Em média 12 carrosséis de 8 slides',
       'Crédito extra: R$2,00',
-      'IA avançada (GPT-4o + imagens)',
+      'IA avançada (Nano Banana + imagens)',
       'Publicação em redes sociais',
       'Remover badge ellocontent',
       'Suporte prioritário',
@@ -58,7 +58,7 @@ const plans = [
     includedLabel: 'Tudo do Pro, mais:',
     features: [
       '250 créditos mensais',
-      '~31 carrosséis simples (8 slides)',
+      'Em média 31 carrosséis de 8 slides',
       'Crédito extra: R$1,50',
       'Templates de design',
       'Workspace de equipe',

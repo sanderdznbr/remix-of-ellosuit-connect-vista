@@ -25,6 +25,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<PublicCarouselGenerator />} />
+            <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
             <Route path="/auth" element={<Index />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

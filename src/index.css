@@ -7,11 +7,12 @@
 @tailwind utilities;
 
 /* Prevent layout shift when Radix dialogs/sheets add overflow:hidden to body */
-body {
+html, body {
   overflow: hidden !important;
   width: 100% !important;
   margin-right: 0 !important;
   padding-right: 0 !important;
+  background-color: #0A0A0A;
 }
 body[data-scroll-locked] {
   margin-right: 0 !important;

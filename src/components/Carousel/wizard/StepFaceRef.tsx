@@ -47,6 +47,7 @@ const StepFaceRef: React.FC<Props> = ({
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">O post deve ter algum rosto?</h2>
         <p className="text-sm text-white/40">Anexe fotos de quem deve aparecer no post.</p>
+        <p className="text-xs text-amber-400/70 mt-1">⚡ Até 3 fotos serão usadas pela IA. Envie ângulos diferentes para melhor resultado.</p>
       </div>
 
       {/* Upload */}

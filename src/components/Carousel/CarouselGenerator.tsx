@@ -1569,6 +1569,11 @@ const CarouselGenerator: React.FC = () => {
           >
             <DashboardLayout
               onStartCarousel={(topic?: string) => {
+                // Reset any previously loaded carousel so the wizard starts fresh
+                setCarouselData(null);
+                setEditingCard(null);
+                setActiveCardIndex(0);
+                setCurrentCarouselId(null);
                 if (topic) {
                   setTopic(topic);
                   setShowWelcome(false);

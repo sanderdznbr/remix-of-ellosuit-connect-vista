@@ -549,10 +549,17 @@ const CarouselGenerator: React.FC = () => {
         return;
       }
       const fileName = `${companyId}/${carouselId}.jpg`;
-      await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) {
+        console.warn('Cover upload failed:', uploadError.message, '- using server fallback');
+        await serverFallbackCover(carouselId);
+        return;
+      }
       const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
       if (urlData?.publicUrl) {
-        await supabase.from('generated_carousels').update({ cover_url: urlData.publicUrl }).eq('id', carouselId);
+        // Add cache-buster to ensure fresh URL
+        const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+        await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
       }
     } catch (err) {
       console.error('Cover capture error, trying server fallback:', err);

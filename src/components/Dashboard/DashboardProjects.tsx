@@ -184,15 +184,20 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
                 >
                   <div
-                    className="w-12 h-14 rounded-lg shrink-0 overflow-hidden"
+                    className="w-12 h-14 rounded-lg shrink-0 overflow-hidden relative"
                     style={{
-                      background: cover
-                        ? `url(${cover}) center/cover no-repeat`
-                        : sc.bgColor
+                      background: !cover
+                        ? sc.bgColor
                           ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                          : 'rgba(255,255,255,0.06)',
+                          : 'rgba(255,255,255,0.06)'
+                        : 'rgba(255,255,255,0.06)',
                     }}
-                  />
+                  >
+                    {cover && (
+                      <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
                     <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -215,15 +220,24 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                 key={item.id}
                 className="rounded-xl overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[4/5]"
                 style={{
-                  background: cover
-                    ? `url(${cover}) center/cover no-repeat`
-                    : sc.bgColor
+                  background: !cover
+                    ? sc.bgColor
                       ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                      : 'rgba(255,255,255,0.04)',
+                      : 'rgba(255,255,255,0.04)'
+                    : 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
                 onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
               >
+                {cover && (
+                  <img
+                    src={cover}
+                    alt={item.title || item.topic}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
                 {/* Star button */}
                 <button
                   onClick={(e) => toggleStar(e, item.id, item.is_starred)}
@@ -235,7 +249,6 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                 >
                   <Star className="w-3.5 h-3.5" fill={item.is_starred ? '#facc15' : 'none'} />
                 </button>
-                {/* Always show star if starred */}
                 {item.is_starred && (
                   <div className="absolute top-2 right-2 p-1.5 group-hover:hidden" style={{ color: '#facc15' }}>
                     <Star className="w-3.5 h-3.5" fill="#facc15" />

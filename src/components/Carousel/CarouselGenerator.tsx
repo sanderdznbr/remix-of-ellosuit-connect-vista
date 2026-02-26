@@ -305,6 +305,7 @@ const CarouselGenerator: React.FC = () => {
     setShowRefPanel(false);
     setEditorRefImage(null);
     setSidebarDrawerOpen(false);
+    setActiveMarketplaceStyle(null);
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setWebSearchResult(null);
@@ -765,6 +766,8 @@ const CarouselGenerator: React.FC = () => {
     }
     setShowHistory(false);
     setActiveCardIndex(0);
+    // Clear marketplace style to prevent previous style bleeding into loaded carousel
+    setActiveMarketplaceStyle(null);
     toast({ title: 'Carrossel carregado!' });
   };
 

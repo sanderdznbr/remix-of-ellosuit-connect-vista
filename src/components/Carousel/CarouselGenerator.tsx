@@ -62,6 +62,7 @@ import SocialPublishDialog from './SocialPublishDialog';
 // CarouselTour removed
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
+import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
@@ -1396,17 +1397,36 @@ const CarouselGenerator: React.FC = () => {
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
 
-      {/* ===== WELCOME SCREEN ===== */}
+      {/* ===== WELCOME / DASHBOARD SCREEN ===== */}
       <AnimatePresence>
-        {showWelcome && (
+        {showWelcome && !user && (
           <WelcomeScreen onStart={(initialTopic?: string, shouldEnhance?: boolean) => {
             if (initialTopic) setTopic(initialTopic);
             setShowWelcome(false);
             if (shouldEnhance && initialTopic) {
-              // Trigger enhance after a short delay to let state settle
               setTimeout(() => enhancePrompt(), 300);
             }
           }} />
+        )}
+        {showWelcome && user && (
+          <motion.div
+            key="dashboard"
+            className="fixed inset-0 z-[70]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DashboardLayout onStartCarousel={(topic?: string) => {
+              if (topic) {
+                setTopic(topic);
+                setShowWelcome(false);
+                setTimeout(() => enhancePrompt(), 300);
+              } else {
+                setShowWelcome(false);
+              }
+            }} />
+          </motion.div>
         )}
       </AnimatePresence>
 

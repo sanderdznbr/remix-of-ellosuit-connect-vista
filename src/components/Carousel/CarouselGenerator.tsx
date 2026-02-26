@@ -44,7 +44,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -134,6 +134,8 @@ const CarouselGenerator: React.FC = () => {
   const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const isGuest = !user;
+  const isCardLocked = (index: number) => isGuest && index > 0 && !!carouselData;
 
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
@@ -651,28 +653,30 @@ const CarouselGenerator: React.FC = () => {
   const generateContent = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
 
-    // Check credit balance before generating
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
-        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
-        if (cu) {
-          const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
-          const creditsNeeded = cardCount; // 1 credit per card
-          if (balance && balance.balance < creditsNeeded) {
-            toast({
-              title: 'Créditos insuficientes',
-              description: `Você precisa de ${creditsNeeded} créditos mas tem ${Math.floor(balance.balance)}. Adquira mais créditos.`,
-              variant: 'destructive',
-            });
-            return;
+    // Check credit balance before generating (only for logged-in users)
+    if (user) {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+          if (cu) {
+            const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
+            const creditsNeeded = cardCount; // 1 credit per card
+            if (balance && balance.balance < creditsNeeded) {
+              toast({
+                title: 'Créditos insuficientes',
+                description: `Você precisa de ${creditsNeeded} créditos mas tem ${Math.floor(balance.balance)}. Adquira mais créditos.`,
+                variant: 'destructive',
+              });
+              return;
+            }
           }
         }
+      } catch (err) {
+        console.warn('Credit check failed:', err);
+        toast({ title: 'Erro ao verificar créditos', description: 'Tente novamente.', variant: 'destructive' });
+        return;
       }
-    } catch (err) {
-      console.warn('Credit check failed:', err);
-      toast({ title: 'Erro ao verificar créditos', description: 'Tente novamente.', variant: 'destructive' });
-      return;
     }
 
     setGenerating(true);
@@ -1596,16 +1600,16 @@ const CarouselGenerator: React.FC = () => {
               <p className="text-xs text-white/40">{carouselData.cards.length} cards</p>
             </div>
             <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end">
-              <button onClick={saveCarousel} disabled={savingCarousel}
+              <button onClick={saveCarousel} disabled={savingCarousel || isGuest}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 transition-all disabled:opacity-50">
-                {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                <span className="hidden sm:inline">{currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
+                {savingCarousel ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+                <span className="hidden sm:inline">{isGuest ? 'Bloqueado' : currentCarouselId ? 'Atualizar' : 'Salvar'}</span>
               </button>
-              <button data-tour="btn-export" onClick={exportAllCards} disabled={exporting}
+              <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : exportAllCards} disabled={exporting}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
                 style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
-                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                <span className="hidden sm:inline">Exportar</span>
+                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                <span className="hidden sm:inline">{isGuest ? 'Cadastre-se' : 'Exportar'}</span>
               </button>
               {/* Publicar button hidden until fully functional */}
             </div>
@@ -1898,7 +1902,7 @@ const CarouselGenerator: React.FC = () => {
                     const endX = e.changedTouches[0].clientX;
                     const diff = startX - endX;
                     if (Math.abs(diff) > 40) {
-                      if (diff > 0 && activeCardIndex < carouselData.cards.length - 1) {
+                      if (diff > 0 && activeCardIndex < carouselData.cards.length - 1 && !isCardLocked(activeCardIndex + 1)) {
                         setActiveCardIndex(activeCardIndex + 1);
                       } else if (diff < 0 && activeCardIndex > 0) {
                         setActiveCardIndex(activeCardIndex - 1);
@@ -1915,6 +1919,19 @@ const CarouselGenerator: React.FC = () => {
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                     </div>
+                    {/* Guest lock overlay */}
+                    {isCardLocked(activeCardIndex) && (
+                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                        <Lock className="w-8 h-8 mb-3" style={{ color: '#8B5CF6' }} />
+                        <p className="text-white font-semibold text-sm mb-1">Card bloqueado</p>
+                        <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
+                        <button onClick={() => navigate('/checkout')}
+                          className="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                          style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                          Cadastrar e Desbloquear
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {/* Swipe indicators */}
                   {activeCardIndex > 0 && (
@@ -1925,10 +1942,10 @@ const CarouselGenerator: React.FC = () => {
                     </button>
                   )}
                   {activeCardIndex < carouselData.cards.length - 1 && (
-                    <button onClick={() => setActiveCardIndex(activeCardIndex + 1)}
+                    <button onClick={() => { if (isCardLocked(activeCardIndex + 1)) return; setActiveCardIndex(activeCardIndex + 1); }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
                       style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-                      <ChevronRight className="h-3.5 w-3.5 text-white" />
+                      {isCardLocked(activeCardIndex + 1) ? <Lock className="h-3 w-3 text-white/60" /> : <ChevronRight className="h-3.5 w-3.5 text-white" />}
                     </button>
                   )}
                 </div>
@@ -1938,7 +1955,7 @@ const CarouselGenerator: React.FC = () => {
                   {/* Dots */}
                   <div className="flex items-center justify-center gap-1 py-2.5">
                     {carouselData.cards.map((_, i) => (
-                      <button key={i} onClick={() => setActiveCardIndex(i)}
+                      <button key={i} onClick={() => { if (!isCardLocked(i)) setActiveCardIndex(i); }}
                         className="transition-all"
                         style={{
                           width: i === activeCardIndex ? 8 : 5,
@@ -2158,20 +2175,36 @@ const CarouselGenerator: React.FC = () => {
 
             </div>{/* end center area flex */}
 
+            {/* Guest CTA banner */}
+            {isGuest && (
+              <div className="flex items-center justify-center gap-3 mt-4 w-full relative z-10 px-4">
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl w-full max-w-xl"
+                  style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))', border: '1px solid rgba(139,92,246,0.2)' }}>
+                  <Lock className="h-4 w-4 shrink-0" style={{ color: '#8B5CF6' }} />
+                  <p className="text-xs text-white/60 flex-1">Cadastre-se para desbloquear todos os cards, salvar e exportar seus carrosséis.</p>
+                  <button onClick={() => navigate('/checkout')}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-white shrink-0 transition-all hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                    Cadastrar
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Action buttons below */}
             <div className="flex items-center justify-center gap-3 mt-6 w-full relative z-10">
-              <button data-tour="btn-add" onClick={addCard}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+              <button data-tour="btn-add" onClick={addCard} disabled={isGuest}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
                 <Plus className="h-3.5 w-3.5" /> Adicionar Card
               </button>
-              <button data-tour="btn-style" onClick={() => setShowStylePanel(!showStylePanel)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+              <button data-tour="btn-style" onClick={() => setShowStylePanel(!showStylePanel)} disabled={isGuest}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
                 <Palette className="h-3.5 w-3.5" /> Estilo
               </button>
-              <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+              <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda
               </button>
@@ -2190,7 +2223,7 @@ const CarouselGenerator: React.FC = () => {
                   const thumbH = thumbW * (CARD_H / CARD_W);
                   return (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
-                    onClick={() => { setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
+                    onClick={() => { if (isCardLocked(i)) return; setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}>
                     <div className="rounded-xl overflow-hidden transition-all" style={{
                       border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
                       boxShadow: i === activeCardIndex ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
@@ -2203,6 +2236,12 @@ const CarouselGenerator: React.FC = () => {
                         </div>
                       </div>
                     </div>
+                    {/* Lock overlay for guest thumbnails */}
+                    {isCardLocked(i) && (
+                      <div className="absolute inset-0 rounded-xl flex items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
+                        <Lock className="w-4 h-4" style={{ color: 'rgba(139,92,246,0.7)' }} />
+                      </div>
+                    )}
                     {/* Hover actions */}
                     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
                       <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}

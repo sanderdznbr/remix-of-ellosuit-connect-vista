@@ -553,46 +553,43 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
-  // ===== CAPTURE COVER FROM RENDERED CARD (with retry + fallback) =====
+  // ===== SAVE COVER FROM AI-GENERATED IMAGE (no html2canvas) =====
   const captureCoverImage = async (carouselId: string, companyId: string) => {
     try {
-      // Poll for the card ref to become available (up to 8 seconds)
-      let el: HTMLElement | null = null;
-      for (let attempt = 0; attempt < 16; attempt++) {
-        await new Promise(r => setTimeout(r, 500));
-        el = cardRefs.current[0];
-        if (el) break;
-      }
-      if (!el) {
-        console.warn('Cover capture: card ref not found after retries, using server fallback');
+      // Use the first card's AI-generated image directly (no text overlay)
+      const firstCardImage = carouselData?.cards?.[0]?.imageUrl;
+      
+      if (!firstCardImage) {
+        console.warn('Cover: no AI image on first card, using server fallback');
         await serverFallbackCover(carouselId);
         return;
       }
-      // Wait for all images inside the element to load
-      const imgs = el.querySelectorAll('img');
-      await Promise.all(Array.from(imgs).map(img => 
-        img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-      ));
-      // Extra settle time for fonts/layout
-      await new Promise(r => setTimeout(r, 500));
-      const canvas = await html2canvas(el, {
-        width: CARD_W,
-        height: CARD_H,
-        scale: 0.5,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: bgColor || '#0A0A1A',
-        logging: false,
-        imageTimeout: 10000,
-      });
-      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+
+      let blob: Blob | null = null;
+
+      if (firstCardImage.startsWith('data:')) {
+        // Convert base64 to blob
+        const res = await fetch(firstCardImage);
+        blob = await res.blob();
+      } else if (firstCardImage.startsWith('http')) {
+        // Fetch remote image
+        try {
+          const res = await fetch(firstCardImage);
+          if (res.ok) blob = await res.blob();
+        } catch {
+          console.warn('Cover: failed to fetch remote image');
+        }
+      }
+
       if (!blob) {
-        console.warn('Cover capture: blob creation failed, using server fallback');
+        console.warn('Cover: could not get image blob, using server fallback');
         await serverFallbackCover(carouselId);
         return;
       }
-      const fileName = `${companyId}/${carouselId}.jpg`;
-      const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+
+      const ext = blob.type.includes('png') ? 'png' : 'jpg';
+      const fileName = `${companyId}/${carouselId}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
       if (uploadError) {
         console.warn('Cover upload failed:', uploadError.message, '- using server fallback');
         await serverFallbackCover(carouselId);
@@ -600,7 +597,6 @@ const CarouselGenerator: React.FC = () => {
       }
       const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
       if (urlData?.publicUrl) {
-        // Add cache-buster to ensure fresh URL
         const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
         await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
       }

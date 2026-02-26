@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { ShoppingBag, Sparkles, Check, Search, Crown, Zap } from 'lucide-react';
 import AdminStyleCreator from './AdminStyleCreator';
 
@@ -27,13 +26,10 @@ const MarketplaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [creditBalance, setCreditBalance] = useState<number>(0);
-  const [selectedStyle, setSelectedStyle] = useState<MarketplaceStyle | null>(null);
 
   useEffect(() => {
     fetchStyles();
-    if (user) fetchPurchasedAndCredits();
+    if (user) fetchPurchased();
   }, [user]);
 
   const fetchStyles = async () => {
@@ -47,49 +43,13 @@ const MarketplaceContent: React.FC = () => {
     setLoading(false);
   };
 
-  const fetchPurchasedAndCredits = async () => {
+  const fetchPurchased = async () => {
     if (!user) return;
-    const [{ data: purchased }, { data: cu }] = await Promise.all([
-      supabase.from('purchased_styles').select('style_id').eq('user_id', user.id),
-      supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle(),
-    ]);
-    setPurchasedIds(new Set((purchased as any[])?.map((p: any) => p.style_id) || []));
-    if (cu) {
-      const { data: bal } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle();
-      setCreditBalance(bal?.balance ?? 0);
-    }
-  };
-
-  const handlePurchase = async (style: MarketplaceStyle) => {
-    if (!user) { navigate('/auth'); return; }
-    if (purchasedIds.has(style.id)) { toast.info('Você já possui este estilo!'); return; }
-    if (creditBalance < style.price_credits) {
-      toast.error('Créditos insuficientes.');
-      navigate('/precos');
-      return;
-    }
-    setPurchasing(style.id);
-    try {
-      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
-      if (!cu) throw new Error('Company not found');
-      const { data: consumeResult } = await supabase.rpc('consume_ai_credits', {
-        p_company_id: cu.company_id, p_agent_id: null as any,
-        p_amount: style.price_credits, p_description: `Compra de estilo: ${style.name}`,
-      });
-      if (!(consumeResult as any)?.success) { toast.error('Créditos insuficientes.'); return; }
-      const { error } = await supabase.from('purchased_styles').insert({
-        user_id: user.id, company_id: cu.company_id, style_id: style.id, payment_method: 'credits',
-      } as any);
-      if (error) throw error;
-      setPurchasedIds(prev => new Set([...prev, style.id]));
-      setCreditBalance(prev => prev - style.price_credits);
-      toast.success(`Estilo "${style.name}" adquirido com sucesso!`);
-      setSelectedStyle(null);
-    } catch (err: any) {
-      toast.error('Erro ao comprar estilo: ' + (err.message || 'Tente novamente'));
-    } finally {
-      setPurchasing(null);
-    }
+    const { data } = await supabase
+      .from('purchased_styles')
+      .select('style_id')
+      .eq('user_id', user.id);
+    setPurchasedIds(new Set((data as any[])?.map((p: any) => p.style_id) || []));
   };
 
   const categories = ['all', ...Array.from(new Set(styles.map(s => s.category)))];
@@ -104,13 +64,11 @@ const MarketplaceContent: React.FC = () => {
   return (
     <div className="flex-1 h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
       <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header — same style as DashboardProjects */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-1">Marketplace</h1>
           <p className="text-sm text-white/40">Navegue por diferentes estilos</p>
         </div>
 
-        {/* Admin Panel - only visible for admin@gmail.com */}
         <AdminStyleCreator onStylesChanged={fetchStyles} />
 
         {/* Filters */}
@@ -161,7 +119,13 @@ const MarketplaceContent: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {featured.map(style => (
-                    <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)} purchasing={purchasing === style.id} onPurchase={() => handlePurchase(style)} onPreview={() => setSelectedStyle(style)} featured />
+                    <StyleCard
+                      key={style.id}
+                      style={style}
+                      owned={purchasedIds.has(style.id)}
+                      onClick={() => navigate(`/marketplace/${style.id}`)}
+                      featured
+                    />
                   ))}
                 </div>
               </div>
@@ -171,7 +135,12 @@ const MarketplaceContent: React.FC = () => {
                 <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4">Todos os estilos</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {regular.map(style => (
-                    <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)} purchasing={purchasing === style.id} onPurchase={() => handlePurchase(style)} onPreview={() => setSelectedStyle(style)} />
+                    <StyleCard
+                      key={style.id}
+                      style={style}
+                      owned={purchasedIds.has(style.id)}
+                      onClick={() => navigate(`/marketplace/${style.id}`)}
+                    />
                   ))}
                 </div>
               </div>
@@ -179,32 +148,34 @@ const MarketplaceContent: React.FC = () => {
           </>
         )}
       </div>
-
-      {selectedStyle && (
-        <StyleDetailModal style={selectedStyle} owned={purchasedIds.has(selectedStyle.id)} purchasing={purchasing === selectedStyle.id} onPurchase={() => handlePurchase(selectedStyle)} onClose={() => setSelectedStyle(null)} />
-      )}
     </div>
   );
 };
 
 // ---- Style Card ----
 const StyleCard: React.FC<{
-  style: MarketplaceStyle; owned: boolean; purchasing: boolean;
-  onPurchase: () => void; onPreview: () => void; featured?: boolean;
-}> = ({ style, owned, purchasing, onPurchase, onPreview, featured }) => {
+  style: MarketplaceStyle;
+  owned: boolean;
+  onClick: () => void;
+  featured?: boolean;
+}> = ({ style, owned, onClick, featured }) => {
   const previewImage = style.preview_images?.[0];
   return (
     <div
-      onClick={onPreview}
+      onClick={onClick}
       className={`group relative rounded-2xl border overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${
-        featured ? 'border-purple-500/30 bg-gradient-to-b from-purple-500/[0.08] to-transparent' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
+        featured
+          ? 'border-purple-500/30 bg-gradient-to-b from-purple-500/[0.08] to-transparent'
+          : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
       }`}
     >
       <div className="aspect-video relative overflow-hidden bg-white/[0.03]">
         {previewImage ? (
           <img src={previewImage} alt={style.name} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center"><Sparkles className="w-10 h-10 text-white/10" /></div>
+          <div className="w-full h-full flex items-center justify-center">
+            <Sparkles className="w-10 h-10 text-white/10" />
+          </div>
         )}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <span className="text-white text-sm font-medium px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm">Ver detalhes</span>
@@ -230,81 +201,10 @@ const StyleCard: React.FC<{
             ))}
           </div>
           {!owned && (
-            <div className="flex items-center gap-1 text-purple-400 text-sm font-bold">
-              <Zap className="w-3.5 h-3.5" />{style.price_credits}
-            </div>
+            <span className="text-purple-400 text-sm font-bold">
+              R$ {style.price_brl?.toFixed(2) || '0,00'}
+            </span>
           )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ---- Detail Modal ----
-const StyleDetailModal: React.FC<{
-  style: MarketplaceStyle; owned: boolean; purchasing: boolean;
-  onPurchase: () => void; onClose: () => void;
-}> = ({ style, owned, purchasing, onPurchase, onClose }) => {
-  const [activeImage, setActiveImage] = useState(0);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/[0.08]" style={{ backgroundColor: '#111116' }}>
-        <div className="flex flex-col md:flex-row">
-          <div className="md:w-1/2 p-6">
-            <div className="aspect-video rounded-xl overflow-hidden bg-white/[0.03] mb-3">
-              {style.preview_images?.[activeImage] ? (
-                <img src={style.preview_images[activeImage]} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center"><Sparkles className="w-12 h-12 text-white/10" /></div>
-              )}
-            </div>
-            {style.preview_images?.length > 1 && (
-              <div className="flex gap-2">
-                {style.preview_images.map((img, i) => (
-                  <button key={i} onClick={() => setActiveImage(i)} className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${i === activeImage ? 'border-purple-500' : 'border-transparent opacity-50 hover:opacity-80'}`}>
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="md:w-1/2 p-6 flex flex-col">
-            <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white cursor-pointer">✕</button>
-            <div className="flex items-center gap-2 mb-2">
-              {style.is_featured && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 text-[10px] font-bold"><Crown className="w-3 h-3" /> DESTAQUE</span>
-              )}
-              <span className="px-2 py-0.5 rounded bg-white/[0.06] text-white/40 text-[10px]">{style.category}</span>
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">{style.name}</h2>
-            {style.description && <p className="text-sm text-white/40 mb-6">{style.description}</p>}
-            {style.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-6">
-                {style.tags.map(tag => (
-                  <span key={tag} className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] text-white/30 border border-white/[0.06]">{tag}</span>
-                ))}
-              </div>
-            )}
-            <div className="mt-auto space-y-4">
-              {!owned ? (
-                <>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-white">{style.price_credits}</span>
-                    <span className="text-sm text-white/40">créditos</span>
-                    {style.price_brl > 0 && <span className="text-xs text-white/20 ml-2">(~R$ {style.price_brl.toFixed(2)})</span>}
-                  </div>
-                  <button onClick={onPurchase} disabled={purchasing} className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold text-sm hover:from-purple-500 hover:to-pink-500 transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
-                    {purchasing ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><ShoppingBag className="w-4 h-4" />Comprar estilo</>}
-                  </button>
-                </>
-              ) : (
-                <div className="flex items-center gap-2 py-3 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
-                  <Check className="w-5 h-5" />Você já possui este estilo
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>

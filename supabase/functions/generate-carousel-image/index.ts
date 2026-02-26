@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       ? faceReferenceUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
       : [];
     const validStyleRefs = hasStyleRefs 
-      ? styleReferenceUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      ? styleReferenceUrls.slice(0, 3).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
       : [];
     const validGeneralRefs = hasGeneralRefs
       ? referenceImageUrls.slice(0, 2).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
@@ -146,10 +146,11 @@ STYLE REQUIREMENTS:
     // Attempt 2: simplified with key refs
     if (!generatedImage) {
       const retryContent: any[] = [
-        { type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}` },
+        { type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` },
       ];
       for (const ref of validFaceRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of validGeneralRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      for (const ref of validStyleRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch { /* next */ }
     }
 

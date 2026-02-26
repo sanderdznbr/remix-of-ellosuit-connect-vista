@@ -74,7 +74,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex-1 flex flex-col relative overflow-hidden h-full" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Orb — large, positioned lower so only ~40% visible */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] pointer-events-none">
         <div className="carousel-loader-wrapper" style={{ width: 'min(1200px, 130vw)', height: 'min(1200px, 130vw)' }}>
@@ -83,7 +83,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       </div>
 
       {/* Center content — title + input */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 min-h-0 pb-4">
         <motion.h1
           className="text-2xl md:text-4xl font-semibold leading-snug mb-3"
           initial={{ opacity: 0, y: 20 }}

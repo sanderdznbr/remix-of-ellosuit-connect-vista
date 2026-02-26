@@ -472,8 +472,9 @@ Responda APENAS em JSON válido:
       const validStyleRefs = hasStyleRefs 
         ? styleReferenceUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
         : [];
-      const validGeneralRefs = (hasGeneralRefs && !hasFaceRefs && !hasStyleRefs)
-        ? referenceImageUrls.slice(0, 1).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      // ALWAYS include product/general refs even when face refs exist
+      const validGeneralRefs = hasGeneralRefs
+        ? referenceImageUrls.slice(0, 2).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
         : [];
 
       console.log('Proxied refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length });
@@ -503,12 +504,26 @@ STYLE REQUIREMENTS:
         textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
       }
 
-      if (validFaceRefs.length > 0) {
+      if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
+        // BOTH face AND product references — person must interact with the product
+        textPrompt += `\n\nCRITICAL - FACE + PRODUCT COMBINED: I am attaching BOTH a person reference AND a product reference. You MUST:
+1. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
+2. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
+3. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
+4. The product must be clearly visible and recognizable — this is the #2 priority
+5. Create a natural, editorial scene where the person and product interact organically
+6. NEVER ignore the face reference. NEVER generate a generic person. The face MUST match the reference exactly.`;
+      } else if (validFaceRefs.length > 0) {
         textPrompt += `\n\nCRITICAL - FACE/PERSON REFERENCE: I am attaching ${validFaceRefs.length} reference photo(s) of the person who MUST appear in this image. You MUST:
 1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
 2. The person must be clearly recognizable as the same individual in the reference photos
 3. Maintain their likeness with high fidelity - this is the #1 priority
-4. Place this person naturally in the scene described above`;
+4. Place this person naturally in the scene described above
+5. NEVER ignore this reference. NEVER generate a generic person.`;
+      }
+
+      if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
+        textPrompt += `\n\nPRODUCT REFERENCE: I am attaching ${validGeneralRefs.length} product reference image(s). Reproduce the product faithfully in the scene.`;
       }
 
       if (validStyleRefs.length > 0) {
@@ -527,7 +542,7 @@ STYLE REQUIREMENTS:
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Add general references (only if no specific refs)
+      // Add product/general references (always, even when face refs exist)
       for (const ref of validGeneralRefs) {
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
@@ -585,13 +600,15 @@ STYLE REQUIREMENTS:
         }
       }
 
-      // Attempt 2: simplified text, only style refs (face refs often trigger safety filters)
+      // Attempt 2: simplified text but KEEP face refs (they are critical)
       if (!generatedImage) {
         const retryContent: any[] = [
-          { type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio, ultra high resolution.` },
+          { type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio, ultra high resolution.${validFaceRefs.length > 0 ? ' The person in the attached reference photo MUST appear in this image with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear in the image.' : ''}` },
         ];
-        // Only add style refs (less likely to trigger safety filters than face refs)
-        for (const ref of validStyleRefs.slice(0, 2)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+        // Keep face refs in retry - they are the #1 priority
+        for (const ref of validFaceRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+        for (const ref of validGeneralRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+        for (const ref of validStyleRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
         try {
           generatedImage = await tryGenerateImage(primaryModel, retryContent, 2);
         } catch { /* try next */ }

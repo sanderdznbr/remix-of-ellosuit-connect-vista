@@ -15,18 +15,23 @@ interface Props {
   skipWebSearch?: boolean;
 }
 
+// Fixed bright purple for loading UI - never uses user's accent color
+const LOADING_PURPLE = '#A855F7';
+
 const GeneratingAnimation: React.FC<Props> = ({
   imageGenProgress,
   topic = 'Seu tema incrível',
   cardCount = 8,
   bgColor = '#0A0A1A',
-  accentColor = '#7B50DC',
+  accentColor = LOADING_PURPLE,
   textColor = '#FFFFFF',
   selectedFont = 'Inter',
   brandName = '',
   logoUrl = null,
   skipWebSearch = false,
 }) => {
+  // Always use bright purple for loading, ignoring user's accentColor
+  const loadingColor = LOADING_PURPLE;
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);
@@ -168,7 +173,7 @@ const GeneratingAnimation: React.FC<Props> = ({
       {/* LEFT SIDE — Orb + Status */}
       <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-4">
         <div className="absolute w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${accentColor}99 0%, transparent 70%)` }} />
+          style={{ background: `radial-gradient(circle, ${loadingColor}99 0%, transparent 70%)` }} />
 
         <div className="carousel-loader-wrapper" style={{ width: 200, height: 200 }}>
           <div className="carousel-loader-spinner" />
@@ -187,7 +192,7 @@ const GeneratingAnimation: React.FC<Props> = ({
                 <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ backgroundColor: accentColor }}
+                    style={{ backgroundColor: loadingColor }}
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ duration: 0.5 }}
@@ -221,7 +226,7 @@ const GeneratingAnimation: React.FC<Props> = ({
                       <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
                         <motion.div
                           className="h-full rounded-full"
-                          style={{ backgroundColor: accentColor }}
+                          style={{ backgroundColor: loadingColor }}
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.5 }}
@@ -243,7 +248,7 @@ const GeneratingAnimation: React.FC<Props> = ({
             {STEPS.map((_, i) => (
               <div key={i} className="w-1.5 h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  backgroundColor: i === activeStep ? accentColor : i < activeStep ? `${accentColor}66` : 'rgba(255,255,255,0.1)',
+                  backgroundColor: i === activeStep ? loadingColor : i < activeStep ? `${loadingColor}66` : 'rgba(255,255,255,0.1)',
                   transform: i === activeStep ? 'scale(1.5)' : 'scale(1)',
                 }} />
             ))}
@@ -282,7 +287,7 @@ const GeneratingAnimation: React.FC<Props> = ({
                     animate={{ opacity: [1, 0] }}
                     transition={{ duration: 0.6, repeat: Infinity }}
                     className="inline-block w-2 h-4 ml-0.5"
-                    style={{ backgroundColor: accentColor, marginTop: 2 }}
+                    style={{ backgroundColor: loadingColor, marginTop: 2 }}
                   />
                 )}
               </motion.div>

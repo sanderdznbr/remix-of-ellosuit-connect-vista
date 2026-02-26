@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '@/styles/carousel-loader.css';
 import '@/styles/cube-loader.css';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Animated percentage counter
@@ -129,6 +129,7 @@ const CarouselGenerator: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { id: routeCarouselId } = useParams<{ id?: string }>();
   const { isMobile: isMobileView } = useIsMobile();
   const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -289,6 +290,30 @@ const CarouselGenerator: React.FC = () => {
   useEffect(() => {
     loadHistory();
   }, [user?.id]);
+
+  // Load carousel from route param /carousel/:id
+  useEffect(() => {
+    if (!routeCarouselId || !user) return;
+    const loadFromRoute = async () => {
+      try {
+        const { data } = await supabase.from('generated_carousels').select('*').eq('id', routeCarouselId).single();
+        if (data) {
+          loadCarousel(data);
+          setShowWelcome(false);
+        }
+      } catch (err) { console.error('Failed to load carousel from URL:', err); }
+    };
+    loadFromRoute();
+  }, [routeCarouselId, user]);
+
+  // Update URL when carousel ID changes
+  useEffect(() => {
+    if (currentCarouselId) {
+      window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
+    } else if (window.location.pathname.startsWith('/carousel/')) {
+      window.history.replaceState({}, '', '/');
+    }
+  }, [currentCarouselId]);
 
   // Handle Facebook OAuth callback
   useEffect(() => {

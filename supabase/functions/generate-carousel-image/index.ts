@@ -135,13 +135,27 @@ STYLE REQUIREMENTS:
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`Attempt ${attempt} error:`, res.status, errText);
+        console.error(`Attempt ${attempt} error:`, res.status, errText.slice(0, 300));
         if (res.status === 429 || res.status === 402) throw { status: res.status };
         return null;
       }
 
-      const data = await res.json();
-      return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+      // Stream response as text and extract base64 image URL via string search
+      // instead of JSON.parse on multi-MB payloads (which causes WORKER_LIMIT)
+      const raw = await res.text();
+      const patterns = ['"url":"data:image/', '"url": "data:image/'];
+      for (const pattern of patterns) {
+        const idx = raw.indexOf(pattern);
+        if (idx === -1) continue;
+        const urlStart = raw.indexOf('"', idx + 5) + 1; // find opening quote of value
+        const urlEnd = raw.indexOf('"', urlStart);
+        if (urlEnd === -1) continue;
+        const url = raw.slice(urlStart, urlEnd);
+        console.log(`Attempt ${attempt}: image extracted (${url.length} chars)`);
+        return url;
+      }
+      console.log(`Attempt ${attempt}: no image in response (${raw.length} chars)`);
+      return null;
     }
 
     // Attempt 1: full prompt

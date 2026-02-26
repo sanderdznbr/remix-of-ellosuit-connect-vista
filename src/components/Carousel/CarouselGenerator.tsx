@@ -2153,8 +2153,35 @@ const CarouselGenerator: React.FC = () => {
                 {/* Glow effect */}
                 <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] rounded-full opacity-15 blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
                 
-                {/* Card preview - compact on mobile */}
-                <div className="flex items-center justify-center w-full flex-1" style={{ minHeight: 0 }}>
+              {/* Card preview - compact on mobile, swipeable */}
+                <div
+                  className="flex items-center justify-center w-full flex-1 touch-pan-y"
+                  style={{ minHeight: 0 }}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    (e.currentTarget as any)._swipeStartX = touch.clientX;
+                    (e.currentTarget as any)._swipeStartY = touch.clientY;
+                    (e.currentTarget as any)._swiped = false;
+                  }}
+                  onTouchMove={(e) => {
+                    const el = e.currentTarget as any;
+                    if (el._swiped) return;
+                    const diffX = e.touches[0].clientX - (el._swipeStartX || 0);
+                    const diffY = e.touches[0].clientY - (el._swipeStartY || 0);
+                    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+                      el._swiped = true;
+                      if (diffX > 0 && validIndex > 0) {
+                        const prev = validIndex - 1;
+                        setEditingCard(prev); setActiveCardIndex(prev);
+                        setAiImagePrompt(carouselData.cards[prev]?.imagePrompt || carouselData.cards[prev]?.title || '');
+                      } else if (diffX < 0 && validIndex < carouselData.cards.length - 1) {
+                        const next = validIndex + 1;
+                        setEditingCard(next); setActiveCardIndex(next);
+                        setAiImagePrompt(carouselData.cards[next]?.imagePrompt || carouselData.cards[next]?.title || '');
+                      }
+                    }
+                  }}
+                >
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
                       transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth < 768 ? window.innerWidth * 0.6 : window.innerWidth * 0.45) : 300) / PREVIEW_W, 1.4)})`,

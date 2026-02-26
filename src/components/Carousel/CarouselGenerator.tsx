@@ -513,10 +513,15 @@ const CarouselGenerator: React.FC = () => {
   // ===== CAPTURE COVER FROM RENDERED CARD =====
   const captureCoverImage = async (carouselId: string, companyId: string) => {
     try {
-      // Wait for export refs to be ready
-      await new Promise(r => setTimeout(r, 300));
+      // Wait longer for export refs and images to be ready
+      await new Promise(r => setTimeout(r, 1500));
       const el = cardRefs.current[0];
-      if (!el) return;
+      if (!el) { console.warn('Cover capture: card ref not found'); return; }
+      // Wait for all images inside the element to load
+      const imgs = el.querySelectorAll('img');
+      await Promise.all(Array.from(imgs).map(img => 
+        img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
+      ));
       const canvas = await html2canvas(el, {
         width: CARD_W,
         height: CARD_H,

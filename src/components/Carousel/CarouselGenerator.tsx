@@ -555,10 +555,11 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== SAVE COVER FROM AI-GENERATED IMAGE (no html2canvas) =====
-  const captureCoverImage = async (carouselId: string, companyId: string) => {
+  const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null) => {
     try {
-      // Use the first card's AI-generated image directly (no text overlay)
-      const firstCardImage = carouselData?.cards?.[0]?.imageUrl;
+      // Use explicit data (passed directly) or fall back to state
+      const dataSource = explicitData || carouselData;
+      const firstCardImage = dataSource?.cards?.[0]?.imageUrl;
       
       if (!firstCardImage) {
         console.warn('Cover: no AI image on first card, using server fallback');
@@ -569,11 +570,9 @@ const CarouselGenerator: React.FC = () => {
       let blob: Blob | null = null;
 
       if (firstCardImage.startsWith('data:')) {
-        // Convert base64 to blob
         const res = await fetch(firstCardImage);
         blob = await res.blob();
       } else if (firstCardImage.startsWith('http')) {
-        // Fetch remote image
         try {
           const res = await fetch(firstCardImage);
           if (res.ok) blob = await res.blob();
@@ -879,6 +878,11 @@ const CarouselGenerator: React.FC = () => {
             setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
             if (url) updatedCards[p.index] = { ...updatedCards[p.index], imageUrl: url, isAiImage: true };
             return url;
+          }).catch((err) => {
+            completed++;
+            console.error('Image generation failed for card', p.index, err);
+            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+            return null;
           })
         );
         await Promise.all(trackedPromises);
@@ -913,7 +917,7 @@ const CarouselGenerator: React.FC = () => {
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length }).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
-              setTimeout(() => captureCoverImage(inserted.id, companyData.company_id).catch(() => {}), 2000);
+              setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
             }
           }
         }

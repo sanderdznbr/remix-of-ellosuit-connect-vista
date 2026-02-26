@@ -887,6 +887,126 @@ export type Database = {
           },
         ]
       }
+      carousel_generation_jobs: {
+        Row: {
+          brand_name: string | null
+          card_count: number
+          carousel_data: Json | null
+          carousel_id: string | null
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          date_label: string | null
+          error_message: string | null
+          face_ref_urls: Json | null
+          id: string
+          image_settings: Json | null
+          keywords: string | null
+          logo_position: string | null
+          logo_url: string | null
+          marketplace_style_config: Json | null
+          marketplace_style_id: string | null
+          negative_prompt: string | null
+          product_context: string | null
+          progress_current: number
+          progress_message: string | null
+          progress_total: number
+          reference_images: Json | null
+          show_header: boolean | null
+          status: string
+          style_config: Json | null
+          topic: string
+          updated_at: string
+          user_id: string
+          user_name: string | null
+          web_search_citations: Json | null
+          web_search_content: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          card_count?: number
+          carousel_data?: Json | null
+          carousel_id?: string | null
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          date_label?: string | null
+          error_message?: string | null
+          face_ref_urls?: Json | null
+          id?: string
+          image_settings?: Json | null
+          keywords?: string | null
+          logo_position?: string | null
+          logo_url?: string | null
+          marketplace_style_config?: Json | null
+          marketplace_style_id?: string | null
+          negative_prompt?: string | null
+          product_context?: string | null
+          progress_current?: number
+          progress_message?: string | null
+          progress_total?: number
+          reference_images?: Json | null
+          show_header?: boolean | null
+          status?: string
+          style_config?: Json | null
+          topic: string
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+          web_search_citations?: Json | null
+          web_search_content?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          card_count?: number
+          carousel_data?: Json | null
+          carousel_id?: string | null
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          date_label?: string | null
+          error_message?: string | null
+          face_ref_urls?: Json | null
+          id?: string
+          image_settings?: Json | null
+          keywords?: string | null
+          logo_position?: string | null
+          logo_url?: string | null
+          marketplace_style_config?: Json | null
+          marketplace_style_id?: string | null
+          negative_prompt?: string | null
+          product_context?: string | null
+          progress_current?: number
+          progress_message?: string | null
+          progress_total?: number
+          reference_images?: Json | null
+          show_header?: boolean | null
+          status?: string
+          style_config?: Json | null
+          topic?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+          web_search_citations?: Json | null
+          web_search_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carousel_generation_jobs_carousel_id_fkey"
+            columns: ["carousel_id"]
+            isOneToOne: false
+            referencedRelation: "generated_carousels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carousel_generation_jobs_marketplace_style_id_fkey"
+            columns: ["marketplace_style_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_styles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carousel_style_templates: {
         Row: {
           company_id: string

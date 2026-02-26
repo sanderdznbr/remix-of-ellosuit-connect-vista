@@ -225,7 +225,7 @@ const CarouselGenerator: React.FC = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  
+  const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);
@@ -364,6 +364,79 @@ const CarouselGenerator: React.FC = () => {
       window.history.replaceState({}, '', '/');
     }
   }, [currentCarouselId]);
+
+  // ===== CLOUD JOB REALTIME SUBSCRIPTION =====
+  useEffect(() => {
+    if (!cloudJobId) return;
+    const channel = supabase
+      .channel(`job-${cloudJobId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'carousel_generation_jobs',
+        filter: `id=eq.${cloudJobId}`,
+      }, (payload: any) => {
+        const job = payload.new;
+        if (!job) return;
+        
+        // Update progress
+        if (job.progress_message) setImageGenProgress(job.progress_message);
+        if (job.progress_current !== undefined && job.progress_total) {
+          setImageGenProgress(`🎨 ${job.progress_current}/${job.progress_total} imagens geradas...`);
+        }
+
+        // Update carousel data as images come in
+        if (job.carousel_data && job.status === 'generating_images') {
+          setCarouselData(job.carousel_data);
+        }
+        
+        // Job completed
+        if (job.status === 'completed') {
+          setGenerating(false);
+          setGeneratingAllImages(false);
+          setImageGenProgress('');
+          setCloudJobId(null);
+          if (job.carousel_data) setCarouselData(job.carousel_data);
+          if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
+          toast({ title: 'Carrossel gerado com sucesso!' });
+        }
+        
+        // Job failed
+        if (job.status === 'failed') {
+          setGenerating(false);
+          setGeneratingAllImages(false);
+          setImageGenProgress('');
+          setCloudJobId(null);
+          toast({ title: 'Erro na geração', description: job.error_message || 'Tente novamente', variant: 'destructive' });
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [cloudJobId]);
+
+  // ===== CHECK FOR PENDING CLOUD JOBS ON MOUNT =====
+  useEffect(() => {
+    if (!user) return;
+    const checkPendingJobs = async () => {
+      const { data } = await supabase
+        .from('carousel_generation_jobs')
+        .select('id, status, progress_message, carousel_data')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'generating_text', 'generating_images'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data?.[0]) {
+        setCloudJobId(data[0].id);
+        setGenerating(true);
+        setGeneratingAllImages(true);
+        setShowWelcome(false);
+        if (data[0].carousel_data) setCarouselData(data[0].carousel_data as any);
+        if (data[0].progress_message) setImageGenProgress(data[0].progress_message);
+      }
+    };
+    checkPendingJobs();
+  }, [user]);
 
   // Handle Facebook OAuth callback
   useEffect(() => {
@@ -780,19 +853,23 @@ const CarouselGenerator: React.FC = () => {
     toast({ title: 'Carrossel removido' });
   };
 
-  // ===== GENERATE =====
+  // ===== GENERATE (CLOUD-BASED) =====
   const generateContent = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
 
     // Check credit balance before generating (only for logged-in users)
+    let companyId: string | null = null;
+    let userId: string | null = null;
     if (user) {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
+          userId = userData.user.id;
           const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (cu) {
+            companyId = cu.company_id;
             const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
-            const creditsNeeded = cardCount; // 1 credit per card
+            const creditsNeeded = cardCount;
             if (balance && balance.balance < creditsNeeded) {
               toast({
                 title: 'Créditos insuficientes',
@@ -811,11 +888,85 @@ const CarouselGenerator: React.FC = () => {
     }
 
     setGenerating(true);
-    // Clear previous carousel data to prevent reusing old images
     setCarouselData(null);
     setCurrentCarouselId(null);
-    // Small delay to let the transition animation settle before showing generating overlay
     setTimeout(() => setTransitionToGenerate(false), 500);
+
+    // === CLOUD GENERATION (for logged-in users) ===
+    if (userId && companyId) {
+      try {
+        setGeneratingAllImages(true);
+        setImageGenProgress('☁️ Iniciando geração em nuvem...');
+
+        const productContext = productAnalysis?.confirmed ? JSON.stringify({
+          productType: productAnalysis.type,
+          productDescription: productAnalysis.description,
+          productImageUrls: productImages.map(p => p.url),
+        }) : null;
+
+        // Build marketplace style config with preview images
+        let marketplaceConfig = activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null;
+        if (marketplaceConfig?._previewImages?.length) {
+          // Convert relative URLs to absolute for the cloud function
+          const origin = window.location.origin;
+          marketplaceConfig._previewImages = (marketplaceConfig._previewImages as string[])
+            .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+        }
+
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+
+        // Create the job in the database
+        const { data: jobData, error: jobError } = await supabase.from('carousel_generation_jobs').insert({
+          user_id: userId,
+          company_id: companyId,
+          topic: topic.trim(),
+          keywords: keywords,
+          card_count: cardCount,
+          style_config: styleConfig as any,
+          marketplace_style_id: activeMarketplaceStyle?.id || null,
+          marketplace_style_config: marketplaceConfig as any,
+          brand_name: brandName,
+          user_name: userName,
+          date_label: dateLabel,
+          logo_url: logoUrl,
+          logo_position: logoPosition,
+          show_header: showHeader,
+          image_settings: imageSettings as any,
+          reference_images: referenceImages as any,
+          face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
+          product_context: productContext,
+          web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
+          web_search_citations: webSearchResult?.citations as any,
+          negative_prompt: imageSettings.negativePrompt || null,
+        } as any).select('id').single();
+
+        if (jobError) throw jobError;
+        if (!jobData?.id) throw new Error('Failed to create job');
+
+        // Subscribe to job updates via Realtime
+        setCloudJobId(jobData.id);
+
+        // Fire the cloud generation (fire-and-forget)
+        supabase.functions.invoke('generate-carousel-cloud', {
+          body: { jobId: jobData.id },
+        }).catch(err => {
+          console.error('Cloud generation invoke error:', err);
+          // The Realtime subscription will handle status updates
+        });
+
+        // The Realtime subscription (above useEffect) will handle all progress updates
+        // and set the final carouselData when complete
+
+      } catch (err: any) {
+        setGenerating(false);
+        setGeneratingAllImages(false);
+        setImageGenProgress('');
+        toast({ title: 'Erro', description: err.message || 'Não foi possível iniciar geração', variant: 'destructive' });
+      }
+      return; // Don't fall through to client-side generation
+    }
+
+    // === FALLBACK: CLIENT-SIDE GENERATION (for guests/unauthenticated) ===
     try {
       const imageCardIndices: number[] = [0];
       const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);
@@ -854,11 +1005,7 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🔍 Buscando referências na web...');
 
-      // ONLY use images the user explicitly selected in the References step (category 'general')
       const selectedImages = referenceImages.filter(r => r.category === 'general').map(r => r.url);
-      console.log('User-selected images:', selectedImages.length);
-
-      // Filter out placeholder/broken image URLs AND images that likely contain text overlays
       const isValidImageUrl = (url: string) => {
         if (!url || typeof url !== 'string') return false;
         const lower = url.toLowerCase();
@@ -868,25 +1015,16 @@ const CarouselGenerator: React.FC = () => {
         if (lower.includes('blank.') || lower.includes('empty.') || lower.includes('pixel.')) return false;
         if (lower.includes('logo') && (lower.includes('icon') || lower.includes('favicon'))) return false;
         if (!lower.startsWith('http') && !lower.startsWith('data:image')) return false;
-        // Filter out images that are likely infographics/slides with text
         if (lower.includes('slide') || lower.includes('infographic') || lower.includes('screenshot')) return false;
         return true;
       };
 
-      // Only use user-selected images (max 3 to avoid too many web photos with text)
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
-      console.log('Valid selected image pool (capped at 3):', webImagePool.length);
-
-      // Determine if we have face/brand references attached
       const updatedCards = [...cards];
       const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-
-      // Extract the clean topic from web search to always include in AI prompts
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
 
-      // IMPROVED STRATEGY: Use AI for ALL image cards. Only use user-selected web photos 
-      // for a limited number of content cards. This ensures every card has a quality image.
       let webImageIndex = 0;
       const imageFactories: { index: number; factory: () => Promise<string | null>; prompt: string }[] = [];
       let totalImages = 0;
@@ -894,23 +1032,16 @@ const CarouselGenerator: React.FC = () => {
       let aiImagesQueued = 0;
       const usedImageUrls = new Set<string>();
 
-      // Standard negative prompt for all AI images
-      // Use marketplace style's negative prompt if available, otherwise default
       const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
       const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
-
-      // For marketplace full-bleed: ALL cards need AI images (text is baked in)
       const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
         if (isFullBleedStyle || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i)) {
           totalImages++;
-
           const isCoverOrCta = card.type === 'cover' || card.type === 'cta';
 
-          // Try to use a user-selected web image (only for non-cover content cards, limited pool)
-          // Skip for marketplace full-bleed: ALL cards must be AI-generated with text baked in
           if (!isFullBleedStyle && !isCoverOrCta && webImagePool.length > webImageIndex) {
             let selectedUrl = webImagePool[webImageIndex];
             webImageIndex++;
@@ -922,29 +1053,23 @@ const CarouselGenerator: React.FC = () => {
               usedImageUrls.add(selectedUrl);
               updatedCards[i] = { ...updatedCards[i], imageUrl: selectedUrl, isAiImage: false };
               realImagesUsed++;
-              continue; // skip AI generation for this card
+              continue;
             }
           }
 
-      // ALL other cards: generate via AI (covers, ctas, and content cards without web images)
           aiImagesQueued++;
           const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
           let imgPrompt = `${cleanTopic}: ${cardDesc}`;
           
-          // For marketplace full-bleed styles: include the actual card TEXT content
-          // so the AI bakes typography directly into the image
           const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
           if (isFullBleedMarketplace) {
             const isCover = card.type === 'cover' || i === 0;
             const isCta = card.type === 'cta' || i === updatedCards.length - 1;
             const cardTextParts: string[] = [];
-            
-            // CRITICAL: Force Portuguese language and tie to user's topic
             cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
             cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
-            
             if (isCover) {
               cardTextParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${updatedCards.length}).`);
               cardTextParts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${card.title || cleanTopic}"`);
@@ -962,11 +1087,9 @@ const CarouselGenerator: React.FC = () => {
               if (card.bodyBottom) cardTextParts.push(`TEXTO SECUNDÁRIO: "${card.bodyBottom}"`);
               cardTextParts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
             }
-            
             imgPrompt = cardTextParts.join('\n');
           }
           
-          // Enhance prompt with product context
           if (productAnalysis?.confirmed) {
             const productPromptMap: Record<string, string> = {
               clothing: `Show the clothing/fashion item described as "${productAnalysis.description}" worn by a model in a professional setting. Recreate the garment faithfully.`,
@@ -978,19 +1101,14 @@ const CarouselGenerator: React.FC = () => {
           }
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
-          
-          // Use product images as style references if available
           const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
           const allStyleRefs = [...styleRefUrls, ...productRefUrls];
           
-          // When marketplace style is active, add preview images as references so AI can see the style
           const marketplaceRefUrls: string[] = [];
           if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
-            // Build absolute URLs from relative paths and pick 3 varied references
             const origin = window.location.origin;
             const allPreviews = (activeMarketplaceStyle._previewImages as string[])
               .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-            // Pick varied samples: first, middle, last
             if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
             if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
             if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
@@ -1019,7 +1137,6 @@ const CarouselGenerator: React.FC = () => {
         const totalAi = imageFactories.length;
         setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
 
-        // Helper: generate in batches of N to avoid overwhelming edge functions
         const generateBatch = async (factories: typeof imageFactories, batchSize: number) => {
           for (let i = 0; i < factories.length; i += batchSize) {
             const batch = factories.slice(i, i + batchSize);
@@ -1042,7 +1159,6 @@ const CarouselGenerator: React.FC = () => {
         const lastFactory = imageFactories.find(p => p.index === lastCardIndex && p.index !== 0);
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
 
-        // STEP 1: Cover alone
         if (coverFactory) {
           const coverUrl = await coverFactory.factory();
           completed++;
@@ -1050,12 +1166,10 @@ const CarouselGenerator: React.FC = () => {
           if (coverUrl) updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true };
         }
 
-        // STEP 2: Middle cards in batches of 2
         if (middleFactories.length > 0) {
           await generateBatch(middleFactories, 2);
         }
 
-        // STEP 3: Last card alone with delay
         if (lastFactory) {
           await new Promise(r => setTimeout(r, 1500));
           const lastUrl = await lastFactory.factory();
@@ -1064,65 +1178,50 @@ const CarouselGenerator: React.FC = () => {
           if (lastUrl) updatedCards[lastFactory.index] = { ...updatedCards[lastFactory.index], imageUrl: lastUrl, isAiImage: true };
         }
 
-        // STEP 4: Retry ALL failed cards one by one
         const failedFactories = imageFactories.filter(f => !updatedCards[f.index]?.imageUrl);
         if (failedFactories.length > 0) {
-          console.log(`Retrying ${failedFactories.length} failed cards...`);
           setImageGenProgress(`🔄 Regenerando ${failedFactories.length} imagens que falharam...`);
           for (const target of failedFactories) {
             await new Promise(r => setTimeout(r, 3000));
-            setImageGenProgress(`🔄 Tentando card ${target.index + 1} novamente...`);
             try {
               const retryUrl = await target.factory();
-              if (retryUrl) {
-                updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
-                console.log(`Retry 1 succeeded for card ${target.index}`);
-              }
-            } catch (e) { console.error(`Retry 1 error card ${target.index}:`, e); }
+              if (retryUrl) updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
+            } catch { /* next */ }
           }
         }
 
-        // STEP 5: Final retry for any still missing
         const stillFailed = imageFactories.filter(f => !updatedCards[f.index]?.imageUrl);
         if (stillFailed.length > 0) {
-          console.log(`Final retry for ${stillFailed.length} cards...`);
-          setImageGenProgress(`🔄 Última tentativa para ${stillFailed.length} imagens...`);
           for (const target of stillFailed) {
             await new Promise(r => setTimeout(r, 4000));
             try {
               const retryUrl = await target.factory();
               if (retryUrl) updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true };
-            } catch { /* accept failure */ }
+            } catch { /* accept */ }
           }
         }
-      } else {
-        setImageGenProgress(`📸 ${realImagesUsed} fotos reais aplicadas!`);
       }
 
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
       setGeneratingAllImages(false);
       setImageGenProgress('');
-      // Tour removed
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
 
-      // Auto-save
+      // Auto-save for guest (no cloud job)
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
-            // Consume credits (1 per card generated)
             try {
-              const result = await supabase.rpc('consume_ai_credits', {
+              await supabase.rpc('consume_ai_credits', {
                 p_company_id: companyData.company_id,
                 p_agent_id: null,
                 p_amount: finalData.cards.length,
                 p_description: `Carrossel: ${finalData.title || topic} (${finalData.cards.length} cards)`,
               });
-              if (result.error) console.error('Credit consumption RPC error:', result.error);
-              else console.log('Credits consumed:', result.data);
-            } catch (creditErr) { console.error('Credit consumption failed:', creditErr); }
+            } catch { /* ignore */ }
 
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
             const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();

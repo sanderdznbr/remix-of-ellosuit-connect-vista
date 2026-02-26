@@ -1417,15 +1417,21 @@ const CarouselGenerator: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <DashboardLayout onStartCarousel={(topic?: string) => {
-              if (topic) {
-                setTopic(topic);
+            <DashboardLayout
+              onStartCarousel={(topic?: string) => {
+                if (topic) {
+                  setTopic(topic);
+                  setShowWelcome(false);
+                  setTimeout(() => enhancePrompt(), 300);
+                } else {
+                  setShowWelcome(false);
+                }
+              }}
+              onLoadCarousel={(item: any) => {
+                loadCarousel(item);
                 setShowWelcome(false);
-                setTimeout(() => enhancePrompt(), 300);
-              } else {
-                setShowWelcome(false);
-              }
-            }} />
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

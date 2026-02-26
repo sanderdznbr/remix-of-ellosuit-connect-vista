@@ -83,7 +83,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center text-center px-4 md:px-6 w-full max-w-2xl mx-auto relative z-10 pt-16 md:pt-24 pb-10">
+        <div className="flex flex-col items-center justify-center text-center px-4 md:px-6 w-full max-w-2xl mx-auto relative z-10 pt-10 md:pt-24 pb-8">
           <motion.h1
             className="text-2xl md:text-4xl font-semibold leading-snug mb-2"
             initial={{ opacity: 0, y: 20 }}
@@ -166,7 +166,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Recent projects section */}
       <motion.div
-        className="relative z-10 px-8 pb-12"
+        className="relative z-10 px-4 md:px-8 pb-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.4 }}

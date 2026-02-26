@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DashboardProjectsProps {
   onStartCarousel: (topic?: string) => void;
@@ -18,6 +19,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [sortBy, setSortBy] = useState('recent');
   const [carousels, setCarousels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 
@@ -58,6 +60,24 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
     const newValue = !currentValue;
     setCarousels(prev => prev.map(c => c.id === id ? { ...c, is_starred: newValue } : c));
     await supabase.from('generated_carousels').update({ is_starred: newValue }).eq('id', id);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (deleteConfirmId === id) {
+      setCarousels(prev => prev.filter(c => c.id !== id));
+      setDeleteConfirmId(null);
+      const { error } = await supabase.from('generated_carousels').delete().eq('id', id);
+      if (error) {
+        toast.error('Erro ao excluir projeto');
+        console.error(error);
+      } else {
+        toast.success('Projeto excluído');
+      }
+    } else {
+      setDeleteConfirmId(id);
+      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+    }
   };
 
   // Filter & sort
@@ -211,6 +231,14 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   >
                     <Star className="w-4 h-4" fill={item.is_starred ? '#facc15' : 'none'} />
                   </button>
+                  <button
+                    onClick={(e) => handleDelete(e, item.id)}
+                    className="p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.15)' }}
+                    title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               );
             }
@@ -238,18 +266,25 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 )}
-                {/* Star button */}
-                <button
-                  onClick={(e) => toggleStar(e, item.id, item.is_starred)}
-                  className="absolute top-2 right-2 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 cursor-pointer z-10"
-                  style={{
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.5)',
-                  }}
-                >
-                  <Star className="w-3.5 h-3.5" fill={item.is_starred ? '#facc15' : 'none'} />
-                </button>
-                {item.is_starred && (
+                {/* Action buttons */}
+                <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                  <button
+                    onClick={(e) => toggleStar(e, item.id, item.is_starred)}
+                    className="p-1.5 rounded-lg cursor-pointer"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.5)' }}
+                  >
+                    <Star className="w-3.5 h-3.5" fill={item.is_starred ? '#facc15' : 'none'} />
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, item.id)}
+                    className="p-1.5 rounded-lg cursor-pointer"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.5)' }}
+                    title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {item.is_starred && !deleteConfirmId && (
                   <div className="absolute top-2 right-2 p-1.5 group-hover:hidden" style={{ color: '#facc15' }}>
                     <Star className="w-3.5 h-3.5" fill="#facc15" />
                   </div>

@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
     const jid = await resolveJid(baileysUrl, session.instance_name, phoneForJid);
     console.log(`[VERIFY] Resolved JID: ${jid}`);
 
-    const messageText = `🔐 *Código de verificação Ellosuit*\n\nSeu código é: *${code}*\n\nEle é válido por 10 minutos.\n\nSe você não solicitou este código, ignore esta mensagem.`;
+    const messageText = `🔐 *Código de verificação elloContent*\n\nSeu código é: *${code}*\n\nEle é válido por 10 minutos.\n\nSe você não solicitou este código, ignore esta mensagem.`;
 
     console.log(`[VERIFY] Sending to ${jid} via instance ${session.instance_name}`);
 

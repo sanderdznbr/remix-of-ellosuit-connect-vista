@@ -32,20 +32,25 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
 
   // Fetch recent carousels metadata with cover_url
+  const fetchRecent = async () => {
+    if (!user) return;
+    try {
+      const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+      if (!companyData) return;
+      const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(10);
+      setRecentCarousels(data || []);
+      const { data: balanceData } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', companyData.company_id).single();
+      setCreditBalance(balanceData?.balance || 0);
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => { fetchRecent(); }, [user]);
+
+  // Refetch when tab/window becomes visible (user navigated back)
   useEffect(() => {
-    const fetchRecent = async () => {
-      if (!user) return;
-      try {
-        const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
-        if (!companyData) return;
-        const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(10);
-        setRecentCarousels(data || []);
-        // Fetch credit balance
-        const { data: balanceData } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', companyData.company_id).single();
-        setCreditBalance(balanceData?.balance || 0);
-      } catch (err) { console.error(err); }
-    };
-    fetchRecent();
+    const handleVisibility = () => { if (document.visibilityState === 'visible') fetchRecent(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [user]);
 
   useEffect(() => {

@@ -1848,7 +1848,7 @@ const CarouselGenerator: React.FC = () => {
                         onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); }}
                       />
                     )}
-                    {wizardStep === 8 && (
+                    {wizardStep === 8 && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
                     )}
                     {wizardStep === 9 && (
@@ -1864,7 +1864,15 @@ const CarouselGenerator: React.FC = () => {
 
                   {/* Navigation buttons */}
                   <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <button onClick={() => { if (wizardStep === 0) { setShowWelcome(true); setWizardStep(0); } else setWizardStep(wizardStep - 1); }}
+                    <button onClick={() => {
+                      if (wizardStep === 0) { setShowWelcome(true); setWizardStep(0); }
+                      else {
+                        let prev = wizardStep - 1;
+                        // Skip fonts step (8) when marketplace style is active
+                        if (prev === 8 && activeMarketplaceStyle?.imageGeneration?.prompt_style) prev = 7;
+                        setWizardStep(prev);
+                      }
+                    }}
                       className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white/30 hover:text-white/60 transition-all">
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
@@ -1885,7 +1893,10 @@ const CarouselGenerator: React.FC = () => {
                             if (wizardStep === 1) {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
-                            setWizardStep(wizardStep + 1);
+                            let next = wizardStep + 1;
+                            // Skip fonts step (8) when marketplace style is active
+                            if (next === 8 && activeMarketplaceStyle?.imageGeneration?.prompt_style) next = 9;
+                            setWizardStep(next);
                           }} disabled={!canProceed || searchingWeb}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
                           style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>

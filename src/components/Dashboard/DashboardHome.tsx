@@ -77,7 +77,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden h-full" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Orb — centered higher on screen */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+      <div className="absolute top-[60%] md:top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper" style={{ width: 'min(1200px, 130vw)', height: 'min(1200px, 130vw)' }}>
           <div className="carousel-loader-spinner" />
         </div>
@@ -164,6 +164,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       </div>
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
+      {recentCarousels.length > 0 && (
       <motion.div
         className="relative z-10 px-4 md:px-8 pb-6 shrink-0"
         initial={{ opacity: 0, y: 20 }}
@@ -249,19 +250,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 </div>
               );
             })}
-            {recentCarousels.length === 0 && (
-              <div
-                className="rounded-xl flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
-                style={{ width: '160px', height: '200px', border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.2)' }}
-                onClick={() => onStartCarousel()}
-              >
-                <Clock className="w-4 h-4" />
-                <span className="text-[10px]">Criar primeiro carrossel</span>
-              </div>
-            )}
           </div>
         </div>
       </motion.div>
+      )}
     </div>
   );
 };

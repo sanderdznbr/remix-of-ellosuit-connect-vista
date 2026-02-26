@@ -860,22 +860,26 @@ const CarouselGenerator: React.FC = () => {
             const isCta = card.type === 'cta' || i === updatedCards.length - 1;
             const cardTextParts: string[] = [];
             
+            // CRITICAL: Force Portuguese language and tie to user's topic
+            cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`);
+            cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
+            
             if (isCover) {
-              cardTextParts.push(`THIS IS THE COVER CARD (Card 1 of ${updatedCards.length}).`);
-              cardTextParts.push(`HEADLINE TEXT TO RENDER: "${card.title || cleanTopic}"`);
-              if (card.subtitle) cardTextParts.push(`SUBTITLE TEXT: "${card.subtitle}"`);
-              cardTextParts.push(`This should be the MOST impactful, magazine-cover style card with the largest typography.`);
+              cardTextParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${updatedCards.length}).`);
+              cardTextParts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${card.title || cleanTopic}"`);
+              if (card.subtitle) cardTextParts.push(`SUBTÍTULO: "${card.subtitle}"`);
+              cardTextParts.push(`Deve ser o card mais impactante, estilo capa de revista, com tipografia grande.`);
             } else if (isCta) {
-              cardTextParts.push(`THIS IS THE FINAL CTA CARD (Card ${i + 1} of ${updatedCards.length}).`);
-              if (card.title) cardTextParts.push(`CTA HEADLINE: "${card.title}"`);
-              if (card.body) cardTextParts.push(`CTA TEXT: "${card.body}"`);
-              cardTextParts.push(`This should be a call-to-action with engaging design, NOT a cover/hero image.`);
+              cardTextParts.push(`ESTE É O CARD FINAL DE CTA (Card ${i + 1} de ${updatedCards.length}).`);
+              if (card.title) cardTextParts.push(`TÍTULO DO CTA: "${card.title}"`);
+              if (card.body) cardTextParts.push(`TEXTO DO CTA: "${card.body}"`);
+              cardTextParts.push(`Card de encerramento com call-to-action. NÃO é uma capa/hero.`);
             } else {
-              cardTextParts.push(`THIS IS CONTENT CARD ${i + 1} of ${updatedCards.length} (NOT a cover, NOT a hero).`);
+              cardTextParts.push(`CARD DE CONTEÚDO ${i + 1} de ${updatedCards.length} (NÃO é capa, NÃO é hero).`);
               const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
-              if (bodyText) cardTextParts.push(`MAIN TEXT TO RENDER IN THE IMAGE: "${bodyText}"`);
-              if (card.bodyBottom) cardTextParts.push(`SECONDARY TEXT: "${card.bodyBottom}"`);
-              cardTextParts.push(`This should look like an INNER content slide, with the text as the main focus. Use varied layout compositions — NOT a hero/cover treatment.`);
+              if (bodyText) cardTextParts.push(`TEXTO PRINCIPAL PARA RENDERIZAR NA IMAGEM: "${bodyText}"`);
+              if (card.bodyBottom) cardTextParts.push(`TEXTO SECUNDÁRIO: "${card.bodyBottom}"`);
+              cardTextParts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
             }
             
             imgPrompt = cardTextParts.join('\n');
@@ -1498,8 +1502,9 @@ const CarouselGenerator: React.FC = () => {
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${16 * (isExport ? 1 : PREVIEW_W / CARD_W)}px` }}>Gerando...</span>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <div style={{ width: 24, height: 24, border: '2px solid rgba(155,107,255,0.3)', borderTopColor: 'rgba(155,107,255,0.8)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${12 * (isExport ? 1 : PREVIEW_W / CARD_W)}px` }}>Gerando imagem...</span>
           </div>
         )}
       </div>

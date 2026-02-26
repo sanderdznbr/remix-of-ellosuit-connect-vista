@@ -49,12 +49,13 @@ Deno.serve(async (req) => {
 
 ${imagePrompt}
 
-CRITICAL INSTRUCTIONS:
-- Generate the COMPLETE final Instagram post image (1080x1350, 4:5 portrait) with ALL visual elements integrated: typography, decorative elements, photo treatment, and composition as described in the style rules above.
-- The output should be a READY-TO-POST image, not just a photograph.
-- ALL text content provided above MUST be rendered directly in the image with appropriate typography.
-- Follow the style references EXACTLY — match the same editorial magazine collage aesthetic, the same typography hierarchy, the same color palette, the same decorative elements.
-- If the card says it is NOT a cover/hero, use a DIFFERENT composition than a full-bleed hero photo — use editorial content layouts with mixed text blocks, smaller photos, and varied arrangements.`;
+INSTRUÇÕES CRÍTICAS:
+- Gere a imagem COMPLETA de um post de Instagram (1080x1350, retrato 4:5) com TODOS os elementos visuais integrados: tipografia, elementos decorativos, tratamento fotográfico e composição conforme as regras de estilo acima.
+- A imagem deve ser um POST PRONTO PARA PUBLICAR, não apenas uma fotografia.
+- TODO o conteúdo textual fornecido acima DEVE ser renderizado diretamente na imagem com tipografia apropriada.
+- TODO texto na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use inglês.
+- Siga as referências de estilo EXATAMENTE — replique a mesma estética de colagem editorial de revista, a mesma hierarquia tipográfica, a mesma paleta de cores, os mesmos elementos decorativos.
+- Se o card indica que NÃO é capa/hero, use uma composição DIFERENTE — use layouts editoriais de conteúdo com blocos de texto mistos, fotos menores e arranjos variados.`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 
@@ -160,19 +161,26 @@ STYLE REQUIREMENTS:
 
     // Attempt 2: simplified with key refs
     if (!generatedImage) {
-      const retryContent: any[] = [
-        { type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` },
-      ];
+      const retryContent: any[] = [];
+      if (stylePrompt) {
+        // For marketplace styles: retry with simplified style prompt but keep the essence
+        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. Siga o estilo editorial descrito acima fielmente.` });
+      } else {
+        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });
+      }
       for (const ref of validFaceRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of validGeneralRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      for (const ref of validStyleRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      for (const ref of validStyleRefs.slice(0, 2)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch { /* next */ }
     }
 
-    // Attempt 3: text-only fallback
+    // Attempt 3: text-only fallback — still keep style if marketplace
     if (!generatedImage) {
+      const fallbackPrompt = stylePrompt
+        ? `${stylePrompt}\n\n${imagePrompt}\n\nGere a composição editorial completa com tipografia em PORTUGUÊS BRASILEIRO.`
+        : `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.`;
       try {
-        generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.` }], 3);
+        generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: fallbackPrompt }], 3);
       } catch { /* ignore */ }
     }
 

@@ -423,12 +423,25 @@ const CarouselGenerator: React.FC = () => {
     const checkPendingJobs = async () => {
       const { data } = await supabase
         .from('carousel_generation_jobs')
-        .select('id, status, progress_message, carousel_data')
+        .select('id, status, progress_message, carousel_data, updated_at')
         .eq('user_id', user.id)
         .in('status', ['pending', 'generating_text', 'generating_images'])
         .order('created_at', { ascending: false })
         .limit(1);
       if (data?.[0]) {
+        // Check if the job is stuck (no update for >5 minutes)
+        const updatedAt = new Date(data[0].updated_at).getTime();
+        const now = Date.now();
+        const stuckThresholdMs = 5 * 60 * 1000; // 5 minutes
+        if (now - updatedAt > stuckThresholdMs) {
+          // Job is stuck — mark it as failed so user can retry
+          await supabase
+            .from('carousel_generation_jobs')
+            .update({ status: 'failed', error_message: 'A geração expirou. Tente novamente.', completed_at: new Date().toISOString() })
+            .eq('id', data[0].id);
+          toast({ title: 'Geração anterior expirou', description: 'Tente gerar novamente.', variant: 'destructive' });
+          return;
+        }
         setCloudJobId(data[0].id);
         setGenerating(true);
         setGeneratingAllImages(true);

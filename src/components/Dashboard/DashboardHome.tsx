@@ -74,18 +74,18 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex-1 flex flex-col relative overflow-auto" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Orb — large, positioned lower so only ~40% visible */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] pointer-events-none">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[60%] pointer-events-none hidden md:block">
         <div className="carousel-loader-wrapper" style={{ width: 'min(1200px, 130vw)', height: 'min(1200px, 130vw)' }}>
           <div className="carousel-loader-spinner" />
         </div>
       </div>
 
       {/* Center content — title + input */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-4 md:px-6 w-full max-w-2xl mx-auto relative z-10">
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 py-10 md:py-0 min-h-0">
         <motion.h1
-          className="text-2xl md:text-4xl font-semibold leading-snug mb-2"
+          className="text-2xl md:text-4xl font-semibold leading-snug mb-3"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
@@ -95,7 +95,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         </motion.h1>
 
         <motion.p
-          className="text-xs md:text-sm max-w-xs mb-7"
+          className="text-xs md:text-sm max-w-xs mb-8"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
@@ -152,7 +152,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
         <motion.button
           onClick={() => onStartCarousel()}
-          className="mt-4 text-[11px] transition-colors cursor-pointer"
+          className="mt-5 text-[11px] transition-colors cursor-pointer"
           style={{ color: 'rgba(255,255,255,0.2)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

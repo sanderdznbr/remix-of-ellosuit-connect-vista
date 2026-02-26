@@ -1410,6 +1410,8 @@ const CarouselGenerator: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Only render content after welcome is dismissed to prevent flicker */}
+      {!showWelcome && <>
       {/* ===== DARK HEADER when carousel is generated ===== */}
       {carouselData && !generatingAllImages && editingCard === null && (
         <div className="sticky top-0 z-30" style={{ backgroundColor: 'transparent', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -2335,6 +2337,7 @@ const CarouselGenerator: React.FC = () => {
       />
 
       {/* Tour removed */}
+      </>}
     </div>
   );
 };

@@ -52,7 +52,7 @@ import StepTopic from './wizard/StepTopic';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
-import StepProduct, { ProductAnalysis } from './wizard/StepProduct';
+import StepProduct, { ProductAnalysis, ProductSize, PRODUCT_SIZE_OPTIONS } from './wizard/StepProduct';
 import StepBrandRef from './wizard/StepBrandRef';
 import StepColors from './wizard/StepColors';
 import StepFonts from './wizard/StepFonts';
@@ -175,6 +175,7 @@ const CarouselGenerator: React.FC = () => {
   const [productImages, setProductImages] = useState<{ url: string; thumb: string; file: File }[]>([]);
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [analyzingProduct, setAnalyzingProduct] = useState(false);
+  const [productSize, setProductSize] = useState<ProductSize>('medium');
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
@@ -1303,11 +1304,13 @@ const CarouselGenerator: React.FC = () => {
           }
           
           if (productAnalysis?.confirmed) {
+            const sizeLabel = PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '';
+            const sizeInstruction = `IMPORTANT: This product is physically ${productSize} (${sizeLabel}). Render it at its REAL-WORLD proportional size relative to people, hands, and surroundings. Do NOT make it larger or smaller than reality.`;
             const productPromptMap: Record<string, string> = {
-              clothing: `Use the uploaded product photo as creative reference for a "${productAnalysis.description}" garment. You DON'T need to replicate it exactly — feel free to change the angle, show it on a different model, in a new setting, styled differently, or from a creative perspective. Keep the essence and key features of the garment but make each card visually unique.`,
-              object: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". You DON'T need to replicate it exactly — change the angle, show someone holding it, place it in a lifestyle context, create a flat-lay, or show it from a dramatic perspective. Keep the product recognizable but make the composition creative and varied.`,
-              food: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". You DON'T need to replicate it exactly — create different food-styling compositions, change the angle, add complementary ingredients, show close-ups of textures, or place it in different table settings. Keep it appetizing but varied.`,
-              unknown: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". You DON'T need to replicate it exactly — change angles, contexts, compositions. Keep the product recognizable but create visually unique and diverse scenes.`,
+              clothing: `Use the uploaded product photo as creative reference for a "${productAnalysis.description}" garment. ${sizeInstruction} You DON'T need to replicate it exactly — feel free to change the angle, show it on a different model, in a new setting, styled differently, or from a creative perspective. Keep the essence and key features of the garment but make each card visually unique.`,
+              object: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". ${sizeInstruction} You DON'T need to replicate it exactly — change the angle, show someone holding it, place it in a lifestyle context, create a flat-lay, or show it from a dramatic perspective. Keep the product recognizable but make the composition creative and varied.`,
+              food: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". ${sizeInstruction} You DON'T need to replicate it exactly — create different food-styling compositions, change the angle, add complementary ingredients, show close-ups of textures, or place it in different table settings. Keep it appetizing but varied.`,
+              unknown: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". ${sizeInstruction} You DON'T need to replicate it exactly — change angles, contexts, compositions. Keep the product recognizable but create visually unique and diverse scenes.`,
             };
             imgPrompt += '. ' + (productPromptMap[productAnalysis.type] || productPromptMap.unknown);
           }
@@ -2532,7 +2535,8 @@ const CarouselGenerator: React.FC = () => {
                     {wizardStep === 4 && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
                         productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}
-                        analyzingProduct={analyzingProduct} setAnalyzingProduct={setAnalyzingProduct} />
+                        analyzingProduct={analyzingProduct} setAnalyzingProduct={setAnalyzingProduct}
+                        productSize={productSize} setProductSize={setProductSize} />
                     )}
                     {wizardStep === 5 && (
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}

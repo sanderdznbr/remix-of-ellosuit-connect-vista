@@ -176,46 +176,67 @@ const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
         className={className}
       />
 
-      {/* Dropdown */}
+      {/* Popup overlay */}
       <AnimatePresence>
         {showDropdown && prompts.length > 0 && (
-          <motion.div
-            ref={dropdownRef}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.12 }}
-            className="absolute left-0 right-0 bottom-full mb-1 max-h-[220px] overflow-y-auto rounded-xl border border-white/[0.08] shadow-2xl z-50"
-            style={{ backgroundColor: '#18181f' }}
-          >
-            {filtered.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-white/25 text-center">
-                {filter ? 'Nenhum prompt encontrado' : 'Nenhum prompt salvo'}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => { setShowDropdown(false); setAtStartPos(null); }}>
+            <motion.div
+              ref={dropdownRef}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="w-full max-w-md max-h-[360px] overflow-y-auto rounded-2xl border border-white/[0.08] shadow-2xl"
+              style={{ backgroundColor: '#18181f' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 pt-4 pb-2">
+                <input
+                  type="text"
+                  value={filter}
+                  onChange={(e) => { setFilter(e.target.value); setHighlightIdx(0); }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+                    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+                    else if (e.key === 'Enter' && filtered.length > 0) { e.preventDefault(); selectPrompt(filtered[highlightIdx]); }
+                    else if (e.key === 'Escape') { setShowDropdown(false); setAtStartPos(null); }
+                  }}
+                  placeholder="Buscar prompt..."
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 outline-none focus:border-white/15"
+                  autoFocus
+                />
               </div>
-            ) : (
-              filtered.map((p, i) => (
-                <button
-                  key={p.id}
-                  onClick={() => selectPrompt(p)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer ${
-                    i === highlightIdx ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#1a1a24' }}>
-                    {p.avatar_url ? (
-                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <MessageSquareText className="w-3.5 h-3.5 text-white/20" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white/80 truncate">{p.title}</p>
-                    <p className="text-[11px] text-white/25 truncate">{p.content.substring(0, 60)}...</p>
-                  </div>
-                </button>
-              ))
-            )}
-          </motion.div>
+              {filtered.length === 0 ? (
+                <div className="px-4 py-4 text-xs text-white/25 text-center">
+                  {filter ? 'Nenhum prompt encontrado' : 'Nenhum prompt salvo'}
+                </div>
+              ) : (
+                <div className="py-1">
+                  {filtered.map((p, i) => (
+                    <button
+                      key={p.id}
+                      onClick={() => selectPrompt(p)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors cursor-pointer ${
+                        i === highlightIdx ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#1a1a24' }}>
+                        {p.avatar_url ? (
+                          <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <MessageSquareText className="w-3.5 h-3.5 text-white/20" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-white/80 truncate">{p.title}</p>
+                        <p className="text-[11px] text-white/25 truncate">{p.content.substring(0, 60)}...</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

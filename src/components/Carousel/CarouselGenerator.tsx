@@ -372,14 +372,15 @@ const CarouselGenerator: React.FC = () => {
     loadFromRoute();
   }, [routeCarouselId, user]);
 
-  // Update URL when carousel ID changes
+  // Update URL when carousel ID changes — only when not on the welcome/dashboard screen
   useEffect(() => {
+    if (showWelcome) return; // Don't change URL while user is browsing dashboard/marketplace
     if (currentCarouselId) {
       window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
     } else if (window.location.pathname.startsWith('/carousel/')) {
       window.history.replaceState({}, '', '/');
     }
-  }, [currentCarouselId]);
+  }, [currentCarouselId, showWelcome]);
 
   // ===== CLOUD JOB REALTIME SUBSCRIPTION =====
   useEffect(() => {

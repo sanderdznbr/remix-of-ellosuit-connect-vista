@@ -1661,20 +1661,27 @@ const CarouselGenerator: React.FC = () => {
           const el = cardRefs.current[i];
           if (!el) continue;
           const canvas = await html2canvas(el, {
-            width: CARD_W, height: CARD_H, scale: 1, useCORS: true, allowTaint: false,
-            backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
-            onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
+            width: CARD_W, height: CARD_H, scale: 2, useCORS: true, allowTaint: true,
+            backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 30000,
           });
-          const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), mimeType, quality));
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((b) => {
+              if (b) resolve(b);
+              else reject(new Error('Failed to create blob'));
+            }, mimeType, quality);
+          });
           zip.file(`card-${i + 1}.${format}`, blob);
         }
 
         const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
         const link = document.createElement('a');
+        link.href = url;
         link.download = `carousel-${(carouselData.title || 'export').replace(/[^a-zA-Z0-9]/g, '-').slice(0, 30)}.zip`;
-        link.href = URL.createObjectURL(zipBlob);
+        document.body.appendChild(link);
         link.click();
-        URL.revokeObjectURL(link.href);
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         for (let i = 0; i < carouselData.cards.length; i++) {
           const el = cardRefs.current[i];
@@ -3059,6 +3066,15 @@ const CarouselGenerator: React.FC = () => {
                       <div className="absolute inset-0 rounded-xl flex items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
                         <Lock className="w-4 h-4" style={{ color: 'rgba(139,92,246,0.7)' }} />
                       </div>
+                    )}
+                    {/* Delete button - top right */}
+                    {carouselData.cards.length > 2 && (
+                      <button onClick={(e) => { e.stopPropagation(); removeCard(i); }}
+                        className="absolute top-1 right-1 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                        style={{ backgroundColor: 'rgba(220,38,38,0.8)' }}
+                        title="Excluir card">
+                        <Trash2 className="h-3 w-3 text-white" />
+                      </button>
                     )}
                     {/* Hover actions */}
                     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">

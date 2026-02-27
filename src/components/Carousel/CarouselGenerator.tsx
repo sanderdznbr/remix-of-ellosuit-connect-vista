@@ -374,7 +374,13 @@ const CarouselGenerator: React.FC = () => {
 
   // Update URL when carousel ID changes — only when not on the welcome/dashboard screen
   useEffect(() => {
-    if (showWelcome) return; // Don't change URL while user is browsing dashboard/marketplace
+    if (showWelcome) {
+      // When returning to dashboard, reset URL to root
+      if (window.location.pathname.startsWith('/carousel/')) {
+        window.history.replaceState({}, '', '/');
+      }
+      return;
+    }
     if (currentCarouselId) {
       window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
     } else if (window.location.pathname.startsWith('/carousel/')) {

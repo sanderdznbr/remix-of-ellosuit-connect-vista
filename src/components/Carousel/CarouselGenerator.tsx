@@ -884,8 +884,16 @@ const CarouselGenerator: React.FC = () => {
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
     // Detect if this carousel was generated with a marketplace full-bleed style
-    // Only trust explicit flags: marketplace_style_id or persisted isFullBleed flag
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
+    // Trust explicit flags first, then fall back to image heuristic
+    let hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
+    // Fallback heuristic: if most cards have base64/generated images AND no explicit flag, treat as full-bleed
+    if (!hasMarketplaceStyle && item.carousel_data?.cards?.length > 0) {
+      const cards = item.carousel_data.cards;
+      const cardsWithImages = cards.filter((c: any) => c.imageUrl && (c.imageUrl.startsWith('data:image') || c.imageUrl.includes('supabase'))).length;
+      if (cardsWithImages / cards.length >= 0.7) {
+        hasMarketplaceStyle = true;
+      }
+    }
     setIsLoadedFullBleed(hasMarketplaceStyle);
     if (item.style_config) {
       const sc = item.style_config;

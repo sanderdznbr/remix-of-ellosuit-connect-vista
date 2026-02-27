@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '@/styles/carousel-loader.css';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';
+import ellocontentProfile from '@/assets/ellocontent-profile.jpg';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -2866,11 +2867,9 @@ const CarouselGenerator: React.FC = () => {
 
                 {/* Instagram header */}
                 <div className="flex items-center gap-2.5 px-4 py-2.5" style={{ backgroundColor: 'rgba(0,0,0,0.9)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div className="w-8 h-8 rounded-full" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span className="text-white text-xs font-bold">E</span>
-                  </div>
+                  <img src={ellocontentProfile} alt="ellocontent" className="w-8 h-8 rounded-full object-cover" />
                   <div className="flex-1">
-                    <p className="text-white text-xs font-semibold">{userName || brandName || 'ellosuit'}</p>
+                    <p className="text-white text-xs font-semibold">{userName || brandName || 'ellocontent'}</p>
                     <p className="text-white/40 text-[10px]">Patrocinado</p>
                   </div>
                   <div className="flex gap-1">
@@ -2973,7 +2972,7 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                   {/* Likes */}
                   <div className="px-4 pb-4">
-                    <p className="text-white text-[11px]"><span className="font-semibold">{userName || 'seuuser'}</span> <span className="text-white/60">{carouselData.title || topic}</span></p>
+                    <p className="text-white text-[11px]"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{carouselData.title || topic}</span></p>
                   </div>
                   {/* Bottom bar */}
                   <div className="flex justify-center pb-2">

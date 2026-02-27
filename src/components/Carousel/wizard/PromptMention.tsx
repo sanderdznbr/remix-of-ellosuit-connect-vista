@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { MessageSquareText, X } from 'lucide-react';
+import { MessageSquareText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SavedPrompt {
@@ -28,21 +28,51 @@ interface Props {
   className?: string;
 }
 
-const PromptMentionInput: React.FC<Props> = ({
+export interface PromptMentionRef {
+  triggerMention: () => void;
+}
+
+const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
   value, onChange, mentionedPrompts, onMentionAdd, onMentionRemove,
   placeholder, className,
-}) => {
+}, ref) => {
   const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
   const [filter, setFilter] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
+  const [atStartPos, setAtStartPos] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Expose triggerMention to parent via ref
+  useImperativeHandle(ref, () => ({
+    triggerMention: () => {
+      const textarea = textareaRef.current;
+      const pos = textarea?.selectionStart ?? value.length;
+      const before = value.substring(0, pos);
+      const after = value.substring(pos);
+      const needsSpace = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n');
+      const atPos = before.length + (needsSpace ? 1 : 0);
+      const newVal = before + (needsSpace ? ' @' : '@') + after;
+      onChange(newVal);
+      setAtStartPos(atPos);
+      setFilter('');
+      setShowDropdown(true);
+      setHighlightIdx(0);
+      setTimeout(() => {
+        if (textarea) {
+          textarea.focus();
+          const cursorPos = atPos + 1;
+          textarea.setSelectionRange(cursorPos, cursorPos);
+        }
+      }, 50);
+    }
+  }));
+
   // Fetch prompts once
   useEffect(() => {
-    const fetch = async () => {
+    const fetchPrompts = async () => {
       if (!user) return;
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
@@ -53,7 +83,7 @@ const PromptMentionInput: React.FC<Props> = ({
         .order('title');
       setPrompts((data as any[]) || []);
     };
-    fetch();
+    fetchPrompts();
   }, [user]);
 
   const filtered = prompts.filter(p =>
@@ -62,10 +92,7 @@ const PromptMentionInput: React.FC<Props> = ({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showDropdown) {
-      // Detect @ trigger
-      return;
-    }
+    if (!showDropdown) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -73,32 +100,37 @@ const PromptMentionInput: React.FC<Props> = ({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlightIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && showDropdown && filtered.length > 0) {
+    } else if (e.key === 'Enter' && filtered.length > 0) {
       e.preventDefault();
       selectPrompt(filtered[highlightIdx]);
     } else if (e.key === 'Escape') {
       setShowDropdown(false);
+      setAtStartPos(null);
     }
   };
 
   const selectPrompt = (p: SavedPrompt) => {
     onMentionAdd({ id: p.id, title: p.title, avatar_url: p.avatar_url, content: p.content });
-    // Remove the @query from the text
-    const text = value;
-    const atIdx = text.lastIndexOf('@');
-    if (atIdx >= 0) {
-      onChange(text.substring(0, atIdx).trimEnd() + (atIdx > 0 ? ' ' : ''));
+    
+    // Replace @query with (@title) inline
+    if (atStartPos !== null) {
+      const before = value.substring(0, atStartPos);
+      const afterAt = value.substring(atStartPos + 1 + filter.length);
+      const mention = `(@${p.title})`;
+      const needsTrailingSpace = afterAt.length === 0 || !afterAt.startsWith(' ');
+      onChange(before + mention + (needsTrailingSpace ? ' ' : '') + afterAt);
     }
+    
     setShowDropdown(false);
     setFilter('');
-    textareaRef.current?.focus();
+    setAtStartPos(null);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     onChange(newVal);
 
-    // Check for @ trigger
     const cursorPos = e.target.selectionStart || 0;
     const textBefore = newVal.substring(0, cursorPos);
     const atIdx = textBefore.lastIndexOf('@');
@@ -109,6 +141,7 @@ const PromptMentionInput: React.FC<Props> = ({
         const query = textBefore.substring(atIdx + 1);
         if (!query.includes(' ') || query.length < 20) {
           setFilter(query);
+          setAtStartPos(atIdx);
           setShowDropdown(true);
           setHighlightIdx(0);
           return;
@@ -116,6 +149,7 @@ const PromptMentionInput: React.FC<Props> = ({
       }
     }
     setShowDropdown(false);
+    setAtStartPos(null);
   };
 
   // Close dropdown on outside click
@@ -124,6 +158,7 @@ const PromptMentionInput: React.FC<Props> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
           textareaRef.current && !textareaRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
+        setAtStartPos(null);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -132,34 +167,6 @@ const PromptMentionInput: React.FC<Props> = ({
 
   return (
     <div className="relative">
-      {/* Mentioned prompt chips */}
-      {mentionedPrompts.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {mentionedPrompts.map(m => (
-            <span
-              key={m.id}
-              className="inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full text-xs font-medium border border-white/[0.1]"
-              style={{ backgroundColor: 'rgba(139,92,246,0.12)' }}
-            >
-              {m.avatar_url ? (
-                <img src={m.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
-              ) : (
-                <span className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <MessageSquareText className="w-2.5 h-2.5 text-purple-400" />
-                </span>
-              )}
-              <span className="text-white/80">{m.title}</span>
-              <button
-                onClick={() => onMentionRemove(m.id)}
-                className="ml-0.5 p-0.5 rounded-full hover:bg-white/10 text-white/30 hover:text-white/60 cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
       <textarea
         ref={textareaRef}
         value={value}
@@ -169,16 +176,9 @@ const PromptMentionInput: React.FC<Props> = ({
         className={className}
       />
 
-      {/* Hint */}
-      {prompts.length > 0 && !showDropdown && (
-        <p className="absolute bottom-2 right-3 text-[10px] text-white/15 select-none pointer-events-none">
-          @ para mencionar prompts
-        </p>
-      )}
-
       {/* Dropdown */}
       <AnimatePresence>
-        {showDropdown && (
+        {showDropdown && prompts.length > 0 && (
           <motion.div
             ref={dropdownRef}
             initial={{ opacity: 0, y: 4 }}
@@ -220,6 +220,8 @@ const PromptMentionInput: React.FC<Props> = ({
       </AnimatePresence>
     </div>
   );
-};
+});
+
+PromptMentionInput.displayName = 'PromptMentionInput';
 
 export default PromptMentionInput;

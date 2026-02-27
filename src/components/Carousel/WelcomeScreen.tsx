@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, AtSign } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
-import PromptMentionInput from './wizard/PromptMention';
+import PromptMentionInput, { PromptMentionRef } from './wizard/PromptMention';
 
 interface MentionedPrompt {
   id: string;
@@ -32,6 +32,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mentionRef = useRef<PromptMentionRef>(null);
   const isUserTyping = inputValue.length > 0;
 
   useEffect(() => {
@@ -93,13 +94,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
     setMentionedPrompts(prev => prev.filter(m => m.id !== id));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && inputValue.trim()) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
   return (
     <motion.div
       className="fixed inset-0 z-[70] flex flex-col overflow-hidden"
@@ -116,7 +110,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
       >
-        {/* Left: Logo + Links */}
         <div className="flex items-center gap-6 md:gap-8">
           <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6" />
           <div className="hidden md:flex items-center gap-5">
@@ -136,21 +129,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             ))}
           </div>
         </div>
-
-        {/* Right: Login / Começar */}
         <div className="flex items-center gap-3">
-          <button
-              onClick={() => navigate('/auth')}
-              className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => navigate('/auth')}
-              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              Começar
-            </button>
+          <button onClick={() => navigate('/auth')} className="text-white/60 hover:text-white text-sm font-medium transition-colors cursor-pointer px-3 py-1.5">Login</button>
+          <button onClick={() => navigate('/auth')} className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer">Começar</button>
         </div>
       </motion.nav>
 
@@ -163,13 +144,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center text-center px-4 md:px-6 -mt-8 md:-mt-12 w-full max-w-xl mx-auto">
-        {/* Title */}
         <motion.h1
           className="text-white text-xl md:text-3xl font-semibold leading-snug mb-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.6 }}
-          style={{ fontFamily: "'Inter', sans-serif" }}
         >
           Crie algo com ellocontent
         </motion.h1>
@@ -191,28 +170,28 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           transition={{ delay: 0.85, duration: 0.5 }}
         >
           <div
-            className="relative w-full rounded-2xl overflow-hidden"
+            className="relative w-full rounded-2xl overflow-visible"
             style={{
               backgroundColor: 'rgba(20, 20, 28, 0.95)',
               border: '1px solid rgba(255,255,255,0.07)',
               boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
             }}
           >
-            {/* PromptMention input with animated placeholder overlay */}
             <div className="relative">
               <PromptMentionInput
+                ref={mentionRef}
                 value={inputValue}
                 onChange={setInputValue}
                 mentionedPrompts={mentionedPrompts}
                 onMentionAdd={handleMentionAdd}
                 onMentionRemove={handleMentionRemove}
-                className="welcome-prompt-input w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
+                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
               />
               {/* Animated placeholder */}
               {!isUserTyping && mentionedPrompts.length === 0 && (
                 <div
                   className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0"
-                  style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}
+                  style={{ color: 'rgba(255,255,255,0.25)' }}
                 >
                   {animatedPlaceholder}
                   <span className="inline-block w-[2px] h-[1em] bg-white/30 ml-0.5 animate-pulse align-middle" />
@@ -223,19 +202,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 pb-3">
               <button
-                onClick={() => {
-                  const newVal = inputValue + '@';
-                  setInputValue(newVal);
-                  setTimeout(() => {
-                    const textarea = document.querySelector('.welcome-prompt-input') as HTMLTextAreaElement;
-                    if (textarea) textarea.focus();
-                  }, 50);
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/25 hover:text-white/50 hover:bg-white/[0.05] transition-all cursor-pointer text-xs"
+                onClick={() => mentionRef.current?.triggerMention()}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all cursor-pointer"
                 title="Mencionar prompt salvo"
               >
-                <span className="font-semibold text-sm">@</span>
-                <span className="hidden md:inline">Prompts</span>
+                <AtSign className="w-4 h-4" />
               </button>
               <button
                 onClick={handleSubmit}
@@ -251,7 +222,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           </div>
         </motion.div>
 
-        {/* Skip link */}
         <motion.button
           onClick={() => onStart()}
           className="mt-4 text-white/20 hover:text-white/40 text-[11px] transition-colors cursor-pointer"

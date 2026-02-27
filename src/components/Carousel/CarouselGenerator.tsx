@@ -142,6 +142,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
+  const [loadingCarousel, setLoadingCarousel] = useState(false);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -2174,7 +2175,8 @@ const CarouselGenerator: React.FC = () => {
                 }
               }}
               onLoadCarousel={async (item: any) => {
-                // Immediately dismiss welcome screen to feel faster
+                // Show loading state and dismiss welcome screen
+                setLoadingCarousel(true);
                 setShowWelcome(false);
                 setTopic(item.topic || '');
                 setKeywords('');
@@ -2189,16 +2191,36 @@ const CarouselGenerator: React.FC = () => {
                   const { data } = await supabase.from('generated_carousels').select('*').eq('id', item.id).single();
                   if (data) {
                     loadCarousel(data);
+                  } else {
+                    // If no data found, go back to dashboard
+                    setShowWelcome(true);
+                    toast({ title: 'Projeto não encontrado', variant: 'destructive' });
                   }
-                } catch (err) { console.error(err); }
+                } catch (err) {
+                  console.error(err);
+                  setShowWelcome(true);
+                  toast({ title: 'Erro ao carregar projeto', variant: 'destructive' });
+                } finally {
+                  setLoadingCarousel(false);
+                }
               }}
             />
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Loading state while fetching carousel data */}
+      {loadingCarousel && !showWelcome && (
+        <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="carousel-loader-wrapper" style={{ width: '200px', height: '200px' }}>
+            <div className="carousel-loader-spinner" />
+            <span className="text-white/40 text-sm z-[1]">Carregando...</span>
+          </div>
+        </div>
+      )}
+
       {/* Only render content after welcome is dismissed to prevent flicker */}
-      {!showWelcome && <>
+      {!showWelcome && !loadingCarousel && <>
       {/* Header removed — Save/Export moved to action buttons area */}
 
       {/* Normal header for editor mode */}
@@ -2206,7 +2228,7 @@ const CarouselGenerator: React.FC = () => {
 
       <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
-        {!carouselData && !generating && !generatingAllImages && (
+        {!carouselData && !generating && !generatingAllImages && !loadingCarousel && (
           <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Subtle ambient glow accents */}
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />

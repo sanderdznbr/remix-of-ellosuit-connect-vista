@@ -3377,6 +3377,17 @@ const CarouselGenerator: React.FC = () => {
                       Regenerar rosto
                     </button>
                   )}
+                  {carouselData.cards.length > 2 && (
+                    <>
+                      <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+                      <button
+                        onClick={() => { setModifyMenuCard(null); removeCard(cardIdx); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-red-400 hover:bg-red-500/10 transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                        Excluir post
+                      </button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             </motion.div>

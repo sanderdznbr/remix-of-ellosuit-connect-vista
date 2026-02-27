@@ -128,7 +128,8 @@ STYLE REQUIREMENTS:
 - NÃO escreva "Tema do Carrossel", "Tema:", "Carousel Theme" ou qualquer rótulo de tema
 - NÃO escreva "Card X de Y", "Card 1 de 20", "1/20", numeração de slides ou contadores
 - NÃO replique a composição exata da capa/cover em cards de conteúdo — cada card deve ter layout ÚNICO e DIFERENTE
-- NÃO copie textos, @handles, nomes de pessoas ou empresas das imagens de referência`;
+- NÃO copie textos, @handles, nomes de pessoas ou empresas das imagens de referência
+- NÃO copie os ROSTOS ou PESSOAS das imagens de referência de ESTILO. Se imagens de referência de ROSTO forem fornecidas separadamente, use APENAS esses rostos. Se não houver referência de rosto, use pessoas COMPLETAMENTE DIFERENTES das que aparecem nas referências de estilo.`;
 
     if (negativePrompt) {
       textPrompt += `\n- ${negativePrompt}`;
@@ -179,7 +180,8 @@ STYLE REQUIREMENTS:
 3. Match the EXACT aesthetic treatment: same photo filters, same contrast levels, same grain/texture effects, same border treatments
 4. The result should look like it belongs to the SAME SERIES as the reference images — a viewer should immediately recognize it as the same brand/style
 5. CRITICAL: Extract ONLY the visual style. DO NOT copy any text content, usernames, @ handles, brand names, company names, or personal information. Replace with the content provided above.
-6. Each card should have a UNIQUE layout variation within the same style system — do NOT make every card identical to the first reference.`;
+6. Each card should have a UNIQUE layout variation within the same style system — do NOT make every card identical to the first reference.
+7. **ABSOLUTELY DO NOT** copy, replicate, or use the FACES or PEOPLE from these style reference images. The people in the style references are NOT the subject — they are part of the reference aesthetic ONLY. If face reference photos are provided separately, use ONLY those faces. If no face references are provided, generate COMPLETELY DIFFERENT people with different features, ethnicity, and appearance from the style references.`;
     }
 
     messageContent.push({ type: 'text', text: textPrompt });

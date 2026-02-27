@@ -10,9 +10,10 @@ interface DashboardSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onSearch?: (query: string) => void;
+  onLoadCarousel?: (carouselItem: any) => void;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch, onLoadCarousel }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -183,7 +184,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           {recentProjects.map((p) => (
             <button
               key={p.id}
-              onClick={() => onTabChange('projects')}
+              onClick={() => onLoadCarousel ? onLoadCarousel(p) : onTabChange('projects')}
               className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors cursor-pointer truncate"
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />

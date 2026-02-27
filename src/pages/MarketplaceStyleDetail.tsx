@@ -129,7 +129,7 @@ const MarketplaceStyleDetail: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Left: Images */}
               <div className="lg:w-3/5">
-                <div className="aspect-video rounded-2xl overflow-hidden bg-white/[0.03] mb-4">
+                <div className="rounded-2xl overflow-hidden bg-white/[0.03] mb-4" style={{ aspectRatio: '1080/1350' }}>
                   {style.preview_images?.[activeImage] ? (
                     <img
                       src={style.preview_images[activeImage]}

@@ -195,7 +195,7 @@ const CarouselGenerator: React.FC = () => {
   const [bgColor, setBgColor] = useState(initialPalette.bg);
   const [accentColor, setAccentColor] = useState(initialPalette.accent);
   const [textColor, setTextColor] = useState(initialPalette.text);
-  const [brandColorsAccepted, setBrandColorsAccepted] = useState(false);
+  const [brandSuggestedPalette, setBrandSuggestedPalette] = useState<{ bg: string; accent: string; text: string } | null>(null);
   const [selectedFont, setSelectedFont] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
@@ -2253,10 +2253,8 @@ const CarouselGenerator: React.FC = () => {
                   {/* Progress dots + voice toggle */}
                   <div className="flex items-center justify-center gap-2">
                     {WIZARD_STEPS.map((_, i) => {
-                      // Hide Cores (7) dot when brand colors accepted or marketplace full-bleed style is active
-                      // Hide Fontes (8) dot when marketplace full-bleed style is active
-                      if (i === 7 && (isFullBleedMarketplace || brandColorsAccepted)) return null;
-                      if (i === 8 && isFullBleedMarketplace) return null;
+                      // Hide Cores (7) and Fontes (8) dots when marketplace full-bleed style is active
+                      if ((i === 7 || i === 8) && isFullBleedMarketplace) return null;
                       return (
                         <button key={i} onClick={() => {
                           if (i <= wizardStep) {
@@ -2319,10 +2317,7 @@ const CarouselGenerator: React.FC = () => {
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         brandAssets={brandAssets}
                         onSuggestColors={(palette) => {
-                          setBgColor(palette.bg);
-                          setAccentColor(palette.accent);
-                          setTextColor(palette.text || '#FFFFFF');
-                          setBrandColorsAccepted(true);
+                          setBrandSuggestedPalette(palette);
                         }} />
                     )}
                     {wizardStep === 6 && (
@@ -2338,7 +2333,17 @@ const CarouselGenerator: React.FC = () => {
                     {wizardStep === 7 && !isFullBleedMarketplace && (
                       <StepColors bgColor={bgColor} setBgColor={setBgColor}
                         accentColor={accentColor} setAccentColor={setAccentColor}
-                        textColor={textColor} setTextColor={setTextColor} />
+                        textColor={textColor} setTextColor={setTextColor}
+                        brandSuggestedPalette={brandSuggestedPalette}
+                        onAcceptBrandPalette={() => {
+                          if (brandSuggestedPalette) {
+                            setBgColor(brandSuggestedPalette.bg);
+                            setAccentColor(brandSuggestedPalette.accent);
+                            setTextColor(brandSuggestedPalette.text || '#FFFFFF');
+                          }
+                          setBrandSuggestedPalette(null);
+                        }}
+                        onDismissBrandPalette={() => setBrandSuggestedPalette(null)} />
                     )}
                     {wizardStep === 8 && !isFullBleedMarketplace && (
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
@@ -2363,9 +2368,8 @@ const CarouselGenerator: React.FC = () => {
                       if (wizardStep === 0) { setShowWelcome(true); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
-                        // Skip colors (7) when brand colors accepted; skip both (7+8) for marketplace
-                        if (prev === 7 && (isFullBleedMarketplace || brandColorsAccepted)) prev = 6;
-                        if (prev === 8 && isFullBleedMarketplace) prev = 6;
+                        // Skip colors (7) and fonts (8) when marketplace style is active
+                        if ((prev === 7 || prev === 8) && isFullBleedMarketplace) prev = 6;
                         setWizardStep(prev);
                       }
                     }}
@@ -2390,8 +2394,6 @@ const CarouselGenerator: React.FC = () => {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
                             let next = wizardStep + 1;
-                            // Skip colors (7) when brand colors were accepted or marketplace style is active
-                            if (next === 7 && (isFullBleedMarketplace || brandColorsAccepted)) next = 8;
                             // Skip colors (7) and fonts (8) when marketplace style is active
                             if (next === 7 && isFullBleedMarketplace) next = 9;
                             setWizardStep(next);

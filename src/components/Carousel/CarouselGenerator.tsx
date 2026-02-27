@@ -667,9 +667,9 @@ const CarouselGenerator: React.FC = () => {
     styleReferenceUrls?: string[];
     negativePrompt?: string;
   }): Promise<string | null> => {
-    // Default: always use nano-banana (best quality). Gemini is fallback only.
+    // Use the model selected by the user (gemini = fast, nano-banana = quality)
     const resolvedModel = imageSettings.model === 'auto'
-      ? 'nano-banana'
+      ? 'gemini'
       : imageSettings.model;
 
     // === HIGGSFIELD PATH ===
@@ -2265,7 +2265,9 @@ const CarouselGenerator: React.FC = () => {
                         showHeader={showHeader} setShowHeader={setShowHeader}
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl}
                         logoPosition={logoPosition} setLogoPosition={setLogoPosition}
-                        logoBrandColors={logoBrandColors} />
+                        logoBrandColors={logoBrandColors}
+                        imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
+                        setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))} />
                     )}
                     </motion.div>
                   </AnimatePresence>

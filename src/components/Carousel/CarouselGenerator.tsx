@@ -1142,7 +1142,7 @@ const CarouselGenerator: React.FC = () => {
             const cardTextParts: string[] = [];
             cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
-            cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas.`);
+            cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas. NUNCA gere grades, mosaicos, grids de posts ou capturas de feeds de redes sociais — cada card deve ser UMA ÚNICA composição editorial. NUNCA use o símbolo "@" antes de nomes de marcas ou plataformas nos textos renderizados.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             
             // Include logo/brand overlay instructions for full-bleed
@@ -1407,7 +1407,7 @@ const CarouselGenerator: React.FC = () => {
         const parts: string[] = [];
         parts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`);
         parts.push(`TEMA DO CARROSSEL: "${topic}"`);
-        parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas referências — use pessoas DIFERENTES.`);
+        parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas referências — use pessoas DIFERENTES. NUNCA gere grades, mosaicos ou grids de posts. NUNCA use "@" antes de nomes de marcas nos textos.`);
         parts.push(`SEM BORDAS: Full bleed, sem barras ou bordas.`);
         if (isCover) {
           parts.push(`CARD DE CAPA. Tipografia grande, impactante.`);

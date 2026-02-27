@@ -159,6 +159,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Step 1: Topic
   const [topic, setTopic] = useState('');
+  const [originalTopic, setOriginalTopic] = useState('');
   const [keywords, setKeywords] = useState('');
   const [cardCount, setCardCount] = useState(7);
   const [imageCardCount, setImageCardCount] = useState(4);
@@ -2422,7 +2423,7 @@ const CarouselGenerator: React.FC = () => {
       <AnimatePresence>
         {showWelcome && !user && (
           <WelcomeScreen onStart={(initialTopic, shouldEnhance, welcomeMentions, mode, postText) => {
-            if (initialTopic) setTopic(initialTopic);
+            if (initialTopic) { setTopic(initialTopic); setOriginalTopic(initialTopic); }
             if (welcomeMentions?.length) setMentionedPrompts(welcomeMentions);
             if (mode) setContentMode(mode);
             if (mode === 'single-post') {
@@ -2450,7 +2451,7 @@ const CarouselGenerator: React.FC = () => {
                 resetWizardState();
                 setShowWelcome(false);
                 if (newTopic) {
-                  setTopic(newTopic);
+                  setTopic(newTopic); setOriginalTopic(newTopic);
                   setTimeout(() => enhancePrompt(newTopic), 300);
                 }
               }}
@@ -2976,7 +2977,7 @@ const CarouselGenerator: React.FC = () => {
                   </div>
                   {/* Likes */}
                   <div className="px-4 pb-4">
-                    <p className="text-white text-[11px]"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{carouselData.title || topic}</span></p>
+                    <p className="text-white text-[11px] line-clamp-2"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{carouselData.title || originalTopic || (topic.length > 80 ? topic.slice(0, 80) + '...' : topic)}</span></p>
                   </div>
                   {/* Bottom bar */}
                   <div className="flex justify-center pb-2">

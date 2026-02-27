@@ -20,7 +20,60 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage } = body;
+
+    // === FACE REGENERATION MODE (Image Editing) ===
+    if (editSourceImage) {
+      console.log('Face regeneration mode: editing existing image');
+      const editContent: any[] = [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: editSourceImage } },
+      ];
+      // Add face references
+      if (faceReferenceUrls?.length) {
+        for (const ref of faceReferenceUrls.slice(0, 3)) {
+          if (ref && (ref.startsWith('http') || ref.startsWith('data:'))) {
+            editContent.push({ type: 'image_url', image_url: { url: ref } });
+          }
+        }
+      }
+      
+      const editRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image',
+          messages: [{ role: 'user', content: editContent }],
+          modalities: ['image', 'text'],
+        }),
+      });
+      
+      if (!editRes.ok) {
+        const errText = await editRes.text();
+        console.error('Face edit error:', editRes.status, errText.slice(0, 300));
+        if (editRes.status === 429) {
+          return new Response(JSON.stringify({ error: 'Rate limit excedido.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        return new Response(JSON.stringify({ error: 'Falha na edição do rosto.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      
+      const raw = await editRes.text();
+      const patterns = ['"url":"data:image/', '"url": "data:image/'];
+      for (const pattern of patterns) {
+        const idx = raw.indexOf(pattern);
+        if (idx === -1) continue;
+        const urlStart = raw.indexOf('"', idx + 5) + 1;
+        const urlEnd = raw.indexOf('"', urlStart);
+        if (urlEnd === -1) continue;
+        const url = raw.slice(urlStart, urlEnd);
+        console.log('Face edit success:', url.length, 'chars');
+        return new Response(JSON.stringify({ success: true, imageUrl: url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      return new Response(JSON.stringify({ error: 'Não foi possível editar o rosto.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     const imagePrompt = prompt || topic || 'abstract background';
     const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;

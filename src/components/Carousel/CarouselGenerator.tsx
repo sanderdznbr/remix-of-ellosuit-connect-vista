@@ -1116,6 +1116,8 @@ const CarouselGenerator: React.FC = () => {
           productType: productAnalysis.type,
           productDescription: productAnalysis.description,
           productImageUrls: productImages.map(p => p.url),
+          productSize,
+          productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
         }) : null;
 
         // Build marketplace style config with preview images
@@ -1194,6 +1196,8 @@ const CarouselGenerator: React.FC = () => {
         productType: productAnalysis.type,
         productDescription: productAnalysis.description,
         productImageUrls: productImages.map(p => p.url),
+        productSize,
+        productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
       } : undefined;
 
       const { data, error } = await supabase.functions.invoke('generate-carousel', {

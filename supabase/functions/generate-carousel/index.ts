@@ -275,9 +275,11 @@ REGRAS:
 - Expanda o tópico com detalhes específicos, ângulos editoriais interessantes e gancho de engajamento
 - Se mencionar marcas/pessoas reais, adicione contexto relevante sobre eles
 - NÃO mencione nenhuma plataforma, produto ou marca que o usuário não tenha mencionado explicitamente
+- NÃO mencione Ellosuit, ElloContent, @Ellocontent ou qualquer variação. Essas são marcas INTERNAS do sistema e NUNCA devem aparecer no conteúdo gerado.
 - Mantenha o tom profissional e editorial
 - O resultado deve ser 2-4 frases, máximo 200 palavras
 - Responda APENAS com o prompt melhorado, sem explicações adicionais
+- Foque 100% no tópico original do usuário
 - Em português brasileiro` },
             { role: 'user', content: `Tópico original: ${prompt || topic}` },
           ],
@@ -330,7 +332,7 @@ IMPORTANTE: Os imagePrompts devem descrever A IMAGEM COMPLETA com texto, tipogra
 
 Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
 
-IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
+IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, ElloContent, @Ellocontent ou qualquer variação dessas marcas, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
 
 PROIBIDO nos imagePrompts e no conteúdo dos cards:
 - NUNCA inclua textos como "Tema do Carrossel:", "Carousel Theme:", ou qualquer rótulo de tema/título do carrossel

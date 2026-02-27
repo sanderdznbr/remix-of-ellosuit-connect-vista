@@ -159,6 +159,8 @@ const CarouselGenerator: React.FC = () => {
   const [famousList, setFamousList] = useState<FamousPerson[]>([]);
   const [famousImages, setFamousImages] = useState<{ username: string; images: any[] }[]>([]);
   const [brandAssets, setBrandAssets] = useState<{ id: string; name: string; file_url: string; category: string }[]>([]);
+  const [faceGender, setFaceGender] = useState<'male' | 'female' | 'auto'>('auto');
+  const [wearsGlasses, setWearsGlasses] = useState(false);
   
   // Product state
   const [productImages, setProductImages] = useState<{ url: string; thumb: string; file: File }[]>([]);
@@ -629,6 +631,19 @@ const CarouselGenerator: React.FC = () => {
       parts.push('Creative artistic interpretation inspired by the references. Take artistic liberties.');
     }
 
+    // Face attributes (gender + glasses)
+    const hasFaceRefs = referenceImages.some(r => r.category === 'face');
+    if (hasFaceRefs) {
+      if (faceGender === 'male') {
+        parts.push('The person in the image MUST be MALE with a masculine body and build.');
+      } else if (faceGender === 'female') {
+        parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
+      }
+      if (wearsGlasses) {
+        parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
+      }
+    }
+
     parts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
 
     return parts.filter(Boolean).join('. ');
@@ -955,7 +970,7 @@ const CarouselGenerator: React.FC = () => {
           logo_url: logoUrl,
           logo_position: logoPosition,
           show_header: showHeader,
-          image_settings: imageSettings as any,
+          image_settings: { ...imageSettings, faceGender, wearsGlasses } as any,
           reference_images: referenceImages as any,
           face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
           product_context: productContext,
@@ -2178,7 +2193,9 @@ const CarouselGenerator: React.FC = () => {
                     {wizardStep === 3 && (
                       <StepFaceRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         famousList={famousList} setFamousList={setFamousList}
-                        famousImages={famousImages} setFamousImages={setFamousImages} />
+                        famousImages={famousImages} setFamousImages={setFamousImages}
+                        faceGender={faceGender} setFaceGender={setFaceGender}
+                        wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses} />
                     )}
                     {wizardStep === 4 && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}

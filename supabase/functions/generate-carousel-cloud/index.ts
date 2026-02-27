@@ -233,6 +233,14 @@ Deno.serve(async (req) => {
       promptParts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
       if (!isFullBleed) promptParts.push('Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
 
+      // Face attributes from image settings
+      if (faceRefUrls.length > 0) {
+        const fg = imageSettings.faceGender;
+        if (fg === 'male') promptParts.push('The person MUST be MALE with a masculine body.');
+        else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
+        if (imageSettings.wearsGlasses) promptParts.push('The person MUST be wearing glasses/eyeglasses.');
+      }
+
       const finalPrompt = promptParts.filter(Boolean).join('. ');
       const negPrompt = isFullBleed ? styleNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
 

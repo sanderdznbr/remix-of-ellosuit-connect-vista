@@ -39,6 +39,8 @@ export interface WizardData {
   famousList: FamousPerson[];
   famousImages: { username: string; images: any[] }[];
   imageSettings: ImageSettings;
+  faceGender: 'male' | 'female' | 'auto';
+  wearsGlasses: boolean;
   // Style
   bgColor: string;
   accentColor: string;

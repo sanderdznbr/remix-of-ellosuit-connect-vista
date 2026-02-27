@@ -143,10 +143,16 @@ const CarouselGenerator: React.FC = () => {
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
   const [loadingCarousel, setLoadingCarousel] = useState(false);
+  
+  // Content mode: carousel vs single-post
+  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
+  const [manualPostText, setManualPostText] = useState('');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS_CAROUSEL = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS_SINGLE = ['Tema', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS = contentMode === 'single-post' ? WIZARD_STEPS_SINGLE : WIZARD_STEPS_CAROUSEL;
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -302,7 +308,8 @@ const CarouselGenerator: React.FC = () => {
   // Full reset for starting a brand-new carousel
   const resetWizardState = useCallback(() => {
     setWizardStep(0);
-    setTopic('');
+    setContentMode('carousel');
+    setManualPostText('');
     setKeywords('');
     setCardCount(7);
     setImageCardCount(4);
@@ -918,9 +925,116 @@ const CarouselGenerator: React.FC = () => {
     toast({ title: 'Carrossel removido' });
   };
 
+  // ===== GENERATE SINGLE POST (1080x1350) =====
+  const generateSinglePost = async () => {
+    setGenerating(true);
+    setCarouselData(null);
+    setCurrentCarouselId(null);
+    setTimeout(() => setTransitionToGenerate(false), 500);
+
+    try {
+      setGeneratingAllImages(true);
+      setImageGenProgress('🎨 Gerando post único...');
+
+      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      const productRefUrls = productImages.map(p => p.url);
+      const marketplaceRefUrls: string[] = [];
+      if (activeMarketplaceStyle?._previewImages?.length) {
+        const origin = window.location.origin;
+        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+          .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
+        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+      }
+
+      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
+
+      // Build a rich prompt for single post with manual text
+      const promptParts: string[] = [];
+      promptParts.push('IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.');
+      promptParts.push(`TEMA: "${topic.trim()}"`);
+      if (manualPostText.trim()) {
+        promptParts.push(`TEXTO OBRIGATÓRIO PARA RENDERIZAR NA IMAGEM: "${manualPostText.trim()}"`);
+        promptParts.push('O texto acima DEVE ser renderizado na imagem com tipografia editorial elegante e integrada à composição visual.');
+      }
+      promptParts.push('POST ÚNICO para Instagram (1080x1350). Composição editorial completa com tipografia integrada na imagem.');
+      promptParts.push('Full bleed, sem barras ou bordas. Design impactante estilo capa de revista.');
+      if (brandName) {
+        const posMap: Record<string, string> = {
+          'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
+          'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
+        };
+        const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
+        promptParts.push(`MARCA: Inclua "${brandName}" como texto pequeno no ${posLabel} da imagem.`);
+      }
+      if (logoBrandColors.length > 0) {
+        promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
+      }
+
+      const finalPrompt = buildImagePrompt(promptParts.join('\n'));
+      const negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
+
+      const imageUrl = await generateImage({
+        prompt: finalPrompt,
+        faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+        styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+        negativePrompt: negPrompt,
+      });
+
+      if (!imageUrl) throw new Error('Não foi possível gerar a imagem do post');
+
+      const singleCard: CarouselCard = {
+        type: 'cover',
+        title: topic.trim(),
+        subtitle: manualPostText.trim() || undefined,
+        imageUrl,
+        isAiImage: true,
+        layout: 'dark',
+      };
+
+      const finalData: CarouselData = { title: topic.trim(), cards: [singleCard] };
+      setCarouselData(finalData);
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
+      toast({ title: 'Post gerado com sucesso!' });
+
+      // Auto-save
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+          if (companyData) {
+            try {
+              await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: 1, p_description: `Post único: ${topic}` });
+            } catch { /* ignore */ }
+            const isFullBleed = true;
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
+            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            if (inserted) {
+              setCurrentCarouselId(inserted.id);
+              setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+            }
+          }
+        }
+      } catch (saveErr) { console.error('Auto-save error:', saveErr); }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message || 'Não foi possível gerar o post', variant: 'destructive' });
+    } finally {
+      setGenerating(false);
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
+    }
+  };
+
   // ===== GENERATE (CLOUD-BASED) =====
   const generateContent = async () => {
     if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
+
+    // === SINGLE POST MODE ===
+    if (contentMode === 'single-post') {
+      return generateSinglePost();
+    }
 
     // Check credit balance before generating (only for logged-in users)
     let companyId: string | null = null;
@@ -2202,7 +2316,11 @@ const CarouselGenerator: React.FC = () => {
   }, [wizardStep, speakStep, showWelcome, carouselData, loadingCarousel]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active
+  // Auto-skip Quantidade step if single-post mode
   useEffect(() => {
+    if (contentMode === 'single-post' && wizardStep === 1) {
+      setWizardStep(2);
+    }
     if (isFullBleedMarketplace && (wizardStep === 7 || wizardStep === 8)) {
       setWizardStep(9);
     }
@@ -2215,9 +2333,15 @@ const CarouselGenerator: React.FC = () => {
       {/* ===== WELCOME / DASHBOARD SCREEN ===== */}
       <AnimatePresence>
         {showWelcome && !user && (
-          <WelcomeScreen onStart={(initialTopic, shouldEnhance, welcomeMentions) => {
+          <WelcomeScreen onStart={(initialTopic, shouldEnhance, welcomeMentions, mode, postText) => {
             if (initialTopic) setTopic(initialTopic);
             if (welcomeMentions?.length) setMentionedPrompts(welcomeMentions);
+            if (mode) setContentMode(mode);
+            if (mode === 'single-post') {
+              setCardCount(1);
+              setImageCardCount(1);
+              if (postText) setManualPostText(postText);
+            }
             setShowWelcome(false);
             if (shouldEnhance && initialTopic) {
               setTimeout(() => enhancePrompt(), 300);
@@ -2386,9 +2510,12 @@ const CarouselGenerator: React.FC = () => {
                         skipWebSearch={skipWebSearch} onToggleSkipWebSearch={() => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
                         mentionedPrompts={mentionedPrompts}
                         onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
-                        onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))} />
+                        onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
+                        contentMode={contentMode}
+                        manualPostText={manualPostText}
+                        setManualPostText={setManualPostText} />
                     )}
-                    {wizardStep === 1 && (
+                    {wizardStep === 1 && contentMode !== 'single-post' && (
                       <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />
                     )}
                     {wizardStep === 2 && (
@@ -2462,6 +2589,8 @@ const CarouselGenerator: React.FC = () => {
                       if (wizardStep === 0) { setShowWelcome(true); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
+                        // Skip Quantidade (1) when single-post mode
+                        if (prev === 1 && contentMode === 'single-post') prev = 0;
                         // Skip colors (7) and fonts (8) when marketplace style is active
                         if ((prev === 7 || prev === 8) && isFullBleedMarketplace) prev = 6;
                         setWizardStep(prev);
@@ -2488,6 +2617,8 @@ const CarouselGenerator: React.FC = () => {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
                             let next = wizardStep + 1;
+                            // Skip Quantidade (1) when single-post mode
+                            if (next === 1 && contentMode === 'single-post') next = 2;
                             // Skip colors (7) and fonts (8) when marketplace style is active
                             if (next === 7 && isFullBleedMarketplace) next = 9;
                             setWizardStep(next);
@@ -2505,7 +2636,7 @@ const CarouselGenerator: React.FC = () => {
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-                        <Sparkles className="h-4 w-4" /> Gerar Carrossel
+                        <Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}
                       </button>
                     )}
                   </div>
@@ -2992,11 +3123,15 @@ const CarouselGenerator: React.FC = () => {
                   <div className="rounded-2xl border border-white/10 p-6 w-72 flex flex-col gap-3"
                     style={{ backgroundColor: 'rgba(15,15,30,0.98)', backdropFilter: 'blur(20px)' }}
                     onClick={(e) => e.stopPropagation()}>
-                    <h3 className="text-sm font-semibold text-white text-center mb-1">Exportar Carrossel</h3>
-                    <button onClick={() => exportAllCards('png', true)}
-                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
-                      <FileText className="h-4 w-4 text-purple-400" /> Baixar ZIP
-                    </button>
+                    <h3 className="text-sm font-semibold text-white text-center mb-1">
+                      {contentMode === 'single-post' ? 'Exportar Post' : 'Exportar Carrossel'}
+                    </h3>
+                    {contentMode !== 'single-post' && (
+                      <button onClick={() => exportAllCards('png', true)}
+                        className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
+                        <FileText className="h-4 w-4 text-purple-400" /> Baixar ZIP
+                      </button>
+                    )}
                     <button onClick={() => exportAllCards('png')}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
                       <ImageIcon className="h-4 w-4" /> Baixar PNG

@@ -13,8 +13,10 @@ interface MentionedPrompt {
   content: string;
 }
 
+type ContentMode = 'carousel' | 'single-post';
+
 interface WelcomeScreenProps {
-  onStart: (initialTopic?: string, shouldEnhance?: boolean, mentionedPrompts?: MentionedPrompt[]) => void;
+  onStart: (initialTopic?: string, shouldEnhance?: boolean, mentionedPrompts?: MentionedPrompt[], contentMode?: ContentMode, manualPostText?: string) => void;
 }
 
 const PLACEHOLDER_SUGGESTIONS = [
@@ -31,6 +33,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
   const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
+  const [contentMode, setContentMode] = useState<ContentMode>('carousel');
+  const [manualPostText, setManualPostText] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
   const isUserTyping = inputValue.length > 0;
@@ -82,7 +86,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
-      onStart(inputValue.trim(), true, mentionedPrompts);
+      onStart(inputValue.trim(), true, mentionedPrompts, contentMode, contentMode === 'single-post' ? manualPostText : undefined);
     }
   };
 
@@ -154,13 +158,44 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
         </motion.h1>
 
         <motion.p
-          className="text-white/35 text-xs md:text-sm max-w-xs mb-7"
+          className="text-white/35 text-xs md:text-sm max-w-xs mb-5"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.65, duration: 0.5 }}
         >
-          Desenvolva carrosséis com um prompt.
+          Desenvolva carrosséis ou posts com um prompt.
         </motion.p>
+
+        {/* Content mode selector */}
+        <motion.div
+          className="flex items-center gap-2 mb-5"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75, duration: 0.5 }}
+        >
+          <button
+            onClick={() => setContentMode('carousel')}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            style={{
+              backgroundColor: contentMode === 'carousel' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${contentMode === 'carousel' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
+              color: contentMode === 'carousel' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
+            }}
+          >
+            🎠 Carrossel
+          </button>
+          <button
+            onClick={() => setContentMode('single-post')}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            style={{
+              backgroundColor: contentMode === 'single-post' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${contentMode === 'single-post' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
+              color: contentMode === 'single-post' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
+            }}
+          >
+            🖼️ Post Único
+          </button>
+        </motion.div>
 
         {/* Input card */}
         <motion.div
@@ -198,6 +233,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
                 </div>
               )}
             </div>
+
+            {/* Manual post text field for single-post mode */}
+            {contentMode === 'single-post' && (
+              <div className="px-3 pb-2">
+                <textarea
+                  value={manualPostText}
+                  onChange={(e) => setManualPostText(e.target.value)}
+                  placeholder="Texto que deve aparecer no post (será renderizado na imagem pela IA)..."
+                  className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none focus:border-white/15 transition-colors"
+                  rows={3}
+                />
+              </div>
+            )}
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 pb-3">

@@ -1369,13 +1369,31 @@ const CarouselGenerator: React.FC = () => {
       let newImagePrompt = card.imagePrompt || '';
       
       if (!error && data?.success && data?.data?.cards) {
-        // Pick a content card from the result
-        const contentCards = data.data.cards.filter((c: any) => c.type === 'content');
-        if (contentCards.length > 0) {
-          const src = contentCards[0];
-          newBody = src.bodyTop || src.body || newBody;
-          newBottomText = src.bodyBottom || newBottomText;
-          newImagePrompt = src.imagePrompt || src.title || newImagePrompt;
+        const isCover = card.type === 'cover' || cardIndex === 0;
+        const isCta = card.type === 'cta' || cardIndex === carouselData.cards.length - 1;
+        
+        if (isCover) {
+          const coverCard = data.data.cards.find((c: any) => c.type === 'cover');
+          if (coverCard) {
+            newBody = coverCard.title || newBody;
+            newBottomText = coverCard.subtitle || newBottomText;
+            newImagePrompt = coverCard.imagePrompt || newImagePrompt;
+          }
+        } else if (isCta) {
+          const ctaCard = data.data.cards.find((c: any) => c.type === 'cta');
+          if (ctaCard) {
+            newBody = ctaCard.body || ctaCard.title || newBody;
+            newBottomText = '';
+            newImagePrompt = ctaCard.imagePrompt || newImagePrompt;
+          }
+        } else {
+          const contentCards = data.data.cards.filter((c: any) => c.type === 'content');
+          if (contentCards.length > 0) {
+            const src = contentCards[0];
+            newBody = src.bodyTop || src.body || newBody;
+            newBottomText = src.bodyBottom || newBottomText;
+            newImagePrompt = src.imagePrompt || src.title || newImagePrompt;
+          }
         }
       }
 

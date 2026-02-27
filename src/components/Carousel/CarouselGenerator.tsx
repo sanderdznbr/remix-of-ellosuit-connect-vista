@@ -942,8 +942,8 @@ const CarouselGenerator: React.FC = () => {
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
 
-    // === CLOUD GENERATION (for logged-in users, unless fallback mode) ===
-    if (userId && companyId && !skipCloudRef.current) {
+    // === CLOUD GENERATION DISABLED — always use local generation for speed ===
+    if (false && userId && companyId && !skipCloudRef.current) {
       try {
         setGeneratingAllImages(true);
         setImageGenProgress('☁️ Iniciando geração em nuvem...');

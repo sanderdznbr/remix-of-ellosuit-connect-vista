@@ -239,6 +239,7 @@ const CarouselGenerator: React.FC = () => {
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
+  const [loadedMarketplaceStyleId, setLoadedMarketplaceStyleId] = useState<string | null>(null);
   const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
@@ -327,6 +328,7 @@ const CarouselGenerator: React.FC = () => {
     setSidebarDrawerOpen(false);
     setActiveMarketplaceStyle(null);
     setIsLoadedFullBleed(false);
+    setLoadedMarketplaceStyleId(null);
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setWebSearchResult(null);
@@ -525,7 +527,7 @@ const CarouselGenerator: React.FC = () => {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
         if (!companyData) return;
         
-        const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
+        const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
         const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed };
         
         if (currentCarouselId) {
@@ -534,7 +536,7 @@ const CarouselGenerator: React.FC = () => {
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
             carousel_data: carouselData as any, style_config: styleConfig as any, 
             card_count: carouselData.cards.length,
-            marketplace_style_id: activeMarketplaceStyle?.id || null,
+            marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
           } as any).eq('id', currentCarouselId);
         } else {
           const { data: inserted } = await supabase.from('generated_carousels').insert({ 
@@ -543,7 +545,7 @@ const CarouselGenerator: React.FC = () => {
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
             carousel_data: carouselData as any, style_config: styleConfig as any, 
             card_count: carouselData.cards.length,
-            marketplace_style_id: activeMarketplaceStyle?.id || null,
+            marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
           } as any).select('id').single();
           if (inserted) {
             setCurrentCarouselId(inserted.id);
@@ -561,7 +563,7 @@ const CarouselGenerator: React.FC = () => {
     }, 3000); // 3s debounce
     
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
-  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed]);
+  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -844,15 +846,15 @@ const CarouselGenerator: React.FC = () => {
       if (!userData.user) throw new Error('Não autenticado');
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
-      const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
+      const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed };
       if (currentCarouselId) {
-        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).eq('id', currentCarouselId);
+        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
         captureCoverImage(currentCarouselId, companyData.company_id).catch(() => {});
         toast({ title: 'Carrossel atualizado!' });
       } else {
-        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null } as any).select('id').single();
         setCurrentCarouselId(inserted?.id || null);
         // Capture real rendered card as cover in background
         if (inserted?.id) captureCoverImage(inserted.id, companyData.company_id).catch(() => {});
@@ -883,18 +885,10 @@ const CarouselGenerator: React.FC = () => {
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
-    // Detect if this carousel was generated with a marketplace full-bleed style
-    // Trust explicit flags first, then fall back to image heuristic
-    let hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
-    // Fallback heuristic: if most cards have base64/generated images AND no explicit flag, treat as full-bleed
-    if (!hasMarketplaceStyle && item.carousel_data?.cards?.length > 0) {
-      const cards = item.carousel_data.cards;
-      const cardsWithImages = cards.filter((c: any) => c.imageUrl && (c.imageUrl.startsWith('data:image') || c.imageUrl.includes('supabase'))).length;
-      if (cardsWithImages / cards.length >= 0.7) {
-        hasMarketplaceStyle = true;
-      }
-    }
+    // Detect full-bleed: trust explicit marketplace_style_id or persisted isFullBleed flag
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
     setIsLoadedFullBleed(hasMarketplaceStyle);
+    setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
     if (item.style_config) {
       const sc = item.style_config;
       if (sc.bgColor) setBgColor(sc.bgColor);

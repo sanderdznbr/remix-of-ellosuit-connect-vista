@@ -38,7 +38,7 @@ const StepStyleSelect: React.FC<Props> = ({
   const [purchasedStyles, setPurchasedStyles] = useState<MarketplaceStyle[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeStyleId, setActiveStyleId] = useState<string | null>(null);
-  const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [activePresetId, setActivePresetId] = useState<string | null>('ellosuit-editorial');
   const [showMarketplace, setShowMarketplace] = useState(false);
 
   useEffect(() => {
@@ -105,8 +105,9 @@ const StepStyleSelect: React.FC<Props> = ({
       <div>
         <p className="text-xs font-medium text-white/40 mb-3">Estilos padrão</p>
         <div className="flex gap-2 flex-wrap">
-          {STYLE_PRESETS.map(preset => {
+          {STYLE_PRESETS.filter(p => p.id === 'ellosuit-editorial').map(preset => {
             const isActive = activePresetId === preset.id;
+            const displayName = preset.id === 'ellosuit-editorial' ? 'Padrão' : preset.name;
             return (
               <button key={preset.id} onClick={() => applyPreset(preset)}
                 className={`px-4 py-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -114,7 +115,7 @@ const StepStyleSelect: React.FC<Props> = ({
                     ? 'bg-white text-black'
                     : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
                 }`}>
-                {preset.emoji} {preset.name}
+                {preset.emoji} {displayName}
               </button>
             );
           })}

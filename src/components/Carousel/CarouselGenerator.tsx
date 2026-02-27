@@ -1572,9 +1572,17 @@ const CarouselGenerator: React.FC = () => {
         imgPrompt = parts.join('\n');
         negPrompt = [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
       } else {
-        imgPrompt = `${cleanTopic}: ${newImagePrompt || newBody.slice(0, 100)}`;
+        // For standard styles, build a richer prompt that maintains consistency
+        const cardType = card.type === 'cover' ? 'capa editorial' : card.type === 'cta' ? 'card final de chamada para ação' : 'slide de conteúdo informativo';
+        imgPrompt = `${cardType} sobre "${cleanTopic}". ${newImagePrompt || newBody.slice(0, 150)}. Manter o mesmo estilo visual, cores e atmosfera dos outros cards do carrossel.`;
         negPrompt = imageSettings.negativePrompt || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
       }
+      
+      // Use existing card images as additional style references for consistency
+      const existingCardImages = carouselData.cards
+        .filter((c, idx) => idx !== cardIndex && c.imageUrl && !c.imageUrl.startsWith('data:'))
+        .slice(0, 2)
+        .map(c => c.imageUrl!);
       
       // Build marketplace style references
       const marketplaceRefUrls: string[] = [];
@@ -1587,7 +1595,7 @@ const CarouselGenerator: React.FC = () => {
         if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
       }
       
-      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
+      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls, ...existingCardImages];
       
       try {
         const generatedUrl = await generateImage({
@@ -3084,31 +3092,13 @@ const CarouselGenerator: React.FC = () => {
                         <Edit3 className="h-3.5 w-3.5 text-white" />
                       </button>
                       )}
-                      {/* Regenerate dropdown */}
-                      <div className="relative">
-                        <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(regenMenuOpen === i ? null : i); }}
-                          disabled={regeneratingCard === i}
-                          className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                          {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 text-white" />}
-                        </button>
-                        {regenMenuOpen === i && (
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 rounded-xl overflow-hidden shadow-2xl z-50"
-                            style={{ backgroundColor: '#1A1A24', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(null); regenerateCard(i); }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/80 hover:bg-white/[0.06] transition-colors text-left">
-                              <Wand2 className="h-3.5 w-3.5 text-purple-400" /> Gerar com IA
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(null); const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (ev) => { const file = (ev.target as HTMLInputElement).files?.[0]; if (file) handleFileUpload(i, file); }; input.click(); }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/80 hover:bg-white/[0.06] transition-colors text-left">
-                              <Upload className="h-3.5 w-3.5 text-blue-400" /> Carregar imagem
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(null); setShowImagePicker(i); setActiveCardIndex(i); }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-white/80 hover:bg-white/[0.06] transition-colors text-left">
-                              <Search className="h-3.5 w-3.5 text-green-400" /> Buscar no Google
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      {/* Regenerate with AI directly */}
+                      <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }}
+                        disabled={regeneratingCard === i}
+                        className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+                        title="Regenerar com IA">
+                        {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 text-white" />}
+                      </button>
                     </div>
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>

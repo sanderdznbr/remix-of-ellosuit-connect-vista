@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUp, Clock, ChevronLeft, ChevronRight, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowUp, AtSign, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
+import PromptMentionInput, { PromptMentionRef } from '@/components/Carousel/wizard/PromptMention';
 
 const PLACEHOLDER_SUGGESTIONS = [
   'Crie um post sobre facetas e resinas...',
@@ -13,8 +14,15 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Como aumentar suas vendas no Instagram...',
 ];
 
+interface MentionedPrompt {
+  id: string;
+  title: string;
+  avatar_url: string | null;
+  content: string;
+}
+
 interface DashboardHomeProps {
-  onStartCarousel: (topic?: string) => void;
+  onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[]) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   onViewAllProjects?: () => void;
 }
@@ -27,8 +35,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [recentCarousels, setRecentCarousels] = useState<any[]>([]);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const mentionRef = useRef<PromptMentionRef>(null);
   const isUserTyping = inputValue.length > 0;
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
@@ -78,7 +88,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   }, [isUserTyping]);
 
   const handleSubmit = () => {
-    if (inputValue.trim()) onStartCarousel(inputValue.trim());
+    if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -137,7 +147,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           transition={{ delay: 0.5, duration: 0.4 }}
         >
           <div
-            className="relative w-full rounded-2xl overflow-hidden"
+            className="relative w-full rounded-2xl overflow-visible"
             style={{
               backgroundColor: 'rgba(20, 20, 28, 0.95)',
               border: '1px solid rgba(255,255,255,0.07)',
@@ -145,15 +155,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             }}
           >
             <div className="relative">
-              <textarea
+              <PromptMentionInput
+                ref={mentionRef}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={3}
-                className="w-full bg-transparent text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10"
-                style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.9)' }}
+                onChange={setInputValue}
+                mentionedPrompts={mentionedPrompts}
+                onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
+                onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
+                className="w-full bg-transparent text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
               />
-              {!isUserTyping && (
+              {!isUserTyping && mentionedPrompts.length === 0 && (
                 <div
                   className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0"
                   style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}
@@ -163,7 +174,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 </div>
               )}
             </div>
-            <div className="flex items-center justify-end px-3 pb-3">
+            <div className="flex items-center justify-between px-3 pb-3">
+              <button
+                onClick={() => mentionRef.current?.triggerMention()}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
+                style={{ color: 'rgba(255,255,255,0.2)' }}
+                title="Mencionar prompt salvo"
+              >
+                <AtSign className="w-4 h-4" />
+              </button>
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim()}

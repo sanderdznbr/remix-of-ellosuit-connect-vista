@@ -1138,6 +1138,36 @@ const CarouselGenerator: React.FC = () => {
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
             cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+            
+            // Include logo/brand overlay instructions for full-bleed
+            if (logoUrl && brandName) {
+              const posMap: Record<string, string> = {
+                'top-left': 'canto superior esquerdo',
+                'top-center': 'centro superior',
+                'top-right': 'canto superior direito',
+                'bottom-left': 'canto inferior esquerdo',
+                'bottom-center': 'centro inferior',
+                'bottom-right': 'canto inferior direito',
+                'middle-left': 'centro esquerdo',
+                'middle-right': 'centro direito',
+              };
+              const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
+              cardTextParts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, sobrepondo o conteúdo com leve destaque (fundo semitransparente ou sombra sutil). A logo deve ser pequena e elegante, sem dominar o layout.`);
+            } else if (brandName) {
+              const posMap: Record<string, string> = {
+                'top-left': 'canto superior esquerdo',
+                'top-center': 'centro superior',
+                'top-right': 'canto superior direito',
+                'bottom-left': 'canto inferior esquerdo',
+                'bottom-center': 'centro inferior',
+                'bottom-right': 'canto inferior direito',
+                'middle-left': 'centro esquerdo',
+                'middle-right': 'centro direito',
+              };
+              const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
+              cardTextParts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
+            }
+            
             if (isCover) {
               cardTextParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${updatedCards.length}).`);
               cardTextParts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${card.title || cleanTopic}"`);
@@ -1502,6 +1532,24 @@ const CarouselGenerator: React.FC = () => {
         parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
         parts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
         
+        // Include logo/brand overlay instructions for full-bleed regeneration
+        if (logoUrl && brandName) {
+          const posMap: Record<string, string> = {
+            'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
+            'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
+            'middle-left': 'centro esquerdo', 'middle-right': 'centro direito',
+          };
+          const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
+          parts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, sobrepondo o conteúdo com leve destaque (fundo semitransparente ou sombra sutil). A logo deve ser pequena e elegante, sem dominar o layout.`);
+        } else if (brandName) {
+          const posMap: Record<string, string> = {
+            'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
+            'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
+            'middle-left': 'centro esquerdo', 'middle-right': 'centro direito',
+          };
+          const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
+          parts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
+        }
         if (isCover) {
           parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
           parts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);

@@ -206,7 +206,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
                 mentionedPrompts={mentionedPrompts}
                 onMentionAdd={handleMentionAdd}
                 onMentionRemove={handleMentionRemove}
-                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
+                className="welcome-prompt-input w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
               />
               {/* Animated placeholder */}
               {!isUserTyping && mentionedPrompts.length === 0 && (
@@ -221,7 +221,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             </div>
 
             {/* Bottom bar */}
-            <div className="flex items-center justify-end px-3 pb-3">
+            <div className="flex items-center justify-between px-3 pb-3">
+              <button
+                onClick={() => {
+                  const newVal = inputValue + '@';
+                  setInputValue(newVal);
+                  setTimeout(() => {
+                    const textarea = document.querySelector('.welcome-prompt-input') as HTMLTextAreaElement;
+                    if (textarea) textarea.focus();
+                  }, 50);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/25 hover:text-white/50 hover:bg-white/[0.05] transition-all cursor-pointer text-xs"
+                title="Mencionar prompt salvo"
+              >
+                <span className="font-semibold text-sm">@</span>
+                <span className="hidden md:inline">Prompts</span>
+              </button>
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim()}

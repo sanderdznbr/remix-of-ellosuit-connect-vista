@@ -1491,7 +1491,23 @@ const CarouselGenerator: React.FC = () => {
         imageUrl: newImageUrl,
         isAiImage: false,
       };
-      setCarouselData({ ...carouselData, cards: newCards });
+      const updatedData = { ...carouselData, cards: newCards };
+      setCarouselData(updatedData);
+
+      // If we regenerated the cover card (index 0), update the cover_url in the DB
+      if (cardIndex === 0 && currentCarouselId) {
+        try {
+          // Save updated carousel_data first so the server can read the new image
+          await supabase.from('generated_carousels').update({
+            carousel_data: updatedData as any,
+          }).eq('id', currentCarouselId);
+          // Then regenerate the cover thumbnail
+          await serverFallbackCover(currentCarouselId);
+        } catch (coverErr) {
+          console.warn('Failed to update cover after regeneration:', coverErr);
+        }
+      }
+
       toast({ title: '✨ Card regenerado!' });
     } catch (err: any) {
       toast({ title: 'Erro ao regenerar', description: err.message, variant: 'destructive' });

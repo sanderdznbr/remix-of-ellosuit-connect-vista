@@ -2147,8 +2147,9 @@ const CarouselGenerator: React.FC = () => {
       {/* ===== WELCOME / DASHBOARD SCREEN ===== */}
       <AnimatePresence>
         {showWelcome && !user && (
-          <WelcomeScreen onStart={(initialTopic?: string, shouldEnhance?: boolean) => {
+          <WelcomeScreen onStart={(initialTopic, shouldEnhance, welcomeMentions) => {
             if (initialTopic) setTopic(initialTopic);
+            if (welcomeMentions?.length) setMentionedPrompts(welcomeMentions);
             setShowWelcome(false);
             if (shouldEnhance && initialTopic) {
               setTimeout(() => enhancePrompt(), 300);

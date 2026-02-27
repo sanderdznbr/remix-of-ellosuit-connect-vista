@@ -4,9 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import PromptMentionInput from './wizard/PromptMention';
+
+interface MentionedPrompt {
+  id: string;
+  title: string;
+  avatar_url: string | null;
+  content: string;
+}
 
 interface WelcomeScreenProps {
-  onStart: (initialTopic?: string, shouldEnhance?: boolean) => void;
+  onStart: (initialTopic?: string, shouldEnhance?: boolean, mentionedPrompts?: MentionedPrompt[]) => void;
 }
 
 const PLACEHOLDER_SUGGESTIONS = [
@@ -22,6 +30,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
+  const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isUserTyping = inputValue.length > 0;
 
@@ -72,12 +81,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
-      onStart(inputValue.trim(), true);
+      onStart(inputValue.trim(), true, mentionedPrompts);
     }
   };
 
+  const handleMentionAdd = (p: MentionedPrompt) => {
+    setMentionedPrompts(prev => [...prev, p]);
+  };
+
+  const handleMentionRemove = (id: string) => {
+    setMentionedPrompts(prev => prev.filter(m => m.id !== id));
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && inputValue.trim()) {
       e.preventDefault();
       handleSubmit();
     }
@@ -181,18 +198,18 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
             }}
           >
-            {/* Textarea with animated placeholder overlay */}
+            {/* PromptMention input with animated placeholder overlay */}
             <div className="relative">
-              <textarea
+              <PromptMentionInput
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={3}
-                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10"
-                style={{ fontFamily: "'Inter', sans-serif" }}
+                onChange={setInputValue}
+                mentionedPrompts={mentionedPrompts}
+                onMentionAdd={handleMentionAdd}
+                onMentionRemove={handleMentionRemove}
+                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
               />
               {/* Animated placeholder */}
-              {!isUserTyping && (
+              {!isUserTyping && mentionedPrompts.length === 0 && (
                 <div
                   className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0"
                   style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}

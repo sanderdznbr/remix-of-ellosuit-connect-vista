@@ -50,6 +50,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
 
   // Edit mode
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [existingImages, setExistingImages] = useState<string[]>([]); // URLs already saved
 
   useEffect(() => {
     checkAdmin();
@@ -106,6 +107,10 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
   const removeRefFile = (index: number) => {
     setRefFiles(prev => prev.filter((_, i) => i !== index));
     setRefPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const buildStyleConfig = (previewUrls: string[]) => {
@@ -201,11 +206,8 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           tags,
           style_config: styleConfig,
         };
-        if (allImages.length > 0) {
-          // Merge with existing images
-          const existing = styles.find(s => s.id === editingId);
-          updateData.preview_images = [...(existing?.preview_images || []), ...allImages];
-        }
+        // Combine remaining existing images with newly uploaded ones
+        updateData.preview_images = [...existingImages, ...allImages];
         const { error } = await supabase.from('marketplace_styles').update(updateData).eq('id', editingId);
         if (error) throw error;
         toast.success('Estilo atualizado!');
@@ -232,6 +234,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false });
       setCoverFile(null); setCoverPreview(null);
       setRefFiles([]); setRefPreviews([]);
+      setExistingImages([]);
       setCreating(false);
       fetchStyles();
       onStylesChanged?.();
@@ -274,8 +277,11 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       tags: (style.tags || []).join(', '),
       is_featured: style.is_featured,
     });
-    setCoverFile(null); setCoverPreview(null);
-    setRefFiles([]); setRefPreviews([]);
+    setCoverFile(null);
+    setCoverPreview(null);
+    setRefFiles([]);
+    setRefPreviews([]);
+    setExistingImages(style.preview_images || []);
     setCreating(true);
     setExpanded(true);
   };
@@ -400,7 +406,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
 
               {/* Cover upload */}
               <div>
-                <label className="text-[10px] text-white/40 mb-2 block">Imagem de Capa *</label>
+                <label className="text-[10px] text-white/40 mb-2 block">Imagem de Capa {!editingId && '*'}</label>
                 {coverPreview ? (
                   <div className="relative w-32 h-40 rounded-xl overflow-hidden border border-white/10">
                     <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
@@ -408,6 +414,15 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                       className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer text-[10px]">
                       <X className="w-3 h-3" />
                     </button>
+                  </div>
+                ) : existingImages[0] ? (
+                  <div className="relative w-32 h-40 rounded-xl overflow-hidden border border-white/10">
+                    <img src={existingImages[0]} alt="Cover atual" className="w-full h-full object-cover" />
+                    <button onClick={() => setExistingImages(prev => prev.slice(1))}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer text-[10px]">
+                      <X className="w-3 h-3" />
+                    </button>
+                    <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white/60 text-[8px]">Atual</span>
                   </div>
                 ) : (
                   <label className="flex items-center justify-center gap-2 w-32 h-40 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
@@ -423,15 +438,27 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
               {/* Reference photos */}
               <div>
                 <label className="text-[10px] text-white/40 mb-2 block">
-                  Fotos de Referência * <span className="text-white/20">({refFiles.length} fotos)</span>
+                  Fotos de Referência {!editingId && '*'} <span className="text-white/20">({existingImages.slice(1).length + refFiles.length} fotos)</span>
                 </label>
                 <p className="text-[10px] text-white/15 mb-2">
                   A IA usará estas fotos como referência visual para replicar o estilo 100%. Quanto mais fotos, melhor a fidelidade.
                 </p>
                 <div className="flex gap-2 flex-wrap">
+                  {/* Existing reference images (skip index 0 = cover) */}
+                  {existingImages.slice(1).map((url, i) => (
+                    <div key={`existing-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
+                      <img src={url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                      <button onClick={() => removeExistingImage(i + 1)}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]">
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                      <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded bg-black/60 text-white/50 text-[7px]">Atual</span>
+                    </div>
+                  ))}
+                  {/* Newly added files */}
                   {refPreviews.map((preview, i) => (
-                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
-                      <img src={preview} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                    <div key={`new-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-yellow-500/20 group">
+                      <img src={preview} alt={`Nova ${i + 1}`} className="w-full h-full object-cover" />
                       <button onClick={() => removeRefFile(i)}
                         className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]">
                         <X className="w-2.5 h-2.5" />
@@ -462,7 +489,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                   onClick={() => {
                     setCreating(false); setEditingId(null);
                     setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false });
-                    setCoverFile(null); setCoverPreview(null); setRefFiles([]); setRefPreviews([]);
+                    setCoverFile(null); setCoverPreview(null); setRefFiles([]); setRefPreviews([]); setExistingImages([]);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-white/[0.04] text-white/40 text-sm hover:bg-white/[0.08] cursor-pointer"
                 >

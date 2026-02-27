@@ -127,7 +127,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           <div className="fixed inset-0 z-50 flex">
             <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
             <div className="relative w-[280px] h-full animate-in slide-in-from-left duration-200">
-              <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} />
+              <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
               <button onClick={() => setSidebarOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">
                 <X className="w-5 h-5" />
               </button>
@@ -145,7 +145,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-      <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} />
+      <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
       {renderContent()}
     </div>
   );

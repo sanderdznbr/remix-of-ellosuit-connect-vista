@@ -2301,7 +2301,7 @@ const CarouselGenerator: React.FC = () => {
                           setAccentColor(palette.accent);
                           setTextColor(palette.text || '#FFFFFF');
                           // Auto-skip colors step since user accepted brand colors
-                          setTimeout(() => setWizardStep(7), 400);
+                          setTimeout(() => setWizardStep(6), 400);
                         }} />
                     )}
                     {wizardStep === 6 && (

@@ -182,7 +182,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               color: contentMode === 'carousel' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
             }}
           >
-            🎠 Carrossel
+            Carrossel
           </button>
           <button
             onClick={() => setContentMode('single-post')}
@@ -193,7 +193,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               color: contentMode === 'single-post' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
             }}
           >
-            🖼️ Post Único
+            Post Único
           </button>
         </motion.div>
 
@@ -220,6 +220,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
                 mentionedPrompts={mentionedPrompts}
                 onMentionAdd={handleMentionAdd}
                 onMentionRemove={handleMentionRemove}
+              placeholder={contentMode === 'single-post' ? "Descreva o tema do post (ex: dicas de skincare)..." : undefined}
                 className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
               />
               {/* Animated placeholder */}
@@ -237,11 +238,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             {/* Manual post text field for single-post mode */}
             {contentMode === 'single-post' && (
               <div className="px-3 pb-2">
+                <p className="text-[11px] text-white/30 mb-1.5 pl-1">Texto exato que aparecerá na imagem:</p>
                 <textarea
                   value={manualPostText}
                   onChange={(e) => setManualPostText(e.target.value)}
-                  placeholder="Texto que deve aparecer no post (será renderizado na imagem pela IA)..."
-                  className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none focus:border-white/15 transition-colors"
+                  placeholder="Ex: 5 dicas para cuidar do seu sorriso todos os dias..."
+                  className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none focus:border-white/15 transition-colors"
                   rows={3}
                 />
               </div>

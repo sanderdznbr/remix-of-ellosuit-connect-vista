@@ -146,10 +146,7 @@ const StepTopic: React.FC<Props> = ({
       {/* Manual post text for single-post mode */}
       {contentMode === 'single-post' && setManualPostText && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <PenTool className="h-4 w-4 text-purple-400" />
-            <p className="text-sm font-medium text-white/80">Texto que deve aparecer no post</p>
-          </div>
+          <p className="text-sm font-medium text-white/80">Texto que aparecerá na imagem</p>
           <textarea
             value={manualPostText || ''}
             onChange={(e) => setManualPostText(e.target.value)}

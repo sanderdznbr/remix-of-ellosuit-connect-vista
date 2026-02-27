@@ -669,6 +669,11 @@ const CarouselGenerator: React.FC = () => {
       }
     }
 
+    // Brand colors — ALWAYS inject when available
+    if (logoBrandColors.length > 0) {
+      parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores.`);
+    }
+
     parts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
 
     return parts.filter(Boolean).join('. ');
@@ -723,6 +728,7 @@ const CarouselGenerator: React.FC = () => {
         negativePrompt: opts.negativePrompt,
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
+        ...(logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
       },
     });
     
@@ -1136,7 +1142,7 @@ const CarouselGenerator: React.FC = () => {
             const cardTextParts: string[] = [];
             cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
-            cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
+            cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             
             // Include logo/brand overlay instructions for full-bleed
@@ -1215,7 +1221,10 @@ const CarouselGenerator: React.FC = () => {
           const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
           const capturedFaceRefs = faceRefUrls.length > 0 ? [...faceRefUrls] : undefined;
           const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
-          const capturedNegative = isFullBleedMarketplace ? (activeMarketplaceStyle?.imageGeneration?.negative_prompt || '') : finalNegative;
+           const isFullBleedMkt = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+           const capturedNegative = isFullBleedMkt 
+             ? [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
+             : finalNegative;
           
           imageFactories.push({
             index: i,
@@ -1398,7 +1407,7 @@ const CarouselGenerator: React.FC = () => {
         const parts: string[] = [];
         parts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`);
         parts.push(`TEMA DO CARROSSEL: "${topic}"`);
-        parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência.`);
+        parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas referências — use pessoas DIFERENTES.`);
         parts.push(`SEM BORDAS: Full bleed, sem barras ou bordas.`);
         if (isCover) {
           parts.push(`CARD DE CAPA. Tipografia grande, impactante.`);
@@ -1409,7 +1418,7 @@ const CarouselGenerator: React.FC = () => {
         }
         parts.push(`CONTEÚDO: "${promptText}"`);
         finalPrompt = buildImagePrompt(parts.join('\n'));
-        negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || undefined;
+        negPrompt = [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ') || undefined;
       } else {
         finalPrompt = buildImagePrompt(promptText);
         negPrompt = imageSettings.negativePrompt || undefined;
@@ -1567,7 +1576,7 @@ const CarouselGenerator: React.FC = () => {
           parts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
         }
         imgPrompt = parts.join('\n');
-        negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+        negPrompt = [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
       } else {
         imgPrompt = `${cleanTopic}: ${newImagePrompt || newBody.slice(0, 100)}`;
         negPrompt = imageSettings.negativePrompt || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';

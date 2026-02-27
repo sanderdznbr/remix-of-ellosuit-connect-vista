@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     const isFullBleed = !!marketplaceStyle?.imageGeneration?.prompt_style;
     const styleNeg = marketplaceStyle?.imageGeneration?.negative_prompt || '';
     const baseNeg = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
-    const cleanTopic = job.topic.split('\n')[0].trim();
+    const antiFaceNeg = 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.';
 
     const refImages = job.reference_images || [];
     const faceRefUrls = (job.face_ref_urls || []) as string[];
@@ -201,8 +201,18 @@ Deno.serve(async (req) => {
         const parts: string[] = [];
         parts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
         parts.push(`TEMA: "${cleanTopic}"`);
-        parts.push(`PROIBIDO: NÃO copie @handles, nomes de empresas ou informações pessoais das referências.`);
+        parts.push(`PROIBIDO: NÃO copie @handles, nomes de empresas ou informações pessoais das referências. NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas referências — use pessoas DIFERENTES com aparências variadas.`);
         parts.push(`SEM BORDAS: Full bleed, sem barras no topo ou base.`);
+        // Logo/brand overlay
+        if (job.logo_url && job.brand_name) {
+          const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
+          const posLabel = posMap[job.logo_position || 'top-left'] || 'canto superior esquerdo';
+          parts.push(`LOGOMARCA: Inclua "${job.brand_name}" no ${posLabel} da imagem, sobrepondo o conteúdo de forma sutil e elegante.`);
+        } else if (job.brand_name) {
+          const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
+          const posLabel = posMap[job.logo_position || 'top-left'] || 'canto superior esquerdo';
+          parts.push(`MARCA: Inclua "${job.brand_name}" como texto pequeno no ${posLabel} da imagem.`);
+        }
         if (isCover) {
           parts.push(`CARD DE CAPA (1 de ${cards.length}).`);
           parts.push(`TÍTULO: "${card.title || cleanTopic}"`);
@@ -248,7 +258,7 @@ Deno.serve(async (req) => {
       }
 
       const finalPrompt = promptParts.filter(Boolean).join('. ');
-      const negPrompt = isFullBleed ? styleNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
+      const negPrompt = isFullBleed ? [styleNeg, antiFaceNeg].filter(Boolean).join(', ') : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
 
       imageTasks.push({ index: i, prompt: finalPrompt, negPrompt });
     }

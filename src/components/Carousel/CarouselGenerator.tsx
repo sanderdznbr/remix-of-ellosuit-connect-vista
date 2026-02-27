@@ -669,8 +669,8 @@ const CarouselGenerator: React.FC = () => {
       }
     }
 
-    // Brand colors — ALWAYS inject when available
-    if (logoBrandColors.length > 0) {
+    // Brand colors — only inject when NO marketplace style is active (marketplace styles have their own palette)
+    if (logoBrandColors.length > 0 && !activeMarketplaceStyle?.imageGeneration?.prompt_style) {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores.`);
     }
 
@@ -728,7 +728,7 @@ const CarouselGenerator: React.FC = () => {
         negativePrompt: opts.negativePrompt,
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
-        ...(logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
+        ...(logoBrandColors.length > 0 && !isFullBleedMarketplace ? { brandColors: logoBrandColors } : {}),
       },
     });
     
@@ -1002,7 +1002,7 @@ const CarouselGenerator: React.FC = () => {
           logo_url: logoUrl,
           logo_position: logoPosition,
           show_header: showHeader,
-          image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined } as any,
+          image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: (logoBrandColors.length > 0 && !isFullBleedMarketplace) ? logoBrandColors : undefined } as any,
           reference_images: referenceImages as any,
           face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
           product_context: productContext,

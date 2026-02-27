@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Loader2, Wand2, Globe, Search, PenTool, AtSign } from 'lucide-react';
+import { Loader2, Wand2, Globe, Search, PenTool } from 'lucide-react';
 import PromptMentionInput, { PromptMentionRef } from './PromptMention';
 
 interface MentionedPrompt {
@@ -60,15 +60,20 @@ const StepTopic: React.FC<Props> = ({
             : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
           className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-24 border px-4 py-3 outline-none"
         />
-        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
-          <button onClick={() => mentionRef.current?.triggerMention()}
-            className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/30 hover:text-white/60 transition-all cursor-pointer"
-            title="Mencionar prompt salvo">
-            <AtSign className="h-4 w-4" />
+        <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
+          <button
+            onClick={() => mentionRef.current?.triggerMention()}
+            className="h-8 px-2.5 rounded-lg bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-200 transition-all cursor-pointer text-sm font-semibold"
+            title="Inserir menção de prompt"
+          >
+            @
           </button>
-          <button onClick={onEnhance} disabled={enhancingPrompt || !topic.trim()}
+          <button
+            onClick={onEnhance}
+            disabled={enhancingPrompt || !topic.trim()}
             className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/40 hover:text-white/70 transition-all disabled:opacity-20"
-            title="Melhorar com IA">
+            title="Melhorar com IA"
+          >
             {enhancingPrompt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
           </button>
         </div>

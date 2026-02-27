@@ -184,7 +184,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           {recentProjects.map((p) => (
             <button
               key={p.id}
-              onClick={() => onLoadCarousel ? onLoadCarousel(p) : onTabChange('projects')}
+              onClick={async () => {
+                if (!onLoadCarousel) {
+                  onTabChange('projects');
+                  return;
+                }
+                try {
+                  await onLoadCarousel(p);
+                } catch (err) {
+                  console.error('Erro ao abrir projeto recente:', err);
+                  toast.error('Não foi possível abrir o projeto agora.');
+                }
+              }}
               className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors cursor-pointer truncate"
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />

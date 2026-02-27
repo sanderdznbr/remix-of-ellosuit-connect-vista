@@ -4,6 +4,7 @@ import DashboardSidebar from './DashboardSidebar';
 import DashboardHome from './DashboardHome';
 import DashboardProjects from './DashboardProjects';
 import BrandGallery from './BrandGallery';
+import PromptGallery from './PromptGallery';
 import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
@@ -54,6 +55,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
       case 'gallery':
         return <BrandGallery />;
+      case 'prompts':
+        return <PromptGallery />;
       case 'marketplace':
         return <MarketplaceContent />;
       default:

@@ -210,7 +210,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       {/* Recent projects — pinned to bottom with horizontal slider */}
       {recentCarousels.length > 0 && (
       <motion.div
-        className="relative z-10 px-4 md:px-8 pb-6 shrink-0"
+        className="relative z-[1] px-4 md:px-8 pb-6 shrink-0"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.4 }}

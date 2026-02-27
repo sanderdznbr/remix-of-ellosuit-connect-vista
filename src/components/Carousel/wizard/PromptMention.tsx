@@ -39,11 +39,13 @@ const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
   const { user } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
+  const [loadingPrompts, setLoadingPrompts] = useState(false);
   const [filter, setFilter] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
   const [atStartPos, setAtStartPos] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const promptsFetched = useRef(false);
 
   // Expose triggerMention to parent via ref
   useImperativeHandle(ref, () => ({
@@ -70,10 +72,11 @@ const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
     }
   }));
 
-  // Fetch prompts once
-  useEffect(() => {
-    const fetchPrompts = async () => {
-      if (!user) return;
+  // Fetch prompts — refetch every time popup opens to avoid stale data
+  const fetchPrompts = async () => {
+    if (!user) return;
+    setLoadingPrompts(true);
+    try {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
       const { data } = await supabase
@@ -82,9 +85,19 @@ const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
         .eq('company_id', cu.company_id)
         .order('title');
       setPrompts((data as any[]) || []);
-    };
-    fetchPrompts();
-  }, [user]);
+      promptsFetched.current = true;
+    } finally {
+      setLoadingPrompts(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => { fetchPrompts(); }, [user]);
+
+  // Refetch when popup opens
+  useEffect(() => {
+    if (showDropdown) fetchPrompts();
+  }, [showDropdown]);
 
   const filtered = prompts.filter(p =>
     !mentionedPrompts.some(m => m.id === p.id) &&
@@ -178,8 +191,8 @@ const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
 
       {/* Popup overlay */}
       <AnimatePresence>
-        {showDropdown && prompts.length > 0 && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => { setShowDropdown(false); setAtStartPos(null); }}>
+        {showDropdown && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => { setShowDropdown(false); setAtStartPos(null); setFilter(''); }}>
             <motion.div
               ref={dropdownRef}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -199,14 +212,16 @@ const PromptMentionInput = forwardRef<PromptMentionRef, Props>(({
                     if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
                     else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
                     else if (e.key === 'Enter' && filtered.length > 0) { e.preventDefault(); selectPrompt(filtered[highlightIdx]); }
-                    else if (e.key === 'Escape') { setShowDropdown(false); setAtStartPos(null); }
+                    else if (e.key === 'Escape') { setShowDropdown(false); setAtStartPos(null); setFilter(''); }
                   }}
                   placeholder="Buscar prompt..."
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 outline-none focus:border-white/15"
                   autoFocus
                 />
               </div>
-              {filtered.length === 0 ? (
+              {loadingPrompts ? (
+                <div className="px-4 py-4 text-xs text-white/25 text-center">Carregando...</div>
+              ) : filtered.length === 0 ? (
                 <div className="px-4 py-4 text-xs text-white/25 text-center">
                   {filter ? 'Nenhum prompt encontrado' : 'Nenhum prompt salvo'}
                 </div>

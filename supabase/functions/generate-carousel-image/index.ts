@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors } = body;
 
     const imagePrompt = prompt || topic || 'abstract background';
     const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;
@@ -85,6 +85,11 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nCRITICAL: Follow reference images with MAXIMUM fidelity. Reproduce exact features, colors, textures, and composition.`;
     } else if (fidelity === 'creative') {
       textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
+    }
+
+    // Brand colors from logo
+    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0) {
+      textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
     }
 
     if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {

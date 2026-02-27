@@ -17,11 +17,13 @@ interface Props {
   setLogoUrl: (v: string | null) => void;
   logoPosition: LogoPosition;
   setLogoPosition: (v: LogoPosition) => void;
+  logoBrandColors?: string[];
 }
 
 const StepBranding: React.FC<Props> = ({
   brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   showHeader, setShowHeader, logoUrl, setLogoUrl, logoPosition, setLogoPosition,
+  logoBrandColors = [],
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,6 +69,19 @@ const StepBranding: React.FC<Props> = ({
         }} />
         {logoUrl && (
           <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
+        )}
+        {logoUrl && logoBrandColors.length > 0 && (
+          <div className="mt-2">
+            <p className="text-[10px] text-white/30 mb-1.5">Cores extraídas da logo (usadas na geração IA)</p>
+            <div className="flex gap-1.5">
+              {logoBrandColors.map((color, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className="w-5 h-5 rounded-md border border-white/10" style={{ backgroundColor: color }} />
+                  <span className="text-[9px] text-white/20 font-mono">{color}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 

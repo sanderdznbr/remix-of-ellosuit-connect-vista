@@ -873,8 +873,10 @@ const CarouselGenerator: React.FC = () => {
     setCurrentCarouselId(item.id);
     // Detect if this carousel was generated with a marketplace full-bleed style
     // Also detect legacy full-bleed carousels where every card has an image (heuristic)
-    const allCardsHaveImages = item.carousel_data?.cards?.length > 2 && item.carousel_data.cards.every((c: any) => !!c.imageUrl);
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || allCardsHaveImages;
+    const cards = item.carousel_data?.cards || [];
+    const cardsWithImages = cards.filter((c: any) => !!c.imageUrl).length;
+    const mostCardsHaveImages = cards.length > 2 && cardsWithImages / cards.length >= 0.7;
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || mostCardsHaveImages;
     setIsLoadedFullBleed(hasMarketplaceStyle);
     if (item.style_config) {
       const sc = item.style_config;

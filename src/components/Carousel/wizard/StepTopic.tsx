@@ -28,6 +28,9 @@ interface Props {
   mentionedPrompts?: MentionedPrompt[];
   onMentionAdd?: (p: MentionedPrompt) => void;
   onMentionRemove?: (id: string) => void;
+  contentMode?: 'carousel' | 'single-post';
+  manualPostText?: string;
+  setManualPostText?: (v: string) => void;
 }
 
 const StepTopic: React.FC<Props> = ({
@@ -36,6 +39,7 @@ const StepTopic: React.FC<Props> = ({
   searchingWeb, webSearchResult,
   skipWebSearch, onToggleSkipWebSearch,
   mentionedPrompts = [], onMentionAdd, onMentionRemove,
+  contentMode, manualPostText, setManualPostText,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
 
@@ -136,6 +140,24 @@ const StepTopic: React.FC<Props> = ({
         <div className="flex items-center gap-3 py-4">
           <Loader2 className="h-5 w-5 animate-spin text-white/40" />
           <span className="text-sm text-white/40">Pesquisando na web...</span>
+        </div>
+      )}
+
+      {/* Manual post text for single-post mode */}
+      {contentMode === 'single-post' && setManualPostText && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <PenTool className="h-4 w-4 text-purple-400" />
+            <p className="text-sm font-medium text-white/80">Texto que deve aparecer no post</p>
+          </div>
+          <textarea
+            value={manualPostText || ''}
+            onChange={(e) => setManualPostText(e.target.value)}
+            placeholder="Digite o texto exato que a IA deve renderizar na imagem do post..."
+            className="w-full bg-white/[0.03] border border-white/[0.06] text-white/80 placeholder-white/20 text-sm px-4 py-3 rounded-xl resize-none outline-none focus:border-white/15 transition-colors min-h-[100px]"
+            rows={4}
+          />
+          <p className="text-[11px] text-white/25">Este texto será renderizado pela IA diretamente na imagem com tipografia editorial.</p>
         </div>
       )}
     </div>

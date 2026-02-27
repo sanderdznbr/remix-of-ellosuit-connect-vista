@@ -26,7 +26,7 @@ async function generateOneImage(params: Record<string, any>): Promise<string | n
   const url = `${SUPABASE_URL}/functions/v1/generate-carousel-image`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 55_000); // 55s per image max
+    const timeout = setTimeout(() => controller.abort(), 45_000); // 45s per image max
     const res = await fetch(url, {
       method: 'POST',
       headers: {

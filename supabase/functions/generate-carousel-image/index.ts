@@ -129,12 +129,12 @@ STYLE REQUIREMENTS:
     for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
     for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
-    // Model selection
+    // Model selection — gemini-3-pro fails consistently with style refs, so use flash directly
     const resolvedModel = imageModel === 'auto' 
-      ? (hasFaceRefs ? 'nano-banana' : 'gemini') 
+      ? (hasFaceRefs && !hasStyleRefs ? 'nano-banana' : 'gemini') 
       : imageModel;
     const primaryModel = resolvedModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
-    const fallbackModel = resolvedModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-3-pro-image-preview';
+    const fallbackModel = resolvedModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-2.5-flash-image';
     console.log('Image gen model:', primaryModel, 'parts:', messageContent.length);
 
     async function tryGenerate(model: string, content: any[], attempt: number): Promise<string | null> {
@@ -194,11 +194,10 @@ STYLE REQUIREMENTS:
       }
     }
 
-    // Attempt 2: simplified with key refs
-    if (!generatedImage) {
+    // Attempt 2: if primary and fallback are the same model, skip to text-only
+    if (!generatedImage && primaryModel !== fallbackModel) {
       const retryContent: any[] = [];
       if (stylePrompt) {
-        // For marketplace styles: retry with simplified style prompt but keep the essence
         retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. Siga o estilo editorial descrito acima fielmente. NÃO copie nomes, @handles ou informações pessoais das referências. SEM bordas no topo ou base da imagem.` });
       } else {
         retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });

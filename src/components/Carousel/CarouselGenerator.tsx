@@ -748,12 +748,13 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== ENHANCE PROMPT =====
-  const enhancePrompt = async () => {
-    if (!topic.trim()) { toast({ title: 'Insira um tópico primeiro', variant: 'destructive' }); return; }
+  const enhancePrompt = async (inputTopic?: string) => {
+    const baseTopic = (inputTopic ?? topic).trim();
+    if (!baseTopic) { toast({ title: 'Insira um tópico primeiro', variant: 'destructive' }); return; }
     setEnhancingPrompt(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: { action: 'enhance-prompt', prompt: topic.trim(), topic: topic.trim() },
+        body: { action: 'enhance-prompt', prompt: baseTopic, topic: baseTopic },
       });
       if (error) throw error;
       if (data?.enhancedPrompt) { setTopic(data.enhancedPrompt); toast({ title: 'Prompt melhorado com IA!' }); }
@@ -2426,7 +2427,7 @@ const CarouselGenerator: React.FC = () => {
             }
             setShowWelcome(false);
             if (shouldEnhance && initialTopic) {
-              setTimeout(() => enhancePrompt(), 300);
+              setTimeout(() => enhancePrompt(initialTopic), 300);
             }
           }} />
         )}
@@ -2445,7 +2446,7 @@ const CarouselGenerator: React.FC = () => {
                 setShowWelcome(false);
                 if (newTopic) {
                   setTopic(newTopic);
-                  setTimeout(() => enhancePrompt(), 300);
+                  setTimeout(() => enhancePrompt(newTopic), 300);
                 }
               }}
               onLoadCarousel={async (item: any) => {

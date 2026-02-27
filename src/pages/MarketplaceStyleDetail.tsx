@@ -126,39 +126,43 @@ const MarketplaceStyleDetail: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Left: Images */}
+          <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left: Images (skip first image = cover) */}
               <div className="lg:w-3/5">
-                <div className="rounded-2xl overflow-hidden bg-white/[0.03] mb-4" style={{ aspectRatio: '1080/1350' }}>
-                  {style.preview_images?.[activeImage] ? (
-                    <img
-                      src={style.preview_images[activeImage]}
-                      alt={style.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Sparkles className="w-12 h-12 text-white/10" />
-                    </div>
-                  )}
-                </div>
-                {style.preview_images?.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {style.preview_images.map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setActiveImage(i)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
-                          i === activeImage
-                            ? 'border-purple-500 opacity-100'
-                            : 'border-transparent opacity-50 hover:opacity-80'
-                        }`}
-                      >
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const innerImages = (style.preview_images || []).slice(1);
+                  const currentImg = innerImages[activeImage];
+                  return (
+                    <>
+                      <div className="rounded-2xl overflow-hidden bg-white/[0.03] mb-4 max-w-sm mx-auto" style={{ aspectRatio: '1080/1350' }}>
+                        {currentImg ? (
+                          <img src={currentImg} alt={style.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Sparkles className="w-12 h-12 text-white/10" />
+                          </div>
+                        )}
+                      </div>
+                      {innerImages.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
+                          {innerImages.map((img, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setActiveImage(i)}
+                              className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                                i === activeImage
+                                  ? 'border-purple-500 opacity-100'
+                                  : 'border-transparent opacity-50 hover:opacity-80'
+                              }`}
+                            >
+                              <img src={img} alt="" className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Right: Info */}

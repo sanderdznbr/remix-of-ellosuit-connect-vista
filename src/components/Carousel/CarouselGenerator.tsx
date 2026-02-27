@@ -537,7 +537,7 @@ const CarouselGenerator: React.FC = () => {
         if (!companyData) return;
         
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
-        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed };
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses };
         
         if (currentCarouselId) {
           await supabase.from('generated_carousels').update({ 
@@ -857,7 +857,7 @@ const CarouselGenerator: React.FC = () => {
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed };
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
@@ -890,7 +890,7 @@ const CarouselGenerator: React.FC = () => {
     finally { setLoadingHistory(false); }
   };
 
-  const loadCarousel = (item: any) => {
+  const loadCarousel = async (item: any) => {
     setCarouselData(item.carousel_data);
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
@@ -913,11 +913,36 @@ const CarouselGenerator: React.FC = () => {
       if (sc.logoUrl !== undefined) setLogoUrl(sc.logoUrl);
       if (sc.logoPosition) setLogoPosition(sc.logoPosition);
       if (sc.showHeader !== undefined) setShowHeader(sc.showHeader);
+      // Restore reference images (face, style, product refs)
+      if (sc.referenceImages?.length) setReferenceImages(sc.referenceImages);
+      if (sc.faceGender) setFaceGender(sc.faceGender);
+      if (sc.wearsGlasses !== undefined) setWearsGlasses(sc.wearsGlasses);
     }
     setShowHistory(false);
     setActiveCardIndex(0);
-    // Clear marketplace style to prevent previous style bleeding into loaded carousel
-    setActiveMarketplaceStyle(null);
+    
+    // Restore marketplace style from DB if this carousel used one
+    if (item.marketplace_style_id) {
+      try {
+        const { data: styleData } = await supabase
+          .from('marketplace_styles')
+          .select('id, name, preview_images, style_config')
+          .eq('id', item.marketplace_style_id)
+          .single();
+        if (styleData?.style_config) {
+          const config = styleData.style_config as any;
+          config.id = styleData.id;
+          config._previewImages = styleData.preview_images;
+          setActiveMarketplaceStyle(config);
+        } else {
+          setActiveMarketplaceStyle(null);
+        }
+      } catch {
+        setActiveMarketplaceStyle(null);
+      }
+    } else {
+      setActiveMarketplaceStyle(null);
+    }
     toast({ title: 'Carrossel carregado!' });
   };
 
@@ -1639,7 +1664,7 @@ const CarouselGenerator: React.FC = () => {
       const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-      const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+      const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
       
       let imgPrompt: string;
       let negPrompt: string;

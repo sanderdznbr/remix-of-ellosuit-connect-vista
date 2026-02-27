@@ -236,6 +236,7 @@ const CarouselGenerator: React.FC = () => {
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
+  const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -2131,6 +2132,13 @@ const CarouselGenerator: React.FC = () => {
     }
   }, [wizardStep, speakStep, showWelcome, carouselData]);
 
+  // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active
+  useEffect(() => {
+    if (isFullBleedMarketplace && (wizardStep === 7 || wizardStep === 8)) {
+      setWizardStep(9);
+    }
+  }, [wizardStep, isFullBleedMarketplace]);
+
   return (
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
       <link href={googleFontsUrl} rel="stylesheet" />
@@ -2243,18 +2251,29 @@ const CarouselGenerator: React.FC = () => {
                 <div className="w-full max-w-[520px] space-y-6">
                   {/* Progress dots + voice toggle */}
                   <div className="flex items-center justify-center gap-2">
-                    {WIZARD_STEPS.map((_, i) => (
-                      <button key={i} onClick={() => i <= wizardStep && setWizardStep(i)}
-                        className="transition-all"
-                        style={{
-                          width: i === wizardStep ? 24 : 6,
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
-                          cursor: i <= wizardStep ? 'pointer' : 'default',
+                    {WIZARD_STEPS.map((_, i) => {
+                      // Hide Cores (7) and Fontes (8) dots when marketplace full-bleed style is active
+                      if ((i === 7 || i === 8) && isFullBleedMarketplace) return null;
+                      return (
+                        <button key={i} onClick={() => {
+                          if (i <= wizardStep) {
+                            // When clicking back, skip hidden steps
+                            let target = i;
+                            if ((target === 7 || target === 8) && isFullBleedMarketplace) target = 6;
+                            setWizardStep(target);
+                          }
                         }}
-                      />
-                    ))}
+                          className="transition-all"
+                          style={{
+                            width: i === wizardStep ? 24 : 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
+                            cursor: i <= wizardStep ? 'pointer' : 'default',
+                          }}
+                        />
+                      );
+                    })}
                     {/* Voice button moved to bottom-right corner */}
                   </div>
 
@@ -2314,12 +2333,12 @@ const CarouselGenerator: React.FC = () => {
                         onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style); }}
                       />
                     )}
-                    {wizardStep === 7 && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                    {wizardStep === 7 && !isFullBleedMarketplace && (
                       <StepColors bgColor={bgColor} setBgColor={setBgColor}
                         accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} />
                     )}
-                    {wizardStep === 8 && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                    {wizardStep === 8 && !isFullBleedMarketplace && (
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
                     )}
                     {wizardStep === 9 && (
@@ -2343,7 +2362,7 @@ const CarouselGenerator: React.FC = () => {
                       else {
                         let prev = wizardStep - 1;
                         // Skip colors (7) and fonts (8) when marketplace style is active
-                        if ((prev === 7 || prev === 8) && activeMarketplaceStyle?.imageGeneration?.prompt_style) prev = 6;
+                        if ((prev === 7 || prev === 8) && isFullBleedMarketplace) prev = 6;
                         setWizardStep(prev);
                       }
                     }}
@@ -2369,7 +2388,7 @@ const CarouselGenerator: React.FC = () => {
                             }
                             let next = wizardStep + 1;
                             // Skip colors (7) and fonts (8) when marketplace style is active
-                            if (next === 7 && activeMarketplaceStyle?.imageGeneration?.prompt_style) next = 9;
+                            if (next === 7 && isFullBleedMarketplace) next = 9;
                             setWizardStep(next);
                           }} disabled={!canProceed || searchingWeb}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
@@ -2405,7 +2424,7 @@ const CarouselGenerator: React.FC = () => {
                         : wizardStep === 3 ? 38
                         : wizardStep === 4 ? 48
                         : wizardStep === 5 ? 56
-                        : wizardStep === 6 ? 65
+                        : wizardStep === 6 ? (isFullBleedMarketplace ? 85 : 65)
                         : wizardStep === 7 ? 74
                         : wizardStep === 8 ? 86
                         : 99

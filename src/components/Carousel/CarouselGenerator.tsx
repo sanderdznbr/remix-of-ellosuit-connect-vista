@@ -2234,30 +2234,31 @@ const CarouselGenerator: React.FC = () => {
                 }
               }}
               onLoadCarousel={async (item: any) => {
-                // Show loading state and dismiss welcome screen
                 setLoadingCarousel(true);
-                setShowWelcome(false);
-                setTopic(item.topic || '');
-                setKeywords('');
-                // Restore style from the lightweight metadata we already have
-                if (item.style_config) {
-                  const sc = item.style_config;
-                  if (sc.bgColor) setBgColor(sc.bgColor);
-                  if (sc.accentColor) setAccentColor(sc.accentColor);
-                  if (sc.isFullBleed) setIsLoadedFullBleed(true);
-                }
                 try {
-                  const { data } = await supabase.from('generated_carousels').select('*').eq('id', item.id).single();
-                  if (data) {
-                    loadCarousel(data);
-                  } else {
-                    // If no data found, go back to dashboard
-                    setShowWelcome(true);
-                    toast({ title: 'Projeto não encontrado', variant: 'destructive' });
+                  // If the caller already has full carousel payload, load directly (faster, avoids extra fetch)
+                  if (item?.carousel_data) {
+                    loadCarousel(item);
+                    setShowWelcome(false);
+                    return;
                   }
+
+                  const { data, error } = await supabase
+                    .from('generated_carousels')
+                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config')
+                    .eq('id', item.id)
+                    .maybeSingle();
+
+                  if (error) throw error;
+                  if (!data) {
+                    toast({ title: 'Projeto não encontrado', variant: 'destructive' });
+                    return;
+                  }
+
+                  loadCarousel(data);
+                  setShowWelcome(false);
                 } catch (err) {
-                  console.error(err);
-                  setShowWelcome(true);
+                  console.error('Erro ao carregar projeto recente:', err);
                   toast({ title: 'Erro ao carregar projeto', variant: 'destructive' });
                 } finally {
                   setLoadingCarousel(false);

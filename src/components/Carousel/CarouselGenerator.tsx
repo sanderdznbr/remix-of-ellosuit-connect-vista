@@ -549,7 +549,7 @@ const CarouselGenerator: React.FC = () => {
     }, 3000); // 3s debounce
     
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
-  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader]);
+  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -872,9 +872,11 @@ const CarouselGenerator: React.FC = () => {
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
     // Detect if this carousel was generated with a marketplace full-bleed style
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
+    // Also detect legacy full-bleed carousels where every card has an image (heuristic)
+    const allCardsHaveImages = item.carousel_data?.cards?.length > 2 && item.carousel_data.cards.every((c: any) => !!c.imageUrl);
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || allCardsHaveImages;
     setIsLoadedFullBleed(hasMarketplaceStyle);
-    if (item.style_config && !hasMarketplaceStyle) {
+    if (item.style_config) {
       const sc = item.style_config;
       if (sc.bgColor) setBgColor(sc.bgColor);
       if (sc.accentColor) setAccentColor(sc.accentColor);
@@ -2246,8 +2248,8 @@ const CarouselGenerator: React.FC = () => {
                         accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor}
                         selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                        onApplyPreset={(preset) => { setActivePresetId(preset.id); setActiveMarketplaceStyle(null); }}
-                        onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); }}
+                        onApplyPreset={(preset) => { setActivePresetId(preset.id); setActiveMarketplaceStyle(null); setIsLoadedFullBleed(false); }}
+                        onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style); }}
                       />
                     )}
                     {wizardStep === 7 && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (

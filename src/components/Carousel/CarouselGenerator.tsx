@@ -45,7 +45,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -235,6 +235,7 @@ const CarouselGenerator: React.FC = () => {
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
+  const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
@@ -574,7 +575,13 @@ const CarouselGenerator: React.FC = () => {
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
   }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId]);
 
-  // Export dialog is now a centered modal, no outside-click handler needed
+  // Close modify menu when clicking outside
+  useEffect(() => {
+    if (modifyMenuCard === null) return;
+    const handler = () => setModifyMenuCard(null);
+    const timer = setTimeout(() => document.addEventListener('click', handler), 50);
+    return () => { clearTimeout(timer); document.removeEventListener('click', handler); };
+  }, [modifyMenuCard]);
 
   // ===== BUILD IMAGE PROMPT with settings =====
   const buildImagePrompt = (basePrompt: string): string => {
@@ -3306,30 +3313,50 @@ const CarouselGenerator: React.FC = () => {
                         <Trash2 className="h-3 w-3 text-white" />
                       </button>
                     )}
-                    {/* Hover actions */}
-                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
-                      {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
-                      <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
-                        className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                        <Edit3 className="h-3.5 w-3.5 text-white" />
+                    {/* Single "Modificar" button */}
+                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10">
+                      <button onClick={(e) => { e.stopPropagation(); setModifyMenuCard(modifyMenuCard === i ? null : i); }}
+                        className="px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-[11px] font-medium text-white"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
+                        {(regeneratingCard === i || regeneratingFace === i) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Pencil className="h-3 w-3" />}
+                        Modificar
                       </button>
-                      )}
-                      {/* Regenerate with AI directly */}
-                      <button onClick={(e) => { e.stopPropagation(); regenerateCard(i); }}
-                        disabled={regeneratingCard === i}
-                        className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-                        title="Regenerar com IA">
-                        {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 text-white" />}
-                      </button>
-                      {/* Regenerate face only */}
-                      {referenceImages.some(r => r.category === 'face') && carouselData.cards[i]?.imageUrl && (
-                        <button onClick={(e) => { e.stopPropagation(); regenerateFace(i); }}
-                          disabled={regeneratingFace === i}
-                          className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-                          title="Regenerar rosto">
-                          {regeneratingFace === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <User className="h-3.5 w-3.5 text-white" />}
-                        </button>
-                      )}
+                      {/* Dropdown menu */}
+                      <AnimatePresence>
+                        {modifyMenuCard === i && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 rounded-xl overflow-hidden shadow-2xl"
+                            style={{ backgroundColor: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)', minWidth: 180 }}
+                            onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => { setModifyMenuCard(null); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12px] text-white/90 hover:bg-white/10 transition-colors">
+                              <Edit3 className="h-3.5 w-3.5 text-purple-400" />
+                              Abrir editor
+                            </button>
+                            <button
+                              onClick={() => { setModifyMenuCard(null); regenerateCard(i); }}
+                              disabled={regeneratingCard === i}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
+                              {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 text-blue-400 animate-spin" /> : <Image className="h-3.5 w-3.5 text-blue-400" />}
+                              Regenerar foto completa
+                            </button>
+                            {referenceImages.some(r => r.category === 'face') && carouselData.cards[i]?.imageUrl && (
+                              <button
+                                onClick={() => { setModifyMenuCard(null); regenerateFace(i); }}
+                                disabled={regeneratingFace === i}
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
+                                {regeneratingFace === i ? <Loader2 className="h-3.5 w-3.5 text-green-400 animate-spin" /> : <UserCheck className="h-3.5 w-3.5 text-green-400" />}
+                                Regenerar rosto
+                              </button>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>

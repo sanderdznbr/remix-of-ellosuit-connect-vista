@@ -191,7 +191,7 @@ const StepStyle: React.FC<Props> = ({
       if (config.colors.secondary) setBgColor(config.colors.secondary);
       if (config.colors.text) setTextColor(config.colors.text);
     }
-    onApplyMarketplaceStyle?.(config);
+    onApplyMarketplaceStyle?.({ ...config, id: style.id, _previewImages: style.preview_images, _styleName: style.name });
   };
 
   const applyColorPreset = (p: typeof COLOR_PRESETS[0]) => {

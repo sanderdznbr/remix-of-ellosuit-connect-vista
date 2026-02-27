@@ -2908,6 +2908,13 @@ const CarouselGenerator: React.FC = () => {
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                     </div>
+                    {/* Regenerating overlay on mockup */}
+                    {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
+                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+                        <div className="w-10 h-10 rounded-full border-3 border-purple-500/30 border-t-purple-500 animate-spin mb-3" />
+                        <p className="text-white/80 text-xs font-medium">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                      </div>
+                    )}
                     {/* Guest lock overlay */}
                     {isCardLocked(activeCardIndex) && (
                       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
@@ -3298,6 +3305,12 @@ const CarouselGenerator: React.FC = () => {
                         </div>
                       </div>
                     </div>
+                    {/* Regenerating overlay on thumbnail */}
+                    {(regeneratingCard === i || regeneratingFace === i) && (
+                      <div className="absolute inset-0 rounded-xl flex flex-col items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+                        <div className="w-5 h-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+                      </div>
+                    )}
                     {/* Lock overlay for guest thumbnails */}
                     {isCardLocked(i) && (
                       <div className="absolute inset-0 rounded-xl flex items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>

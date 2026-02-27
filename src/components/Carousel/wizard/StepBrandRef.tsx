@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, X, Check, Loader2, Folder } from 'lucide-react';
+import { Upload, X, Loader2, Folder } from 'lucide-react';
 import { ReferenceImage } from './types';
 import { extractColorsFromImage, isMonochromeImage, buildPaletteFromColors } from '@/utils/extractColorsFromImage';
-import { motion, AnimatePresence } from 'framer-motion';
 import GalleryPicker from './GalleryPicker';
 
 interface Props {
@@ -17,38 +16,27 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [extracting, setExtracting] = useState(false);
-  const [suggestedPalette, setSuggestedPalette] = useState<{ bg: string; accent: string; text: string } | null>(null);
-  const [extractedColors, setExtractedColors] = useState<string[]>([]);
-  const [dismissed, setDismissed] = useState(false);
-
   const latestStyleRef = styleRefs[styleRefs.length - 1];
   const [lastAnalyzedUrl, setLastAnalyzedUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!latestStyleRef || latestStyleRef.url === lastAnalyzedUrl || dismissed) return;
+    if (!latestStyleRef || latestStyleRef.url === lastAnalyzedUrl) return;
     const analyze = async () => {
       setExtracting(true);
-      setSuggestedPalette(null);
-      setExtractedColors([]);
       try {
         const mono = await isMonochromeImage(latestStyleRef.url);
         if (mono) { setExtracting(false); setLastAnalyzedUrl(latestStyleRef.url); return; }
         const colors = await extractColorsFromImage(latestStyleRef.url, 5);
-        setExtractedColors(colors);
         const palette = buildPaletteFromColors(colors);
-        if (palette) setSuggestedPalette(palette);
+        if (palette && onSuggestColors) onSuggestColors(palette);
         setLastAnalyzedUrl(latestStyleRef.url);
       } catch (err) { console.error('Color extraction error:', err); }
       finally { setExtracting(false); }
     };
     analyze();
-  }, [latestStyleRef?.url, lastAnalyzedUrl, dismissed]);
-
-  const acceptPalette = () => { if (suggestedPalette && onSuggestColors) onSuggestColors(suggestedPalette); setSuggestedPalette(null); };
-  const rejectPalette = () => { setSuggestedPalette(null); setDismissed(true); };
+  }, [latestStyleRef?.url, lastAnalyzedUrl]);
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
-    setDismissed(false);
     const newRefs: ReferenceImage[] = files.map(f => ({
       url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const,
     }));
@@ -70,7 +58,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         <input type="file" accept="image/*" multiple className="hidden"
           onChange={(e) => {
             if (!e.target.files) return;
-            setDismissed(false);
             Array.from(e.target.files).forEach(file => {
               const reader = new FileReader();
               reader.onload = (ev) => {
@@ -101,60 +88,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
           Analisando cores da marca...
         </div>
       )}
-
-      {/* Color suggestion card */}
-      <AnimatePresence>
-        {suggestedPalette && !extracting && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.97 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-xl p-5 space-y-4"
-            style={{
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.04) 100%)',
-              border: '1px solid rgba(139,92,246,0.2)',
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎨</span>
-              <p className="text-sm font-semibold text-white">Estilo sugerido com base na marca</p>
-            </div>
-            {extractedColors.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-white/30">Cores detectadas:</span>
-                <div className="flex gap-1">
-                  {extractedColors.map((c, i) => (
-                    <div key={i} className="w-6 h-6 rounded-md ring-1 ring-white/10" style={{ backgroundColor: c }} title={c} />
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex gap-1 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
-              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: suggestedPalette.bg }}>
-                <span className="text-[9px] font-mono" style={{ color: suggestedPalette.text }}>Fundo</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: suggestedPalette.accent }}>
-                <span className="text-[9px] font-mono text-white mix-blend-difference">Destaque</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: suggestedPalette.bg }}>
-                <span className="text-[9px] font-mono" style={{ color: suggestedPalette.text }}>Texto</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={acceptPalette}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
-                <Check className="h-3.5 w-3.5" /> Usar essas cores
-              </button>
-              <button onClick={rejectPalette}
-                className="px-4 py-2.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
-                Não, obrigado
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {styleRefs.length > 0 && (
         <div>

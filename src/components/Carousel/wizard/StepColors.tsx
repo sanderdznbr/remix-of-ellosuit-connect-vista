@@ -1,5 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
+import { Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const COLOR_PRESETS = [
   { name: 'Ellosuit Dark', bg: '#0A0A1A', accent: '#3000E3', text: '#FFFFFF' },
@@ -19,15 +21,65 @@ interface Props {
   setAccentColor: (v: string) => void;
   textColor: string;
   setTextColor: (v: string) => void;
+  brandSuggestedPalette?: { bg: string; accent: string; text: string } | null;
+  onAcceptBrandPalette?: () => void;
+  onDismissBrandPalette?: () => void;
 }
 
-const StepColors: React.FC<Props> = ({ bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor }) => {
+const StepColors: React.FC<Props> = ({
+  bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
+  brandSuggestedPalette, onAcceptBrandPalette, onDismissBrandPalette,
+}) => {
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Escolha as cores</h2>
         <p className="text-sm text-white/40">Selecione uma paleta ou personalize.</p>
       </div>
+
+      {/* Brand color suggestion */}
+      <AnimatePresence>
+        {brandSuggestedPalette && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-xl p-5 space-y-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.04) 100%)',
+              border: '1px solid rgba(139,92,246,0.2)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎨</span>
+              <p className="text-sm font-semibold text-white">Cores detectadas na sua marca</p>
+            </div>
+            <div className="flex gap-0.5 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
+              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: brandSuggestedPalette.bg }}>
+                <span className="text-[9px] font-mono" style={{ color: brandSuggestedPalette.text }}>Fundo</span>
+              </div>
+              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: brandSuggestedPalette.accent }}>
+                <span className="text-[9px] font-mono text-white mix-blend-difference">Destaque</span>
+              </div>
+              <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: brandSuggestedPalette.bg }}>
+                <span className="text-[9px] font-mono" style={{ color: brandSuggestedPalette.text }}>Texto</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onAcceptBrandPalette}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                <Check className="h-3.5 w-3.5" /> Usar essas cores
+              </button>
+              <button onClick={onDismissBrandPalette}
+                className="px-4 py-2.5 rounded-lg text-xs font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
+                Não, obrigado
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div>
         <p className="text-xs font-medium text-white/40 mb-3">Paletas prontas</p>

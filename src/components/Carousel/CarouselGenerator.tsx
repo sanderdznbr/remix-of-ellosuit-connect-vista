@@ -235,7 +235,9 @@ const CarouselGenerator: React.FC = () => {
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
-  const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
+   const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
+   const [faceUploadMode, setFaceUploadMode] = useState(false);
+   const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
@@ -1790,13 +1792,15 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== REGENERATE FACE ONLY (Image editing via Gemini) =====
-  const regenerateFace = async (cardIndex: number) => {
+  const regenerateFace = async (cardIndex: number, overrideFaceUrls?: string[]) => {
     if (!carouselData) return;
     const card = carouselData.cards[cardIndex];
     if (!card.imageUrl) { toast({ title: 'Este card não possui imagem', variant: 'destructive' }); return; }
     
-    const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
-    if (faceRefUrls.length === 0) { toast({ title: 'Nenhuma foto de rosto fornecida', description: 'Adicione fotos de referência do rosto no wizard.', variant: 'destructive' }); return; }
+    const faceRefUrls = overrideFaceUrls && overrideFaceUrls.length > 0 
+      ? overrideFaceUrls 
+      : referenceImages.filter(r => r.category === 'face').map(r => r.url);
+    if (faceRefUrls.length === 0) { toast({ title: 'Nenhuma foto de rosto fornecida', variant: 'destructive' }); return; }
     
     setRegeneratingFace(cardIndex);
     try {
@@ -3332,7 +3336,6 @@ const CarouselGenerator: React.FC = () => {
           const cardIdx = modifyMenuCard;
           const card = carouselData.cards[cardIdx];
           if (!card) return null;
-          const hasFaceRefs = referenceImages.some(r => r.category === 'face') && card.imageUrl;
           return (
             <motion.div
               key="modify-modal"
@@ -3341,54 +3344,125 @@ const CarouselGenerator: React.FC = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 z-50 flex items-center justify-center"
-              onClick={() => setModifyMenuCard(null)}>
+              onClick={() => { setModifyMenuCard(null); setFaceUploadMode(false); setTempFaceFiles([]); }}>
               <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="relative rounded-2xl overflow-hidden shadow-2xl w-[280px]"
+                className="relative rounded-2xl overflow-hidden shadow-2xl w-[300px]"
                 style={{ backgroundColor: 'rgba(20,20,28,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)' }}
                 onClick={(e) => e.stopPropagation()}>
                 <div className="px-4 pt-4 pb-2">
-                  <p className="text-white/50 text-[11px] font-medium uppercase tracking-wider">Card {cardIdx + 1}</p>
+                  <p className="text-white/50 text-[11px] font-medium uppercase tracking-wider">
+                    {faceUploadMode ? 'Fotos de referência do rosto' : `Card ${cardIdx + 1}`}
+                  </p>
                 </div>
-                <div className="flex flex-col px-2 pb-3 gap-0.5">
-                  <button
-                    onClick={() => { setModifyMenuCard(null); setEditingCard(cardIdx); setActiveCardIndex(cardIdx); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors">
-                    <Edit3 className="h-4 w-4 text-purple-400" />
-                    Abrir editor
-                  </button>
-                  <button
-                    onClick={() => { setModifyMenuCard(null); regenerateCard(cardIdx); }}
-                    disabled={regeneratingCard === cardIdx}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
-                    {regeneratingCard === cardIdx ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
-                    Regenerar foto completa
-                  </button>
-                  {hasFaceRefs && (
+
+                {!faceUploadMode ? (
+                  <div className="flex flex-col px-2 pb-3 gap-0.5">
                     <button
-                      onClick={() => { setModifyMenuCard(null); regenerateFace(cardIdx); }}
-                      disabled={regeneratingFace === cardIdx}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
-                      {regeneratingFace === cardIdx ? <Loader2 className="h-4 w-4 text-green-400 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-400" />}
-                      Regenerar rosto
+                      onClick={() => { setModifyMenuCard(null); setEditingCard(cardIdx); setActiveCardIndex(cardIdx); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors">
+                      <Edit3 className="h-4 w-4 text-purple-400" />
+                      Abrir editor
                     </button>
-                  )}
-                  {carouselData.cards.length > 2 && (
-                    <>
-                      <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+                    <button
+                      onClick={() => { setModifyMenuCard(null); regenerateCard(cardIdx); }}
+                      disabled={regeneratingCard === cardIdx}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
+                      {regeneratingCard === cardIdx ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
+                      Regenerar foto completa
+                    </button>
+                    {card.imageUrl && (
                       <button
-                        onClick={() => { setModifyMenuCard(null); removeCard(cardIdx); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-red-400 hover:bg-red-500/10 transition-colors">
-                        <Trash2 className="h-4 w-4" />
-                        Excluir post
+                        onClick={() => { setFaceUploadMode(true); setTempFaceFiles(referenceImages.filter(r => r.category === 'face').map(r => r.url)); }}
+                        disabled={regeneratingFace === cardIdx}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
+                        {regeneratingFace === cardIdx ? <Loader2 className="h-4 w-4 text-green-400 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-400" />}
+                        Regenerar rosto
                       </button>
-                    </>
-                  )}
-                </div>
+                    )}
+                    {carouselData.cards.length > 2 && (
+                      <>
+                        <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+                        <button
+                          onClick={() => { setModifyMenuCard(null); removeCard(cardIdx); }}
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-red-400 hover:bg-red-500/10 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                          Excluir post
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="px-3 pb-4">
+                    <p className="text-white/60 text-[12px] mb-3">Envie até 3 fotos do rosto para referência. Fotos de diferentes ângulos melhoram o resultado.</p>
+                    
+                    {/* Thumbnails of uploaded faces */}
+                    {tempFaceFiles.length > 0 && (
+                      <div className="flex gap-2 mb-3 flex-wrap">
+                        {tempFaceFiles.map((url, fi) => (
+                          <div key={fi} className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/10">
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => setTempFaceFiles(prev => prev.filter((_, idx) => idx !== fi))}
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                              <X className="h-3 w-3 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Upload button */}
+                    {tempFaceFiles.length < 3 && (
+                      <label className="flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-[13px] text-white/70 border border-dashed border-white/20 hover:bg-white/5 transition-colors cursor-pointer mb-3">
+                        <Upload className="h-4 w-4" />
+                        Adicionar foto do rosto
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            files.slice(0, 3 - tempFaceFiles.length).forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                if (ev.target?.result) setTempFaceFiles(prev => [...prev.slice(0, 2), ev.target!.result as string]);
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    )}
+                    
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setFaceUploadMode(false); setTempFaceFiles([]); }}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-[13px] text-white/60 hover:bg-white/10 transition-colors">
+                        Voltar
+                      </button>
+                      <button
+                        onClick={() => {
+                          const urls = [...tempFaceFiles];
+                          setModifyMenuCard(null);
+                          setFaceUploadMode(false);
+                          setTempFaceFiles([]);
+                          regenerateFace(cardIdx, urls);
+                        }}
+                        disabled={tempFaceFiles.length === 0}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium text-white bg-green-600 hover:bg-green-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        Regenerar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           );

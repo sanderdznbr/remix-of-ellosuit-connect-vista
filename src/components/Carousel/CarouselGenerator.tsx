@@ -45,7 +45,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -234,6 +234,7 @@ const CarouselGenerator: React.FC = () => {
   const [aiImagePrompt, setAiImagePrompt] = useState('');
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
+  const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
@@ -658,9 +659,10 @@ const CarouselGenerator: React.FC = () => {
       parts.push('Creative artistic interpretation inspired by the references. Take artistic liberties.');
     }
 
-    // Face attributes (gender + glasses)
+    // Face attributes (gender + glasses) + STRONG FIDELITY
     const hasFaceRefs = referenceImages.some(r => r.category === 'face');
     if (hasFaceRefs) {
+      parts.push('FACE REFERENCE FIDELITY (CRITICAL): The face in this image MUST be an EXACT match to the uploaded face reference photos. Preserve the EXACT same facial structure, nose shape, eye shape, eyebrow shape, jawline, skin tone, skin texture, lip shape, and all distinctive features. The person must be immediately recognizable as the SAME individual from the reference photos. Do NOT change or stylize facial features. Do NOT use a different person. This is the #1 priority.');
       if (faceGender === 'male') {
         parts.push('The person in the image MUST be MALE with a masculine body and build.');
       } else if (faceGender === 'female') {
@@ -1758,6 +1760,51 @@ const CarouselGenerator: React.FC = () => {
       toast({ title: 'Erro ao regenerar', description: err.message, variant: 'destructive' });
     } finally {
       setRegeneratingCard(null);
+    }
+  };
+
+  // ===== REGENERATE FACE ONLY (Image editing via Gemini) =====
+  const regenerateFace = async (cardIndex: number) => {
+    if (!carouselData) return;
+    const card = carouselData.cards[cardIndex];
+    if (!card.imageUrl) { toast({ title: 'Este card não possui imagem', variant: 'destructive' }); return; }
+    
+    const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+    if (faceRefUrls.length === 0) { toast({ title: 'Nenhuma foto de rosto fornecida', description: 'Adicione fotos de referência do rosto no wizard.', variant: 'destructive' }); return; }
+    
+    setRegeneratingFace(cardIndex);
+    try {
+      // Use the Gemini image editing API via edge function to fix only the face
+      const genderInstruction = faceGender === 'male' ? 'The person is MALE.' : faceGender === 'female' ? 'The person is FEMALE.' : '';
+      const glassesInstruction = wearsGlasses ? 'The person wears glasses.' : '';
+      
+      const editPrompt = `Replace ONLY the face in this image with the EXACT face from the reference photo(s). Keep EVERYTHING else identical — the body, pose, clothing, background, colors, text, layout, and composition must remain EXACTLY the same. The face must match the reference photos precisely: same facial structure, nose, eyes, eyebrows, jawline, skin tone, and all distinctive features. ${genderInstruction} ${glassesInstruction}`.trim();
+      
+      const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
+        body: {
+          prompt: editPrompt,
+          editSourceImage: card.imageUrl,
+          faceReferenceUrls: faceRefUrls,
+          imageModel: 'gemini',
+          imageSize: '3:4',
+          negativePrompt: 'Do not change the body, pose, clothing, background, text, or any other element. Only replace the face.',
+        },
+      });
+      
+      if (error) throw error;
+      if (data?.success && data?.imageUrl) {
+        const newCards = [...carouselData.cards];
+        newCards[cardIndex] = { ...newCards[cardIndex], imageUrl: data.imageUrl };
+        setCarouselData({ ...carouselData, cards: newCards });
+        toast({ title: '✨ Rosto regenerado!' });
+      } else {
+        throw new Error('Não foi possível regenerar o rosto');
+      }
+    } catch (err: any) {
+      console.error('Face regeneration error:', err);
+      toast({ title: 'Erro ao regenerar rosto', description: err.message, variant: 'destructive' });
+    } finally {
+      setRegeneratingFace(null);
     }
   };
 
@@ -3249,6 +3296,15 @@ const CarouselGenerator: React.FC = () => {
                         title="Regenerar com IA">
                         {regeneratingCard === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 text-white" />}
                       </button>
+                      {/* Regenerate face only */}
+                      {referenceImages.some(r => r.category === 'face') && carouselData.cards[i]?.imageUrl && (
+                        <button onClick={(e) => { e.stopPropagation(); regenerateFace(i); }}
+                          disabled={regeneratingFace === i}
+                          className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+                          title="Regenerar rosto">
+                          {regeneratingFace === i ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" /> : <User className="h-3.5 w-3.5 text-white" />}
+                        </button>
+                      )}
                     </div>
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>

@@ -182,6 +182,9 @@ Deno.serve(async (req) => {
     }
     const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
 
+    // Extract brandColors once before the loop
+    const brandColors = (imageSettings.brandColors as string[] | undefined) || [];
+
     // Build all image generation tasks
     interface ImageTask { index: number; prompt: string; negPrompt: string; }
     const imageTasks: ImageTask[] = [];
@@ -240,9 +243,7 @@ Deno.serve(async (req) => {
         else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
         if (imageSettings.wearsGlasses) promptParts.push('The person MUST be wearing glasses/eyeglasses.');
       }
-      // Brand colors from logo extraction
-      const brandColors = imageSettings.brandColors as string[] | undefined;
-      if (brandColors && brandColors.length > 0) {
+      if (brandColors.length > 0) {
         promptParts.push(`PALETA DE CORES DA MARCA: use predominantemente estas cores da marca do cliente: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`);
       }
 

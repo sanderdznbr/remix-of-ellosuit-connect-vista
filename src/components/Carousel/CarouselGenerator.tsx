@@ -2662,7 +2662,15 @@ const CarouselGenerator: React.FC = () => {
                       logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition}
                       globalFontScale={Math.round((carouselData?.cards?.[0]?.fontScale ?? 1) * 100)}
                       onChangeGlobalFontScale={(v) => updateAllCards({ fontScale: v / 100 })}
-                      onApplyPreset={(preset) => setActivePresetId(preset.id)} />
+                      onApplyPreset={(preset) => setActivePresetId(preset.id)}
+                      onRecreateWithStyle={(config) => {
+                        setActiveMarketplaceStyle(config);
+                        setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                        setShowStylePanel(false);
+                        setTransitionToGenerate(true);
+                        setCurrentCarouselId(null);
+                        setTimeout(() => generateContent(), 1200);
+                      }} />
                   </div>
                 </motion.div>
               )}
@@ -2711,7 +2719,15 @@ const CarouselGenerator: React.FC = () => {
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition}
                         globalFontScale={Math.round((carouselData?.cards?.[0]?.fontScale ?? 1) * 100)}
                         onChangeGlobalFontScale={(v) => updateAllCards({ fontScale: v / 100 })}
-                        onApplyPreset={(preset) => setActivePresetId(preset.id)} />
+                        onApplyPreset={(preset) => setActivePresetId(preset.id)}
+                        onRecreateWithStyle={(config) => {
+                          setActiveMarketplaceStyle(config);
+                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                          setShowStylePanel(false);
+                          setTransitionToGenerate(true);
+                          setCurrentCarouselId(null);
+                          setTimeout(() => generateContent(), 1200);
+                        }} />
                     </div>
                   </motion.div>
                 </>

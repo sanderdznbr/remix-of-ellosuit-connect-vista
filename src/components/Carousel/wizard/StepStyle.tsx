@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { ChevronDown, ChevronUp, Upload, X, ShoppingBag, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, X, ShoppingBag, Loader2, RefreshCw } from 'lucide-react';
 import LogoPositionPicker from './LogoPositionPicker';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -112,6 +112,7 @@ interface Props {
   setShowHeader?: (v: boolean) => void;
   onApplyPreset?: (preset: StylePreset) => void;
   onApplyMarketplaceStyle?: (styleConfig: any) => void;
+  onRecreateWithStyle?: (styleConfig: any) => void;
   logoUrl?: string | null;
   setLogoUrl?: (v: string | null) => void;
   logoPosition?: LogoPosition;
@@ -131,7 +132,7 @@ const StepStyle: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
   selectedFont, setSelectedFont, brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   showHeader = true, setShowHeader,
-  onApplyPreset, onApplyMarketplaceStyle,
+  onApplyPreset, onApplyMarketplaceStyle, onRecreateWithStyle,
   logoUrl, setLogoUrl, logoPosition = 'top-left', setLogoPosition,
   globalFontScale = 100, onChangeGlobalFontScale,
 }) => {
@@ -272,6 +273,21 @@ const StepStyle: React.FC<Props> = ({
                   );
                 })}
               </div>
+              {activeMarketplaceId && onRecreateWithStyle && (
+                <button
+                  onClick={() => {
+                    const style = marketplaceStyles.find(s => s.id === activeMarketplaceId);
+                    if (style) {
+                      const config = style.style_config;
+                      onRecreateWithStyle({ ...config, _previewImages: style.preview_images, _styleName: style.name, id: style.id });
+                    }
+                  }}
+                  className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}
+                >
+                  <RefreshCw className="w-4 h-4" /> Recriar post completo
+                </button>
+              )}
             </div>
           )}
         </div>

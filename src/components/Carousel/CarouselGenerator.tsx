@@ -565,13 +565,7 @@ const CarouselGenerator: React.FC = () => {
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
   }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId]);
 
-  // Close export menu on outside click
-  useEffect(() => {
-    if (!showExportMenu) return;
-    const handler = () => setShowExportMenu(false);
-    const timer = setTimeout(() => document.addEventListener('click', handler), 100);
-    return () => { clearTimeout(timer); document.removeEventListener('click', handler); };
-  }, [showExportMenu]);
+  // Export dialog is now a centered modal, no outside-click handler needed
 
   // ===== BUILD IMAGE PROMPT with settings =====
   const buildImagePrompt = (basePrompt: string): string => {
@@ -2969,37 +2963,40 @@ const CarouselGenerator: React.FC = () => {
                 {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
                 {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
               </div>
-              {/* Export dropdown */}
-              <div className="relative">
-                <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : () => setShowExportMenu(!showExportMenu)} disabled={exporting}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
-                  style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
-                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-                  {isGuest ? 'Cadastre-se' : 'Exportar'}
-                </button>
-                {showExportMenu && !isGuest && (
-                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 rounded-xl border border-white/10 overflow-hidden z-50 w-48"
-                    style={{ backgroundColor: 'rgba(10,10,26,0.95)', backdropFilter: 'blur(12px)' }}>
+              {/* Export button */}
+              <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : () => setShowExportMenu(true)} disabled={exporting}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
+                style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                {isGuest ? 'Cadastre-se' : 'Exportar'}
+              </button>
+
+              {/* Export Dialog */}
+              {showExportMenu && !isGuest && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" onClick={() => setShowExportMenu(false)}>
+                  <div className="rounded-2xl border border-white/10 p-6 w-72 flex flex-col gap-3"
+                    style={{ backgroundColor: 'rgba(15,15,30,0.98)', backdropFilter: 'blur(20px)' }}
+                    onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-sm font-semibold text-white text-center mb-1">Exportar Carrossel</h3>
                     <button onClick={() => exportAllCards('png', true)}
-                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-2">
-                      <FileText className="h-3.5 w-3.5" /> Baixar ZIP
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
+                      <FileText className="h-4 w-4 text-purple-400" /> Baixar ZIP
                     </button>
-                    <div className="border-t border-white/5" />
                     <button onClick={() => exportAllCards('png')}
-                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
-                      <ImageIcon className="h-3.5 w-3.5" /> Baixar PNG
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
+                      <ImageIcon className="h-4 w-4" /> Baixar PNG
                     </button>
                     <button onClick={() => exportAllCards('jpg')}
-                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
-                      <ImageIcon className="h-3.5 w-3.5" /> Baixar JPG
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
+                      <ImageIcon className="h-4 w-4" /> Baixar JPG
                     </button>
                     <button onClick={() => exportAllCards('webp')}
-                      className="w-full text-left px-4 py-2.5 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2">
-                      <ImageIcon className="h-3.5 w-3.5" /> Baixar WEBP
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
+                      <ImageIcon className="h-4 w-4" /> Baixar WEBP
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
               {/* Hide editing controls when marketplace full-bleed is active */}
               {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                 <>
@@ -3137,7 +3134,7 @@ const CarouselGenerator: React.FC = () => {
                   {autoSaveStatus === 'saving' ? <Loader2 className="h-3 w-3 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3 w-3 text-green-400" /> : <Save className="h-3 w-3" />}
                   <span className="hidden sm:inline">{autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : ''}</span>
                 </div>
-                <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={exporting}
+                <button onClick={() => setShowExportMenu(true)} disabled={exporting}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 relative"
                   style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
                   {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}

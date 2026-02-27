@@ -2807,13 +2807,14 @@ const CarouselGenerator: React.FC = () => {
                         <Lock className="w-4 h-4" style={{ color: 'rgba(139,92,246,0.7)' }} />
                       </div>
                     )}
-                    {/* Hover actions — hidden for marketplace full-bleed */}
-                    {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                    {/* Hover actions */}
                     <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
+                      {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                       <button onClick={(e) => { e.stopPropagation(); setEditingCard(i); setActiveCardIndex(i); setAiImagePrompt(card.imagePrompt || card.title || ''); }}
                         className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
                         <Edit3 className="h-3.5 w-3.5 text-white" />
                       </button>
+                      )}
                       {/* Regenerate dropdown */}
                       <div className="relative">
                         <button onClick={(e) => { e.stopPropagation(); setRegenMenuOpen(regenMenuOpen === i ? null : i); }}
@@ -2840,7 +2841,6 @@ const CarouselGenerator: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    )}
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
                   );

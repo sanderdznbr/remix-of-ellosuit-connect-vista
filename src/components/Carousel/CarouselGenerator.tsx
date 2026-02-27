@@ -1332,11 +1332,54 @@ const CarouselGenerator: React.FC = () => {
         ...referenceImages.filter(r => r.category === 'style').map(r => r.url),
         ...(editorRefImage ? [editorRefImage] : []),
       ];
+      const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+
+      // Include marketplace style references if active or loaded as full-bleed
+      const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
+      const marketplaceRefUrls: string[] = [];
+      if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+        const origin = window.location.origin;
+        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+          .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
+        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+        if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+      }
+
+      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
+
+      let finalPrompt: string;
+      let negPrompt: string | undefined;
+
+      if (isFullBleedMarketplace && activeMarketplaceStyle?.imageGeneration?.prompt_style) {
+        const card = carouselData?.cards[cardIndex];
+        const isCover = card?.type === 'cover' || cardIndex === 0;
+        const isCta = card?.type === 'cta' || (carouselData && cardIndex === carouselData.cards.length - 1);
+        const parts: string[] = [];
+        parts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`);
+        parts.push(`TEMA DO CARROSSEL: "${topic}"`);
+        parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência.`);
+        parts.push(`SEM BORDAS: Full bleed, sem barras ou bordas.`);
+        if (isCover) {
+          parts.push(`CARD DE CAPA. Tipografia grande, impactante.`);
+        } else if (isCta) {
+          parts.push(`CARD FINAL DE CTA. Encerramento com call-to-action.`);
+        } else {
+          parts.push(`CARD DE CONTEÚDO interno. Layout editorial variado — NÃO estilo capa/hero.`);
+        }
+        parts.push(`CONTEÚDO: "${promptText}"`);
+        finalPrompt = buildImagePrompt(parts.join('\n'));
+        negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || undefined;
+      } else {
+        finalPrompt = buildImagePrompt(promptText);
+        negPrompt = imageSettings.negativePrompt || undefined;
+      }
+
       const imageUrl = await generateImage({
-        prompt: buildImagePrompt(promptText),
+        prompt: finalPrompt,
         faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-        styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
-        negativePrompt: imageSettings.negativePrompt || undefined,
+        styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+        negativePrompt: negPrompt,
       });
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem');
       setCardImage(cardIndex, imageUrl);

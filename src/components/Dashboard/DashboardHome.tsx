@@ -162,7 +162,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 mentionedPrompts={mentionedPrompts}
                 onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
                 onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
-                className="w-full bg-transparent text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
+                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
               />
               {!isUserTyping && mentionedPrompts.length === 0 && (
                 <div

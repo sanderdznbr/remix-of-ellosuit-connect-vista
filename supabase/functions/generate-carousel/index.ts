@@ -337,6 +337,8 @@ PROIBIDO nos imagePrompts e no conteúdo dos cards:
 - NUNCA inclua numeração tipo "Card 1 de 20", "1/20", contadores de slides ou indicadores de posição
 - Cada card de conteúdo DEVE ter uma composição visual DIFERENTE da capa — NÃO repita o layout da capa nos cards internos
 - Os imagePrompts dos cards internos devem descrever cenas, composições e layouts VARIADOS e DISTINTOS entre si
+- NUNCA use o símbolo "@" antes de nomes de marcas, plataformas ou pessoas nos textos dos cards (bodyTop, bodyBottom, title, subtitle, body). Escreva o nome diretamente sem "@". Exemplo: escreva "Ellocontent" e NÃO "@Ellocontent"
+- NUNCA gere imagePrompts que descrevam grades, mosaicos, grids de posts, capturas de tela de feeds ou interfaces de redes sociais. Cada card deve ser UMA ÚNICA imagem editorial coesa
 
 REGRAS DE LAYOUT (siga EXATAMENTE):
 - Card 1 (cover): Título impactante em CAIXA ALTA (máx 10 palavras) + subtítulo curto descritivo

@@ -10,10 +10,27 @@ interface Props {
   setFamousList: React.Dispatch<React.SetStateAction<FamousPerson[]>>;
   famousImages: { username: string; images: any[] }[];
   setFamousImages: React.Dispatch<React.SetStateAction<{ username: string; images: any[] }[]>>;
+  faceGender: 'male' | 'female' | 'auto';
+  setFaceGender: (v: 'male' | 'female' | 'auto') => void;
+  wearsGlasses: boolean;
+  setWearsGlasses: (v: boolean) => void;
 }
+
+const GenderChip = ({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) => (
+  <button onClick={onClick}
+    className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+      selected
+        ? 'bg-white text-black'
+        : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
+    }`}>
+    {children}
+  </button>
+);
 
 const StepFaceRef: React.FC<Props> = ({
   referenceImages, setReferenceImages,
+  faceGender, setFaceGender,
+  wearsGlasses, setWearsGlasses,
 }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
@@ -41,6 +58,7 @@ const StepFaceRef: React.FC<Props> = ({
   };
 
   const faceRefs = referenceImages.filter(r => r.category === 'face');
+  const hasFaces = faceRefs.length > 0;
 
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
@@ -84,6 +102,30 @@ const StepFaceRef: React.FC<Props> = ({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Face attributes — shown only when faces are uploaded */}
+      {hasFaces && (
+        <div className="space-y-5 pt-2 border-t border-white/[0.06]">
+          {/* Gender */}
+          <div>
+            <label className="text-sm font-medium text-white/80 mb-2.5 block">Gênero da pessoa</label>
+            <div className="flex gap-2">
+              <GenderChip selected={faceGender === 'auto'} onClick={() => setFaceGender('auto')}>🤖 Detectar auto</GenderChip>
+              <GenderChip selected={faceGender === 'male'} onClick={() => setFaceGender('male')}>👨 Masculino</GenderChip>
+              <GenderChip selected={faceGender === 'female'} onClick={() => setFaceGender('female')}>👩 Feminino</GenderChip>
+            </div>
+          </div>
+
+          {/* Glasses */}
+          <div>
+            <label className="text-sm font-medium text-white/80 mb-2.5 block">Usa óculos?</label>
+            <div className="flex gap-2">
+              <GenderChip selected={!wearsGlasses} onClick={() => setWearsGlasses(false)}>Não</GenderChip>
+              <GenderChip selected={wearsGlasses} onClick={() => setWearsGlasses(true)}>🤓 Sim, usa óculos</GenderChip>
+            </div>
           </div>
         </div>
       )}

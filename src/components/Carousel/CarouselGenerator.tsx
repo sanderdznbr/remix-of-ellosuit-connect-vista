@@ -2618,7 +2618,13 @@ const CarouselGenerator: React.FC = () => {
                               await handleSearchWeb();
                             }
                             if (wizardStep === 1) {
-                              setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                              if (cardCount === 1) {
+                                setContentMode('single-post');
+                                setImageCardCount(1);
+                              } else {
+                                setContentMode('carousel');
+                                setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                              }
                             }
                             let next = wizardStep + 1;
                             // Skip Quantidade (1) when single-post mode
@@ -2634,7 +2640,12 @@ const CarouselGenerator: React.FC = () => {
                       </div>
                     ) : (
                       <button onClick={() => {
-                          setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                          if (cardCount === 1) {
+                            setContentMode('single-post');
+                            setImageCardCount(1);
+                          } else {
+                            setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                          }
                           setTransitionToGenerate(true);
                           setTimeout(() => generateContent(), 1200);
                         }} disabled={generating || transitionToGenerate || !topic.trim()}

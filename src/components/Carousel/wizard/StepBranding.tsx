@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Zap, Sparkles } from 'lucide-react';
 import { LogoPosition } from './StepStyle';
 import LogoPositionPicker from './LogoPositionPicker';
 
@@ -18,12 +18,14 @@ interface Props {
   logoPosition: LogoPosition;
   setLogoPosition: (v: LogoPosition) => void;
   logoBrandColors?: string[];
+  imageModel: 'gemini' | 'nano-banana';
+  setImageModel: (v: 'gemini' | 'nano-banana') => void;
 }
 
 const StepBranding: React.FC<Props> = ({
   brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   showHeader, setShowHeader, logoUrl, setLogoUrl, logoPosition, setLogoPosition,
-  logoBrandColors = [],
+  logoBrandColors = [], imageModel, setImageModel,
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,6 +99,37 @@ const StepBranding: React.FC<Props> = ({
               className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-lg text-xs h-10 focus:!border-white/20 focus:!ring-0 disabled:opacity-30" />
           </div>
         ))}
+      </div>
+
+      {/* Speed toggle */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-white/40">Velocidade de geração de imagens</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setImageModel('gemini')}
+            className={`flex items-center gap-2 p-3 rounded-xl text-left transition-all border ${
+              imageModel === 'gemini'
+                ? 'bg-white/[0.08] border-emerald-500/40'
+                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
+            }`}>
+            <Zap className={`h-4 w-4 ${imageModel === 'gemini' ? 'text-emerald-400' : 'text-white/30'}`} />
+            <div>
+              <span className="text-sm font-semibold text-white/90">⚡ Rápido</span>
+              <span className="block text-[10px] text-white/40">Gemini Flash · ~5s/img</span>
+            </div>
+          </button>
+          <button onClick={() => setImageModel('nano-banana')}
+            className={`flex items-center gap-2 p-3 rounded-xl text-left transition-all border ${
+              imageModel === 'nano-banana'
+                ? 'bg-white/[0.08] border-purple-500/40'
+                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
+            }`}>
+            <Sparkles className={`h-4 w-4 ${imageModel === 'nano-banana' ? 'text-purple-400' : 'text-white/30'}`} />
+            <div>
+              <span className="text-sm font-semibold text-white/90">🎨 Qualidade</span>
+              <span className="block text-[10px] text-white/40">Gemini Pro · ~15s/img</span>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

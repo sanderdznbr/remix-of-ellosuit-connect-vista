@@ -52,7 +52,7 @@ export interface WizardData {
 }
 
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
-  model: 'auto',
+  model: 'gemini',
   higgsFieldModel: 'higgsfield-ai/soul/standard',
   fidelity: 'balanced',
   negativePrompt: '',

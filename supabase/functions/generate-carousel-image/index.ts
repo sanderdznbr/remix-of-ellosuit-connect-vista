@@ -25,18 +25,33 @@ Deno.serve(async (req) => {
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
       console.log('Face regeneration mode: editing existing image');
-      const editContent: any[] = [
-        { type: 'text', text: prompt },
-        { type: 'image_url', image_url: { url: editSourceImage } },
-      ];
-      // Add face references
+      
+      // Build content with face references FIRST, then source image, then instructions
+      // This ordering ensures the model treats face refs as the identity to use
+      const editContent: any[] = [];
+      
+      // 1. Add face reference photos FIRST so model sees them as the "target face"
+      const validFaceRefs: string[] = [];
       if (faceReferenceUrls?.length) {
-        for (const ref of faceReferenceUrls.slice(0, 3)) {
+        for (const ref of faceReferenceUrls.slice(0, 5)) {
           if (ref && (ref.startsWith('http') || ref.startsWith('data:'))) {
+            validFaceRefs.push(ref);
             editContent.push({ type: 'image_url', image_url: { url: ref } });
           }
         }
       }
+      
+      // 2. Label the face references
+      if (validFaceRefs.length > 0) {
+        editContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS of the person whose face must appear in the final result. Study these faces carefully — memorize every facial feature.` });
+      }
+      
+      // 3. Now add the source image to edit
+      editContent.push({ type: 'text', text: 'The image below is the SOURCE IMAGE that needs face replacement. Keep its EXACT composition, background, clothing, text, colors, and layout:' });
+      editContent.push({ type: 'image_url', image_url: { url: editSourceImage } });
+      
+      // 4. Final instruction
+      editContent.push({ type: 'text', text: prompt + '\n\nCRITICAL RULES:\n- Generate a NEW image that is the SOURCE IMAGE but with the face replaced by the face from the REFERENCE PHOTOS.\n- The output must have the SAME dimensions, framing, and zoom level as the source image — do NOT crop or zoom in.\n- Keep ALL text overlays, logos, backgrounds, clothing, body pose, and composition IDENTICAL to the source.\n- ONLY the face changes. Everything else stays pixel-perfect.' });
       
       const editRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',

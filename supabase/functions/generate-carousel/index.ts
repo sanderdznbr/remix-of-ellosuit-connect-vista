@@ -346,7 +346,7 @@ REGRAS DE LAYOUT (siga EXATAMENTE):
   - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. ${hasMarketplaceStyle ? 'DEVE seguir o estilo visual definido abaixo.' : 'Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes'}
   - "searchTerms": Array de termos para buscar fotos de referência na web (ex: ["Toguro fitness", "Cimed logo", "suplemento proteico"]). Inclua nomes reais de pessoas e marcas mencionadas.
   - "needsImage": boolean - true se este card precisa de imagem baseado no conteúdo
-- Card ${numCards} (cta): CTA + mensagem motivacional
+- Card ${numCards} (cta): CTA + mensagem motivacional. ${body.brandName ? `Use "${body.brandName}" como nome da marca/autor.` : body.userName ? `Use "${body.userName}" como nome do autor.` : 'NÃO inclua nome de autor.'} NUNCA use placeholders como "[Nome do Usuário]", "[Seu Nome]", "[Nome da Marca]" etc. Se não souber o nome, simplesmente OMITA a linha de autor.
 
 ${imageCardIndices.length > 0 ? `IMPORTANTE: Os cards nas posições ${imageCardIndices.join(', ')} DEVEM ter imagens (needsImage=true). Os demais podem ser somente texto.` : ''}
 
@@ -381,6 +381,7 @@ Responda APENAS em JSON válido:
       "type": "cta",
       "title": "Gostou do conteúdo?",
       "body": "Salve, compartilhe e siga para mais!",
+      "ctaLine": "${body.brandName || body.userName || ''}",
       "imagePrompt": "descrição visual para CTA",
       "searchTerms": [],
       "needsImage": false

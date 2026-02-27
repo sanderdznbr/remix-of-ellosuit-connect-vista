@@ -131,6 +131,8 @@ Deno.serve(async (req) => {
         keywords: job.keywords ? job.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : [],
         cardCount,
         imageCardIndices: imageCardIndices.sort((a: number, b: number) => a - b),
+        brandName: job.brand_name || '',
+        userName: job.user_name || '',
         ...(job.web_search_content ? { webSearchContent: JSON.parse(job.web_search_content) } : {}),
         ...(job.web_search_citations ? { webSearchCitations: job.web_search_citations } : {}),
         ...(job.product_context ? { productContext: JSON.parse(job.product_context) } : {}),

@@ -1,7 +1,6 @@
 // Cloud-based carousel generation orchestrator
 // Runs the entire carousel generation (text + images) server-side
-// so it survives connection drops and browser closures
-// Uses a wall-clock guard to avoid silent timeouts
+// Uses parallel image generation in batches for speed
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -12,15 +11,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-// Wall-clock budget: Supabase Edge Functions timeout at ~150s.
-// We stop new image generations at 120s to leave time for cleanup.
-const MAX_EXECUTION_MS = 120_000;
-const startTime = Date.now();
-
-function timeLeft() {
-  return MAX_EXECUTION_MS - (Date.now() - startTime);
-}
 
 function adminClient() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -36,7 +26,7 @@ async function generateOneImage(params: Record<string, any>): Promise<string | n
   const url = `${SUPABASE_URL}/functions/v1/generate-carousel-image`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50_000); // 50s per image max
+    const timeout = setTimeout(() => controller.abort(), 55_000); // 55s per image max
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -64,7 +54,7 @@ async function generateOneImage(params: Record<string, any>): Promise<string | n
 async function generateTextContent(params: Record<string, any>): Promise<any> {
   const url = `${SUPABASE_URL}/functions/v1/generate-carousel`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000); // 60s max for text
+  const timeout = setTimeout(() => controller.abort(), 60_000);
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -89,6 +79,11 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // CRITICAL: startTime per-request, NOT at module load
+  const startTime = Date.now();
+  const MAX_EXECUTION_MS = 130_000; // 130s budget (Supabase allows ~150s)
+  function timeLeft() { return MAX_EXECUTION_MS - (Date.now() - startTime); }
+
   try {
     const body = await req.json();
     const { jobId } = body;
@@ -99,7 +94,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch job details
     const sb = adminClient();
     const { data: job, error: jobErr } = await sb
       .from('carousel_generation_jobs')
@@ -149,7 +143,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Assign layouts to cards
+    // Assign layouts
     const cards = textData.cards.map((c: any, i: number) => {
       if (c.type === 'cover') return { ...c, layout: 'dark' };
       if (c.type === 'cta') return { ...c, layout: 'accent' };
@@ -157,7 +151,7 @@ Deno.serve(async (req) => {
       return { ...c, layout: layouts[(i - 1) % layouts.length] };
     });
 
-    // === STEP 2: Generate images ===
+    // === STEP 2: Generate images in PARALLEL batches ===
     await updateJob(jobId, {
       status: 'generating_images',
       progress_current: 0,
@@ -172,13 +166,11 @@ Deno.serve(async (req) => {
     const baseNeg = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
     const cleanTopic = job.topic.split('\n')[0].trim();
 
-    // Parse reference images
     const refImages = job.reference_images || [];
     const faceRefUrls = (job.face_ref_urls || []) as string[];
     const styleRefUrls = (refImages as any[]).filter((r: any) => r.category === 'style').map((r: any) => r.url);
     const imageSettings = job.image_settings || {};
 
-    // Build marketplace preview refs
     const marketplaceRefUrls: string[] = [];
     if (isFullBleed && marketplaceStyle?._previewImages?.length) {
       const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
@@ -186,35 +178,17 @@ Deno.serve(async (req) => {
       if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
       if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
     }
-
     const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
 
-    // Track if we hit the timeout
-    let timedOut = false;
+    // Build all image generation tasks
+    interface ImageTask { index: number; prompt: string; negPrompt: string; }
+    const imageTasks: ImageTask[] = [];
 
-    // Generate images sequentially (cover first, then content, then CTA)
     for (let i = 0; i < cards.length; i++) {
-      // Wall-clock guard: stop if we're running out of time
-      if (timeLeft() < 15_000) {
-        console.warn(`Wall-clock guard triggered at card ${i}/${cards.length}, ${timeLeft()}ms left`);
-        timedOut = true;
-        break;
-      }
-
       const card = cards[i];
       const shouldGenImage = isFullBleed || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i);
+      if (!shouldGenImage) continue;
 
-      if (!shouldGenImage) {
-        await updateJob(jobId, { progress_current: i + 1 });
-        continue;
-      }
-
-      await updateJob(jobId, {
-        progress_current: i,
-        progress_message: `Gerando imagem ${i + 1} de ${cards.length}...`,
-      });
-
-      // Build prompt
       let imgPrompt: string;
       if (isFullBleed) {
         const isCover = card.type === 'cover' || i === 0;
@@ -224,7 +198,6 @@ Deno.serve(async (req) => {
         parts.push(`TEMA: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie @handles, nomes de empresas ou informações pessoais das referências.`);
         parts.push(`SEM BORDAS: Full bleed, sem barras no topo ou base.`);
-
         if (isCover) {
           parts.push(`CARD DE CAPA (1 de ${cards.length}).`);
           parts.push(`TÍTULO: "${card.title || cleanTopic}"`);
@@ -246,13 +219,10 @@ Deno.serve(async (req) => {
         imgPrompt = `${cleanTopic}: ${card.imagePrompt || card.title || card.bodyTop || ''}`;
       }
 
-      // Build full prompt with image settings
       const promptParts = [];
       if (marketplaceStyle?.imageGeneration?.prompt_style) {
         promptParts.push(marketplaceStyle.imageGeneration.prompt_style);
-        if (marketplaceStyle.imageGeneration?.prompt_prefix) {
-          promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
-        }
+        if (marketplaceStyle.imageGeneration?.prompt_prefix) promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
         promptParts.push(`CONTENT FOR THIS CARD: ${imgPrompt}`);
       } else {
         promptParts.push('Professional photograph');
@@ -264,60 +234,79 @@ Deno.serve(async (req) => {
       const finalPrompt = promptParts.filter(Boolean).join('. ');
       const negPrompt = isFullBleed ? styleNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
 
-      // Generate with retry (max 2 attempts to save time)
-      let imageUrl: string | null = null;
-      const maxRetries = timeLeft() > 60_000 ? 3 : 2;
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        if (timeLeft() < 15_000) { timedOut = true; break; }
-        if (attempt > 0) {
-          await new Promise(r => setTimeout(r, 2000));
-          await updateJob(jobId, { progress_message: `Tentativa ${attempt + 1} para imagem ${i + 1}...` });
-        }
-        imageUrl = await generateOneImage({
-          prompt: finalPrompt,
-          topic: imgPrompt,
-          faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-          styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
-          imageModel: imageSettings.model || 'auto',
-          negativePrompt: negPrompt,
-          fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
-          ...(isFullBleed && marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
-        });
-        if (imageUrl) break;
+      imageTasks.push({ index: i, prompt: finalPrompt, negPrompt });
+    }
+
+    // Process images in parallel batches of 3
+    const BATCH_SIZE = 3;
+    let timedOut = false;
+    let completedCount = 0;
+
+    for (let batchStart = 0; batchStart < imageTasks.length; batchStart += BATCH_SIZE) {
+      if (timeLeft() < 20_000) {
+        console.warn(`Wall-clock guard at batch ${batchStart}/${imageTasks.length}, ${timeLeft()}ms left`);
+        timedOut = true;
+        break;
       }
 
-      if (timedOut) break;
+      const batch = imageTasks.slice(batchStart, batchStart + BATCH_SIZE);
 
-      if (imageUrl) {
-        cards[i] = { ...cards[i], imageUrl, isAiImage: true };
+      await updateJob(jobId, {
+        progress_current: completedCount,
+        progress_message: `🎨 Gerando imagens ${completedCount + 1}-${Math.min(completedCount + batch.length, imageTasks.length)} de ${imageTasks.length}...`,
+      });
+
+      // Fire all images in this batch in parallel
+      const results = await Promise.all(batch.map(async (task) => {
+        // Each task gets up to 2 attempts
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (timeLeft() < 15_000) return { index: task.index, url: null };
+          if (attempt > 0) await new Promise(r => setTimeout(r, 1500));
+          const url = await generateOneImage({
+            prompt: task.prompt,
+            topic: task.prompt.slice(0, 200),
+            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+            imageModel: imageSettings.model || 'auto',
+            negativePrompt: task.negPrompt,
+            fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
+            ...(isFullBleed && marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
+          });
+          if (url) return { index: task.index, url };
+        }
+        return { index: task.index, url: null };
+      }));
+
+      // Apply results to cards
+      for (const r of results) {
+        if (r.url) {
+          cards[r.index] = { ...cards[r.index], imageUrl: r.url, isAiImage: true };
+        }
+        completedCount++;
       }
 
       // Update progress with latest card data
       await updateJob(jobId, {
-        progress_current: i + 1,
+        progress_current: completedCount,
         carousel_data: { ...textData, cards },
       });
 
-      // Small delay between images to avoid rate limits
-      if (i < cards.length - 1) {
-        await new Promise(r => setTimeout(r, 1000));
+      // Small delay between batches (not between individual images)
+      if (batchStart + BATCH_SIZE < imageTasks.length && timeLeft() > 20_000) {
+        await new Promise(r => setTimeout(r, 500));
       }
     }
 
-    // If we timed out, mark job as failed so the user can retry
+    // If timed out, mark as failed for fallback
     if (timedOut) {
       const imagesGenerated = cards.filter((c: any) => c.imageUrl).length;
       await updateJob(jobId, {
         status: 'failed',
-        error_message: `Tempo limite atingido. ${imagesGenerated}/${cards.length} imagens geradas. Por favor, tente novamente com menos cards.`,
+        error_message: `Tempo limite atingido. ${imagesGenerated}/${cards.length} imagens geradas.`,
         carousel_data: { ...textData, cards },
         completed_at: new Date().toISOString(),
       });
-      return new Response(JSON.stringify({
-        error: 'timeout',
-        imagesGenerated,
-        total: cards.length,
-      }), {
+      return new Response(JSON.stringify({ error: 'timeout', imagesGenerated, total: cards.length }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -340,13 +329,13 @@ Deno.serve(async (req) => {
 
     if (insertErr) {
       console.error('Failed to save carousel:', insertErr);
-      await updateJob(jobId, { status: 'failed', error_message: 'Falha ao salvar carrossel: ' + insertErr.message, completed_at: new Date().toISOString() });
+      await updateJob(jobId, { status: 'failed', error_message: 'Falha ao salvar: ' + insertErr.message, completed_at: new Date().toISOString() });
       return new Response(JSON.stringify({ error: insertErr.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Save cover image (use first card's image)
+    // Save cover image
     const coverImageUrl = cards[0]?.imageUrl;
     if (inserted?.id && coverImageUrl?.startsWith('data:')) {
       try {
@@ -381,7 +370,7 @@ Deno.serve(async (req) => {
       console.error('Credit consumption failed:', creditErr);
     }
 
-    // Mark job as completed
+    // Mark completed
     await updateJob(jobId, {
       status: 'completed',
       progress_current: cards.length,
@@ -392,28 +381,18 @@ Deno.serve(async (req) => {
       completed_at: new Date().toISOString(),
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      carouselId: inserted?.id,
-      jobId,
-    }), {
+    return new Response(JSON.stringify({ success: true, carouselId: inserted?.id, jobId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (err: any) {
     console.error('Cloud generation error:', err);
-    // Try to update the job status if we have a jobId
     try {
       const body = await req.clone().json().catch(() => ({}));
       if (body?.jobId) {
-        await updateJob(body.jobId, {
-          status: 'failed',
-          error_message: err.message || 'Erro interno',
-          completed_at: new Date().toISOString(),
-        });
+        await updateJob(body.jobId, { status: 'failed', error_message: err.message || 'Erro interno', completed_at: new Date().toISOString() });
       }
     } catch { /* ignore */ }
-
     return new Response(JSON.stringify({ error: err.message || 'Internal error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

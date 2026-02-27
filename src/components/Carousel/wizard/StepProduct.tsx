@@ -3,6 +3,16 @@ import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw, Folder } from 'lucid
 import { supabase } from '@/integrations/supabase/client';
 import GalleryPicker from './GalleryPicker';
 
+export type ProductSize = 'tiny' | 'small' | 'medium' | 'large' | 'extra-large';
+
+export const PRODUCT_SIZE_OPTIONS: { value: ProductSize; label: string; desc: string }[] = [
+  { value: 'tiny', label: 'Muito pequeno', desc: '~5 cm — cápsulas, pen drives, brincos' },
+  { value: 'small', label: 'Pequeno', desc: '~10–15 cm — frascos, cosméticos, celular' },
+  { value: 'medium', label: 'Médio', desc: '~20–40 cm — caixa, garrafa, sapato' },
+  { value: 'large', label: 'Grande', desc: '~50–100 cm — mochila, cadeira, violão' },
+  { value: 'extra-large', label: 'Muito grande', desc: '1 m+ — sofá, geladeira, bicicleta' },
+];
+
 export interface ProductAnalysis {
   type: 'clothing' | 'object' | 'food' | 'unknown';
   description: string;
@@ -17,6 +27,8 @@ interface Props {
   setProductAnalysis: React.Dispatch<React.SetStateAction<ProductAnalysis | null>>;
   analyzingProduct: boolean;
   setAnalyzingProduct: React.Dispatch<React.SetStateAction<boolean>>;
+  productSize: ProductSize;
+  setProductSize: (v: ProductSize) => void;
 }
 
 const TYPE_LABELS: Record<string, { label: string; emoji: string; desc: string }> = {
@@ -30,6 +42,7 @@ const StepProduct: React.FC<Props> = ({
   productImages, setProductImages,
   productAnalysis, setProductAnalysis,
   analyzingProduct, setAnalyzingProduct,
+  productSize, setProductSize,
 }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
@@ -138,7 +151,27 @@ const StepProduct: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Analyzing state */}
+      {/* Product size selector */}
+      {productImages.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-white/50">Tamanho real do produto</p>
+          <div className="grid grid-cols-1 gap-1.5">
+            {PRODUCT_SIZE_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => setProductSize(opt.value)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
+                  productSize === opt.value
+                    ? 'bg-purple-500/15 border border-purple-500/30'
+                    : 'bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05]'
+                }`}>
+                <span className={`text-sm font-semibold min-w-[110px] ${productSize === opt.value ? 'text-purple-300' : 'text-white/50'}`}>
+                  {opt.label}
+                </span>
+                <span className="text-[11px] text-white/30">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {analyzingProduct && (
         <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <Loader2 className="h-5 w-5 animate-spin text-purple-400" />

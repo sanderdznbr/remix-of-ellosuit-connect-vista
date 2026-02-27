@@ -155,6 +155,7 @@ const CarouselGenerator: React.FC = () => {
   const [cardCount, setCardCount] = useState(7);
   const [imageCardCount, setImageCardCount] = useState(4);
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
+  const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
 
   // Step 2: References
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
@@ -305,6 +306,7 @@ const CarouselGenerator: React.FC = () => {
     setCardCount(7);
     setImageCardCount(4);
     setEnhancingPrompt(false);
+    setMentionedPrompts([]);
     setReferenceImages([]);
     setFamousList([]);
     setFamousImages([]);
@@ -1046,7 +1048,7 @@ const CarouselGenerator: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: topic.trim(),
+          topic: (topic.trim() + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount,
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
@@ -2311,7 +2313,10 @@ const CarouselGenerator: React.FC = () => {
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
                         enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
                         searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult}
-                        skipWebSearch={skipWebSearch} onToggleSkipWebSearch={() => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }} />
+                        skipWebSearch={skipWebSearch} onToggleSkipWebSearch={() => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
+                        mentionedPrompts={mentionedPrompts}
+                        onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
+                        onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))} />
                     )}
                     {wizardStep === 1 && (
                       <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />

@@ -1,6 +1,13 @@
 import React from 'react';
-import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Wand2, Globe, Search, PenTool } from 'lucide-react';
+import PromptMentionInput from './PromptMention';
+
+interface MentionedPrompt {
+  id: string;
+  title: string;
+  avatar_url: string | null;
+  content: string;
+}
 
 interface Props {
   topic: string;
@@ -18,6 +25,9 @@ interface Props {
   webSearchResult?: { summary: string; citations: string[] } | null;
   skipWebSearch?: boolean;
   onToggleSkipWebSearch?: () => void;
+  mentionedPrompts?: MentionedPrompt[];
+  onMentionAdd?: (p: MentionedPrompt) => void;
+  onMentionRemove?: (id: string) => void;
 }
 
 const StepTopic: React.FC<Props> = ({
@@ -25,6 +35,7 @@ const StepTopic: React.FC<Props> = ({
   enhancingPrompt, onEnhance,
   searchingWeb, webSearchResult,
   skipWebSearch, onToggleSkipWebSearch,
+  mentionedPrompts = [], onMentionAdd, onMentionRemove,
 }) => {
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
@@ -35,13 +46,19 @@ const StepTopic: React.FC<Props> = ({
       </div>
 
       <div className="relative">
-        <Textarea value={topic} onChange={(e) => setTopic(e.target.value)}
+        <PromptMentionInput
+          value={topic}
+          onChange={setTopic}
+          mentionedPrompts={mentionedPrompts}
+          onMentionAdd={onMentionAdd || (() => {})}
+          onMentionRemove={onMentionRemove || (() => {})}
           placeholder={skipWebSearch 
             ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
             : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
-          className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-12" />
+          className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-12 border px-4 py-3 outline-none"
+        />
         <button onClick={onEnhance} disabled={enhancingPrompt || !topic.trim()}
-          className="absolute bottom-3 right-3 p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/40 hover:text-white/70 transition-all disabled:opacity-20"
+          className="absolute bottom-3 right-3 p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/40 hover:text-white/70 transition-all disabled:opacity-20 z-10"
           title="Melhorar com IA">
           {enhancingPrompt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
         </button>

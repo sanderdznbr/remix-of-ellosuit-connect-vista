@@ -1196,10 +1196,10 @@ const CarouselGenerator: React.FC = () => {
           
           if (productAnalysis?.confirmed) {
             const productPromptMap: Record<string, string> = {
-              clothing: `Show the clothing/fashion item described as "${productAnalysis.description}" worn by a model in a professional setting. Recreate the garment faithfully.`,
-              object: `Show the product "${productAnalysis.description}" in a professional mockup, lifestyle context, or being held/used naturally.`,
-              food: `Show the food/beverage "${productAnalysis.description}" in professional food-styling, appetizing composition with beautiful plating.`,
-              unknown: `Feature the product "${productAnalysis.description}" prominently in the scene.`,
+              clothing: `Use the uploaded product photo as creative reference for a "${productAnalysis.description}" garment. You DON'T need to replicate it exactly — feel free to change the angle, show it on a different model, in a new setting, styled differently, or from a creative perspective. Keep the essence and key features of the garment but make each card visually unique.`,
+              object: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". You DON'T need to replicate it exactly — change the angle, show someone holding it, place it in a lifestyle context, create a flat-lay, or show it from a dramatic perspective. Keep the product recognizable but make the composition creative and varied.`,
+              food: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". You DON'T need to replicate it exactly — create different food-styling compositions, change the angle, add complementary ingredients, show close-ups of textures, or place it in different table settings. Keep it appetizing but varied.`,
+              unknown: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". You DON'T need to replicate it exactly — change angles, contexts, compositions. Keep the product recognizable but create visually unique and diverse scenes.`,
             };
             imgPrompt += '. ' + (productPromptMap[productAnalysis.type] || productPromptMap.unknown);
           }

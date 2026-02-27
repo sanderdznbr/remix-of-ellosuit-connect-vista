@@ -89,19 +89,25 @@ STYLE REQUIREMENTS:
 
     if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
       textPrompt += `\n\nCRITICAL - FACE + PRODUCT COMBINED: I am attaching BOTH a person reference AND a product reference. You MUST:
-1. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
-2. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
-3. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
-4. The product must be clearly visible and recognizable — this is the #2 priority
-5. Create a natural, editorial scene where the person and product interact organically
-6. NEVER ignore the face reference. NEVER generate a generic person. The face MUST match the reference exactly.`;
+1. FIRST: Carefully analyze the face reference photo to determine the person's GENDER, body type, and physical characteristics. If the person is MALE, generate a MALE body. If FEMALE, generate a FEMALE body. NEVER mismatch gender.
+2. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
+3. The BODY must match the person's gender and build from the reference — a man's face MUST be on a man's body, a woman's face MUST be on a woman's body
+4. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
+5. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
+6. The product must be clearly visible and recognizable — this is the #2 priority
+7. Create a natural, editorial scene where the person and product interact organically
+8. NEVER ignore the face reference. NEVER generate a generic person. The face MUST match the reference exactly.
+9. GENDER MATCHING IS MANDATORY — mismatching the gender (e.g. putting a man's face on a woman's body) is a CRITICAL ERROR that must never happen.`;
     } else if (validFaceRefs.length > 0) {
       textPrompt += `\n\nCRITICAL - FACE/PERSON REFERENCE: I am attaching reference photo(s) of the person who MUST appear in this image. You MUST:
-1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
-2. The person must be clearly recognizable as the same individual in the reference photos
-3. Maintain their likeness with high fidelity - this is the #1 priority
-4. Place this person naturally in the scene described above
-5. NEVER ignore this reference. NEVER generate a generic person.`;
+1. FIRST: Carefully analyze the face reference photo to determine the person's GENDER, body type, and physical characteristics. If the person is MALE, generate a MALE body. If FEMALE, generate a FEMALE body. NEVER mismatch gender.
+2. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
+3. The BODY must match the person's gender and build — a man's face MUST be on a man's body, a woman's face MUST be on a woman's body
+4. The person must be clearly recognizable as the same individual in the reference photos
+5. Maintain their likeness with high fidelity - this is the #1 priority
+6. Place this person naturally in the scene described above
+7. NEVER ignore this reference. NEVER generate a generic person.
+8. GENDER MATCHING IS MANDATORY — mismatching the gender is a CRITICAL ERROR.`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

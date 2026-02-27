@@ -227,6 +227,7 @@ const CarouselGenerator: React.FC = () => {
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
+  const skipCloudRef = useRef(false);
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);
@@ -403,13 +404,16 @@ const CarouselGenerator: React.FC = () => {
           toast({ title: 'Carrossel gerado com sucesso!' });
         }
         
-        // Job failed
+        // Job failed — trigger fallback to client-side generation
         if (job.status === 'failed') {
-          setGenerating(false);
-          setGeneratingAllImages(false);
-          setImageGenProgress('');
+          console.warn('Cloud job failed, falling back to client-side generation:', job.error_message);
           setCloudJobId(null);
-          toast({ title: 'Erro na geração', description: job.error_message || 'Tente novamente', variant: 'destructive' });
+          setImageGenProgress('⚡ Nuvem falhou, gerando localmente...');
+          // Trigger client-side fallback
+          skipCloudRef.current = true;
+          setTimeout(() => {
+            generateContent();
+          }, 500);
         }
       })
       .subscribe();
@@ -912,8 +916,8 @@ const CarouselGenerator: React.FC = () => {
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
 
-    // === CLOUD GENERATION (for logged-in users) ===
-    if (userId && companyId) {
+    // === CLOUD GENERATION (for logged-in users, unless fallback mode) ===
+    if (userId && companyId && !skipCloudRef.current) {
       try {
         setGeneratingAllImages(true);
         setImageGenProgress('☁️ Iniciando geração em nuvem...');
@@ -978,15 +982,18 @@ const CarouselGenerator: React.FC = () => {
         // and set the final carouselData when complete
 
       } catch (err: any) {
-        setGenerating(false);
-        setGeneratingAllImages(false);
-        setImageGenProgress('');
-        toast({ title: 'Erro', description: err.message || 'Não foi possível iniciar geração', variant: 'destructive' });
+        // If cloud setup fails, fall through to client-side
+        console.warn('Cloud setup failed, falling back to client-side:', err);
+        skipCloudRef.current = true;
+        setImageGenProgress('⚡ Gerando localmente...');
+        // Don't return — fall through to client-side generation below
       }
-      return; // Don't fall through to client-side generation
+      if (!skipCloudRef.current) return; // Only return if cloud started successfully
     }
+    // Reset skip flag for next generation
+    skipCloudRef.current = false;
 
-    // === FALLBACK: CLIENT-SIDE GENERATION (for guests/unauthenticated) ===
+    // === CLIENT-SIDE GENERATION (fallback or for guests/unauthenticated) ===
     try {
       const imageCardIndices: number[] = [0];
       const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);

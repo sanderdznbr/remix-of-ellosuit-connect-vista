@@ -240,6 +240,11 @@ Deno.serve(async (req) => {
         else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
         if (imageSettings.wearsGlasses) promptParts.push('The person MUST be wearing glasses/eyeglasses.');
       }
+      // Brand colors from logo extraction
+      const brandColors = imageSettings.brandColors as string[] | undefined;
+      if (brandColors && brandColors.length > 0) {
+        promptParts.push(`PALETA DE CORES DA MARCA: use predominantemente estas cores da marca do cliente: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`);
+      }
 
       const finalPrompt = promptParts.filter(Boolean).join('. ');
       const negPrompt = isFullBleed ? styleNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
@@ -281,6 +286,7 @@ Deno.serve(async (req) => {
             negativePrompt: task.negPrompt,
             fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
             ...(isFullBleed && marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
+            ...(brandColors && brandColors.length > 0 ? { brandColors } : {}),
           });
           if (url) return { index: task.index, url };
         }

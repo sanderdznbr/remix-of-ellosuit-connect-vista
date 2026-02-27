@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import '@/styles/carousel-loader.css';
+import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -197,6 +198,16 @@ const CarouselGenerator: React.FC = () => {
   const [selectedFont, setSelectedFont] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
+  const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
+
+  // Auto-extract colors from logo when it changes
+  useEffect(() => {
+    if (!logoUrl) { setLogoBrandColors([]); return; }
+    extractColorsFromImage(logoUrl, 4).then(colors => {
+      console.log('Logo brand colors extracted:', colors);
+      setLogoBrandColors(colors);
+    }).catch(() => setLogoBrandColors([]));
+  }, [logoUrl]);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -970,7 +981,7 @@ const CarouselGenerator: React.FC = () => {
           logo_url: logoUrl,
           logo_position: logoPosition,
           show_header: showHeader,
-          image_settings: { ...imageSettings, faceGender, wearsGlasses } as any,
+          image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined } as any,
           reference_images: referenceImages as any,
           face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
           product_context: productContext,
@@ -2253,7 +2264,8 @@ const CarouselGenerator: React.FC = () => {
                         dateLabel={dateLabel} setDateLabel={setDateLabel}
                         showHeader={showHeader} setShowHeader={setShowHeader}
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl}
-                        logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
+                        logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+                        logoBrandColors={logoBrandColors} />
                     )}
                     </motion.div>
                   </AnimatePresence>

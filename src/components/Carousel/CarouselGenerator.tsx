@@ -382,7 +382,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Load carousel from route param /carousel/:id
   useEffect(() => {
-    if (!routeCarouselId || !user) return;
+    if (!routeCarouselId || !user || showWelcome) return;
     const loadFromRoute = async () => {
       try {
         const { data } = await supabase.from('generated_carousels').select('*').eq('id', routeCarouselId).single();
@@ -2519,7 +2519,7 @@ const CarouselGenerator: React.FC = () => {
             {/* Home button to return to dashboard */}
             {user && (
               <button
-                onClick={() => setShowWelcome(true)}
+                onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
                 className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
                 <Home className="w-5 h-5 text-white/60" />
@@ -2536,10 +2536,12 @@ const CarouselGenerator: React.FC = () => {
                     onTabChange={(tab) => {
                       setSidebarDrawerOpen(false);
                       setShowWelcome(true);
+                      setCurrentCarouselId(null);
                     }}
                     onSearch={() => {
                       setSidebarDrawerOpen(false);
                       setShowWelcome(true);
+                      setCurrentCarouselId(null);
                     }}
                   />
                   <button onClick={() => setSidebarDrawerOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">
@@ -2676,7 +2678,7 @@ const CarouselGenerator: React.FC = () => {
                   {/* Navigation buttons */}
                   <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                     <button onClick={() => {
-                      if (wizardStep === 0) { setShowWelcome(true); setWizardStep(0); }
+                      if (wizardStep === 0) { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
                         // Skip Quantidade (1) when single-post mode
@@ -2839,7 +2841,7 @@ const CarouselGenerator: React.FC = () => {
             {/* Home button */}
             {user && (
               <button
-                onClick={() => setShowWelcome(true)}
+                onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
                 className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
                 <Home className="w-5 h-5 text-white/60" />

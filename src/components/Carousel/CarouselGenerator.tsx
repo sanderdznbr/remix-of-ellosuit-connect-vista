@@ -746,7 +746,11 @@ const CarouselGenerator: React.FC = () => {
     
     const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
     if (error) throw error;
+    if (data?.code === 'CONTENT_BLOCKED' || data?.error?.includes('filtros de segurança')) {
+      throw new Error('⚠️ Suas fotos foram bloqueadas pelos filtros de segurança da IA. Por favor, envie imagens apropriadas e tente novamente.');
+    }
     if (data?.success && data?.imageUrl) return data.imageUrl;
+    if (data?.error) throw new Error(data.error);
     return null;
   };
 

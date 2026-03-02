@@ -229,19 +229,31 @@ STYLE REQUIREMENTS:
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error(`Attempt ${attempt} error:`, res.status, errText.slice(0, 300));
+        console.error(`Attempt ${attempt} error:`, res.status, errText.slice(0, 500));
         if (res.status === 429 || res.status === 402) throw { status: res.status };
+        // Detect safety/NSFW blocks from the API error response
+        const lowerErr = errText.toLowerCase();
+        if (lowerErr.includes('safety') || lowerErr.includes('block') || lowerErr.includes('prohibited') || lowerErr.includes('harmful') || lowerErr.includes('sexual') || lowerErr.includes('nsfw') || lowerErr.includes('policy')) {
+          throw { status: 451, reason: 'nsfw' };
+        }
         return null;
       }
 
       // Stream response as text and extract base64 image URL via string search
-      // instead of JSON.parse on multi-MB payloads (which causes WORKER_LIMIT)
       const raw = await res.text();
+      
+      // Check for safety blocks in a successful response (Gemini sometimes returns 200 with block info)
+      const lowerRaw = raw.toLowerCase();
+      if (lowerRaw.includes('"blockreason"') || lowerRaw.includes('"safety"') && (lowerRaw.includes('"blocked"') || lowerRaw.includes('"block_reason"'))) {
+        console.log(`Attempt ${attempt}: content blocked by safety filters`);
+        throw { status: 451, reason: 'nsfw' };
+      }
+      
       const patterns = ['"url":"data:image/', '"url": "data:image/'];
       for (const pattern of patterns) {
         const idx = raw.indexOf(pattern);
         if (idx === -1) continue;
-        const urlStart = raw.indexOf('"', idx + 5) + 1; // find opening quote of value
+        const urlStart = raw.indexOf('"', idx + 5) + 1;
         const urlEnd = raw.indexOf('"', urlStart);
         if (urlEnd === -1) continue;
         const url = raw.slice(urlStart, urlEnd);
@@ -257,6 +269,11 @@ STYLE REQUIREMENTS:
     try {
       generatedImage = await tryGenerate(primaryModel, messageContent, 1);
     } catch (e: any) {
+      if (e?.reason === 'nsfw') {
+        return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), {
+          status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       if (e?.status === 429) {
         return new Response(JSON.stringify({ error: 'Rate limit excedido. Tente novamente em alguns segundos.' }), {
           status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -280,7 +297,7 @@ STYLE REQUIREMENTS:
       for (const ref of validFaceRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of validGeneralRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of validStyleRefs.slice(0, 2)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch { /* next */ }
+      try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch (e2: any) { if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
     }
 
     // Attempt 3: text-only fallback — still keep style if marketplace
@@ -290,7 +307,7 @@ STYLE REQUIREMENTS:
         : `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.`;
       try {
         generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: fallbackPrompt }], 3);
-      } catch { /* ignore */ }
+      } catch (e3: any) { if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
     }
 
     if (!generatedImage) {

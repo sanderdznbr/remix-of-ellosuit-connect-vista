@@ -260,7 +260,33 @@ const CarouselGenerator: React.FC = () => {
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
+  const cloudJobIdRef = useRef<string | null>(null);
   const skipCloudRef = useRef(false);
+  const generatingRef = useRef(false);
+
+  // Keep refs in sync with state
+  useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
+  useEffect(() => { generatingRef.current = generating; }, [generating]);
+
+  // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const jobId = cloudJobIdRef.current;
+      if (!jobId || !generatingRef.current) return;
+      // Fire-and-forget: trigger cloud generation for this job
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`;
+      const body = JSON.stringify({ jobId });
+      // Use sendBeacon for reliability during page unload
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon(url, blob);
+      } else {
+        fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, keepalive: true }).catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);
@@ -967,12 +993,100 @@ const CarouselGenerator: React.FC = () => {
     toast({ title: 'Carrossel removido' });
   };
 
+  // Helper: create a cloud job for fallback
+  const createCloudJob = async (mode: 'single-post' | 'carousel'): Promise<string | null> => {
+    if (!user) return null;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return null;
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+      if (!cu) return null;
+
+      const productContext = productAnalysis?.confirmed ? JSON.stringify({
+        productType: productAnalysis.type,
+        productDescription: productAnalysis.description,
+        productImageUrls: productImages.map(p => p.url),
+        productSize,
+        productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
+      }) : null;
+
+      let marketplaceConfig = activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null;
+      if (marketplaceConfig?._previewImages?.length) {
+        const origin = window.location.origin;
+        marketplaceConfig._previewImages = (marketplaceConfig._previewImages as string[])
+          .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+      }
+
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, contentMode: mode, manualPostText: mode === 'single-post' ? manualPostText : undefined };
+
+      const { data: jobData, error: jobError } = await supabase.from('carousel_generation_jobs').insert({
+        user_id: userData.user.id,
+        company_id: cu.company_id,
+        topic: topic.trim(),
+        keywords: keywords,
+        card_count: mode === 'single-post' ? 1 : cardCount,
+        style_config: styleConfig as any,
+        marketplace_style_id: activeMarketplaceStyle?.id || null,
+        marketplace_style_config: marketplaceConfig as any,
+        brand_name: brandName,
+        user_name: userName,
+        date_label: dateLabel,
+        logo_url: logoUrl,
+        logo_position: logoPosition,
+        show_header: showHeader,
+        image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined } as any,
+        reference_images: referenceImages as any,
+        face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
+        product_context: productContext,
+        web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
+        web_search_citations: webSearchResult?.citations as any,
+        negative_prompt: imageSettings.negativePrompt || null,
+      } as any).select('id').single();
+
+      if (jobError || !jobData?.id) {
+        console.warn('Failed to create cloud job:', jobError);
+        return null;
+      }
+      return jobData.id;
+    } catch (err) {
+      console.warn('Cloud job creation failed:', err);
+      return null;
+    }
+  };
+
+  // Helper: mark cloud job as completed
+  const completeCloudJob = async (jobId: string, carouselId?: string) => {
+    try {
+      await supabase.from('carousel_generation_jobs').update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        carousel_id: carouselId || null,
+        progress_message: 'Concluído localmente',
+      } as any).eq('id', jobId);
+    } catch (err) { console.warn('Failed to complete cloud job:', err); }
+  };
+
+  // Helper: mark cloud job as failed
+  const failCloudJob = async (jobId: string, errorMsg: string) => {
+    try {
+      await supabase.from('carousel_generation_jobs').update({
+        status: 'failed',
+        error_message: errorMsg,
+        completed_at: new Date().toISOString(),
+      } as any).eq('id', jobId);
+    } catch (err) { console.warn('Failed to update cloud job:', err); }
+  };
+
   // ===== GENERATE SINGLE POST (1080x1350) =====
   const generateSinglePost = async () => {
     setGenerating(true);
     setCarouselData(null);
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
+
+    // Create cloud job for fallback
+    const jobId = await createCloudJob('single-post');
+    if (jobId) setCloudJobId(jobId);
 
     try {
       setGeneratingAllImages(true);
@@ -1080,18 +1194,23 @@ const CarouselGenerator: React.FC = () => {
             }
             if (inserted) {
               setCurrentCarouselId(inserted.id);
-              // Capture cover immediately (don't wait 2s)
               captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
+              // Mark cloud job as completed
+              if (jobId) completeCloudJob(jobId, inserted.id);
             }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
+      // Clear cloud job on success
+      if (jobId) { setCloudJobId(null); if (!currentCarouselId) completeCloudJob(jobId); }
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message || 'Não foi possível gerar o post', variant: 'destructive' });
+      // Don't mark job as failed — leave it pending so cloud can pick it up if browser closes
     } finally {
       setGenerating(false);
       setGeneratingAllImages(false);
       setImageGenProgress('');
+      setCloudJobId(null);
     }
   };
 
@@ -1139,86 +1258,15 @@ const CarouselGenerator: React.FC = () => {
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
 
-    // === CLOUD GENERATION DISABLED — always use local generation for speed ===
-    if (false && userId && companyId && !skipCloudRef.current) {
-      try {
-        setGeneratingAllImages(true);
-        setImageGenProgress('☁️ Iniciando geração em nuvem...');
-
-        const productContext = productAnalysis?.confirmed ? JSON.stringify({
-          productType: productAnalysis.type,
-          productDescription: productAnalysis.description,
-          productImageUrls: productImages.map(p => p.url),
-          productSize,
-          productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
-        }) : null;
-
-        // Build marketplace style config with preview images
-        let marketplaceConfig = activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null;
-        if (marketplaceConfig?._previewImages?.length) {
-          // Convert relative URLs to absolute for the cloud function
-          const origin = window.location.origin;
-          marketplaceConfig._previewImages = (marketplaceConfig._previewImages as string[])
-            .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        }
-
-        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-
-        // Create the job in the database
-        const { data: jobData, error: jobError } = await supabase.from('carousel_generation_jobs').insert({
-          user_id: userId,
-          company_id: companyId,
-          topic: topic.trim(),
-          keywords: keywords,
-          card_count: cardCount,
-          style_config: styleConfig as any,
-          marketplace_style_id: activeMarketplaceStyle?.id || null,
-          marketplace_style_config: marketplaceConfig as any,
-          brand_name: brandName,
-          user_name: userName,
-          date_label: dateLabel,
-          logo_url: logoUrl,
-          logo_position: logoPosition,
-          show_header: showHeader,
-          image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: (logoBrandColors.length > 0 && !isFullBleedMarketplace) ? logoBrandColors : undefined } as any,
-          reference_images: referenceImages as any,
-          face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
-          product_context: productContext,
-          web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
-          web_search_citations: webSearchResult?.citations as any,
-          negative_prompt: imageSettings.negativePrompt || null,
-        } as any).select('id').single();
-
-        if (jobError) throw jobError;
-        if (!jobData?.id) throw new Error('Failed to create job');
-
-        // Subscribe to job updates via Realtime
-        setCloudJobId(jobData.id);
-
-        // Fire the cloud generation (fire-and-forget)
-        supabase.functions.invoke('generate-carousel-cloud', {
-          body: { jobId: jobData.id },
-        }).catch(err => {
-          console.error('Cloud generation invoke error:', err);
-          // The Realtime subscription will handle status updates
-        });
-
-        // The Realtime subscription (above useEffect) will handle all progress updates
-        // and set the final carouselData when complete
-
-      } catch (err: any) {
-        // If cloud setup fails, fall through to client-side
-        console.warn('Cloud setup failed, falling back to client-side:', err);
-        skipCloudRef.current = true;
-        setImageGenProgress('⚡ Gerando localmente...');
-        // Don't return — fall through to client-side generation below
-      }
-      if (!skipCloudRef.current) return; // Only return if cloud started successfully
+    // === HYBRID: Create cloud job for fallback (if user closes browser, cloud continues) ===
+    let localJobId: string | null = null;
+    if (userId && companyId && !skipCloudRef.current) {
+      localJobId = await createCloudJob('carousel');
+      if (localJobId) setCloudJobId(localJobId);
     }
-    // Reset skip flag for next generation
     skipCloudRef.current = false;
 
-    // === CLIENT-SIDE GENERATION (fallback or for guests/unauthenticated) ===
+    // === CLIENT-SIDE GENERATION (primary, with cloud fallback) ===
     try {
       const imageCardIndices: number[] = [0];
       const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);
@@ -1519,14 +1567,20 @@ const CarouselGenerator: React.FC = () => {
             if (inserted) {
               setCurrentCarouselId(inserted.id);
               setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+              // Mark cloud job as completed
+              if (localJobId) completeCloudJob(localJobId, inserted.id);
             }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
+      // Clear cloud job on success
+      if (localJobId) { setCloudJobId(null); }
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message || 'Não foi possível gerar', variant: 'destructive' });
+      // Don't mark job as failed — leave pending for cloud fallback
     } finally {
       setGenerating(false);
+      setCloudJobId(null);
     }
   };
 

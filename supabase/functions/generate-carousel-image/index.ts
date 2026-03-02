@@ -193,21 +193,10 @@ ${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY 
 5. Place this person naturally in the scene described above
 6. NEVER ignore this reference. NEVER generate a generic person.
 7. GENDER MATCHING IS MANDATORY — mismatching the gender is a CRITICAL ERROR.`;
-    } else {
-      // NO FACE REFERENCE — generate thematic visuals instead of people
-      textPrompt += `\n\nSEM REFERÊNCIA DE ROSTO — MODO VISUAL TEMÁTICO:
-Como NENHUMA foto de rosto foi fornecida, NÃO gere pessoas como foco principal. Em vez disso, crie uma composição visual TEMÁTICA e IMPACTANTE relacionada ao assunto do post:
-- Use OBJETOS 3D realistas, renderizados com iluminação cinematográfica, relacionados ao tema (ex: livros 3D, troféus, engrenagens, gráficos flutuantes, dispositivos tech, moedas, chaves, etc.)
-- Ou use CENÁRIOS abstratos editoriais: paisagens conceituais, texturas ricas, composições geométricas dramáticas
-- Ou use ELEMENTOS SIMBÓLICOS que representem o conceito do post (ex: para "produtividade" use relógios 3D e engrenagens; para "vendas" use gráficos ascendentes e moedas douradas; para "mindset" use cérebro estilizado ou labirinto)
-- Os objetos devem ter qualidade de RENDER 3D PREMIUM: reflexos, sombras suaves, materiais realistas (vidro, metal, couro)
-- Mantenha a mesma identidade visual do estilo (cores, tipografia, composição) mas substitua o elemento humano por objetos/conceitos visuais
-- É PERMITIDO incluir silhuetas humanas, mãos ou partes do corpo como elementos compositivos secundários, mas NÃO como retrato/foco principal
-- O resultado deve parecer um POST de Instagram profissional e editorial, mesmo sem pessoa como protagonista`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
-      textPrompt += `\n\nPRODUCT REFERENCE: I am attaching ${validGeneralRefs.length} product reference image(s). Reproduce the product faithfully in the scene. The product is the MAIN VISUAL ELEMENT since no face was provided.`;
+      textPrompt += `\n\nPRODUCT REFERENCE: I am attaching ${validGeneralRefs.length} product reference image(s). Reproduce the product faithfully in the scene.`;
     }
 
     if (validStyleRefs.length > 0) {

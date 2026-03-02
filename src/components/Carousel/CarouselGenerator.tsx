@@ -161,7 +161,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const SIMPLE_STEPS = ['Tema', 'Rosto', 'Logo', 'Velocidade'];
+  const SIMPLE_STEPS = ['Tema', 'Formato', 'Rosto', 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
@@ -170,7 +170,7 @@ const CarouselGenerator: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [originalTopic, setOriginalTopic] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [cardCount, setCardCount] = useState(7);
+  const [cardCount, setCardCount] = useState(5);
   const [imageCardCount, setImageCardCount] = useState(4);
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
@@ -328,12 +328,7 @@ const CarouselGenerator: React.FC = () => {
         images: data.images || [],
       });
 
-      // Auto-fill topic with richer content
-      if (content?.title) {
-        setTopic(content.title + (content.subtitle ? '\n\n' + content.subtitle : ''));
-      }
-
-      // Auto-fill keywords from image search terms
+      // Auto-fill keywords from image search terms (do NOT overwrite the user's topic)
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
@@ -361,7 +356,7 @@ const CarouselGenerator: React.FC = () => {
     setManualCardTexts([]);
     setWizardMode('simple');
     setKeywords('');
-    setCardCount(7);
+    setCardCount(5);
     setImageCardCount(4);
     setEnhancingPrompt(false);
     setMentionedPrompts([]);
@@ -2784,7 +2779,6 @@ const CarouselGenerator: React.FC = () => {
                 setShowWelcome(false);
                 if (newTopic) {
                   setTopic(newTopic); setOriginalTopic(newTopic);
-                  setTimeout(() => enhancePrompt(newTopic), 300);
                 }
               }}
               onLoadCarousel={async (item: any) => {
@@ -2914,16 +2908,16 @@ const CarouselGenerator: React.FC = () => {
                       onClick={() => {
                         const newMode = wizardMode === 'simple' ? 'advanced' : 'simple';
                         setWizardMode(newMode);
-                        setWizardStep(0); // Reset to first step on mode change
+                        setWizardStep(0);
                       }}
-                      className="ml-3 px-3 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wider transition-all whitespace-nowrap"
+                      className="ml-3 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5"
                       style={{
                         backgroundColor: wizardMode === 'advanced' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
                         border: `1px solid ${wizardMode === 'advanced' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.08)'}`,
                         color: wizardMode === 'advanced' ? '#A78BFA' : 'rgba(255,255,255,0.4)',
                       }}
                     >
-                      {wizardMode === 'simple' ? 'Avançado' : 'Simples'}
+                      {wizardMode === 'simple' ? '⚡ Simples' : '🎛️ Avançado'}
                     </button>
                   </div>
 
@@ -2953,7 +2947,7 @@ const CarouselGenerator: React.FC = () => {
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
-                          else if (cardCount < 5) { setCardCount(7); }
+                          else if (cardCount < 2) { setCardCount(5); }
                         }} />
                     )}
                     {currentStepName === 'Formato' && (
@@ -2964,7 +2958,7 @@ const CarouselGenerator: React.FC = () => {
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
-                          else if (cardCount < 5) { setCardCount(7); }
+                          else if (cardCount < 2) { setCardCount(5); }
                         }}
                       />
                     )}
@@ -3089,16 +3083,6 @@ const CarouselGenerator: React.FC = () => {
                             }
                             if (currentStepName === 'Tema' && hasManualText) {
                               setSkipWebSearch(true);
-                            }
-                            // In simple mode, set content mode from StepTopic inline selector
-                            if (currentStepName === 'Tema' && wizardMode === 'simple') {
-                              if (cardCount === 1) {
-                                setContentMode('single-post');
-                                setImageCardCount(1);
-                              } else {
-                                setContentMode('carousel');
-                                setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
-                              }
                             }
                             // Formato step (advanced)
                             if (currentStepName === 'Formato') {

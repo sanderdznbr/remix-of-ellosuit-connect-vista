@@ -262,6 +262,8 @@ const CarouselGenerator: React.FC = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);
+  const [carouselFromCoverCount, setCarouselFromCoverCount] = useState(8);
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
   const skipCloudRef = useRef(false);
@@ -1597,6 +1599,175 @@ const CarouselGenerator: React.FC = () => {
     } finally {
       setGenerating(false);
       setCloudJobId(null);
+    }
+  };
+
+
+  // ===== GENERATE CAROUSEL FROM EXISTING COVER =====
+  const generateCarouselFromCover = async (totalCards: number) => {
+    if (!carouselData?.cards[0]?.imageUrl) return;
+    const coverCard = { ...carouselData.cards[0] };
+    setShowCarouselFromCover(false);
+    setContentMode('carousel');
+    setCardCount(totalCards);
+
+    // Check credits
+    let companyId: string | null = null;
+    let userId: string | null = null;
+    if (user) {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          userId = userData.user.id;
+          const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+          if (cu) {
+            companyId = cu.company_id;
+            const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
+            if (balance && balance.balance < totalCards - 1) {
+              toast({ title: 'Créditos insuficientes', description: `Precisa de ${totalCards - 1} créditos mas tem ${Math.floor(balance.balance)}.`, variant: 'destructive' });
+              return;
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    setGenerating(true);
+    setCarouselData(null);
+    setCurrentCarouselId(null);
+    setTimeout(() => setTransitionToGenerate(false), 500);
+
+    try {
+      // Generate text content for remaining cards
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: {
+          action: 'generate-content',
+          topic: (topic.trim() + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
+          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+          cardCount: totalCards,
+          imageCardIndices: Array.from({ length: totalCards }, (_, i) => i),
+          ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+        },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Erro ao gerar');
+
+      const cards: CarouselCard[] = data.data.cards.map((c: any, i: number) => {
+        if (i === 0) return coverCard; // Keep original cover
+        if (c.type === 'cta') return { ...c, layout: 'accent' as const };
+        const layouts: CarouselCard['layout'][] = ['dark', 'dark', 'light', 'accent', 'dark'];
+        return { ...c, layout: layouts[(i - 1) % layouts.length] };
+      });
+
+      setActiveCardIndex(0);
+      setGeneratingAllImages(true);
+      setImageGenProgress('🎨 Gerando imagens dos cards...');
+
+      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
+      const updatedCards = [...cards];
+      const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+      const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+      const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing';
+
+      // Generate images only for cards 1+ (skip cover at index 0)
+      const imageFactories: { index: number; factory: () => Promise<string | null> }[] = [];
+      for (let i = 1; i < updatedCards.length; i++) {
+        const card = updatedCards[i];
+        const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
+        let imgPrompt = `${cleanTopic}: ${cardDesc}`;
+
+        if (isFullBleedStyle) {
+          const isCta = card.type === 'cta' || i === updatedCards.length - 1;
+          const cardTextParts: string[] = [];
+          cardTextParts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
+          cardTextParts.push(`TEMA: "${cleanTopic}"`);
+          cardTextParts.push(`SEM BORDAS: Full bleed.`);
+          if (isCta) {
+            cardTextParts.push(`CARD FINAL DE CTA (${i + 1} de ${updatedCards.length}).`);
+            if (card.title) cardTextParts.push(`TÍTULO: "${card.title}"`);
+            if (card.body) cardTextParts.push(`TEXTO: "${card.body}"`);
+          } else {
+            cardTextParts.push(`CARD DE CONTEÚDO ${i + 1} de ${updatedCards.length}.`);
+            const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
+            if (bodyText) cardTextParts.push(`TEXTO: "${bodyText}"`);
+          }
+          imgPrompt = cardTextParts.join('\n');
+        }
+
+        const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
+        const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+        const marketplaceRefUrls: string[] = [];
+        if (isFullBleedStyle && activeMarketplaceStyle?._previewImages?.length) {
+          const origin = window.location.origin;
+          const allPreviews = (activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+          if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
+          if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+        }
+
+        // Use the cover image as style reference to maintain visual consistency
+        const coverStyleRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];
+        const capturedStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef].length > 0 ? [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef] : undefined;
+
+        imageFactories.push({
+          index: i,
+          factory: () => generateImage({
+            prompt: buildImagePrompt(imgPrompt) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            styleReferenceUrls: capturedStyleRefs,
+            referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
+            negativePrompt: finalNegative,
+          }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
+        });
+      }
+
+      // Generate images in batches
+      let completed = 0;
+      const totalAi = imageFactories.length;
+      setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
+
+      for (let i = 0; i < imageFactories.length; i += 2) {
+        const batch = imageFactories.slice(i, i + 2);
+        if (i > 0) await new Promise(r => setTimeout(r, 1500));
+        await Promise.all(batch.map(f =>
+          f.factory().then(url => {
+            completed++;
+            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+            if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true };
+          })
+        ));
+      }
+
+      const finalData = { ...data.data, cards: updatedCards };
+      setCarouselData(finalData);
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
+      toast({ title: 'Carrossel gerado!', description: `${totalCards} cards a partir da capa` });
+
+      // Auto-save
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+          if (companyData) {
+            try { await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: totalCards - 1, p_description: `Carrossel da capa: ${topic} (${totalCards} cards)` }); } catch { /* ignore */ }
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            if (inserted) {
+              setCurrentCarouselId(inserted.id);
+              setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+            }
+          }
+        }
+      } catch (saveErr) { console.error('Auto-save error:', saveErr); }
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message || 'Não foi possível gerar', variant: 'destructive' });
+    } finally {
+      setGenerating(false);
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
     }
   };
 
@@ -3401,12 +3572,58 @@ const CarouselGenerator: React.FC = () => {
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda
               </button>
+              {/* Generate carousel from cover */}
+              {carouselData.cards.length <= 2 && carouselData.cards[0]?.imageUrl && !isGuest && (
+                <button onClick={() => setShowCarouselFromCover(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all"
+                  style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05))' }}>
+                  <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
+                </button>
+              )}
               <button onClick={() => { resetWizardState(); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                 Novo
               </button>
             </div>
+
+            {/* Carousel from cover modal */}
+            {showCarouselFromCover && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" onClick={() => setShowCarouselFromCover(false)}>
+                <div className="rounded-2xl border border-white/10 p-6 w-80 flex flex-col gap-4"
+                  style={{ backgroundColor: 'rgba(15,15,30,0.98)', backdropFilter: 'blur(20px)' }}
+                  onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-sm font-semibold text-white text-center">
+                    <Sparkles className="h-4 w-4 inline mr-1.5 text-yellow-400" />
+                    Gerar carrossel a partir desta capa
+                  </h3>
+                  <p className="text-xs text-white/50 text-center">A capa atual será mantida como card 1. Os demais serão gerados pela IA.</p>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-white/60">Quantos cards no total?</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range" min={4} max={20} value={carouselFromCoverCount}
+                        onChange={(e) => setCarouselFromCoverCount(Number(e.target.value))}
+                        className="flex-1 accent-yellow-400"
+                      />
+                      <span className="text-lg font-bold text-white w-8 text-center">{carouselFromCoverCount}</span>
+                    </div>
+                    <p className="text-[10px] text-white/30 text-center">{carouselFromCoverCount - 1} cards serão gerados pela IA</p>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button onClick={() => setShowCarouselFromCover(false)}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-xs font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors">
+                      Cancelar
+                    </button>
+                    <button onClick={() => generateCarouselFromCover(carouselFromCoverCount)}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-xs font-medium text-white border transition-colors"
+                      style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'linear-gradient(135deg, rgba(234,179,8,0.2), rgba(234,179,8,0.05))' }}>
+                      <Sparkles className="h-3.5 w-3.5 inline mr-1" /> Gerar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Card strip - horizontal thumbnails */}
             <div data-tour="card-strip" className="w-full max-w-5xl mt-6 relative z-10 overflow-x-hidden">

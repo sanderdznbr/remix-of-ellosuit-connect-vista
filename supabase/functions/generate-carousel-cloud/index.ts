@@ -415,7 +415,7 @@ Deno.serve(async (req) => {
 
     // === STEP 3: Save to generated_carousels ===
     const finalCarouselData = { ...textData, cards };
-    const styleConfig = job.style_config || {};
+    const savedStyleConfig = job.style_config || {};
 
     const { data: inserted, error: insertErr } = await sb.from('generated_carousels').insert({
       company_id: job.company_id,
@@ -424,7 +424,7 @@ Deno.serve(async (req) => {
       topic: job.topic,
       keywords: job.keywords ? job.keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : [],
       carousel_data: finalCarouselData,
-      style_config: styleConfig,
+      style_config: savedStyleConfig,
       card_count: cards.length,
       marketplace_style_id: job.marketplace_style_id || null,
     }).select('id').single();

@@ -755,6 +755,7 @@ const CarouselGenerator: React.FC = () => {
     styleReferenceUrls?: string[];
     referenceImageUrls?: string[];
     negativePrompt?: string;
+    facePersonsMetadata?: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[];
   }): Promise<string | null> => {
     // Use the model selected by the user (gemini = fast, nano-banana = quality)
     const resolvedModel = imageSettings.model === 'auto'
@@ -799,6 +800,7 @@ const CarouselGenerator: React.FC = () => {
         negativePrompt: opts.negativePrompt,
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
+        facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
         ...(logoBrandColors.length > 0 && !isFullBleedMarketplace ? { brandColors: logoBrandColors } : {}),
       },
@@ -1069,9 +1071,9 @@ const CarouselGenerator: React.FC = () => {
         logo_url: logoUrl,
         logo_position: logoPosition,
         show_header: showHeader,
-        image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined } as any,
+        image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined, facePersonsMetadata: facePersons.filter(p => p.photos.length > 0).length > 1 ? facePersons.filter(p => p.photos.length > 0).map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined, allPeopleOnCover } as any,
         reference_images: referenceImages as any,
-        face_ref_urls: referenceImages.filter(r => r.category === 'face').map(r => r.url) as any,
+        face_ref_urls: (() => { const active = facePersons.filter(p => p.photos.length > 0); return active.length > 0 ? active.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url); })() as any,
         product_context: productContext,
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
@@ -1127,7 +1129,9 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🎨 Gerando post único...');
 
-      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const activeFP = facePersons.filter(p => p.photos.length > 0);
+      const faceRefUrls = activeFP.length > 0 ? activeFP.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const singlePostFaceMeta = activeFP.length > 1 ? activeFP.map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.map(p => p.url);
       const marketplaceRefUrls: string[] = [];
@@ -1195,6 +1199,7 @@ const CarouselGenerator: React.FC = () => {
         styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
         referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
         negativePrompt: negPrompt,
+        facePersonsMetadata: singlePostFaceMeta,
       });
 
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem do post');
@@ -1487,12 +1492,24 @@ const CarouselGenerator: React.FC = () => {
           }
           
           const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
-          // Multi-person: alternate or combine face refs
+          // Multi-person: build grouped face refs with metadata
           let cardFaceRefs: string[] | undefined;
+          let cardFacePersonsMeta: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[] | undefined;
           if (activeFacePersonsForGen.length > 1 && !allPeopleOnCover) {
             // Alternate people across cards
             const personForCard = activeFacePersonsForGen[(i - 1) % activeFacePersonsForGen.length];
             cardFaceRefs = personForCard.photos.map(p => p.url);
+            // Single person per card — no multi-person metadata needed
+            cardFacePersonsMeta = undefined;
+          } else if (activeFacePersonsForGen.length > 1) {
+            // All people on every card — group refs by person with metadata
+            cardFaceRefs = activeFacePersonsForGen.flatMap(p => p.photos.map(ph => ph.url));
+            cardFacePersonsMeta = activeFacePersonsForGen.map(p => ({
+              label: p.label,
+              gender: p.gender,
+              wearsGlasses: p.wearsGlasses,
+              photoCount: p.photos.length,
+            }));
           } else {
             cardFaceRefs = allFaceRefUrls.length > 0 ? [...allFaceRefUrls] : undefined;
           }
@@ -1513,6 +1530,7 @@ const CarouselGenerator: React.FC = () => {
               styleReferenceUrls: capturedStyleRefs,
               referenceImageUrls: capturedProductRefs,
               negativePrompt: capturedNegative,
+              facePersonsMetadata: cardFacePersonsMeta,
             }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
           });
         }

@@ -154,6 +154,8 @@ Deno.serve(async (req) => {
         ? `${marketplaceStyle.imageGeneration.prompt_style}\n\n${promptParts.join('\n')}`
         : promptParts.join('\n');
 
+      const facePersonsMeta = imageSettings.facePersonsMetadata;
+
       const imageUrl = await generateOneImage({
         prompt: finalPrompt,
         topic: job.topic,
@@ -163,6 +165,7 @@ Deno.serve(async (req) => {
         imageModel: imageSettings.model || 'auto',
         negativePrompt: marketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces from reference images',
         fidelity: imageSettings.fidelity || 'balanced',
+        facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
         ...(marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
         ...(brandColors.length > 0 ? { brandColors } : {}),
       });
@@ -322,7 +325,16 @@ Deno.serve(async (req) => {
       if (!isFullBleed) promptParts.push('Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
 
       // Face attributes from image settings
-      if (faceRefUrls.length > 0) {
+      const facePersonsMeta = imageSettings.facePersonsMetadata;
+      const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
+      if (faceRefUrls.length > 0 && isMultiPerson) {
+        promptParts.push(`MULTIPLE PEOPLE (CRITICAL): This image MUST contain exactly ${facePersonsMeta.length} DISTINCT people with DIFFERENT faces.`);
+        facePersonsMeta.forEach((pm: any, idx: number) => {
+          const genderDesc = pm.gender === 'male' ? 'MALE with masculine build.' : pm.gender === 'female' ? 'FEMALE with feminine build.' : '';
+          const glassesDesc = pm.wearsGlasses ? ' MUST wear glasses.' : '';
+          promptParts.push(`${pm.label || `Person ${idx + 1}`}: ${genderDesc}${glassesDesc}`);
+        });
+      } else if (faceRefUrls.length > 0) {
         const fg = imageSettings.faceGender;
         if (fg === 'male') promptParts.push('The person MUST be MALE with a masculine body.');
         else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
@@ -371,6 +383,7 @@ Deno.serve(async (req) => {
             imageModel: imageSettings.model || 'auto',
             negativePrompt: task.negPrompt,
             fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
+            facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
             ...(brandColors && brandColors.length > 0 ? { brandColors } : {}),
           });

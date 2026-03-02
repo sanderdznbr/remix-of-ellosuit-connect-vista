@@ -164,7 +164,7 @@ const CarouselGenerator: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [originalTopic, setOriginalTopic] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [cardCount, setCardCount] = useState(1);
+  const [cardCount, setCardCount] = useState(7);
   const [imageCardCount, setImageCardCount] = useState(4);
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
@@ -353,8 +353,8 @@ const CarouselGenerator: React.FC = () => {
     setContentMode('carousel');
     setManualPostText('');
     setKeywords('');
-    setCardCount(1);
-    setImageCardCount(1);
+    setCardCount(7);
+    setImageCardCount(4);
     setEnhancingPrompt(false);
     setMentionedPrompts([]);
     setReferenceImages([]);

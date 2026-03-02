@@ -56,7 +56,7 @@ const StepTopic: React.FC<Props> = ({
             {advancedMode ? 'Escreva exatamente o que a IA deve renderizar na imagem.' : 'Descreva o assunto e nós cuidamos do resto.'}
           </p>
         </div>
-        {contentMode === 'single-post' && (
+        {(
           <button
             onClick={() => setAdvancedMode(!advancedMode)}
             className="p-2 rounded-lg transition-all"
@@ -167,7 +167,7 @@ const StepTopic: React.FC<Props> = ({
       )}
 
       {/* Advanced mode: manual text for image */}
-      {advancedMode && contentMode === 'single-post' && setManualPostText && (
+      {advancedMode && setManualPostText && (
         <div className="space-y-2">
           <textarea
             value={manualPostText || ''}

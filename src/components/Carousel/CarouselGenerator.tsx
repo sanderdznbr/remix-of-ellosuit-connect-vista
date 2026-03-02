@@ -61,6 +61,7 @@ import StepFonts from './wizard/StepFonts';
 import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepSpeed from './wizard/StepSpeed';
+import StepCardTexts from './wizard/StepCardTexts';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -153,11 +154,16 @@ const CarouselGenerator: React.FC = () => {
   // Content mode: carousel vs single-post
   const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
   const [manualPostText, setManualPostText] = useState('');
+  const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
+
+  // Wizard mode: simple vs advanced
+  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS_CAROUSEL = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS = WIZARD_STEPS_CAROUSEL;
+  const SIMPLE_STEPS = ['Tema', 'Rosto', 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -352,6 +358,8 @@ const CarouselGenerator: React.FC = () => {
     setWizardStep(0);
     setContentMode('carousel');
     setManualPostText('');
+    setManualCardTexts([]);
+    setWizardMode('simple');
     setKeywords('');
     setCardCount(7);
     setImageCardCount(4);
@@ -2734,13 +2742,14 @@ const CarouselGenerator: React.FC = () => {
     }
   }, [wizardStep, speakStep, showWelcome, carouselData, loadingCarousel]);
 
-  // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active
-  // Auto-skip colors/fonts steps when marketplace style is active
+  // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
+  const currentStepName = WIZARD_STEPS[wizardStep] || '';
   useEffect(() => {
-    if (isFullBleedMarketplace && (wizardStep === 7 || wizardStep === 8)) {
-      setWizardStep(9);
+    if (wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) {
+      const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
+      if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
     }
-  }, [wizardStep, isFullBleedMarketplace]);
+  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName]);
 
   return (
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
@@ -2879,32 +2888,43 @@ const CarouselGenerator: React.FC = () => {
               {/* LEFT column: centered content */}
               <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto">
                 <div className="w-full max-w-[520px] space-y-6">
-                  {/* Progress dots + voice toggle */}
-                  <div className="flex items-center justify-center gap-2">
-                    {WIZARD_STEPS.map((_, i) => {
-                      // Hide Cores (7) and Fontes (8) dots when marketplace full-bleed style is active
-                      if ((i === 7 || i === 8) && isFullBleedMarketplace) return null;
-                      return (
-                        <button key={i} onClick={() => {
-                          if (i <= wizardStep) {
-                            // When clicking back, skip hidden steps
-                            let target = i;
-                            if ((target === 7 || target === 8) && isFullBleedMarketplace) target = 6;
-                            setWizardStep(target);
-                          }
-                        }}
-                          className="transition-all"
-                          style={{
-                            width: i === wizardStep ? 24 : 6,
-                            height: 6,
-                            borderRadius: 3,
-                            backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
-                            cursor: i <= wizardStep ? 'pointer' : 'default',
+                  {/* Mode toggle: Simple / Advanced */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-center gap-2 flex-1">
+                      {WIZARD_STEPS.map((stepName, i) => {
+                        // Hide Cores/Fontes dots when marketplace full-bleed style is active (advanced)
+                        if ((stepName === 'Cores' || stepName === 'Fontes') && isFullBleedMarketplace) return null;
+                        return (
+                          <button key={i} onClick={() => {
+                            if (i <= wizardStep) setWizardStep(i);
                           }}
-                        />
-                      );
-                    })}
-                    {/* Voice button moved to bottom-right corner */}
+                            className="transition-all"
+                            style={{
+                              width: i === wizardStep ? 24 : 6,
+                              height: 6,
+                              borderRadius: 3,
+                              backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
+                              cursor: i <= wizardStep ? 'pointer' : 'default',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newMode = wizardMode === 'simple' ? 'advanced' : 'simple';
+                        setWizardMode(newMode);
+                        setWizardStep(0); // Reset to first step on mode change
+                      }}
+                      className="ml-3 px-3 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wider transition-all whitespace-nowrap"
+                      style={{
+                        backgroundColor: wizardMode === 'advanced' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${wizardMode === 'advanced' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                        color: wizardMode === 'advanced' ? '#A78BFA' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >
+                      {wizardMode === 'simple' ? 'Avançado' : 'Simples'}
+                    </button>
                   </div>
 
                    {/* Step content with entrance animation */}
@@ -2916,40 +2936,43 @@ const CarouselGenerator: React.FC = () => {
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                     >
-                    {wizardStep === 0 && (
+                    {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
                         enhancingPrompt={enhancingPrompt} onEnhance={enhancePrompt}
                         searchingWeb={searchingWeb} onSearchWeb={handleSearchWeb} webSearchResult={webSearchResult}
-                        skipWebSearch={skipWebSearch} onToggleSkipWebSearch={() => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
+                        skipWebSearch={wizardMode === 'simple' ? false : skipWebSearch}
+                        onToggleSkipWebSearch={wizardMode === 'simple' ? undefined : () => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
                         mentionedPrompts={mentionedPrompts}
                         onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
                         onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
                         contentMode={contentMode}
                         manualPostText={manualPostText}
-                        setManualPostText={setManualPostText} />
+                        setManualPostText={setManualPostText}
+                        wizardMode={wizardMode}
+                        setContentMode={(mode) => {
+                          setContentMode(mode);
+                          if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
+                          else if (cardCount < 5) { setCardCount(7); }
+                        }} />
                     )}
-                    {wizardStep === 1 && (
+                    {currentStepName === 'Formato' && (
                       <StepCardCount
                         cardCount={cardCount}
                         setCardCount={setCardCount}
                         contentMode={contentMode}
                         setContentMode={(mode) => {
                           setContentMode(mode);
-                          if (mode === 'single-post') {
-                            setCardCount(1);
-                            setImageCardCount(1);
-                          } else if (cardCount < 5) {
-                            setCardCount(7);
-                          }
+                          if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
+                          else if (cardCount < 5) { setCardCount(7); }
                         }}
                       />
                     )}
-                    {wizardStep === 2 && (
+                    {currentStepName === 'Fotos' && (
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        webImages={webSearchResult?.images} onSkip={() => setWizardStep(3)} />
+                        webImages={webSearchResult?.images} onSkip={() => setWizardStep(wizardStep + 1)} />
                     )}
-                    {wizardStep === 3 && (
+                    {currentStepName === 'Rosto' && (
                       <StepFaceRef
                         facePersons={facePersons} setFacePersons={setFacePersons}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages}
@@ -2959,20 +2982,20 @@ const CarouselGenerator: React.FC = () => {
                         faceGender={faceGender} setFaceGender={setFaceGender}
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses} />
                     )}
-                    {wizardStep === 4 && (
+                    {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
                         productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}
                         analyzingProduct={analyzingProduct} setAnalyzingProduct={setAnalyzingProduct}
                         productSize={productSize} setProductSize={setProductSize} />
                     )}
-                    {wizardStep === 5 && (
+                    {currentStepName === 'Marca' && (
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         brandAssets={brandAssets}
                         onSuggestColors={(palette) => {
                           setBrandSuggestedPalette(palette);
                         }} />
                     )}
-                    {wizardStep === 6 && (
+                    {currentStepName === 'Estilo' && (
                       <StepStyleSelect
                         bgColor={bgColor} setBgColor={setBgColor}
                         accentColor={accentColor} setAccentColor={setAccentColor}
@@ -2982,7 +3005,7 @@ const CarouselGenerator: React.FC = () => {
                         onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style); }}
                       />
                     )}
-                    {wizardStep === 7 && !isFullBleedMarketplace && (
+                    {currentStepName === 'Cores' && !isFullBleedMarketplace && (
                       <StepColors bgColor={bgColor} setBgColor={setBgColor}
                         accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor}
@@ -2997,10 +3020,18 @@ const CarouselGenerator: React.FC = () => {
                         }}
                         onDismissBrandPalette={() => setBrandSuggestedPalette(null)} />
                     )}
-                    {wizardStep === 8 && !isFullBleedMarketplace && (
+                    {currentStepName === 'Fontes' && !isFullBleedMarketplace && (
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
                     )}
-                    {wizardStep === 9 && (
+                    {currentStepName === 'Roteiro' && (
+                      <StepCardTexts
+                        cardCount={cardCount}
+                        contentMode={contentMode}
+                        manualCardTexts={manualCardTexts}
+                        setManualCardTexts={setManualCardTexts}
+                        topic={topic} />
+                    )}
+                    {currentStepName === 'Logo' && (
                       <StepBranding
                         showHeader={showHeader} setShowHeader={setShowHeader}
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl}
@@ -3010,7 +3041,7 @@ const CarouselGenerator: React.FC = () => {
                         userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel} />
                     )}
-                    {wizardStep === 10 && (
+                    {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
                         setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))} />
@@ -3024,10 +3055,13 @@ const CarouselGenerator: React.FC = () => {
                       if (wizardStep === 0) { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
-                        // Skip web images (2) when toggle is off or no images
-                        if (prev === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev = 1;
-                        // Skip colors (7) and fonts (8) when marketplace style is active
-                        if ((prev === 7 || prev === 8) && isFullBleedMarketplace) prev = 6;
+                        const prevName = WIZARD_STEPS[prev];
+                        // Skip Fotos when toggle is off or no images (advanced only)
+                        if (prevName === 'Fotos' && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev--;
+                        // Skip Cores/Fontes when marketplace style is active (advanced only)
+                        if ((WIZARD_STEPS[prev] === 'Cores' || WIZARD_STEPS[prev] === 'Fontes') && isFullBleedMarketplace) {
+                          while (prev > 0 && (WIZARD_STEPS[prev] === 'Cores' || WIZARD_STEPS[prev] === 'Fontes')) prev--;
+                        }
                         setWizardStep(prev);
                       }
                     }}
@@ -3037,28 +3071,37 @@ const CarouselGenerator: React.FC = () => {
 
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
-                        {/* Skip button for face, product and brand steps */}
-                        {(wizardStep === 3 || wizardStep === 4 || wizardStep === 5) && (
+                        {/* Skip button for optional steps */}
+                        {(currentStepName === 'Rosto' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular
                           </button>
                         )}
                         <button onClick={async () => {
-                            // Only search web if no manual text provided and web search is enabled
                             const hasManualText = manualPostText.trim().length > 0;
-                            if (wizardStep === 0 && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
+                            // Web search on Tema step
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
                               await handleSearchWeb();
                             }
-                            // If advanced mode (manualPostText filled), use it as topic if topic is empty
-                            if (wizardStep === 0 && hasManualText && !topic.trim()) {
+                            if (currentStepName === 'Tema' && hasManualText && !topic.trim()) {
                               setTopic(manualPostText.trim());
                             }
-                            // If manual text is provided, also skip web search toggle
-                            if (wizardStep === 0 && hasManualText) {
+                            if (currentStepName === 'Tema' && hasManualText) {
                               setSkipWebSearch(true);
                             }
-                            if (wizardStep === 1) {
+                            // In simple mode, set content mode from StepTopic inline selector
+                            if (currentStepName === 'Tema' && wizardMode === 'simple') {
+                              if (cardCount === 1) {
+                                setContentMode('single-post');
+                                setImageCardCount(1);
+                              } else {
+                                setContentMode('carousel');
+                                setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                              }
+                            }
+                            // Formato step (advanced)
+                            if (currentStepName === 'Formato') {
                               if (cardCount === 1) {
                                 setContentMode('single-post');
                                 setImageCardCount(1);
@@ -3068,10 +3111,13 @@ const CarouselGenerator: React.FC = () => {
                               }
                             }
                             let next = wizardStep + 1;
-                            // Skip web images (2) when toggle is off or no images found
-                            if (next === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) next = 3;
-                            // Skip colors (7) and fonts (8) when marketplace style is active
-                            if (next === 7 && isFullBleedMarketplace) next = 9;
+                            const nextName = WIZARD_STEPS[next];
+                            // Skip Fotos when toggle is off or no images found (advanced)
+                            if (nextName === 'Fotos' && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) next++;
+                            // Skip Cores/Fontes when marketplace style is active (advanced)
+                            if (WIZARD_STEPS[next] === 'Cores' && isFullBleedMarketplace) {
+                              while (next < WIZARD_STEPS.length && (WIZARD_STEPS[next] === 'Cores' || WIZARD_STEPS[next] === 'Fontes')) next++;
+                            }
                             setWizardStep(next);
                           }} disabled={!canProceed || searchingWeb}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
@@ -3104,20 +3150,7 @@ const CarouselGenerator: React.FC = () => {
                 <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
                   <div className="carousel-loader-spinner" />
                   <span className="text-white/60 text-3xl font-light z-[1]">
-                    <AnimatedCounter target={
-                      wizardStep === 0
-                        ? (webSearchResult ? 8 : 0)
-                        : wizardStep === 1 ? 14
-                        : wizardStep === 2 ? 24
-                        : wizardStep === 3 ? 34
-                        : wizardStep === 4 ? 44
-                        : wizardStep === 5 ? 52
-                        : wizardStep === 6 ? (isFullBleedMarketplace ? 78 : 60)
-                        : wizardStep === 7 ? 68
-                        : wizardStep === 8 ? 78
-                        : wizardStep === 9 ? 90
-                        : 99
-                    } />
+                    <AnimatedCounter target={Math.round((wizardStep / Math.max(WIZARD_STEPS.length - 1, 1)) * 99)} />
                   </span>
                 </div>
               </div>

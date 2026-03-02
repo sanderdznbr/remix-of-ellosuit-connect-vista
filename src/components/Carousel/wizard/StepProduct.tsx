@@ -83,11 +83,11 @@ const StepProduct: React.FC<Props> = ({
       });
       if (error) throw error;
       if (data?.success && data?.analysis) {
-        setProductAnalysis({ ...data.analysis, confirmed: false });
+        setProductAnalysis({ ...data.analysis, confirmed: true });
       }
     } catch (err) {
       console.error('Product analysis error:', err);
-      setProductAnalysis({ type: 'unknown', description: 'Não foi possível analisar. Você pode selecionar o tipo manualmente.', suggestions: [], confirmed: false });
+      setProductAnalysis({ type: 'unknown', description: 'Não foi possível analisar. Você pode selecionar o tipo manualmente.', suggestions: [], confirmed: true });
     } finally {
       setAnalyzingProduct(false);
     }
@@ -101,7 +101,7 @@ const StepProduct: React.FC<Props> = ({
 
   const handleTypeOverride = (type: ProductAnalysis['type']) => {
     if (productAnalysis) {
-      setProductAnalysis({ ...productAnalysis, type, confirmed: false });
+      setProductAnalysis({ ...productAnalysis, type, confirmed: true });
     }
   };
 
@@ -201,19 +201,9 @@ const StepProduct: React.FC<Props> = ({
             ))}
           </div>
 
-          {!productAnalysis.confirmed && (
-            <button onClick={() => setProductAnalysis({ ...productAnalysis, confirmed: true })}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-              <Check className="h-4 w-4" /> Confirmar
-            </button>
-          )}
-
-          {productAnalysis.confirmed && (
-            <div className="flex items-center gap-2 text-emerald-400/70 text-xs font-medium">
-              <Check className="h-3.5 w-3.5" /> Produto confirmado
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-emerald-400/70 text-xs font-medium">
+            <Check className="h-3.5 w-3.5" /> Produto identificado
+          </div>
         </div>
       )}
     </div>

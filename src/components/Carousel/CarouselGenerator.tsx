@@ -60,6 +60,7 @@ import StepColors from './wizard/StepColors';
 import StepFonts from './wizard/StepFonts';
 import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
+import StepSpeed from './wizard/StepSpeed';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -147,13 +148,13 @@ const CarouselGenerator: React.FC = () => {
   const [loadingCarousel, setLoadingCarousel] = useState(false);
   
   // Content mode: carousel vs single-post
-  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
+  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('single-post');
   const [manualPostText, setManualPostText] = useState('');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS_CAROUSEL = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Marca Final'];
-  const WIZARD_STEPS_SINGLE = ['Tema', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Marca Final'];
+  const WIZARD_STEPS_CAROUSEL = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Logo', 'Velocidade'];
+  const WIZARD_STEPS_SINGLE = ['Tema', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = contentMode === 'single-post' ? WIZARD_STEPS_SINGLE : WIZARD_STEPS_CAROUSEL;
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
@@ -161,7 +162,7 @@ const CarouselGenerator: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [originalTopic, setOriginalTopic] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [cardCount, setCardCount] = useState(7);
+  const [cardCount, setCardCount] = useState(1);
   const [imageCardCount, setImageCardCount] = useState(4);
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
@@ -317,11 +318,11 @@ const CarouselGenerator: React.FC = () => {
   // Full reset for starting a brand-new carousel
   const resetWizardState = useCallback(() => {
     setWizardStep(0);
-    setContentMode('carousel');
+    setContentMode('single-post');
     setManualPostText('');
     setKeywords('');
-    setCardCount(7);
-    setImageCardCount(4);
+    setCardCount(1);
+    setImageCardCount(1);
     setEnhancingPrompt(false);
     setMentionedPrompts([]);
     setReferenceImages([]);
@@ -2662,13 +2663,14 @@ const CarouselGenerator: React.FC = () => {
                       <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
                     )}
                     {wizardStep === 9 && (
-                      <StepBranding brandName={brandName} setBrandName={setBrandName}
-                        userName={userName} setUserName={setUserName}
-                        dateLabel={dateLabel} setDateLabel={setDateLabel}
+                      <StepBranding
                         showHeader={showHeader} setShowHeader={setShowHeader}
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl}
                         logoPosition={logoPosition} setLogoPosition={setLogoPosition}
-                        logoBrandColors={logoBrandColors}
+                        logoBrandColors={logoBrandColors} />
+                    )}
+                    {wizardStep === 10 && (
+                      <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
                         setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))} />
                     )}
@@ -2683,6 +2685,8 @@ const CarouselGenerator: React.FC = () => {
                         let prev = wizardStep - 1;
                         // Skip Quantidade (1) when single-post mode
                         if (prev === 1 && contentMode === 'single-post') prev = 0;
+                        // Skip web images (2) when toggle is off or no images
+                        if (prev === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev = contentMode === 'single-post' ? 0 : 1;
                         // Skip colors (7) and fonts (8) when marketplace style is active
                         if ((prev === 7 || prev === 8) && isFullBleedMarketplace) prev = 6;
                         setWizardStep(prev);
@@ -2717,6 +2721,8 @@ const CarouselGenerator: React.FC = () => {
                             let next = wizardStep + 1;
                             // Skip Quantidade (1) when single-post mode
                             if (next === 1 && contentMode === 'single-post') next = 2;
+                            // Skip web images (2) when toggle is off or no images found
+                            if (next === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) next = 3;
                             // Skip colors (7) and fonts (8) when marketplace style is active
                             if (next === 7 && isFullBleedMarketplace) next = 9;
                             setWizardStep(next);
@@ -2753,15 +2759,16 @@ const CarouselGenerator: React.FC = () => {
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={
                       wizardStep === 0
-                        ? (webSearchResult ? 10 : 0)
-                        : wizardStep === 1 ? 16
-                        : wizardStep === 2 ? 28
-                        : wizardStep === 3 ? 38
-                        : wizardStep === 4 ? 48
-                        : wizardStep === 5 ? 56
-                        : wizardStep === 6 ? (isFullBleedMarketplace ? 85 : 65)
-                        : wizardStep === 7 ? 74
-                        : wizardStep === 8 ? 86
+                        ? (webSearchResult ? 8 : 0)
+                        : wizardStep === 1 ? 14
+                        : wizardStep === 2 ? 24
+                        : wizardStep === 3 ? 34
+                        : wizardStep === 4 ? 44
+                        : wizardStep === 5 ? 52
+                        : wizardStep === 6 ? (isFullBleedMarketplace ? 78 : 60)
+                        : wizardStep === 7 ? 68
+                        : wizardStep === 8 ? 78
+                        : wizardStep === 9 ? 90
                         : 99
                     } />
                   </span>

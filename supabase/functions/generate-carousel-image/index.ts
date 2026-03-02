@@ -20,7 +20,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata } = body;
+    // facePersonsMetadata: optional array of { label, gender, wearsGlasses, photoCount } to map grouped face refs
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
@@ -96,7 +97,7 @@ Deno.serve(async (req) => {
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
 
     const validFaceRefs = hasFaceRefs 
-      ? faceReferenceUrls.slice(0, 3).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      ? faceReferenceUrls.slice(0, 12).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
       : [];
     const validStyleRefs = hasStyleRefs 
       ? styleReferenceUrls.slice(0, 4).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
@@ -156,16 +157,53 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
     }
 
-    // Determine explicit gender instruction from user selection
-    const genderDirective = faceGender === 'male' 
+    // Determine if we have multi-person metadata
+    const isMultiPerson = facePersonsMetadata && Array.isArray(facePersonsMetadata) && facePersonsMetadata.length > 1;
+
+    // Build per-person gender directives
+    const buildGenderDirective = (gender: string) => 
+      gender === 'male' ? 'MALE with masculine build, masculine hands (short nails, broader fingers).'
+      : gender === 'female' ? 'FEMALE with feminine build and features.'
+      : '';
+
+    // Single-person fallback gender directive
+    const singleGender = faceGender === 'male' 
       ? 'The user has CONFIRMED this person is MALE. Generate a MALE body with masculine build, masculine hands, masculine features. DO NOT generate feminine hands, nails, or body features.' 
       : faceGender === 'female' 
       ? 'The user has CONFIRMED this person is FEMALE. Generate a FEMALE body with feminine build and features.' 
       : '';
 
-    if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
+    if (validFaceRefs.length > 0 && isMultiPerson) {
+      // === MULTI-PERSON MODE ===
+      const personCount = facePersonsMetadata.length;
+      let personDescriptions = '';
+      let photoOffset = 0;
+      for (let pi = 0; pi < personCount; pi++) {
+        const pm = facePersonsMetadata[pi];
+        const count = pm.photoCount || 1;
+        const startIdx = photoOffset + 1;
+        const endIdx = photoOffset + count;
+        const genderDesc = buildGenderDirective(pm.gender || 'auto');
+        const glassesDesc = pm.wearsGlasses ? ' MUST wear glasses/eyeglasses.' : '';
+        personDescriptions += `\n- ${pm.label || `Person ${pi + 1}`} (face reference images #${startIdx}${count > 1 ? `-#${endIdx}` : ''}): ${genderDesc}${glassesDesc} Reproduce this person's EXACT facial features, face shape, skin tone, hair style.`;
+        photoOffset += count;
+      }
+
+      if (validGeneralRefs.length > 0) {
+        textPrompt += `\n\nCRITICAL - MULTIPLE PEOPLE + PRODUCT: This image MUST contain EXACTLY ${personCount} DISTINCT people AND a product. Each person MUST match their respective face reference photos EXACTLY.${personDescriptions}
+\nThe face reference images are provided in order — the first ${facePersonsMetadata[0]?.photoCount || 1} image(s) belong to ${facePersonsMetadata[0]?.label || 'Person 1'}, the next belong to ${facePersonsMetadata[1]?.label || 'Person 2'}, etc.
+\nEach person MUST be clearly distinguishable with DIFFERENT faces. NEVER give two people the same face. This is the #1 priority.
+\nThe product from the product reference MUST also appear in the scene. Create a natural, editorial scene where ALL people and the product interact organically.
+\nGENDER MATCHING IS MANDATORY for each person — mismatching gender is a CRITICAL ERROR.`;
+      } else {
+        textPrompt += `\n\nCRITICAL - MULTIPLE PEOPLE: This image MUST contain EXACTLY ${personCount} DISTINCT people. Each person MUST match their respective face reference photos EXACTLY.${personDescriptions}
+\nThe face reference images are provided in order — the first ${facePersonsMetadata[0]?.photoCount || 1} image(s) belong to ${facePersonsMetadata[0]?.label || 'Person 1'}, the next belong to ${facePersonsMetadata[1]?.label || 'Person 2'}, etc.
+\nEach person MUST be clearly distinguishable with DIFFERENT faces. NEVER give two people the same face. NEVER merge or average faces together. Each person's identity must be preserved independently. This is the #1 priority.
+\nGENDER MATCHING IS MANDATORY for each person — mismatching gender is a CRITICAL ERROR.`;
+      }
+    } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
       textPrompt += `\n\nCRITICAL - FACE + PRODUCT COMBINED: I am attaching BOTH a person reference AND a product reference. You MUST:
-${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
+${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
 2. The BODY, HANDS, and all physical features must match the specified gender — masculine hands for males (short nails, broader fingers), feminine hands for females
 3. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
 4. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
@@ -175,7 +213,7 @@ ${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY 
 8. GENDER MATCHING IS MANDATORY — mismatching the gender (e.g. putting a man's face on a woman's body, or giving a man feminine painted nails) is a CRITICAL ERROR.`;
     } else if (validFaceRefs.length > 0) {
       textPrompt += `\n\nCRITICAL - FACE/PERSON REFERENCE: I am attaching reference photo(s) of the person who MUST appear in this image. You MUST:
-${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
+${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
 2. The BODY, HANDS, and all physical features must match the specified gender — masculine hands for males (short nails, broader fingers), feminine hands for females
 3. The person must be clearly recognizable as the same individual in the reference photos
 4. Maintain their likeness with high fidelity - this is the #1 priority
@@ -202,9 +240,27 @@ ${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY 
 
     // CRITICAL: Face references MUST come FIRST in the message content
     // so the model treats them as highest priority identity references
-    for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-    if (validFaceRefs.length > 0) {
-      messageContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person in the generated image MUST have the EXACT same face as shown above. This is the #1 priority.` });
+    if (validFaceRefs.length > 0 && isMultiPerson) {
+      // Group face refs by person with clear labels
+      let photoOffset = 0;
+      for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
+        const pm = facePersonsMetadata[pi];
+        const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
+        if (count <= 0) break;
+        messageContent.push({ type: 'text', text: `=== FACE REFERENCES FOR ${(pm.label || `Person ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ===` });
+        for (let j = 0; j < count; j++) {
+          if (photoOffset + j < validFaceRefs.length) {
+            messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
+          }
+        }
+        photoOffset += count;
+      }
+      messageContent.push({ type: 'text', text: `The images above show ${facePersonsMetadata.length} DIFFERENT people. Each group is labeled. The generated image MUST contain ALL ${facePersonsMetadata.length} people with their EXACT faces from their respective reference groups. Each person MUST look DIFFERENT from the others.` });
+    } else {
+      for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person in the generated image MUST have the EXACT same face as shown above. This is the #1 priority.` });
+      }
     }
     messageContent.push({ type: 'text', text: textPrompt });
     for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });

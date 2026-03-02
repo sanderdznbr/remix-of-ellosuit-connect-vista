@@ -985,7 +985,7 @@ const CarouselGenerator: React.FC = () => {
         if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
       }
 
-      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];
@@ -997,6 +997,23 @@ const CarouselGenerator: React.FC = () => {
       }
       promptParts.push('POST ÚNICO para Instagram (1080x1350). Composição editorial completa com tipografia integrada na imagem.');
       promptParts.push('Full bleed, sem barras ou bordas. Design impactante estilo capa de revista.');
+
+      // Product context — CRITICAL for product fidelity
+      if (productAnalysis?.confirmed && productRefUrls.length > 0) {
+        const sizeLabel = PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '';
+        const sizeInstruction = `IMPORTANT: This product is physically ${productSize} (${sizeLabel}). Render it at its REAL-WORLD proportional size relative to people, hands, and surroundings. Do NOT make it larger or smaller than reality.`;
+        const productPromptMap: Record<string, string> = {
+          clothing: `PRODUTO (OBRIGATÓRIO): A imagem DEVE apresentar EXATAMENTE o produto "${productAnalysis.description}" mostrado na foto de referência do produto. ${sizeInstruction} Você pode variar ângulo, modelo e cenário, mas o PRODUTO deve ser o mesmo e reconhecível.`,
+          object: `PRODUTO (OBRIGATÓRIO): A imagem DEVE apresentar EXATAMENTE o produto "${productAnalysis.description}" mostrado na foto de referência. ${sizeInstruction} Mostre o produto real — pode mudar ângulo, contexto e composição, mas o OBJETO deve ser o MESMO da referência.`,
+          food: `PRODUTO (OBRIGATÓRIO): A imagem DEVE apresentar EXATAMENTE o alimento/bebida "${productAnalysis.description}" mostrado na foto de referência. ${sizeInstruction} Crie composições food-styling variadas mas com o MESMO produto.`,
+          unknown: `PRODUTO (OBRIGATÓRIO): A imagem DEVE apresentar EXATAMENTE o produto "${productAnalysis.description}" mostrado na foto de referência. ${sizeInstruction} Mantenha o produto reconhecível e fiel à referência.`,
+        };
+        promptParts.push(productPromptMap[productAnalysis.type] || productPromptMap.unknown);
+        promptParts.push('PRIORIDADE #1: O produto da foto de referência DEVE aparecer na imagem gerada. NÃO substitua por outro produto diferente.');
+      } else if (productRefUrls.length > 0) {
+        promptParts.push('PRODUTO: Use a foto de referência do produto como base. O produto DEVE aparecer fielmente na imagem gerada.');
+      }
+
       if (brandName) {
         const posMap: Record<string, string> = {
           'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
@@ -1012,10 +1029,13 @@ const CarouselGenerator: React.FC = () => {
       const finalPrompt = buildImagePrompt(promptParts.join('\n'));
       const negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
+      // Pass product images as SEPARATE reference to ensure fidelity
+      const imageRefs = productRefUrls.length > 0 ? [...allStyleRefs, ...productRefUrls] : allStyleRefs;
+
       const imageUrl = await generateImage({
         prompt: finalPrompt,
         faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-        styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+        styleReferenceUrls: imageRefs.length > 0 ? imageRefs : undefined,
         negativePrompt: negPrompt,
       });
 
@@ -1047,10 +1067,14 @@ const CarouselGenerator: React.FC = () => {
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
-            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            if (insertErr) {
+              console.error('Single post save failed:', insertErr);
+            }
             if (inserted) {
               setCurrentCarouselId(inserted.id);
-              setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+              // Capture cover immediately (don't wait 2s)
+              captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
             }
           }
         }

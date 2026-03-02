@@ -115,18 +115,7 @@ Deno.serve(async (req) => {
     if (stylePrompt) {
       textPrompt = `${stylePrompt}
 
-${imagePrompt}
-
-INSTRUÇÕES CRÍTICAS:
-- Gere a imagem COMPLETA de um post de Instagram (1080x1350, retrato 4:5) com TODOS os elementos visuais integrados: tipografia, elementos decorativos, tratamento fotográfico e composição conforme as regras de estilo acima.
-- A imagem deve ser um POST PRONTO PARA PUBLICAR, não apenas uma fotografia.
-- TODO o conteúdo textual fornecido acima DEVE ser renderizado diretamente na imagem com tipografia apropriada.
-- TODO texto na imagem DEVE estar em PORTUGUÊS BRASILEIRO correto, fluente e sem erros ortográficos. NÃO use inglês, NÃO use espanhol. APENAS português do Brasil. Verifique a ortografia de cada palavra.
-- Se um TEXTO EXATO foi fornecido, use SOMENTE esse texto na imagem. NÃO adicione textos extras, subtítulos, listas ou tópicos adicionais.
-- Siga as referências de estilo EXATAMENTE — replique a mesma estética de colagem editorial de revista, a mesma hierarquia tipográfica, a mesma paleta de cores, os mesmos elementos decorativos.
-- Se o card indica que NÃO é capa/hero, use uma composição DIFERENTE — use layouts editoriais de conteúdo com blocos de texto mistos, fotos menores e arranjos variados.
-- COMPOSIÇÃO FULL BLEED OBRIGATÓRIA: A imagem DEVE preencher 100% do espaço. ZERO bordas brancas, coloridas ou transparentes no topo, base, esquerda ou direita. Nenhuma margem ou barra em nenhum lado.
-- IGNORE completamente quaisquer nomes de usuário (@), marcas, logotipos, nomes de empresas ou informações pessoais que apareçam nas imagens de referência. Use as referências APENAS para extrair o ESTILO VISUAL (paleta de cores, tipografia, composição, elementos decorativos). NUNCA copie textos, @handles, nomes de pessoas ou empresas das referências.`;
+${imagePrompt}`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
 

@@ -2704,7 +2704,10 @@ const CarouselGenerator: React.FC = () => {
                         showHeader={showHeader} setShowHeader={setShowHeader}
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl}
                         logoPosition={logoPosition} setLogoPosition={setLogoPosition}
-                        logoBrandColors={logoBrandColors} />
+                        logoBrandColors={logoBrandColors}
+                        brandName={brandName} setBrandName={setBrandName}
+                        userName={userName} setUserName={setUserName}
+                        dateLabel={dateLabel} setDateLabel={setDateLabel} />
                     )}
                     {wizardStep === 10 && (
                       <StepSpeed

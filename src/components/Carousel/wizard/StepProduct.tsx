@@ -106,15 +106,15 @@ const StepProduct: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-6" style={{ minHeight: '300px' }}>
+    <div className="space-y-4" style={{ minHeight: '300px' }}>
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Seu post é sobre algum produto?</h2>
         <p className="text-sm text-white/40">Se sim, envie fotos do produto para a IA recriá-lo no carrossel.</p>
       </div>
 
       {/* Upload area */}
-      <label className="flex flex-col items-center justify-center gap-3 py-8 rounded-xl border border-dashed border-white/[0.08] cursor-pointer hover:bg-white/[0.02] transition-colors">
-        <ShoppingBag className="h-6 w-6 text-white/20" />
+      <label className="flex flex-col items-center justify-center gap-2 py-6 rounded-xl border border-dashed border-white/[0.08] cursor-pointer hover:bg-white/[0.02] transition-colors">
+        <ShoppingBag className="h-5 w-5 text-white/20" />
         <span className="text-sm font-medium text-white/50">Subir fotos do produto</span>
         <span className="text-xs text-white/20">JPG, PNG — várias fotos de ângulos diferentes</span>
         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
@@ -122,120 +122,96 @@ const StepProduct: React.FC<Props> = ({
 
       {/* Gallery picker button */}
       <button onClick={() => setGalleryOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
         <Folder className="h-4 w-4" /> Importar da Galeria de Marca
       </button>
 
       <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de produto" />
 
-      {/* Uploaded images */}
+      {/* Uploaded images + size selector inline */}
       {productImages.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-white/40 mb-3">Fotos do produto ({productImages.length})</p>
-          <div className="flex gap-2 flex-wrap">
-            {productImages.map((img, i) => (
-              <div key={i} className="relative group">
-                <div className="w-16 h-16 rounded-lg overflow-hidden ring-1 ring-white/10">
-                  <img src={img.thumb} alt="Produto" className="w-full h-full object-cover" />
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex gap-1.5 flex-wrap flex-1">
+              {productImages.map((img, i) => (
+                <div key={i} className="relative group">
+                  <div className="w-14 h-14 rounded-lg overflow-hidden ring-1 ring-white/10">
+                    <img src={img.thumb} alt="Produto" className="w-full h-full object-cover" />
+                  </div>
+                  <button onClick={() => {
+                    setProductImages(prev => prev.filter((_, idx) => idx !== i));
+                    if (productImages.length <= 1) setProductAnalysis(null);
+                  }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
                 </div>
-                <button onClick={() => {
-                  setProductImages(prev => prev.filter((_, idx) => idx !== i));
-                  if (productImages.length <= 1) setProductAnalysis(null);
-                }}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Product size selector */}
-      {productImages.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-white/50">Tamanho real do produto</p>
-          <div className="grid grid-cols-1 gap-1.5">
-            {PRODUCT_SIZE_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => setProductSize(opt.value)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                  productSize === opt.value
-                    ? 'bg-purple-500/15 border border-purple-500/30'
-                    : 'bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05]'
-                }`}>
-                <span className={`text-sm font-semibold min-w-[110px] ${productSize === opt.value ? 'text-purple-300' : 'text-white/50'}`}>
-                  {opt.label}
-                </span>
-                <span className="text-[11px] text-white/30">{opt.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      {analyzingProduct && (
-        <div className="flex items-center gap-3 py-4 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-          <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
-          <div>
-            <p className="text-sm font-medium text-white/70">Analisando produto com IA...</p>
-            <p className="text-xs text-white/30">Identificando tipo e sugerindo como usar no carrossel</p>
-          </div>
-        </div>
-      )}
-
-      {/* Analysis result */}
-      {productAnalysis && !analyzingProduct && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{TYPE_LABELS[productAnalysis.type]?.emoji || '🏷️'}</span>
-                <div>
-                  <p className="text-sm font-semibold text-white/80">{TYPE_LABELS[productAnalysis.type]?.label || 'Produto'}</p>
-                  <p className="text-xs text-white/40">{productAnalysis.description}</p>
-                </div>
-              </div>
-              <button onClick={analyzeProduct} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-all" title="Re-analisar">
-                <RefreshCw className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <p className="text-xs text-white/30">{TYPE_LABELS[productAnalysis.type]?.desc}</p>
-            {productAnalysis.suggestions.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {productAnalysis.suggestions.map((s, i) => (
-                  <span key={i} className="px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-300/70 text-[10px] font-medium">{s}</span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Type override */}
-          <div>
-            <p className="text-xs text-white/30 mb-2">Não está correto? Selecione manualmente:</p>
-            <div className="flex gap-2 flex-wrap">
-              {(Object.keys(TYPE_LABELS) as ProductAnalysis['type'][]).map(type => (
-                <button key={type} onClick={() => handleTypeOverride(type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    productAnalysis.type === type
-                      ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/30'
-                      : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08]'
-                  }`}>
-                  {TYPE_LABELS[type].emoji} {TYPE_LABELS[type].label}
-                </button>
               ))}
             </div>
           </div>
 
+          {/* Compact size selector */}
+          <div className="flex flex-wrap gap-1.5">
+            {PRODUCT_SIZE_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => setProductSize(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  productSize === opt.value
+                    ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
+                    : 'bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'
+                }`}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {analyzingProduct && (
+        <div className="flex items-center gap-3 py-3 px-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+          <p className="text-sm text-white/50">Analisando produto...</p>
+        </div>
+      )}
+
+      {/* Compact analysis result */}
+      {productAnalysis && !analyzingProduct && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+            <span className="text-lg">{TYPE_LABELS[productAnalysis.type]?.emoji || '🏷️'}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white/80">{TYPE_LABELS[productAnalysis.type]?.label || 'Produto'}</p>
+              <p className="text-xs text-white/40 truncate">{productAnalysis.description}</p>
+            </div>
+            <button onClick={analyzeProduct} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-all" title="Re-analisar">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Type override - compact pills */}
+          <div className="flex gap-1.5 flex-wrap">
+            {(Object.keys(TYPE_LABELS) as ProductAnalysis['type'][]).map(type => (
+              <button key={type} onClick={() => handleTypeOverride(type)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                  productAnalysis.type === type
+                    ? 'bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/30'
+                    : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08]'
+                }`}>
+                {TYPE_LABELS[type].emoji} {TYPE_LABELS[type].label}
+              </button>
+            ))}
+          </div>
+
           {!productAnalysis.confirmed && (
             <button onClick={() => setProductAnalysis({ ...productAnalysis, confirmed: true })}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-              <Check className="h-4 w-4" /> Confirmar e continuar
+              <Check className="h-4 w-4" /> Confirmar
             </button>
           )}
 
           {productAnalysis.confirmed && (
-            <div className="flex items-center gap-2 py-2 text-emerald-400/70 text-xs font-medium">
-              <Check className="h-3.5 w-3.5" /> Produto confirmado — será usado na geração das imagens
+            <div className="flex items-center gap-2 text-emerald-400/70 text-xs font-medium">
+              <Check className="h-3.5 w-3.5" /> Produto confirmado
             </div>
           )}
         </div>

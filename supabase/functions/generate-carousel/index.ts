@@ -251,6 +251,51 @@ Respond ONLY with the JSON object, no markdown or explanation.` },
       }
     }
 
+    // ===== GENERATE OUTLINE (for StepCardTexts AI fill) =====
+    if (action === 'generate-outline') {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const numCards = body.cardCount || 7;
+      const mode = body.contentMode || 'carousel';
+      const outlinePrompt = mode === 'single-post'
+        ? `Gere um outline para 1 post único sobre: "${topic}". Retorne JSON: { "outline": [{ "title": "...", "body": "..." }] }`
+        : `Gere um outline para um carrossel de ${numCards} cards sobre: "${topic}". Card 1 é capa (título impactante + subtítulo), cards intermediários são conteúdo (título + corpo informativo), último card é CTA. Retorne JSON: { "outline": [{ "title": "...", "body": "..." }, ...] } com exatamente ${numCards} itens. Em português brasileiro.`;
+
+      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: 'Você gera outlines de carrosséis em JSON. Responda APENAS com JSON válido.' },
+            { role: 'user', content: outlinePrompt },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        return new Response(JSON.stringify({ error: 'Erro ao gerar outline' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const aiData = await res.json();
+      const content = aiData.choices?.[0]?.message?.content || '';
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        return new Response(JSON.stringify({ success: true, outline: parsed?.outline || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch {
+        return new Response(JSON.stringify({ success: true, outline: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // ===== ENHANCE PROMPT =====
     if (action === 'enhance-prompt') {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');

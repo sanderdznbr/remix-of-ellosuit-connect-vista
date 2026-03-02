@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Loader2, Wand2, Globe, Search, PenTool, Settings } from 'lucide-react';
+import { Loader2, Wand2, Globe, Search, PenTool, Settings, Image as ImageIcon, Layers } from 'lucide-react';
 import PromptMentionInput, { PromptMentionRef } from './PromptMention';
 
 interface MentionedPrompt {
@@ -31,18 +31,23 @@ interface Props {
   contentMode?: 'carousel' | 'single-post';
   manualPostText?: string;
   setManualPostText?: (v: string) => void;
+  wizardMode?: 'simple' | 'advanced';
+  setContentMode?: (mode: 'carousel' | 'single-post') => void;
 }
 
 const StepTopic: React.FC<Props> = ({
   topic, setTopic,
+  cardCount, setCardCount,
   enhancingPrompt, onEnhance,
   searchingWeb, webSearchResult,
   skipWebSearch, onToggleSkipWebSearch,
   mentionedPrompts = [], onMentionAdd, onMentionRemove,
   contentMode, manualPostText, setManualPostText,
+  wizardMode = 'advanced', setContentMode,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
   const [advancedMode, setAdvancedMode] = useState(false);
+  const isSimple = wizardMode === 'simple';
 
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
@@ -177,6 +182,52 @@ const StepTopic: React.FC<Props> = ({
             rows={6}
           />
           <p className="text-[11px] text-white/25">Este texto será renderizado pela IA diretamente na imagem com tipografia editorial.</p>
+        </div>
+      )}
+
+      {/* Simple mode: inline format selector */}
+      {isSimple && setContentMode && (
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <button
+              onClick={() => setContentMode('single-post')}
+              className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
+              style={{
+                backgroundColor: contentMode === 'single-post' ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${contentMode === 'single-post' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              }}
+            >
+              <ImageIcon className="h-5 w-5" style={{ color: contentMode === 'single-post' ? '#A78BFA' : 'rgba(255,255,255,0.3)' }} />
+              <span className="text-xs font-medium" style={{ color: contentMode === 'single-post' ? '#A78BFA' : 'rgba(255,255,255,0.4)' }}>Post Único</span>
+            </button>
+            <button
+              onClick={() => { setContentMode('carousel'); if (cardCount < 5) setCardCount(7); }}
+              className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
+              style={{
+                backgroundColor: contentMode === 'carousel' ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${contentMode === 'carousel' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              }}
+            >
+              <Layers className="h-5 w-5" style={{ color: contentMode === 'carousel' ? '#A78BFA' : 'rgba(255,255,255,0.3)' }} />
+              <span className="text-xs font-medium" style={{ color: contentMode === 'carousel' ? '#A78BFA' : 'rgba(255,255,255,0.4)' }}>Carrossel</span>
+            </button>
+          </div>
+          {contentMode === 'carousel' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-white/40">Quantidade de slides</span>
+                <span className="text-sm font-semibold text-white/70">{cardCount}</span>
+              </div>
+              <input
+                type="range"
+                min={5}
+                max={20}
+                value={cardCount}
+                onChange={(e) => setCardCount(Number(e.target.value))}
+                className="w-full accent-purple-500"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

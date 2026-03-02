@@ -150,7 +150,6 @@ const StepStyleSelect: React.FC<Props> = ({
                   )}
                   <div className="p-2.5">
                     <p className="text-xs font-medium text-white truncate">{style.name}</p>
-                    {style.description && <p className="text-[10px] text-white/25 mt-0.5 line-clamp-1">{style.description}</p>}
                   </div>
                   {isActive && (
                     <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">

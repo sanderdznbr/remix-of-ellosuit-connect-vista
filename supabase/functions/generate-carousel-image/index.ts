@@ -121,10 +121,11 @@ INSTRUÇÕES CRÍTICAS:
 - Gere a imagem COMPLETA de um post de Instagram (1080x1350, retrato 4:5) com TODOS os elementos visuais integrados: tipografia, elementos decorativos, tratamento fotográfico e composição conforme as regras de estilo acima.
 - A imagem deve ser um POST PRONTO PARA PUBLICAR, não apenas uma fotografia.
 - TODO o conteúdo textual fornecido acima DEVE ser renderizado diretamente na imagem com tipografia apropriada.
-- TODO texto na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use inglês, NÃO use espanhol. APENAS português do Brasil.
+- TODO texto na imagem DEVE estar em PORTUGUÊS BRASILEIRO correto, fluente e sem erros ortográficos. NÃO use inglês, NÃO use espanhol. APENAS português do Brasil. Verifique a ortografia de cada palavra.
+- Se um TEXTO EXATO foi fornecido, use SOMENTE esse texto na imagem. NÃO adicione textos extras, subtítulos, listas ou tópicos adicionais.
 - Siga as referências de estilo EXATAMENTE — replique a mesma estética de colagem editorial de revista, a mesma hierarquia tipográfica, a mesma paleta de cores, os mesmos elementos decorativos.
 - Se o card indica que NÃO é capa/hero, use uma composição DIFERENTE — use layouts editoriais de conteúdo com blocos de texto mistos, fotos menores e arranjos variados.
-- A imagem NÃO deve ter bordas coloridas no topo nem na base. A composição deve ir de ponta a ponta (full bleed), sem margens ou barras.
+- COMPOSIÇÃO FULL BLEED OBRIGATÓRIA: A imagem DEVE preencher 100% do espaço. ZERO bordas brancas, coloridas ou transparentes no topo, base, esquerda ou direita. Nenhuma margem ou barra em nenhum lado.
 - IGNORE completamente quaisquer nomes de usuário (@), marcas, logotipos, nomes de empresas ou informações pessoais que apareçam nas imagens de referência. Use as referências APENAS para extrair o ESTILO VISUAL (paleta de cores, tipografia, composição, elementos decorativos). NUNCA copie textos, @handles, nomes de pessoas ou empresas das referências.`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
@@ -199,8 +200,13 @@ STYLE REQUIREMENTS:
 7. **ABSOLUTELY DO NOT** copy, replicate, or use the FACES or PEOPLE from these style reference images. The people in the style references are NOT the subject — they are part of the reference aesthetic ONLY. If face reference photos are provided separately, use ONLY those faces. If no face references are provided, generate COMPLETELY DIFFERENT people with different features, ethnicity, and appearance from the style references.`;
     }
 
-    messageContent.push({ type: 'text', text: textPrompt });
+    // CRITICAL: Face references MUST come FIRST in the message content
+    // so the model treats them as highest priority identity references
     for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+    if (validFaceRefs.length > 0) {
+      messageContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person in the generated image MUST have the EXACT same face as shown above. This is the #1 priority.` });
+    }
+    messageContent.push({ type: 'text', text: textPrompt });
     for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
     for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 

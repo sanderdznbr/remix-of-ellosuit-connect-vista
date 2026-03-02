@@ -1664,7 +1664,13 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🎨 Gerando imagens dos cards...');
 
-      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      // IMPORTANT: Use the cover image itself as face reference to maintain the same person
+      // The cover already contains the correct face, so we use it as the primary face ref
+      // Only fall back to wizard referenceImages if they match what was used for this cover
+      const coverFaceRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];
+      const wizardFaceRefs = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      // Prioritize: wizard face refs if available (they were used for the cover), otherwise use cover image itself
+      const faceRefUrls = wizardFaceRefs.length > 0 ? [...wizardFaceRefs, ...coverFaceRef] : coverFaceRef;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const updatedCards = [...cards];

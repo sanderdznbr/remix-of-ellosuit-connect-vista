@@ -994,14 +994,16 @@ const CarouselGenerator: React.FC = () => {
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];
-      promptParts.push('IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.');
-      promptParts.push(`TEMA: "${topic.trim()}"`);
+      promptParts.push('IDIOMA OBRIGATÓRIO: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO correto e fluente. Verifique a ortografia e gramática. NÃO use espanhol, inglês ou qualquer outro idioma. NÃO invente palavras.');
       if (manualPostText.trim()) {
-        promptParts.push(`TEXTO OBRIGATÓRIO PARA RENDERIZAR NA IMAGEM: "${manualPostText.trim()}"`);
-        promptParts.push('O texto acima DEVE ser renderizado na imagem com tipografia editorial elegante e integrada à composição visual.');
+        promptParts.push(`TEXTO EXATO PARA A IMAGEM (use APENAS este texto, sem adicionar nada): "${manualPostText.trim()}"`);
+        promptParts.push('REGRA ABSOLUTA: Renderize APENAS o texto exato fornecido acima na imagem. NÃO adicione subtítulos, tópicos, bullet points, listas, descrições extras ou qualquer outro texto. O texto acima é o ÚNICO conteúdo textual permitido na imagem. Renderize com tipografia editorial elegante.');
+        promptParts.push(`CONTEXTO VISUAL (para guiar o estilo visual, NÃO adicione este texto na imagem): ${topic.trim()}`);
+      } else {
+        promptParts.push(`TEMA: "${topic.trim()}"`);
       }
       promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA ÚNICA composição editorial completa — como uma CAPA de revista ou de carrossel. NÃO divida a imagem em múltiplos quadros, slides ou seções. Apenas UMA imagem unificada e impactante.');
-      promptParts.push('Full bleed, sem barras, bordas ou grid interno. Design limpo e editorial. NÃO crie múltiplos posts dentro de uma imagem.');
+      promptParts.push('COMPOSIÇÃO OBRIGATÓRIA: Full bleed total, a imagem DEVE preencher 100% do espaço de ponta a ponta. ZERO bordas, ZERO barras, ZERO margens brancas ou coloridas no topo, base, esquerda ou direita. NENHUM espaço vazio nas bordas.');
 
       // Product context — CRITICAL for product fidelity
       if (productAnalysis?.confirmed && productRefUrls.length > 0) {

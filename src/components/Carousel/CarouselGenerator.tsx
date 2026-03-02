@@ -2741,12 +2741,18 @@ const CarouselGenerator: React.FC = () => {
                           </button>
                         )}
                         <button onClick={async () => {
-                            if (wizardStep === 0 && !webSearchResult && !skipWebSearch && topic.trim() && !manualPostText.trim()) {
+                            // Only search web if no manual text provided and web search is enabled
+                            const hasManualText = manualPostText.trim().length > 0;
+                            if (wizardStep === 0 && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
                               await handleSearchWeb();
                             }
                             // If advanced mode (manualPostText filled), use it as topic if topic is empty
-                            if (wizardStep === 0 && manualPostText.trim() && !topic.trim()) {
+                            if (wizardStep === 0 && hasManualText && !topic.trim()) {
                               setTopic(manualPostText.trim());
+                            }
+                            // If manual text is provided, also skip web search toggle
+                            if (wizardStep === 0 && hasManualText) {
+                              setSkipWebSearch(true);
                             }
                             if (wizardStep === 1) {
                               if (cardCount === 1) {

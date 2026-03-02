@@ -1,0 +1,1 @@
+UPDATE carousel_generation_jobs SET status = 'failed', error_message = 'Expirado automaticamente.', completed_at = now() WHERE status IN ('pending', 'generating_text', 'generating_images') AND updated_at < now() - interval '5 minutes';

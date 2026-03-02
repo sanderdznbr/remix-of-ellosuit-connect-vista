@@ -145,6 +145,9 @@ const CarouselGenerator: React.FC = () => {
 
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
+  const showWelcomeRef = useRef(true);
+  // Keep ref in sync
+  useEffect(() => { showWelcomeRef.current = showWelcome; }, [showWelcome]);
   const [loadingCarousel, setLoadingCarousel] = useState(false);
   
   // Content mode: carousel vs single-post
@@ -462,15 +465,21 @@ const CarouselGenerator: React.FC = () => {
           setCarouselData(job.carousel_data);
         }
         
-        // Job completed
+        // Job completed — if we're on the welcome/dashboard, just clear the job and let recents refresh
         if (job.status === 'completed') {
-          setGenerating(false);
-          setGeneratingAllImages(false);
-          setImageGenProgress('');
           setCloudJobId(null);
-          if (job.carousel_data) setCarouselData(job.carousel_data);
-          if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
-          toast({ title: 'Carrossel gerado com sucesso!' });
+          // Only take over the screen if the user is actively in a generation session (not on dashboard)
+          if (generatingRef.current && !showWelcomeRef.current) {
+            setGenerating(false);
+            setGeneratingAllImages(false);
+            setImageGenProgress('');
+            if (job.carousel_data) setCarouselData(job.carousel_data);
+            if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
+            toast({ title: 'Carrossel gerado com sucesso!' });
+          } else {
+            // Background completion — just log it; the recents list will pick it up
+            console.log('Cloud job completed in background:', job.carousel_id);
+          }
         }
         
         // Job failed — do NOT auto-retry (local generation already ran)
@@ -490,36 +499,41 @@ const CarouselGenerator: React.FC = () => {
   }, [cloudJobId]);
 
   // ===== CHECK FOR PENDING CLOUD JOBS ON MOUNT =====
+  // Cloud jobs run in BACKGROUND only — they should NEVER hijack the welcome/dashboard screen.
+  // When a pending cloud job is found, we subscribe to its updates and let it finish silently.
+  // The result will appear in the "Recentes" list on the dashboard when completed.
   useEffect(() => {
     if (!user) return;
     const checkPendingJobs = async () => {
-      const { data } = await supabase
-        .from('carousel_generation_jobs')
-        .select('id, status, progress_message, carousel_data, updated_at')
-        .eq('user_id', user.id)
-        .in('status', ['pending', 'generating_text', 'generating_images'])
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (data?.[0]) {
-        // Check if the job is stuck (no update for >5 minutes)
-        const updatedAt = new Date(data[0].updated_at).getTime();
-        const now = Date.now();
-        const stuckThresholdMs = 5 * 60 * 1000; // 5 minutes
-        if (now - updatedAt > stuckThresholdMs) {
-          // Job is stuck — mark it as failed so user can retry
-          await supabase
-            .from('carousel_generation_jobs')
-            .update({ status: 'failed', error_message: 'A geração expirou. Tente novamente.', completed_at: new Date().toISOString() })
-            .eq('id', data[0].id);
-          toast({ title: 'Geração anterior expirou', description: 'Tente gerar novamente.', variant: 'destructive' });
-          return;
+      try {
+        const { data } = await supabase
+          .from('carousel_generation_jobs')
+          .select('id, status, progress_message, carousel_data, updated_at')
+          .eq('user_id', user.id)
+          .in('status', ['pending', 'generating_text', 'generating_images'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (data?.[0]) {
+          const updatedAt = new Date(data[0].updated_at).getTime();
+          const now = Date.now();
+          const stuckThresholdMs = 5 * 60 * 1000; // 5 minutes
+          if (now - updatedAt > stuckThresholdMs) {
+            // Job is stuck — mark it as failed silently
+            await supabase
+              .from('carousel_generation_jobs')
+              .update({ status: 'failed', error_message: 'A geração expirou.', completed_at: new Date().toISOString() })
+              .eq('id', data[0].id);
+            console.log('Stale cloud job marked as failed:', data[0].id);
+            return;
+          }
+          // Subscribe to updates in background — do NOT change showWelcome or generating state
+          // The realtime subscription (cloudJobId effect) will handle completion
+          // and the result will show up in the recents list
+          setCloudJobId(data[0].id);
+          console.log('Background cloud job detected, subscribing:', data[0].id);
         }
-        setCloudJobId(data[0].id);
-        setGenerating(true);
-        setGeneratingAllImages(true);
-        setShowWelcome(false);
-        if (data[0].carousel_data) setCarouselData(data[0].carousel_data as any);
-        if (data[0].progress_message) setImageGenProgress(data[0].progress_message);
+      } catch (err) {
+        console.error('Error checking pending cloud jobs:', err);
       }
     };
     checkPendingJobs();

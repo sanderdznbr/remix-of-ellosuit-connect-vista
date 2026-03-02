@@ -1645,6 +1645,8 @@ const CarouselGenerator: React.FC = () => {
       // Don't mark job as failed — leave pending for cloud fallback
     } finally {
       setGenerating(false);
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
       setCloudJobId(null);
     }
   };

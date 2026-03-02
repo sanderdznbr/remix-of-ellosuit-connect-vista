@@ -208,7 +208,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       {/* Bottom: Profile */}
       <div className="mt-auto border-t border-white/[0.06]">
         {/* Credits */}
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors rounded-lg" onClick={() => navigate('/precos')}>
           <div className="flex items-center justify-between text-xs">
             <span className="text-white/40">Créditos</span>
             <span className="text-white/70 font-medium">{creditBalance !== null ? `${Math.floor(creditBalance)} restantes` : '...'}</span>

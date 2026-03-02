@@ -113,6 +113,80 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if this is a single-post job
+    const styleConfig = job.style_config || {};
+    const isSinglePost = styleConfig.contentMode === 'single-post' || job.card_count === 1;
+
+    if (isSinglePost) {
+      // === SINGLE POST MODE: Generate one image directly ===
+      await updateJob(jobId, { status: 'generating_images', progress_message: '🎨 Gerando post único...' });
+
+      const faceRefUrls = (job.face_ref_urls || []) as string[];
+      const styleRefUrls = ((job.reference_images || []) as any[]).filter((r: any) => r.category === 'style').map((r: any) => r.url);
+      const productRefUrls = job.product_context ? (() => { try { const pc = JSON.parse(job.product_context); return pc.productImageUrls || []; } catch { return []; } })() : [];
+      const marketplaceStyle = job.marketplace_style_config;
+      const imageSettings = job.image_settings || {};
+      const brandColors = (imageSettings.brandColors as string[] | undefined) || [];
+
+      const marketplaceRefUrls: string[] = [];
+      if (marketplaceStyle?._previewImages?.length) {
+        const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
+        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
+        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+      }
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+
+      const promptParts: string[] = [];
+      promptParts.push('IDIOMA OBRIGATÓRIO: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO correto e fluente.');
+      const manualText = styleConfig.manualPostText;
+      if (manualText) {
+        promptParts.push(`TEXTO EXATO PARA A IMAGEM (use APENAS este texto, sem adicionar nada): "${manualText}"`);
+        promptParts.push('REGRA ABSOLUTA: Renderize APENAS o texto exato fornecido acima. NÃO adicione subtítulos, tópicos, bullet points extras.');
+        promptParts.push(`CONTEXTO VISUAL (NÃO adicione na imagem): ${job.topic}`);
+      } else {
+        promptParts.push(`TEMA: "${job.topic}"`);
+      }
+      promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
+      if (job.brand_name) promptParts.push(`MARCA: Inclua "${job.brand_name}" como texto pequeno.`);
+      if (brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
+
+      const finalPrompt = marketplaceStyle?.imageGeneration?.prompt_style 
+        ? `${marketplaceStyle.imageGeneration.prompt_style}\n\n${promptParts.join('\n')}`
+        : promptParts.join('\n');
+
+      const imageUrl = await generateOneImage({
+        prompt: finalPrompt,
+        topic: job.topic,
+        faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+        styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+        referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
+        imageModel: imageSettings.model || 'auto',
+        negativePrompt: marketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces from reference images',
+        fidelity: imageSettings.fidelity || 'balanced',
+        ...(marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
+        ...(brandColors.length > 0 ? { brandColors } : {}),
+      });
+
+      if (!imageUrl) {
+        await updateJob(jobId, { status: 'failed', error_message: 'Não foi possível gerar a imagem do post', completed_at: new Date().toISOString() });
+        return new Response(JSON.stringify({ error: 'Image generation failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const singleCard = { type: 'cover', title: job.topic, subtitle: manualText || undefined, imageUrl, isAiImage: true, layout: 'dark' };
+      const finalData = { title: job.topic, cards: [singleCard] };
+
+      // Save to generated_carousels
+      const { data: inserted } = await sb.from('generated_carousels').insert({
+        company_id: job.company_id, user_id: job.user_id, title: job.topic, topic: job.topic,
+        keywords: [], carousel_data: finalData, style_config: styleConfig, card_count: 1,
+        marketplace_style_id: job.marketplace_style_id || null,
+      }).select('id').single();
+
+      await updateJob(jobId, { status: 'completed', carousel_data: finalData, carousel_id: inserted?.id || null, completed_at: new Date().toISOString(), progress_message: '✅ Post gerado!' });
+      return new Response(JSON.stringify({ success: true, carouselId: inserted?.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // === CAROUSEL MODE (multi-card) ===
     // === STEP 1: Generate text content ===
     await updateJob(jobId, { status: 'generating_text', progress_message: 'Gerando conteúdo do carrossel...' });
 
@@ -145,6 +219,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    const cleanTopic = textData?.clean_topic || job.topic.split('\n')[0].trim();
     // Assign layouts
     const cards = textData.cards.map((c: any, i: number) => {
       if (c.type === 'cover') return { ...c, layout: 'dark' };

@@ -198,9 +198,10 @@ STYLE REQUIREMENTS:
 2. Match the EXACT layout composition: same grid structure, same text placement zones, same image-to-text ratio
 3. Match the EXACT aesthetic treatment: same photo filters, same contrast levels, same grain/texture effects, same border treatments
 4. The result should look like it belongs to the SAME SERIES as the reference images — a viewer should immediately recognize it as the same brand/style
-5. CRITICAL: Extract ONLY the visual style. DO NOT copy any text content, usernames, @ handles, brand names, company names, or personal information. Replace with the content provided above.
+5. CRITICAL: Extract ONLY the visual style. DO NOT copy any text content, usernames, @ handles, brand names, company names, personal names, credits, watermarks, or personal information from the reference images. ALL text in the generated image must come EXCLUSIVELY from the user's input above. If you see text like "marketing for X by Y", "por Fulano", "@ someone", credits, or any attribution text in the references — IGNORE IT COMPLETELY and DO NOT reproduce it.
 6. Each card should have a UNIQUE layout variation within the same style system — do NOT make every card identical to the first reference.
-7. **ABSOLUTELY DO NOT** copy, replicate, or use the FACES or PEOPLE from these style reference images. The people in the style references are NOT the subject — they are part of the reference aesthetic ONLY. If face reference photos are provided separately, use ONLY those faces. If no face references are provided, generate COMPLETELY DIFFERENT people with different features, ethnicity, and appearance from the style references.`;
+7. **ABSOLUTELY DO NOT** copy, replicate, or use the FACES or PEOPLE from these style reference images. The people in the style references are NOT the subject — they are part of the reference aesthetic ONLY. If face reference photos are provided separately, use ONLY those faces. If no face references are provided, generate COMPLETELY DIFFERENT people with different features, ethnicity, and appearance from the style references.
+8. **ABSOLUTELY DO NOT** reproduce ANY text, names, brands, credits, attributions, or watermarks visible in the style reference images. The references are for VISUAL STYLE ONLY (colors, typography style, layout, decorative elements). All actual text content must come from the user prompt above.`;
     }
 
     // CRITICAL: Face references MUST come FIRST in the message content

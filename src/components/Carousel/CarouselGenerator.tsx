@@ -3567,19 +3567,19 @@ const CarouselGenerator: React.FC = () => {
                   </button>
                 </>
               )}
+              {/* Generate carousel from cover - prominent position */}
+              {carouselData.cards.length <= 2 && carouselData.cards[0]?.imageUrl && !isGuest && (
+                <button onClick={() => setShowCarouselFromCover(true)}
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold text-yellow-300 border-2 transition-all hover:scale-105 animate-pulse hover:animate-none"
+                  style={{ borderColor: 'rgba(234,179,8,0.5)', background: 'linear-gradient(135deg, rgba(234,179,8,0.2), rgba(234,179,8,0.08))' }}>
+                  <Sparkles className="h-4 w-4 text-yellow-400" /> Gerar Carrossel
+                </button>
+              )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda
               </button>
-              {/* Generate carousel from cover */}
-              {carouselData.cards.length <= 2 && carouselData.cards[0]?.imageUrl && !isGuest && (
-                <button onClick={() => setShowCarouselFromCover(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all"
-                  style={{ borderColor: 'rgba(234,179,8,0.4)', background: 'linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05))' }}>
-                  <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
-                </button>
-              )}
               <button onClick={() => { resetWizardState(); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>

@@ -6,17 +6,26 @@ export interface ReferenceImage {
   label: string;
   source: 'upload' | 'web';
   category: 'face' | 'style' | 'general' | 'product';
+  personId?: string; // links face photo to a specific FacePerson
+}
+
+export interface FacePerson {
+  id: string;
+  label: string; // "Pessoa 1", "Pessoa 2"...
+  photos: ReferenceImage[];
+  gender: 'male' | 'female' | 'auto';
+  wearsGlasses: boolean;
 }
 
 export interface ImageSettings {
   model: 'gemini' | 'nano-banana' | 'higgsfield' | 'auto';
-  higgsFieldModel: string; // e.g. 'higgsfield-ai/soul/standard', 'reve/text-to-image'
-  fidelity: 'high' | 'balanced' | 'creative'; // how closely to match references
+  higgsFieldModel: string;
+  fidelity: 'high' | 'balanced' | 'creative';
   negativePrompt: string;
   bodyPosition: string;
   handObject: string;
   phoneScreen: string;
-  screenImageUrl: string; // uploaded screenshot for device screen
+  screenImageUrl: string;
   imageType: 'photo' | 'illustration' | 'print' | '3d-render' | 'cinematic';
   lightingStyle: 'cinematic' | 'natural' | 'studio' | 'dramatic' | 'soft' | 'neon';
   cameraAngle: 'front' | 'side' | 'low-angle' | 'high-angle' | 'close-up' | 'full-body';
@@ -36,6 +45,8 @@ export interface WizardData {
   cardCount: number;
   imageCardCount: number;
   referenceImages: ReferenceImage[];
+  facePersons: FacePerson[];
+  allPeopleOnCover: boolean;
   famousList: FamousPerson[];
   famousImages: { username: string; images: any[] }[];
   imageSettings: ImageSettings;

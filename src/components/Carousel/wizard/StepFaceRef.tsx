@@ -1,26 +1,32 @@
 import React, { useState } from 'react';
-import { Upload, X, Folder } from 'lucide-react';
-import { ReferenceImage, FamousPerson } from './types';
+import { Upload, X, Folder, Plus, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { ReferenceImage, FacePerson } from './types';
 import GalleryPicker from './GalleryPicker';
 
-const MAX_FACE_PHOTOS = 3;
+const MAX_PEOPLE = 4;
+const MAX_PHOTOS_PER_PERSON = 3;
 
 interface Props {
+  facePersons: FacePerson[];
+  setFacePersons: React.Dispatch<React.SetStateAction<FacePerson[]>>;
   referenceImages: ReferenceImage[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
-  famousList: FamousPerson[];
-  setFamousList: React.Dispatch<React.SetStateAction<FamousPerson[]>>;
-  famousImages: { username: string; images: any[] }[];
-  setFamousImages: React.Dispatch<React.SetStateAction<{ username: string; images: any[] }[]>>;
+  allPeopleOnCover: boolean;
+  setAllPeopleOnCover: (v: boolean) => void;
+  // Legacy compat (kept for backward compat in generator)
   faceGender: 'male' | 'female' | 'auto';
   setFaceGender: (v: 'male' | 'female' | 'auto') => void;
   wearsGlasses: boolean;
   setWearsGlasses: (v: boolean) => void;
+  famousList: any[];
+  setFamousList: React.Dispatch<React.SetStateAction<any[]>>;
+  famousImages: any[];
+  setFamousImages: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
-const GenderChip = ({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) => (
+const Chip = ({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) => (
   <button onClick={onClick}
-    className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+    className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
       selected
         ? 'bg-white text-black'
         : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
@@ -29,32 +35,94 @@ const GenderChip = ({ selected, onClick, children }: { selected: boolean; onClic
   </button>
 );
 
+const PERSON_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B'];
+
+const createPerson = (index: number): FacePerson => ({
+  id: crypto.randomUUID(),
+  label: `Pessoa ${index + 1}`,
+  photos: [],
+  gender: 'auto',
+  wearsGlasses: false,
+});
+
 const StepFaceRef: React.FC<Props> = ({
+  facePersons, setFacePersons,
   referenceImages, setReferenceImages,
+  allPeopleOnCover, setAllPeopleOnCover,
   faceGender, setFaceGender,
   wearsGlasses, setWearsGlasses,
 }) => {
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
+  const [galleryOpenFor, setGalleryOpenFor] = useState<string | null>(null);
 
-  const faceRefs = referenceImages.filter(r => r.category === 'face');
-  const hasFaces = faceRefs.length > 0;
-  const canAddMore = faceRefs.length < MAX_FACE_PHOTOS;
+  // Ensure at least 1 person slot exists
+  React.useEffect(() => {
+    if (facePersons.length === 0) {
+      const p = createPerson(0);
+      setFacePersons([p]);
+      setExpandedPerson(p.id);
+    } else if (!expandedPerson) {
+      setExpandedPerson(facePersons[0].id);
+    }
+  }, []);
 
-  const handleFaceUpload = (files: FileList | null) => {
+  // Sync legacy faceGender/wearsGlasses from first person
+  React.useEffect(() => {
+    if (facePersons.length > 0 && facePersons[0].photos.length > 0) {
+      setFaceGender(facePersons[0].gender);
+      setWearsGlasses(facePersons[0].wearsGlasses);
+    }
+  }, [facePersons]);
+
+  // Sync referenceImages (face category) from facePersons
+  const syncFaceRefs = (persons: FacePerson[]) => {
+    const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
+    const allFaceRefs = persons.flatMap(p => p.photos.map(ph => ({ ...ph, personId: p.id })));
+    setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
+  };
+
+  const addPerson = () => {
+    if (facePersons.length >= MAX_PEOPLE) return;
+    const newPerson = createPerson(facePersons.length);
+    const updated = [...facePersons, newPerson];
+    setFacePersons(updated);
+    setExpandedPerson(newPerson.id);
+  };
+
+  const removePerson = (id: string) => {
+    const updated = facePersons.filter(p => p.id !== id);
+    setFacePersons(updated);
+    syncFaceRefs(updated);
+    if (expandedPerson === id) setExpandedPerson(updated[0]?.id || null);
+  };
+
+  const updatePerson = (id: string, patch: Partial<FacePerson>) => {
+    const updated = facePersons.map(p => p.id === id ? { ...p, ...patch } : p);
+    setFacePersons(updated);
+    if (patch.photos !== undefined) syncFaceRefs(updated);
+  };
+
+  const handlePhotoUpload = (personId: string, files: FileList | null) => {
     if (!files) return;
-    const remaining = MAX_FACE_PHOTOS - faceRefs.length;
+    const person = facePersons.find(p => p.id === personId);
+    if (!person) return;
+    const remaining = MAX_PHOTOS_PER_PERSON - person.photos.length;
     if (remaining <= 0) return;
+
     Array.from(files).slice(0, remaining).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
-          setReferenceImages(prev => {
-            const currentFaces = prev.filter(r => r.category === 'face').length;
-            if (currentFaces >= MAX_FACE_PHOTOS) return prev;
-            return [...prev, {
-              url: e.target!.result as string, thumb: e.target!.result as string,
-              label: file.name, source: 'upload', category: 'face',
-            }];
+          const newPhoto: ReferenceImage = {
+            url: e.target.result as string,
+            thumb: e.target.result as string,
+            label: file.name,
+            source: 'upload',
+            category: 'face',
+            personId,
+          };
+          updatePerson(personId, {
+            photos: [...(facePersons.find(p => p.id === personId)?.photos || []), newPhoto],
           });
         }
       };
@@ -62,91 +130,180 @@ const StepFaceRef: React.FC<Props> = ({
     });
   };
 
-  const handleGalleryFiles = (files: { url: string; name: string }[]) => {
-    const remaining = MAX_FACE_PHOTOS - faceRefs.length;
+  const handleGalleryFiles = (personId: string, files: { url: string; name: string }[]) => {
+    const person = facePersons.find(p => p.id === personId);
+    if (!person) return;
+    const remaining = MAX_PHOTOS_PER_PERSON - person.photos.length;
     if (remaining <= 0) return;
-    const newRefs: ReferenceImage[] = files.slice(0, remaining).map(f => ({
-      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'face' as const,
+    const newPhotos: ReferenceImage[] = files.slice(0, remaining).map(f => ({
+      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'face' as const, personId,
     }));
-    setReferenceImages(prev => [...prev, ...newRefs]);
+    updatePerson(personId, { photos: [...person.photos, ...newPhotos] });
   };
 
+  const removePhoto = (personId: string, photoIndex: number) => {
+    const person = facePersons.find(p => p.id === personId);
+    if (!person) return;
+    updatePerson(personId, { photos: person.photos.filter((_, i) => i !== photoIndex) });
+  };
+
+  const totalFaces = facePersons.reduce((sum, p) => sum + p.photos.length, 0);
+  const hasAnyFaces = totalFaces > 0;
+  const multiPeople = facePersons.filter(p => p.photos.length > 0).length > 1;
+
   return (
-    <div className="space-y-6" style={{ minHeight: '300px' }}>
+    <div className="space-y-5" style={{ minHeight: '300px' }}>
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">O post deve ter algum rosto?</h2>
-        <p className="text-sm text-white/40">Anexe fotos de quem deve aparecer no post.</p>
-        <p className="text-xs text-amber-400/70 mt-1">⚡ Até {MAX_FACE_PHOTOS} fotos serão usadas pela IA. Envie ângulos diferentes para melhor resultado.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Quem deve aparecer no post?</h2>
+        <p className="text-sm text-white/40">Adicione até {MAX_PEOPLE} pessoas com fotos de referência para cada uma.</p>
+        <p className="text-xs text-amber-400/70 mt-1">⚡ Envie ângulos diferentes de cada pessoa para melhor resultado.</p>
       </div>
 
-      {/* Upload */}
-      {canAddMore ? (
-        <label className="flex flex-col items-center justify-center gap-3 py-8 rounded-xl border border-dashed border-white/[0.08] cursor-pointer hover:bg-white/[0.02] transition-colors">
-          <Upload className="h-6 w-6 text-white/20" />
-          <span className="text-sm font-medium text-white/50">Subir fotos do rosto</span>
-          <span className="text-xs text-white/20">JPG, PNG — até {MAX_FACE_PHOTOS - faceRefs.length} foto(s) restante(s)</span>
-          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFaceUpload(e.target.files)} />
-        </label>
-      ) : (
-        <div className="py-6 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center">
-          <p className="text-sm text-white/40">Limite de {MAX_FACE_PHOTOS} fotos atingido</p>
-        </div>
-      )}
+      {/* Person slots */}
+      <div className="space-y-2">
+        {facePersons.map((person, personIdx) => {
+          const isExpanded = expandedPerson === person.id;
+          const color = PERSON_COLORS[personIdx % PERSON_COLORS.length];
+          const hasPhotos = person.photos.length > 0;
 
-      {/* Gallery picker button */}
-      {canAddMore && (
-        <button onClick={() => setGalleryOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
-          <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+          return (
+            <div key={person.id} className="rounded-xl border transition-all"
+              style={{
+                borderColor: hasPhotos ? `${color}40` : 'rgba(255,255,255,0.06)',
+                background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent',
+              }}>
+              {/* Person header */}
+              <button onClick={() => setExpandedPerson(isExpanded ? null : person.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ backgroundColor: `${color}20`, color }}>
+                  {hasPhotos ? (
+                    <img src={person.photos[0].thumb} alt="" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-white/80">{person.label}</span>
+                  {hasPhotos && (
+                    <span className="ml-2 text-[10px] text-white/30">
+                      {person.photos.length} foto(s) · {person.gender === 'auto' ? 'Auto' : person.gender === 'male' ? '♂' : '♀'}
+                      {person.wearsGlasses ? ' · 🤓' : ''}
+                    </span>
+                  )}
+                </div>
+                {facePersons.length > 1 && (
+                  <button onClick={(e) => { e.stopPropagation(); removePerson(person.id); }}
+                    className="p-1 text-white/20 hover:text-red-400 transition-colors">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {isExpanded ? <ChevronUp className="h-4 w-4 text-white/20" /> : <ChevronDown className="h-4 w-4 text-white/20" />}
+              </button>
+
+              {/* Expanded content */}
+              {isExpanded && (
+                <div className="px-4 pb-4 space-y-4">
+                  {/* Upload area */}
+                  {person.photos.length < MAX_PHOTOS_PER_PERSON ? (
+                    <label className="flex flex-col items-center justify-center gap-2 py-5 rounded-xl border border-dashed cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      style={{ borderColor: `${color}30` }}>
+                      <Upload className="h-5 w-5 text-white/20" />
+                      <span className="text-xs font-medium text-white/50">Subir fotos de {person.label}</span>
+                      <span className="text-[10px] text-white/20">Até {MAX_PHOTOS_PER_PERSON - person.photos.length} foto(s) restante(s)</span>
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => handlePhotoUpload(person.id, e.target.files)} />
+                    </label>
+                  ) : (
+                    <div className="py-3 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center">
+                      <p className="text-xs text-white/40">Limite de {MAX_PHOTOS_PER_PERSON} fotos atingido</p>
+                    </div>
+                  )}
+
+                  {/* Gallery button */}
+                  {person.photos.length < MAX_PHOTOS_PER_PERSON && (
+                    <button onClick={() => setGalleryOpenFor(person.id)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+                      <Folder className="h-3.5 w-3.5" /> Importar da Galeria de Marca
+                    </button>
+                  )}
+
+                  {/* Photo thumbnails */}
+                  {person.photos.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {person.photos.map((photo, i) => (
+                        <div key={i} className="relative group">
+                          <div className="w-14 h-14 rounded-lg overflow-hidden ring-1 ring-white/10">
+                            <img src={photo.thumb} alt={photo.label} className="w-full h-full object-cover" />
+                          </div>
+                          <button onClick={() => removePhoto(person.id, i)}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Attributes — only when photos exist */}
+                  {hasPhotos && (
+                    <div className="space-y-3 pt-2 border-t border-white/[0.06]">
+                      <div>
+                        <label className="text-xs font-medium text-white/60 mb-2 block">Gênero</label>
+                        <div className="flex gap-1.5">
+                          <Chip selected={person.gender === 'auto'} onClick={() => updatePerson(person.id, { gender: 'auto' })}>🤖 Auto</Chip>
+                          <Chip selected={person.gender === 'male'} onClick={() => updatePerson(person.id, { gender: 'male' })}>👨 Masc</Chip>
+                          <Chip selected={person.gender === 'female'} onClick={() => updatePerson(person.id, { gender: 'female' })}>👩 Fem</Chip>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-white/60 mb-2 block">Usa óculos?</label>
+                        <div className="flex gap-1.5">
+                          <Chip selected={!person.wearsGlasses} onClick={() => updatePerson(person.id, { wearsGlasses: false })}>Não</Chip>
+                          <Chip selected={person.wearsGlasses} onClick={() => updatePerson(person.id, { wearsGlasses: true })}>🤓 Sim</Chip>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add person button */}
+      {facePersons.length < MAX_PEOPLE && (
+        <button onClick={addPerson}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-medium text-white/30 hover:text-white/50 border border-dashed border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.02] transition-all">
+          <Plus className="h-4 w-4" /> Adicionar outra pessoa (até {MAX_PEOPLE})
         </button>
       )}
 
-      <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de rostos" />
-
-      {faceRefs.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-white/40 mb-3">Fotos adicionadas ({faceRefs.length}/{MAX_FACE_PHOTOS})</p>
-          <div className="flex gap-2 flex-wrap">
-            {faceRefs.map((ref, i) => {
-              const globalIdx = referenceImages.indexOf(ref);
-              return (
-                <div key={i} className="relative group">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden ring-1 ring-white/10">
-                    <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
-                  </div>
-                  <button onClick={() => setReferenceImages(prev => prev.filter((_, idx) => idx !== globalIdx))}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              );
-            })}
+      {/* Multi-person options */}
+      {multiPeople && (
+        <div className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02] space-y-3">
+          <label className="text-sm font-medium text-white/80 block">Todas as pessoas devem aparecer na capa?</label>
+          <div className="flex gap-2">
+            <Chip selected={allPeopleOnCover} onClick={() => setAllPeopleOnCover(true)}>✅ Sim, todas na capa</Chip>
+            <Chip selected={!allPeopleOnCover} onClick={() => setAllPeopleOnCover(false)}>🔄 Alternar entre os cards</Chip>
           </div>
+          <p className="text-[10px] text-white/30">
+            {allPeopleOnCover
+              ? 'Todas as pessoas aparecerão juntas em todos os cards.'
+              : 'Cada pessoa aparecerá em cards diferentes, alternando ao longo do carrossel.'}
+          </p>
         </div>
       )}
 
-      {/* Face attributes — shown only when faces are uploaded */}
-      {hasFaces && (
-        <div className="space-y-5 pt-2 border-t border-white/[0.06]">
-          {/* Gender */}
-          <div>
-            <label className="text-sm font-medium text-white/80 mb-2.5 block">Gênero da pessoa</label>
-            <div className="flex gap-2">
-              <GenderChip selected={faceGender === 'auto'} onClick={() => setFaceGender('auto')}>🤖 Detectar auto</GenderChip>
-              <GenderChip selected={faceGender === 'male'} onClick={() => setFaceGender('male')}>👨 Masculino</GenderChip>
-              <GenderChip selected={faceGender === 'female'} onClick={() => setFaceGender('female')}>👩 Feminino</GenderChip>
-            </div>
-          </div>
-
-          {/* Glasses */}
-          <div>
-            <label className="text-sm font-medium text-white/80 mb-2.5 block">Usa óculos?</label>
-            <div className="flex gap-2">
-              <GenderChip selected={!wearsGlasses} onClick={() => setWearsGlasses(false)}>Não</GenderChip>
-              <GenderChip selected={wearsGlasses} onClick={() => setWearsGlasses(true)}>🤓 Sim, usa óculos</GenderChip>
-            </div>
-          </div>
-        </div>
+      {/* Gallery picker modal */}
+      {galleryOpenFor && (
+        <GalleryPicker
+          open={!!galleryOpenFor}
+          onClose={() => setGalleryOpenFor(null)}
+          onSelectFiles={(files) => { handleGalleryFiles(galleryOpenFor, files); setGalleryOpenFor(null); }}
+          label="Selecionar pasta de rostos"
+        />
       )}
     </div>
   );

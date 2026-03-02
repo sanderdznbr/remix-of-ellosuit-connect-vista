@@ -145,7 +145,10 @@ STYLE REQUIREMENTS:
 - NÃO escreva "Card X de Y", "Card 1 de 20", "1/20", numeração de slides ou contadores
 - NÃO replique a composição exata da capa/cover em cards de conteúdo — cada card deve ter layout ÚNICO e DIFERENTE
 - NÃO copie textos, @handles, nomes de pessoas ou empresas das imagens de referência
-- NÃO copie os ROSTOS ou PESSOAS das imagens de referência de ESTILO. Se imagens de referência de ROSTO forem fornecidas separadamente, use APENAS esses rostos. Se não houver referência de rosto, use pessoas COMPLETAMENTE DIFERENTES das que aparecem nas referências de estilo.`;
+- NÃO copie os ROSTOS ou PESSOAS das imagens de referência de ESTILO. Se imagens de referência de ROSTO forem fornecidas separadamente, use APENAS esses rostos. Se não houver referência de rosto, use pessoas COMPLETAMENTE DIFERENTES das que aparecem nas referências de estilo.
+- NÃO adicione textos que não foram explicitamente solicitados. Se um "TEXTO EXATO" foi fornecido, use APENAS esse texto. Nenhum bullet point, lista, subtítulo ou texto adicional.
+- NÃO coloque texto fora dos limites da imagem. Todo texto DEVE estar completamente visível dentro dos limites 1080x1350, com margens de segurança.
+- NÃO use textos cortados ou parcialmente visíveis nas bordas.`;
 
     if (negativePrompt) {
       textPrompt += `\n- ${negativePrompt}`;

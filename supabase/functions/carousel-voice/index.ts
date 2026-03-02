@@ -52,8 +52,28 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("ElevenLabs error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "TTS generation failed" }), {
-        status: 500,
+
+      let status = response.status === 401 ? 401 : 500;
+      let errorMessage = "TTS generation failed";
+
+      try {
+        const errData = JSON.parse(errorText);
+        const detail = errData?.detail;
+
+        if (detail?.status === "quota_exceeded") {
+          status = 429;
+          errorMessage = detail?.message || "Cota ElevenLabs esgotada para gerar áudio.";
+        } else if (typeof detail?.message === "string") {
+          errorMessage = detail.message;
+        } else if (typeof detail === "string") {
+          errorMessage = detail;
+        }
+      } catch {
+        // Keep fallback error message
+      }
+
+      return new Response(JSON.stringify({ error: errorMessage, provider_status: response.status }), {
+        status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -61,7 +61,23 @@ export function useCarouselVoice() {
       );
 
       if (!response.ok) {
-        console.warn('Voice guide failed:', response.status);
+        let errorMessage = `Voice guide failed (${response.status})`;
+        try {
+          const data = await response.json();
+          if (typeof data?.error === 'string') {
+            errorMessage = data.error;
+          }
+        } catch {
+          // ignore parse errors
+        }
+
+        if (response.status === 429 || /quota|cota|credits?/i.test(errorMessage)) {
+          setVoiceEnabled(false);
+          console.warn('Voice guide disabled: ElevenLabs quota exceeded.');
+        } else {
+          console.warn('Voice guide failed:', errorMessage);
+        }
+
         setIsSpeaking(false);
         return;
       }

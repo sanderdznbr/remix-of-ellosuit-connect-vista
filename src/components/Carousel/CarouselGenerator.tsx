@@ -2437,11 +2437,8 @@ const CarouselGenerator: React.FC = () => {
   }, [wizardStep, speakStep, showWelcome, carouselData, loadingCarousel]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active
-  // Auto-skip Quantidade step if single-post mode
+  // Auto-skip colors/fonts steps when marketplace style is active
   useEffect(() => {
-    if (contentMode === 'single-post' && wizardStep === 1) {
-      setWizardStep(2);
-    }
     if (isFullBleedMarketplace && (wizardStep === 7 || wizardStep === 8)) {
       setWizardStep(9);
     }
@@ -2457,12 +2454,8 @@ const CarouselGenerator: React.FC = () => {
           <WelcomeScreen onStart={(initialTopic, shouldEnhance, welcomeMentions, mode, postText) => {
             if (initialTopic) { setTopic(initialTopic); setOriginalTopic(initialTopic); }
             if (welcomeMentions?.length) setMentionedPrompts(welcomeMentions);
-            if (mode) setContentMode(mode);
-            if (mode === 'single-post') {
-              setCardCount(1);
-              setImageCardCount(1);
-              if (postText) setManualPostText(postText);
-            }
+            // Don't set contentMode from welcome — user chooses at Step 1 (Format)
+            if (postText) setManualPostText(postText);
             setShowWelcome(false);
             if (shouldEnhance && initialTopic) {
               setTimeout(() => enhancePrompt(initialTopic), 300);

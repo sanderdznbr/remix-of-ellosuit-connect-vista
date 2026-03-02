@@ -3,6 +3,8 @@ import { Upload, X, Folder } from 'lucide-react';
 import { ReferenceImage, FamousPerson } from './types';
 import GalleryPicker from './GalleryPicker';
 
+const MAX_FACE_PHOTOS = 3;
+
 interface Props {
   referenceImages: ReferenceImage[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
@@ -34,16 +36,26 @@ const StepFaceRef: React.FC<Props> = ({
 }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
+  const faceRefs = referenceImages.filter(r => r.category === 'face');
+  const hasFaces = faceRefs.length > 0;
+  const canAddMore = faceRefs.length < MAX_FACE_PHOTOS;
+
   const handleFaceUpload = (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach(file => {
+    const remaining = MAX_FACE_PHOTOS - faceRefs.length;
+    if (remaining <= 0) return;
+    Array.from(files).slice(0, remaining).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
-          setReferenceImages(prev => [...prev, {
-            url: e.target!.result as string, thumb: e.target!.result as string,
-            label: file.name, source: 'upload', category: 'face',
-          }]);
+          setReferenceImages(prev => {
+            const currentFaces = prev.filter(r => r.category === 'face').length;
+            if (currentFaces >= MAX_FACE_PHOTOS) return prev;
+            return [...prev, {
+              url: e.target!.result as string, thumb: e.target!.result as string,
+              label: file.name, source: 'upload', category: 'face',
+            }];
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -51,42 +63,49 @@ const StepFaceRef: React.FC<Props> = ({
   };
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
-    const newRefs: ReferenceImage[] = files.map(f => ({
+    const remaining = MAX_FACE_PHOTOS - faceRefs.length;
+    if (remaining <= 0) return;
+    const newRefs: ReferenceImage[] = files.slice(0, remaining).map(f => ({
       url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'face' as const,
     }));
     setReferenceImages(prev => [...prev, ...newRefs]);
   };
-
-  const faceRefs = referenceImages.filter(r => r.category === 'face');
-  const hasFaces = faceRefs.length > 0;
 
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">O post deve ter algum rosto?</h2>
         <p className="text-sm text-white/40">Anexe fotos de quem deve aparecer no post.</p>
-        <p className="text-xs text-amber-400/70 mt-1">⚡ Até 3 fotos serão usadas pela IA. Envie ângulos diferentes para melhor resultado.</p>
+        <p className="text-xs text-amber-400/70 mt-1">⚡ Até {MAX_FACE_PHOTOS} fotos serão usadas pela IA. Envie ângulos diferentes para melhor resultado.</p>
       </div>
 
       {/* Upload */}
-      <label className="flex flex-col items-center justify-center gap-3 py-8 rounded-xl border border-dashed border-white/[0.08] cursor-pointer hover:bg-white/[0.02] transition-colors">
-        <Upload className="h-6 w-6 text-white/20" />
-        <span className="text-sm font-medium text-white/50">Subir fotos do rosto</span>
-        <span className="text-xs text-white/20">JPG, PNG — múltiplas fotos para melhor resultado</span>
-        <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFaceUpload(e.target.files)} />
-      </label>
+      {canAddMore ? (
+        <label className="flex flex-col items-center justify-center gap-3 py-8 rounded-xl border border-dashed border-white/[0.08] cursor-pointer hover:bg-white/[0.02] transition-colors">
+          <Upload className="h-6 w-6 text-white/20" />
+          <span className="text-sm font-medium text-white/50">Subir fotos do rosto</span>
+          <span className="text-xs text-white/20">JPG, PNG — até {MAX_FACE_PHOTOS - faceRefs.length} foto(s) restante(s)</span>
+          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFaceUpload(e.target.files)} />
+        </label>
+      ) : (
+        <div className="py-6 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center">
+          <p className="text-sm text-white/40">Limite de {MAX_FACE_PHOTOS} fotos atingido</p>
+        </div>
+      )}
 
       {/* Gallery picker button */}
-      <button onClick={() => setGalleryOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
-        <Folder className="h-4 w-4" /> Importar da Galeria de Marca
-      </button>
+      {canAddMore && (
+        <button onClick={() => setGalleryOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+          <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+        </button>
+      )}
 
       <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de rostos" />
 
       {faceRefs.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-white/40 mb-3">Fotos adicionadas ({faceRefs.length})</p>
+          <p className="text-xs font-medium text-white/40 mb-3">Fotos adicionadas ({faceRefs.length}/{MAX_FACE_PHOTOS})</p>
           <div className="flex gap-2 flex-wrap">
             {faceRefs.map((ref, i) => {
               const globalIdx = referenceImages.indexOf(ref);

@@ -110,7 +110,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       {/* Top Navbar */}
       <motion.nav
         className="relative z-20 flex items-center justify-between px-5 md:px-8 py-4"
-        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}

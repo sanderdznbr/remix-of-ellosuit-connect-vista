@@ -2426,7 +2426,7 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ==================== UI ====================
-  const canProceed = wizardStep === 0 ? topic.trim().length > 0 : true;
+  const canProceed = wizardStep === 0 ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : true;
 
   // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
@@ -2741,8 +2741,12 @@ const CarouselGenerator: React.FC = () => {
                           </button>
                         )}
                         <button onClick={async () => {
-                            if (wizardStep === 0 && !webSearchResult && !skipWebSearch && topic.trim()) {
+                            if (wizardStep === 0 && !webSearchResult && !skipWebSearch && topic.trim() && !manualPostText.trim()) {
                               await handleSearchWeb();
+                            }
+                            // If advanced mode (manualPostText filled), use it as topic if topic is empty
+                            if (wizardStep === 0 && manualPostText.trim() && !topic.trim()) {
+                              setTopic(manualPostText.trim());
                             }
                             if (wizardStep === 1) {
                               if (cardCount === 1) {

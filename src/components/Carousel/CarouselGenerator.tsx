@@ -69,7 +69,7 @@ import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { ReferenceImage, FamousPerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
+import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 
 const CARD_W = 1080;
@@ -176,6 +176,8 @@ const CarouselGenerator: React.FC = () => {
   const [brandAssets, setBrandAssets] = useState<{ id: string; name: string; file_url: string; category: string }[]>([]);
   const [faceGender, setFaceGender] = useState<'male' | 'female' | 'auto'>('auto');
   const [wearsGlasses, setWearsGlasses] = useState(false);
+  const [facePersons, setFacePersons] = useState<FacePerson[]>([]);
+  const [allPeopleOnCover, setAllPeopleOnCover] = useState(true);
   
   // Product state
   const [productImages, setProductImages] = useState<{ url: string; thumb: string; file: File }[]>([]);
@@ -585,7 +587,7 @@ const CarouselGenerator: React.FC = () => {
         if (!companyData) return;
         
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
-        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses };
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
         
         if (currentCarouselId) {
           await supabase.from('generated_carousels').update({ 
@@ -709,16 +711,31 @@ const CarouselGenerator: React.FC = () => {
 
     // Face attributes (gender + glasses) + STRONG FIDELITY
     const hasFaceRefs = referenceImages.some(r => r.category === 'face');
-    if (hasFaceRefs) {
+    const activeFacePersons = facePersons.filter(p => p.photos.length > 0);
+    if (hasFaceRefs && activeFacePersons.length > 0) {
+      if (activeFacePersons.length === 1) {
+        const p = activeFacePersons[0];
+        parts.push('FACE REFERENCE FIDELITY (CRITICAL): The face in this image MUST be an EXACT match to the uploaded face reference photos. Preserve the EXACT same facial structure, nose shape, eye shape, eyebrow shape, jawline, skin tone, skin texture, lip shape, and all distinctive features. The person must be immediately recognizable as the SAME individual from the reference photos. Do NOT change or stylize facial features. Do NOT use a different person. This is the #1 priority.');
+        if (p.gender === 'male') parts.push('The person in the image MUST be MALE with a masculine body and build.');
+        else if (p.gender === 'female') parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
+        if (p.wearsGlasses) parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
+      } else {
+        parts.push(`MULTIPLE PEOPLE (CRITICAL): This image MUST contain exactly ${activeFacePersons.length} distinct people. Each person MUST match their respective face reference photos EXACTLY. Preserve facial structure, nose shape, eye shape, jawline, skin tone, and all distinctive features for EACH person.`);
+        activeFacePersons.forEach((p, idx) => {
+          const label = p.label || `Pessoa ${idx + 1}`;
+          let desc = `${label}:`;
+          if (p.gender === 'male') desc += ' MALE with masculine build.';
+          else if (p.gender === 'female') desc += ' FEMALE with feminine build.';
+          if (p.wearsGlasses) desc += ' MUST wear glasses.';
+          parts.push(desc);
+        });
+      }
+    } else if (hasFaceRefs) {
+      // Fallback for legacy data without facePersons
       parts.push('FACE REFERENCE FIDELITY (CRITICAL): The face in this image MUST be an EXACT match to the uploaded face reference photos. Preserve the EXACT same facial structure, nose shape, eye shape, eyebrow shape, jawline, skin tone, skin texture, lip shape, and all distinctive features. The person must be immediately recognizable as the SAME individual from the reference photos. Do NOT change or stylize facial features. Do NOT use a different person. This is the #1 priority.');
-      if (faceGender === 'male') {
-        parts.push('The person in the image MUST be MALE with a masculine body and build.');
-      } else if (faceGender === 'female') {
-        parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
-      }
-      if (wearsGlasses) {
-        parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
-      }
+      if (faceGender === 'male') parts.push('The person in the image MUST be MALE with a masculine body and build.');
+      else if (faceGender === 'female') parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
+      if (wearsGlasses) parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
     }
 
     // Brand colors — only inject when NO marketplace style is active (marketplace styles have their own palette)
@@ -913,7 +930,7 @@ const CarouselGenerator: React.FC = () => {
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses };
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
@@ -973,6 +990,8 @@ const CarouselGenerator: React.FC = () => {
       if (sc.referenceImages?.length) setReferenceImages(sc.referenceImages);
       if (sc.faceGender) setFaceGender(sc.faceGender);
       if (sc.wearsGlasses !== undefined) setWearsGlasses(sc.wearsGlasses);
+      if (sc.facePersons?.length) setFacePersons(sc.facePersons);
+      if (sc.allPeopleOnCover !== undefined) setAllPeopleOnCover(sc.allPeopleOnCover);
     }
     setShowHistory(false);
     setActiveCardIndex(0);
@@ -1341,7 +1360,8 @@ const CarouselGenerator: React.FC = () => {
 
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
       const updatedCards = [...cards];
-      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
 
@@ -1467,7 +1487,16 @@ const CarouselGenerator: React.FC = () => {
           }
           
           const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
-          const capturedFaceRefs = faceRefUrls.length > 0 ? [...faceRefUrls] : undefined;
+          // Multi-person: alternate or combine face refs
+          let cardFaceRefs: string[] | undefined;
+          if (activeFacePersonsForGen.length > 1 && !allPeopleOnCover) {
+            // Alternate people across cards
+            const personForCard = activeFacePersonsForGen[(i - 1) % activeFacePersonsForGen.length];
+            cardFaceRefs = personForCard.photos.map(p => p.url);
+          } else {
+            cardFaceRefs = allFaceRefUrls.length > 0 ? [...allFaceRefUrls] : undefined;
+          }
+          const capturedFaceRefs = cardFaceRefs && cardFaceRefs.length > 0 ? cardFaceRefs : undefined;
           const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
           const capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
            const isFullBleedMkt = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
@@ -2901,7 +2930,10 @@ const CarouselGenerator: React.FC = () => {
                         webImages={webSearchResult?.images} onSkip={() => setWizardStep(3)} />
                     )}
                     {wizardStep === 3 && (
-                      <StepFaceRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                      <StepFaceRef
+                        facePersons={facePersons} setFacePersons={setFacePersons}
+                        referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                        allPeopleOnCover={allPeopleOnCover} setAllPeopleOnCover={setAllPeopleOnCover}
                         famousList={famousList} setFamousList={setFamousList}
                         famousImages={famousImages} setFamousImages={setFamousImages}
                         faceGender={faceGender} setFaceGender={setFaceGender}

@@ -1,52 +1,145 @@
 
-# Plano: Geração de Post Individual (1080x1350)
+
+# Wizard Redesign: Modo Simples + Avancado com Edicao de Texto por Card
 
 ## Resumo
-Adicionar a funcionalidade de gerar um **Post único** (1080x1350) além do carrossel, com opção de inserir texto manualmente que será renderizado diretamente na imagem.
 
-## Mudanças Necessárias
+Reorganizar o wizard de criacao em dois modos: **Simples** (fluxo rapido, menos etapas) e **Avancado** (controle total, incluindo edicao de texto por card). Ambos os modos suportam Post Unico e Carrossel, com a nova funcionalidade de definir o texto exato de cada card antes da geracao.
 
-### 1. Tela de boas-vindas (WelcomeScreen) -- adicionar seleção de tipo
-- Abaixo do campo de prompt, adicionar dois botões de seleção: **"Carrossel"** e **"Post Único"**
-- Quando "Post Único" for selecionado, mostrar um campo extra: **"Texto no post"** (textarea) onde o usuário digita o texto que deve aparecer renderizado na imagem
-- O `onStart` passará um novo parâmetro indicando o modo (`carousel` ou `single-post`) e o texto manual
+---
 
-### 2. CarouselGenerator -- novo modo "single post"
-- Adicionar estado `contentMode: 'carousel' | 'single-post'` e `manualPostText: string`
-- No modo "single post":
-  - Pular o wizard de "Quantidade de slides" (forçar `cardCount = 1`)
-  - Gerar apenas 1 card com a imagem IA incluindo o texto manual renderizado diretamente
-  - A geração de imagem usará um prompt especial que instrui a IA a renderizar o texto fornecido com tipografia editorial integrada (similar ao modo full-bleed dos estilos marketplace)
-  - O editor mostrará o card único sem strip de thumbnails, apenas o preview e a sidebar de edição
-  - Exportar como imagem única (sem opção ZIP, apenas PNG/JPG/WEBP direto)
+## Fluxo Proposto
 
-### 3. Prompt de geração para post único
-- Quando `contentMode === 'single-post'`, o prompt enviado ao `generate-carousel-image` incluirá:
-  - O texto manual como **conteúdo obrigatório a ser renderizado** na imagem
-  - Instrução para gerar composição editorial completa com tipografia integrada (1080x1350)
-  - Referências de rosto, estilo e produto (se fornecidas)
-  - Cores da marca (se extraídas do logo)
-- Não será necessário chamar o `generate-carousel` para gerar conteúdo textual -- o texto é manual
+### Tela Inicial do Wizard (Step 0) - NOVO
 
-### 4. Fluxo do wizard no modo single-post
-- O wizard terá passos reduzidos: **Tema/Texto** -> **Fotos** -> **Rosto** -> **Produto** -> **Marca** -> **Estilo** -> **Gerar**
-- O passo "Quantidade" será pulado automaticamente
-- No passo "Tema", aparecerá o campo adicional "Texto que deve aparecer no post" (textarea)
+Antes de comecar, o usuario escolhe:
 
-### 5. Ajustes na exportação
-- No modo single-post, o botão "Exportar" baixará diretamente a imagem (sem ZIP), com opção de formato (PNG/JPG/WEBP)
+```text
++------------------------------------------+
+|  Como voce quer criar?                    |
+|                                           |
+|  [  Simples  ]    [  Avancado  ]          |
+|  Rapido, a IA       Controle total:       |
+|  cuida de tudo      textos, rosto,        |
+|                     produto, cores...     |
++------------------------------------------+
+```
 
-## Arquivos a Editar
+Um toggle/chip no topo do wizard que pode ser alternado a qualquer momento.
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/Carousel/WelcomeScreen.tsx` | Adicionar botões "Carrossel" / "Post Único" e campo de texto manual; atualizar `onStart` com novos params |
-| `src/components/Carousel/CarouselGenerator.tsx` | Novo estado `contentMode` e `manualPostText`; lógica de geração simplificada para single-post; wizard steps reduzidos; exportação direta |
-| `src/components/Carousel/wizard/StepTopic.tsx` | Adicionar campo "Texto no post" quando modo é single-post |
+### Modo Simples (4 etapas)
 
-## Detalhes Técnicos
+| Step | Conteudo |
+|------|----------|
+| 0 | Tema + Formato (Post Unico / Carrossel + slider de quantidade) |
+| 1 | Rosto (opcional, com botao "Pular") |
+| 2 | Logo + Marca (upload logo, nome da marca) |
+| 3 | Velocidade (Flash vs Pro) -> Gerar |
 
-- A geração do post único **não** chama `generate-carousel` (edge function de texto). Vai direto para `generate-carousel-image` com um prompt que inclui o texto manual
-- O prompt será construído no estilo full-bleed: texto renderizado pela IA dentro da imagem com tipografia editorial
-- O campo de texto manual suporta múltiplas linhas e será enviado integralmente no prompt
-- Auto-save funciona normalmente, salvando como um "carrossel" de 1 card no banco
+- Cores, fontes e estilo sao aplicados automaticamente (paleta aleatoria ou da marca)
+- Sem etapa de produto, sem referencias de marca, sem cores/fontes manuais
+- Web search fica ativo por padrao (sem toggle visivel)
+
+### Modo Avancado (manter as 11 etapas atuais + nova etapa de texto por card)
+
+| Step | Conteudo |
+|------|----------|
+| 0 | Tema (com engrenagem de texto exato e toggle de web search) |
+| 1 | Formato (Post Unico / Carrossel + slider) |
+| 2 | Imagens da Web (skip automatico se desativado) |
+| 3 | Rosto (multi-pessoa, ate 4) |
+| 4 | Produto |
+| 5 | Referencias de Marca |
+| 6 | Estilo (presets / marketplace) |
+| 7 | Cores |
+| 8 | Fontes |
+| 9 | **Roteiro por Card** (NOVO) |
+| 10 | Logo + Marca |
+| 11 | Velocidade -> Gerar |
+
+### Nova Etapa: Roteiro por Card (Step 9 no modo avancado)
+
+```text
++------------------------------------------+
+|  Defina o texto de cada card              |
+|  (opcional - a IA preenche o que faltar)  |
+|                                           |
+|  Card 1 (Capa)                            |
+|  [____________________________]           |
+|  [____________________________]           |
+|                                           |
+|  Card 2                                   |
+|  [____________________________]           |
+|  [____________________________]           |
+|                                           |
+|  ...                                      |
+|                                           |
+|  [+ Preencher todos com IA]              |
++------------------------------------------+
+```
+
+- Cada card tera campos para titulo e corpo
+- Campos pre-preenchidos pela IA (via prompt) OU deixados vazios para a IA decidir
+- Botao "Preencher com IA" gera sugestoes para todos os cards de uma vez
+- O texto definido aqui sera enviado ao `generate-carousel` como `manualCardTexts`
+- No post unico, mostra apenas 1 card com titulo, subtitulo e CTA
+
+---
+
+## Detalhes Tecnicos
+
+### 1. Novo estado `wizardMode`
+
+```typescript
+const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
+```
+
+### 2. Mapeamento de steps dinamico
+
+Criar duas constantes de steps:
+
+```typescript
+const SIMPLE_STEPS = ['Tema', 'Rosto', 'Logo', 'Velocidade'];
+const ADVANCED_STEPS = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+```
+
+A constante `WIZARD_STEPS` sera derivada do `wizardMode`.
+
+### 3. Navegacao condicional
+
+A logica de `next`/`prev` no wizard usara o array de steps correto. No modo simples, o step 0 (Tema) incluira o seletor de formato embutido (Post Unico/Carrossel + slider), eliminando a necessidade de um step separado.
+
+### 4. Novo estado `manualCardTexts`
+
+```typescript
+const [manualCardTexts, setManualCardTexts] = useState<
+  { title?: string; body?: string }[]
+>([]);
+```
+
+### 5. Novo componente `StepCardTexts.tsx`
+
+- Recebe `cardCount`, `contentMode`, `manualCardTexts`, `setManualCardTexts`
+- Renderiza um accordion/lista de cards com campos de titulo e corpo
+- Botao "Preencher com IA" chama `generate-carousel` com action `generate-outline`
+- Cada card editavel individualmente
+
+### 6. Integracao com geracao
+
+No `generateContent()`, enviar `manualCardTexts` ao `generate-carousel` edge function. O backend usara esses textos como base, preenchendo apenas os que estiverem vazios.
+
+### 7. Toggle simples/avancado
+
+Um chip no canto superior direito do wizard que permite alternar entre modos a qualquer momento. Ao mudar de avancado para simples, os dados preenchidos sao preservados (nao resetados).
+
+---
+
+## Arquivos a Criar/Editar
+
+| Arquivo | Acao |
+|---------|------|
+| `src/components/Carousel/wizard/StepCardTexts.tsx` | **Criar** - novo componente de roteiro por card |
+| `src/components/Carousel/CarouselGenerator.tsx` | **Editar** - adicionar wizardMode, manualCardTexts, logica de steps condicional, toggle de modo |
+| `src/components/Carousel/wizard/StepTopic.tsx` | **Editar** - no modo simples, embutir seletor de formato |
+| `supabase/functions/generate-carousel/index.ts` | **Editar** - aceitar `manualCardTexts` e usa-los na geracao |
+

@@ -61,7 +61,7 @@ const StepTopic: React.FC<Props> = ({
             {advancedMode ? 'Escreva exatamente o que a IA deve renderizar na imagem.' : 'Descreva o assunto e nós cuidamos do resto.'}
           </p>
         </div>
-        {(
+        {!isSimple && (
           <button
             onClick={() => setAdvancedMode(!advancedMode)}
             className="p-2 rounded-lg transition-all"
@@ -111,30 +111,32 @@ const StepTopic: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Toggle: Web search ON/OFF */}
-          <button
-            onClick={onToggleSkipWebSearch}
-            className="flex items-center gap-3 w-full p-3.5 rounded-xl transition-all text-left"
-            style={{
-              backgroundColor: !skipWebSearch ? 'rgba(139,92,246,0.08)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${!skipWebSearch ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)'}`,
-            }}
-          >
-            <div className="p-2 rounded-lg" style={{ backgroundColor: !skipWebSearch ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)' }}>
-              {!skipWebSearch ? <Search className="h-4 w-4 text-purple-400" /> : <PenTool className="h-4 w-4 text-white/30" />}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-white/80">Pesquisa na Web</p>
-              <p className="text-xs text-white/30 mt-0.5">
-                {!skipWebSearch 
-                  ? 'Ativada — busca informações reais para enriquecer o conteúdo.'
-                  : 'Desativada — usando apenas o que você escrever acima.'}
-              </p>
-            </div>
-            <div className="w-10 h-5 rounded-full relative transition-all" style={{ backgroundColor: !skipWebSearch ? '#8B5CF6' : 'rgba(255,255,255,0.1)' }}>
-              <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: !skipWebSearch ? '22px' : '2px' }} />
-            </div>
-          </button>
+          {/* Toggle: Web search ON/OFF (only in advanced mode) */}
+          {!isSimple && onToggleSkipWebSearch && (
+            <button
+              onClick={onToggleSkipWebSearch}
+              className="flex items-center gap-3 w-full p-3.5 rounded-xl transition-all text-left"
+              style={{
+                backgroundColor: !skipWebSearch ? 'rgba(139,92,246,0.08)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${!skipWebSearch ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)'}`,
+              }}
+            >
+              <div className="p-2 rounded-lg" style={{ backgroundColor: !skipWebSearch ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)' }}>
+                {!skipWebSearch ? <Search className="h-4 w-4 text-purple-400" /> : <PenTool className="h-4 w-4 text-white/30" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white/80">Pesquisa na Web</p>
+                <p className="text-xs text-white/30 mt-0.5">
+                  {!skipWebSearch 
+                    ? 'Ativada — busca informações reais para enriquecer o conteúdo.'
+                    : 'Desativada — usando apenas o que você escrever acima.'}
+                </p>
+              </div>
+              <div className="w-10 h-5 rounded-full relative transition-all" style={{ backgroundColor: !skipWebSearch ? '#8B5CF6' : 'rgba(255,255,255,0.1)' }}>
+                <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: !skipWebSearch ? '22px' : '2px' }} />
+              </div>
+            </button>
+          )}
 
           {/* Web search result */}
           {webSearchResult && !skipWebSearch && (
@@ -185,51 +187,6 @@ const StepTopic: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Simple mode: inline format selector */}
-      {isSimple && setContentMode && (
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <button
-              onClick={() => setContentMode('single-post')}
-              className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
-              style={{
-                backgroundColor: contentMode === 'single-post' ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${contentMode === 'single-post' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
-              }}
-            >
-              <ImageIcon className="h-5 w-5" style={{ color: contentMode === 'single-post' ? '#A78BFA' : 'rgba(255,255,255,0.3)' }} />
-              <span className="text-xs font-medium" style={{ color: contentMode === 'single-post' ? '#A78BFA' : 'rgba(255,255,255,0.4)' }}>Post Único</span>
-            </button>
-            <button
-              onClick={() => { setContentMode('carousel'); if (cardCount < 5) setCardCount(7); }}
-              className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
-              style={{
-                backgroundColor: contentMode === 'carousel' ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${contentMode === 'carousel' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
-              }}
-            >
-              <Layers className="h-5 w-5" style={{ color: contentMode === 'carousel' ? '#A78BFA' : 'rgba(255,255,255,0.3)' }} />
-              <span className="text-xs font-medium" style={{ color: contentMode === 'carousel' ? '#A78BFA' : 'rgba(255,255,255,0.4)' }}>Carrossel</span>
-            </button>
-          </div>
-          {contentMode === 'carousel' && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-white/40">Quantidade de slides</span>
-                <span className="text-sm font-semibold text-white/70">{cardCount}</span>
-              </div>
-              <input
-                type="range"
-                min={5}
-                max={20}
-                value={cardCount}
-                onChange={(e) => setCardCount(Number(e.target.value))}
-                className="w-full accent-purple-500"
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

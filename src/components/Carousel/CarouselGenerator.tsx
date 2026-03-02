@@ -473,16 +473,15 @@ const CarouselGenerator: React.FC = () => {
           toast({ title: 'Carrossel gerado com sucesso!' });
         }
         
-        // Job failed — trigger fallback to client-side generation
+        // Job failed — do NOT auto-retry (local generation already ran)
         if (job.status === 'failed') {
-          console.warn('Cloud job failed, falling back to client-side generation:', job.error_message);
+          console.warn('Cloud job failed:', job.error_message);
           setCloudJobId(null);
-          setImageGenProgress('⚡ Nuvem falhou, gerando localmente...');
-          // Trigger client-side fallback
-          skipCloudRef.current = true;
-          setTimeout(() => {
-            generateContent();
-          }, 500);
+          // Local generation is the primary path — cloud is only a fallback for browser close
+          // If local is still running, it will finish on its own
+          if (!generatingRef.current) {
+            console.log('Cloud fallback failed but local generation already completed.');
+          }
         }
       })
       .subscribe();

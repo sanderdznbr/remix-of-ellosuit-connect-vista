@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Upload, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, X, Settings2 } from 'lucide-react';
 import { LogoPosition } from './StepStyle';
 import LogoPositionPicker from './LogoPositionPicker';
 
@@ -11,22 +11,65 @@ interface Props {
   logoPosition: LogoPosition;
   setLogoPosition: (v: LogoPosition) => void;
   logoBrandColors?: string[];
+  brandName?: string;
+  setBrandName?: (v: string) => void;
+  userName?: string;
+  setUserName?: (v: string) => void;
+  dateLabel?: string;
+  setDateLabel?: (v: string) => void;
 }
 
 const StepBranding: React.FC<Props> = ({
   showHeader, setShowHeader, logoUrl, setLogoUrl, logoPosition, setLogoPosition,
-  logoBrandColors = [],
+  logoBrandColors = [], brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Sua logomarca</h2>
-        <p className="text-sm text-white/40">Envie a logomarca que aparecerá nos cards.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-2">Sua logomarca</h2>
+          <p className="text-sm text-white/40">Envie a logomarca que aparecerá nos cards.</p>
+        </div>
+        <button
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={`p-2.5 rounded-xl transition-all cursor-pointer ${showAdvanced ? 'bg-purple-500/20 text-purple-400' : 'bg-white/[0.04] text-white/30 hover:text-white/50 hover:bg-white/[0.08]'}`}
+          title="Configurações avançadas de cabeçalho"
+        >
+          <Settings2 className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* Logo upload - prominent */}
+      {/* Advanced: header settings */}
+      {showAdvanced && (
+        <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] animate-in fade-in duration-200">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)}
+              className="w-4 h-4 rounded border-white/20 bg-white/[0.04] accent-purple-500" />
+            <span className="text-xs font-medium text-white/60">Exibir cabeçalho nos cards (marca, @, data)</span>
+          </label>
+          {showHeader && (
+            <div className="space-y-2 pl-7">
+              {setBrandName && (
+                <input type="text" value={brandName || ''} onChange={(e) => setBrandName(e.target.value)}
+                  placeholder="Nome da marca" className="w-full bg-white/[0.03] border border-white/[0.06] text-white/70 placeholder-white/20 text-xs px-3 py-2 rounded-lg outline-none focus:border-white/15" />
+              )}
+              {setUserName && (
+                <input type="text" value={userName || ''} onChange={(e) => setUserName(e.target.value)}
+                  placeholder="@ seu usuário" className="w-full bg-white/[0.03] border border-white/[0.06] text-white/70 placeholder-white/20 text-xs px-3 py-2 rounded-lg outline-none focus:border-white/15" />
+              )}
+              {setDateLabel && (
+                <input type="text" value={dateLabel || ''} onChange={(e) => setDateLabel(e.target.value)}
+                  placeholder="Data (ex: 01 Mar 2026)" className="w-full bg-white/[0.03] border border-white/[0.06] text-white/70 placeholder-white/20 text-xs px-3 py-2 rounded-lg outline-none focus:border-white/15" />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Logo upload */}
       <div className="space-y-4">
         {logoUrl ? (
           <div className="flex flex-col items-center gap-4 py-6 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
@@ -85,13 +128,6 @@ const StepBranding: React.FC<Props> = ({
           </div>
         </div>
       )}
-
-      {/* Show header toggle */}
-      <label className="flex items-center gap-3 cursor-pointer pt-2 border-t border-white/[0.06]">
-        <input type="checkbox" checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)}
-          className="w-4 h-4 rounded border-white/20 bg-white/[0.04] accent-purple-500" />
-        <span className="text-xs font-medium text-white/60">Exibir cabeçalho nos cards (marca, @, data)</span>
-      </label>
     </div>
   );
 };

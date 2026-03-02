@@ -86,7 +86,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
-      onStart(inputValue.trim(), true, mentionedPrompts, contentMode, contentMode === 'single-post' ? manualPostText : undefined);
+      onStart(inputValue.trim(), false, mentionedPrompts, contentMode, contentMode === 'single-post' ? manualPostText : undefined);
     }
   };
 

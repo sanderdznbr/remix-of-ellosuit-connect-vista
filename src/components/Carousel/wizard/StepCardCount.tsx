@@ -3,9 +3,11 @@ import React from 'react';
 interface Props {
   cardCount: number;
   setCardCount: (v: number) => void;
+  contentMode: 'carousel' | 'single-post';
+  setContentMode: (mode: 'carousel' | 'single-post') => void;
 }
 
-const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount }) => {
+const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode }) => {
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
@@ -15,32 +17,38 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount }) => {
 
       {/* Single post option */}
       <button
-        onClick={() => setCardCount(1)}
+        onClick={() => {
+          setContentMode('single-post');
+          setCardCount(1);
+        }}
         className={`w-full p-4 rounded-2xl text-left transition-all ${
-          cardCount === 1
+          contentMode === 'single-post'
             ? 'bg-purple-500/15 border-purple-500/40 border'
             : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]'
         }`}
       >
-        <p className={`text-sm font-semibold ${cardCount === 1 ? 'text-purple-300' : 'text-white/60'}`}>Post Único</p>
+        <p className={`text-sm font-semibold ${contentMode === 'single-post' ? 'text-purple-300' : 'text-white/60'}`}>Post Único</p>
         <p className="text-xs text-white/30 mt-0.5">1 imagem · 1080×1350</p>
       </button>
 
-      {/* Carousel slider */}
+      {/* Carousel option */}
       <div className="space-y-5">
         <button
-          onClick={() => { if (cardCount < 5) setCardCount(7); }}
+          onClick={() => {
+            setContentMode('carousel');
+            if (cardCount < 5) setCardCount(7);
+          }}
           className={`w-full p-4 rounded-2xl text-left transition-all ${
-            cardCount >= 5
+            contentMode === 'carousel'
               ? 'bg-purple-500/15 border-purple-500/40 border'
               : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]'
           }`}
         >
-          <p className={`text-sm font-semibold ${cardCount >= 5 ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
-          <p className="text-xs text-white/30 mt-0.5">{cardCount >= 5 ? `${cardCount} slides` : '5–20 slides'}</p>
+          <p className={`text-sm font-semibold ${contentMode === 'carousel' ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
+          <p className="text-xs text-white/30 mt-0.5">{contentMode === 'carousel' && cardCount >= 5 ? `${cardCount} slides` : '5–20 slides'}</p>
         </button>
 
-        {cardCount >= 5 && (
+        {contentMode === 'carousel' && cardCount >= 5 && (
           <>
             <div className="flex items-center justify-center">
               <span className="text-5xl font-bold text-white tabular-nums">{cardCount}</span>

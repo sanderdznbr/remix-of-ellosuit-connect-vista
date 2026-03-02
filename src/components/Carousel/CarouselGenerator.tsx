@@ -148,7 +148,7 @@ const CarouselGenerator: React.FC = () => {
   const [loadingCarousel, setLoadingCarousel] = useState(false);
   
   // Content mode: carousel vs single-post
-  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('single-post');
+  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
   const [manualPostText, setManualPostText] = useState('');
 
   // Wizard state
@@ -317,7 +317,7 @@ const CarouselGenerator: React.FC = () => {
   // Full reset for starting a brand-new carousel
   const resetWizardState = useCallback(() => {
     setWizardStep(0);
-    setContentMode('single-post');
+    setContentMode('carousel');
     setManualPostText('');
     setKeywords('');
     setCardCount(1);
@@ -2635,7 +2635,20 @@ const CarouselGenerator: React.FC = () => {
                         setManualPostText={setManualPostText} />
                     )}
                     {wizardStep === 1 && (
-                      <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />
+                      <StepCardCount
+                        cardCount={cardCount}
+                        setCardCount={setCardCount}
+                        contentMode={contentMode}
+                        setContentMode={(mode) => {
+                          setContentMode(mode);
+                          if (mode === 'single-post') {
+                            setCardCount(1);
+                            setImageCardCount(1);
+                          } else if (cardCount < 5) {
+                            setCardCount(7);
+                          }
+                        }}
+                      />
                     )}
                     {wizardStep === 2 && (
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}

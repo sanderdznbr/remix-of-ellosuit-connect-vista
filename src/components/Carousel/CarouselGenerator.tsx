@@ -695,6 +695,7 @@ const CarouselGenerator: React.FC = () => {
     prompt: string;
     faceReferenceUrls?: string[];
     styleReferenceUrls?: string[];
+    referenceImageUrls?: string[];
     negativePrompt?: string;
   }): Promise<string | null> => {
     // Use the model selected by the user (gemini = fast, nano-banana = quality)
@@ -735,6 +736,7 @@ const CarouselGenerator: React.FC = () => {
         topic: opts.prompt,
         faceReferenceUrls: opts.faceReferenceUrls,
         styleReferenceUrls: opts.styleReferenceUrls,
+        referenceImageUrls: opts.referenceImageUrls,
         imageModel: resolvedModel,
         negativePrompt: opts.negativePrompt,
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
@@ -1032,13 +1034,13 @@ const CarouselGenerator: React.FC = () => {
       const finalPrompt = buildImagePrompt(promptParts.join('\n'));
       const negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
-      // Pass product images as SEPARATE reference to ensure fidelity
-      const imageRefs = productRefUrls.length > 0 ? [...allStyleRefs, ...productRefUrls] : allStyleRefs;
-
+      // Pass product images as referenceImageUrls (general refs) so the edge function
+      // triggers the face+product combined logic, and style refs stay separate
       const imageUrl = await generateImage({
         prompt: finalPrompt,
         faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-        styleReferenceUrls: imageRefs.length > 0 ? imageRefs : undefined,
+        styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+        referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
         negativePrompt: negPrompt,
       });
 
@@ -1384,7 +1386,7 @@ const CarouselGenerator: React.FC = () => {
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
           const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-          const allStyleRefs = [...styleRefUrls, ...productRefUrls];
+          const allStyleRefs = [...styleRefUrls];
           
           const marketplaceRefUrls: string[] = [];
           if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
@@ -1399,6 +1401,7 @@ const CarouselGenerator: React.FC = () => {
           const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
           const capturedFaceRefs = faceRefUrls.length > 0 ? [...faceRefUrls] : undefined;
           const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
+          const capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
            const isFullBleedMkt = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
            const capturedNegative = isFullBleedMkt 
              ? [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
@@ -1411,6 +1414,7 @@ const CarouselGenerator: React.FC = () => {
               prompt: capturedPrompt,
               faceReferenceUrls: capturedFaceRefs,
               styleReferenceUrls: capturedStyleRefs,
+              referenceImageUrls: capturedProductRefs,
               negativePrompt: capturedNegative,
             }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
           });

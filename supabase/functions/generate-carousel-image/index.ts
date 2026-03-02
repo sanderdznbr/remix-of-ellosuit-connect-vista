@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender } = body;
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
@@ -148,7 +148,9 @@ STYLE REQUIREMENTS:
 - NÃO copie os ROSTOS ou PESSOAS das imagens de referência de ESTILO. Se imagens de referência de ROSTO forem fornecidas separadamente, use APENAS esses rostos. Se não houver referência de rosto, use pessoas COMPLETAMENTE DIFERENTES das que aparecem nas referências de estilo.
 - NÃO adicione textos que não foram explicitamente solicitados. Se um "TEXTO EXATO" foi fornecido, use APENAS esse texto. Nenhum bullet point, lista, subtítulo ou texto adicional.
 - NÃO coloque texto fora dos limites da imagem. Todo texto DEVE estar completamente visível dentro dos limites 1080x1350, com margens de segurança.
-- NÃO use textos cortados ou parcialmente visíveis nas bordas.`;
+- NÃO use textos cortados ou parcialmente visíveis nas bordas.
+- NÃO escreva "ARRASTE PRO LADO", "ARRASTE PARA O LADO", "ARRASTE", "DESLIZE", "SWIPE", "Arraste para o lado" ou qualquer variação de instrução de swipe/arrastar. Essas instruções de navegação são PROIBIDAS na imagem.
+- NÃO adicione setas de navegação, indicadores de swipe, ou qualquer elemento que sugira "passar para o lado".`;
 
     if (negativePrompt) {
       textPrompt += `\n- ${negativePrompt}`;
@@ -165,27 +167,32 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
     }
 
+    // Determine explicit gender instruction from user selection
+    const genderDirective = faceGender === 'male' 
+      ? 'The user has CONFIRMED this person is MALE. Generate a MALE body with masculine build, masculine hands, masculine features. DO NOT generate feminine hands, nails, or body features.' 
+      : faceGender === 'female' 
+      ? 'The user has CONFIRMED this person is FEMALE. Generate a FEMALE body with feminine build and features.' 
+      : '';
+
     if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
       textPrompt += `\n\nCRITICAL - FACE + PRODUCT COMBINED: I am attaching BOTH a person reference AND a product reference. You MUST:
-1. FIRST: Carefully analyze the face reference photo to determine the person's GENDER, body type, and physical characteristics. If the person is MALE, generate a MALE body. If FEMALE, generate a FEMALE body. NEVER mismatch gender.
-2. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
-3. The BODY must match the person's gender and build from the reference — a man's face MUST be on a man's body, a woman's face MUST be on a woman's body
-4. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
-5. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
-6. The product must be clearly visible and recognizable — this is the #2 priority
-7. Create a natural, editorial scene where the person and product interact organically
-8. NEVER ignore the face reference. NEVER generate a generic person. The face MUST match the reference exactly.
-9. GENDER MATCHING IS MANDATORY — mismatching the gender (e.g. putting a man's face on a woman's body) is a CRITICAL ERROR that must never happen.`;
+${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
+2. The BODY, HANDS, and all physical features must match the specified gender — masculine hands for males (short nails, broader fingers), feminine hands for females
+3. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
+4. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
+5. The product must be clearly visible and recognizable — this is the #2 priority
+6. Create a natural, editorial scene where the person and product interact organically
+7. NEVER ignore the face reference. NEVER generate a generic person. The face MUST match the reference exactly.
+8. GENDER MATCHING IS MANDATORY — mismatching the gender (e.g. putting a man's face on a woman's body, or giving a man feminine painted nails) is a CRITICAL ERROR.`;
     } else if (validFaceRefs.length > 0) {
       textPrompt += `\n\nCRITICAL - FACE/PERSON REFERENCE: I am attaching reference photo(s) of the person who MUST appear in this image. You MUST:
-1. FIRST: Carefully analyze the face reference photo to determine the person's GENDER, body type, and physical characteristics. If the person is MALE, generate a MALE body. If FEMALE, generate a FEMALE body. NEVER mismatch gender.
-2. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
-3. The BODY must match the person's gender and build — a man's face MUST be on a man's body, a woman's face MUST be on a woman's body
-4. The person must be clearly recognizable as the same individual in the reference photos
-5. Maintain their likeness with high fidelity - this is the #1 priority
-6. Place this person naturally in the scene described above
-7. NEVER ignore this reference. NEVER generate a generic person.
-8. GENDER MATCHING IS MANDATORY — mismatching the gender is a CRITICAL ERROR.`;
+${genderDirective ? `0. MANDATORY GENDER: ${genderDirective} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
+2. The BODY, HANDS, and all physical features must match the specified gender — masculine hands for males (short nails, broader fingers), feminine hands for females
+3. The person must be clearly recognizable as the same individual in the reference photos
+4. Maintain their likeness with high fidelity - this is the #1 priority
+5. Place this person naturally in the scene described above
+6. NEVER ignore this reference. NEVER generate a generic person.
+7. GENDER MATCHING IS MANDATORY — mismatching the gender is a CRITICAL ERROR.`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

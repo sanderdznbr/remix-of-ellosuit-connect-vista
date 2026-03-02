@@ -779,6 +779,7 @@ const CarouselGenerator: React.FC = () => {
         imageModel: resolvedModel,
         negativePrompt: opts.negativePrompt,
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
+        faceGender: faceGender,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
         ...(logoBrandColors.length > 0 && !isFullBleedMarketplace ? { brandColors: logoBrandColors } : {}),
       },

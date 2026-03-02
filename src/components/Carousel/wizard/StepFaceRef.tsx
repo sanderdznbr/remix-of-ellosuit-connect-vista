@@ -303,6 +303,7 @@ const StepFaceRef: React.FC<Props> = ({
           onClose={() => setGalleryOpenFor(null)}
           onSelectFiles={(files) => { handleGalleryFiles(galleryOpenFor, files); setGalleryOpenFor(null); }}
           label="Selecionar pasta de rostos"
+          maxFiles={MAX_PHOTOS_PER_PERSON - (facePersons.find(p => p.id === galleryOpenFor)?.photos.length || 0)}
         />
       )}
     </div>

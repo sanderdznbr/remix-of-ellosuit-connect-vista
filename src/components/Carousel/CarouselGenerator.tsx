@@ -153,9 +153,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const WIZARD_STEPS_CAROUSEL = ['Tema', 'Quantidade', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS_SINGLE = ['Tema', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS = contentMode === 'single-post' ? WIZARD_STEPS_SINGLE : WIZARD_STEPS_CAROUSEL;
+  const WIZARD_STEPS_CAROUSEL = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Logo', 'Velocidade'];
+  const WIZARD_STEPS = WIZARD_STEPS_CAROUSEL;
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -999,8 +998,8 @@ const CarouselGenerator: React.FC = () => {
         promptParts.push(`TEXTO OBRIGATÓRIO PARA RENDERIZAR NA IMAGEM: "${manualPostText.trim()}"`);
         promptParts.push('O texto acima DEVE ser renderizado na imagem com tipografia editorial elegante e integrada à composição visual.');
       }
-      promptParts.push('POST ÚNICO para Instagram (1080x1350). Composição editorial completa com tipografia integrada na imagem.');
-      promptParts.push('Full bleed, sem barras ou bordas. Design impactante estilo capa de revista.');
+      promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA ÚNICA composição editorial completa — como uma CAPA de revista ou de carrossel. NÃO divida a imagem em múltiplos quadros, slides ou seções. Apenas UMA imagem unificada e impactante.');
+      promptParts.push('Full bleed, sem barras, bordas ou grid interno. Design limpo e editorial. NÃO crie múltiplos posts dentro de uma imagem.');
 
       // Product context — CRITICAL for product fidelity
       if (productAnalysis?.confirmed && productRefUrls.length > 0) {
@@ -2635,7 +2634,7 @@ const CarouselGenerator: React.FC = () => {
                         manualPostText={manualPostText}
                         setManualPostText={setManualPostText} />
                     )}
-                    {wizardStep === 1 && contentMode !== 'single-post' && (
+                    {wizardStep === 1 && (
                       <StepCardCount cardCount={cardCount} setCardCount={setCardCount} />
                     )}
                     {wizardStep === 2 && (
@@ -2711,10 +2710,8 @@ const CarouselGenerator: React.FC = () => {
                       if (wizardStep === 0) { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
-                        // Skip Quantidade (1) when single-post mode
-                        if (prev === 1 && contentMode === 'single-post') prev = 0;
                         // Skip web images (2) when toggle is off or no images
-                        if (prev === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev = contentMode === 'single-post' ? 0 : 1;
+                        if (prev === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev = 1;
                         // Skip colors (7) and fonts (8) when marketplace style is active
                         if ((prev === 7 || prev === 8) && isFullBleedMarketplace) prev = 6;
                         setWizardStep(prev);
@@ -2747,8 +2744,6 @@ const CarouselGenerator: React.FC = () => {
                               }
                             }
                             let next = wizardStep + 1;
-                            // Skip Quantidade (1) when single-post mode
-                            if (next === 1 && contentMode === 'single-post') next = 2;
                             // Skip web images (2) when toggle is off or no images found
                             if (next === 2 && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) next = 3;
                             // Skip colors (7) and fonts (8) when marketplace style is active

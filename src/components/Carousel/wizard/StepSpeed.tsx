@@ -27,8 +27,8 @@ const StepSpeed: React.FC<Props> = ({ imageModel, setImageModel }) => {
             <Zap className={`h-6 w-6 ${imageModel === 'gemini' ? 'text-emerald-400' : 'text-white/30'}`} />
           </div>
           <div>
-            <span className="text-base font-semibold text-white/90 block">⚡ Rápido</span>
-            <span className="text-xs text-white/40 block mt-0.5">Gemini Flash · ~5s por imagem</span>
+        <span className="text-base font-semibold text-white/90 block">⚡ Rápido</span>
+            <span className="text-xs text-white/40 block mt-0.5">ELLOIA Flash · ~5s por imagem</span>
             <span className="text-[10px] text-white/25 block mt-0.5">Ideal para testes e iterações rápidas</span>
           </div>
         </button>
@@ -45,8 +45,8 @@ const StepSpeed: React.FC<Props> = ({ imageModel, setImageModel }) => {
             <Sparkles className={`h-6 w-6 ${imageModel === 'nano-banana' ? 'text-purple-400' : 'text-white/30'}`} />
           </div>
           <div>
-            <span className="text-base font-semibold text-white/90 block">🎨 Qualidade</span>
-            <span className="text-xs text-white/40 block mt-0.5">Gemini Pro · ~15s por imagem</span>
+        <span className="text-base font-semibold text-white/90 block">🎨 Qualidade</span>
+            <span className="text-xs text-white/40 block mt-0.5">ELLOIA Pro · ~15s por imagem</span>
             <span className="text-[10px] text-white/25 block mt-0.5">Melhor resultado visual para publicação</span>
           </div>
         </button>

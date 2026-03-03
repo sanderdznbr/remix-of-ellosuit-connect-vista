@@ -592,6 +592,35 @@ const CarouselGenerator: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Helper: build generation_config to persist prompt + wizard settings
+  const buildGenerationConfig = useCallback(() => ({
+    topic,
+    keywords,
+    cardCount,
+    imageCardCount,
+    contentMode,
+    manualPostText,
+    referenceImages,
+    facePersons,
+    allPeopleOnCover,
+    faceGender,
+    wearsGlasses,
+    imageSettings,
+    bgColor,
+    accentColor,
+    textColor,
+    selectedFont,
+    brandName,
+    userName,
+    dateLabel,
+    activePresetId,
+    logoUrl,
+    logoPosition,
+    showHeader,
+    marketplaceStyleId: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
+    marketplaceStyleName: activeMarketplaceStyle?.name || null,
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId]);
+
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedDataRef = useRef<string>('');
@@ -622,6 +651,7 @@ const CarouselGenerator: React.FC = () => {
             carousel_data: carouselData as any, style_config: styleConfig as any, 
             card_count: carouselData.cards.length,
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
+            generation_config: buildGenerationConfig(),
           } as any).eq('id', currentCarouselId);
         } else {
           const { data: inserted } = await supabase.from('generated_carousels').insert({ 
@@ -631,6 +661,7 @@ const CarouselGenerator: React.FC = () => {
             carousel_data: carouselData as any, style_config: styleConfig as any, 
             card_count: carouselData.cards.length,
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
+            generation_config: buildGenerationConfig(),
           } as any).select('id').single();
           if (inserted) {
             setCurrentCarouselId(inserted.id);
@@ -960,12 +991,12 @@ const CarouselGenerator: React.FC = () => {
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
       if (currentCarouselId) {
-        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null } as any).eq('id', currentCarouselId);
+        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
         captureCoverImage(currentCarouselId, companyData.company_id).catch(() => {});
         toast({ title: 'Carrossel atualizado!' });
       } else {
-        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null } as any).select('id').single();
+        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).select('id').single();
         setCurrentCarouselId(inserted?.id || null);
         // Capture real rendered card as cover in background
         if (inserted?.id) captureCoverImage(inserted.id, companyData.company_id).catch(() => {});
@@ -1257,7 +1288,7 @@ const CarouselGenerator: React.FC = () => {
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
-            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
             if (insertErr) {
               console.error('Single post save failed:', insertErr);
             }
@@ -1707,7 +1738,7 @@ const CarouselGenerator: React.FC = () => {
             } catch { /* ignore */ }
 
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
               setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
@@ -2108,7 +2139,7 @@ const CarouselGenerator: React.FC = () => {
           if (companyData) {
             try { await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: totalCards - 1, p_description: `Carrossel da capa: ${topic} (${totalCards} cards)` }); } catch { /* ignore */ }
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null } as any).select('id').single();
+            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
               setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);

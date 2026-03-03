@@ -2473,6 +2473,7 @@ export type Database = {
           company_id: string
           cover_url: string | null
           created_at: string
+          generation_config: Json | null
           id: string
           is_starred: boolean
           keywords: string[] | null
@@ -2489,6 +2490,7 @@ export type Database = {
           company_id: string
           cover_url?: string | null
           created_at?: string
+          generation_config?: Json | null
           id?: string
           is_starred?: boolean
           keywords?: string[] | null
@@ -2505,6 +2507,7 @@ export type Database = {
           company_id?: string
           cover_url?: string | null
           created_at?: string
+          generation_config?: Json | null
           id?: string
           is_starred?: boolean
           keywords?: string[] | null

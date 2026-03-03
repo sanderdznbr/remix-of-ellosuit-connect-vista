@@ -59,7 +59,7 @@ const StepStyleSelect: React.FC<Props> = ({
       const styleIds = (purchased as any[]).map(p => p.style_id);
       const { data: styles } = await supabase
         .from('marketplace_styles')
-        .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags')
+        .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions')
         .in('id', styleIds)
         .eq('is_active', true);
       setPurchasedStyles((styles as any[]) || []);
@@ -106,7 +106,7 @@ const StepStyleSelect: React.FC<Props> = ({
       if (config.colors.secondary) setBgColor(config.colors.secondary);
       if (config.colors.text) setTextColor(config.colors.text);
     }
-    onApplyMarketplaceStyle?.({ ...config, id: style.id, _previewImages: style.preview_images, _styleName: style.name });
+    onApplyMarketplaceStyle?.({ ...config, id: style.id, _previewImages: style.preview_images, _styleName: style.name, _strictInstructions: (style as any).strict_instructions || null });
   };
 
   return (

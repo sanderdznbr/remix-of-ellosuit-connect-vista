@@ -3402,6 +3402,7 @@ FORBIDDEN:
                         manualPostText={manualPostText}
                         setManualPostText={setManualPostText}
                         wizardMode={wizardMode}
+                        guestMode={isGuest}
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }

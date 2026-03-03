@@ -281,12 +281,14 @@ const CarouselGenerator: React.FC = () => {
   const [showAddCardMenu, setShowAddCardMenu] = useState(false);
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
+  const carouselDataRef = useRef<CarouselData | null>(null);
   const skipCloudRef = useRef(false);
   const generatingRef = useRef(false);
 
   // Keep refs in sync with state
   useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
   useEffect(() => { generatingRef.current = generating; }, [generating]);
+  useEffect(() => { carouselDataRef.current = carouselData; }, [carouselData]);
 
   // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
   useEffect(() => {
@@ -1678,30 +1680,42 @@ const CarouselGenerator: React.FC = () => {
 
   // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
   const addOneMoreCard = async (mode: 'composed' | 'solid' = 'composed') => {
-    if (!carouselData) return;
     setShowAddCardMenu(false);
-    const newIndex = carouselData.cards.length;
-    const newCard: CarouselCard = { type: 'content', title: '', body: '', layout: 'dark', needsImage: true };
-    const updatedCards = [...carouselData.cards, newCard];
-    const updatedData = { ...carouselData, cards: updatedCards };
-    setCarouselData(updatedData);
+
+    let newIndex = -1;
+    setCarouselData((prev) => {
+      if (!prev) return prev;
+      newIndex = prev.cards.length;
+      const newCard: CarouselCard = {
+        type: 'content',
+        title: '',
+        body: '',
+        layout: 'dark',
+        needsImage: mode === 'composed',
+      };
+      return { ...prev, cards: [...prev.cards, newCard] };
+    });
+
+    if (newIndex < 0) return;
     setActiveCardIndex(newIndex);
-    // Auto-generate the new card
-    if (mode === 'composed') {
-      // Full generation: text + photo with person/face references
-      setTimeout(() => { void regenerateCard(newIndex, true); }, 250);
-    } else {
-      // Solid: generate only text content, no AI image (use solid background)
-      setTimeout(() => { void regenerateCardTextOnly(newIndex); }, 250);
-    }
+
+    window.setTimeout(() => {
+      if (mode === 'composed') {
+        void regenerateCard(newIndex, true);
+      } else {
+        void regenerateCardTextOnly(newIndex);
+      }
+    }, 120);
   };
 
   // ===== REGENERATE CARD TEXT ONLY (no image generation) =====
   const regenerateCardTextOnly = async (cardIndex: number) => {
-    if (!carouselData) return;
+    const currentData = carouselDataRef.current;
+    if (!currentData) return;
+
     setRegeneratingCard(cardIndex);
     try {
-      const existingCardSummaries = carouselData.cards
+      const existingCardSummaries = currentData.cards
         .map((c, i) => {
           if (i === cardIndex) return null;
           const title = c.title || c.bodyTop || '';
@@ -1715,7 +1729,7 @@ const CarouselGenerator: React.FC = () => {
           action: 'generate-content',
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount: carouselData.cards.length,
+          cardCount: currentData.cards.length,
           imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
@@ -1735,16 +1749,20 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // Update card with text only — no image, solid background
-      const newCards = [...carouselData.cards];
-      newCards[cardIndex] = {
-        ...newCards[cardIndex],
-        bodyTop: newBody || 'Texto do card...',
-        bodyBottom: newBottomText,
-        imageUrl: undefined,
-        isAiImage: false,
-      };
-      setCarouselData({ ...carouselData, cards: newCards });
+      setCarouselData((prev) => {
+        if (!prev || !prev.cards[cardIndex]) return prev;
+        const newCards = [...prev.cards];
+        newCards[cardIndex] = {
+          ...newCards[cardIndex],
+          bodyTop: newBody || 'Texto do card...',
+          bodyBottom: newBottomText,
+          imageUrl: undefined,
+          isAiImage: false,
+          needsImage: false,
+        };
+        return { ...prev, cards: newCards };
+      });
+
       toast({ title: '✨ Card de texto criado!' });
     } catch (err: any) {
       toast({ title: 'Erro ao gerar card', description: err.message, variant: 'destructive' });
@@ -2157,8 +2175,11 @@ FORBIDDEN:
   };
 
   const regenerateCard = async (cardIndex: number, forceImageRequired = false) => {
-    if (!carouselData) return;
+    const currentData = carouselDataRef.current;
+    if (!currentData) return;
+    const carouselData = currentData;
     const card = carouselData.cards[cardIndex];
+    if (!card) return;
     setRegeneratingCard(cardIndex);
     try {
       // Gather existing card summaries so the AI avoids repeating content
@@ -2360,17 +2381,22 @@ FORBIDDEN:
       }
 
       // 3. Update card
-      const newCards = [...carouselData.cards];
-      newCards[cardIndex] = {
-        ...newCards[cardIndex],
-        bodyTop: newBody,
-        bodyBottom: newBottomText,
-        imagePrompt: newImagePrompt,
-        imageUrl: newImageUrl,
-        isAiImage: false,
-      };
-      const updatedData = { ...carouselData, cards: newCards };
-      setCarouselData(updatedData);
+      let updatedData: CarouselData | null = null;
+      setCarouselData((prev) => {
+        if (!prev || !prev.cards[cardIndex]) return prev;
+        const newCards = [...prev.cards];
+        newCards[cardIndex] = {
+          ...newCards[cardIndex],
+          bodyTop: newBody,
+          bodyBottom: newBottomText,
+          imagePrompt: newImagePrompt,
+          imageUrl: newImageUrl,
+          isAiImage: false,
+          needsImage: !!newImageUrl,
+        };
+        updatedData = { ...prev, cards: newCards };
+        return updatedData;
+      });
 
       // If we regenerated the cover card (index 0), update the cover_url in the DB
       if (cardIndex === 0 && currentCarouselId) {
@@ -3493,6 +3519,53 @@ FORBIDDEN:
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               style={{ width: 375, maxWidth: '95vw' }}
             >
+              {!isGuest && carouselData.cards.length > 0 && (
+                <div className="absolute top-1/2 right-2 md:-right-14 -translate-y-1/2 z-40">
+                  <button
+                    onClick={() => setShowAddCardMenu((prev) => !prev)}
+                    className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all"
+                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: showAddCardMenu ? 'rgba(139,92,246,0.3)' : 'rgba(20,20,30,0.85)' }}
+                    aria-label="Adicionar card"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+
+                  {showAddCardMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowAddCardMenu(false)} />
+                      <div
+                        className="absolute top-1/2 right-full -translate-y-1/2 mr-3 z-50 w-56 rounded-xl p-1.5 shadow-xl border"
+                        style={{ backgroundColor: 'rgba(20,20,30,0.97)', borderColor: 'rgba(255,255,255,0.1)' }}
+                      >
+                        <button
+                          onClick={() => addOneMoreCard('composed')}
+                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
+                        >
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                            <User className="h-3.5 w-3.5 text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/90">Composto</p>
+                            <p className="text-[10px] text-white/40">Com foto e pessoa</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => addOneMoreCard('solid')}
+                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
+                        >
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                            <Type className="h-3.5 w-3.5 text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/90">Sólido</p>
+                            <p className="text-[10px] text-white/40">Somente texto</p>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               {/* Phone frame */}
               <div className="rounded-[3rem] overflow-hidden" style={{
                 border: '3px solid rgba(255,255,255,0.1)',
@@ -3920,46 +3993,6 @@ FORBIDDEN:
                   style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
                   <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
                 </button>
-              )}
-              {/* Add +1 card with mode selector */}
-              {!isGuest && carouselData.cards.length > 0 && (
-                <div className="relative">
-                  <button onClick={() => setShowAddCardMenu(!showAddCardMenu)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
-                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: showAddCardMenu ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)' }}>
-                    <Plus className="h-3.5 w-3.5" /> +1 Card
-                  </button>
-                  {showAddCardMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowAddCardMenu(false)} />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-56 rounded-xl p-1.5 shadow-xl border"
-                        style={{ backgroundColor: 'rgba(20,20,30,0.97)', borderColor: 'rgba(255,255,255,0.1)' }}>
-                        <button
-                          onClick={() => addOneMoreCard('composed')}
-                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors">
-                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                            <User className="h-3.5 w-3.5 text-purple-400" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-white/90">Composto</p>
-                            <p className="text-[10px] text-white/40">Com foto e pessoa</p>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => addOneMoreCard('solid')}
-                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors">
-                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                            <Type className="h-3.5 w-3.5 text-purple-400" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-white/90">Sólido</p>
-                            <p className="text-[10px] text-white/40">Somente texto</p>
-                          </div>
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
               )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"

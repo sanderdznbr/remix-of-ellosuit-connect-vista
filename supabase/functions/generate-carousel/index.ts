@@ -370,6 +370,8 @@ ${styleConfig.imageGeneration.prompt_style}
 ${styleConfig.cardVariations ? `VARIAÇÕES DE CARD (alterne entre elas):
 ${styleConfig.cardVariations.map((v: any, i: number) => `${i + 1}. Tipo "${v.type}": ${v.description}`).join('\n')}` : ''}
 
+${styleConfig._strictInstructions ? `\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${styleConfig._strictInstructions}` : ''}
+
 IMPORTANTE: Os imagePrompts devem descrever A IMAGEM COMPLETA com texto, tipografia, elementos decorativos e composição editorial integrados. NÃO gere apenas uma foto - gere a COMPOSIÇÃO FINAL do post como ele apareceria no Instagram.`
         : '';
 

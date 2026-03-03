@@ -827,7 +827,7 @@ const CarouselGenerator: React.FC = () => {
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
-        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
+        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyle?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyle._strictInstructions}` : '') } : {}),
         ...(logoBrandColors.length > 0 && !isFullBleedMarketplace ? { brandColors: logoBrandColors } : {}),
       },
     });
@@ -1029,13 +1029,14 @@ const CarouselGenerator: React.FC = () => {
       try {
         const { data: styleData } = await supabase
           .from('marketplace_styles')
-          .select('id, name, preview_images, style_config')
+          .select('id, name, preview_images, style_config, strict_instructions')
           .eq('id', item.marketplace_style_id)
           .single();
         if (styleData?.style_config) {
           const config = styleData.style_config as any;
           config.id = styleData.id;
           config._previewImages = styleData.preview_images;
+          config._strictInstructions = (styleData as any).strict_instructions || null;
           setActiveMarketplaceStyle(config);
         } else {
           setActiveMarketplaceStyle(null);
@@ -1165,8 +1166,8 @@ const CarouselGenerator: React.FC = () => {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+        // Send ALL preview images for maximum style fidelity
+        marketplaceRefUrls.push(...allPreviews);
       }
 
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
@@ -1561,9 +1562,8 @@ const CarouselGenerator: React.FC = () => {
             const origin = window.location.origin;
             const allPreviews = (activeMarketplaceStyle._previewImages as string[])
               .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-            if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-            if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-            if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+            // Send ALL preview images for maximum style fidelity
+            marketplaceRefUrls.push(...allPreviews);
           }
           
           const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
@@ -2051,11 +2051,11 @@ const CarouselGenerator: React.FC = () => {
         const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
         const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
         const marketplaceRefUrls: string[] = [];
-        if (isFullBleedStyle && activeMarketplaceStyle?._previewImages?.length) {
+        if (activeMarketplaceStyle?._previewImages?.length) {
           const origin = window.location.origin;
           const allPreviews = (activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-          if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-          if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+          // Send ALL preview images for maximum style fidelity
+          marketplaceRefUrls.push(...allPreviews);
         }
 
         // Use the cover image as style reference to maintain visual consistency
@@ -2238,13 +2238,11 @@ FORBIDDEN:
       // Include marketplace style references if active or loaded as full-bleed
       const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
       const marketplaceRefUrls: string[] = [];
-      if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyle?._previewImages?.length) {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-        if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+        marketplaceRefUrls.push(...allPreviews);
       }
 
       const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
@@ -2461,13 +2459,11 @@ FORBIDDEN:
       
       // Build marketplace style references
       const marketplaceRefUrls: string[] = [];
-      if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyle?._previewImages?.length) {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-        if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+        marketplaceRefUrls.push(...allPreviews);
       }
       
       const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls, ...existingCardImages];

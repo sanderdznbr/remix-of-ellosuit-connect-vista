@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Upload, Save, Loader2, X, Image as ImageIcon,
-  Eye, EyeOff, Star, StarOff, Pencil, ChevronDown, ChevronUp,
+  Eye, EyeOff, Star, StarOff, Pencil, ChevronDown, ChevronUp, Download,
 } from 'lucide-react';
 
 interface MarketplaceStyleRow {
@@ -41,6 +41,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
     price_brl: 9.90,
     tags: '',
     is_featured: false,
+    strict_instructions: '',
   });
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -205,6 +206,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           is_featured: form.is_featured,
           tags,
           style_config: styleConfig,
+          strict_instructions: form.strict_instructions || null,
         };
         // Combine remaining existing images with newly uploaded ones
         updateData.preview_images = [...existingImages, ...allImages];
@@ -225,13 +227,14 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           is_featured: form.is_featured,
           tags,
           sort_order: styles.length + 1,
+          strict_instructions: form.strict_instructions || null,
         } as any);
         if (error) throw error;
         toast.success('Estilo criado com sucesso!');
       }
 
       // Reset form
-      setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false });
+      setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, strict_instructions: '' });
       setCoverFile(null); setCoverPreview(null);
       setRefFiles([]); setRefPreviews([]);
       setExistingImages([]);
@@ -276,6 +279,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       price_brl: style.price_brl,
       tags: (style.tags || []).join(', '),
       is_featured: style.is_featured,
+      strict_instructions: (style as any).strict_instructions || '',
     });
     setCoverFile(null);
     setCoverPreview(null);
@@ -473,6 +477,39 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                     <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefFilesChange} />
                   </label>
                 </div>
+              {/* Download all button */}
+              {existingImages.length > 0 && (
+                <button
+                  onClick={() => {
+                    existingImages.forEach((url, i) => {
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `ref-${i + 1}.png`;
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    });
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] text-white/50 text-xs hover:bg-white/[0.1] hover:text-white/80 cursor-pointer transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Baixar todas ({existingImages.length})
+                </button>
+              )}
+              </div>
+
+              {/* Strict instructions */}
+              <div>
+                <label className="text-[10px] text-white/40 mb-1 block">Instruções Rígidas (opcional)</label>
+                <textarea
+                  value={form.strict_instructions}
+                  onChange={e => setForm(f => ({ ...f, strict_instructions: e.target.value }))}
+                  placeholder="Ex: Ao usar esse estilo, todas as fotos devem ter fundo escuro com neon, a pessoa deve aparecer em poses dinâmicas..."
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none resize-none focus:border-yellow-500/40"
+                />
+                <p className="text-[9px] text-white/15 mt-1">Essas instruções serão injetadas com prioridade máxima na IA ao gerar com este estilo.</p>
               </div>
 
               {/* Actions */}
@@ -488,7 +525,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                 <button
                   onClick={() => {
                     setCreating(false); setEditingId(null);
-                    setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false });
+                    setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, strict_instructions: '' });
                     setCoverFile(null); setCoverPreview(null); setRefFiles([]); setRefPreviews([]); setExistingImages([]);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-white/[0.04] text-white/40 text-sm hover:bg-white/[0.08] cursor-pointer"

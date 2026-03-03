@@ -3096,7 +3096,7 @@ FORBIDDEN:
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : true;
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? !!activeMarketplaceStyle : true;
 
   // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
@@ -3422,7 +3422,7 @@ FORBIDDEN:
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Estilo' || currentStepName === 'Rosto' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
+                        {(currentStepName === 'Rosto' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

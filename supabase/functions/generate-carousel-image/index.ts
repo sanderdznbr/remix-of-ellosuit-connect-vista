@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
       
       // 4. Final instruction with explicit aspect ratio if requested
       const aspectInstruction = imageSize === '9:16' 
-        ? '\n\nOUTPUT FORMAT: The generated image MUST be in 9:16 VERTICAL format (1080x1920px). Fill the ENTIRE vertical frame — NO black bars, NO letterboxing, NO empty space at top or bottom. Generatively expand the scene to fill the full vertical canvas.'
+        ? '\n\nOUTPUT FORMAT MANDATORY: You MUST generate an image in PORTRAIT 9:16 aspect ratio (width=1080, height=1920). The image must be TALL and VERTICAL like a phone screen. Do NOT generate a square image. The height must be approximately 1.78x the width. Fill the ENTIRE vertical canvas — NO black bars, NO letterboxing, NO empty space at top or bottom. Generatively EXPAND the scene/background upward and downward to naturally fill the tall vertical frame. The subject should be centered vertically with expanded background above and below.'
         : '';
-      editContent.push({ type: 'text', text: prompt + aspectInstruction + '\n\nCRITICAL RULES:\n- Generate a NEW image that is the SOURCE IMAGE but adapted as instructed.\n- Keep ALL text overlays, logos, backgrounds, clothing, body pose, and composition as close to the source as possible.\n- The output MUST fill the entire frame with NO black bars or empty areas.' });
+      editContent.push({ type: 'text', text: prompt + aspectInstruction + '\n\nCRITICAL RULES:\n- Generate a NEW image that is the SOURCE IMAGE but adapted as instructed.\n- Keep ALL text overlays, logos, backgrounds, clothing, body pose, and composition as close to the source as possible.\n- The output MUST fill the entire frame with NO black bars or empty areas.\n- If the output format is 9:16, the image MUST be taller than it is wide (portrait orientation).' });
       
       const editRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',

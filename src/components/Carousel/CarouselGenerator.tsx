@@ -147,6 +147,7 @@ const CarouselGenerator: React.FC = () => {
   const isGuest = !user;
   const isCardLocked = (index: number) => isGuest && index > 0 && !!carouselData;
   const [showLoginGate, setShowLoginGate] = useState(false);
+  const [showGuestPaywall, setShowGuestPaywall] = useState(false);
 
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
@@ -1277,6 +1278,11 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(false);
       setImageGenProgress('');
       toast({ title: 'Post gerado com sucesso!' });
+
+      // Guest paywall: show the result for 6 seconds, then overlay paywall
+      if (isGuest) {
+        setTimeout(() => setShowGuestPaywall(true), 6000);
+      }
 
       // Auto-save
       try {
@@ -3574,7 +3580,7 @@ FORBIDDEN:
                       </div>
                     ) : (
                       <button onClick={() => {
-                          if (isGuest) {
+                          if (isGuest && cardCount > 1) {
                             setShowLoginGate(true);
                             return;
                           }
@@ -3589,7 +3595,7 @@ FORBIDDEN:
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-                        {isGuest ? <><Lock className="h-4 w-4" /> Criar conta para gerar</> : <><Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}</>}
+                        {isGuest ? <><Sparkles className="h-4 w-4" /> Gerar Post Grátis</> : <><Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}</>}
                       </button>
                     )}
                   </div>
@@ -4898,6 +4904,44 @@ FORBIDDEN:
       />
 
       {/* Tour removed */}
+
+      {/* Guest Paywall Modal - shown after free generation */}
+      {showGuestPaywall && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-md" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-md rounded-2xl overflow-hidden p-8 text-center"
+            style={{ backgroundColor: '#18181f', border: '1px solid rgba(139,92,246,0.3)' }}
+          >
+            <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
+              <Sparkles className="w-8 h-8" style={{ color: '#9B6BFF' }} />
+            </div>
+            <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>
+            <p className="text-white/50 text-sm mb-6 leading-relaxed">
+              Esse foi seu teste gratuito! Para baixar, editar e gerar mais conteúdos incríveis com IA, assine um plano.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => { setShowGuestPaywall(false); navigate('/precos'); }}
+                className="w-full py-3.5 rounded-xl text-sm font-bold cursor-pointer transition-all"
+                style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)', color: '#fff' }}
+              >
+                Ver planos e assinar
+              </button>
+              <button
+                onClick={() => { setShowGuestPaywall(false); navigate('/register'); }}
+                className="w-full py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all border"
+                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
+              >
+                Criar conta gratuita
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Login Gate Modal */}
       {showLoginGate && (

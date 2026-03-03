@@ -1557,7 +1557,7 @@ const CarouselGenerator: React.FC = () => {
           const allStyleRefs = [...styleRefUrls];
           
           const marketplaceRefUrls: string[] = [];
-          if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+          if (activeMarketplaceStyle?._previewImages?.length) {
             const origin = window.location.origin;
             const allPreviews = (activeMarketplaceStyle._previewImages as string[])
               .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);

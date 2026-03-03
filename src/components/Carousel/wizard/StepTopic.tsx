@@ -33,6 +33,7 @@ interface Props {
   setManualPostText?: (v: string) => void;
   wizardMode?: 'simple' | 'advanced';
   setContentMode?: (mode: 'carousel' | 'single-post') => void;
+  guestMode?: boolean;
 }
 
 const StepTopic: React.FC<Props> = ({
@@ -43,7 +44,7 @@ const StepTopic: React.FC<Props> = ({
   skipWebSearch, onToggleSkipWebSearch,
   mentionedPrompts = [], onMentionAdd, onMentionRemove,
   contentMode, manualPostText, setManualPostText,
-  wizardMode = 'advanced', setContentMode,
+  wizardMode = 'advanced', setContentMode, guestMode = false,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
   const [advancedMode, setAdvancedMode] = useState(false);
@@ -80,26 +81,39 @@ const StepTopic: React.FC<Props> = ({
       {!advancedMode && (
         <>
           <div className="relative">
-            <PromptMentionInput
-              ref={mentionRef}
-              value={topic}
-              onChange={setTopic}
-              mentionedPrompts={mentionedPrompts}
-              onMentionAdd={onMentionAdd || (() => {})}
-              onMentionRemove={onMentionRemove || (() => {})}
-              placeholder={skipWebSearch 
-                ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
-                : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
-              className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-24 border px-4 py-3 outline-none"
-            />
+            {guestMode ? (
+              <textarea
+                value={topic}
+                onChange={e => setTopic(e.target.value)}
+                placeholder={skipWebSearch 
+                  ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
+                  : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
+                className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-12 border px-4 py-3 outline-none"
+              />
+            ) : (
+              <PromptMentionInput
+                ref={mentionRef}
+                value={topic}
+                onChange={setTopic}
+                mentionedPrompts={mentionedPrompts}
+                onMentionAdd={onMentionAdd || (() => {})}
+                onMentionRemove={onMentionRemove || (() => {})}
+                placeholder={skipWebSearch 
+                  ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
+                  : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
+                className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-24 border px-4 py-3 outline-none"
+              />
+            )}
             <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
-              <button
-                onClick={() => mentionRef.current?.triggerMention()}
-                className="h-8 px-2.5 rounded-lg bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-200 transition-all cursor-pointer text-sm font-semibold"
-                title="Inserir menção de prompt"
-              >
-                @
-              </button>
+              {!guestMode && (
+                <button
+                  onClick={() => mentionRef.current?.triggerMention()}
+                  className="h-8 px-2.5 rounded-lg bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-200 transition-all cursor-pointer text-sm font-semibold"
+                  title="Inserir menção de prompt"
+                >
+                  @
+                </button>
+              )}
               <button
                 onClick={onEnhance}
                 disabled={enhancingPrompt || !topic.trim()}

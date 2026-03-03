@@ -269,12 +269,12 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
     for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
     for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
-    // Model selection — gemini-3-pro fails consistently with style refs, so use flash directly
+    // Model selection — use pro model whenever face refs exist for maximum fidelity
     const resolvedModel = imageModel === 'auto' 
-      ? (hasFaceRefs && !hasStyleRefs ? 'nano-banana' : 'gemini') 
+      ? (hasFaceRefs ? 'nano-banana' : 'gemini') 
       : imageModel;
     const primaryModel = resolvedModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
-    const fallbackModel = resolvedModel === 'nano-banana' ? 'google/gemini-2.5-flash-image' : 'google/gemini-2.5-flash-image';
+    const fallbackModel = 'google/gemini-2.5-flash-image';
     console.log('Image gen model:', primaryModel, 'parts:', messageContent.length);
 
     async function tryGenerate(model: string, content: any[], attempt: number): Promise<string | null> {
@@ -351,15 +351,19 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       }
     }
 
-    // Attempt 2: if primary and fallback are the same model, skip to text-only
-    if (!generatedImage && primaryModel !== fallbackModel) {
+    // Attempt 2: retry with fallback model but keep ALL face refs for fidelity
+    if (!generatedImage) {
       const retryContent: any[] = [];
+      // CRITICAL: Send ALL face refs first for maximum fidelity (not just 1)
+      for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (validFaceRefs.length > 0) {
+        retryContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
+      }
       if (stylePrompt) {
         retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. Siga o estilo editorial descrito acima fielmente. NÃO copie nomes, @handles ou informações pessoais das referências. SEM bordas no topo ou base da imagem.` });
       } else {
         retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });
       }
-      for (const ref of validFaceRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of validGeneralRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of validStyleRefs.slice(0, 2)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch (e2: any) { if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }

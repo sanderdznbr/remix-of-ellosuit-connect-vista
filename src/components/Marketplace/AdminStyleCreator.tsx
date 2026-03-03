@@ -477,6 +477,39 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                     <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefFilesChange} />
                   </label>
                 </div>
+              {/* Download all button */}
+              {existingImages.length > 0 && (
+                <button
+                  onClick={() => {
+                    existingImages.forEach((url, i) => {
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `ref-${i + 1}.png`;
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    });
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] text-white/50 text-xs hover:bg-white/[0.1] hover:text-white/80 cursor-pointer transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" /> Baixar todas ({existingImages.length})
+                </button>
+              )}
+              </div>
+
+              {/* Strict instructions */}
+              <div>
+                <label className="text-[10px] text-white/40 mb-1 block">Instruções Rígidas (opcional)</label>
+                <textarea
+                  value={form.strict_instructions}
+                  onChange={e => setForm(f => ({ ...f, strict_instructions: e.target.value }))}
+                  placeholder="Ex: Ao usar esse estilo, todas as fotos devem ter fundo escuro com neon, a pessoa deve aparecer em poses dinâmicas..."
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none resize-none focus:border-yellow-500/40"
+                />
+                <p className="text-[9px] text-white/15 mt-1">Essas instruções serão injetadas com prioridade máxima na IA ao gerar com este estilo.</p>
               </div>
 
               {/* Actions */}

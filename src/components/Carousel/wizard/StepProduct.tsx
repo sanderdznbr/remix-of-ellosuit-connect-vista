@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw, Folder } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import GalleryPicker from './GalleryPicker';
+import { useAuth } from '@/components/AuthProvider';
 
 export type ProductSize = 'tiny' | 'small' | 'medium' | 'large' | 'extra-large';
 
@@ -44,6 +45,7 @@ const StepProduct: React.FC<Props> = ({
   analyzingProduct, setAnalyzingProduct,
   productSize, setProductSize,
 }) => {
+  const { user } = useAuth();
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const handleUpload = (files: FileList | null) => {
@@ -120,11 +122,13 @@ const StepProduct: React.FC<Props> = ({
         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
       </label>
 
-      {/* Gallery picker button */}
-      <button onClick={() => setGalleryOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
-        <Folder className="h-4 w-4" /> Importar da Galeria de Marca
-      </button>
+      {/* Gallery picker button - only for logged in users */}
+      {user && (
+        <button onClick={() => setGalleryOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+          <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+        </button>
+      )}
 
       <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de produto" />
 

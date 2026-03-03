@@ -121,8 +121,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             {[
               { label: 'Preços', path: '/precos' },
               { label: 'Recursos', path: '/recursos' },
-              { label: 'Comunidade', path: '#' },
-              { label: 'Suporte', path: '#' },
+              { label: 'Suporte', path: '/suporte' },
             ].map((item) => (
               <button
                 key={item.label}

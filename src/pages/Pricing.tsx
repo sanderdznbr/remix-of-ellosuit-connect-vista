@@ -396,9 +396,8 @@ function PublicPricing() {
           <div className="hidden md:flex items-center gap-5">
             {[
               { label: 'Preços', path: '/precos' },
-              { label: 'Recursos', path: '#' },
-              { label: 'Comunidade', path: '#' },
-              { label: 'Suporte', path: '#' },
+              { label: 'Recursos', path: '/recursos' },
+              { label: 'Suporte', path: '/suporte' },
             ].map(item => (
               <button key={item.label} onClick={() => item.path !== '#' && navigate(item.path)}
                 className={`text-sm font-medium transition-colors cursor-pointer ${item.path === '/precos' ? 'text-white/90' : 'text-white/50 hover:text-white/80'}`}>

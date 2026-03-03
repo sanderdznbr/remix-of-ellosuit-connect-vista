@@ -119,15 +119,15 @@ const Suporte: React.FC = () => {
         </div>
       </motion.nav>
 
-      {/* Giant Orb background — same as WelcomeScreen */}
-      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
+      {/* Giant Orb background — same as WelcomeScreen, extra blur */}
+      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none" style={{ filter: 'blur(40px)', opacity: 0.7 }}>
         <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
           <div className="carousel-loader-spinner" />
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex items-center justify-center relative z-10 px-4 md:px-8 overflow-y-auto">
+      <div className="flex-1 flex items-start lg:items-center justify-center relative z-10 px-4 md:px-8 overflow-y-auto pt-4 md:pt-8 lg:pt-0">
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center py-8">
 
           {/* LEFT — Typing animation */}

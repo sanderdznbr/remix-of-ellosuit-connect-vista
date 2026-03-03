@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search } from 'lucide-react';
+import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 
 interface MarketplaceStyle {
@@ -40,6 +40,8 @@ const StepStyleSelect: React.FC<Props> = ({
   const [activeStyleId, setActiveStyleId] = useState<string | null>(null);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [showMarketplace, setShowMarketplace] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
     fetchPurchasedStyles();
@@ -68,6 +70,19 @@ const StepStyleSelect: React.FC<Props> = ({
     }
   };
 
+  const categories = useMemo(() => {
+    const cats = Array.from(new Set(purchasedStyles.map(s => s.category)));
+    return ['all', ...cats];
+  }, [purchasedStyles]);
+
+  const filteredStyles = useMemo(() => {
+    return purchasedStyles.filter(s => {
+      if (selectedCategory !== 'all' && s.category !== selectedCategory) return false;
+      if (searchQuery && !s.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+  }, [purchasedStyles, searchQuery, selectedCategory]);
+
   const applyPreset = (preset: StylePreset) => {
     setActiveStyleId(null);
     setActivePresetId(preset.id);
@@ -95,24 +110,51 @@ const StepStyleSelect: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-6" style={{ minHeight: '300px' }}>
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Selecione o estilo</h2>
-        <p className="text-sm text-white/40">Selecione um estilo do Marketplace para continuar.</p>
+    <div className="flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
+      {/* Header */}
+      <div className="shrink-0 pb-3">
+        <h2 className="text-xl font-bold text-white mb-1">Selecione o estilo</h2>
+        <p className="text-xs text-white/40">Selecione um estilo do Marketplace para continuar.</p>
       </div>
 
-      {/* Purchased marketplace styles */}
-      <div>
-        <p className="text-xs font-medium text-white/40 mb-3 flex items-center gap-1.5">
-          <ShoppingBag className="w-3.5 h-3.5" /> Meus estilos do Marketplace
-        </p>
-        {loading ? (
-          <div className="flex items-center gap-2 text-white/30 text-xs py-4">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" /> Carregando estilos...
+      {/* Search + Filters */}
+      <div className="shrink-0 flex flex-col gap-2 pb-3">
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+          <Search className="w-4 h-4 text-white/30 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Buscar estilos..."
+            className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none min-w-0"
+          />
+        </div>
+        {categories.length > 2 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-white/[0.04] text-white/40 hover:text-white/60 border border-transparent'
+                }`}>
+                {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
           </div>
-        ) : purchasedStyles.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {purchasedStyles.map(style => {
+        )}
+      </div>
+
+      {/* Scrollable grid */}
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-5 h-5 animate-spin text-white/30" />
+          </div>
+        ) : filteredStyles.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {filteredStyles.map(style => {
               const isActive = activeStyleId === style.id;
               const previewImg = style.preview_images?.[0];
               return (
@@ -123,15 +165,15 @@ const StepStyleSelect: React.FC<Props> = ({
                       : 'border-white/[0.06] hover:border-white/15'
                   }`}>
                   {previewImg && (
-                    <div className="aspect-video bg-white/[0.03]">
-                      <img src={previewImg} alt={style.name} className="w-full h-full object-cover" />
+                    <div className="aspect-[16/9] bg-white/[0.03]">
+                      <img src={previewImg} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   )}
-                  <div className="p-2.5">
-                    <p className="text-xs font-medium text-white truncate">{style.name}</p>
+                  <div className="p-2">
+                    <p className="text-[11px] font-medium text-white truncate">{style.name}</p>
                   </div>
                   {isActive && (
-                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
                       <Check className="w-3 h-3 text-white" />
                     </div>
                   )}
@@ -140,20 +182,22 @@ const StepStyleSelect: React.FC<Props> = ({
             })}
           </div>
         ) : (
-          <p className="text-xs text-white/20 py-2">Nenhum estilo adquirido ainda.</p>
+          <div className="flex flex-col items-center justify-center h-full text-white/20 gap-2">
+            <ShoppingBag className="w-8 h-8" />
+            <p className="text-xs">{searchQuery ? 'Nenhum estilo encontrado' : 'Nenhum estilo adquirido'}</p>
+          </div>
         )}
       </div>
 
       {/* Marketplace button */}
       <button
         onClick={() => setShowMarketplace(true)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-purple-500/30 bg-purple-500/[0.05] text-purple-300 hover:bg-purple-500/[0.1] transition-all text-sm font-medium cursor-pointer"
+        className="shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-purple-500/30 bg-purple-500/[0.05] text-purple-300 hover:bg-purple-500/[0.1] transition-all text-xs font-medium cursor-pointer"
       >
-        <ShoppingBag className="w-4 h-4" />
+        <ShoppingBag className="w-3.5 h-3.5" />
         Explorar Marketplace
       </button>
 
-      {/* Marketplace popup */}
       {showMarketplace && (
         <MarketplacePopup
           onClose={() => { setShowMarketplace(false); fetchPurchasedStyles(); }}
@@ -164,7 +208,7 @@ const StepStyleSelect: React.FC<Props> = ({
   );
 };
 
-// ---- Marketplace Popup (inline) ----
+// ---- Marketplace Popup ----
 const MarketplacePopup: React.FC<{
   onClose: () => void;
   purchasedStyles: MarketplaceStyle[];
@@ -178,9 +222,7 @@ const MarketplacePopup: React.FC<{
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -201,9 +243,7 @@ const MarketplacePopup: React.FC<{
   };
 
   const handlePurchase = async (style: MarketplaceStyle) => {
-    if (!user) return;
-    if (purchasedIds.has(style.id)) return;
-    if (creditBalance < style.price_credits) return;
+    if (!user || purchasedIds.has(style.id) || creditBalance < style.price_credits) return;
     setPurchasing(style.id);
     try {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
@@ -235,9 +275,9 @@ const MarketplacePopup: React.FC<{
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.08]" style={{ backgroundColor: '#0a0a0f' }}>
+      <div className="relative w-full max-w-4xl h-[85vh] flex flex-col rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
         {/* Header */}
-        <div className="sticky top-0 z-10 px-6 py-4 border-b border-white/[0.06] flex items-center justify-between" style={{ backgroundColor: '#0a0a0f' }}>
+        <div className="shrink-0 px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-white">Marketplace de Estilos</h2>
             <p className="text-xs text-white/30 mt-0.5">
@@ -249,28 +289,29 @@ const MarketplacePopup: React.FC<{
           </button>
         </div>
 
-        <div className="p-6">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] flex-1 max-w-xs">
-              <Search className="w-4 h-4 text-white/30" />
-              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar estilos..." className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {categories.map(cat => (
-                <button key={cat} onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                    selectedCategory === cat
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                      : 'bg-white/[0.04] text-white/40 hover:text-white/60 border border-transparent'
-                  }`}>
-                  {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                </button>
-              ))}
-            </div>
+        {/* Filters */}
+        <div className="shrink-0 px-6 py-3 border-b border-white/[0.04] flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] flex-1 max-w-xs">
+            <Search className="w-4 h-4 text-white/30" />
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar estilos..." className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
           </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-white/[0.04] text-white/40 hover:text-white/60 border border-transparent'
+                }`}>
+                {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
 
+        {/* Scrollable content */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-6" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
@@ -291,7 +332,7 @@ const MarketplacePopup: React.FC<{
                   }`}>
                     <div className="aspect-video bg-white/[0.03]">
                       {previewImg ? (
-                        <img src={previewImg} alt={style.name} className="w-full h-full object-cover" />
+                        <img src={previewImg} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Sparkles className="w-8 h-8 text-white/10" /></div>
                       )}

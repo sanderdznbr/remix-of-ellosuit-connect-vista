@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHome from './DashboardHome';
@@ -6,6 +6,7 @@ import DashboardProjects from './DashboardProjects';
 import BrandGallery from './BrandGallery';
 import PromptGallery from './PromptGallery';
 import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
+import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -22,12 +23,27 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const { isMobile } = useIsMobile();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'U';
   const email = user?.email || '';
+
+  // Fetch credit balance
+  useEffect(() => {
+    if (!user) return;
+    const fetchCredits = async () => {
+      try {
+        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
+        if (!cu) return;
+        const { data } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle();
+        setCreditBalance(data?.balance ?? 0);
+      } catch {}
+    };
+    fetchCredits();
+  }, [user]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -94,13 +110,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                 <p className="text-sm text-white/70 font-medium truncate">{email}</p>
               </div>
               <div className="py-1">
-                <div className="px-4 py-3 border-b border-white/[0.06]">
+                <div className="px-4 py-3 border-b border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => { setProfileOpen(false); navigate('/precos'); }}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-white/40">Créditos</span>
-                    <span className="text-white/70 font-medium">0 restantes</span>
+                    <span className="text-white/70 font-medium">{creditBalance !== null ? `${Math.floor(creditBalance)} restantes` : '...'}</span>
                   </div>
                   <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-                    <div className="h-full rounded-full bg-purple-500/60" style={{ width: '0%' }} />
+                    <div className="h-full rounded-full bg-purple-500/60" style={{ width: `${Math.min(100, ((creditBalance ?? 0) / 100) * 100)}%` }} />
                   </div>
                 </div>
                 <button onClick={() => { setProfileOpen(false); toast.info('Perfil em breve!'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">

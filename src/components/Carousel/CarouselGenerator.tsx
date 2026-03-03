@@ -2182,10 +2182,7 @@ FORBIDDEN:
 
   const addCard = () => {
     if (!carouselData) return;
-    const newCard: CarouselCard = { type: 'content', bodyTop: 'Texto principal aqui...', bodyBottom: 'Texto complementar...', layout: 'dark' };
-    const cards = [...carouselData.cards];
-    cards.splice(cards.length - 1, 0, newCard);
-    setCarouselData({ ...carouselData, cards });
+    void addOneMoreCard('composed');
   };
 
   const removeCard = (index: number) => {

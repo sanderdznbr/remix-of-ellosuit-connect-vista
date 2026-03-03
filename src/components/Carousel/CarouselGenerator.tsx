@@ -2096,16 +2096,28 @@ FORBIDDEN:
     const card = carouselData.cards[cardIndex];
     setRegeneratingCard(cardIndex);
     try {
+      // Gather existing card summaries so the AI avoids repeating content
+      const existingCardSummaries = carouselData.cards
+        .map((c, i) => {
+          if (i === cardIndex) return null;
+          const title = c.title || c.bodyTop || '';
+          const body = c.body || c.bodyBottom || '';
+          return title || body ? `Card ${i + 1}: ${title} ${body}`.slice(0, 120) : null;
+        })
+        .filter(Boolean);
+
       // 1. Regenerate text content for this card
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount: 3, // Generate minimal (cover + 1 content + cta)
-          imageCardIndices: [1],
+          cardCount: carouselData.cards.length, // Use actual card count for proper context
+          imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
           regenerateCardIndex: cardIndex, // hint to backend
+          existingCardSummaries, // avoid repeating content from other cards
         },
       });
       
@@ -2145,7 +2157,12 @@ FORBIDDEN:
       // 2. Regenerate image using AI with face/style references
       let newImageUrl = card.imageUrl;
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
-      const faceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const wizardFaceRefs = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      // If no wizard face refs, use the cover image as face reference to maintain the same person
+      const coverImageUrl = carouselData.cards[0]?.imageUrl;
+      const faceRefUrls = wizardFaceRefs.length > 0 
+        ? wizardFaceRefs 
+        : (coverImageUrl && !coverImageUrl.startsWith('data:') ? [coverImageUrl] : []);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
       const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);

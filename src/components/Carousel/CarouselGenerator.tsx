@@ -62,6 +62,7 @@ import StepFonts from './wizard/StepFonts';
 import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepSpeed from './wizard/StepSpeed';
+import StepVisualStyle, { VisualCategory } from './wizard/StepVisualStyle';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
@@ -163,9 +164,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', 'Logo', 'Velocidade'];
-  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  // WIZARD_STEPS computed below after all state declarations
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
   // Step 1: Topic
@@ -186,12 +185,22 @@ const CarouselGenerator: React.FC = () => {
   const [wearsGlasses, setWearsGlasses] = useState(false);
   const [facePersons, setFacePersons] = useState<FacePerson[]>([]);
   const [allPeopleOnCover, setAllPeopleOnCover] = useState(true);
+
+  // Visual style (when no face is attached)
+  const [visualCategory, setVisualCategory] = useState<VisualCategory | null>(null);
+  const [visualSearchQuery, setVisualSearchQuery] = useState('');
   
   // Product state
   const [productImages, setProductImages] = useState<{ url: string; thumb: string; file: File }[]>([]);
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [analyzingProduct, setAnalyzingProduct] = useState(false);
   const [productSize, setProductSize] = useState<ProductSize>('medium');
+
+  // Compute wizard steps after all state is declared
+  const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
+  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Visual']), 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
@@ -3332,6 +3341,12 @@ FORBIDDEN:
                         faceGender={faceGender} setFaceGender={setFaceGender}
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses} />
                     )}
+                    {currentStepName === 'Visual' && (
+                      <StepVisualStyle
+                        selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
+                        visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
+                        referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
+                    )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
                         productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}
@@ -3422,7 +3437,7 @@ FORBIDDEN:
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Rosto' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
+                        {(currentStepName === 'Rosto' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

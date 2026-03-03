@@ -234,7 +234,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       }
 
       // Reset form
-      setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false });
+      setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, strict_instructions: '' });
       setCoverFile(null); setCoverPreview(null);
       setRefFiles([]); setRefPreviews([]);
       setExistingImages([]);
@@ -279,6 +279,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       price_brl: style.price_brl,
       tags: (style.tags || []).join(', '),
       is_featured: style.is_featured,
+      strict_instructions: (style as any).strict_instructions || '',
     });
     setCoverFile(null);
     setCoverPreview(null);
@@ -491,7 +492,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                 <button
                   onClick={() => {
                     setCreating(false); setEditingId(null);
-                    setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false });
+                    setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, strict_instructions: '' });
                     setCoverFile(null); setCoverPreview(null); setRefFiles([]); setRefPreviews([]); setExistingImages([]);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-white/[0.04] text-white/40 text-sm hover:bg-white/[0.08] cursor-pointer"

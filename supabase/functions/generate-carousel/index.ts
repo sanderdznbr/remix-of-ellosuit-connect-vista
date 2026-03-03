@@ -375,7 +375,7 @@ IMPORTANTE: Os imagePrompts devem descrever A IMAGEM COMPLETA com texto, tipogra
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
-Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
+Gere conteúdo para um carrossel de EXATAMENTE ${numCards} cards sobre o tópico fornecido. VOCÊ DEVE retornar EXATAMENTE ${numCards} cards no array "cards" — nem mais, nem menos. Isso é OBRIGATÓRIO.
 
 IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, ElloContent, @Ellocontent ou qualquer variação dessas marcas, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
 
@@ -492,6 +492,22 @@ Responda APENAS em JSON válido:
         return new Response(JSON.stringify({ error: 'Não foi possível processar o conteúdo gerado', raw: content }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      // Validate card count server-side
+      if (parsed.cards && Array.isArray(parsed.cards) && parsed.cards.length !== numCards) {
+        console.warn(`AI returned ${parsed.cards.length} cards but ${numCards} were requested`);
+        // Pad if fewer
+        while (parsed.cards.length < numCards) {
+          const idx = parsed.cards.length;
+          if (idx === numCards - 1) {
+            parsed.cards.push({ type: 'cta', title: 'Gostou do conteúdo?', body: 'Salve, compartilhe e siga para mais!', imagePrompt: 'Card final CTA editorial', needsImage: true });
+          } else {
+            parsed.cards.splice(idx, 0, { type: 'content', bodyTop: `Continuação sobre o tema...`, bodyBottom: '', imagePrompt: `Composição editorial card ${idx + 1}`, needsImage: true });
+          }
+        }
+        // Trim if more
+        if (parsed.cards.length > numCards) parsed.cards.splice(numCards);
       }
 
       return new Response(JSON.stringify({ success: true, data: parsed }), {

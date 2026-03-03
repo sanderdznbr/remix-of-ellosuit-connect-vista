@@ -1385,7 +1385,34 @@ const CarouselGenerator: React.FC = () => {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao gerar');
 
-      const cards: CarouselCard[] = data.data.cards.map((c: any, i: number) => {
+      // === VALIDATE CARD COUNT: AI sometimes returns fewer cards than requested ===
+      const rawCards: any[] = data.data.cards || [];
+      if (rawCards.length < cardCount) {
+        console.warn(`AI returned ${rawCards.length} cards but ${cardCount} were requested. Padding...`);
+        while (rawCards.length < cardCount) {
+          const insertIdx = rawCards.length;
+          if (insertIdx === cardCount - 1) {
+            rawCards.push({
+              type: 'cta', title: 'Gostou do conteúdo?', body: 'Salve, compartilhe e siga para mais!',
+              ctaLine: brandName || userName || '',
+              imagePrompt: `Card final de CTA sobre "${cleanMentionsFromTopic(topic.trim())}" com design editorial.`,
+              needsImage: true,
+            });
+          } else {
+            rawCards.splice(insertIdx, 0, {
+              type: 'content',
+              bodyTop: `Continuação sobre ${cleanMentionsFromTopic(topic.trim()).split('\n')[0]}...`,
+              bodyBottom: '',
+              imagePrompt: `Composição editorial profissional sobre "${cleanMentionsFromTopic(topic.trim())}", card ${insertIdx + 1} de ${cardCount}.`,
+              needsImage: true,
+            });
+          }
+        }
+      } else if (rawCards.length > cardCount) {
+        rawCards.splice(cardCount);
+      }
+
+      const cards: CarouselCard[] = rawCards.map((c: any, i: number) => {
         if (c.type === 'cover') return { ...c, layout: 'dark' as const };
         if (c.type === 'cta') return { ...c, layout: 'accent' as const };
         const layouts: CarouselCard['layout'][] = ['dark', 'dark', 'light', 'accent', 'dark'];

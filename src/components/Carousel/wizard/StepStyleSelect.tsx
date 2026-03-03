@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter } from 'lucide-react';
+import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 
 interface MarketplaceStyle {
@@ -40,6 +40,7 @@ const StepStyleSelect: React.FC<Props> = ({
   const [activeStyleId, setActiveStyleId] = useState<string | null>(null);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [showMarketplace, setShowMarketplace] = useState(false);
+  const [lockedStyleName, setLockedStyleName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -51,14 +52,14 @@ const StepStyleSelect: React.FC<Props> = ({
     setLoading(true);
     try {
       if (!user) {
-        // Unauth users: show free styles from marketplace
-        const { data: freeStyles } = await supabase
+        // Unauth users: show ALL styles (free ones selectable, paid ones locked)
+        const { data: allStyles } = await supabase
           .from('marketplace_styles')
-          .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions')
+          .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
           .eq('is_active', true)
-          .eq('is_free', true)
+          .order('is_free', { ascending: false })
           .order('sort_order', { ascending: true });
-        setPurchasedStyles((freeStyles as any[]) || []);
+        setPurchasedStyles((allStyles as any[]) || []);
         setLoading(false);
         return;
       }
@@ -171,22 +172,41 @@ const StepStyleSelect: React.FC<Props> = ({
             {filteredStyles.map(style => {
               const isActive = activeStyleId === style.id;
               const previewImg = style.preview_images?.[0];
+              const isFree = (style as any).is_free;
+              const isLocked = !user && !isFree;
               return (
-                <button key={style.id} onClick={() => applyMarketplaceStyle(style)}
+                <button key={style.id}
+                  onClick={() => {
+                    if (isLocked) {
+                      setLockedStyleName(style.name);
+                      return;
+                    }
+                    applyMarketplaceStyle(style);
+                  }}
                   className={`relative rounded-xl overflow-hidden border transition-all text-left cursor-pointer ${
-                    isActive
-                      ? 'border-purple-500 ring-1 ring-purple-500/50'
-                      : 'border-white/[0.06] hover:border-white/15'
+                    isLocked
+                      ? 'border-white/[0.04] opacity-70'
+                      : isActive
+                        ? 'border-purple-500 ring-1 ring-purple-500/50'
+                        : 'border-white/[0.06] hover:border-white/15'
                   }`}>
                   {previewImg && (
-                    <div className="aspect-[16/9] bg-white/[0.03]">
-                      <img src={previewImg} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="aspect-[16/9] bg-white/[0.03] relative">
+                      <img src={previewImg} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="lazy" />
+                      {isLocked && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Lock className="w-5 h-5 text-white/60" />
+                        </div>
+                      )}
                     </div>
                   )}
-                  <div className="p-2">
+                  <div className="p-2 flex items-center justify-between">
                     <p className="text-[11px] font-medium text-white truncate">{style.name}</p>
+                    {isLocked && (
+                      <span className="text-[9px] text-yellow-400/70 font-medium shrink-0 ml-1">PRO</span>
+                    )}
                   </div>
-                  {isActive && (
+                  {isActive && !isLocked && (
                     <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
                       <Check className="w-3 h-3 text-white" />
                     </div>
@@ -219,6 +239,31 @@ const StepStyleSelect: React.FC<Props> = ({
           onClose={() => { setShowMarketplace(false); fetchAvailableStyles(); }}
           purchasedStyles={purchasedStyles}
         />
+      )}
+
+      {lockedStyleName && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setLockedStyleName(null)} />
+          <div className="relative bg-[#12121a] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center">
+            <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-6 h-6 text-yellow-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Estilo "{lockedStyleName}"</h3>
+            <p className="text-sm text-white/50 mb-5">
+              Liberado após contratação de um plano pago. Crie sua conta e escolha um plano para desbloquear todos os estilos.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setLockedStyleName(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white/50 bg-white/[0.06] hover:bg-white/[0.1] transition-colors cursor-pointer">
+                Fechar
+              </button>
+              <a href="/register"
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 transition-colors text-center">
+                Criar Conta
+              </a>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

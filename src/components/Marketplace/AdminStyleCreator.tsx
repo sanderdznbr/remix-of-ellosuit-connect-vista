@@ -41,6 +41,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
     price_brl: 9.90,
     tags: '',
     is_featured: false,
+    strict_instructions: '',
   });
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -205,6 +206,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           is_featured: form.is_featured,
           tags,
           style_config: styleConfig,
+          strict_instructions: form.strict_instructions || null,
         };
         // Combine remaining existing images with newly uploaded ones
         updateData.preview_images = [...existingImages, ...allImages];
@@ -225,6 +227,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           is_featured: form.is_featured,
           tags,
           sort_order: styles.length + 1,
+          strict_instructions: form.strict_instructions || null,
         } as any);
         if (error) throw error;
         toast.success('Estilo criado com sucesso!');

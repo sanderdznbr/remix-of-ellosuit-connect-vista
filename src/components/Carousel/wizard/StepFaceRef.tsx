@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Upload, X, Folder, Plus, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, X, Folder, Plus, User, ChevronDown, ChevronUp, Scan, Glasses, UserRound, UserRoundCheck } from 'lucide-react';
 import { ReferenceImage, FacePerson } from './types';
 import GalleryPicker from './GalleryPicker';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/integrations/supabase/client';
 
 const MAX_PEOPLE = 4;
 const MAX_PHOTOS_PER_PERSON = 3;
@@ -56,6 +57,38 @@ const StepFaceRef: React.FC<Props> = ({
   const { user } = useAuth();
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
   const [galleryOpenFor, setGalleryOpenFor] = useState<string | null>(null);
+  const [detectingGender, setDetectingGender] = useState<string | null>(null);
+
+  const detectGenderFromPhoto = async (personId: string, imageDataUrl: string) => {
+    setDetectingGender(personId);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          model: 'google/gemini-2.0-flash-001',
+          messages: [
+            { role: 'system', content: 'You are a gender detection assistant. Respond ONLY with "male" or "female". Nothing else.' },
+            { role: 'user', content: [
+              { type: 'text', text: 'What is the gender of the person in this photo? Reply only "male" or "female".' },
+              { type: 'image_url', image_url: { url: imageDataUrl } },
+            ]},
+          ],
+          temperature: 0,
+        },
+      });
+      if (!error && data?.content) {
+        const result = data.content.trim().toLowerCase();
+        if (result.includes('female') || result.includes('fem')) {
+          updatePerson(personId, { gender: 'female' });
+        } else if (result.includes('male') || result.includes('masc')) {
+          updatePerson(personId, { gender: 'male' });
+        }
+      }
+    } catch (err) {
+      console.warn('Gender detection failed:', err);
+    } finally {
+      setDetectingGender(null);
+    }
+  };
 
   // Ensure at least 1 person slot exists
   React.useEffect(() => {
@@ -111,13 +144,18 @@ const StepFaceRef: React.FC<Props> = ({
     const remaining = MAX_PHOTOS_PER_PERSON - person.photos.length;
     if (remaining <= 0) return;
 
-    Array.from(files).slice(0, remaining).forEach(file => {
+    const isFirstPhoto = person.photos.length === 0;
+    let firstDataUrl: string | null = null;
+
+    Array.from(files).slice(0, remaining).forEach((file, idx) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
+          const dataUrl = e.target.result as string;
+          if (idx === 0 && isFirstPhoto) firstDataUrl = dataUrl;
           const newPhoto: ReferenceImage = {
-            url: e.target.result as string,
-            thumb: e.target.result as string,
+            url: dataUrl,
+            thumb: dataUrl,
             label: file.name,
             source: 'upload',
             category: 'face',
@@ -126,6 +164,10 @@ const StepFaceRef: React.FC<Props> = ({
           updatePerson(personId, {
             photos: [...(facePersons.find(p => p.id === personId)?.photos || []), newPhoto],
           });
+          // Auto-detect gender on first photo upload (when person had no photos)
+          if (idx === 0 && isFirstPhoto && person.gender === 'auto') {
+            detectGenderFromPhoto(personId, dataUrl);
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -188,9 +230,10 @@ const StepFaceRef: React.FC<Props> = ({
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-white/80">{person.label}</span>
                   {hasPhotos && (
-                    <span className="ml-2 text-[10px] text-white/30">
-                      {person.photos.length} foto(s) · {person.gender === 'auto' ? 'Auto' : person.gender === 'male' ? '♂' : '♀'}
-                      {person.wearsGlasses ? ' · 🤓' : ''}
+                    <span className="ml-2 text-[10px] text-white/30 inline-flex items-center gap-1">
+                      {person.photos.length} foto(s) · {person.gender === 'auto' ? 'Auto' : person.gender === 'male' ? 'Masc' : 'Fem'}
+                      {detectingGender === person.id && <Scan className="w-3 h-3 animate-pulse text-purple-400 ml-1" />}
+                      {person.wearsGlasses && <><span>·</span><Glasses className="w-3 h-3" /></>}
                     </span>
                   )}
                 </div>
@@ -251,18 +294,23 @@ const StepFaceRef: React.FC<Props> = ({
                   {hasPhotos && (
                     <div className="space-y-3 pt-2 border-t border-white/[0.06]">
                       <div>
-                        <label className="text-xs font-medium text-white/60 mb-2 block">Gênero</label>
+                        <label className="text-xs font-medium text-white/60 mb-2 flex items-center gap-1.5">
+                          Gênero
+                          {detectingGender === person.id && (
+                            <span className="text-[10px] text-purple-400 flex items-center gap-1"><Scan className="w-3 h-3 animate-pulse" /> Detectando...</span>
+                          )}
+                        </label>
                         <div className="flex gap-1.5">
-                          <Chip selected={person.gender === 'auto'} onClick={() => updatePerson(person.id, { gender: 'auto' })}>🤖 Auto</Chip>
-                          <Chip selected={person.gender === 'male'} onClick={() => updatePerson(person.id, { gender: 'male' })}>👨 Masc</Chip>
-                          <Chip selected={person.gender === 'female'} onClick={() => updatePerson(person.id, { gender: 'female' })}>👩 Fem</Chip>
+                          <Chip selected={person.gender === 'auto'} onClick={() => updatePerson(person.id, { gender: 'auto' })}><Scan className="w-3 h-3 inline -mt-px" /> Auto</Chip>
+                          <Chip selected={person.gender === 'male'} onClick={() => updatePerson(person.id, { gender: 'male' })}><UserRound className="w-3 h-3 inline -mt-px" /> Masc</Chip>
+                          <Chip selected={person.gender === 'female'} onClick={() => updatePerson(person.id, { gender: 'female' })}><UserRoundCheck className="w-3 h-3 inline -mt-px" /> Fem</Chip>
                         </div>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-white/60 mb-2 block">Usa óculos?</label>
                         <div className="flex gap-1.5">
                           <Chip selected={!person.wearsGlasses} onClick={() => updatePerson(person.id, { wearsGlasses: false })}>Não</Chip>
-                          <Chip selected={person.wearsGlasses} onClick={() => updatePerson(person.id, { wearsGlasses: true })}>🤓 Sim</Chip>
+                          <Chip selected={person.wearsGlasses} onClick={() => updatePerson(person.id, { wearsGlasses: true })}><Glasses className="w-3 h-3 inline -mt-px" /> Sim</Chip>
                         </div>
                       </div>
                     </div>
@@ -287,8 +335,8 @@ const StepFaceRef: React.FC<Props> = ({
         <div className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.02] space-y-3">
           <label className="text-sm font-medium text-white/80 block">Todas as pessoas devem aparecer na capa?</label>
           <div className="flex gap-2">
-            <Chip selected={allPeopleOnCover} onClick={() => setAllPeopleOnCover(true)}>✅ Sim, todas na capa</Chip>
-            <Chip selected={!allPeopleOnCover} onClick={() => setAllPeopleOnCover(false)}>🔄 Alternar entre os cards</Chip>
+            <Chip selected={allPeopleOnCover} onClick={() => setAllPeopleOnCover(true)}>Sim, todas na capa</Chip>
+            <Chip selected={!allPeopleOnCover} onClick={() => setAllPeopleOnCover(false)}>Alternar entre os cards</Chip>
           </div>
           <p className="text-[10px] text-white/30">
             {allPeopleOnCover

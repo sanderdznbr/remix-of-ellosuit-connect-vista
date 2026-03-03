@@ -2876,6 +2876,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_featured: boolean
+          is_free: boolean
           name: string
           preview_images: string[]
           price_brl: number
@@ -2893,6 +2894,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_featured?: boolean
+          is_free?: boolean
           name: string
           preview_images?: string[]
           price_brl?: number
@@ -2910,6 +2912,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_featured?: boolean
+          is_free?: boolean
           name?: string
           preview_images?: string[]
           price_brl?: number

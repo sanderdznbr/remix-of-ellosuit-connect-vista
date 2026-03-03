@@ -1,19 +1,19 @@
 import React from 'react';
-import { User, Sparkles } from 'lucide-react';
+import { User, Sparkles, Lock } from 'lucide-react';
 
 interface Props {
   cardCount: number;
   setCardCount: (v: number) => void;
   contentMode: 'carousel' | 'single-post';
   setContentMode: (mode: 'carousel' | 'single-post') => void;
-  // Advanced: face card count
   hasFacePhotos?: boolean;
   faceCardCount?: number | null;
   setFaceCardCount?: (v: number | null) => void;
   wizardMode?: 'simple' | 'advanced';
+  guestMode?: boolean;
 }
 
-const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode }) => {
+const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode }) => {
   const showFaceSelector = wizardMode === 'advanced' && hasFacePhotos && contentMode === 'carousel' && cardCount >= 2;
   const effectiveFaceCount = faceCardCount != null ? faceCardCount : cardCount;
 
@@ -44,17 +44,27 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
       <div className="space-y-5">
         <button
           onClick={() => {
+            if (guestMode) return;
             setContentMode('carousel');
             if (cardCount < 2) setCardCount(5);
           }}
-          className={`w-full p-4 rounded-2xl text-left transition-all ${
-            contentMode === 'carousel'
+          className={`w-full p-4 rounded-2xl text-left transition-all relative ${
+            guestMode
+              ? 'bg-white/[0.02] border border-white/[0.04] opacity-50 cursor-not-allowed'
+              : contentMode === 'carousel'
               ? 'bg-purple-500/15 border-purple-500/40 border'
               : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]'
           }`}
         >
-          <p className={`text-sm font-semibold ${contentMode === 'carousel' ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
-        <p className="text-xs text-white/30 mt-0.5">{contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : '2–10 slides'}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-sm font-semibold ${contentMode === 'carousel' && !guestMode ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
+              <p className="text-xs text-white/30 mt-0.5">
+                {guestMode ? 'Crie uma conta para gerar carrosséis' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : '2–10 slides'}
+              </p>
+            </div>
+            {guestMode && <Lock className="w-4 h-4 text-white/20" />}
+          </div>
         </button>
 
         {contentMode === 'carousel' && cardCount >= 2 && (

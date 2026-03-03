@@ -1,0 +1,1 @@
+ALTER TABLE public.marketplace_styles ADD COLUMN IF NOT EXISTS is_free BOOLEAN NOT NULL DEFAULT false;

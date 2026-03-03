@@ -46,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import StepTopic from './wizard/StepTopic';
@@ -272,6 +272,9 @@ const CarouselGenerator: React.FC = () => {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);
   const [carouselFromCoverCount, setCarouselFromCoverCount] = useState(8);
+  const [generatingStories, setGeneratingStories] = useState(false);
+  const [storiesImageUrl, setStoriesImageUrl] = useState<string | null>(null);
+  const [showStoriesPreview, setShowStoriesPreview] = useState(false);
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
   const skipCloudRef = useRef(false);
@@ -1827,6 +1830,49 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(false);
       setImageGenProgress('');
     }
+  };
+
+  // ===== GENERATE STORIES VERSION (9:16, 1080x1920) =====
+  const generateStoriesImage = async () => {
+    if (!carouselData?.cards[activeCardIndex]?.imageUrl) return;
+    const sourceImage = carouselData.cards[activeCardIndex].imageUrl!;
+    setGeneratingStories(true);
+    setStoriesImageUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
+        body: {
+          prompt: `Adapt this image to Stories format (9:16 vertical, 1080x1920px). Keep the EXACT same visual content, style, colors, text, branding, and composition. Simply reframe and extend the image vertically to fill the 9:16 aspect ratio. Do NOT crop or remove any important elements. Keep all text readable and centered. The result must look like the same post adapted for Instagram Stories.`,
+          editSourceImage: sourceImage,
+          faceReferenceUrls: referenceImages.filter(r => r.category === 'face').map(r => r.url),
+        },
+      });
+      if (error) throw error;
+      if (data?.imageUrl) {
+        setStoriesImageUrl(data.imageUrl);
+        setShowStoriesPreview(true);
+        toast({ title: 'Stories gerado!', description: 'Imagem adaptada para formato 9:16' });
+      } else {
+        throw new Error('Sem imagem retornada');
+      }
+    } catch (err: any) {
+      console.error('Stories gen error:', err);
+      toast({ title: 'Erro ao gerar Stories', description: err.message || 'Tente novamente', variant: 'destructive' });
+    } finally {
+      setGeneratingStories(false);
+    }
+  };
+
+  const downloadStoriesImage = async () => {
+    if (!storiesImageUrl) return;
+    try {
+      const link = document.createElement('a');
+      link.href = storiesImageUrl;
+      link.download = `stories-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({ title: 'Download iniciado!' });
+    } catch { toast({ title: 'Erro no download', variant: 'destructive' }); }
   };
 
   const [imageSearchPage, setImageSearchPage] = useState(1);
@@ -3642,12 +3688,21 @@ const CarouselGenerator: React.FC = () => {
                   </button>
                 </>
               )}
-              {/* Generate carousel from cover - prominent position */}
-              {carouselData.cards.length <= 2 && carouselData.cards[0]?.imageUrl && !isGuest && (
+              {/* Generate Stories image */}
+              {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
+                <button onClick={generateStoriesImage} disabled={generatingStories}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
+                  style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
+                  {generatingStories ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
+                  {generatingStories ? 'Gerando...' : 'Gerar Stories'}
+                </button>
+              )}
+              {/* Generate carousel from cover */}
+              {carouselData.cards[0]?.imageUrl && !isGuest && (
                 <button onClick={() => setShowCarouselFromCover(true)}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold text-yellow-300 border-2 transition-all hover:scale-105 animate-pulse hover:animate-none"
-                  style={{ borderColor: 'rgba(234,179,8,0.5)', background: 'linear-gradient(135deg, rgba(234,179,8,0.2), rgba(234,179,8,0.08))' }}>
-                  <Sparkles className="h-4 w-4 text-yellow-400" /> Gerar Carrossel
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
+                  style={{ borderColor: 'rgba(234,179,8,0.3)', backgroundColor: 'rgba(234,179,8,0.08)' }}>
+                  <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
                 </button>
               )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
@@ -3700,7 +3755,28 @@ const CarouselGenerator: React.FC = () => {
               </div>
             )}
 
-            {/* Card strip - horizontal thumbnails */}
+            {/* Stories preview modal */}
+            {showStoriesPreview && storiesImageUrl && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80" onClick={() => setShowStoriesPreview(false)}>
+                <div className="relative flex flex-col items-center gap-4 p-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="rounded-2xl overflow-hidden border border-white/10" style={{ width: 270, height: 480 }}>
+                    <img src={storiesImageUrl} alt="Stories" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={downloadStoriesImage}
+                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-medium text-white border transition-colors"
+                      style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                      <Download className="h-3.5 w-3.5" /> Baixar Stories
+                    </button>
+                    <button onClick={() => setShowStoriesPreview(false)}
+                      className="px-4 py-2.5 rounded-xl text-xs font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors">
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div data-tour="card-strip" className="w-full max-w-5xl mt-6 relative z-10 overflow-x-hidden">
               <div className="flex gap-3 pb-4 px-4 justify-center flex-wrap">
                 {carouselData.cards.map((card, i) => {

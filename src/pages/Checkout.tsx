@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
@@ -9,41 +9,68 @@ import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; price: number; credits: number; extraPrice: string; features: string[] }> = {
   starter: {
-    name: 'Starter',
-    price: 49,
-    credits: 40,
-    extraPrice: 'R$2,50',
+    name: 'Starter', price: 49, credits: 40, extraPrice: 'R$2,50',
     features: ['40 créditos mensais', 'Em média 5 carrosséis de 8 slides', 'Geração com IA', 'Exportação em imagem'],
   },
   pro: {
-    name: 'Pro',
-    price: 97,
-    credits: 100,
-    extraPrice: 'R$2,00',
+    name: 'Pro', price: 97, credits: 100, extraPrice: 'R$2,00',
     features: ['100 créditos mensais', 'Em média 12 carrosséis de 8 slides', 'IA avançada (Nano Banana)', 'Publicação em redes sociais', 'Suporte prioritário'],
   },
   growth: {
-    name: 'Growth',
-    price: 197,
-    credits: 250,
-    extraPrice: 'R$1,50',
+    name: 'Growth', price: 197, credits: 250, extraPrice: 'R$1,50',
     features: ['250 créditos mensais', 'Em média 31 carrosséis de 8 slides', 'Templates de design', 'Workspace de equipe', 'Projetos privados'],
   },
 };
+
+const CREDIT_TOPUPS = [
+  { credits: 10, price: 25 },
+  { credits: 20, price: 45 },
+  { credits: 50, price: 100 },
+  { credits: 100, price: 180 },
+  { credits: 200, price: 340 },
+  { credits: 500, price: 750 },
+];
+
+// ── Format helpers ──
+const formatCPF = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+};
+const formatPhone = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+};
+const formatCardNumber = (v: string) => v.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
+const formatExpiry = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 4);
+  return d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
+};
+
+const inputStyle = { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' };
 
 function CheckoutContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const planKey = searchParams.get('plano') || 'starter';
-  const plan = PLANS[planKey] || PLANS.starter;
 
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>('credit_card');
+  // Mode: 'plan' for subscription, 'credits' for avulso
+  const mode = searchParams.get('modo') === 'creditos' ? 'credits' : 'plan';
+  const planKey = searchParams.get('plano') || 'starter';
+  const creditIdx = parseInt(searchParams.get('creditos') || '2');
+  const plan = PLANS[planKey] || PLANS.starter;
+  const creditPack = CREDIT_TOPUPS[creditIdx] || CREDIT_TOPUPS[2];
+
+  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(mode === 'plan' ? 'credit_card' : 'credit_card');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'pix'>('form');
-  const [pixData, setPixData] = useState<{ qrCode?: string; qrCodeUrl?: string; expiration?: string } | null>(null);
+  const [pixData, setPixData] = useState<{ qrCode?: string; qrCodeUrl?: string } | null>(null);
 
-  // Form fields
+  // Customer fields
   const [customerName, setCustomerName] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -54,7 +81,6 @@ function CheckoutContent() {
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
 
-  // Credit balance
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
 
   useEffect(() => {
@@ -68,39 +94,14 @@ function CheckoutContent() {
     fetchBalance();
   }, [user]);
 
-  const formatCPF = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-  };
-
-  const formatPhone = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 2) return `(${digits}`;
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  };
-
-  const formatCardNumber = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 16);
-    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-  };
-
-  const formatExpiry = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 4);
-    if (digits.length <= 2) return digits;
-    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  };
-
   const handleSubmit = async () => {
     if (!customerName.trim() || !customerDocument.trim()) {
-      toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
+      toast({ title: 'Preencha nome e CPF', variant: 'destructive' });
       return;
     }
 
-    if (paymentMethod === 'credit_card') {
+    const needsCard = mode === 'plan' || paymentMethod === 'credit_card';
+    if (needsCard) {
       const cardDigits = cardNumber.replace(/\D/g, '');
       if (cardDigits.length < 13 || !cardHolder.trim() || cardExpiry.length < 5 || cardCvv.length < 3) {
         toast({ title: 'Preencha todos os dados do cartão', variant: 'destructive' });
@@ -116,38 +117,50 @@ function CheckoutContent() {
       const expMonth = parseInt(expiryParts[0] || '0');
       const expYear = parseInt(`20${expiryParts[1] || '00'}`);
 
-      const body: any = {
-        plan_id: planKey,
-        billing_cycle: 'monthly',
-        payment_method: paymentMethod,
-        customer: {
-          name: customerName,
-          email: user?.email || '',
-          document: customerDocument.replace(/\D/g, ''),
-          phone: customerPhone.replace(/\D/g, '') || '11999999999',
-        },
+      const customer = {
+        name: customerName,
+        email: user?.email || '',
+        document: customerDocument.replace(/\D/g, ''),
+        phone: customerPhone.replace(/\D/g, '') || '11999999999',
       };
 
-      if (paymentMethod === 'credit_card') {
-        body.card = {
-          number: cardNumber.replace(/\D/g, ''),
-          holder_name: cardHolder,
-          exp_month: expMonth,
-          exp_year: expYear,
-          cvv: cardCvv,
+      const cardData = needsCard ? {
+        number: cardNumber.replace(/\D/g, ''),
+        holder_name: cardHolder,
+        exp_month: expMonth,
+        exp_year: expYear,
+        cvv: cardCvv,
+      } : undefined;
+
+      let body: any;
+
+      if (mode === 'plan') {
+        body = {
+          action: 'subscribe',
+          plan_id: planKey,
+          customer,
+          card: cardData,
+        };
+      } else {
+        body = {
+          action: 'buy_credits',
+          credits: creditPack.credits,
+          price_cents: creditPack.price * 100,
+          payment_method: paymentMethod,
+          customer,
+          card: cardData,
         };
       }
 
       const { data, error } = await supabase.functions.invoke('pagarme-checkout', { body });
 
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Erro no pagamento');
+      if (!data?.success) throw new Error(data?.error || data?.details || 'Erro no pagamento');
 
       if (paymentMethod === 'pix' && data.pix) {
         setPixData({
           qrCode: data.pix.qr_code,
           qrCodeUrl: data.pix.qr_code_url,
-          expiration: data.pix.expires_at,
         });
         setStep('pix');
       } else {
@@ -167,107 +180,82 @@ function CheckoutContent() {
     return null;
   }
 
-  const inputStyle = { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' };
+  const displayPrice = mode === 'plan' ? plan.price : creditPack.price;
+  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : `+${creditPack.credits} créditos`;
+  const displaySubtitle = mode === 'plan'
+    ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`
+    : `Créditos avulsos para uso imediato`;
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
       <div className="max-w-lg mx-auto px-4 py-8 md:py-16">
-        {/* Back */}
-        <button
-          onClick={() => navigate('/precos')}
-          className="flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-8 cursor-pointer transition-colors"
-        >
+        <button onClick={() => navigate('/precos')} className="flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-8 cursor-pointer transition-colors">
           <ArrowLeft className="w-4 h-4" /> Voltar aos planos
         </button>
 
         <AnimatePresence mode="wait">
           {step === 'form' && (
             <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              {/* Plan summary */}
+              {/* Summary */}
               <div className="rounded-2xl p-5 mb-6" style={{ backgroundColor: 'rgba(20, 20, 28, 0.8)', border: '1px solid rgba(123, 80, 220, 0.3)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h2 className="text-white text-xl font-bold">Plano {plan.name}</h2>
-                    <p className="text-white/40 text-xs mt-0.5">{plan.credits} créditos/mês • Crédito extra: {plan.extraPrice}</p>
+                    <h2 className="text-white text-xl font-bold">{displayTitle}</h2>
+                    <p className="text-white/40 text-xs mt-0.5">{displaySubtitle}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-white text-2xl font-bold">R${plan.price}</span>
-                    <span className="text-white/40 text-xs block">/mês</span>
+                    <span className="text-white text-2xl font-bold">R${displayPrice}</span>
+                    <span className="text-white/40 text-xs block">{mode === 'plan' ? '/mês' : ''}</span>
                   </div>
                 </div>
                 {currentBalance !== null && (
                   <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(123, 80, 220, 0.8)' }}>
-                    <Sparkles className="w-3 h-3" />
-                    Saldo atual: {currentBalance} créditos
+                    <Sparkles className="w-3 h-3" /> Saldo atual: {Math.floor(currentBalance)} créditos
                   </div>
                 )}
               </div>
 
-              {/* Payment method */}
-              <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Método de pagamento</h3>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <button
-                  onClick={() => setPaymentMethod('credit_card')}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all text-sm"
-                  style={{
-                    backgroundColor: paymentMethod === 'credit_card' ? 'rgba(123, 80, 220, 0.15)' : 'rgba(255,255,255,0.03)',
-                    border: paymentMethod === 'credit_card' ? '1px solid rgba(123, 80, 220, 0.4)' : '1px solid rgba(255,255,255,0.07)',
-                    color: paymentMethod === 'credit_card' ? '#ffffff' : 'rgba(255,255,255,0.5)',
-                  }}
-                >
-                  <CreditCard className="w-4 h-4" /> Cartão
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('pix')}
-                  className="flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all text-sm"
-                  style={{
-                    backgroundColor: paymentMethod === 'pix' ? 'rgba(123, 80, 220, 0.15)' : 'rgba(255,255,255,0.03)',
-                    border: paymentMethod === 'pix' ? '1px solid rgba(123, 80, 220, 0.4)' : '1px solid rgba(255,255,255,0.07)',
-                    color: paymentMethod === 'pix' ? '#ffffff' : 'rgba(255,255,255,0.5)',
-                  }}
-                >
-                  <QrCode className="w-4 h-4" /> PIX
-                </button>
-              </div>
+              {/* Payment method - only show toggle for credits */}
+              {mode === 'credits' && (
+                <>
+                  <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Método de pagamento</h3>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {(['credit_card', 'pix'] as const).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setPaymentMethod(m)}
+                        className="flex items-center gap-2 p-3 rounded-xl cursor-pointer transition-all text-sm"
+                        style={{
+                          backgroundColor: paymentMethod === m ? 'rgba(123, 80, 220, 0.15)' : 'rgba(255,255,255,0.03)',
+                          border: paymentMethod === m ? '1px solid rgba(123, 80, 220, 0.4)' : '1px solid rgba(255,255,255,0.07)',
+                          color: paymentMethod === m ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                        }}
+                      >
+                        {m === 'credit_card' ? <CreditCard className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
+                        {m === 'credit_card' ? 'Cartão' : 'PIX'}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {mode === 'plan' && (
+                <div className="flex items-center gap-2 mb-6 px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: 'rgba(123, 80, 220, 0.1)', border: '1px solid rgba(123, 80, 220, 0.2)', color: 'rgba(123, 80, 220, 0.9)' }}>
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Planos mensais são cobrados via cartão de crédito com renovação automática.
+                </div>
+              )}
 
               {/* Card fields */}
-              {paymentMethod === 'credit_card' && (
+              {(mode === 'plan' || paymentMethod === 'credit_card') && (
                 <>
                   <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Dados do cartão</h3>
                   <div className="space-y-3 mb-6">
-                    <input
-                      type="text"
-                      placeholder="Número do cartão"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                      className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                      style={inputStyle}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Nome no cartão"
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                      className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                      style={inputStyle}
-                    />
+                    <input type="text" placeholder="Número do cartão" value={cardNumber} onChange={e => setCardNumber(formatCardNumber(e.target.value))} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
+                    <input type="text" placeholder="Nome no cartão" value={cardHolder} onChange={e => setCardHolder(e.target.value.toUpperCase())} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
                     <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="MM/AA"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                        className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                        style={inputStyle}
-                      />
-                      <input
-                        type="text"
-                        placeholder="CVV"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                        style={inputStyle}
-                      />
+                      <input type="text" placeholder="MM/AA" value={cardExpiry} onChange={e => setCardExpiry(formatExpiry(e.target.value))} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
+                      <input type="text" placeholder="CVV" value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
                     </div>
                   </div>
                 </>
@@ -276,63 +264,32 @@ function CheckoutContent() {
               {/* Customer info */}
               <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Dados do pagante</h3>
               <div className="space-y-3 mb-6">
-                <input
-                  type="text"
-                  placeholder="Nome completo"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={inputStyle}
-                />
-                <input
-                  type="text"
-                  placeholder="CPF"
-                  value={customerDocument}
-                  onChange={(e) => setCustomerDocument(formatCPF(e.target.value))}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={inputStyle}
-                />
-                <input
-                  type="text"
-                  placeholder="Telefone (opcional)"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={inputStyle}
-                />
+                <input type="text" placeholder="Nome completo" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
+                <input type="text" placeholder="CPF" value={customerDocument} onChange={e => setCustomerDocument(formatCPF(e.target.value))} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
+                <input type="text" placeholder="Telefone (opcional)" value={customerPhone} onChange={e => setCustomerPhone(formatPhone(e.target.value))} className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={inputStyle} />
               </div>
 
-              {/* Features */}
-              <div className="rounded-xl p-4 mb-6" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <p className="text-white/40 text-xs font-medium mb-2">Incluso no plano:</p>
-                <ul className="space-y-1.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-white/60 text-xs">
-                      <Check className="w-3 h-3 flex-shrink-0" style={{ color: '#7B50DC' }} /> {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {/* Features (plan only) */}
+              {mode === 'plan' && (
+                <div className="rounded-xl p-4 mb-6" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p className="text-white/40 text-xs font-medium mb-2">Incluso no plano:</p>
+                  <ul className="space-y-1.5">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-center gap-2 text-white/60 text-xs">
+                        <Check className="w-3 h-3 flex-shrink-0" style={{ color: '#7B50DC' }} /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              {/* Submit */}
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full py-3.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-50"
-                style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                ) : (
-                  `Assinar por R$${plan.price}/mês`
-                )}
+              <button onClick={handleSubmit} disabled={loading} className="w-full py-3.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-50" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : mode === 'plan' ? `Assinar por R$${displayPrice}/mês` : `Pagar R$${displayPrice}`}
               </button>
 
               <div className="flex items-center justify-center gap-1.5 mt-3">
                 <Lock className="w-3 h-3 text-white/20" />
-                <p className="text-white/20 text-[10px]">
-                  Pagamento seguro processado por Pagar.me. Cancele quando quiser.
-                </p>
+                <p className="text-white/20 text-[10px]">Pagamento seguro processado por Pagar.me{mode === 'plan' ? '. Cancele quando quiser.' : '.'}</p>
               </div>
             </motion.div>
           )}
@@ -348,22 +305,21 @@ function CheckoutContent() {
             <motion.div key="pix" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center py-8">
               <QrCode className="w-8 h-8 mb-4" style={{ color: '#7B50DC' }} />
               <h2 className="text-white text-xl font-bold mb-2">Pague com PIX</h2>
-              <p className="text-white/40 text-sm mb-6 text-center">
-                Escaneie o QR Code abaixo ou copie o código PIX para pagar R${plan.price}
-              </p>
-              {pixData.qrCodeUrl && (
-                <img src={pixData.qrCodeUrl} alt="QR Code PIX" className="w-48 h-48 rounded-lg mb-4" />
-              )}
+              <p className="text-white/40 text-sm mb-6 text-center">Escaneie o QR Code ou copie o código para pagar R${displayPrice}</p>
+              {pixData.qrCodeUrl && <img src={pixData.qrCodeUrl} alt="QR Code PIX" className="w-48 h-48 rounded-lg mb-4" />}
               {pixData.qrCode && (
                 <button
                   onClick={() => { navigator.clipboard.writeText(pixData.qrCode!); toast({ title: 'Código PIX copiado!' }); }}
-                  className="px-4 py-2 rounded-lg text-xs cursor-pointer transition-colors mb-4"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs cursor-pointer transition-colors mb-4"
                   style={{ backgroundColor: 'rgba(123, 80, 220, 0.2)', color: '#7B50DC', border: '1px solid rgba(123, 80, 220, 0.3)' }}
                 >
-                  Copiar código PIX
+                  <Copy className="w-3 h-3" /> Copiar código PIX
                 </button>
               )}
               <p className="text-white/30 text-xs">Após o pagamento, seus créditos serão adicionados automaticamente.</p>
+              <button onClick={() => navigate('/precos')} className="mt-6 text-white/40 text-xs hover:text-white/60 cursor-pointer transition-colors">
+                Voltar aos planos
+              </button>
             </motion.div>
           )}
 
@@ -372,15 +328,15 @@ function CheckoutContent() {
               <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ backgroundColor: 'rgba(123, 80, 220, 0.15)' }}>
                 <Zap className="w-8 h-8" style={{ color: '#7B50DC' }} />
               </div>
-              <h2 className="text-white text-2xl font-bold mb-2">Assinatura ativa! 🎉</h2>
+              <h2 className="text-white text-2xl font-bold mb-2">
+                {mode === 'plan' ? 'Assinatura ativa! 🎉' : 'Créditos adicionados! 🎉'}
+              </h2>
               <p className="text-white/50 text-sm mb-8 text-center">
-                {plan.credits} créditos foram adicionados à sua conta. Vamos criar!
+                {mode === 'plan'
+                  ? `${plan.credits} créditos foram adicionados à sua conta. Vamos criar!`
+                  : `+${creditPack.credits} créditos adicionados ao seu saldo.`}
               </p>
-              <button
-                onClick={() => navigate('/')}
-                className="px-6 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-                style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}
-              >
+              <button onClick={() => navigate('/')} className="px-6 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
                 Começar a criar
               </button>
             </motion.div>
@@ -394,7 +350,6 @@ function CheckoutContent() {
 export default function Checkout() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const isLoggedIn = !!user;
 
   const handleTabChange = (tab: string) => {
     if (tab === 'home') navigate('/');
@@ -402,19 +357,16 @@ export default function Checkout() {
     else if (tab === 'pricing') navigate('/precos');
   };
 
-  if (isLoggedIn) {
-    return (
-      <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-        <div className="hidden md:block">
-          <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
-        </div>
-        <CheckoutContent />
-      </div>
-    );
+  if (!user) {
+    navigate('/auth');
+    return null;
   }
 
   return (
-    <div className="fixed inset-0 overflow-y-auto z-50" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
+      <div className="hidden md:block">
+        <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
+      </div>
       <CheckoutContent />
     </div>
   );

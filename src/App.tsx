@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/components/AuthProvider";
+import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanner";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Register from './pages/Register';
@@ -25,6 +26,7 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>
+          <SubscriptionBlockedBanner />
           <Routes>
             <Route path="/" element={<PublicCarouselGenerator />} />
             <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />

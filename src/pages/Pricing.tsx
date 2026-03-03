@@ -109,28 +109,15 @@ interface TopUpModalProps {
 }
 
 const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, companyId, initialTopup = 2 }) => {
+  const navigate = useNavigate();
   const [selectedTopup, setSelectedTopup] = useState(initialTopup);
-  const [purchasing, setPurchasing] = useState(false);
 
   if (!open) return null;
 
-  const handlePurchase = async () => {
-    setPurchasing(true);
-    try {
-      // Add credits via RPC
-      const { data, error } = await supabase.rpc('add_ai_credits', {
-        p_company_id: companyId,
-        p_amount: CREDIT_TOPUPS[selectedTopup].credits,
-        p_description: `Compra avulsa: +${CREDIT_TOPUPS[selectedTopup].credits} créditos`,
-      });
-      if (error) throw error;
-      toast.success(`+${CREDIT_TOPUPS[selectedTopup].credits} créditos adicionados!`);
-      onClose();
-    } catch (err) {
-      toast.error('Erro ao adicionar créditos');
-    } finally {
-      setPurchasing(false);
-    }
+  const handlePurchase = () => {
+    // Redirect to checkout with credit purchase mode
+    navigate(`/checkout?modo=creditos&creditos=${selectedTopup}`);
+    onClose();
   };
 
   return (
@@ -174,9 +161,9 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
               className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] text-white/60 hover:bg-white/[0.04] transition-colors cursor-pointer">
               Cancelar
             </button>
-            <button onClick={handlePurchase} disabled={purchasing}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-purple-600 text-white hover:bg-purple-500 transition-colors cursor-pointer disabled:opacity-50">
-              {purchasing ? 'Processando...' : `Comprar R$${CREDIT_TOPUPS[selectedTopup].price.toFixed(2)}`}
+            <button onClick={handlePurchase}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-purple-600 text-white hover:bg-purple-500 transition-colors cursor-pointer">
+              {`Comprar R$${CREDIT_TOPUPS[selectedTopup].price.toFixed(2)}`}
             </button>
           </div>
         </div>

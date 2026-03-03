@@ -2,360 +2,393 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-interface CheckoutRequest {
-  plan_id: 'omni' | 'flow' | 'track' | 'business';
-  billing_cycle: 'monthly' | 'yearly';
-  payment_method: 'credit_card' | 'pix';
-  card?: {
-    number: string;
-    holder_name: string;
-    exp_month: number;
-    exp_year: number;
-    cvv: string;
-  };
-  customer: {
-    name: string;
-    email: string;
-    document: string;
-    phone: string;
-  };
+// Plan pricing (cents)
+const PLANS: Record<string, { name: string; price: number; credits: number }> = {
+  starter: { name: 'Starter', price: 4900, credits: 40 },
+  pro: { name: 'Pro', price: 9700, credits: 100 },
+  growth: { name: 'Growth', price: 19700, credits: 250 },
+};
+
+function getPagarmeAuth(): string {
+  const key = Deno.env.get('PAGARME_SECRET_KEY');
+  if (!key) throw new Error('PAGARME_SECRET_KEY not configured');
+  return `Basic ${btoa(`${key}:`)}`;
 }
 
-// Plan pricing configuration
-const PLANS: Record<string, { monthly: number; yearly: number; name: string; credits?: number }> = {
-  omni: { monthly: 19700, yearly: 197000, name: 'Omni - Comunicação' },
-  flow: { monthly: 14700, yearly: 147000, name: 'Flow - Produtividade' },
-  track: { monthly: 9700, yearly: 97000, name: 'Track - Rastreamento' },
-  business: { monthly: 29700, yearly: 297000, name: 'Business - Completo' },
-  starter: { monthly: 4900, yearly: 49000, name: 'Starter', credits: 40 },
-  pro: { monthly: 9700, yearly: 97000, name: 'Pro', credits: 100 },
-  growth: { monthly: 19700, yearly: 197000, name: 'Growth', credits: 250 },
-};
+async function getOrCreateCustomer(
+  auth: string,
+  customer: { name: string; email: string; document: string; phone: string },
+  supabase: any,
+  companyId: string,
+): Promise<string> {
+  // Check if customer already exists
+  const { data: existing } = await supabase
+    .from('subscriptions')
+    .select('pagarme_customer_id')
+    .eq('company_id', companyId)
+    .not('pagarme_customer_id', 'is', null)
+    .maybeSingle();
+
+  if (existing?.pagarme_customer_id) {
+    console.log('Reusing existing customer:', existing.pagarme_customer_id);
+    return existing.pagarme_customer_id;
+  }
+
+  const doc = customer.document.replace(/\D/g, '');
+  const phone = customer.phone.replace(/\D/g, '');
+
+  const res = await fetch('https://api.pagar.me/core/v5/customers', {
+    method: 'POST',
+    headers: { Authorization: auth, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: customer.name,
+      email: customer.email,
+      document: doc,
+      type: doc.length > 11 ? 'company' : 'individual',
+      phones: {
+        mobile_phone: {
+          country_code: '55',
+          area_code: phone.substring(0, 2),
+          number: phone.substring(2),
+        },
+      },
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('Customer creation error:', data);
+    throw new Error(data.message || 'Falha ao criar cliente');
+  }
+
+  console.log('Created customer:', data.id);
+  return data.id;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const PAGARME_SECRET_KEY = Deno.env.get('PAGARME_SECRET_KEY');
-    if (!PAGARME_SECRET_KEY) {
-      throw new Error('PAGARME_SECRET_KEY not configured');
-    }
+    const auth = getPagarmeAuth();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+    const userClient = createClient(supabaseUrl, anonKey!, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
-    if (claimsError || !claimsData.user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const userId = claimsData.user.id;
-    const userEmail = claimsData.user.email;
+    const userId = userData.user.id;
+    const userEmail = userData.user.email || '';
 
-    // Get user's company
-    const { data: companyUser, error: companyError } = await supabase
+    // Get company
+    const { data: cu } = await userClient
       .from('company_users')
       .select('company_id')
       .eq('user_id', userId)
       .single();
 
-    if (companyError || !companyUser) {
-      throw new Error('Company not found for user');
-    }
-
-    const body: CheckoutRequest = await req.json();
-    const { plan_id, billing_cycle, payment_method, card, customer } = body;
-
-    if (!PLANS[plan_id]) {
-      throw new Error('Invalid plan');
-    }
-
-    const plan = PLANS[plan_id];
-    const amount = billing_cycle === 'yearly' ? plan.yearly : plan.monthly;
-    const interval = billing_cycle === 'yearly' ? 'year' : 'month';
-
-    console.log(`Creating subscription for user ${userId}, plan: ${plan_id}, method: ${payment_method}`);
-
-    // Base64 encode the secret key for Basic Auth
-    const authToken = btoa(`${PAGARME_SECRET_KEY}:`);
-
-    // Step 1: Create or get customer in Pagar.me
-    let pagarmeCustomerId: string;
-
-    // Check if customer already exists in our database
-    const { data: existingSubscription } = await supabase
-      .from('subscriptions')
-      .select('pagarme_customer_id')
-      .eq('company_id', companyUser.company_id)
-      .not('pagarme_customer_id', 'is', null)
-      .single();
-
-    if (existingSubscription?.pagarme_customer_id) {
-      pagarmeCustomerId = existingSubscription.pagarme_customer_id;
-      console.log('Using existing Pagar.me customer:', pagarmeCustomerId);
-    } else {
-      // Create new customer
-      const customerResponse = await fetch('https://api.pagar.me/core/v5/customers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: customer.name,
-          email: customer.email || userEmail,
-          document: customer.document.replace(/\D/g, ''),
-          type: customer.document.replace(/\D/g, '').length > 11 ? 'company' : 'individual',
-          phones: {
-            mobile_phone: {
-              country_code: '55',
-              area_code: customer.phone.replace(/\D/g, '').substring(0, 2),
-              number: customer.phone.replace(/\D/g, '').substring(2),
-            },
-          },
-        }),
+    if (!cu) {
+      return new Response(JSON.stringify({ error: 'Usuário sem empresa' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-
-      const customerData = await customerResponse.json();
-      
-      if (!customerResponse.ok) {
-        console.error('Pagar.me customer error:', customerData);
-        throw new Error(customerData.message || 'Failed to create customer');
-      }
-
-      pagarmeCustomerId = customerData.id;
-      console.log('Created Pagar.me customer:', pagarmeCustomerId);
     }
 
-    // Step 2: Create subscription with 7-day trial
-    const subscriptionPayload: any = {
-      customer_id: pagarmeCustomerId,
-      plan_id: null, // We use "avulsa" subscription (without pre-created plan)
-      payment_method: payment_method,
-      interval: interval,
-      interval_count: 1,
-      billing_type: 'prepaid',
-      minimum_price: null,
-      installments: 1,
-      statement_descriptor: 'ELLOSUIT',
-      currency: 'BRL',
-      items: [
-        {
-          description: plan.name,
-          quantity: 1,
-          pricing_scheme: {
-            scheme_type: 'unit',
-            price: amount,
-          },
-        },
-      ],
-      metadata: {
-        company_id: companyUser.company_id,
-        user_id: userId,
-        plan_id: plan_id,
-        billing_cycle: billing_cycle,
-      },
-    };
+    const companyId = cu.company_id;
+    const adminClient = createClient(supabaseUrl, serviceKey);
+    const body = await req.json();
+    const { action, customer } = body;
 
-    // Add credit card for trial (required for 7-day trial)
-    if (payment_method === 'credit_card' && card) {
-      subscriptionPayload.card = {
-        number: card.number.replace(/\D/g, ''),
-        holder_name: card.holder_name,
-        exp_month: card.exp_month,
-        exp_year: card.exp_year,
-        cvv: card.cvv,
-        billing_address: {
-          line_1: 'Endereço do cliente',
-          zip_code: '00000000',
-          city: 'São Paulo',
-          state: 'SP',
-          country: 'BR',
-        },
-      };
-      
-      // 7-day free trial - only for credit card
-      const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 7);
-      subscriptionPayload.start_at = trialEnd.toISOString();
-    }
-
-    console.log('Creating subscription with payload:', JSON.stringify(subscriptionPayload, null, 2));
-
-    const subscriptionResponse = await fetch('https://api.pagar.me/core/v5/subscriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(subscriptionPayload),
-    });
-
-    const subscriptionData = await subscriptionResponse.json();
-
-    if (!subscriptionResponse.ok) {
-      console.error('Pagar.me subscription error:', subscriptionData);
-      throw new Error(subscriptionData.message || 'Failed to create subscription');
-    }
-
-    console.log('Created Pagar.me subscription:', subscriptionData.id);
-
-    // Step 3: Update our database
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
-
-    // Update or create subscription in our database
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .upsert({
-        company_id: companyUser.company_id,
-        plan_type: plan_id === 'business' ? 'business' : 'base',
-        billing_cycle: billing_cycle,
-        status: 'trialing',
-        monthly_price: amount / 100,
-        trial_ends_at: trialEndsAt.toISOString(),
-        current_period_start: new Date().toISOString(),
-        current_period_end: trialEndsAt.toISOString(),
-        pagarme_subscription_id: subscriptionData.id,
-        pagarme_customer_id: pagarmeCustomerId,
-      }, {
-        onConflict: 'company_id',
+    if (!customer?.name || !customer?.document) {
+      return new Response(JSON.stringify({ error: 'Nome e CPF são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-
-    if (updateError) {
-      console.error('Database update error:', updateError);
     }
 
-    // Activate the appropriate module or add credits
-    const planCredits = PLANS[plan_id]?.credits;
-    if (planCredits) {
-      // Content plan: add credits
-      await supabase.rpc('add_ai_credits', {
-        p_company_id: companyUser.company_id,
-        p_amount: planCredits,
-        p_description: `Plano ${plan.name} - ${planCredits} créditos`,
-      });
-      console.log(`Added ${planCredits} credits for plan ${plan_id}`);
-    } else if (plan_id !== 'business') {
-      await supabase.from('subscription_modules').upsert({
-        company_id: companyUser.company_id,
-        module_type: plan_id,
-        is_active: true,
-        activated_at: new Date().toISOString(),
-        monthly_price: amount / 100,
-      }, {
-        onConflict: 'company_id,module_type',
-      });
-    } else {
-      // Business plan: activate all modules
-      for (const moduleType of ['omni', 'flow', 'track']) {
-        await supabase.from('subscription_modules').upsert({
-          company_id: companyUser.company_id,
-          module_type: moduleType,
-          is_active: true,
-          activated_at: new Date().toISOString(),
-          monthly_price: 0,
-        }, {
-          onConflict: 'company_id,module_type',
+    customer.email = customer.email || userEmail;
+    customer.phone = customer.phone || '11999999999';
+
+    const customerId = await getOrCreateCustomer(auth, customer, adminClient, companyId);
+
+    // ════════════════════════════════════════
+    //  ACTION: SUBSCRIBE (monthly plan, card only)
+    // ════════════════════════════════════════
+    if (action === 'subscribe') {
+      const { plan_id, card } = body;
+      const plan = PLANS[plan_id];
+
+      if (!plan) {
+        return new Response(JSON.stringify({ error: 'Plano inválido' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-    }
 
-    // Auto-create receipt for trial activation
-    try {
-      const planName = PLANS[plan_id as keyof typeof PLANS]?.name || 'Business';
-      const receiptTitle = `Ativacao Trial 7 Dias - ${planName}`;
-      
-      await supabase.from('receipts').insert({
-        company_id: companyUser.company_id,
-        created_by: userId,
-        title: receiptTitle,
-        amount: 0,
-        payment_method: 'Trial Gratuito',
-        description: `Periodo de teste gratuito de 7 dias do plano ${planName}. Valido ate ${trialEndsAt.toLocaleDateString('pt-BR')}.`,
-        client_name: body.customer.name,
-        client_document: body.customer.document,
-        status: 'pago',
-        notes: `Assinatura Pagar.me: ${subscriptionData.id}`,
+      if (!card?.number) {
+        return new Response(JSON.stringify({ error: 'Dados do cartão são obrigatórios para planos mensais' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`[SUBSCRIBE] Plan: ${plan_id}, Company: ${companyId}`);
+
+      const subscriptionPayload = {
+        customer_id: customerId,
+        payment_method: 'credit_card',
+        interval: 'month',
+        interval_count: 1,
+        billing_type: 'prepaid',
+        installments: 1,
+        statement_descriptor: 'ELLOCONTENT',
+        currency: 'BRL',
+        card: {
+          number: card.number.replace(/\D/g, ''),
+          holder_name: card.holder_name,
+          exp_month: card.exp_month,
+          exp_year: card.exp_year,
+          cvv: card.cvv,
+          billing_address: {
+            line_1: customer.address || 'Rua Exemplo, 123',
+            zip_code: customer.zip_code?.replace(/\D/g, '') || '01001000',
+            city: customer.city || 'São Paulo',
+            state: customer.state || 'SP',
+            country: 'BR',
+          },
+        },
+        items: [{
+          description: `elloContent - Plano ${plan.name} (Mensal)`,
+          quantity: 1,
+          pricing_scheme: { scheme_type: 'unit', price: plan.price },
+        }],
+        metadata: {
+          company_id: companyId,
+          user_id: userId,
+          plan_id,
+          credits: plan.credits,
+          action: 'subscribe',
+        },
+      };
+
+      const res = await fetch('https://api.pagar.me/core/v5/subscriptions', {
+        method: 'POST',
+        headers: { Authorization: auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscriptionPayload),
       });
 
-      console.log('Trial receipt created for company:', companyUser.company_id);
+      const data = await res.json();
 
-      // Send trial started email
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
-      
-      await fetch(`${supabaseUrl}/functions/v1/send-system-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
-          template_key: 'trial_started',
-          recipient_email: body.customer.email,
-          recipient_name: body.customer.name,
-          variables: {
-            nome_plano: planName,
-          },
-        }),
-      }).catch(e => console.error('Trial email error:', e));
+      if (!res.ok) {
+        console.error('[SUBSCRIBE] Error:', data);
+        return new Response(JSON.stringify({
+          error: 'Falha ao criar assinatura',
+          details: data.message || JSON.stringify(data.errors || data),
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
-      console.log('Trial email sent to:', body.customer.email);
-    } catch (receiptErr) {
-      console.error('Error creating trial receipt:', receiptErr);
-    }
+      console.log('[SUBSCRIBE] Created:', data.id, 'Status:', data.status);
 
-    // Return success with PIX QR code if applicable
-    let pixData = null;
-    if (payment_method === 'pix' && subscriptionData.current_cycle?.current_invoice?.charges?.[0]?.last_transaction) {
-      const transaction = subscriptionData.current_cycle.current_invoice.charges[0].last_transaction;
-      pixData = {
-        qr_code: transaction.qr_code,
-        qr_code_url: transaction.qr_code_url,
-        expires_at: transaction.expires_at,
-      };
-    }
+      // Update subscription in DB
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-    return new Response(
-      JSON.stringify({
+      await adminClient.from('subscriptions').upsert({
+        company_id: companyId,
+        plan_type: plan_id as any,
+        billing_cycle: 'monthly',
+        status: data.status === 'active' ? 'active' : 'trialing',
+        monthly_price: plan.price / 100,
+        current_period_start: now.toISOString(),
+        current_period_end: periodEnd.toISOString(),
+        pagarme_subscription_id: data.id,
+        pagarme_customer_id: customerId,
+        updated_at: now.toISOString(),
+      }, { onConflict: 'company_id' });
+
+      // Add initial credits if active
+      if (data.status === 'active') {
+        await adminClient.rpc('add_ai_credits', {
+          p_company_id: companyId,
+          p_amount: plan.credits,
+          p_description: `Plano ${plan.name} - ${plan.credits} créditos mensais`,
+        });
+        console.log(`[SUBSCRIBE] Added ${plan.credits} credits`);
+      }
+
+      return new Response(JSON.stringify({
         success: true,
-        subscription_id: subscriptionData.id,
-        status: subscriptionData.status,
-        trial_ends_at: trialEndsAt.toISOString(),
-        pix: pixData,
-        message: payment_method === 'credit_card' 
-          ? 'Assinatura criada com 7 dias de teste grátis!' 
-          : 'Aguardando pagamento PIX',
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+        subscription_id: data.id,
+        status: data.status,
+        plan: plan.name,
+        credits: plan.credits,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-  } catch (error) {
-    console.error('Checkout error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Checkout failed' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // ════════════════════════════════════════
+    //  ACTION: BUY_CREDITS (one-time, card or PIX)
+    // ════════════════════════════════════════
+    if (action === 'buy_credits') {
+      const { credits, price_cents, payment_method, card } = body;
+
+      if (!credits || !price_cents) {
+        return new Response(JSON.stringify({ error: 'Créditos e preço são obrigatórios' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (payment_method === 'credit_card' && !card?.number) {
+        return new Response(JSON.stringify({ error: 'Dados do cartão são obrigatórios' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`[BUY_CREDITS] ${credits} credits, method: ${payment_method}, company: ${companyId}`);
+
+      const orderPayload: any = {
+        customer_id: customerId,
+        items: [{
+          amount: price_cents,
+          description: `elloContent - ${credits} créditos avulsos`,
+          quantity: 1,
+        }],
+        payments: [],
+        metadata: {
+          company_id: companyId,
+          user_id: userId,
+          credits,
+          action: 'buy_credits',
+        },
+      };
+
+      if (payment_method === 'pix') {
+        orderPayload.payments.push({
+          payment_method: 'pix',
+          pix: {
+            expires_in: 3600, // 1 hour
+          },
+          amount: price_cents,
+        });
+      } else {
+        orderPayload.payments.push({
+          payment_method: 'credit_card',
+          credit_card: {
+            card: {
+              number: card.number.replace(/\D/g, ''),
+              holder_name: card.holder_name,
+              exp_month: card.exp_month,
+              exp_year: card.exp_year,
+              cvv: card.cvv,
+              billing_address: {
+                line_1: customer.address || 'Rua Exemplo, 123',
+                zip_code: customer.zip_code?.replace(/\D/g, '') || '01001000',
+                city: customer.city || 'São Paulo',
+                state: customer.state || 'SP',
+                country: 'BR',
+              },
+            },
+            installments: 1,
+            statement_descriptor: 'ELLOCONTENT',
+          },
+          amount: price_cents,
+        });
+      }
+
+      const res = await fetch('https://api.pagar.me/core/v5/orders', {
+        method: 'POST',
+        headers: { Authorization: auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('[BUY_CREDITS] Error:', data);
+        return new Response(JSON.stringify({
+          error: 'Falha no pagamento',
+          details: data.message || JSON.stringify(data.errors || data),
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log('[BUY_CREDITS] Order created:', data.id, 'Status:', data.status);
+
+      // If paid immediately (credit card), add credits
+      if (data.status === 'paid') {
+        await adminClient.rpc('add_ai_credits', {
+          p_company_id: companyId,
+          p_amount: credits,
+          p_description: `Compra avulsa - ${credits} créditos`,
+        });
+        console.log(`[BUY_CREDITS] Added ${credits} credits immediately`);
+      }
+
+      // Extract PIX data if applicable
+      let pixData = null;
+      if (payment_method === 'pix' && data.charges?.[0]?.last_transaction) {
+        const tx = data.charges[0].last_transaction;
+        pixData = {
+          qr_code: tx.qr_code,
+          qr_code_url: tx.qr_code_url,
+          expires_at: tx.expires_at,
+        };
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        order_id: data.id,
+        status: data.status,
+        credits,
+        pix: pixData,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Ação inválida. Use 'subscribe' ou 'buy_credits'" }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (e: any) {
+    console.error('[CHECKOUT] Error:', e);
+    return new Response(JSON.stringify({ error: e.message || 'Erro interno' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

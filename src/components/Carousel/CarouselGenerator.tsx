@@ -2880,7 +2880,7 @@ const CarouselGenerator: React.FC = () => {
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
             <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
               {/* LEFT column: centered content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto">
+              <div className="flex-1 flex flex-col items-center px-6 lg:px-16 py-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="w-full max-w-[520px] space-y-6">
                   {/* Mode toggle: Simple / Advanced */}
                   <div className="flex items-center justify-between">

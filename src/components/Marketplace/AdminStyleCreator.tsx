@@ -369,12 +369,29 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                     onClick={async () => {
                       setGeneratingDesc(true);
                       try {
+                        // Collect image URLs for AI visual analysis
+                        const imageUrls: { type: string; image_url: { url: string } }[] = [];
+                        if (coverPreview) {
+                          imageUrls.push({ type: 'image_url', image_url: { url: coverPreview } });
+                        }
+                        // Add up to 3 reference images (existing or newly added)
+                        const allRefs = [...existingImages, ...refPreviews].slice(0, 3);
+                        for (const url of allRefs) {
+                          if (url) imageUrls.push({ type: 'image_url', image_url: { url } });
+                        }
+
+                        const userContent: any[] = [
+                          { type: 'text', text: `Analise as imagens deste estilo de post para Instagram e gere uma descrição curta (1-2 frases, máx 120 chars) descrevendo o visual: cores, tipografia, composição e mood. Nome: "${form.name}", Categoria: "${form.category}", Tags: ${form.tags || 'nenhuma'}. Responda APENAS com a descrição, sem aspas.` },
+                          ...imageUrls,
+                        ];
+
                         const { data, error } = await supabase.functions.invoke('ai-chat', {
                           body: {
                             messages: [
-                              { role: 'system', content: 'Você é um especialista em design de posts para Instagram. Gere uma descrição curta (1-2 frases, máx 120 chars) para um estilo de carrossel/post. Seja direto e descritivo sobre o visual. Responda APENAS com a descrição, sem aspas.' },
-                              { role: 'user', content: `Gere uma descrição para o estilo "${form.name}" da categoria "${form.category}". Tags: ${form.tags || 'nenhuma'}.` }
-                            ]
+                              { role: 'system', content: 'Você é um especialista em design de posts para Instagram. Analise as imagens fornecidas e descreva o estilo visual de forma concisa. Foque em cores, tipografia, layout e mood. Responda APENAS com a descrição.' },
+                              { role: 'user', content: imageUrls.length > 0 ? userContent : `Gere uma descrição para o estilo "${form.name}" da categoria "${form.category}". Tags: ${form.tags || 'nenhuma'}.` }
+                            ],
+                            model: 'google/gemini-2.5-flash'
                           }
                         });
                         if (error) throw error;

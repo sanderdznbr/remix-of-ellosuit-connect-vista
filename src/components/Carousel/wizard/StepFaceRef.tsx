@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, X, Folder, Plus, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { ReferenceImage, FacePerson } from './types';
 import GalleryPicker from './GalleryPicker';
+import { useAuth } from '@/components/AuthProvider';
 
 const MAX_PEOPLE = 4;
 const MAX_PHOTOS_PER_PERSON = 3;
@@ -52,6 +53,7 @@ const StepFaceRef: React.FC<Props> = ({
   faceGender, setFaceGender,
   wearsGlasses, setWearsGlasses,
 }) => {
+  const { user } = useAuth();
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
   const [galleryOpenFor, setGalleryOpenFor] = useState<string | null>(null);
 
@@ -220,8 +222,8 @@ const StepFaceRef: React.FC<Props> = ({
                     </div>
                   )}
 
-                  {/* Gallery button */}
-                  {person.photos.length < MAX_PHOTOS_PER_PERSON && (
+                  {/* Gallery button - only for logged in users */}
+                  {user && person.photos.length < MAX_PHOTOS_PER_PERSON && (
                     <button onClick={() => setGalleryOpenFor(person.id)}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
                       <Folder className="h-3.5 w-3.5" /> Importar da Galeria de Marca

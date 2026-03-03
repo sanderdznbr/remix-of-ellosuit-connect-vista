@@ -3,6 +3,7 @@ import { Upload, X, Loader2, Folder } from 'lucide-react';
 import { ReferenceImage } from './types';
 import { extractColorsFromImage, isMonochromeImage, buildPaletteFromColors } from '@/utils/extractColorsFromImage';
 import GalleryPicker from './GalleryPicker';
+import { useAuth } from '@/components/AuthProvider';
 
 interface Props {
   referenceImages: ReferenceImage[];
@@ -12,6 +13,7 @@ interface Props {
 }
 
 const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, brandAssets, onSuggestColors }) => {
+  const { user } = useAuth();
   const styleRefs = referenceImages.filter(r => r.category === 'style');
   const [galleryOpen, setGalleryOpen] = useState(false);
 
@@ -73,11 +75,13 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
           }} />
       </label>
 
-      {/* Gallery picker button */}
-      <button onClick={() => setGalleryOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
-        <Folder className="h-4 w-4" /> Importar da Galeria de Marca
-      </button>
+      {/* Gallery picker button - only for logged in users */}
+      {user && (
+        <button onClick={() => setGalleryOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
+          <Folder className="h-4 w-4" /> Importar da Galeria de Marca
+        </button>
+      )}
 
       <GalleryPicker open={galleryOpen} onClose={() => setGalleryOpen(false)} onSelectFiles={handleGalleryFiles} label="Selecionar pasta de marca" />
 

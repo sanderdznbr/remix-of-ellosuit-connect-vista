@@ -2169,23 +2169,25 @@ const CarouselGenerator: React.FC = () => {
       const cardTitle = card.title || '';
       const cardBody = card.body || card.subtitle || card.bodyTop || '';
 
-      const storiesPrompt = `Transform this Instagram post image into a full-bleed Instagram STORIES image (9:16 vertical, 1080x1920px).
+      const storiesPrompt = `Transform this Instagram post image into a TALL VERTICAL Instagram STORIES image. The output MUST be in PORTRAIT 9:16 aspect ratio (1080px wide x 1920px tall). The image must be much TALLER than it is wide.
 
 CRITICAL RULES:
-1. The output MUST be 9:16 vertical and fill the ENTIRE frame — absolutely NO black bars, NO letterboxing, NO empty space.
-2. GENERATIVELY EXPAND the background/scene above and below the original content to fill the taller 9:16 canvas naturally.
-3. Keep the person/subject FULLY VISIBLE — heads, faces, and bodies must be 100% inside the frame.
-4. Keep ALL text that exists in the original image, REPOSITION it to fit the vertical layout:
+1. Generate a PORTRAIT/VERTICAL image — height must be ~1.78x the width. NOT square, NOT landscape.
+2. GENERATIVELY EXPAND the background/scene ABOVE and BELOW the original content to fill the tall 9:16 vertical canvas naturally.
+3. The output MUST fill the ENTIRE vertical frame — absolutely NO black bars, NO letterboxing, NO empty space anywhere.
+4. Keep the person/subject FULLY VISIBLE and centered — heads, faces, and bodies must be 100% inside the frame.
+5. Keep ALL text that exists in the original image, REPOSITION it to fit the vertical layout:
    - Place text in the LOWER THIRD with comfortable margins
    - Slightly reduce text size to ~60-70% of original
-5. Maintain the EXACT same visual style, colors, typography, and aesthetic.
-6. The logo/seal (if present) must remain visible.
+6. Maintain the EXACT same visual style, colors, typography, and aesthetic.
+7. The logo/seal (if present) must remain visible.
 
 ${cardTitle ? `Title text in image: "${cardTitle}"` : ''}
 ${cardBody ? `Body text in image: "${cardBody}"` : ''}
 
 FORBIDDEN:
 - NO black bars or empty space at top or bottom
+- Do NOT generate a SQUARE image — it MUST be tall vertical portrait
 - Do NOT crop any person's head, face, or body
 - Do NOT just zoom in or stretch the original
 - Do NOT change the people's faces or features
@@ -4281,7 +4283,7 @@ FORBIDDEN:
               <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowStoriesPreview(false)}>
                 <div className="relative flex flex-col items-center gap-4 max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
                   <div className="rounded-2xl overflow-hidden border border-white/10" style={{ width: Math.min(270, window.innerWidth - 48), height: Math.min(480, (window.innerHeight * 0.7)) }}>
-                    <img src={storiesImageUrl} alt="Stories" className="w-full h-full object-contain bg-black" />
+                    <img src={storiesImageUrl} alt="Stories" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex gap-2">
                     <button onClick={downloadStoriesImage}

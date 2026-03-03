@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -176,8 +176,7 @@ function CheckoutContent() {
   };
 
   if (!user) {
-    navigate('/auth');
-    return null;
+    return <Navigate to="/auth" replace />;
   }
 
   const displayPrice = mode === 'plan' ? plan.price : creditPack.price;
@@ -348,7 +347,7 @@ function CheckoutContent() {
 }
 
 export default function Checkout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleTabChange = (tab: string) => {
@@ -357,9 +356,16 @@ export default function Checkout() {
     else if (tab === 'pricing') navigate('/precos');
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen" style={{ backgroundColor: '#0a0a0f' }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#7B50DC' }} />
+      </div>
+    );
+  }
+
   if (!user) {
-    navigate('/auth');
-    return null;
+    return <Navigate to="/auth" replace />;
   }
 
   return (

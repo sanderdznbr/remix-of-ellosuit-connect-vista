@@ -1269,8 +1269,11 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== GENERATE (CLOUD-BASED) =====
+  // Strip mention tags from topic: (@Title) → Title
+  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1');
+
   const generateContent = async () => {
-    if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); return; }
+    if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); setTransitionToGenerate(false); return; }
 
     // === SINGLE POST MODE ===
     if (contentMode === 'single-post') {
@@ -1296,14 +1299,14 @@ const CarouselGenerator: React.FC = () => {
                 description: `Você precisa de ${creditsNeeded} créditos mas tem ${Math.floor(balance.balance)}. Adquira mais créditos.`,
                 variant: 'destructive',
               });
-              return;
+              setTransitionToGenerate(false); return;
             }
           }
         }
       } catch (err) {
         console.warn('Credit check failed:', err);
         toast({ title: 'Erro ao verificar créditos', description: 'Tente novamente.', variant: 'destructive' });
-        return;
+        setTransitionToGenerate(false); return;
       }
     }
 
@@ -1338,7 +1341,7 @@ const CarouselGenerator: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: (topic.trim() + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
+          topic: (cleanMentionsFromTopic(topic.trim()) + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount,
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
@@ -1380,7 +1383,7 @@ const CarouselGenerator: React.FC = () => {
       const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-      const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
+      const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
 
       let webImageIndex = 0;
       const imageFactories: { index: number; factory: () => Promise<string | null>; prompt: string }[] = [];
@@ -1835,7 +1838,7 @@ const CarouselGenerator: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: (topic.trim() + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
+          topic: (cleanMentionsFromTopic(topic.trim()) + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: totalCards,
           imageCardIndices: Array.from({ length: totalCards }, (_, i) => i),

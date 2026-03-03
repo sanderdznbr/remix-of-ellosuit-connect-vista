@@ -9,9 +9,9 @@ import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
 
 const PLAN_CONFIG: Record<string, { label: string; price: number; credits: number; extraCredit: number }> = {
-  starter: { label: 'Starter', price: 49, credits: 40, extraCredit: 2.50 },
-  pro: { label: 'Pro', price: 97, credits: 100, extraCredit: 2.00 },
-  growth: { label: 'Growth', price: 197, credits: 250, extraCredit: 1.50 },
+  starter: { label: 'Starter', price: 67, credits: 50, extraCredit: 2.50 },
+  pro: { label: 'Pro', price: 127, credits: 120, extraCredit: 1.90 },
+  growth: { label: 'Growth', price: 247, credits: 300, extraCredit: 1.40 },
 };
 
 const CREDIT_TOPUPS = [
@@ -27,74 +27,76 @@ const plans = [
   {
     key: 'starter',
     name: 'Starter',
-    description: 'Ideal para quem está começando a criar conteúdo com IA.',
-    price: 'R$49',
+    description: 'Comece a criar cards de conteúdo profissionais com IA em minutos.',
+    price: 'R$67',
     period: 'por mês',
-    subtitle: '40 créditos inclusos',
+    subtitle: '50 créditos · ~6 cards de conteúdo',
     badge: null,
     includedLabel: 'O que está incluso:',
     features: [
-      '40 créditos mensais',
-      'Em média 5 carrosséis de 8 slides',
-      'Crédito extra: R$2,50',
+      '50 créditos mensais',
+      'Até 6 cards de conteúdo por mês',
       'Geração de carrosséis com IA',
-      'Exportação em imagem',
+      'Imagens geradas por IA em cada slide',
+      'Exportação em imagem (PNG/JPG)',
+      'Crédito extra: R$2,50/crédito',
     ],
   },
   {
     key: 'pro',
     name: 'Pro',
-    description: 'Para criadores e equipes que produzem conteúdo em alta velocidade.',
-    price: 'R$97',
+    description: 'Para criadores que produzem cards de conteúdo em alta velocidade.',
+    price: 'R$127',
     period: 'por mês',
-    subtitle: '100 créditos inclusos',
+    subtitle: '120 créditos · ~15 cards de conteúdo',
     badge: 'Mais popular',
     includedLabel: 'Tudo do Starter, mais:',
     features: [
-      '100 créditos mensais',
-      'Em média 12 carrosséis de 8 slides',
-      'Crédito extra: R$2,00',
-      'IA avançada (Nano Banana + imagens)',
-      'Publicação em redes sociais',
-      'Remover badge ellocontent',
+      '120 créditos mensais',
+      'Até 15 cards de conteúdo por mês',
+      'IA avançada com imagens de referência',
+      'Estilos do Marketplace inclusos',
+      'Publicação direta em redes sociais',
+      'Sem badge elloContent nos cards',
       'Suporte prioritário',
+      'Crédito extra: R$1,90/crédito',
     ],
   },
   {
     key: 'growth',
     name: 'Growth',
-    description: 'Escale sua produção de conteúdo com mais créditos e recursos.',
-    price: 'R$197',
+    description: 'Escale sua produção de cards de conteúdo com volume e recursos avançados.',
+    price: 'R$247',
     period: 'por mês',
-    subtitle: '250 créditos inclusos',
+    subtitle: '300 créditos · ~37 cards de conteúdo',
     badge: null,
     includedLabel: 'Tudo do Pro, mais:',
     features: [
-      '250 créditos mensais',
-      'Em média 31 carrosséis de 8 slides',
-      'Crédito extra: R$1,50',
-      'Templates de design',
-      'Workspace de equipe',
-      'Projetos privados',
+      '300 créditos mensais',
+      'Até 37 cards de conteúdo por mês',
+      'Templates de design personalizados',
+      'Workspace de equipe (multi-usuários)',
+      'Projetos e galeria privada',
       'Controle de acesso por papéis',
+      'Crédito extra: R$1,40/crédito',
     ],
   },
   {
     key: 'enterprise',
     name: 'Enterprise',
-    description: 'Para grandes organizações que precisam de flexibilidade, escala e governança.',
+    description: 'Para agências e equipes que precisam de escala ilimitada e personalização.',
     price: 'Sob consulta',
     period: '',
-    subtitle: 'Planos flexíveis',
+    subtitle: 'Volume personalizado',
     badge: null,
     includedLabel: 'Tudo do Growth, mais:',
     features: [
-      'Créditos ilimitados',
-      'Suporte dedicado',
-      'Onboarding personalizado',
+      'Créditos sob medida (ilimitados)',
+      'Suporte dedicado com SLA',
+      'Onboarding e treinamento',
       'SSO (Single Sign-On)',
-      'Conectores personalizados',
-      'Logs de auditoria',
+      'API de integração',
+      'Relatórios e auditoria',
     ],
   },
 ];
@@ -209,10 +211,10 @@ function LoggedInPricing() {
     fetchData();
   }, [user]);
 
-  const currentPlanKey = subscription?.plan_type || 'free';
-  const planConfig = PLAN_CONFIG[currentPlanKey];
-  const planLabel = planConfig?.label || currentPlanKey.charAt(0).toUpperCase() + currentPlanKey.slice(1);
-  const maxCredits = planConfig?.credits || 40;
+  const currentPlanKey = subscription?.plan_type || null;
+  const planConfig = currentPlanKey ? PLAN_CONFIG[currentPlanKey] : null;
+  const planLabel = planConfig?.label || 'Sem plano';
+  const maxCredits = planConfig?.credits || 50;
 
   const handleTabChange = (tab: string) => {
     if (tab === 'home') navigate('/');
@@ -304,7 +306,7 @@ function LoggedInPricing() {
               {/* Plans grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {plans.map((plan, i) => {
-                  const isCurrent = plan.key === currentPlanKey;
+                  const isCurrent = currentPlanKey ? plan.key === currentPlanKey : false;
                   return (
                     <motion.div
                       key={plan.key}

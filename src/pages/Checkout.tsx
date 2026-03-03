@@ -9,16 +9,16 @@ import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; price: number; credits: number; extraPrice: string; features: string[] }> = {
   starter: {
-    name: 'Starter', price: 49, credits: 40, extraPrice: 'R$2,50',
-    features: ['40 créditos mensais', 'Em média 5 carrosséis de 8 slides', 'Geração com IA', 'Exportação em imagem'],
+    name: 'Starter', price: 67, credits: 50, extraPrice: 'R$2,50',
+    features: ['50 créditos mensais', 'Até 6 cards de conteúdo/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG'],
   },
   pro: {
-    name: 'Pro', price: 97, credits: 100, extraPrice: 'R$2,00',
-    features: ['100 créditos mensais', 'Em média 12 carrosséis de 8 slides', 'IA avançada (Nano Banana)', 'Publicação em redes sociais', 'Suporte prioritário'],
+    name: 'Pro', price: 127, credits: 120, extraPrice: 'R$1,90',
+    features: ['120 créditos mensais', 'Até 15 cards de conteúdo/mês', 'Estilos do Marketplace', 'Publicação em redes sociais', 'Suporte prioritário'],
   },
   growth: {
-    name: 'Growth', price: 197, credits: 250, extraPrice: 'R$1,50',
-    features: ['250 créditos mensais', 'Em média 31 carrosséis de 8 slides', 'Templates de design', 'Workspace de equipe', 'Projetos privados'],
+    name: 'Growth', price: 247, credits: 300, extraPrice: 'R$1,40',
+    features: ['300 créditos mensais', 'Até 37 cards de conteúdo/mês', 'Templates personalizados', 'Workspace de equipe', 'Projetos privados'],
   },
 };
 

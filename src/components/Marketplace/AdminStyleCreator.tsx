@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Upload, Save, Loader2, X, Image as ImageIcon,
-  Eye, EyeOff, Star, StarOff, Pencil, ChevronDown, ChevronUp, Download,
+  Eye, EyeOff, Star, StarOff, Pencil, ChevronDown, ChevronUp, Download, Sparkles,
 } from 'lucide-react';
 
 interface MarketplaceStyleRow {
@@ -50,7 +50,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [refPreviews, setRefPreviews] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   // Edit mode
   const [editingId, setEditingId] = useState<string | null>(null);
   const [existingImages, setExistingImages] = useState<string[]>([]); // URLs already saved
@@ -361,7 +361,38 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
               </div>
 
               <div>
-                <label className="text-[10px] text-white/40 mb-1 block">Descrição</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] text-white/40">Descrição</label>
+                  <button
+                    type="button"
+                    disabled={generatingDesc || !form.name.trim()}
+                    onClick={async () => {
+                      setGeneratingDesc(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('ai-chat', {
+                          body: {
+                            messages: [
+                              { role: 'system', content: 'Você é um especialista em design de posts para Instagram. Gere uma descrição curta (1-2 frases, máx 120 chars) para um estilo de carrossel/post. Seja direto e descritivo sobre o visual. Responda APENAS com a descrição, sem aspas.' },
+                              { role: 'user', content: `Gere uma descrição para o estilo "${form.name}" da categoria "${form.category}". Tags: ${form.tags || 'nenhuma'}.` }
+                            ]
+                          }
+                        });
+                        if (error) throw error;
+                        const text = typeof data === 'string' ? data : data?.content || data?.message || '';
+                        if (text) setForm(f => ({ ...f, description: text.trim() }));
+                      } catch (err) {
+                        console.error(err);
+                        toast.error('Erro ao gerar descrição');
+                      } finally {
+                        setGeneratingDesc(false);
+                      }
+                    }}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition-colors disabled:opacity-40 cursor-pointer"
+                  >
+                    {generatingDesc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    Gerar com IA
+                  </button>
+                </div>
                 <textarea
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -371,26 +402,30 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                 />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div>
-                  <label className="text-[10px] text-white/40 mb-1 block">Preço (créditos)</label>
-                  <input
-                    type="number"
-                    value={form.price_credits}
-                    onChange={e => setForm(f => ({ ...f, price_credits: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-white/40 mb-1 block">Preço (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.price_brl}
-                    onChange={e => setForm(f => ({ ...f, price_brl: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white outline-none"
-                  />
-                </div>
+              <div className={`grid gap-3 ${form.is_free ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                {!form.is_free && (
+                  <>
+                    <div>
+                      <label className="text-[10px] text-white/40 mb-1 block">Preço (créditos)</label>
+                      <input
+                        type="number"
+                        value={form.price_credits}
+                        onChange={e => setForm(f => ({ ...f, price_credits: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-white/40 mb-1 block">Preço (R$)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.price_brl}
+                        onChange={e => setForm(f => ({ ...f, price_brl: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white outline-none"
+                      />
+                    </div>
+                  </>
+                )}
                 <div>
                   <label className="text-[10px] text-white/40 mb-1 block">Tags (vírgula)</label>
                   <input
@@ -411,7 +446,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                     Destaque
                   </button>
                   <button
-                    onClick={() => setForm(f => ({ ...f, is_free: !f.is_free }))}
+                    onClick={() => setForm(f => ({ ...f, is_free: !f.is_free, ...(!f.is_free ? { price_credits: 0, price_brl: 0 } : {}) }))}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                       form.is_free ? 'bg-green-500/20 text-green-300' : 'bg-white/[0.04] text-white/30'
                     }`}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { MessageSquare, Send, CheckCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -96,7 +96,7 @@ const Suporte: React.FC = () => {
         transition={{ delay: 0.2, duration: 0.5 }}
       >
         <div className="flex items-center gap-6 md:gap-8">
-          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6 cursor-pointer" onClick={() => navigate('/')} />
+          <Link to="/"><img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6 cursor-pointer" /></Link>
           <div className="hidden md:flex items-center gap-5">
             {[
               { label: 'Preços', path: '/precos' },

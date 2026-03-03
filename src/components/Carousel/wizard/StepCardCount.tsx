@@ -1,13 +1,22 @@
 import React from 'react';
+import { User, Sparkles } from 'lucide-react';
 
 interface Props {
   cardCount: number;
   setCardCount: (v: number) => void;
   contentMode: 'carousel' | 'single-post';
   setContentMode: (mode: 'carousel' | 'single-post') => void;
+  // Advanced: face card count
+  hasFacePhotos?: boolean;
+  faceCardCount?: number | null;
+  setFaceCardCount?: (v: number | null) => void;
+  wizardMode?: 'simple' | 'advanced';
 }
 
-const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode }) => {
+const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode }) => {
+  const showFaceSelector = wizardMode === 'advanced' && hasFacePhotos && contentMode === 'carousel' && cardCount >= 2;
+  const effectiveFaceCount = faceCardCount != null ? faceCardCount : cardCount;
+
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
@@ -59,7 +68,14 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
                 min={2}
                 max={10}
                 value={cardCount}
-                onChange={(e) => setCardCount(Number(e.target.value))}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setCardCount(v);
+                  // Adjust faceCardCount if it exceeds new cardCount
+                  if (setFaceCardCount && faceCardCount != null && faceCardCount > v) {
+                    setFaceCardCount(v);
+                  }
+                }}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer"
                 style={{
                   background: `linear-gradient(to right, #7B50DC 0%, #9B6BFF ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) 100%)`,
@@ -75,7 +91,12 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
             </div>
             <div className="flex items-center justify-center gap-2">
               {[2, 3, 5, 7, 10].map(n => (
-                <button key={n} onClick={() => setCardCount(n)}
+                <button key={n} onClick={() => {
+                  setCardCount(n);
+                  if (setFaceCardCount && faceCardCount != null && faceCardCount > n) {
+                    setFaceCardCount(n);
+                  }
+                }}
                   className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     cardCount === n
                       ? 'bg-white text-black'
@@ -88,6 +109,63 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
           </>
         )}
       </div>
+
+      {/* Face card count selector (advanced mode only, when faces are attached) */}
+      {showFaceSelector && setFaceCardCount && (
+        <div className="p-4 rounded-2xl border border-purple-500/20 bg-purple-500/[0.05] space-y-4">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-purple-400" />
+            <p className="text-sm font-semibold text-white/80">Cards com rosto</p>
+          </div>
+          <p className="text-xs text-white/40">
+            Quantos slides devem mostrar o rosto? O restante será preenchido com textos, efeitos e elementos visuais.
+          </p>
+
+          <div className="flex items-center justify-center gap-3">
+            <User className="h-4 w-4 text-purple-400/60" />
+            <span className="text-3xl font-bold text-purple-300 tabular-nums">{effectiveFaceCount}</span>
+            <span className="text-sm text-white/30">de {cardCount}</span>
+          </div>
+
+          <div className="px-2">
+            <input
+              type="range"
+              min={1}
+              max={cardCount}
+              value={effectiveFaceCount}
+              onChange={(e) => setFaceCardCount(Number(e.target.value))}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, #8B5CF6 0%, #A78BFA ${((effectiveFaceCount - 1) / Math.max(cardCount - 1, 1)) * 100}%, rgba(255,255,255,0.06) ${((effectiveFaceCount - 1) / Math.max(cardCount - 1, 1)) * 100}%, rgba(255,255,255,0.06) 100%)`,
+              }}
+            />
+          </div>
+
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            {Array.from({ length: cardCount }, (_, i) => i + 1).filter(n => n === 1 || n === Math.ceil(cardCount / 2) || n === cardCount).map(n => (
+              <button key={n} onClick={() => setFaceCardCount(n)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  effectiveFaceCount === n
+                    ? 'bg-purple-500/30 text-purple-200 border border-purple-500/40'
+                    : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
+                }`}>
+                {n === cardCount ? `Todos (${n})` : n}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-3 text-[10px] text-white/30">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-purple-500/60" />
+              <span>{effectiveFaceCount} com rosto</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-white/10" />
+              <span>{cardCount - effectiveFaceCount} texto/efeitos</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

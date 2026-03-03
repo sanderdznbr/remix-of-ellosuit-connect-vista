@@ -173,6 +173,7 @@ const CarouselGenerator: React.FC = () => {
   const [keywords, setKeywords] = useState('');
   const [cardCount, setCardCount] = useState(5);
   const [imageCardCount, setImageCardCount] = useState(4);
+  const [faceCardCount, setFaceCardCount] = useState<number | null>(null); // null = all image cards get faces
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
 
@@ -379,6 +380,7 @@ const CarouselGenerator: React.FC = () => {
     setKeywords('');
     setCardCount(5);
     setImageCardCount(4);
+    setFaceCardCount(null);
     setEnhancingPrompt(false);
     setMentionedPrompts([]);
     setReferenceImages([]);
@@ -1334,9 +1336,31 @@ const CarouselGenerator: React.FC = () => {
     // === CLIENT-SIDE GENERATION (primary, with cloud fallback) ===
     try {
       const imageCardIndices: number[] = [0];
+      const hasFaceRefsForGen = referenceImages.some(r => r.category === 'face') || facePersons.some(p => p.photos.length > 0);
+      // When faces are provided, ALL cards should get AI images to preserve face fidelity
+      const effectiveImageCardCount = hasFaceRefsForGen ? cardCount : imageCardCount;
       const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);
       const shuffled = contentIndices.sort(() => Math.random() - 0.5);
-      for (let i = 0; i < Math.min(imageCardCount - 1, shuffled.length); i++) imageCardIndices.push(shuffled[i]);
+      for (let i = 0; i < Math.min(effectiveImageCardCount - 1, shuffled.length); i++) imageCardIndices.push(shuffled[i]);
+      // Determine which cards get face refs (faceCardCount controls this)
+      const faceCardIndices = new Set<number>();
+      if (hasFaceRefsForGen) {
+        const effectiveFaceCount = faceCardCount != null ? Math.min(faceCardCount, cardCount) : cardCount;
+        // Always include cover (0) and distribute face cards evenly
+        faceCardIndices.add(0);
+        if (effectiveFaceCount >= cardCount) {
+          // All cards get faces
+          for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
+        } else {
+          // Distribute face cards: cover + evenly spaced middle cards
+          const remaining = effectiveFaceCount - 1;
+          const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+          const step = middleIndices.length / remaining;
+          for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+            faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+          }
+        }
+      }
 
       const productContext = productAnalysis?.confirmed ? {
         productType: productAnalysis.type,
@@ -1518,14 +1542,18 @@ const CarouselGenerator: React.FC = () => {
           // Multi-person: build grouped face refs with metadata
           let cardFaceRefs: string[] | undefined;
           let cardFacePersonsMeta: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[] | undefined;
-          if (activeFacePersonsForGen.length > 1 && !allPeopleOnCover) {
+          // Only send face refs to cards designated for faces
+          const shouldHaveFace = faceCardIndices.has(i);
+          if (!shouldHaveFace) {
+            cardFaceRefs = undefined;
+            cardFacePersonsMeta = undefined;
+          } else if (activeFacePersonsForGen.length > 1 && !allPeopleOnCover) {
             // Alternate people across cards
             const personForCard = activeFacePersonsForGen[(i - 1) % activeFacePersonsForGen.length];
             cardFaceRefs = personForCard.photos.map(p => p.url);
-            // Single person per card — no multi-person metadata needed
             cardFacePersonsMeta = undefined;
           } else if (activeFacePersonsForGen.length > 1) {
-            // All people on every card — group refs by person with metadata
+            // All people on every card
             cardFaceRefs = activeFacePersonsForGen.flatMap(p => p.photos.map(ph => ph.url));
             cardFacePersonsMeta = activeFacePersonsForGen.map(p => ({
               label: p.label,
@@ -3325,6 +3353,10 @@ FORBIDDEN:
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
                           else if (cardCount < 2) { setCardCount(5); }
                         }}
+                        hasFacePhotos={hasFacePhotos}
+                        faceCardCount={faceCardCount}
+                        setFaceCardCount={setFaceCardCount}
+                        wizardMode={wizardMode}
                       />
                     )}
                     {currentStepName === 'Fotos' && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
@@ -48,6 +48,12 @@ function CheckoutContent() {
   const [customerDocument, setCustomerDocument] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
 
+  // Card fields
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+
   // Credit balance
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
 
@@ -77,43 +83,73 @@ function CheckoutContent() {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   };
 
+  const formatCardNumber = (v: string) => {
+    const digits = v.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+  };
+
+  const formatExpiry = (v: string) => {
+    const digits = v.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  };
+
   const handleSubmit = async () => {
     if (!customerName.trim() || !customerDocument.trim()) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
 
+    if (paymentMethod === 'credit_card') {
+      const cardDigits = cardNumber.replace(/\D/g, '');
+      if (cardDigits.length < 13 || !cardHolder.trim() || cardExpiry.length < 5 || cardCvv.length < 3) {
+        toast({ title: 'Preencha todos os dados do cartão', variant: 'destructive' });
+        return;
+      }
+    }
+
     setLoading(true);
     setStep('processing');
 
     try {
-      const { data, error } = await supabase.functions.invoke('ellocontent-checkout', {
-        body: {
-          action: 'subscribe',
-          plan_name: planKey,
-          payment_method: paymentMethod,
-          customer_name: customerName,
-          customer_document: customerDocument.replace(/\D/g, ''),
-          customer_phone: customerPhone.replace(/\D/g, ''),
+      const expiryParts = cardExpiry.split('/');
+      const expMonth = parseInt(expiryParts[0] || '0');
+      const expYear = parseInt(`20${expiryParts[1] || '00'}`);
+
+      const body: any = {
+        plan_id: planKey,
+        billing_cycle: 'monthly',
+        payment_method: paymentMethod,
+        customer: {
+          name: customerName,
+          email: user?.email || '',
+          document: customerDocument.replace(/\D/g, ''),
+          phone: customerPhone.replace(/\D/g, '') || '11999999999',
         },
-      });
+      };
+
+      if (paymentMethod === 'credit_card') {
+        body.card = {
+          number: cardNumber.replace(/\D/g, ''),
+          holder_name: cardHolder,
+          exp_month: expMonth,
+          exp_year: expYear,
+          cvv: cardCvv,
+        };
+      }
+
+      const { data, error } = await supabase.functions.invoke('pagarme-checkout', { body });
 
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || data?.details || 'Erro no pagamento');
+      if (!data?.success) throw new Error(data?.error || 'Erro no pagamento');
 
-      if (paymentMethod === 'pix' && (data.pix_qr_code || data.pix_qr_code_url)) {
+      if (paymentMethod === 'pix' && data.pix) {
         setPixData({
-          qrCode: data.pix_qr_code,
-          qrCodeUrl: data.pix_qr_code_url,
-          expiration: data.pix_expiration_date,
+          qrCode: data.pix.qr_code,
+          qrCodeUrl: data.pix.qr_code_url,
+          expiration: data.pix.expires_at,
         });
         setStep('pix');
-      } else if (data.status === 'paid') {
-        setStep('success');
-      } else if (data.secure_url) {
-        window.open(data.secure_url, '_blank');
-        setStep('form');
-        toast({ title: 'Redirecionado para pagamento', description: 'Complete o pagamento na nova aba.' });
       } else {
         setStep('success');
       }
@@ -130,6 +166,8 @@ function CheckoutContent() {
     navigate('/auth');
     return null;
   }
+
+  const inputStyle = { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' };
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
@@ -192,6 +230,49 @@ function CheckoutContent() {
                 </button>
               </div>
 
+              {/* Card fields */}
+              {paymentMethod === 'credit_card' && (
+                <>
+                  <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Dados do cartão</h3>
+                  <div className="space-y-3 mb-6">
+                    <input
+                      type="text"
+                      placeholder="Número do cartão"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                      style={inputStyle}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Nome no cartão"
+                      value={cardHolder}
+                      onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                      style={inputStyle}
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="MM/AA"
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                        style={inputStyle}
+                      />
+                      <input
+                        type="text"
+                        placeholder="CVV"
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Customer info */}
               <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Dados do pagante</h3>
               <div className="space-y-3 mb-6">
@@ -201,7 +282,7 @@ function CheckoutContent() {
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+                  style={inputStyle}
                 />
                 <input
                   type="text"
@@ -209,7 +290,7 @@ function CheckoutContent() {
                   value={customerDocument}
                   onChange={(e) => setCustomerDocument(formatCPF(e.target.value))}
                   className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+                  style={inputStyle}
                 />
                 <input
                   type="text"
@@ -217,7 +298,7 @@ function CheckoutContent() {
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
                   className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+                  style={inputStyle}
                 />
               </div>
 
@@ -247,9 +328,12 @@ function CheckoutContent() {
                 )}
               </button>
 
-              <p className="text-white/20 text-[10px] text-center mt-3">
-                Pagamento seguro processado por Beehive Pay. Cancele quando quiser.
-              </p>
+              <div className="flex items-center justify-center gap-1.5 mt-3">
+                <Lock className="w-3 h-3 text-white/20" />
+                <p className="text-white/20 text-[10px]">
+                  Pagamento seguro processado por Pagar.me. Cancele quando quiser.
+                </p>
+              </div>
             </motion.div>
           )}
 

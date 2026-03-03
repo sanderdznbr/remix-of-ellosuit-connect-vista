@@ -25,11 +25,14 @@ interface CheckoutRequest {
 }
 
 // Plan pricing configuration
-const PLANS = {
+const PLANS: Record<string, { monthly: number; yearly: number; name: string; credits?: number }> = {
   omni: { monthly: 19700, yearly: 197000, name: 'Omni - Comunicação' },
   flow: { monthly: 14700, yearly: 147000, name: 'Flow - Produtividade' },
   track: { monthly: 9700, yearly: 97000, name: 'Track - Rastreamento' },
   business: { monthly: 29700, yearly: 297000, name: 'Business - Completo' },
+  starter: { monthly: 4900, yearly: 49000, name: 'Starter', credits: 40 },
+  pro: { monthly: 9700, yearly: 97000, name: 'Pro', credits: 100 },
+  growth: { monthly: 19700, yearly: 197000, name: 'Growth', credits: 250 },
 };
 
 Deno.serve(async (req) => {
@@ -243,8 +246,17 @@ Deno.serve(async (req) => {
       console.error('Database update error:', updateError);
     }
 
-    // Activate the appropriate module
-    if (plan_id !== 'business') {
+    // Activate the appropriate module or add credits
+    const planCredits = PLANS[plan_id]?.credits;
+    if (planCredits) {
+      // Content plan: add credits
+      await supabase.rpc('add_ai_credits', {
+        p_company_id: companyUser.company_id,
+        p_amount: planCredits,
+        p_description: `Plano ${plan.name} - ${planCredits} créditos`,
+      });
+      console.log(`Added ${planCredits} credits for plan ${plan_id}`);
+    } else if (plan_id !== 'business') {
       await supabase.from('subscription_modules').upsert({
         company_id: companyUser.company_id,
         module_type: plan_id,
@@ -262,7 +274,7 @@ Deno.serve(async (req) => {
           module_type: moduleType,
           is_active: true,
           activated_at: new Date().toISOString(),
-          monthly_price: 0, // Included in business
+          monthly_price: 0,
         }, {
           onConflict: 'company_id,module_type',
         });

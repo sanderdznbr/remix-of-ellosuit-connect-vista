@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel, negativePrompt, fidelity, marketplaceStyleConfig } = body;
+    const { action, topic, keywords, cardCount, prompt, imageSize, query, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, username, imageModel, negativePrompt, fidelity, marketplaceStyleConfig, promptContexts } = body;
 
     // ===== INSTAGRAM PROFILE FETCH =====
     if (action === 'instagram-profile') {
@@ -373,11 +373,22 @@ ${styleConfig.cardVariations.map((v: any, i: number) => `${i + 1}. Tipo "${v.typ
 IMPORTANTE: Os imagePrompts devem descrever A IMAGEM COMPLETA com texto, tipografia, elementos decorativos e composição editorial integrados. NÃO gere apenas uma foto - gere a COMPOSIÇÃO FINAL do post como ele apareceria no Instagram.`
         : '';
 
+      // Build prompt context instructions if mentioned prompts exist
+      const promptContextInstructions = (promptContexts && Array.isArray(promptContexts) && promptContexts.length > 0)
+        ? `\n\nCONTEXTO DE MARCA/PERSONA (PRIORIDADE MÁXIMA):
+O usuário anexou os seguintes contextos de referência da galeria de prompts. Você DEVE usar estas informações como a BASE PRINCIPAL para gerar o conteúdo. O tópico do usuário deve ser interpretado À LUZ destes contextos. Se o contexto descreve uma marca, persona, empresa ou produto, TODO o conteúdo gerado DEVE ser sobre essa marca/persona/empresa.
+
+${promptContexts.map((p: any) => `### ${p.title}\n${p.content}`).join('\n\n')}
+
+REGRA ABSOLUTA: O conteúdo dos cards DEVE refletir fielmente as informações dos contextos acima. NÃO invente informações que contradigam esses contextos. NÃO gere conteúdo genérico ignorando os contextos.`
+        : '';
+
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
+${promptContextInstructions}
 
 Gere conteúdo para um carrossel de EXATAMENTE ${numCards} cards sobre o tópico fornecido. VOCÊ DEVE retornar EXATAMENTE ${numCards} cards no array "cards" — nem mais, nem menos. Isso é OBRIGATÓRIO.
 
-IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, ElloContent, @Ellocontent ou qualquer variação dessas marcas, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
+IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário${promptContexts?.length > 0 ? ', usando os CONTEXTOS DE MARCA/PERSONA como base' : ''}. NÃO mencione a Ellosuit, ElloContent, @Ellocontent ou qualquer variação dessas marcas, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
 
 PROIBIDO nos imagePrompts e no conteúdo dos cards:
 - NUNCA inclua textos como "Tema do Carrossel:", "Carousel Theme:", ou qualquer rótulo de tema/título do carrossel

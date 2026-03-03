@@ -272,6 +272,9 @@ const CarouselGenerator: React.FC = () => {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);
   const [carouselFromCoverCount, setCarouselFromCoverCount] = useState(8);
+  const [coverModalTab, setCoverModalTab] = useState<'config' | 'texts'>('config');
+  const [coverCardTexts, setCoverCardTexts] = useState<{ title?: string; body?: string }[]>([]);
+  const [fillingCoverTexts, setFillingCoverTexts] = useState(false);
   const [generatingStories, setGeneratingStories] = useState(false);
   const [storiesImageUrl, setStoriesImageUrl] = useState<string | null>(null);
   const [showStoriesPreview, setShowStoriesPreview] = useState(false);
@@ -1658,11 +1661,35 @@ const CarouselGenerator: React.FC = () => {
   };
 
 
+  // ===== FILL COVER MODAL TEXTS WITH AI =====
+  const fillCoverTextsWithAI = async () => {
+    if (!topic.trim() || fillingCoverTexts) return;
+    setFillingCoverTexts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'generate-outline', topic: topic.trim(), cardCount: carouselFromCoverCount, contentMode: 'carousel' },
+      });
+      if (error) throw error;
+      if (data?.outline) setCoverCardTexts(data.outline);
+    } catch (err) { console.error('AI fill error:', err); }
+    finally { setFillingCoverTexts(false); }
+  };
+
+  // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
+  const addOneMoreCard = () => {
+    if (!carouselData) return;
+    const newCard: CarouselCard = { type: 'content', title: '', body: '', layout: 'dark', needsImage: true };
+    const updatedCards = [...carouselData.cards, newCard];
+    setCarouselData({ ...carouselData, cards: updatedCards });
+    setActiveCardIndex(updatedCards.length - 1);
+  };
+
   // ===== GENERATE CAROUSEL FROM EXISTING COVER =====
   const generateCarouselFromCover = async (totalCards: number) => {
     if (!carouselData?.cards[0]?.imageUrl) return;
     const coverCard = { ...carouselData.cards[0] };
     setShowCarouselFromCover(false);
+    setCoverModalTab('config');
     setContentMode('carousel');
     setCardCount(totalCards);
 
@@ -1694,6 +1721,8 @@ const CarouselGenerator: React.FC = () => {
 
     try {
       // Generate text content for remaining cards
+      // Prepare manual texts for cards (skip index 0 which is the cover)
+      const hasManualTexts = coverCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
@@ -1701,6 +1730,7 @@ const CarouselGenerator: React.FC = () => {
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: totalCards,
           imageCardIndices: Array.from({ length: totalCards }, (_, i) => i),
+          ...(hasManualTexts ? { manualCardTexts: coverCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
         },
@@ -3700,10 +3730,18 @@ const CarouselGenerator: React.FC = () => {
               
               {/* Generate carousel from cover */}
               {carouselData.cards[0]?.imageUrl && !isGuest && (
-                <button onClick={() => setShowCarouselFromCover(true)}
+                <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
                   style={{ borderColor: 'rgba(234,179,8,0.3)', backgroundColor: 'rgba(234,179,8,0.08)' }}>
                   <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
+                </button>
+              )}
+              {/* Add +1 card */}
+              {!isGuest && carouselData.cards.length > 0 && (
+                <button onClick={addOneMoreCard}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                  style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                  <Plus className="h-3.5 w-3.5" /> +1 Card
                 </button>
               )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
@@ -3718,29 +3756,90 @@ const CarouselGenerator: React.FC = () => {
               </button>
             </div>
 
-            {/* Carousel from cover modal */}
+            {/* Carousel from cover modal - enhanced */}
             {showCarouselFromCover && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" onClick={() => setShowCarouselFromCover(false)}>
-                <div className="rounded-2xl border border-white/10 p-6 w-80 flex flex-col gap-4"
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowCarouselFromCover(false)}>
+                <div className="rounded-2xl border border-white/10 p-5 w-full max-w-md max-h-[85vh] flex flex-col gap-4 overflow-hidden"
                   style={{ backgroundColor: 'rgba(15,15,30,0.98)', backdropFilter: 'blur(20px)' }}
                   onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-sm font-semibold text-white text-center">
                     <Sparkles className="h-4 w-4 inline mr-1.5 text-yellow-400" />
                     Gerar carrossel a partir desta capa
                   </h3>
-                  <p className="text-xs text-white/50 text-center">A capa atual será mantida como card 1. Os demais serão gerados pela IA.</p>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs text-white/60">Quantos cards no total?</label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range" min={4} max={20} value={carouselFromCoverCount}
-                        onChange={(e) => setCarouselFromCoverCount(Number(e.target.value))}
-                        className="flex-1 accent-yellow-400"
-                      />
-                      <span className="text-lg font-bold text-white w-8 text-center">{carouselFromCoverCount}</span>
-                    </div>
-                    <p className="text-[10px] text-white/30 text-center">{carouselFromCoverCount - 1} cards serão gerados pela IA</p>
+
+                  {/* Tabs */}
+                  <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                    <button onClick={() => setCoverModalTab('config')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${coverModalTab === 'config' ? 'bg-yellow-500/20 text-yellow-300' : 'text-white/40 hover:text-white/60'}`}>
+                      ⚙️ Configuração
+                    </button>
+                    <button onClick={() => setCoverModalTab('texts')}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${coverModalTab === 'texts' ? 'bg-yellow-500/20 text-yellow-300' : 'text-white/40 hover:text-white/60'}`}>
+                      <Type className="h-3 w-3 inline mr-1" /> Textos
+                    </button>
                   </div>
+
+                  {coverModalTab === 'config' ? (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-xs text-white/50 text-center">A capa atual será mantida como card 1. Os demais serão gerados pela IA.</p>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs text-white/60">Quantos cards no total?</label>
+                        <div className="flex items-center gap-3">
+                          <input type="range" min={4} max={20} value={carouselFromCoverCount}
+                            onChange={(e) => { setCarouselFromCoverCount(Number(e.target.value)); setCoverCardTexts(Array.from({ length: Number(e.target.value) }, (_, i) => coverCardTexts[i] || { title: '', body: '' })); }}
+                            className="flex-1 accent-yellow-400" />
+                          <span className="text-lg font-bold text-white w-8 text-center">{carouselFromCoverCount}</span>
+                        </div>
+                        <div className="flex gap-1.5 justify-center flex-wrap">
+                          {[4, 6, 8, 10, 15, 20].map(n => (
+                            <button key={n} onClick={() => { setCarouselFromCoverCount(n); setCoverCardTexts(Array.from({ length: n }, (_, i) => coverCardTexts[i] || { title: '', body: '' })); }}
+                              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${carouselFromCoverCount === n ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'}`}>
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-white/30 text-center">{carouselFromCoverCount - 1} cards serão gerados pela IA</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0" style={{ maxHeight: '50vh', WebkitOverflowScrolling: 'touch' as any }}>
+                      {/* AI fill button */}
+                      <button onClick={fillCoverTextsWithAI} disabled={fillingCoverTexts || !topic.trim()}
+                        className="flex items-center gap-2 w-full p-2.5 rounded-xl transition-all text-left"
+                        style={{ backgroundColor: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)' }}>
+                        <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(234,179,8,0.15)' }}>
+                          {fillingCoverTexts ? <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-400" /> : <Wand2 className="h-3.5 w-3.5 text-yellow-400" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-white/80">{fillingCoverTexts ? 'Gerando...' : 'Preencher com IA'}</p>
+                          <p className="text-[10px] text-white/30">Gera sugestões de texto para cada card.</p>
+                        </div>
+                      </button>
+                      <p className="text-[10px] text-white/40 text-center">Opcional — a IA preenche o que ficar vazio.</p>
+                      {/* Card text editors */}
+                      {Array.from({ length: carouselFromCoverCount }, (_, i) => {
+                        const cardText = coverCardTexts[i] || { title: '', body: '' };
+                        const label = i === 0 ? 'Card 1 — Capa' : i === carouselFromCoverCount - 1 ? `Card ${i + 1} — CTA` : `Card ${i + 1}`;
+                        const hasContent = (cardText.title || '').trim() || (cardText.body || '').trim();
+                        return (
+                          <div key={i} className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${hasContent ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-medium text-white/60">{label}</span>
+                              {hasContent && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300">editado</span>}
+                            </div>
+                            <input value={cardText.title || ''} onChange={(e) => { const u = [...coverCardTexts]; u[i] = { ...u[i], title: e.target.value }; setCoverCardTexts(u); }}
+                              placeholder={i === 0 ? 'Título da capa...' : 'Título do card...'}
+                              className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-xs px-2.5 py-1.5 rounded-lg outline-none focus:border-white/15" />
+                            <textarea value={cardText.body || ''} onChange={(e) => { const u = [...coverCardTexts]; u[i] = { ...u[i], body: e.target.value }; setCoverCardTexts(u); }}
+                              placeholder={i === 0 ? 'Subtítulo...' : 'Conteúdo...'}
+                              className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-xs px-2.5 py-1.5 rounded-lg resize-none outline-none focus:border-white/15 min-h-[50px]"
+                              rows={2} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="flex gap-2 mt-1">
                     <button onClick={() => setShowCarouselFromCover(false)}
                       className="flex-1 px-4 py-2.5 rounded-xl text-xs font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors">

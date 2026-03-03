@@ -96,8 +96,34 @@ function ShowcaseRow({ section, images, index }: { section: typeof SECTION_META[
 
 function FloatingGallery({ images }: { images: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start end', 'end start'] });
-  const x = useTransform(scrollYProgress, [0, 1], ['0%', '-30%']);
+  const xScroll = useTransform(scrollYProgress, [0, 1], ['5%', '-15%']);
+
+  // Drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.clientX);
+    setScrollLeft(scrollRef.current.scrollLeft);
+    scrollRef.current.style.cursor = 'grabbing';
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    const dx = e.clientX - startX;
+    scrollRef.current.scrollLeft = scrollLeft - dx;
+  };
+
+  const handlePointerUp = () => {
+    setIsDragging(false);
+    if (scrollRef.current) scrollRef.current.style.cursor = 'grab';
+  };
 
   if (images.length === 0) return null;
 
@@ -111,26 +137,38 @@ function FloatingGallery({ images }: { images: string[] }) {
           Galeria
         </span>
         <h2 className="text-2xl md:text-4xl font-bold text-white">Veja o que é possível criar</h2>
+        <p className="text-white/30 text-sm mt-2">Arraste para explorar →</p>
       </div>
       <div ref={containerRef} className="relative">
-        <motion.div style={{ x }} className="flex gap-4 md:gap-6 w-max pl-8">
-          {images.map((img, i) => (
-            <motion.div
-              key={i}
-              className="w-[220px] md:w-[280px] rounded-2xl overflow-hidden border border-white/[0.06] shrink-0 group"
-              whileHover={{ scale: 1.04, y: -8 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            >
-              <div className="aspect-[1080/1350] overflow-hidden">
-                <img
-                  src={img}
-                  alt={`Galeria ${i + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-              </div>
-            </motion.div>
-          ))}
+        <motion.div style={{ x: xScroll }}>
+          <div
+            ref={scrollRef}
+            className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pl-8 pr-8 select-none"
+            style={{ cursor: 'grab', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+          >
+            {images.map((img, i) => (
+              <motion.div
+                key={i}
+                className="w-[200px] md:w-[260px] rounded-2xl overflow-hidden border border-white/[0.06] shrink-0 group"
+                whileHover={!isDragging ? { scale: 1.04, y: -8 } : {}}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                <div className="aspect-[1080/1350] overflow-hidden">
+                  <img
+                    src={img}
+                    alt={`Galeria ${i + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+                    loading="lazy"
+                    draggable={false}
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
     </RevealSection>
@@ -150,28 +188,28 @@ const FEATURES_QUICK = [
 const Recursos: React.FC = () => {
   const navigate = useNavigate();
   const [allImages, setAllImages] = useState<string[]>([]);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchStyles = async () => {
       const { data } = await supabase
         .from('marketplace_styles')
-        .select('id, name, category, preview_images')
+        .select('id, name, category, preview_images, style_config')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
         .limit(20);
 
       if (data) {
-        const styles = data as StylePreview[];
+        const styles = data as any[];
         // For each style, skip index 0 (cover) and collect only refs
         const perStyle: string[][] = styles.map((s) => {
           if (!s.preview_images || !Array.isArray(s.preview_images)) return [];
-          // Skip first image (cover), keep only reference images
-          return s.preview_images.slice(1).filter((u) => typeof u === 'string' && u.length > 0);
+          return s.preview_images.slice(1).filter((u: any) => typeof u === 'string' && u.length > 0);
         });
 
-        // Round-robin pick from different styles for variety
+        // Round-robin pick from different styles for showcase sections
         const picked: string[] = [];
-        const maxPicks = 20; // enough for 4 sections × 3 + gallery
+        const maxPicks = 12; // 4 sections × 3
         let round = 0;
         while (picked.length < maxPicks) {
           let added = false;
@@ -185,19 +223,45 @@ const Recursos: React.FC = () => {
           round++;
         }
         setAllImages(picked);
+
+        // For gallery: pick images from styles with face-heavy categories
+        // or styles whose references visually contain people (lifestyle, coach, editorial)
+        const faceCategories = ['lifestyle', 'editorial', 'corporativo'];
+        const faceStyles = styles.filter((s) => faceCategories.includes(s.category));
+        const fallbackStyles = faceStyles.length >= 3 ? faceStyles : styles;
+
+        // Collect gallery refs: round-robin from face-oriented styles, skip covers
+        const galleryPicked: string[] = [];
+        const galleryPerStyle = fallbackStyles.map((s) => {
+          if (!s.preview_images || !Array.isArray(s.preview_images)) return [];
+          return s.preview_images.slice(1).filter((u: any) => typeof u === 'string' && u.length > 0);
+        });
+        let gRound = 0;
+        while (galleryPicked.length < 12) {
+          let added = false;
+          for (const refs of galleryPerStyle) {
+            if (gRound < refs.length && galleryPicked.length < 12) {
+              // Avoid duplicates from showcase
+              if (!picked.includes(refs[gRound])) {
+                galleryPicked.push(refs[gRound]);
+              }
+              added = true;
+            }
+          }
+          if (!added) break;
+          gRound++;
+        }
+        setGalleryImages(galleryPicked);
       }
     };
     fetchStyles();
   }, []);
 
-  // Split images into sections of 3 for showcase rows (each from different styles)
+  // Split images into sections of 3 for showcase rows
   const sectionImages = SECTION_META.map((_, i) => {
     const start = i * 3;
     return allImages.slice(start, start + 3);
   });
-
-  // Remaining images for gallery
-  const galleryImages = allImages.slice(SECTION_META.length * 3);
 
   return (
     <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: '#0a0a0f' }}>

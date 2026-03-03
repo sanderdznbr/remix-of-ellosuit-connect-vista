@@ -17,6 +17,7 @@ interface MarketplaceStyleRow {
   style_config: any;
   is_active: boolean;
   is_featured: boolean;
+  is_free: boolean;
   sort_order: number;
   tags: string[];
 }
@@ -41,6 +42,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
     price_brl: 9.90,
     tags: '',
     is_featured: false,
+    is_free: false,
     strict_instructions: '',
   });
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -204,6 +206,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           price_credits: form.price_credits,
           price_brl: form.price_brl,
           is_featured: form.is_featured,
+          is_free: form.is_free,
           tags,
           style_config: styleConfig,
           strict_instructions: form.strict_instructions || null,
@@ -225,6 +228,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
           category: form.category,
           style_config: styleConfig,
           is_featured: form.is_featured,
+          is_free: form.is_free,
           tags,
           sort_order: styles.length + 1,
           strict_instructions: form.strict_instructions || null,
@@ -234,7 +238,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       }
 
       // Reset form
-      setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, strict_instructions: '' });
+      setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '' });
       setCoverFile(null); setCoverPreview(null);
       setRefFiles([]); setRefPreviews([]);
       setExistingImages([]);
@@ -279,6 +283,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       price_brl: style.price_brl,
       tags: (style.tags || []).join(', '),
       is_featured: style.is_featured,
+      is_free: (style as any).is_free || false,
       strict_instructions: (style as any).strict_instructions || '',
     });
     setCoverFile(null);
@@ -395,7 +400,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                     className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none"
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end gap-2">
                   <button
                     onClick={() => setForm(f => ({ ...f, is_featured: !f.is_featured }))}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
@@ -404,6 +409,14 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                   >
                     {form.is_featured ? <Star className="w-3.5 h-3.5" /> : <StarOff className="w-3.5 h-3.5" />}
                     Destaque
+                  </button>
+                  <button
+                    onClick={() => setForm(f => ({ ...f, is_free: !f.is_free }))}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                      form.is_free ? 'bg-green-500/20 text-green-300' : 'bg-white/[0.04] text-white/30'
+                    }`}
+                  >
+                    {form.is_free ? '✓' : '○'} Grátis
                   </button>
                 </div>
               </div>
@@ -535,7 +548,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                 <button
                   onClick={() => {
                     setCreating(false); setEditingId(null);
-                    setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, strict_instructions: '' });
+                    setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '' });
                     setCoverFile(null); setCoverPreview(null); setRefFiles([]); setRefPreviews([]); setExistingImages([]);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-white/[0.04] text-white/40 text-sm hover:bg-white/[0.08] cursor-pointer"

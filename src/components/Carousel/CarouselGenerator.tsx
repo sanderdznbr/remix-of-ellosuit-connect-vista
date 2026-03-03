@@ -49,6 +49,7 @@ import {
   Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
@@ -1274,7 +1275,7 @@ const CarouselGenerator: React.FC = () => {
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1');
 
   const generateContent = async () => {
-    if (!topic.trim()) { toast({ title: 'Insira um tópico', variant: 'destructive' }); setTransitionToGenerate(false); return; }
+    if (!topic.trim()) { sonnerToast.error('Insira um tópico para gerar'); setTransitionToGenerate(false); return; }
 
     // === SINGLE POST MODE ===
     if (contentMode === 'single-post') {
@@ -1295,18 +1296,14 @@ const CarouselGenerator: React.FC = () => {
             const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
             const creditsNeeded = cardCount;
             if (balance && balance.balance < creditsNeeded) {
-              toast({
-                title: 'Créditos insuficientes',
-                description: `Você precisa de ${creditsNeeded} créditos mas tem ${Math.floor(balance.balance)}. Adquira mais créditos.`,
-                variant: 'destructive',
-              });
+              sonnerToast.error(`Créditos insuficientes: você precisa de ${creditsNeeded} mas tem ${Math.floor(balance.balance)}.`);
               setTransitionToGenerate(false); return;
             }
           }
         }
       } catch (err) {
         console.warn('Credit check failed:', err);
-        toast({ title: 'Erro ao verificar créditos', description: 'Tente novamente.', variant: 'destructive' });
+        sonnerToast.error('Erro ao verificar créditos. Tente novamente.');
         setTransitionToGenerate(false); return;
       }
     }
@@ -1657,8 +1654,8 @@ const CarouselGenerator: React.FC = () => {
       // Clear cloud job on success
       if (localJobId) { setCloudJobId(null); }
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message || 'Não foi possível gerar', variant: 'destructive' });
-      // Don't mark job as failed — leave pending for cloud fallback
+      console.error('Generation error:', err);
+      sonnerToast.error(err.message || 'Não foi possível gerar o carrossel. Tente novamente.');
     } finally {
       setGenerating(false);
       setGeneratingAllImages(false);

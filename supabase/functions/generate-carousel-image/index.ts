@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata, imageSize } = body;
     // facePersonsMetadata: optional array of { label, gender, wearsGlasses, photoCount } to map grouped face refs
 
     // === FACE REGENERATION MODE (Image Editing) ===
@@ -51,8 +51,11 @@ Deno.serve(async (req) => {
       editContent.push({ type: 'text', text: 'The image below is the SOURCE IMAGE that needs face replacement. Keep its EXACT composition, background, clothing, text, colors, and layout:' });
       editContent.push({ type: 'image_url', image_url: { url: editSourceImage } });
       
-      // 4. Final instruction
-      editContent.push({ type: 'text', text: prompt + '\n\nCRITICAL RULES:\n- Generate a NEW image that is the SOURCE IMAGE but with the face replaced by the face from the REFERENCE PHOTOS.\n- The output must have the SAME dimensions, framing, and zoom level as the source image — do NOT crop or zoom in.\n- Keep ALL text overlays, logos, backgrounds, clothing, body pose, and composition IDENTICAL to the source.\n- ONLY the face changes. Everything else stays pixel-perfect.' });
+      // 4. Final instruction with explicit aspect ratio if requested
+      const aspectInstruction = imageSize === '9:16' 
+        ? '\n\nOUTPUT FORMAT: The generated image MUST be in 9:16 VERTICAL format (1080x1920px). Fill the ENTIRE vertical frame — NO black bars, NO letterboxing, NO empty space at top or bottom. Generatively expand the scene to fill the full vertical canvas.'
+        : '';
+      editContent.push({ type: 'text', text: prompt + aspectInstruction + '\n\nCRITICAL RULES:\n- Generate a NEW image that is the SOURCE IMAGE but adapted as instructed.\n- Keep ALL text overlays, logos, backgrounds, clothing, body pose, and composition as close to the source as possible.\n- The output MUST fill the entire frame with NO black bars or empty areas.' });
       
       const editRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',

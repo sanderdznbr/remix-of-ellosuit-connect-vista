@@ -3628,7 +3628,7 @@ const CarouselGenerator: React.FC = () => {
             )}
 
             {/* Action buttons below */}
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap px-4">
               {/* Auto-save indicator */}
               <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 border border-white/5">
                 {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
@@ -3641,6 +3641,15 @@ const CarouselGenerator: React.FC = () => {
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
                 {isGuest ? 'Cadastre-se' : 'Exportar'}
               </button>
+              {/* Generate Stories */}
+              {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
+                <button onClick={generateStoriesImage} disabled={generatingStories}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
+                  style={{ borderColor: 'rgba(59,130,246,0.3)', backgroundColor: 'rgba(59,130,246,0.08)' }}>
+                  {generatingStories ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
+                  {generatingStories ? 'Gerando...' : 'Stories'}
+                </button>
+              )}
 
               {/* Export Dialog */}
               {showExportMenu && !isGuest && (
@@ -3688,15 +3697,7 @@ const CarouselGenerator: React.FC = () => {
                   </button>
                 </>
               )}
-              {/* Generate Stories image */}
-              {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
-                <button onClick={generateStoriesImage} disabled={generatingStories}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
-                  style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
-                  {generatingStories ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
-                  {generatingStories ? 'Gerando...' : 'Gerar Stories'}
-                </button>
-              )}
+              
               {/* Generate carousel from cover */}
               {carouselData.cards[0]?.imageUrl && !isGuest && (
                 <button onClick={() => setShowCarouselFromCover(true)}

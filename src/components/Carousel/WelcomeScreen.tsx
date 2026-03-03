@@ -120,7 +120,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           <div className="hidden md:flex items-center gap-5">
             {[
               { label: 'Preços', path: '/precos' },
-              { label: 'Recursos', path: '#' },
+              { label: 'Recursos', path: '/recursos' },
               { label: 'Comunidade', path: '#' },
               { label: 'Suporte', path: '#' },
             ].map((item) => (

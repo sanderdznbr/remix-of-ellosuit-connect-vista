@@ -281,6 +281,7 @@ const CarouselGenerator: React.FC = () => {
   const [storiesImageUrl, setStoriesImageUrl] = useState<string | null>(null);
   const [showStoriesPreview, setShowStoriesPreview] = useState(false);
   const [showAddCardMenu, setShowAddCardMenu] = useState(false);
+  const [addCardModal, setAddCardModal] = useState<{ open: boolean; cardType: 'composed' | 'solid'; step: 'type' | 'text-mode' | 'manual' | 'auto-preview'; autoText: { title: string; body: string } | null; manualText: { title: string; body: string }; generatingAutoText: boolean }>({ open: false, cardType: 'composed', step: 'type', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false });
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
   const carouselDataRef = useRef<CarouselData | null>(null);
@@ -1680,8 +1681,57 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
-  const addOneMoreCard = async (mode: 'composed' | 'solid' = 'composed') => {
+  // ===== GENERATE TEXT PREVIEW FOR NEW CARD =====
+  const generateAddCardAutoText = async () => {
+    setAddCardModal(prev => ({ ...prev, generatingAutoText: true, autoText: null }));
+    try {
+      const currentData = carouselDataRef.current;
+      const existingCardSummaries = currentData?.cards
+        ?.map((c, i) => {
+          const title = c.title || c.bodyTop || '';
+          const body = c.body || c.bodyBottom || '';
+          return title || body ? `Card ${i + 1}: ${title} ${body}`.slice(0, 120) : null;
+        })
+        .filter(Boolean) || [];
+
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: {
+          action: 'generate-content',
+          topic: topic.trim(),
+          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+          cardCount: (currentData?.cards.length || 7) + 1,
+          imageCardIndices: [(currentData?.cards.length || 0)],
+          ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          regenerateCardIndex: currentData?.cards.length || 0,
+          existingCardSummaries,
+        },
+      });
+
+      if (!error && data?.success && data?.data?.cards) {
+        const contentCards = data.data.cards.filter((c: any) => c.type === 'content');
+        if (contentCards.length > 0) {
+          const src = contentCards[0];
+          setAddCardModal(prev => ({
+            ...prev,
+            autoText: { title: src.bodyTop || src.body || src.title || '', body: src.bodyBottom || '' },
+            step: 'auto-preview',
+          }));
+          return;
+        }
+      }
+      toast({ title: 'Não foi possível gerar texto. Tente novamente.', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar texto', description: err.message, variant: 'destructive' });
+    } finally {
+      setAddCardModal(prev => ({ ...prev, generatingAutoText: false }));
+    }
+  };
+
+  // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
+  const addOneMoreCard = async (mode: 'composed' | 'solid' = 'composed', manualText?: { title: string; body: string }) => {
     setShowAddCardMenu(false);
+    setAddCardModal(prev => ({ ...prev, open: false }));
 
     const currentData = carouselDataRef.current;
     if (!currentData) return;
@@ -1692,8 +1742,10 @@ const CarouselGenerator: React.FC = () => {
       if (!prev) return prev;
       const newCard: CarouselCard = {
         type: 'content',
-        title: '',
-        body: '',
+        title: manualText?.title || '',
+        body: manualText?.body || '',
+        bodyTop: manualText?.title || '',
+        bodyBottom: manualText?.body || '',
         layout: 'dark',
         needsImage: mode === 'composed',
       };
@@ -1726,7 +1778,13 @@ const CarouselGenerator: React.FC = () => {
           });
         }
       } else {
-        void regenerateCardTextOnly(newIndex);
+        // For solid mode with manual text, just set the text (no regeneration needed)
+        if (manualText?.title || manualText?.body) {
+          // Already set above, just show success
+          toast({ title: 'Card de texto criado!' });
+        } else {
+          void regenerateCardTextOnly(newIndex);
+        }
       }
     }, 120);
   };
@@ -3549,7 +3607,7 @@ FORBIDDEN:
                         style={{ backgroundColor: 'rgba(20,20,30,0.97)', borderColor: 'rgba(255,255,255,0.1)' }}
                       >
                         <button
-                          onClick={() => addOneMoreCard('composed')}
+                          onClick={() => { setShowAddCardMenu(false); setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false }); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
                           <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
@@ -3561,7 +3619,7 @@ FORBIDDEN:
                           </div>
                         </button>
                         <button
-                          onClick={() => addOneMoreCard('solid')}
+                          onClick={() => { setShowAddCardMenu(false); setAddCardModal({ open: true, cardType: 'solid', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false }); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
                           <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
@@ -3984,7 +4042,7 @@ FORBIDDEN:
               {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                 <>
                   <div className="w-px h-5 bg-white/10" />
-                  <button data-tour="btn-add" onClick={addCard} disabled={isGuest}
+                  <button data-tour="btn-add" onClick={() => setShowAddCardMenu(true)} disabled={isGuest}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                     style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
                     <Plus className="h-3.5 w-3.5" /> Adicionar Card
@@ -4361,7 +4419,132 @@ FORBIDDEN:
         })()}
       </AnimatePresence>
 
-      {/* Gallery picker for face upload mode */}
+      {/* ===== ADD CARD TEXT MODE MODAL ===== */}
+      <AnimatePresence>
+        {addCardModal.open && (
+          <motion.div
+            key="add-card-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            onClick={() => setAddCardModal(prev => ({ ...prev, open: false }))}>
+            <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative rounded-2xl overflow-hidden shadow-2xl w-[380px] max-w-[95vw]"
+              style={{ backgroundColor: 'rgba(20,20,28,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)' }}
+              onClick={(e) => e.stopPropagation()}>
+              
+              <div className="px-5 pt-5 pb-3">
+                <p className="text-white/50 text-[11px] font-medium uppercase tracking-wider">
+                  Novo Card {addCardModal.cardType === 'composed' ? 'Composto' : 'Sólido'}
+                </p>
+                <p className="text-white text-sm font-semibold mt-1">
+                  {addCardModal.step === 'text-mode' ? 'Como definir o texto?' : addCardModal.step === 'manual' ? 'Texto do card' : 'Texto gerado pela IA'}
+                </p>
+              </div>
+
+              {/* Step: text-mode selection */}
+              {addCardModal.step === 'text-mode' && (
+                <div className="flex flex-col px-3 pb-4 gap-1.5">
+                  <button
+                    onClick={() => { generateAddCardAutoText(); }}
+                    disabled={addCardModal.generatingAutoText}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all border"
+                    style={{ borderColor: 'rgba(139,92,246,0.2)', backgroundColor: 'rgba(139,92,246,0.06)' }}>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                      {addCardModal.generatingAutoText ? <Loader2 className="h-4 w-4 text-purple-400 animate-spin" /> : <Wand2 className="h-4 w-4 text-purple-400" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Texto automático</p>
+                      <p className="text-[11px] text-white/40">A IA sugere o conteúdo para aprovação</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setAddCardModal(prev => ({ ...prev, step: 'manual' }))}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all border"
+                    style={{ borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                      <Type className="h-4 w-4 text-white/60" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white/90">Texto manual</p>
+                      <p className="text-[11px] text-white/40">Você define título e corpo</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Step: manual text input */}
+              {addCardModal.step === 'manual' && (
+                <div className="px-4 pb-4 space-y-3">
+                  <div>
+                    <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1 block">Título</label>
+                    <input
+                      value={addCardModal.manualText.title}
+                      onChange={(e) => setAddCardModal(prev => ({ ...prev, manualText: { ...prev.manualText, title: e.target.value } }))}
+                      placeholder="Título do card..."
+                      className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-lg outline-none focus:border-white/15 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1 block">Corpo</label>
+                    <textarea
+                      value={addCardModal.manualText.body}
+                      onChange={(e) => setAddCardModal(prev => ({ ...prev, manualText: { ...prev.manualText, body: e.target.value } }))}
+                      placeholder="Conteúdo do card..."
+                      className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-lg resize-none outline-none focus:border-white/15 transition-colors min-h-[80px]"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setAddCardModal(prev => ({ ...prev, step: 'text-mode' }))}
+                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors">
+                      Voltar
+                    </button>
+                    <button
+                      onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.manualText)}
+                      disabled={!addCardModal.manualText.title.trim() && !addCardModal.manualText.body.trim()}
+                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors disabled:opacity-40"
+                      style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.8), rgba(99,102,241,0.8))' }}>
+                      Gerar card
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step: auto text preview */}
+              {addCardModal.step === 'auto-preview' && addCardModal.autoText && (
+                <div className="px-4 pb-4 space-y-3">
+                  <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <p className="text-sm font-semibold text-white/90">{addCardModal.autoText.title}</p>
+                    {addCardModal.autoText.body && <p className="text-xs text-white/50 leading-relaxed">{addCardModal.autoText.body}</p>}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => generateAddCardAutoText()}
+                      disabled={addCardModal.generatingAutoText}
+                      className="flex items-center justify-center gap-1.5 flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">
+                      {addCardModal.generatingAutoText ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                      Gerar outro
+                    </button>
+                    <button
+                      onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.autoText!)}
+                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors"
+                      style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.8), rgba(99,102,241,0.8))' }}>
+                      Aprovar e gerar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <GalleryPicker
         open={faceGalleryOpen}
         onClose={() => setFaceGalleryOpen(false)}

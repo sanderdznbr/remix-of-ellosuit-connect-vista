@@ -1866,14 +1866,54 @@ const CarouselGenerator: React.FC = () => {
   const generateStoriesImage = async () => {
     if (!carouselData?.cards[activeCardIndex]?.imageUrl) return;
     const sourceImage = carouselData.cards[activeCardIndex].imageUrl!;
+    const card = carouselData.cards[activeCardIndex];
     setGeneratingStories(true);
     setStoriesImageUrl(null);
     try {
+      // Build a fresh generation prompt for 9:16 Stories format
+      // We send the original image as a STYLE reference (not editSourceImage)
+      // so the AI creates a new composition adapted to vertical format
+      const cardTitle = card.title || '';
+      const cardBody = card.body || card.subtitle || card.bodyTop || '';
+      const cleanTopic = topic.split('\n')[0].trim();
+
+      const storiesPrompt = `Generate a BRAND NEW professional editorial image for Instagram Stories format.
+
+DIMENSIONS: 9:16 VERTICAL portrait (1080x1920px). The image MUST be taller than wide.
+
+CONTENT TO REPRODUCE:
+- Theme: "${cleanTopic}"
+${cardTitle ? `- Title text: "${cardTitle}"` : ''}
+${cardBody ? `- Body text: "${cardBody}"` : ''}
+
+CRITICAL LAYOUT RULES FOR 9:16 VERTICAL FORMAT:
+1. ALL people/faces MUST be FULLY VISIBLE — heads, faces, and bodies must be COMPLETELY inside the frame. NEVER crop heads or faces at the edges.
+2. Position people in the CENTER of the frame with generous margins on ALL sides (top, bottom, left, right).
+3. Text must be SMALLER than in a 4:5 post — use about 60-70% of the text size you'd use for a square post.
+4. Place text in the LOWER THIRD of the image, leaving the upper area for the person/visual.
+5. All text must have comfortable padding from edges (at least 80px margins on all sides).
+6. The composition must feel NATIVE to Stories — vertical, immersive, full-bleed.
+7. Keep the EXACT same visual style, color palette, typography style, and aesthetic as the reference.
+8. The result should look like the same designer created both the original post and this Stories version.
+
+PROIBIDO:
+- NÃO corte rostos ou cabeças. Toda pessoa deve estar 100% visível.
+- NÃO amplie/zoom a imagem original. Crie uma nova composição vertical.
+- NÃO coloque texto fora dos limites. Margens de segurança de 80px.
+- NÃO use texto grande demais. Adapte o tamanho para o formato vertical.`;
+
+      const faceRefs = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      // Also use the cover image as face ref if it has a person
+      const allFaceRefs = faceRefs.length > 0 ? faceRefs : [sourceImage];
+
       const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
         body: {
-          prompt: `Adapt this image to Stories format (9:16 vertical, 1080x1920px). Keep the EXACT same visual content, style, colors, text, branding, and composition. Simply reframe and extend the image vertically to fill the 9:16 aspect ratio. Do NOT crop or remove any important elements. Keep all text readable and centered. The result must look like the same post adapted for Instagram Stories.`,
-          editSourceImage: sourceImage,
-          faceReferenceUrls: referenceImages.filter(r => r.category === 'face').map(r => r.url),
+          prompt: storiesPrompt,
+          // Send as style reference, NOT editSourceImage
+          styleReferenceUrls: [sourceImage],
+          faceReferenceUrls: allFaceRefs,
+          faceGender,
+          negativePrompt: 'cropped heads, cut off faces, zoomed in, text outside borders, oversized text',
         },
       });
       if (error) throw error;
@@ -3857,16 +3897,20 @@ const CarouselGenerator: React.FC = () => {
 
             {/* Stories preview modal */}
             {showStoriesPreview && storiesImageUrl && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80" onClick={() => setShowStoriesPreview(false)}>
-                <div className="relative flex flex-col items-center gap-4 p-4" onClick={(e) => e.stopPropagation()}>
-                  <div className="rounded-2xl overflow-hidden border border-white/10" style={{ width: 270, height: 480 }}>
-                    <img src={storiesImageUrl} alt="Stories" className="w-full h-full object-cover" />
+              <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4" onClick={() => setShowStoriesPreview(false)}>
+                <div className="relative flex flex-col items-center gap-4 max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+                  <div className="rounded-2xl overflow-hidden border border-white/10" style={{ width: Math.min(270, window.innerWidth - 48), height: Math.min(480, (window.innerHeight * 0.7)) }}>
+                    <img src={storiesImageUrl} alt="Stories" className="w-full h-full object-contain bg-black" />
                   </div>
                   <div className="flex gap-2">
                     <button onClick={downloadStoriesImage}
                       className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-medium text-white border transition-colors"
                       style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
                       <Download className="h-3.5 w-3.5" /> Baixar Stories
+                    </button>
+                    <button onClick={() => { setShowStoriesPreview(false); generateStoriesImage(); }}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium text-white/70 border border-white/10 hover:bg-white/5 transition-colors">
+                      <RotateCcw className="h-3.5 w-3.5" /> Regenerar
                     </button>
                     <button onClick={() => setShowStoriesPreview(false)}
                       className="px-4 py-2.5 rounded-xl text-xs font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors">

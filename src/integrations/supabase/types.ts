@@ -4744,7 +4744,10 @@ export type Database = {
           company_id: string | null
           created_at: string
           description: string
+          email: string | null
           id: string
+          message: string | null
+          name: string | null
           priority: string
           responded_at: string | null
           responded_by: string | null
@@ -4753,13 +4756,17 @@ export type Database = {
           subject: string
           updated_at: string
           user_id: string
+          whatsapp: string | null
         }
         Insert: {
           category?: string | null
           company_id?: string | null
           created_at?: string
           description: string
+          email?: string | null
           id?: string
+          message?: string | null
+          name?: string | null
           priority?: string
           responded_at?: string | null
           responded_by?: string | null
@@ -4768,13 +4775,17 @@ export type Database = {
           subject: string
           updated_at?: string
           user_id: string
+          whatsapp?: string | null
         }
         Update: {
           category?: string | null
           company_id?: string | null
           created_at?: string
           description?: string
+          email?: string | null
           id?: string
+          message?: string | null
+          name?: string | null
           priority?: string
           responded_at?: string | null
           responded_by?: string | null
@@ -4783,6 +4794,7 @@ export type Database = {
           subject?: string
           updated_at?: string
           user_id?: string
+          whatsapp?: string | null
         }
         Relationships: [
           {

@@ -36,8 +36,15 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
             : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]'
         }`}
       >
-        <p className={`text-sm font-semibold ${contentMode === 'single-post' ? 'text-purple-300' : 'text-white/60'}`}>Post Único</p>
-        <p className="text-xs text-white/30 mt-0.5">1 imagem · 1080×1350</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className={`text-sm font-semibold ${contentMode === 'single-post' ? 'text-purple-300' : 'text-white/60'}`}>Post Único</p>
+            <p className="text-xs text-white/30 mt-0.5">1 imagem · 1080×1350</p>
+          </div>
+          {guestMode && (
+            <span className="px-2 py-0.5 rounded-md bg-green-500/15 text-green-400 text-[10px] font-bold border border-green-500/20">1 TESTE GRÁTIS</span>
+          )}
+        </div>
       </button>
 
       {/* Carousel option */}
@@ -60,10 +67,12 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
             <div>
               <p className={`text-sm font-semibold ${contentMode === 'carousel' && !guestMode ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
               <p className="text-xs text-white/30 mt-0.5">
-                {guestMode ? 'Crie uma conta para gerar carrosséis' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : '2–10 slides'}
+                {guestMode ? 'Recurso PRO' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : '2–10 slides'}
               </p>
             </div>
-            {guestMode && <Lock className="w-4 h-4 text-white/20" />}
+            {guestMode && (
+              <span className="px-2 py-0.5 rounded-md bg-yellow-500/15 text-yellow-400 text-[10px] font-bold border border-yellow-500/20">PRO</span>
+            )}
           </div>
         </button>
 

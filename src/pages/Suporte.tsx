@@ -1,15 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Mail, MessageSquare, Send, CheckCircle, Headphones } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Send, CheckCircle, Headphones, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
+import '@/styles/carousel-loader.css';
+
+const TYPING_PHRASES = [
+  'Estamos aqui para te trazer a melhor experiência',
+  'Seu sucesso é a nossa prioridade',
+  'Conte com a gente para qualquer dúvida',
+  'Suporte humano, rápido e eficiente',
+];
+
+const useTypeAndErase = (phrases: string[], typingSpeed = 60, erasingSpeed = 30, pauseMs = 2000) => {
+  const [text, setText] = useState('');
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const current = phrases[phraseIndex];
+    if (isTyping) {
+      if (text.length < current.length) {
+        timeoutRef.current = setTimeout(() => setText(current.slice(0, text.length + 1)), typingSpeed);
+      } else {
+        timeoutRef.current = setTimeout(() => setIsTyping(false), pauseMs);
+      }
+    } else {
+      if (text.length > 0) {
+        timeoutRef.current = setTimeout(() => setText(text.slice(0, -1)), erasingSpeed);
+      } else {
+        setPhraseIndex((phraseIndex + 1) % phrases.length);
+        setIsTyping(true);
+      }
+    }
+    return () => clearTimeout(timeoutRef.current);
+  }, [text, isTyping, phraseIndex, phrases, typingSpeed, erasingSpeed, pauseMs]);
+
+  return text;
+};
 
 const Suporte: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', whatsapp: '', subject: '', message: '' });
+  const typedText = useTypeAndErase(TYPING_PHRASES);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,127 +82,129 @@ const Suporte: React.FC = () => {
     }
   };
 
+  const inputStyle = {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.07)',
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Header */}
       <header className="sticky top-0 z-50 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', backgroundColor: 'rgba(10,10,15,0.9)', backdropFilter: 'blur(20px)' }}>
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors cursor-pointer">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+          <button onClick={() => navigate('/')} className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors cursor-pointer text-sm">
             <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
-          <span className="text-white/80 font-semibold text-sm">Suporte</span>
           <div className="w-16" />
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
-            <Headphones className="w-8 h-8" style={{ color: '#9B6BFF' }} />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-3">Central de Suporte</h1>
-          <p className="text-white/40 text-base max-w-md mx-auto">Estamos aqui para ajudar. Entre em contato por WhatsApp ou preencha o formulário abaixo.</p>
-        </motion.div>
+      <div className="max-w-7xl mx-auto px-6 py-12 lg:py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center min-h-[70vh]">
 
-        {/* Contact card */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="rounded-2xl p-6 mb-10 border" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a href="https://wa.me/5541989015612" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-white/[0.04]" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(34,197,94,0.15)' }}>
-                <MessageSquare className="w-5 h-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-white/80 text-sm font-medium">WhatsApp</p>
-                <p className="text-white/40 text-xs">(41) 98901-5612</p>
-              </div>
-            </a>
-            <a href="tel:+5541989015612"
-              className="flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-white/[0.04]" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.15)' }}>
-                <Phone className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-white/80 text-sm font-medium">Telefone</p>
-                <p className="text-white/40 text-xs">+55 41 98901-5612</p>
-              </div>
-            </a>
-            <a href="mailto:suporte@ellosuit.com"
-              className="flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-white/[0.04]" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                <Mail className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-white/80 text-sm font-medium">E-mail</p>
-                <p className="text-white/40 text-xs">suporte@ellosuit.com</p>
-              </div>
-            </a>
-          </div>
-        </motion.div>
-
-        {/* Form */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="rounded-2xl p-8 border" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-          {sent ? (
-            <div className="text-center py-12">
-              <CheckCircle className="w-14 h-14 mx-auto mb-4 text-green-400" />
-              <h3 className="text-white text-lg font-bold mb-2">Mensagem enviada!</h3>
-              <p className="text-white/40 text-sm mb-6">Retornaremos em breve. Obrigado pelo contato.</p>
-              <button onClick={() => { setSent(false); setForm({ name: '', email: '', whatsapp: '', subject: '', message: '' }); }}
-                className="text-sm text-purple-400 hover:text-purple-300 cursor-pointer">Enviar outra mensagem</button>
+          {/* LEFT — Animation + typing text */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center lg:items-start"
+          >
+            {/* Carousel loader animation */}
+            <div className="carousel-loader-wrapper mb-10" style={{ width: '200px', height: '200px' }}>
+              <div className="carousel-loader-spinner" />
+              <Headphones className="w-12 h-12 text-white/60 z-[1]" />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <h3 className="text-white text-lg font-semibold mb-1">Formulário de contato</h3>
-              <p className="text-white/30 text-sm mb-4">Campos com * são obrigatórios</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* Typing text */}
+            <div className="text-center lg:text-left">
+              <h1 className="text-3xl lg:text-4xl font-bold text-white mb-4 leading-tight" style={{ minHeight: '5rem' }}>
+                {typedText}
+                <span className="inline-block w-[2px] h-8 ml-1 bg-purple-400 animate-pulse align-middle" />
+              </h1>
+              <p className="text-white/30 text-sm max-w-sm">
+                Nossa equipe está disponível para te ajudar com qualquer questão sobre a plataforma.
+              </p>
+            </div>
+
+            {/* WhatsApp quick button */}
+            <a href="https://wa.me/5541989015612" target="_blank" rel="noopener noreferrer"
+              className="mt-8 flex items-center gap-3 px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02]"
+              style={{ backgroundColor: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80' }}>
+              <MessageSquare className="w-5 h-5" />
+              Falar pelo WhatsApp
+              <ExternalLink className="w-3.5 h-3.5 opacity-50" />
+            </a>
+            <span className="mt-2 text-white/20 text-xs">+55 41 98901-5612</span>
+          </motion.div>
+
+          {/* RIGHT — Form */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.15 }}
+            className="rounded-2xl p-7 lg:p-9 border"
+            style={{ backgroundColor: 'rgba(255,255,255,0.015)', borderColor: 'rgba(255,255,255,0.06)' }}
+          >
+            {sent ? (
+              <div className="text-center py-16">
+                <CheckCircle className="w-14 h-14 mx-auto mb-4 text-green-400" />
+                <h3 className="text-white text-lg font-bold mb-2">Mensagem enviada!</h3>
+                <p className="text-white/40 text-sm mb-6">Retornaremos em breve. Obrigado pelo contato.</p>
+                <button onClick={() => { setSent(false); setForm({ name: '', email: '', whatsapp: '', subject: '', message: '' }); }}
+                  className="text-sm text-purple-400 hover:text-purple-300 cursor-pointer">Enviar outra mensagem</button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="mb-2">
+                  <h3 className="text-white text-base font-semibold">Envie uma mensagem</h3>
+                  <p className="text-white/25 text-xs mt-1">Responderemos o mais rápido possível.</p>
+                </div>
+
                 <div>
-                  <label className="text-white/50 text-xs font-medium mb-1.5 block">Nome *</label>
+                  <label className="text-white/40 text-[11px] font-medium mb-1 block">Nome *</label>
                   <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} maxLength={200}
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white/90 outline-none transition-all focus:ring-1"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', focusRingColor: '#7B50DC' } as any}
-                    placeholder="Seu nome" />
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white/90 outline-none transition-all focus:border-purple-500/40 placeholder:text-white/15"
+                    style={inputStyle} placeholder="Seu nome" />
                 </div>
-                <div>
-                  <label className="text-white/50 text-xs font-medium mb-1.5 block">E-mail *</label>
-                  <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} maxLength={255}
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white/90 outline-none transition-all focus:ring-1"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' } as any}
-                    placeholder="seu@email.com" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-white/40 text-[11px] font-medium mb-1 block">E-mail *</label>
+                    <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} maxLength={255}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm text-white/90 outline-none transition-all focus:border-purple-500/40 placeholder:text-white/15"
+                      style={inputStyle} placeholder="seu@email.com" />
+                  </div>
+                  <div>
+                    <label className="text-white/40 text-[11px] font-medium mb-1 block">WhatsApp</label>
+                    <input type="text" value={form.whatsapp} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} maxLength={20}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm text-white/90 outline-none transition-all focus:border-purple-500/40 placeholder:text-white/15"
+                      style={inputStyle} placeholder="(00) 00000-0000" />
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                 <div>
-                  <label className="text-white/50 text-xs font-medium mb-1.5 block">WhatsApp</label>
-                  <input type="text" value={form.whatsapp} onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))} maxLength={20}
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white/90 outline-none transition-all focus:ring-1"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' } as any}
-                    placeholder="(00) 00000-0000" />
-                </div>
-                <div>
-                  <label className="text-white/50 text-xs font-medium mb-1.5 block">Assunto *</label>
+                  <label className="text-white/40 text-[11px] font-medium mb-1 block">Assunto *</label>
                   <input type="text" value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} maxLength={300}
-                    className="w-full px-4 py-3 rounded-xl text-sm text-white/90 outline-none transition-all focus:ring-1"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' } as any}
-                    placeholder="Assunto da mensagem" />
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white/90 outline-none transition-all focus:border-purple-500/40 placeholder:text-white/15"
+                    style={inputStyle} placeholder="Ex: Dúvida sobre planos" />
                 </div>
-              </div>
-              <div>
-                <label className="text-white/50 text-xs font-medium mb-1.5 block">Mensagem *</label>
-                <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} maxLength={5000} rows={5}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white/90 outline-none transition-all focus:ring-1 resize-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' } as any}
-                  placeholder="Descreva como podemos ajudar..." />
-              </div>
-              <button type="submit" disabled={loading}
-                className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50 cursor-pointer"
-                style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
-                {loading ? 'Enviando...' : <><Send className="w-4 h-4" /> Enviar mensagem</>}
-              </button>
-            </form>
-          )}
-        </motion.div>
+
+                <div>
+                  <label className="text-white/40 text-[11px] font-medium mb-1 block">Mensagem *</label>
+                  <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} maxLength={5000} rows={4}
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white/90 outline-none transition-all focus:border-purple-500/40 resize-none placeholder:text-white/15"
+                    style={inputStyle} placeholder="Como podemos ajudar?" />
+                </div>
+
+                <button type="submit" disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 cursor-pointer mt-2"
+                  style={{ backgroundColor: '#7B50DC' }}>
+                  {loading ? 'Enviando...' : <><Send className="w-4 h-4" /> Enviar</>}
+                </button>
+              </form>
+            )}
+          </motion.div>
+        </div>
       </div>
     </div>
   );

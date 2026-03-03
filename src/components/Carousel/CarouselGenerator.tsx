@@ -62,6 +62,7 @@ import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepSpeed from './wizard/StepSpeed';
 import StepCardTexts from './wizard/StepCardTexts';
+import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -161,8 +162,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
-  const SIMPLE_STEPS = ['Tema', 'Estilo', 'Formato', 'Rosto', 'Logo', 'Velocidade'];
-  const ADVANCED_STEPS = ['Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
 
@@ -3038,8 +3039,10 @@ FORBIDDEN:
     );
   };
 
-  // ==================== UI ====================
-  const canProceed = wizardStep === 0 ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : true;
+  // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
+  const currentStepName = WIZARD_STEPS[wizardStep] || '';
+
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : true;
 
   // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
@@ -3049,8 +3052,7 @@ FORBIDDEN:
     }
   }, [wizardStep, speakStep, showWelcome, carouselData, loadingCarousel]);
 
-  // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
-  const currentStepName = WIZARD_STEPS[wizardStep] || '';
+
   useEffect(() => {
     if (wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) {
       const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
@@ -3194,44 +3196,29 @@ FORBIDDEN:
               {/* LEFT column: centered content */}
               <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="w-full max-w-[520px] space-y-6">
-                  {/* Mode toggle: Simple / Advanced */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center justify-center gap-2 flex-1">
-                      {WIZARD_STEPS.map((stepName, i) => {
-                        // Hide Cores/Fontes dots when marketplace full-bleed style is active (advanced)
+                  {/* Step dots (hide on Modo step) */}
+                  {currentStepName !== 'Modo' && (
+                  <div className="flex items-center justify-center gap-2">
+                      {WIZARD_STEPS.filter(s => s !== 'Modo').map((stepName, i) => {
+                        const realIndex = i + 1; // offset by 1 since Modo is index 0
                         if ((stepName === 'Cores' || stepName === 'Fontes') && isFullBleedMarketplace) return null;
                         return (
-                          <button key={i} onClick={() => {
-                            if (i <= wizardStep) setWizardStep(i);
+                          <button key={realIndex} onClick={() => {
+                            if (realIndex <= wizardStep) setWizardStep(realIndex);
                           }}
                             className="transition-all"
                             style={{
-                              width: i === wizardStep ? 24 : 6,
+                              width: realIndex === wizardStep ? 24 : 6,
                               height: 6,
                               borderRadius: 3,
-                              backgroundColor: i === wizardStep ? '#9B6BFF' : i < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
-                              cursor: i <= wizardStep ? 'pointer' : 'default',
+                              backgroundColor: realIndex === wizardStep ? '#9B6BFF' : realIndex < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
+                              cursor: realIndex <= wizardStep ? 'pointer' : 'default',
                             }}
                           />
                         );
                       })}
-                    </div>
-                    <button
-                      onClick={() => {
-                        const newMode = wizardMode === 'simple' ? 'advanced' : 'simple';
-                        setWizardMode(newMode);
-                        setWizardStep(0);
-                      }}
-                      className="ml-3 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5"
-                      style={{
-                        backgroundColor: wizardMode === 'advanced' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${wizardMode === 'advanced' ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                        color: wizardMode === 'advanced' ? '#A78BFA' : 'rgba(255,255,255,0.4)',
-                      }}
-                    >
-                      {wizardMode === 'simple' ? '⚡ Simples' : '🎛️ Avançado'}
-                    </button>
                   </div>
+                  )}
 
                    {/* Step content with entrance animation */}
                   <AnimatePresence mode="wait">
@@ -3242,6 +3229,9 @@ FORBIDDEN:
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                     >
+                    {currentStepName === 'Modo' && (
+                      <StepMode wizardMode={wizardMode} setWizardMode={setWizardMode} />
+                    )}
                     {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
@@ -3358,7 +3348,7 @@ FORBIDDEN:
                   {/* Navigation buttons */}
                   <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                     <button onClick={() => {
-                      if (wizardStep === 0) { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
+                      if (currentStepName === 'Modo') { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
                       else {
                         let prev = wizardStep - 1;
                         const prevName = WIZARD_STEPS[prev];

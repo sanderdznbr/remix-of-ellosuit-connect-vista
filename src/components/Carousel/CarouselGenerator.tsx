@@ -1699,9 +1699,29 @@ const CarouselGenerator: React.FC = () => {
     if (newIndex < 0) return;
     setActiveCardIndex(newIndex);
 
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       if (mode === 'composed') {
-        void regenerateCard(newIndex, true);
+        let success = await regenerateCard(newIndex, true);
+
+        if (!success) {
+          await new Promise((r) => setTimeout(r, 900));
+          success = await regenerateCard(newIndex, true);
+        }
+
+        if (!success) {
+          setCarouselData((prev) => {
+            if (!prev || !prev.cards[newIndex]) return prev;
+            const cards = [...prev.cards];
+            cards.splice(newIndex, 1);
+            return { ...prev, cards };
+          });
+          setActiveCardIndex((prev) => Math.max(0, Math.min(prev, newIndex - 1)));
+          toast({
+            title: 'Falha ao gerar o novo card',
+            description: 'Tente novamente em alguns segundos.',
+            variant: 'destructive',
+          });
+        }
       } else {
         void regenerateCardTextOnly(newIndex);
       }
@@ -2174,12 +2194,12 @@ FORBIDDEN:
     if (activeCardIndex >= cards.length) setActiveCardIndex(cards.length - 1);
   };
 
-  const regenerateCard = async (cardIndex: number, forceImageRequired = false) => {
+  const regenerateCard = async (cardIndex: number, forceImageRequired = false): Promise<boolean> => {
     const currentData = carouselDataRef.current;
-    if (!currentData) return;
+    if (!currentData) return false;
     const carouselData = currentData;
     const card = carouselData.cards[cardIndex];
-    if (!card) return;
+    if (!card) return false;
     setRegeneratingCard(cardIndex);
     try {
       // Gather existing card summaries so the AI avoids repeating content
@@ -2413,8 +2433,10 @@ FORBIDDEN:
       }
 
       toast({ title: '✨ Card regenerado!' });
+      return true;
     } catch (err: any) {
       toast({ title: 'Erro ao regenerar', description: err.message, variant: 'destructive' });
+      return false;
     } finally {
       setRegeneratingCard(null);
     }

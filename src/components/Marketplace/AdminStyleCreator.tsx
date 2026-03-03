@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Upload, Save, Loader2, X, Image as ImageIcon,
-  Eye, EyeOff, Star, StarOff, Pencil, ChevronDown, ChevronUp,
+  Eye, EyeOff, Star, StarOff, Pencil, ChevronDown, ChevronUp, Download,
 } from 'lucide-react';
 
 interface MarketplaceStyleRow {

@@ -146,6 +146,7 @@ const CarouselGenerator: React.FC = () => {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
   const isCardLocked = (index: number) => isGuest && index > 0 && !!carouselData;
+  const [showLoginGate, setShowLoginGate] = useState(false);
 
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
@@ -3404,9 +3405,9 @@ FORBIDDEN:
                     {currentStepName === 'Formato' && (
                       <StepCardCount
                         cardCount={cardCount}
-                        setCardCount={setCardCount}
-                        contentMode={contentMode}
-                        setContentMode={(mode) => {
+                        setCardCount={isGuest ? () => {} : setCardCount}
+                        contentMode={isGuest ? 'single-post' : contentMode}
+                        setContentMode={isGuest ? () => {} : (mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
                           else if (cardCount < 2) { setCardCount(5); }
@@ -3415,6 +3416,7 @@ FORBIDDEN:
                         faceCardCount={faceCardCount}
                         setFaceCardCount={setFaceCardCount}
                         wizardMode={wizardMode}
+                        guestMode={isGuest}
                       />
                     )}
                     {currentStepName === 'Fotos' && (
@@ -3572,6 +3574,10 @@ FORBIDDEN:
                       </div>
                     ) : (
                       <button onClick={() => {
+                          if (isGuest) {
+                            setShowLoginGate(true);
+                            return;
+                          }
                           if (cardCount === 1) {
                             setContentMode('single-post');
                             setImageCardCount(1);
@@ -3583,7 +3589,7 @@ FORBIDDEN:
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-                        <Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}
+                        {isGuest ? <><Lock className="h-4 w-4" /> Criar conta para gerar</> : <><Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}</>}
                       </button>
                     )}
                   </div>
@@ -4892,6 +4898,46 @@ FORBIDDEN:
       />
 
       {/* Tour removed */}
+
+      {/* Login Gate Modal */}
+      {showLoginGate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLoginGate(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-sm rounded-2xl overflow-hidden p-8 text-center"
+            style={{ backgroundColor: '#18181f', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ backgroundColor: 'rgba(123, 80, 220, 0.15)' }}>
+              <Lock className="w-7 h-7" style={{ color: '#9B6BFF' }} />
+            </div>
+            <h2 className="text-white text-lg font-bold mb-2">Crie sua conta gratuita</h2>
+            <p className="text-white/40 text-sm mb-6 leading-relaxed">
+              Para gerar conteúdo com IA, você precisa criar uma conta. É rápido e gratuito!
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => { setShowLoginGate(false); navigate('/register'); }}
+                className="w-full py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all"
+                style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+              >
+                Criar conta grátis
+              </button>
+              <button
+                onClick={() => { setShowLoginGate(false); navigate('/auth'); }}
+                className="w-full py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all border"
+                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                Já tenho conta — Entrar
+              </button>
+            </div>
+            <button onClick={() => setShowLoginGate(false)} className="absolute top-3 right-3 p-1 text-white/30 hover:text-white/60 cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
+          </motion.div>
+        </div>
+      )}
       </>}
     </div>
   );

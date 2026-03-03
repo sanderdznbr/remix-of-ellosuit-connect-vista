@@ -44,13 +44,25 @@ const StepStyleSelect: React.FC<Props> = ({
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
-    fetchPurchasedStyles();
+    fetchAvailableStyles();
   }, [user]);
 
-  const fetchPurchasedStyles = async () => {
+  const fetchAvailableStyles = async () => {
     setLoading(true);
     try {
-      if (!user) { setLoading(false); return; }
+      if (!user) {
+        // Unauth users: show free styles from marketplace
+        const { data: freeStyles } = await supabase
+          .from('marketplace_styles')
+          .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions')
+          .eq('is_active', true)
+          .eq('is_free', true)
+          .order('sort_order', { ascending: true });
+        setPurchasedStyles((freeStyles as any[]) || []);
+        setLoading(false);
+        return;
+      }
+      // Auth users: show purchased styles
       const { data: purchased } = await supabase
         .from('purchased_styles')
         .select('style_id')
@@ -64,7 +76,7 @@ const StepStyleSelect: React.FC<Props> = ({
         .eq('is_active', true);
       setPurchasedStyles((styles as any[]) || []);
     } catch (err) {
-      console.error('Error fetching purchased styles:', err);
+      console.error('Error fetching styles:', err);
     } finally {
       setLoading(false);
     }
@@ -114,7 +126,9 @@ const StepStyleSelect: React.FC<Props> = ({
       {/* Header */}
       <div className="shrink-0 pb-3">
         <h2 className="text-xl font-bold text-white mb-1">Selecione o estilo</h2>
-        <p className="text-xs text-white/40">Selecione um estilo do Marketplace para continuar.</p>
+        <p className="text-xs text-white/40">
+          {user ? 'Selecione um estilo do Marketplace para continuar.' : 'Estilos gratuitos disponíveis para teste. Crie uma conta para acessar mais.'}
+        </p>
       </div>
 
       {/* Search + Filters */}
@@ -184,23 +198,25 @@ const StepStyleSelect: React.FC<Props> = ({
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-white/20 gap-2">
             <ShoppingBag className="w-8 h-8" />
-            <p className="text-xs">{searchQuery ? 'Nenhum estilo encontrado' : 'Nenhum estilo adquirido'}</p>
+            <p className="text-xs">{searchQuery ? 'Nenhum estilo encontrado' : user ? 'Nenhum estilo adquirido' : 'Nenhum estilo gratuito disponível'}</p>
           </div>
         )}
       </div>
 
-      {/* Marketplace button */}
-      <button
-        onClick={() => setShowMarketplace(true)}
-        className="shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-purple-500/30 bg-purple-500/[0.05] text-purple-300 hover:bg-purple-500/[0.1] transition-all text-xs font-medium cursor-pointer"
-      >
-        <ShoppingBag className="w-3.5 h-3.5" />
-        Explorar Marketplace
-      </button>
+      {/* Marketplace button - only for logged in users */}
+      {user && (
+        <button
+          onClick={() => setShowMarketplace(true)}
+          className="shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-purple-500/30 bg-purple-500/[0.05] text-purple-300 hover:bg-purple-500/[0.1] transition-all text-xs font-medium cursor-pointer"
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
+          Explorar Marketplace
+        </button>
+      )}
 
       {showMarketplace && (
         <MarketplacePopup
-          onClose={() => { setShowMarketplace(false); fetchPurchasedStyles(); }}
+          onClose={() => { setShowMarketplace(false); fetchAvailableStyles(); }}
           purchasedStyles={purchasedStyles}
         />
       )}

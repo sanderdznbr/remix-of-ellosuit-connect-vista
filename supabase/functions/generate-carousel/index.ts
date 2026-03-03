@@ -375,7 +375,7 @@ IMPORTANTE: Os imagePrompts devem descrever A IMAGEM COMPLETA com texto, tipogra
 
       const systemPrompt = `Você é um especialista em criação de carrosséis editoriais profissionais para Instagram no formato 1080x1350.
 
-Gere conteúdo para um carrossel de ${numCards} cards sobre o tópico fornecido.
+Gere conteúdo para um carrossel de EXATAMENTE ${numCards} cards sobre o tópico fornecido. VOCÊ DEVE retornar EXATAMENTE ${numCards} cards no array "cards" — nem mais, nem menos. Isso é OBRIGATÓRIO.
 
 IMPORTANTE: Gere o conteúdo EXCLUSIVAMENTE sobre o tópico fornecido pelo usuário. NÃO mencione a Ellosuit, ElloContent, @Ellocontent ou qualquer variação dessas marcas, nem qualquer outra plataforma ou ferramenta, a menos que o próprio tópico do usuário mencione explicitamente. O conteúdo deve ser 100% focado no tema solicitado.
 

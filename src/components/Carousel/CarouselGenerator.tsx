@@ -1165,8 +1165,8 @@ const CarouselGenerator: React.FC = () => {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+        // Send ALL preview images for maximum style fidelity
+        marketplaceRefUrls.push(...allPreviews);
       }
 
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
@@ -1561,9 +1561,8 @@ const CarouselGenerator: React.FC = () => {
             const origin = window.location.origin;
             const allPreviews = (activeMarketplaceStyle._previewImages as string[])
               .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-            if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-            if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-            if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+            // Send ALL preview images for maximum style fidelity
+            marketplaceRefUrls.push(...allPreviews);
           }
           
           const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
@@ -2051,11 +2050,11 @@ const CarouselGenerator: React.FC = () => {
         const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
         const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
         const marketplaceRefUrls: string[] = [];
-        if (isFullBleedStyle && activeMarketplaceStyle?._previewImages?.length) {
+        if (activeMarketplaceStyle?._previewImages?.length) {
           const origin = window.location.origin;
           const allPreviews = (activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-          if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-          if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+          // Send ALL preview images for maximum style fidelity
+          marketplaceRefUrls.push(...allPreviews);
         }
 
         // Use the cover image as style reference to maintain visual consistency

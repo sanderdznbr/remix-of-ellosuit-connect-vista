@@ -2878,6 +2878,7 @@ export type Database = {
           price_brl: number
           price_credits: number
           sort_order: number
+          strict_instructions: string | null
           style_config: Json
           tags: string[] | null
           updated_at: string
@@ -2894,6 +2895,7 @@ export type Database = {
           price_brl?: number
           price_credits?: number
           sort_order?: number
+          strict_instructions?: string | null
           style_config?: Json
           tags?: string[] | null
           updated_at?: string
@@ -2910,6 +2912,7 @@ export type Database = {
           price_brl?: number
           price_credits?: number
           sort_order?: number
+          strict_instructions?: string | null
           style_config?: Json
           tags?: string[] | null
           updated_at?: string

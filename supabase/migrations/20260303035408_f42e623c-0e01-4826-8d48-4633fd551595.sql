@@ -1,0 +1,1 @@
+ALTER TABLE public.marketplace_styles ADD COLUMN IF NOT EXISTS strict_instructions TEXT DEFAULT NULL;

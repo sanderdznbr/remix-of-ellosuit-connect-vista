@@ -1683,10 +1683,13 @@ const CarouselGenerator: React.FC = () => {
   const addOneMoreCard = async (mode: 'composed' | 'solid' = 'composed') => {
     setShowAddCardMenu(false);
 
-    let newIndex = -1;
+    const currentData = carouselDataRef.current;
+    if (!currentData) return;
+
+    const newIndex = currentData.cards.length;
+
     setCarouselData((prev) => {
       if (!prev) return prev;
-      newIndex = prev.cards.length;
       const newCard: CarouselCard = {
         type: 'content',
         title: '',
@@ -1697,7 +1700,6 @@ const CarouselGenerator: React.FC = () => {
       return { ...prev, cards: [...prev.cards, newCard] };
     });
 
-    if (newIndex < 0) return;
     setActiveCardIndex(newIndex);
 
     window.setTimeout(async () => {

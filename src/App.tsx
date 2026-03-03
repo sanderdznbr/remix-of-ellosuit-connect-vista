@@ -15,6 +15,7 @@ import PublicCarouselGenerator from './pages/PublicCarouselGenerator';
 import Pricing from './pages/Pricing';
 import Checkout from './pages/Checkout';
 import MarketplaceStyleDetail from './pages/MarketplaceStyleDetail';
+import Recursos from './pages/Recursos';
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/precos" element={<Pricing />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
+            <Route path="/recursos" element={<Recursos />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

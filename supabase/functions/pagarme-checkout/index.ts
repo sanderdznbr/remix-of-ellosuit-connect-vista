@@ -7,9 +7,9 @@ const corsHeaders = {
 
 // Plan pricing (cents)
 const PLANS: Record<string, { name: string; price: number; credits: number }> = {
-  starter: { name: 'Starter', price: 4900, credits: 40 },
-  pro: { name: 'Pro', price: 9700, credits: 100 },
-  growth: { name: 'Growth', price: 19700, credits: 250 },
+  starter: { name: 'Starter', price: 6700, credits: 50 },
+  pro: { name: 'Pro', price: 12700, credits: 120 },
+  growth: { name: 'Growth', price: 24700, credits: 300 },
 };
 
 function getPagarmeAuth(): string {

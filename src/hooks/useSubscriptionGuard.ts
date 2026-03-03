@@ -48,11 +48,12 @@ export function useSubscriptionGuard(): SubscriptionStatus {
           .single();
 
         if (!sub) {
+          // No subscription = no plan, not blocked (trial/onboarding)
           setState({
             loading: false,
             isBlocked: false,
-            status: 'free',
-            planType: 'free',
+            status: null,
+            planType: null,
             expiresAt: null,
             monthlyPrice: null,
           });

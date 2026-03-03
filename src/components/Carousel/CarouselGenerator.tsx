@@ -1684,9 +1684,8 @@ const CarouselGenerator: React.FC = () => {
     const updatedData = { ...carouselData, cards: updatedCards };
     setCarouselData(updatedData);
     setActiveCardIndex(newIndex);
-    // Auto-generate the new card
-    // Small delay to let state update, then trigger regeneration
-    setTimeout(() => regenerateCard(newIndex), 100);
+    // Auto-generate the new card with strict image requirement
+    setTimeout(() => { void regenerateCard(newIndex, true); }, 250);
   };
 
   // ===== GENERATE CAROUSEL FROM EXISTING COVER =====
@@ -2092,7 +2091,7 @@ FORBIDDEN:
     if (activeCardIndex >= cards.length) setActiveCardIndex(cards.length - 1);
   };
 
-  const regenerateCard = async (cardIndex: number) => {
+  const regenerateCard = async (cardIndex: number, forceImageRequired = false) => {
     if (!carouselData) return;
     const card = carouselData.cards[cardIndex];
     setRegeneratingCard(cardIndex);
@@ -2244,16 +2243,56 @@ FORBIDDEN:
       const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls, ...existingCardImages];
       
       try {
-        const generatedUrl = await generateImage({
-          prompt: buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
-          faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
-          styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
-          negativePrompt: negPrompt || undefined,
-        });
-        if (generatedUrl) {
-          newImageUrl = generatedUrl;
+        // Retry image generation with progressive fallback to avoid blank cards
+        const generationAttempts: Array<{
+          faceReferenceUrls?: string[];
+          styleReferenceUrls?: string[];
+          prompt: string;
+          negativePrompt?: string;
+        }> = [
+          {
+            prompt: buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+            negativePrompt: negPrompt || undefined,
+          },
+          {
+            prompt: buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+            negativePrompt: negPrompt || undefined,
+          },
+          {
+            prompt: buildImagePrompt(`${imgPrompt}. Manter identidade visual do carrossel sem copiar conteúdo textual de referências.`) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            styleReferenceUrls: undefined,
+            negativePrompt: negPrompt || undefined,
+          },
+        ];
+
+        for (let attempt = 0; attempt < generationAttempts.length; attempt++) {
+          const attemptConfig = generationAttempts[attempt];
+          try {
+            const generatedUrl = await generateImage(attemptConfig);
+            if (generatedUrl) {
+              newImageUrl = generatedUrl;
+              break;
+            }
+          } catch (attemptErr) {
+            console.warn(`Image generation attempt ${attempt + 1} failed for card ${cardIndex + 1}:`, attemptErr);
+          }
+          if (attempt < generationAttempts.length - 1) {
+            await new Promise(r => setTimeout(r, 1200));
+          }
         }
-      } catch { /* keep old image */ }
+      } catch (imgErr) {
+        console.warn('Image regeneration failed:', imgErr);
+      }
+
+      // For newly added cards, require image to be generated (avoid blank placeholder card)
+      if (forceImageRequired && !newImageUrl) {
+        throw new Error('Não consegui gerar a imagem deste novo card automaticamente. Tente novamente em alguns segundos.');
+      }
 
       // 3. Update card
       const newCards = [...carouselData.cards];

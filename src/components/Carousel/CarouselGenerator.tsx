@@ -1728,6 +1728,8 @@ const CarouselGenerator: React.FC = () => {
       // Generate text content for remaining cards
       // Prepare manual texts for cards (skip index 0 which is the cover)
       const hasManualTexts = coverCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
+      const coverTitle = coverCard.title || coverCard.bodyTop || '';
+      const coverBody = coverCard.body || coverCard.subtitle || '';
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
@@ -1738,6 +1740,9 @@ const CarouselGenerator: React.FC = () => {
           ...(hasManualTexts ? { manualCardTexts: coverCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          coverAlreadyExists: true,
+          existingCoverTitle: coverTitle,
+          existingCoverBody: coverBody,
         },
       });
       if (error) throw error;
@@ -1773,7 +1778,24 @@ const CarouselGenerator: React.FC = () => {
       for (let i = 1; i < updatedCards.length; i++) {
         const card = updatedCards[i];
         const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
-        let imgPrompt = `${cleanTopic}: ${cardDesc}`;
+        // Add variation instructions per card to avoid identical compositions
+        const variationHints = [
+          'close-up portrait composition',
+          'medium shot, slightly angled',
+          'wide compositional view',
+          'dynamic diagonal composition',
+          'centered symmetric layout',
+          'rule-of-thirds off-center',
+          'low angle dramatic perspective',
+          'high angle overview',
+        ];
+        const variation = variationHints[(i - 1) % variationHints.length];
+        // Alternate: some cards show the person, others are text-focused without people
+        const showPerson = faceRefUrls.length > 0 && (i % 3 !== 0); // Every 3rd content card: no person, text-only
+        let imgPrompt = `${cleanTopic}: ${cardDesc}. Composition: ${variation}.`;
+        if (!showPerson && faceRefUrls.length > 0) {
+          imgPrompt += ' This card should be TEXT-FOCUSED with abstract/editorial background — do NOT include any person or face.';
+        }
 
         if (isFullBleedStyle) {
           const isCta = card.type === 'cta' || i === updatedCards.length - 1;
@@ -1781,6 +1803,10 @@ const CarouselGenerator: React.FC = () => {
           cardTextParts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
           cardTextParts.push(`TEMA: "${cleanTopic}"`);
           cardTextParts.push(`SEM BORDAS: Full bleed.`);
+          cardTextParts.push(`COMPOSIÇÃO: ${variation}. Este é o card ${i + 1} de ${updatedCards.length} — deve ser DIFERENTE de todos os outros cards.`);
+          if (!showPerson && faceRefUrls.length > 0) {
+            cardTextParts.push(`ESTE CARD: layout editorial sem pessoa — fundo abstrato ou texturizado com texto em destaque.`);
+          }
           if (isCta) {
             cardTextParts.push(`CARD FINAL DE CTA (${i + 1} de ${updatedCards.length}).`);
             if (card.title) cardTextParts.push(`TÍTULO: "${card.title}"`);
@@ -1807,14 +1833,17 @@ const CarouselGenerator: React.FC = () => {
         const coverStyleRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];
         const capturedStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef].length > 0 ? [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef] : undefined;
 
+        // For text-only cards, don't send face references
+        const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
+
         imageFactories.push({
           index: i,
           factory: () => generateImage({
             prompt: buildImagePrompt(imgPrompt) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
-            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            faceReferenceUrls: cardFaceRefs,
             styleReferenceUrls: capturedStyleRefs,
             referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
-            negativePrompt: finalNegative,
+            negativePrompt: finalNegative + (!showPerson && faceRefUrls.length > 0 ? ', no people, no faces, no portraits' : ''),
           }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
         });
       }

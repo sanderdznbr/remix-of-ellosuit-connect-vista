@@ -1029,13 +1029,14 @@ const CarouselGenerator: React.FC = () => {
       try {
         const { data: styleData } = await supabase
           .from('marketplace_styles')
-          .select('id, name, preview_images, style_config')
+          .select('id, name, preview_images, style_config, strict_instructions')
           .eq('id', item.marketplace_style_id)
           .single();
         if (styleData?.style_config) {
           const config = styleData.style_config as any;
           config.id = styleData.id;
           config._previewImages = styleData.preview_images;
+          config._strictInstructions = (styleData as any).strict_instructions || null;
           setActiveMarketplaceStyle(config);
         } else {
           setActiveMarketplaceStyle(null);

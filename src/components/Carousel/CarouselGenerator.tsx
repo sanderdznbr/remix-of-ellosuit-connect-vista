@@ -278,6 +278,7 @@ const CarouselGenerator: React.FC = () => {
   const [generatingStories, setGeneratingStories] = useState(false);
   const [storiesImageUrl, setStoriesImageUrl] = useState<string | null>(null);
   const [showStoriesPreview, setShowStoriesPreview] = useState(false);
+  const [showAddCardMenu, setShowAddCardMenu] = useState(false);
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
   const skipCloudRef = useRef(false);
@@ -1676,16 +1677,80 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
-  const addOneMoreCard = async () => {
+  const addOneMoreCard = async (mode: 'composed' | 'solid' = 'composed') => {
     if (!carouselData) return;
+    setShowAddCardMenu(false);
     const newIndex = carouselData.cards.length;
     const newCard: CarouselCard = { type: 'content', title: '', body: '', layout: 'dark', needsImage: true };
     const updatedCards = [...carouselData.cards, newCard];
     const updatedData = { ...carouselData, cards: updatedCards };
     setCarouselData(updatedData);
     setActiveCardIndex(newIndex);
-    // Auto-generate the new card with strict image requirement
-    setTimeout(() => { void regenerateCard(newIndex, true); }, 250);
+    // Auto-generate the new card
+    if (mode === 'composed') {
+      // Full generation: text + photo with person/face references
+      setTimeout(() => { void regenerateCard(newIndex, true); }, 250);
+    } else {
+      // Solid: generate only text content, no AI image (use solid background)
+      setTimeout(() => { void regenerateCardTextOnly(newIndex); }, 250);
+    }
+  };
+
+  // ===== REGENERATE CARD TEXT ONLY (no image generation) =====
+  const regenerateCardTextOnly = async (cardIndex: number) => {
+    if (!carouselData) return;
+    setRegeneratingCard(cardIndex);
+    try {
+      const existingCardSummaries = carouselData.cards
+        .map((c, i) => {
+          if (i === cardIndex) return null;
+          const title = c.title || c.bodyTop || '';
+          const body = c.body || c.bodyBottom || '';
+          return title || body ? `Card ${i + 1}: ${title} ${body}`.slice(0, 120) : null;
+        })
+        .filter(Boolean);
+
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: {
+          action: 'generate-content',
+          topic: topic.trim(),
+          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+          cardCount: carouselData.cards.length,
+          imageCardIndices: [cardIndex],
+          ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
+          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          regenerateCardIndex: cardIndex,
+          existingCardSummaries,
+        },
+      });
+
+      let newBody = '';
+      let newBottomText = '';
+      if (!error && data?.success && data?.data?.cards) {
+        const contentCards = data.data.cards.filter((c: any) => c.type === 'content');
+        if (contentCards.length > 0) {
+          const src = contentCards[0];
+          newBody = src.bodyTop || src.body || '';
+          newBottomText = src.bodyBottom || '';
+        }
+      }
+
+      // Update card with text only — no image, solid background
+      const newCards = [...carouselData.cards];
+      newCards[cardIndex] = {
+        ...newCards[cardIndex],
+        bodyTop: newBody || 'Texto do card...',
+        bodyBottom: newBottomText,
+        imageUrl: undefined,
+        isAiImage: false,
+      };
+      setCarouselData({ ...carouselData, cards: newCards });
+      toast({ title: '✨ Card de texto criado!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar card', description: err.message, variant: 'destructive' });
+    } finally {
+      setRegeneratingCard(null);
+    }
   };
 
   // ===== GENERATE CAROUSEL FROM EXISTING COVER =====
@@ -3856,13 +3921,45 @@ FORBIDDEN:
                   <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
                 </button>
               )}
-              {/* Add +1 card */}
+              {/* Add +1 card with mode selector */}
               {!isGuest && carouselData.cards.length > 0 && (
-                <button onClick={addOneMoreCard}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
-                  style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                  <Plus className="h-3.5 w-3.5" /> +1 Card
-                </button>
+                <div className="relative">
+                  <button onClick={() => setShowAddCardMenu(!showAddCardMenu)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: showAddCardMenu ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)' }}>
+                    <Plus className="h-3.5 w-3.5" /> +1 Card
+                  </button>
+                  {showAddCardMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowAddCardMenu(false)} />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-56 rounded-xl p-1.5 shadow-xl border"
+                        style={{ backgroundColor: 'rgba(20,20,30,0.97)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <button
+                          onClick={() => addOneMoreCard('composed')}
+                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors">
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                            <User className="h-3.5 w-3.5 text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/90">Composto</p>
+                            <p className="text-[10px] text-white/40">Com foto e pessoa</p>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => addOneMoreCard('solid')}
+                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors">
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                            <Type className="h-3.5 w-3.5 text-purple-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/90">Sólido</p>
+                            <p className="text-[10px] text-white/40">Somente texto</p>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"

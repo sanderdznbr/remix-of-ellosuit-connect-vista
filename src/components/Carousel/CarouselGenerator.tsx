@@ -827,7 +827,7 @@ const CarouselGenerator: React.FC = () => {
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
-        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
+        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyle?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyle._strictInstructions}` : '') } : {}),
         ...(logoBrandColors.length > 0 && !isFullBleedMarketplace ? { brandColors: logoBrandColors } : {}),
       },
     });

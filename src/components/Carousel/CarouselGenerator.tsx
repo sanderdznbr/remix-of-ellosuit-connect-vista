@@ -1676,12 +1676,17 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
-  const addOneMoreCard = () => {
+  const addOneMoreCard = async () => {
     if (!carouselData) return;
+    const newIndex = carouselData.cards.length;
     const newCard: CarouselCard = { type: 'content', title: '', body: '', layout: 'dark', needsImage: true };
     const updatedCards = [...carouselData.cards, newCard];
-    setCarouselData({ ...carouselData, cards: updatedCards });
-    setActiveCardIndex(updatedCards.length - 1);
+    const updatedData = { ...carouselData, cards: updatedCards };
+    setCarouselData(updatedData);
+    setActiveCardIndex(newIndex);
+    // Auto-generate the new card
+    // Small delay to let state update, then trigger regeneration
+    setTimeout(() => regenerateCard(newIndex), 100);
   };
 
   // ===== GENERATE CAROUSEL FROM EXISTING COVER =====

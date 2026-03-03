@@ -161,29 +161,43 @@ const Recursos: React.FC = () => {
         .limit(20);
 
       if (data) {
-        // Collect all preview_images from marketplace styles (reference images)
-        const imgs: string[] = [];
-        (data as StylePreview[]).forEach((style) => {
-          if (style.preview_images && Array.isArray(style.preview_images)) {
-            style.preview_images.forEach((url) => {
-              if (url && typeof url === 'string') imgs.push(url);
-            });
-          }
+        const styles = data as StylePreview[];
+        // For each style, skip index 0 (cover) and collect only refs
+        const perStyle: string[][] = styles.map((s) => {
+          if (!s.preview_images || !Array.isArray(s.preview_images)) return [];
+          // Skip first image (cover), keep only reference images
+          return s.preview_images.slice(1).filter((u) => typeof u === 'string' && u.length > 0);
         });
-        setAllImages(imgs);
+
+        // Round-robin pick from different styles for variety
+        const picked: string[] = [];
+        const maxPicks = 20; // enough for 4 sections × 3 + gallery
+        let round = 0;
+        while (picked.length < maxPicks) {
+          let added = false;
+          for (const refs of perStyle) {
+            if (round < refs.length && picked.length < maxPicks) {
+              picked.push(refs[round]);
+              added = true;
+            }
+          }
+          if (!added) break;
+          round++;
+        }
+        setAllImages(picked);
       }
     };
     fetchStyles();
   }, []);
 
-  // Split images into sections of 3 for showcase rows
+  // Split images into sections of 3 for showcase rows (each from different styles)
   const sectionImages = SECTION_META.map((_, i) => {
     const start = i * 3;
     return allImages.slice(start, start + 3);
   });
 
   // Remaining images for gallery
-  const galleryImages = allImages.slice(SECTION_META.length * 3, SECTION_META.length * 3 + 8);
+  const galleryImages = allImages.slice(SECTION_META.length * 3);
 
   return (
     <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: '#0a0a0f' }}>

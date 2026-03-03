@@ -480,17 +480,27 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
               {/* Download all button */}
               {existingImages.length > 0 && (
                 <button
-                  onClick={() => {
-                    existingImages.forEach((url, i) => {
+                  onClick={async () => {
+                    try {
+                      const JSZip = (await import('jszip')).default;
+                      const zip = new JSZip();
+                      const folder = zip.folder('referencias');
+                      for (let i = 0; i < existingImages.length; i++) {
+                        try {
+                          const res = await fetch(existingImages[i]);
+                          const blob = await res.blob();
+                          const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
+                          folder!.file(`ref-${i + 1}.${ext}`, blob);
+                        } catch (e) { console.error('Erro ao baixar imagem', i, e); }
+                      }
+                      const content = await zip.generateAsync({ type: 'blob' });
+                      const url = URL.createObjectURL(content);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `ref-${i + 1}.png`;
-                      a.target = '_blank';
-                      a.rel = 'noopener noreferrer';
-                      document.body.appendChild(a);
+                      a.download = `referencias-${form.name || 'estilo'}.zip`;
                       a.click();
-                      document.body.removeChild(a);
-                    });
+                      URL.revokeObjectURL(url);
+                    } catch (e) { console.error('Erro ao criar ZIP', e); }
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] text-white/50 text-xs hover:bg-white/[0.1] hover:text-white/80 cursor-pointer transition-colors"
                 >

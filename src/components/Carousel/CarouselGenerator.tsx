@@ -2238,13 +2238,11 @@ FORBIDDEN:
       // Include marketplace style references if active or loaded as full-bleed
       const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
       const marketplaceRefUrls: string[] = [];
-      if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyle?._previewImages?.length) {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-        if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+        marketplaceRefUrls.push(...allPreviews);
       }
 
       const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls];
@@ -2461,13 +2459,11 @@ FORBIDDEN:
       
       // Build marketplace style references
       const marketplaceRefUrls: string[] = [];
-      if (isFullBleedMarketplace && activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyle?._previewImages?.length) {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-        if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+        marketplaceRefUrls.push(...allPreviews);
       }
       
       const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls, ...existingCardImages];

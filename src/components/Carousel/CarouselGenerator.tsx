@@ -1909,27 +1909,26 @@ const CarouselGenerator: React.FC = () => {
       const cardTitle = card.title || '';
       const cardBody = card.body || card.subtitle || card.bodyTop || '';
 
-      const storiesPrompt = `Adapt this Instagram post image to Instagram STORIES format (9:16 vertical, 1080x1920px).
+      const storiesPrompt = `Transform this Instagram post image into a full-bleed Instagram STORIES image (9:16 vertical, 1080x1920px).
 
-CRITICAL ADAPTATION RULES:
-1. EXPAND the background/scene to fill the full 9:16 vertical frame — DO NOT just crop or stretch.
-2. Keep the person/subject FULLY VISIBLE and CENTERED — heads, faces, and bodies must be 100% inside the frame. NEVER crop any part of any person.
-3. Extend the background naturally above and below to fill the taller format.
-4. Keep ALL text that exists in the original image, but REPOSITION and RESIZE it to fit the vertical format:
-   - Text should be about 60-70% of its original size
-   - Place text in the LOWER THIRD with at least 80px margins from all edges
+CRITICAL RULES:
+1. The output MUST be 9:16 vertical and fill the ENTIRE frame — absolutely NO black bars, NO letterboxing, NO empty space.
+2. GENERATIVELY EXPAND the background/scene above and below the original content to fill the taller 9:16 canvas naturally.
+3. Keep the person/subject FULLY VISIBLE — heads, faces, and bodies must be 100% inside the frame.
+4. Keep ALL text that exists in the original image, REPOSITION it to fit the vertical layout:
+   - Place text in the LOWER THIRD with comfortable margins
+   - Slightly reduce text size to ~60-70% of original
 5. Maintain the EXACT same visual style, colors, typography, and aesthetic.
-6. The logo/seal (if present) must remain visible and properly positioned.
-7. The result must look like a native Stories post — vertical, immersive, full-bleed.
+6. The logo/seal (if present) must remain visible.
 
 ${cardTitle ? `Title text in image: "${cardTitle}"` : ''}
 ${cardBody ? `Body text in image: "${cardBody}"` : ''}
 
 FORBIDDEN:
-- Do NOT crop or cut any person's head, face, or body
-- Do NOT just zoom in or stretch the original image
+- NO black bars or empty space at top or bottom
+- Do NOT crop any person's head, face, or body
+- Do NOT just zoom in or stretch the original
 - Do NOT change the people's faces or features
-- Do NOT remove or alter existing text content, only reposition/resize it
 - Do NOT add new text that wasn't in the original`;
 
       const { data, error } = await supabase.functions.invoke('generate-carousel-image', {
@@ -1937,6 +1936,8 @@ FORBIDDEN:
           editSourceImage: sourceImage,
           prompt: storiesPrompt,
           faceGender,
+          imageSize: '9:16',
+          faceReferenceUrls: referenceImages.filter(r => r.category === 'face').map(r => r.url),
         },
       });
       if (error) throw error;

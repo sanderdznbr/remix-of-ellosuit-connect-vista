@@ -1373,9 +1373,10 @@ const CarouselGenerator: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: (cleanMentionsFromTopic(topic.trim()) + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
+          topic: cleanMentionsFromTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount,
+          ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(productContext ? { productContext } : {}),
@@ -1960,9 +1961,10 @@ const CarouselGenerator: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: (cleanMentionsFromTopic(topic.trim()) + (mentionedPrompts.length > 0 ? '\n\n--- Contexto adicional ---\n' + mentionedPrompts.map(m => `[${m.title}]: ${m.content}`).join('\n\n') : '')),
+          topic: cleanMentionsFromTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: totalCards,
+          ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: Array.from({ length: totalCards }, (_, i) => i),
           ...(hasManualTexts ? { manualCardTexts: coverCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),

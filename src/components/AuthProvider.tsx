@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, username: string, companyName: string) => Promise<{ data: { user: User; session: Session } | { user: User; session: null }, error: AuthError | null }>;
+  signUp: (email: string, password: string, username: string, companyName: string, phone?: string) => Promise<{ data: { user: User; session: Session } | { user: User; session: null }, error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ data: { user: User; session: Session } | null, error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ data: { provider?: string; url?: string } | null, error: AuthError | null }>;
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, username: string, companyName: string) => {
+  const signUp = async (email: string, password: string, username: string, companyName: string, phone?: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data: {
           username,
           company_name: companyName,
+          ...(phone ? { phone } : {}),
         },
       },
     });

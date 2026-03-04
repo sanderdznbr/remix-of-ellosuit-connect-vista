@@ -28,14 +28,24 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Tendências de marketing digital para 2026...',
 ];
 
+const TITLE_PHRASES = [
+  'Crie o inimaginável',
+  'Crie posts com ellocontent',
+  'Crie carrosséis incríveis',
+  'Crie conteúdos que vendem',
+  'Crie artes profissionais',
+];
+
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
+  const [animatedTitle, setAnimatedTitle] = useState('');
   const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
   const [contentMode, setContentMode] = useState<ContentMode>('carousel');
   const [manualPostText, setManualPostText] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
   const isUserTyping = inputValue.length > 0;
 
@@ -83,6 +93,47 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isUserTyping]);
+
+  // Title typewriter effect
+  useEffect(() => {
+    let phraseIndex = 0;
+    let charIndex = 0;
+    let erasing = false;
+    let cancelled = false;
+
+    const tick = () => {
+      if (cancelled) return;
+      const text = TITLE_PHRASES[phraseIndex];
+
+      if (!erasing) {
+        charIndex++;
+        setAnimatedTitle(text.slice(0, charIndex));
+        if (charIndex >= text.length) {
+          erasing = true;
+          titleTimeoutRef.current = setTimeout(tick, 2500);
+        } else {
+          titleTimeoutRef.current = setTimeout(tick, 65 + Math.random() * 30);
+        }
+      } else {
+        charIndex--;
+        setAnimatedTitle(text.slice(0, charIndex));
+        if (charIndex <= 0) {
+          erasing = false;
+          phraseIndex = (phraseIndex + 1) % TITLE_PHRASES.length;
+          titleTimeoutRef.current = setTimeout(tick, 400);
+        } else {
+          titleTimeoutRef.current = setTimeout(tick, 30);
+        }
+      }
+    };
+
+    titleTimeoutRef.current = setTimeout(tick, 600);
+
+    return () => {
+      cancelled = true;
+      if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
+    };
+  }, []);
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
@@ -149,12 +200,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center text-center px-4 md:px-6 -mt-8 md:-mt-12 w-full max-w-xl mx-auto">
         <motion.h1
-          className="text-white text-xl md:text-3xl font-semibold leading-snug mb-2"
+          className="text-white text-xl md:text-3xl font-semibold leading-snug mb-2 min-h-[2em]"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.6 }}
         >
-          Crie algo com ellocontent
+          {animatedTitle}
+          <span className="inline-block w-[2px] h-[0.85em] bg-white/50 ml-0.5 animate-pulse align-middle" />
         </motion.h1>
 
         <motion.p
@@ -163,7 +215,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.65, duration: 0.5 }}
         >
-          Desenvolva carrosséis ou posts com um prompt.
+          Desenvolva conteúdos com um prompt.
         </motion.p>
 
         {/* Content mode selector */}

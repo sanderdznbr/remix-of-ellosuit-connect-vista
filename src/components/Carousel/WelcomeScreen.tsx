@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUp, AtSign } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import PromptMentionInput, { PromptMentionRef } from './wizard/PromptMention';
@@ -37,6 +38,7 @@ const TITLE_PHRASES = [
 ];
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
@@ -218,36 +220,38 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           Desenvolva conteúdos com um prompt.
         </motion.p>
 
-        {/* Content mode selector */}
-        <motion.div
-          className="flex items-center gap-2 mb-5"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75, duration: 0.5 }}
-        >
-          <button
-            onClick={() => setContentMode('carousel')}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-            style={{
-              backgroundColor: contentMode === 'carousel' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${contentMode === 'carousel' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
-              color: contentMode === 'carousel' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
-            }}
+        {/* Content mode selector - only for logged in users */}
+        {user && (
+          <motion.div
+            className="flex items-center gap-2 mb-5"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.75, duration: 0.5 }}
           >
-            Carrossel
-          </button>
-          <button
-            onClick={() => setContentMode('single-post')}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-            style={{
-              backgroundColor: contentMode === 'single-post' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${contentMode === 'single-post' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
-              color: contentMode === 'single-post' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
-            }}
-          >
-            Post Único
-          </button>
-        </motion.div>
+            <button
+              onClick={() => setContentMode('carousel')}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={{
+                backgroundColor: contentMode === 'carousel' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${contentMode === 'carousel' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                color: contentMode === 'carousel' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
+              }}
+            >
+              Carrossel
+            </button>
+            <button
+              onClick={() => setContentMode('single-post')}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              style={{
+                backgroundColor: contentMode === 'single-post' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${contentMode === 'single-post' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                color: contentMode === 'single-post' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
+              }}
+            >
+              Post Único
+            </button>
+          </motion.div>
+        )}
 
         {/* Input card */}
         <motion.div

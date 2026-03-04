@@ -29,25 +29,19 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Tendências de marketing digital para 2026...',
 ];
 
-const TITLE_PHRASES = [
-  'Crie o inimaginável',
-  'Crie posts com ellocontent',
-  'Crie carrosséis incríveis',
-  'Crie conteúdos que vendem',
-  'Crie artes profissionais',
-];
+const STATIC_TITLE = 'Crie algo com ellocontent';
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-  const [animatedTitle, setAnimatedTitle] = useState('');
+  
   const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
   const [contentMode, setContentMode] = useState<ContentMode>('carousel');
   const [manualPostText, setManualPostText] = useState('');
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const titleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   const mentionRef = useRef<PromptMentionRef>(null);
   const isUserTyping = inputValue.length > 0;
 
@@ -96,46 +90,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
     };
   }, [isUserTyping]);
 
-  // Title typewriter effect
-  useEffect(() => {
-    let phraseIndex = 0;
-    let charIndex = 0;
-    let erasing = false;
-    let cancelled = false;
-
-    const tick = () => {
-      if (cancelled) return;
-      const text = TITLE_PHRASES[phraseIndex];
-
-      if (!erasing) {
-        charIndex++;
-        setAnimatedTitle(text.slice(0, charIndex));
-        if (charIndex >= text.length) {
-          erasing = true;
-          titleTimeoutRef.current = setTimeout(tick, 2500);
-        } else {
-          titleTimeoutRef.current = setTimeout(tick, 65 + Math.random() * 30);
-        }
-      } else {
-        charIndex--;
-        setAnimatedTitle(text.slice(0, charIndex));
-        if (charIndex <= 0) {
-          erasing = false;
-          phraseIndex = (phraseIndex + 1) % TITLE_PHRASES.length;
-          titleTimeoutRef.current = setTimeout(tick, 400);
-        } else {
-          titleTimeoutRef.current = setTimeout(tick, 30);
-        }
-      }
-    };
-
-    titleTimeoutRef.current = setTimeout(tick, 600);
-
-    return () => {
-      cancelled = true;
-      if (titleTimeoutRef.current) clearTimeout(titleTimeoutRef.current);
-    };
-  }, []);
 
   const handleSubmit = () => {
     if (inputValue.trim()) {
@@ -207,8 +161,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.6 }}
         >
-          {animatedTitle}
-          <span className="inline-block w-[2px] h-[0.85em] bg-white/50 ml-0.5 animate-pulse align-middle" />
+          {STATIC_TITLE}
         </motion.h1>
 
         <motion.p
@@ -220,38 +173,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           Desenvolva conteúdos com um prompt.
         </motion.p>
 
-        {/* Content mode selector - only for logged in users */}
-        {user && (
-          <motion.div
-            className="flex items-center gap-2 mb-5"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75, duration: 0.5 }}
-          >
-            <button
-              onClick={() => setContentMode('carousel')}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-              style={{
-                backgroundColor: contentMode === 'carousel' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${contentMode === 'carousel' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                color: contentMode === 'carousel' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
-              }}
-            >
-              Carrossel
-            </button>
-            <button
-              onClick={() => setContentMode('single-post')}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-              style={{
-                backgroundColor: contentMode === 'single-post' ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${contentMode === 'single-post' ? 'rgba(123,80,220,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                color: contentMode === 'single-post' ? '#C4B5FD' : 'rgba(255,255,255,0.4)',
-              }}
-            >
-              Post Único
-            </button>
-          </motion.div>
-        )}
 
         {/* Input card */}
         <motion.div
@@ -294,13 +215,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
             {/* Bottom bar */}
             <div className="flex items-center justify-between px-3 pb-3">
-              <button
-                onClick={() => mentionRef.current?.triggerMention()}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all cursor-pointer"
-                title="Mencionar prompt salvo"
-              >
-                <AtSign className="w-4 h-4" />
-              </button>
+              {user && (
+                <button
+                  onClick={() => mentionRef.current?.triggerMention()}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all cursor-pointer"
+                  title="Mencionar prompt salvo"
+                >
+                  <AtSign className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim()}

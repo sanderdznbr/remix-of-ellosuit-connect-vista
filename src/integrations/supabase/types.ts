@@ -2589,6 +2589,72 @@ export type Database = {
           },
         ]
       }
+      generated_portraits: {
+        Row: {
+          company_id: string
+          created_at: string
+          error_message: string | null
+          face_ref_urls: Json | null
+          id: string
+          marketplace_style_id: string | null
+          metadata: Json | null
+          prompt: string
+          result_image_url: string | null
+          status: string
+          style_ref_urls: Json | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          face_ref_urls?: Json | null
+          id?: string
+          marketplace_style_id?: string | null
+          metadata?: Json | null
+          prompt: string
+          result_image_url?: string | null
+          status?: string
+          style_ref_urls?: Json | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          face_ref_urls?: Json | null
+          id?: string
+          marketplace_style_id?: string | null
+          metadata?: Json | null
+          prompt?: string
+          result_image_url?: string | null
+          status?: string
+          style_ref_urls?: Json | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_portraits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_portraits_marketplace_style_id_fkey"
+            columns: ["marketplace_style_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_styles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       holidays: {
         Row: {
           company_id: string

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
-import { ArrowLeft, ShoppingBag, Check, Sparkles, Crown } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Check, Sparkles, Crown, CreditCard, Coins } from 'lucide-react';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import CommunityPosts from '@/components/Marketplace/CommunityPosts';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,6 +35,7 @@ const MarketplaceStyleDetail: React.FC = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('marketplace');
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
     if (id) fetchStyle();
@@ -146,9 +147,9 @@ const MarketplaceStyleDetail: React.FC = () => {
         setOwned(true);
         toast.success(`Estilo "${style.name}" adquirido com ${style.price_credits} créditos!`);
       } else {
-        // Not enough credits — redirect to checkout for BRL payment
-        toast.info('Créditos insuficientes. Redirecionando para o checkout...');
-        navigate(`/checkout?modo=creditos&creditos=0&style_id=${style.id}&style_name=${encodeURIComponent(style.name)}&style_price=${style.price_brl}`);
+        // Not enough credits — show purchase options modal
+        setPurchasing(false);
+        setShowPurchaseModal(true);
       }
     } catch (err: any) {
       toast.error('Erro ao comprar estilo: ' + (err.message || 'Tente novamente'));
@@ -296,6 +297,64 @@ const MarketplaceStyleDetail: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Purchase options modal */}
+      {showPurchaseModal && style && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={() => setShowPurchaseModal(false)}>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md rounded-2xl p-6 space-y-5" style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)' }} onClick={e => e.stopPropagation()}>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white">Como deseja adquirir?</h3>
+              <p className="text-sm text-white/40 mt-1">Estilo: <span className="text-white/70">{style.name}</span></p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Option 1: Pay with BRL */}
+              <button
+                onClick={() => {
+                  setShowPurchaseModal(false);
+                  navigate(`/checkout?modo=style&style_id=${style.id}&style_name=${encodeURIComponent(style.name)}&style_price=${style.price_brl}`);
+                }}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all hover:scale-[1.02] cursor-pointer text-left"
+                style={{ backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.3)' }}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                  <CreditCard className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Pagar R$ {style.price_brl?.toFixed(2)}</p>
+                  <p className="text-xs text-white/40">Cartão de crédito ou PIX</p>
+                </div>
+              </button>
+
+              {/* Option 2: Buy credits */}
+              <button
+                onClick={() => {
+                  setShowPurchaseModal(false);
+                  navigate(`/checkout?modo=creditos&creditos=2`);
+                }}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all hover:scale-[1.02] cursor-pointer text-left"
+                style={{ backgroundColor: 'rgba(234,179,8,0.06)', borderColor: 'rgba(234,179,8,0.2)' }}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(234,179,8,0.12)' }}>
+                  <Coins className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Comprar {style.price_credits} créditos</p>
+                  <p className="text-xs text-white/40">Use créditos para este e outros estilos</p>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowPurchaseModal(false)}
+              className="w-full py-2.5 rounded-xl text-sm text-white/40 hover:text-white/60 hover:bg-white/[0.04] transition-colors cursor-pointer"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

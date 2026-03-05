@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Sparkles, Check, Search, Crown, Zap, Pencil } from 'lucide-react';
-import AdminStyleCreator, { AdminStyleManagerApi } from './AdminStyleCreator';
+import { ShoppingBag, Sparkles, Check, Search, Crown, Pencil, Plus, Star } from 'lucide-react';
+import AdminStyleDialog from './AdminStyleDialog';
+
+const ADMIN_EMAIL = 'admin@gmail.com';
 
 interface MarketplaceStyle {
   id: string;
@@ -15,7 +17,9 @@ interface MarketplaceStyle {
   category: string;
   style_config: any;
   is_featured: boolean;
+  is_free?: boolean;
   tags: string[];
+  strict_instructions?: string;
 }
 
 const MarketplaceContent: React.FC = () => {
@@ -26,12 +30,24 @@ const MarketplaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const adminApiRef = useRef<AdminStyleManagerApi | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editStyle, setEditStyle] = useState<MarketplaceStyle | null>(null);
 
   useEffect(() => {
     fetchStyles();
-    if (user) fetchPurchased();
+    if (user) {
+      fetchPurchased();
+      checkAdmin();
+    }
   }, [user]);
+
+  const checkAdmin = async () => {
+    const { data } = await supabase.auth.getUser();
+    setIsAdmin(data.user?.email === ADMIN_EMAIL);
+  };
 
   const fetchStyles = async () => {
     setLoading(true);
@@ -62,8 +78,6 @@ const MarketplaceContent: React.FC = () => {
   const featured = filtered.filter(s => s.is_featured);
   const regular = filtered.filter(s => !s.is_featured);
 
-  const isAdmin = adminApiRef.current?.isAdmin || false;
-
   return (
     <div className="flex-1 h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -72,31 +86,37 @@ const MarketplaceContent: React.FC = () => {
           <p className="text-sm text-white/40">Navegue por diferentes estilos</p>
         </div>
 
-        <AdminStyleCreator onStylesChanged={fetchStyles} onApiReady={(api) => { adminApiRef.current = api; }} />
+        {/* Admin bar */}
+        {isAdmin && (
+          <div className="mb-6 flex items-center justify-between px-4 py-3 rounded-xl border border-yellow-500/20 bg-yellow-500/[0.03]">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs font-bold text-yellow-300">Admin</span>
+              <span className="text-[10px] text-yellow-300/40">{styles.length} estilos</span>
+            </div>
+            <button onClick={() => { setEditStyle(null); setDialogOpen(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-medium hover:bg-yellow-500/30 transition-colors cursor-pointer">
+              <Plus className="w-3.5 h-3.5" /> Novo Estilo
+            </button>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-8">
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] flex-1 max-w-sm">
             <Search className="w-4 h-4 text-white/30" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar estilos..."
-              className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none"
-            />
+              className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none" />
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
+              <button key={cat} onClick={() => setSelectedCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                     : 'bg-white/[0.04] text-white/40 hover:text-white/60 border border-transparent hover:border-white/[0.08]'
-                }`}
-              >
+                }`}>
                 {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}
               </button>
             ))}
@@ -111,7 +131,6 @@ const MarketplaceContent: React.FC = () => {
           <div className="text-center py-20">
             <ShoppingBag className="w-12 h-12 text-white/10 mx-auto mb-3" />
             <p className="text-white/30 text-lg">Nenhum estilo encontrado</p>
-            <p className="text-white/15 text-sm mt-1">Em breve novos estilos serão adicionados!</p>
           </div>
         ) : (
           <>
@@ -122,15 +141,9 @@ const MarketplaceContent: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {featured.map(style => (
-                    <StyleCard
-                      key={style.id}
-                      style={style}
-                      owned={purchasedIds.has(style.id)}
-                      onClick={() => navigate(`/marketplace/${style.id}`)}
-                      featured
-                      isAdmin={isAdmin}
-                      onEdit={() => adminApiRef.current?.openEdit(style as any)}
-                    />
+                    <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)}
+                      onClick={() => navigate(`/marketplace/${style.id}`)} featured
+                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }} />
                   ))}
                 </div>
               </div>
@@ -140,14 +153,9 @@ const MarketplaceContent: React.FC = () => {
                 <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4">Todos os estilos</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {regular.map(style => (
-                    <StyleCard
-                      key={style.id}
-                      style={style}
-                      owned={purchasedIds.has(style.id)}
+                    <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)}
                       onClick={() => navigate(`/marketplace/${style.id}`)}
-                      isAdmin={isAdmin}
-                      onEdit={() => adminApiRef.current?.openEdit(style as any)}
-                    />
+                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }} />
                   ))}
                 </div>
               </div>
@@ -155,29 +163,31 @@ const MarketplaceContent: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Admin dialog */}
+      <AdminStyleDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editStyle={editStyle as any}
+        onSaved={fetchStyles}
+        totalStyles={styles.length}
+      />
     </div>
   );
 };
 
 // ---- Style Card ----
 const StyleCard: React.FC<{
-  style: MarketplaceStyle;
-  owned: boolean;
-  onClick: () => void;
-  featured?: boolean;
-  isAdmin?: boolean;
-  onEdit?: () => void;
+  style: MarketplaceStyle; owned: boolean; onClick: () => void;
+  featured?: boolean; isAdmin?: boolean; onEdit?: () => void;
 }> = ({ style, owned, onClick, featured, isAdmin, onEdit }) => {
   const previewImage = style.preview_images?.[0];
   return (
-    <div
-      onClick={onClick}
+    <div onClick={onClick}
       className={`group relative rounded-2xl border overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${
-        featured
-          ? 'border-purple-500/30 bg-gradient-to-b from-purple-500/[0.08] to-transparent'
+        featured ? 'border-purple-500/30 bg-gradient-to-b from-purple-500/[0.08] to-transparent'
           : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
-      }`}
-    >
+      }`}>
       <div className="relative overflow-hidden bg-white/[0.03]" style={{ aspectRatio: '1080/1350' }}>
         {previewImage ? (
           <img src={previewImage} alt={style.name} className="w-full h-full object-cover" />
@@ -199,12 +209,9 @@ const StyleCard: React.FC<{
             <Check className="w-3 h-3" /> ADQUIRIDO
           </div>
         )}
-        {/* Admin edit button on hover */}
         {isAdmin && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-yellow-400 shadow-lg"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-yellow-400 shadow-lg z-10">
             <Pencil className="w-3.5 h-3.5" /> Editar
           </button>
         )}
@@ -220,7 +227,7 @@ const StyleCard: React.FC<{
           </div>
           {!owned && (
             <span className="text-purple-400 text-sm font-bold">
-              R$ {style.price_brl?.toFixed(2) || '0,00'}
+              {(style as any).is_free ? 'Grátis' : `R$ ${style.price_brl?.toFixed(2) || '0,00'}`}
             </span>
           )}
         </div>

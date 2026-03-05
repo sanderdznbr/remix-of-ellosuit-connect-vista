@@ -2228,14 +2228,29 @@ FORBIDDEN:
   const downloadStoriesImage = async () => {
     if (!storiesImageUrl) return;
     try {
+      let blobUrl: string;
+      if (storiesImageUrl.startsWith('data:')) {
+        // Convert data URL to blob for reliable download
+        const res = await fetch(storiesImageUrl);
+        const blob = await res.blob();
+        blobUrl = URL.createObjectURL(blob);
+      } else {
+        const res = await fetch(storiesImageUrl);
+        const blob = await res.blob();
+        blobUrl = URL.createObjectURL(blob);
+      }
       const link = document.createElement('a');
-      link.href = storiesImageUrl;
+      link.href = blobUrl;
       link.download = `stories-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       toast({ title: 'Download iniciado!' });
-    } catch { toast({ title: 'Erro no download', variant: 'destructive' }); }
+    } catch (err) {
+      console.error('Stories download error:', err);
+      toast({ title: 'Erro no download', variant: 'destructive' });
+    }
   };
 
   const [imageSearchPage, setImageSearchPage] = useState(1);

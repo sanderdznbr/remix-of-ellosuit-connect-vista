@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, message, personality, instructions, model = 'google/gemini-3-flash-preview', stream = false, temperature } = await req.json();
+    const { messages, message, personality, instructions, model = 'google/gemini-3-flash-preview', stream = false, temperature, modalities } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
         messages: apiMessages,
         stream: stream,
         ...(temperature != null ? { temperature } : {}),
+        ...(modalities ? { modalities } : {}),
       }),
     });
 

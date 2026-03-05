@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Sparkles, Check, Search, Crown, Zap } from 'lucide-react';
-import AdminStyleCreator from './AdminStyleCreator';
+import { ShoppingBag, Sparkles, Check, Search, Crown, Zap, Pencil } from 'lucide-react';
+import AdminStyleCreator, { AdminStyleManagerApi } from './AdminStyleCreator';
 
 interface MarketplaceStyle {
   id: string;
@@ -26,6 +26,7 @@ const MarketplaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const adminApiRef = useRef<AdminStyleManagerApi | null>(null);
 
   useEffect(() => {
     fetchStyles();
@@ -61,6 +62,8 @@ const MarketplaceContent: React.FC = () => {
   const featured = filtered.filter(s => s.is_featured);
   const regular = filtered.filter(s => !s.is_featured);
 
+  const isAdmin = adminApiRef.current?.isAdmin || false;
+
   return (
     <div className="flex-1 h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
       <div className="max-w-6xl mx-auto px-6 py-8">
@@ -69,7 +72,7 @@ const MarketplaceContent: React.FC = () => {
           <p className="text-sm text-white/40">Navegue por diferentes estilos</p>
         </div>
 
-        <AdminStyleCreator onStylesChanged={fetchStyles} />
+        <AdminStyleCreator onStylesChanged={fetchStyles} onApiReady={(api) => { adminApiRef.current = api; }} />
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-8">
@@ -125,6 +128,8 @@ const MarketplaceContent: React.FC = () => {
                       owned={purchasedIds.has(style.id)}
                       onClick={() => navigate(`/marketplace/${style.id}`)}
                       featured
+                      isAdmin={isAdmin}
+                      onEdit={() => adminApiRef.current?.openEdit(style as any)}
                     />
                   ))}
                 </div>
@@ -140,6 +145,8 @@ const MarketplaceContent: React.FC = () => {
                       style={style}
                       owned={purchasedIds.has(style.id)}
                       onClick={() => navigate(`/marketplace/${style.id}`)}
+                      isAdmin={isAdmin}
+                      onEdit={() => adminApiRef.current?.openEdit(style as any)}
                     />
                   ))}
                 </div>
@@ -158,7 +165,9 @@ const StyleCard: React.FC<{
   owned: boolean;
   onClick: () => void;
   featured?: boolean;
-}> = ({ style, owned, onClick, featured }) => {
+  isAdmin?: boolean;
+  onEdit?: () => void;
+}> = ({ style, owned, onClick, featured, isAdmin, onEdit }) => {
   const previewImage = style.preview_images?.[0];
   return (
     <div
@@ -189,6 +198,15 @@ const StyleCard: React.FC<{
           <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/90 text-white text-[10px] font-bold">
             <Check className="w-3 h-3" /> ADQUIRIDO
           </div>
+        )}
+        {/* Admin edit button on hover */}
+        {isAdmin && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-yellow-400 shadow-lg"
+          >
+            <Pencil className="w-3.5 h-3.5" /> Editar
+          </button>
         )}
       </div>
       <div className="p-4">

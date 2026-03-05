@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import {
   ArrowLeft, ArrowRight, Upload, X, Loader2, Palette, Sparkles,
-  Image as ImageIcon, User, Monitor, Wand2, Check, Plus, Eye,
+  Image as ImageIcon, User, Monitor, Wand2, Check, Plus, Eye, Download,
 } from 'lucide-react';
 
 const SUPABASE_URL = 'https://jwddiyuezqrpuakazvgg.supabase.co';
@@ -53,6 +53,7 @@ const StyleCreator: React.FC = () => {
   const [generatedPosts, setGeneratedPosts] = useState<GeneratedPost[]>([]);
   const [progress, setProgress] = useState({ current: 0, total: 10, message: '' });
   const [previewPost, setPreviewPost] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
 
   // File helpers
   const addFiles = (
@@ -261,6 +262,7 @@ NOME DO ESTILO: "${styleName}"`;
       }
 
       setProgress({ current: 10, total: 10, message: 'Concluído!' });
+      setShowResults(true);
       toast.success(`${posts.length} posts gerados com sucesso!`);
     } catch (err: any) {
       console.error(err);
@@ -561,6 +563,64 @@ NOME DO ESTILO: "${styleName}"`;
               Próximo <ArrowRight className="w-4 h-4" />
             </button>
           )}
+        </div>
+      )}
+
+      {/* Results gallery (full view after generation) */}
+      {showResults && generatedPosts.length > 0 && (
+        <div className="fixed inset-0 z-[9998] bg-[#0a0a0f] overflow-y-auto">
+          <div className="max-w-6xl mx-auto p-6 md:p-10">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Posts Gerados — {styleName}</h2>
+                <p className="text-sm text-white/40 mt-1">{generatedPosts.length} posts criados • Clique para ampliar, use o botão para baixar</p>
+              </div>
+              <button onClick={() => setShowResults(false)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.08] text-white/60 text-sm hover:bg-white/[0.12] cursor-pointer">
+                <ArrowLeft className="w-4 h-4" /> Voltar ao editor
+              </button>
+            </div>
+
+            {/* With face */}
+            {generatedPosts.filter(p => p.hasFace).length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-white/50 mb-3">👤 Com Rosto ({generatedPosts.filter(p => p.hasFace).length})</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  {generatedPosts.filter(p => p.hasFace).map((post, i) => (
+                    <div key={`face-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
+                      <div className="aspect-[4/5] cursor-pointer" onClick={() => setPreviewPost(post.imageUrl)}>
+                        <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                      <a href={post.imageUrl} download={`${styleName}-face-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/80">
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Without face */}
+            {generatedPosts.filter(p => !p.hasFace).length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-white/50 mb-3">📐 Sem Rosto ({generatedPosts.filter(p => !p.hasFace).length})</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  {generatedPosts.filter(p => !p.hasFace).map((post, i) => (
+                    <div key={`noface-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
+                      <div className="aspect-[4/5] cursor-pointer" onClick={() => setPreviewPost(post.imageUrl)}>
+                        <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                      <a href={post.imageUrl} download={`${styleName}-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/80">
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

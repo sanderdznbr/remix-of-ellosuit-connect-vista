@@ -71,7 +71,8 @@ function CheckoutContent() {
   const styleName = searchParams.get('style_name') ? decodeURIComponent(searchParams.get('style_name')!) : '';
   const stylePrice = parseFloat(searchParams.get('style_price') || '9.90');
 
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(mode === 'plan' ? 'credit_card' : 'credit_card');
+  const metodoParam = searchParams.get('metodo');
+  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(metodoParam === 'pix' ? 'pix' : 'credit_card');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'pix'>('form');
   const [pixData, setPixData] = useState<{ qrCode?: string; qrCodeUrl?: string } | null>(null);

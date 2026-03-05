@@ -263,7 +263,7 @@ const MarketplaceStyleDetail: React.FC = () => {
                     <>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-bold text-white">
-                          {style.is_free ? 'Grátis' : `R$ ${style.price_brl?.toFixed(2) || '0,00'}`}
+                          {style.is_free ? 'Grátis' : `R$ ${(style.price_brl ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                         </span>
                         {!style.is_free && style.price_credits > 0 && (
                           <span className="text-sm text-white/30">ou {style.price_credits} créditos</span>
@@ -309,11 +309,32 @@ const MarketplaceStyleDetail: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {/* Option 1: Pay with BRL */}
+              {/* Option 1: Pay with PIX */}
               <button
                 onClick={() => {
                   setShowPurchaseModal(false);
-                  navigate(`/checkout?modo=style&style_id=${style.id}&style_name=${encodeURIComponent(style.name)}&style_price=${style.price_brl}`);
+                  navigate(`/checkout?modo=style&style_id=${style.id}&style_name=${encodeURIComponent(style.name)}&style_price=${style.price_brl}&metodo=pix`);
+                }}
+                className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all hover:scale-[1.02] cursor-pointer text-left"
+                style={{ backgroundColor: 'rgba(0,186,173,0.08)', borderColor: 'rgba(0,186,173,0.3)' }}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(0,186,173,0.15)' }}>
+                  <svg viewBox="0 0 512 512" className="w-5 h-5" fill="none">
+                    <path d="M395.5 297.4l-83.6-83.6c-5.5-5.5-14.4-5.5-19.8 0l-83.6 83.6c-5.5 5.5-5.5 14.4 0 19.8l83.6 83.6c5.5 5.5 14.4 5.5 19.8 0l83.6-83.6c5.5-5.5 5.5-14.4 0-19.8z" fill="#00BAAD"/>
+                    <path d="M256 116.4l-83.6 83.6c-5.5 5.5-5.5 14.4 0 19.8l83.6 83.6c5.5 5.5 14.4 5.5 19.8 0l83.6-83.6c5.5 5.5 14.4-5.5 19.8 0l-83.6-83.6C270.4 110.9 261.5 110.9 256 116.4z" fill="#00BAAD" opacity="0.7"/>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">Pagar com PIX · R$ {(style.price_brl ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-xs text-white/40">Pagamento instantâneo</p>
+                </div>
+              </button>
+
+              {/* Option 2: Pay with Card */}
+              <button
+                onClick={() => {
+                  setShowPurchaseModal(false);
+                  navigate(`/checkout?modo=style&style_id=${style.id}&style_name=${encodeURIComponent(style.name)}&style_price=${style.price_brl}&metodo=cartao`);
                 }}
                 className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all hover:scale-[1.02] cursor-pointer text-left"
                 style={{ backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.3)' }}
@@ -322,12 +343,12 @@ const MarketplaceStyleDetail: React.FC = () => {
                   <CreditCard className="w-5 h-5 text-purple-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">Pagar R$ {style.price_brl?.toFixed(2)}</p>
-                  <p className="text-xs text-white/40">Cartão de crédito ou PIX</p>
+                  <p className="text-sm font-semibold text-white">Cartão de crédito · R$ {(style.price_brl ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-xs text-white/40">Visa, Mastercard, Elo...</p>
                 </div>
               </button>
 
-              {/* Option 2: Buy credits */}
+              {/* Option 3: Buy credits */}
               <button
                 onClick={() => {
                   setShowPurchaseModal(false);

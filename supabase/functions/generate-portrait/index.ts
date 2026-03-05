@@ -82,13 +82,15 @@ serve(async (req) => {
     // Build the multimodal prompt
     const systemPrompt = `You are a professional portrait photographer AI. Generate a stunning, high-quality professional portrait photo based on the user's request.
 
-CRITICAL RULES:
-- The generated image MUST be a professional portrait/headshot
-- Maintain the EXACT facial identity from the reference photos provided
-- Use studio-quality lighting and composition
-- The output should look like a real professional photograph, NOT AI-generated
-- Analyze the face reference to determine gender and physical characteristics - NEVER mismatch body type
-- Produce a single, clean portrait image with no text, watermarks, or collages
+CRITICAL IDENTITY PRESERVATION RULES (MANDATORY):
+1. FACIAL IDENTITY: The generated face MUST be an EXACT match to the reference photos. Every facial feature — bone structure, eye shape, eye color, nose shape, lip shape, skin tone, facial proportions, jawline, chin, forehead, cheekbones, wrinkles, freckles, moles — MUST be preserved with 100% accuracy.
+2. BODY TYPE: Analyze ALL reference photos to determine gender, body type, skin tone, and physical build. The generated body MUST match these characteristics exactly. NEVER generate a female body for a male face or vice versa.
+3. HAIR: Match the exact hair color, texture, length and style from the references unless the user explicitly requests a change.
+4. SKIN: Preserve exact skin tone, texture, and any distinctive marks (moles, scars, freckles).
+5. AGE: The apparent age in the output MUST match the references exactly.
+6. MULTIPLE REFERENCES: When multiple reference photos are provided, use ALL of them to build a comprehensive understanding of the person's facial geometry from different angles. More photos = higher accuracy requirement.
+7. OUTPUT QUALITY: Studio-quality lighting, sharp focus, professional composition. Must look like a real photograph, NOT AI-generated.
+8. RESTRICTIONS: No text, no watermarks, no collages, no split images. Single clean portrait only.
 ${styleInstructions}`;
 
     const messages: any[] = [
@@ -98,13 +100,13 @@ ${styleInstructions}`;
     // Build user content with images
     const userContent: any[] = [];
 
-    // Add face references first (highest priority)
+    // Add face references first (highest priority) - send ALL photos for maximum fidelity
     if (faceRefUrls && faceRefUrls.length > 0) {
       userContent.push({
         type: "text",
-        text: "FACE REFERENCE PHOTOS (reproduce this exact face with maximum fidelity):",
+        text: `FACE REFERENCE PHOTOS (${faceRefUrls.length} photos provided — study EVERY photo to build a complete 3D understanding of this person's face. Reproduce this EXACT face with ABSOLUTE fidelity. Do NOT average or blend features — match them precisely):`,
       });
-      for (const url of faceRefUrls.slice(0, 5)) {
+      for (const url of faceRefUrls) {
         userContent.push({
           type: "image_url",
           image_url: { url },

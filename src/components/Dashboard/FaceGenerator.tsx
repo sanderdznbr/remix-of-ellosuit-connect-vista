@@ -57,10 +57,12 @@ const FaceGenerator: React.FC = () => {
     loadData();
   }, [user]);
 
+  const MAX_FACE_PHOTOS = 40;
+
   const handleFaceUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (faceFiles.length + files.length > 5) {
-      toast.error('Máximo 5 fotos de rosto');
+    if (faceFiles.length + files.length > MAX_FACE_PHOTOS) {
+      toast.error(`Máximo ${MAX_FACE_PHOTOS} fotos de rosto`);
       return;
     }
     const newFiles = [...faceFiles, ...files];
@@ -322,8 +324,9 @@ const FaceGenerator: React.FC = () => {
           {/* Step 1: Face Upload */}
           {step === 'faces' && (
             <motion.div key="faces" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 className="text-white/80 text-sm font-medium mb-4">Envie fotos do rosto (até 5)</h2>
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <h2 className="text-white/80 text-sm font-medium mb-4">Envie fotos do rosto (até {MAX_FACE_PHOTOS})</h2>
+              <p className="text-xs text-amber-400/70 mb-3">⚡ Quanto mais ângulos e expressões diferentes, maior a fidelidade facial.</p>
+              <div className="grid grid-cols-4 md:grid-cols-5 gap-2 mb-6 max-h-[400px] overflow-y-auto pr-1">
                 {facePreviews.map((preview, i) => (
                   <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-white/[0.08]">
                     <img src={preview} alt="" className="w-full h-full object-cover" />
@@ -332,7 +335,7 @@ const FaceGenerator: React.FC = () => {
                     </button>
                   </div>
                 ))}
-                {faceFiles.length < 5 && (
+                {faceFiles.length < MAX_FACE_PHOTOS && (
                   <label className="aspect-square rounded-xl border-2 border-dashed border-white/[0.08] hover:border-purple-500/30 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
                     <Upload className="w-5 h-5 text-white/25" />
                     <span className="text-[10px] text-white/20">Adicionar</span>

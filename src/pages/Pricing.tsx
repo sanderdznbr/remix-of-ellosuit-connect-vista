@@ -212,9 +212,10 @@ function LoggedInPricing() {
   }, [user]);
 
   const currentPlanKey = subscription?.plan_type || null;
-  const planConfig = currentPlanKey ? PLAN_CONFIG[currentPlanKey] : null;
+  const isActive = subscription && subscription.status === 'active';
+  const planConfig = currentPlanKey && isActive ? PLAN_CONFIG[currentPlanKey] : null;
   const planLabel = planConfig?.label || 'Sem plano';
-  const maxCredits = planConfig?.credits || 50;
+  const maxCredits = planConfig?.credits || 0;
 
   const handleTabChange = (tab: string) => {
     if (tab === 'home') navigate('/');
@@ -247,8 +248,8 @@ function LoggedInPricing() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {/* Current plan card */}
                 <div className="rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
-                  <p className="text-white font-semibold text-sm">Você está no plano {planLabel}</p>
-                  {subscription?.current_period_end && (
+                 <p className="text-white font-semibold text-sm">Você está no plano {planLabel}</p>
+                  {isActive && subscription?.current_period_end && (
                     <p className="text-white/30 text-xs mt-1">
                       Renova em {new Date(subscription.current_period_end).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </p>
@@ -306,7 +307,7 @@ function LoggedInPricing() {
               {/* Plans grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {plans.map((plan, i) => {
-                  const isCurrent = currentPlanKey ? plan.key === currentPlanKey : false;
+                  const isCurrent = isActive && currentPlanKey ? plan.key === currentPlanKey : false;
                   return (
                     <motion.div
                       key={plan.key}

@@ -21,16 +21,37 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   const pathsRef = useRef<{ x: number; y: number }[][]>([]);
   const currentPathRef = useRef<{ x: number; y: number }[]>([]);
 
-  // Setup canvas after image loads
-  useEffect(() => {
-    if (!imgLoaded || !imgRef.current || !canvasRef.current || !containerRef.current) return;
+  const syncCanvasToImage = useCallback(() => {
+    if (!imgRef.current || !canvasRef.current) return;
     const img = imgRef.current;
     const rect = img.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
     setCanvasSize({ w: rect.width, h: rect.height });
+
     const canvas = canvasRef.current;
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-  }, [imgLoaded]);
+    canvas.width = Math.floor(rect.width);
+    canvas.height = Math.floor(rect.height);
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+  }, []);
+
+  // Setup/resync canvas after image loads and on resize
+  useEffect(() => {
+    if (!imgLoaded || !imgRef.current) return;
+
+    const runSync = () => requestAnimationFrame(syncCanvasToImage);
+    runSync();
+
+    const ro = new ResizeObserver(runSync);
+    ro.observe(imgRef.current);
+    window.addEventListener('resize', runSync);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', runSync);
+    };
+  }, [imgLoaded, syncCanvasToImage]);
 
   const getCanvasPos = (clientX: number, clientY: number): { x: number; y: number } | null => {
     const canvas = canvasRef.current;
@@ -128,42 +149,20 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   };
 
   const getMaskDataUrl = (): string => {
-    const canvas = canvasRef.current;
-    if (!canvas) return '';
-    // Create a clean mask canvas (white on black)
+    const img = imgRef.current;
+    if (!img || !canvasSize.w || !canvasSize.h) return '';
+
+    // Build final mask at original image resolution (white=editable, black=preserve)
     const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = canvas.width;
-    maskCanvas.height = canvas.height;
-    const ctx = maskCanvas.getContext('2d')!;
+    maskCanvas.width = img.naturalWidth;
+    maskCanvas.height = img.naturalHeight;
+
+    const ctx = maskCanvas.getContext('2d');
+    if (!ctx) return '';
+
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 
-    for (const path of pathsRef.current) {
-      if (path.length < 2) continue;
-      ctx.beginPath();
-      ctx.moveTo(path[0].x, path[0].y);
-      for (let i = 1; i < path.length; i++) {
-        ctx.lineTo(path[i].x, path[i].y);
-      }
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 50;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
-    }
-    return maskCanvas.toDataURL('image/png');
-  };
-
-  const getCompositeDataUrl = (): string => {
-    // Create composite: original image with red mask overlay
-    const canvas = document.createElement('canvas');
-    const img = imgRef.current!;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0);
-
-    // Scale and draw mask paths onto the composite
     const scaleX = img.naturalWidth / canvasSize.w;
     const scaleY = img.naturalHeight / canvasSize.h;
 
@@ -174,21 +173,23 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
       for (let i = 1; i < path.length; i++) {
         ctx.lineTo(path[i].x * scaleX, path[i].y * scaleY);
       }
-      ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-      ctx.lineWidth = 50 * scaleX;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 50 * Math.max(scaleX, scaleY);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.stroke();
     }
-    return canvas.toDataURL('image/jpeg', 0.85);
+
+    return maskCanvas.toDataURL('image/png');
   };
 
   const handleSubmit = async () => {
     if (!editPrompt.trim() || !hasDrawn) return;
     setIsProcessing(true);
     try {
-      const compositeDataUrl = getCompositeDataUrl();
-      const newUrl = await editFn(imageUrl, compositeDataUrl, editPrompt);
+      const maskDataUrl = getMaskDataUrl();
+      if (!maskDataUrl) throw new Error('Falha ao gerar máscara de edição');
+      const newUrl = await editFn(imageUrl, maskDataUrl, editPrompt);
       onImageEdited(newUrl);
     } catch (err: any) {
       console.error('Inpaint error:', err);
@@ -232,8 +233,12 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
           <canvas
             ref={canvasRef}
             className="absolute inset-0 z-20 rounded-xl"
-            style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none', pointerEvents: 'auto' }}
+            style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none', pointerEvents: 'auto', background: 'transparent' }}
             onPointerDown={handlePointerDown}
+            onPointerMove={(e) => moveStroke(e.clientX, e.clientY)}
+            onPointerUp={endStroke}
+            onPointerCancel={endStroke}
+            onContextMenu={(e) => e.preventDefault()}
           />
         )}
       </div>

@@ -55,6 +55,15 @@ const StyleCreator: React.FC = () => {
   const [previewPost, setPreviewPost] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
 
+  const extractGeneratedImageUrl = (data: any): string | null => {
+    return (
+      data?.choices?.[0]?.message?.images?.[0]?.image_url?.url ||
+      data?.images?.[0]?.image_url?.url ||
+      data?.raw?.choices?.[0]?.message?.images?.[0]?.image_url?.url ||
+      null
+    );
+  };
+
   // File helpers
   const addFiles = (
     setter: React.Dispatch<React.SetStateAction<File[]>>,
@@ -147,6 +156,35 @@ const StyleCreator: React.FC = () => {
         faceUrls.push(url);
       }
 
+      // AI identifica o DNA do estilo a partir das referências
+      let styleDna = '';
+      try {
+        const styleAnalysisContent: any[] = [
+          {
+            type: 'text',
+            text: `Analise as imagens e descreva o DNA visual deste estilo em português brasileiro, com no máximo 6 linhas objetivas. Inclua: composição, hierarquia tipográfica, ritmo visual, uso de espaço, direção de arte e elementos distintivos. Crie instruções acionáveis para gerar NOVOS posts no mesmo estilo sem copiar texto/marca das referências.`
+          },
+          ...refUrls.slice(0, 6).map(url => ({ type: 'image_url', image_url: { url } })),
+          ...brandUrls.slice(0, 3).map(url => ({ type: 'image_url', image_url: { url } })),
+          ...(logoUrl ? [{ type: 'image_url', image_url: { url: logoUrl } }] : []),
+        ];
+
+        const { data: styleData, error: styleError } = await supabase.functions.invoke('ai-chat', {
+          body: {
+            messages: [
+              { role: 'system', content: 'Você é diretor(a) de criação sênior de social media. Extraia um DNA de estilo aplicável para novas artes.' },
+              { role: 'user', content: styleAnalysisContent },
+            ],
+            model: 'google/gemini-3-flash-preview',
+          },
+        });
+
+        if (styleError) throw styleError;
+        styleDna = (styleData?.content || styleData?.response || styleData?.message || '').toString().trim();
+      } catch (err) {
+        console.warn('Falha ao extrair DNA do estilo, seguindo com prompt base:', err);
+      }
+
       // Generate 10 posts (5 with face, 5 without)
       for (let i = 0; i < 10; i++) {
         const hasFace = i < 5; // first 5 with face
@@ -183,6 +221,10 @@ const StyleCreator: React.FC = () => {
 ESTILO: Replique EXATAMENTE o estilo visual das imagens de referência fornecidas - mesmas cores, tipografia, composição, elementos decorativos e mood.
 
 NOME DO ESTILO: "${styleName}"`;
+
+        if (styleDna) {
+          prompt += `\n\nDNA DO ESTILO (extraído por IA, seguir rigorosamente):\n${styleDna}`;
+        }
 
         if (extractedColors.length > 0) {
           prompt += `\n\nCORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${extractedColors.join(', ')}. Integre estas cores harmoniosamente no design.`;
@@ -225,33 +267,35 @@ NOME DO ESTILO: "${styleName}"`;
           const { data, error } = await supabase.functions.invoke('ai-chat', {
             body: {
               messages: [
-                { role: 'system', content: 'Você é um designer profissional de posts para Instagram. Gere imagens seguindo as instruções com precisão.' },
+                { role: 'system', content: 'Você é um diretor de arte sênior especializado em Instagram. Crie uma imagem original com altíssima qualidade visual, obedecendo rigorosamente o estilo e as referências.' },
                 { role: 'user', content: userContent },
               ],
-              model: 'google/gemini-2.5-flash-image',
+              model: 'google/gemini-3-pro-image-preview',
               modalities: ['image', 'text'],
             },
           });
 
           if (error) throw error;
 
-          const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-          if (imageUrl) {
-            // Upload generated image to storage
-            const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
-            const byteString = atob(base64Data);
-            const ab = new ArrayBuffer(byteString.length);
-            const ia = new Uint8Array(ab);
-            for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
-            const blob = new Blob([ab], { type: 'image/png' });
-            const file = new File([blob], `generated-${i}.png`, { type: 'image/png' });
-
-            const genUrl = await uploadFile(file, `style-creator/${slug}/generated-${hasFace ? 'face' : 'no-face'}-${i}-${timestamp}.png`);
-
-            const post: GeneratedPost = { imageUrl: genUrl, hasFace, cardIndex: i };
-            posts.push(post);
-            setGeneratedPosts([...posts]);
+          const imageUrl = extractGeneratedImageUrl(data);
+          if (!imageUrl) {
+            throw new Error('A IA retornou resposta sem imagem para este post.');
           }
+
+          // Upload generated image to storage
+          const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
+          const byteString = atob(base64Data);
+          const ab = new ArrayBuffer(byteString.length);
+          const ia = new Uint8Array(ab);
+          for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
+          const blob = new Blob([ab], { type: 'image/png' });
+          const file = new File([blob], `generated-${i}.png`, { type: 'image/png' });
+
+          const genUrl = await uploadFile(file, `style-creator/${slug}/generated-${hasFace ? 'face' : 'no-face'}-${i}-${timestamp}.png`);
+
+          const post: GeneratedPost = { imageUrl: genUrl, hasFace, cardIndex: i };
+          posts.push(post);
+          setGeneratedPosts([...posts]);
         } catch (err: any) {
           console.error(`Erro no post ${cardNumber}:`, err);
           toast.error(`Erro no post ${cardNumber}: ${err.message || 'Tente novamente'}`);

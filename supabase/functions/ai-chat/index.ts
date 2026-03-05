@@ -109,7 +109,15 @@ Deno.serve(async (req) => {
     const data = await response.json();
     console.log('✅ AI response received');
     
-    const assistantMessage = data.choices[0].message.content;
+    const firstMessage = data?.choices?.[0]?.message;
+    const assistantMessage = typeof firstMessage?.content === 'string'
+      ? firstMessage.content
+      : Array.isArray(firstMessage?.content)
+        ? firstMessage.content
+            .filter((item: any) => item?.type === 'text' && typeof item?.text === 'string')
+            .map((item: any) => item.text)
+            .join('\n')
+        : '';
 
     // Log cost based on usage tokens
     const usage = data.usage || {};
@@ -132,11 +140,15 @@ Deno.serve(async (req) => {
       metadata: { stream: false },
     });
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       response: assistantMessage,
-      message: assistantMessage, // For backward compatibility
+      message: assistantMessage, // Backward compatibility
+      content: assistantMessage,
       model: model,
-      usage: data.usage 
+      usage: data.usage,
+      choices: data?.choices || [],
+      images: firstMessage?.images || [],
+      raw: data,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

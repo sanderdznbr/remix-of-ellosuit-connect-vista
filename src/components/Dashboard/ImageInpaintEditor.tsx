@@ -22,6 +22,20 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   const currentRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
+  useEffect(() => {
+    setImgLoaded(false);
+    setHasDrawn(false);
+    setEditPrompt('');
+    rectsRef.current = [];
+    currentRectRef.current = null;
+    dragStartRef.current = null;
+
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      setImgLoaded(true);
+    }
+  }, [imageUrl]);
+
   const syncCanvasToImage = useCallback(() => {
     if (!imgRef.current || !canvasRef.current) return;
     const img = imgRef.current;
@@ -121,9 +135,20 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     isDrawingRef.current = false;
 
     const rect = currentRectRef.current;
-    if (rect && rect.w > 8 && rect.h > 8) {
-      rectsRef.current.push(rect);
-      setHasDrawn(true);
+    if (rect) {
+      const finalRect = (rect.w > 8 && rect.h > 8)
+        ? rect
+        : {
+            x: Math.max(0, Math.min(canvasSize.w - 72, rect.x - 36)),
+            y: Math.max(0, Math.min(canvasSize.h - 72, rect.y - 36)),
+            w: Math.min(72, canvasSize.w),
+            h: Math.min(72, canvasSize.h),
+          };
+
+      if (finalRect.w > 0 && finalRect.h > 0) {
+        rectsRef.current.push(finalRect);
+        setHasDrawn(true);
+      }
     }
 
     currentRectRef.current = null;
@@ -131,33 +156,55 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     redrawAll();
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const canvas = canvasRef.current;
-    if (canvas) {
-      try { canvas.setPointerCapture(e.pointerId); } catch {}
-    }
-
     startStroke(e.clientX, e.clientY);
 
-    const handleWindowMove = (event: PointerEvent) => {
+    const handleWindowMove = (event: MouseEvent) => {
       event.preventDefault();
       moveStroke(event.clientX, event.clientY);
     };
 
-    const handleWindowUp = (event: PointerEvent) => {
+    const handleWindowUp = (event: MouseEvent) => {
       event.preventDefault();
       endStroke();
-      window.removeEventListener('pointermove', handleWindowMove);
-      window.removeEventListener('pointerup', handleWindowUp);
-      window.removeEventListener('pointercancel', handleWindowUp);
+      window.removeEventListener('mousemove', handleWindowMove);
+      window.removeEventListener('mouseup', handleWindowUp);
     };
 
-    window.addEventListener('pointermove', handleWindowMove, { passive: false });
-    window.addEventListener('pointerup', handleWindowUp, { passive: false });
-    window.addEventListener('pointercancel', handleWindowUp, { passive: false });
+    window.addEventListener('mousemove', handleWindowMove);
+    window.addEventListener('mouseup', handleWindowUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    startStroke(touch.clientX, touch.clientY);
+
+    const handleWindowTouchMove = (event: TouchEvent) => {
+      event.preventDefault();
+      const moveTouch = event.touches[0];
+      if (!moveTouch) return;
+      moveStroke(moveTouch.clientX, moveTouch.clientY);
+    };
+
+    const handleWindowTouchEnd = (event: TouchEvent) => {
+      event.preventDefault();
+      endStroke();
+      window.removeEventListener('touchmove', handleWindowTouchMove);
+      window.removeEventListener('touchend', handleWindowTouchEnd);
+      window.removeEventListener('touchcancel', handleWindowTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleWindowTouchMove, { passive: false });
+    window.addEventListener('touchend', handleWindowTouchEnd, { passive: false });
+    window.addEventListener('touchcancel', handleWindowTouchEnd, { passive: false });
   };
 
   const undoLast = () => {
@@ -247,12 +294,10 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
         {imgLoaded && canvasSize.w > 0 && (
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 z-20 rounded-xl"
+            className="absolute inset-0 z-20 rounded-xl select-none"
             style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none', pointerEvents: 'auto', background: 'transparent' }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={(e) => moveStroke(e.clientX, e.clientY)}
-            onPointerUp={endStroke}
-            onPointerCancel={endStroke}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
             onContextMenu={(e) => e.preventDefault()}
           />
         )}

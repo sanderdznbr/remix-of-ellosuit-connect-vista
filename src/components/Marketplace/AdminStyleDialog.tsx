@@ -5,12 +5,6 @@ import {
   Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles,
   Star, StarOff, Eye, EyeOff,
 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 interface MarketplaceStyleRow {
   id: string;
@@ -226,16 +220,20 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#111118] border-white/[0.08] text-white">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-white">
-            {editStyle ? 'Editar Estilo' : 'Criar Novo Estilo'}
-          </DialogTitle>
-        </DialogHeader>
+  if (!open) return null;
 
-        <div className="space-y-4 pt-2">
+  return (
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/80" onClick={() => onOpenChange(false)} />
+      <div className="relative z-[9999] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/[0.08] p-6 mx-4" style={{ backgroundColor: '#111118' }}>
+        <button onClick={() => onOpenChange(false)} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white cursor-pointer">
+          <X className="w-4 h-4" />
+        </button>
+        <h2 className="text-lg font-bold text-white mb-4">
+          {editStyle ? 'Editar Estilo' : 'Criar Novo Estilo'}
+        </h2>
+
+        <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] text-white/40 mb-1 block">Nome *</label>
@@ -393,8 +391,8 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
             </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 

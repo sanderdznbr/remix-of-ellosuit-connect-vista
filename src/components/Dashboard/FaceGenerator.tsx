@@ -229,9 +229,9 @@ const FaceGenerator: React.FC = () => {
   const Lightbox = () => {
     if (!lightboxUrl) return null;
     return (
-      <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
-        <div className="relative max-w-4xl max-h-[90vh] w-full" onClick={(e) => e.stopPropagation()}>
-          <img src={lightboxUrl} alt="Retrato expandido" className="w-full h-full object-contain rounded-xl" />
+      <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-6" onClick={() => setLightboxUrl(null)}>
+        <div className="relative flex items-center justify-center" style={{ maxWidth: '90vw', maxHeight: '85vh' }} onClick={(e) => e.stopPropagation()}>
+          <img src={lightboxUrl} alt="Retrato expandido" className="max-w-full max-h-[85vh] object-contain rounded-xl" />
           <div className="absolute top-3 right-3 flex gap-2">
             <a href={lightboxUrl} download target="_blank" rel="noreferrer"
               className="p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors">

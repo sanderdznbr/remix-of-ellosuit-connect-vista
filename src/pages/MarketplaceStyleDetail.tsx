@@ -19,6 +19,7 @@ interface MarketplaceStyle {
   category: string;
   style_config: any;
   is_featured: boolean;
+  is_free?: boolean;
   tags: string[];
 }
 
@@ -70,6 +71,37 @@ const MarketplaceStyleDetail: React.FC = () => {
     if (!style) return;
     if (owned) { toast.info('Você já possui este estilo!'); return; }
 
+    // Free styles: grant immediately
+    if (style.is_free) {
+      setPurchasing(true);
+      try {
+        const { data: cu } = await supabase
+          .from('company_users')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        if (!cu) throw new Error('Company not found');
+
+        const { error } = await supabase.from('purchased_styles').insert({
+          user_id: user.id,
+          company_id: cu.company_id,
+          style_id: style.id,
+          payment_method: 'free',
+        } as any);
+        if (error) throw error;
+
+        setOwned(true);
+        toast.success(`Estilo "${style.name}" adquirido com sucesso!`);
+      } catch (err: any) {
+        toast.error('Erro ao adquirir estilo: ' + (err.message || 'Tente novamente'));
+      } finally {
+        setPurchasing(false);
+      }
+      return;
+    }
+
+    // Paid styles: try credits first
     setPurchasing(true);
     try {
       const { data: cu } = await supabase
@@ -80,16 +112,44 @@ const MarketplaceStyleDetail: React.FC = () => {
         .maybeSingle();
       if (!cu) throw new Error('Company not found');
 
-      const { error } = await supabase.from('purchased_styles').insert({
-        user_id: user.id,
-        company_id: cu.company_id,
-        style_id: style.id,
-        payment_method: 'brl',
-      } as any);
-      if (error) throw error;
+      // Check credit balance
+      const { data: balanceData } = await supabase
+        .from('ai_credit_balances')
+        .select('balance')
+        .eq('company_id', cu.company_id)
+        .maybeSingle();
 
-      setOwned(true);
-      toast.success(`Estilo "${style.name}" adquirido com sucesso!`);
+      const balance = (balanceData as any)?.balance || 0;
+
+      if (balance >= style.price_credits) {
+        // Has enough credits — consume and grant
+        const { data: consumeResult } = await supabase.rpc('consume_ai_credits', {
+          p_company_id: cu.company_id,
+          p_agent_id: null as any,
+          p_amount: style.price_credits,
+          p_description: `Compra de estilo: ${style.name}`,
+        });
+        if (!(consumeResult as any)?.success) {
+          toast.error('Créditos insuficientes.');
+          setPurchasing(false);
+          return;
+        }
+
+        const { error } = await supabase.from('purchased_styles').insert({
+          user_id: user.id,
+          company_id: cu.company_id,
+          style_id: style.id,
+          payment_method: 'credits',
+        } as any);
+        if (error) throw error;
+
+        setOwned(true);
+        toast.success(`Estilo "${style.name}" adquirido com ${style.price_credits} créditos!`);
+      } else {
+        // Not enough credits — redirect to checkout for BRL payment
+        toast.info('Créditos insuficientes. Redirecionando para o checkout...');
+        navigate(`/checkout?modo=creditos&creditos=0&style_id=${style.id}&style_name=${encodeURIComponent(style.name)}&style_price=${style.price_brl}`);
+      }
     } catch (err: any) {
       toast.error('Erro ao comprar estilo: ' + (err.message || 'Tente novamente'));
     } finally {
@@ -202,8 +262,11 @@ const MarketplaceStyleDetail: React.FC = () => {
                     <>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-bold text-white">
-                          R$ {style.price_brl?.toFixed(2) || '0,00'}
+                          {style.is_free ? 'Grátis' : `R$ ${style.price_brl?.toFixed(2) || '0,00'}`}
                         </span>
+                        {!style.is_free && style.price_credits > 0 && (
+                          <span className="text-sm text-white/30">ou {style.price_credits} créditos</span>
+                        )}
                       </div>
                       <button
                         onClick={handlePurchase}
@@ -214,7 +277,7 @@ const MarketplaceStyleDetail: React.FC = () => {
                           <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
                           <>
-                            <ShoppingBag className="w-4 h-4" /> Comprar estilo
+                            <ShoppingBag className="w-4 h-4" /> {style.is_free ? 'Usar grátis' : 'Comprar estilo'}
                           </>
                         )}
                       </button>

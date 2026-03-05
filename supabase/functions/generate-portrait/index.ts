@@ -53,7 +53,96 @@ serve(async (req) => {
       });
     }
 
-    const { portraitId, prompt, faceRefUrls, styleRefUrls, marketplaceStyleId } = await req.json();
+    const body = await req.json();
+    const { mode } = body;
+
+    // ─── INPAINT MODE ──────────────────────────────
+    if (mode === 'inpaint') {
+      const { originalImageUrl, compositeImageDataUrl, editPrompt } = body;
+
+      if (!originalImageUrl || !compositeImageDataUrl || !editPrompt) {
+        return new Response(JSON.stringify({ error: "Missing inpaint parameters" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`🎨 Inpainting for user ${user.email}: "${editPrompt.slice(0, 80)}"`);
+
+      const inpaintMessages = [
+        {
+          role: "system",
+          content: `You are a professional photo editor AI. The user has marked a region in red on the image. You must edit ONLY that marked region according to their instructions. Everything outside the red-marked area must remain EXACTLY the same — same lighting, same background, same composition, same person. Output a single clean edited photo.`,
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: `Here is the ORIGINAL image (keep everything from this image EXCEPT the marked area):` },
+            { type: "image_url", image_url: { url: originalImageUrl } },
+            { type: "text", text: `Here is the image WITH THE RED MARKS showing exactly which area to edit:` },
+            { type: "image_url", image_url: { url: compositeImageDataUrl } },
+            { type: "text", text: `EDIT INSTRUCTION (apply ONLY to the red-marked area): ${editPrompt}` },
+          ],
+        },
+      ];
+
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-pro-image-preview",
+          messages: inpaintMessages,
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text();
+        console.error("AI inpaint error:", aiResponse.status, errText);
+        if (aiResponse.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (aiResponse.status === 402) {
+          return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        throw new Error(`AI error: ${aiResponse.status}`);
+      }
+
+      const aiData = await aiResponse.json();
+      const imageData = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!imageData) {
+        return new Response(JSON.stringify({ error: "No image returned from AI" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Upload edited image
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
+      const bytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+      const fileName = `portraits/${cu.company_id}/edited_${Date.now()}.png`;
+
+      const { error: uploadError } = await supabase.storage.from("brand-assets").upload(fileName, bytes, { contentType: "image/png", upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage.from("brand-assets").getPublicUrl(fileName);
+
+      // Save as new portrait record
+      await supabase.from("generated_portraits").insert({
+        user_id: user.id,
+        company_id: cu.company_id,
+        title: `Edição: ${editPrompt.slice(0, 70)}`,
+        prompt: editPrompt,
+        status: "completed",
+        result_image_url: publicUrl.publicUrl,
+      });
+
+      console.log(`✅ Inpaint complete for ${user.email}`);
+      return new Response(JSON.stringify({ success: true, imageUrl: publicUrl.publicUrl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ─── STANDARD GENERATION MODE ──────────────────────────────
+    const { portraitId, prompt, faceRefUrls, styleRefUrls, marketplaceStyleId } = body;
 
     // Get marketplace style config if provided
     let styleInstructions = "";

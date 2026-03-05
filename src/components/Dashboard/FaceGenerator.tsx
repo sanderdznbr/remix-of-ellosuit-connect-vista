@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, ChevronRight, ChevronLeft, Sparkles, Image as ImageIcon, Loader2, Download, Trash2, Maximize2 } from 'lucide-react';
+import { Upload, X, ChevronRight, ChevronLeft, Sparkles, Image as ImageIcon, Loader2, Download, Trash2, Maximize2, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+import ImageInpaintEditor from './ImageInpaintEditor';
 
 interface MarketplaceStyle {
   id: string;
@@ -41,6 +42,7 @@ const FaceGenerator: React.FC = () => {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [inpaintUrl, setInpaintUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -225,6 +227,36 @@ const FaceGenerator: React.FC = () => {
     setLastGeneratedUrl(null);
   };
 
+  // ─── Inpainting handler ──────────────────────────────
+  const handleInpaint = async (originalUrl: string, compositeDataUrl: string, editPrompt: string): Promise<string> => {
+    const { data: session } = await supabase.auth.getSession();
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.session?.access_token}` },
+        body: JSON.stringify({ mode: 'inpaint', originalImageUrl: originalUrl, compositeImageDataUrl: compositeDataUrl, editPrompt }),
+      }
+    );
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Error ${response.status}`);
+    }
+    const result = await response.json();
+    if (!result.imageUrl) throw new Error('No image returned');
+
+    // Save edited version to gallery folder
+    await saveToGalleryFolder(result.imageUrl, `Edição: ${editPrompt.slice(0, 60)}`);
+
+    // Refresh gallery
+    const { data: updated } = await supabase.from('generated_portraits')
+      .select('*').eq('user_id', user!.id).order('created_at', { ascending: false }).limit(50);
+    setGallery((updated as GeneratedPortrait[]) || []);
+
+    toast.success('Edição aplicada!');
+    return result.imageUrl;
+  };
+
   // ─── Lightbox ──────────────────────────────
   const Lightbox = () => {
     if (!lightboxUrl) return null;
@@ -233,6 +265,10 @@ const FaceGenerator: React.FC = () => {
         <div className="relative flex items-center justify-center" style={{ maxWidth: '90vw', maxHeight: '85vh' }} onClick={(e) => e.stopPropagation()}>
           <img src={lightboxUrl} alt="Retrato expandido" className="max-w-full max-h-[85vh] object-contain rounded-xl" />
           <div className="absolute top-3 right-3 flex gap-2">
+            <button onClick={(e) => { e.stopPropagation(); setInpaintUrl(lightboxUrl); setLightboxUrl(null); }}
+              className="p-2 rounded-full bg-purple-600/80 hover:bg-purple-500 text-white transition-colors cursor-pointer" title="Editar região">
+              <Pencil className="w-5 h-5" />
+            </button>
             <a href={lightboxUrl} download target="_blank" rel="noreferrer"
               className="p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors">
               <Download className="w-5 h-5" />
@@ -252,6 +288,14 @@ const FaceGenerator: React.FC = () => {
     return (
       <>
         <Lightbox />
+        {inpaintUrl && (
+          <ImageInpaintEditor
+            imageUrl={inpaintUrl}
+            onClose={() => setInpaintUrl(null)}
+            onImageEdited={(newUrl) => { setInpaintUrl(null); setLightboxUrl(newUrl); setLastGeneratedUrl(newUrl); }}
+            editFn={handleInpaint}
+          />
+        )}
         <div className="flex-1 overflow-y-auto p-6 md:p-8" style={{ backgroundColor: '#0a0a0f' }}>
           <div className="max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-6">
@@ -331,6 +375,14 @@ const FaceGenerator: React.FC = () => {
   return (
     <>
       <Lightbox />
+      {inpaintUrl && (
+        <ImageInpaintEditor
+          imageUrl={inpaintUrl}
+          onClose={() => setInpaintUrl(null)}
+          onImageEdited={(newUrl) => { setInpaintUrl(null); setLightboxUrl(newUrl); setLastGeneratedUrl(newUrl); }}
+          editFn={handleInpaint}
+        />
+      )}
       <div className="flex-1 overflow-y-auto p-6 md:p-8" style={{ backgroundColor: '#0a0a0f' }}>
         <div className="max-w-2xl mx-auto">
           {/* Header */}

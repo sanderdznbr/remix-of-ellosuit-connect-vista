@@ -45,8 +45,6 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
     is_free: false,
     strict_instructions: '',
   });
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [refPreviews, setRefPreviews] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -88,14 +86,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
     return `${SUPABASE_URL}/storage/v1/object/public/marketplace-assets/${path}`;
   };
 
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCoverFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-  };
+
 
   const handleRefFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -170,8 +161,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Nome é obrigatório'); return; }
-    if (!coverFile && !editingId) { toast.error('Adicione uma capa'); return; }
-    if (refFiles.length === 0 && !editingId) { toast.error('Adicione pelo menos 1 foto de referência'); return; }
+    if (refFiles.length === 0 && existingImages.length === 0) { toast.error('Adicione pelo menos 1 foto de referência'); return; }
 
     setSaving(true);
     try {
@@ -179,14 +169,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       const slug = form.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const uploadedUrls: string[] = [];
 
-      // Upload cover
-      if (coverFile) {
-        const coverPath = `styles/${slug}/cover-${timestamp}.${coverFile.name.split('.').pop()}`;
-        const coverUrl = await uploadImage(coverFile, coverPath);
-        uploadedUrls.push(coverUrl);
-      }
-
-      // Upload ref images
+      // Upload ref images (first one becomes cover automatically)
       for (let i = 0; i < refFiles.length; i++) {
         const refPath = `styles/${slug}/ref-${i + 1}-${timestamp}.${refFiles[i].name.split('.').pop()}`;
         const refUrl = await uploadImage(refFiles[i], refPath);
@@ -239,7 +222,6 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
 
       // Reset form
       setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '' });
-      setCoverFile(null); setCoverPreview(null);
       setRefFiles([]); setRefPreviews([]);
       setExistingImages([]);
       setCreating(false);
@@ -286,8 +268,6 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
       is_free: (style as any).is_free || false,
       strict_instructions: (style as any).strict_instructions || '',
     });
-    setCoverFile(null);
-    setCoverPreview(null);
     setRefFiles([]);
     setRefPreviews([]);
     setExistingImages(style.preview_images || []);
@@ -371,11 +351,8 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                       try {
                         // Collect image URLs for AI visual analysis
                         const imageUrls: { type: string; image_url: { url: string } }[] = [];
-                        if (coverPreview) {
-                          imageUrls.push({ type: 'image_url', image_url: { url: coverPreview } });
-                        }
-                        // Add up to 3 reference images (existing or newly added)
-                        const allRefs = [...existingImages, ...refPreviews].slice(0, 3);
+                        // Add up to 4 reference images (existing or newly added)
+                        const allRefs = [...existingImages, ...refPreviews].slice(0, 4);
                         for (const url of allRefs) {
                           if (url) imageUrls.push({ type: 'image_url', image_url: { url } });
                         }
@@ -473,51 +450,23 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                 </div>
               </div>
 
-              {/* Cover upload */}
-              <div>
-                <label className="text-[10px] text-white/40 mb-2 block">Imagem de Capa {!editingId && '*'}</label>
-                {coverPreview ? (
-                  <div className="relative w-32 h-40 rounded-xl overflow-hidden border border-white/10">
-                    <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
-                    <button onClick={() => { setCoverFile(null); setCoverPreview(null); }}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer text-[10px]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : existingImages[0] ? (
-                  <div className="relative w-32 h-40 rounded-xl overflow-hidden border border-white/10">
-                    <img src={existingImages[0]} alt="Cover atual" className="w-full h-full object-cover" />
-                    <button onClick={() => setExistingImages(prev => prev.slice(1))}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center cursor-pointer text-[10px]">
-                      <X className="w-3 h-3" />
-                    </button>
-                    <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white/60 text-[8px]">Atual</span>
-                  </div>
-                ) : (
-                  <label className="flex items-center justify-center gap-2 w-32 h-40 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
-                    <div className="text-center">
-                      <Upload className="w-5 h-5 text-white/20 mx-auto mb-1" />
-                      <span className="text-[10px] text-white/20">Capa</span>
-                    </div>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
-                  </label>
-                )}
-              </div>
-
-              {/* Reference photos */}
+              {/* Reference photos (first one = cover) */}
               <div>
                 <label className="text-[10px] text-white/40 mb-2 block">
-                  Fotos de Referência {!editingId && '*'} <span className="text-white/20">({existingImages.slice(1).length + refFiles.length} fotos)</span>
+                  Fotos de Referência * <span className="text-white/20">({existingImages.length + refFiles.length} fotos)</span>
                 </label>
                 <p className="text-[10px] text-white/15 mb-2">
-                  A IA usará estas fotos como referência visual para replicar o estilo 100%. Quanto mais fotos, melhor a fidelidade.
+                  A IA usará estas fotos como referência visual para replicar o estilo 100%. A primeira foto será usada como capa.
                 </p>
                 <div className="flex gap-2 flex-wrap">
-                  {/* Existing reference images (skip index 0 = cover) */}
-                  {existingImages.slice(1).map((url, i) => (
+                  {/* Existing reference images */}
+                  {existingImages.map((url, i) => (
                     <div key={`existing-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
                       <img src={url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
-                      <button onClick={() => removeExistingImage(i + 1)}
+                      {i === 0 && (
+                        <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded bg-yellow-500/80 text-black text-[7px] font-bold">Capa</span>
+                      )}
+                      <button onClick={() => removeExistingImage(i)}
                         className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]">
                         <X className="w-2.5 h-2.5" />
                       </button>
@@ -601,7 +550,7 @@ const AdminStyleCreator: React.FC<{ onStylesChanged?: () => void }> = ({ onStyle
                   onClick={() => {
                     setCreating(false); setEditingId(null);
                     setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '' });
-                    setCoverFile(null); setCoverPreview(null); setRefFiles([]); setRefPreviews([]); setExistingImages([]);
+                    setRefFiles([]); setRefPreviews([]); setExistingImages([]);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-white/[0.04] text-white/40 text-sm hover:bg-white/[0.08] cursor-pointer"
                 >

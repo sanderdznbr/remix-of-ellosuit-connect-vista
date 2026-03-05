@@ -95,23 +95,30 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     e.stopPropagation();
+
     const canvas = canvasRef.current;
     if (canvas) {
       try { canvas.setPointerCapture(e.pointerId); } catch {}
     }
+
     startStroke(e.clientX, e.clientY);
-  };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    moveStroke(e.clientX, e.clientY);
-  };
+    const handleWindowMove = (event: PointerEvent) => {
+      event.preventDefault();
+      moveStroke(event.clientX, event.clientY);
+    };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    endStroke();
+    const handleWindowUp = (event: PointerEvent) => {
+      event.preventDefault();
+      endStroke();
+      window.removeEventListener('pointermove', handleWindowMove);
+      window.removeEventListener('pointerup', handleWindowUp);
+      window.removeEventListener('pointercancel', handleWindowUp);
+    };
+
+    window.addEventListener('pointermove', handleWindowMove, { passive: false });
+    window.addEventListener('pointerup', handleWindowUp, { passive: false });
+    window.addEventListener('pointercancel', handleWindowUp, { passive: false });
   };
 
   const undoLast = () => {
@@ -216,7 +223,7 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
           ref={imgRef}
           src={imageUrl}
           alt="Editar"
-          className="block max-w-full max-h-[65vh] object-contain rounded-xl select-none"
+          className="block max-w-full max-h-[65vh] object-contain rounded-xl select-none pointer-events-none"
           crossOrigin="anonymous"
           onLoad={() => setImgLoaded(true)}
           draggable={false}
@@ -224,29 +231,9 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
         {imgLoaded && canvasSize.w > 0 && (
           <canvas
             ref={canvasRef}
-            className="absolute top-0 left-0 z-10 rounded-xl"
+            className="absolute inset-0 z-20 rounded-xl"
             style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none', pointerEvents: 'auto' }}
             onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            onPointerLeave={handlePointerUp}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startStroke(e.clientX, e.clientY); }}
-            onMouseMove={(e) => { e.preventDefault(); e.stopPropagation(); moveStroke(e.clientX, e.clientY); }}
-            onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); endStroke(); }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const t = e.touches[0];
-              if (t) startStroke(t.clientX, t.clientY);
-            }}
-            onTouchMove={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const t = e.touches[0];
-              if (t) moveStroke(t.clientX, t.clientY);
-            }}
-            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); endStroke(); }}
           />
         )}
       </div>

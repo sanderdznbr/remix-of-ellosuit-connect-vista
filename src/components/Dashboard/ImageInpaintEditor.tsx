@@ -18,8 +18,9 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   const [isProcessing, setIsProcessing] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
-  const pathsRef = useRef<{ x: number; y: number }[][]>([]);
-  const currentPathRef = useRef<{ x: number; y: number }[]>([]);
+  const rectsRef = useRef<{ x: number; y: number; w: number; h: number }[]>([]);
+  const currentRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const syncCanvasToImage = useCallback(() => {
     if (!imgRef.current || !canvasRef.current) return;
@@ -57,7 +58,9 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    return { x, y };
   };
 
   const redrawAll = useCallback(() => {
@@ -65,52 +68,67 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const allPaths = [...pathsRef.current, currentPathRef.current.length > 0 ? currentPathRef.current : null].filter(Boolean) as { x: number; y: number }[][];
+    const rectsToDraw = currentRectRef.current
+      ? [...rectsRef.current, currentRectRef.current]
+      : rectsRef.current;
 
-    for (const path of allPaths) {
-      if (path.length < 2) continue;
-      ctx.beginPath();
-      ctx.moveTo(path[0].x, path[0].y);
-      for (let i = 1; i < path.length; i++) {
-        ctx.lineTo(path[i].x, path[i].y);
-      }
-      ctx.strokeStyle = 'rgba(255, 50, 50, 0.7)';
-      ctx.lineWidth = 30;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
+    for (const rect of rectsToDraw) {
+      if (rect.w < 1 || rect.h < 1) continue;
 
-      ctx.strokeStyle = 'rgba(255, 100, 100, 0.3)';
-      ctx.lineWidth = 50;
-      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 60, 60, 0.25)';
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+
+      ctx.strokeStyle = 'rgba(255, 80, 80, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
     }
   }, []);
+
+  useEffect(() => {
+    if (!imgLoaded || canvasSize.w <= 0 || canvasSize.h <= 0) return;
+    redrawAll();
+  }, [imgLoaded, canvasSize.w, canvasSize.h, redrawAll]);
 
   const startStroke = (clientX: number, clientY: number) => {
     const pos = getCanvasPos(clientX, clientY);
     if (!pos) return;
     isDrawingRef.current = true;
-    currentPathRef.current = [pos];
+    dragStartRef.current = pos;
+    currentRectRef.current = { x: pos.x, y: pos.y, w: 0, h: 0 };
+    redrawAll();
   };
 
   const moveStroke = (clientX: number, clientY: number) => {
-    if (!isDrawingRef.current) return;
+    if (!isDrawingRef.current || !dragStartRef.current) return;
     const pos = getCanvasPos(clientX, clientY);
     if (!pos) return;
-    currentPathRef.current.push(pos);
+
+    const start = dragStartRef.current;
+    const x = Math.min(start.x, pos.x);
+    const y = Math.min(start.y, pos.y);
+    const w = Math.abs(pos.x - start.x);
+    const h = Math.abs(pos.y - start.y);
+
+    currentRectRef.current = { x, y, w, h };
     redrawAll();
   };
 
   const endStroke = () => {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
-    if (currentPathRef.current.length > 1) {
-      pathsRef.current.push([...currentPathRef.current]);
+
+    const rect = currentRectRef.current;
+    if (rect && rect.w > 8 && rect.h > 8) {
+      rectsRef.current.push(rect);
       setHasDrawn(true);
     }
-    currentPathRef.current = [];
+
+    currentRectRef.current = null;
+    dragStartRef.current = null;
+    redrawAll();
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -143,8 +161,8 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   };
 
   const undoLast = () => {
-    pathsRef.current.pop();
-    if (pathsRef.current.length === 0) setHasDrawn(false);
+    rectsRef.current.pop();
+    if (rectsRef.current.length === 0) setHasDrawn(false);
     redrawAll();
   };
 
@@ -166,18 +184,15 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     const scaleX = img.naturalWidth / canvasSize.w;
     const scaleY = img.naturalHeight / canvasSize.h;
 
-    for (const path of pathsRef.current) {
-      if (path.length < 2) continue;
-      ctx.beginPath();
-      ctx.moveTo(path[0].x * scaleX, path[0].y * scaleY);
-      for (let i = 1; i < path.length; i++) {
-        ctx.lineTo(path[i].x * scaleX, path[i].y * scaleY);
-      }
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 50 * Math.max(scaleX, scaleY);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
+    ctx.fillStyle = 'white';
+    for (const rect of rectsRef.current) {
+      if (rect.w < 1 || rect.h < 1) continue;
+      ctx.fillRect(
+        rect.x * scaleX,
+        rect.y * scaleY,
+        rect.w * scaleX,
+        rect.h * scaleY,
+      );
     }
 
     return maskCanvas.toDataURL('image/png');
@@ -204,7 +219,7 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
       <div className="w-full max-w-4xl flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Pencil className="w-4 h-4 text-red-400" />
-          <span className="text-sm text-white/70">Desenhe sobre a área que deseja alterar</span>
+          <span className="text-sm text-white/70">Arraste para selecionar as áreas que deseja alterar</span>
         </div>
         <div className="flex items-center gap-2">
           {hasDrawn && (
@@ -251,7 +266,7 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
               type="text"
               value={editPrompt}
               onChange={(e) => setEditPrompt(e.target.value)}
-              placeholder="Descreva o que mudar na área marcada... Ex: trocar a roupa por um terno preto"
+              placeholder="Descreva o que mudar na área selecionada... Ex: trocar a roupa por um terno preto"
               className="flex-1 bg-white/[0.06] border border-white/[0.12] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-purple-500/40 transition-colors"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               disabled={isProcessing}
@@ -266,7 +281,7 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
               {isProcessing ? 'Editando...' : 'Aplicar'}
             </button>
           </div>
-          <p className="text-[10px] text-white/20 mt-2 text-center">A IA irá alterar apenas a região marcada em vermelho</p>
+          <p className="text-[10px] text-white/20 mt-2 text-center">A IA irá alterar apenas as áreas selecionadas em vermelho</p>
         </div>
       )}
 

@@ -379,7 +379,153 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Ação inválida. Use 'subscribe' ou 'buy_credits'" }), {
+    // ════════════════════════════════════════
+    //  ACTION: BUY_STYLE (marketplace style, card or PIX)
+    // ════════════════════════════════════════
+    if (action === 'buy_style') {
+      const { style_id, price_cents, payment_method, card } = body;
+
+      if (!style_id || !price_cents) {
+        return new Response(JSON.stringify({ error: 'ID do estilo e preço são obrigatórios' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Validate price server-side
+      const { data: styleData } = await adminClient
+        .from('marketplace_styles')
+        .select('id, name, price_brl, is_free')
+        .eq('id', style_id)
+        .single();
+
+      if (!styleData) {
+        return new Response(JSON.stringify({ error: 'Estilo não encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (styleData.is_free) {
+        return new Response(JSON.stringify({ error: 'Este estilo é gratuito' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Use server-side price (security)
+      const serverPriceCents = Math.round(styleData.price_brl * 100);
+
+      if (payment_method === 'credit_card' && !card?.number) {
+        return new Response(JSON.stringify({ error: 'Dados do cartão são obrigatórios' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`[BUY_STYLE] Style: ${styleData.name}, Price: ${serverPriceCents} cents, Company: ${companyId}`);
+
+      const orderPayload: any = {
+        customer_id: customerId,
+        items: [{
+          amount: serverPriceCents,
+          description: `elloContent - Estilo "${styleData.name}"`,
+          quantity: 1,
+        }],
+        payments: [],
+        metadata: {
+          company_id: companyId,
+          user_id: userId,
+          style_id,
+          action: 'buy_style',
+        },
+      };
+
+      if (payment_method === 'pix') {
+        orderPayload.payments.push({
+          payment_method: 'pix',
+          pix: { expires_in: 3600 },
+          amount: serverPriceCents,
+        });
+      } else {
+        orderPayload.payments.push({
+          payment_method: 'credit_card',
+          credit_card: {
+            card: {
+              number: card.number.replace(/\D/g, ''),
+              holder_name: card.holder_name,
+              exp_month: card.exp_month,
+              exp_year: card.exp_year,
+              cvv: card.cvv,
+              billing_address: {
+                line_1: customer.address || 'Rua Exemplo, 123',
+                zip_code: customer.zip_code?.replace(/\D/g, '') || '01001000',
+                city: customer.city || 'São Paulo',
+                state: customer.state || 'SP',
+                country: 'BR',
+              },
+            },
+            installments: 1,
+            statement_descriptor: 'ELLOCONTENT',
+          },
+          amount: serverPriceCents,
+        });
+      }
+
+      const res = await fetch('https://api.pagar.me/core/v5/orders', {
+        method: 'POST',
+        headers: { Authorization: auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('[BUY_STYLE] Error:', data);
+        return new Response(JSON.stringify({
+          error: 'Falha no pagamento',
+          details: data.message || JSON.stringify(data.errors || data),
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log('[BUY_STYLE] Order created:', data.id, 'Status:', data.status);
+
+      // If paid immediately, grant the style
+      if (data.status === 'paid') {
+        await adminClient.from('purchased_styles').insert({
+          user_id: userId,
+          company_id: companyId,
+          style_id,
+          payment_method: 'brl',
+        });
+        console.log(`[BUY_STYLE] Style granted to user ${userId}`);
+      }
+
+      let pixInfo = null;
+      if (payment_method === 'pix' && data.charges?.[0]?.last_transaction) {
+        const tx = data.charges[0].last_transaction;
+        pixInfo = {
+          qr_code: tx.qr_code,
+          qr_code_url: tx.qr_code_url,
+          expires_at: tx.expires_at,
+        };
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        order_id: data.id,
+        status: data.status,
+        style_id,
+        pix: pixInfo,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Ação inválida. Use 'subscribe', 'buy_credits' ou 'buy_style'" }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

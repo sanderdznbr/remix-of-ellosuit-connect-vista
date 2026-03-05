@@ -58,12 +58,18 @@ function CheckoutContent() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
-  // Mode: 'plan' for subscription, 'credits' for avulso
-  const mode = searchParams.get('modo') === 'creditos' ? 'credits' : 'plan';
+  // Mode: 'plan' for subscription, 'credits' for avulso, 'style' for marketplace style
+  const modoParam = searchParams.get('modo');
+  const mode = modoParam === 'creditos' ? 'credits' : modoParam === 'style' ? 'style' : 'plan';
   const planKey = searchParams.get('plano') || 'starter';
   const creditIdx = parseInt(searchParams.get('creditos') || '2');
   const plan = PLANS[planKey] || PLANS.starter;
   const creditPack = CREDIT_TOPUPS[creditIdx] || CREDIT_TOPUPS[2];
+
+  // Style purchase params
+  const styleId = searchParams.get('style_id');
+  const styleName = searchParams.get('style_name') ? decodeURIComponent(searchParams.get('style_name')!) : '';
+  const stylePrice = parseFloat(searchParams.get('style_price') || '9.90');
 
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(mode === 'plan' ? 'credit_card' : 'credit_card');
   const [loading, setLoading] = useState(false);
@@ -141,6 +147,15 @@ function CheckoutContent() {
           customer,
           card: cardData,
         };
+      } else if (mode === 'style') {
+        body = {
+          action: 'buy_style',
+          style_id: styleId,
+          price_cents: Math.round(stylePrice * 100),
+          payment_method: paymentMethod,
+          customer,
+          card: cardData,
+        };
       } else {
         body = {
           action: 'buy_credits',
@@ -179,10 +194,12 @@ function CheckoutContent() {
     return <Navigate to="/auth" replace />;
   }
 
-  const displayPrice = mode === 'plan' ? plan.price : creditPack.price;
-  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : `+${creditPack.credits} créditos`;
+  const displayPrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : creditPack.price;
+  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : `+${creditPack.credits} créditos`;
   const displaySubtitle = mode === 'plan'
     ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`
+    : mode === 'style'
+    ? `Compra avulsa do estilo do Marketplace`
     : `Créditos avulsos para uso imediato`;
 
   return (
@@ -328,15 +345,17 @@ function CheckoutContent() {
                 <Zap className="w-8 h-8" style={{ color: '#7B50DC' }} />
               </div>
               <h2 className="text-white text-2xl font-bold mb-2">
-                {mode === 'plan' ? 'Assinatura ativa! 🎉' : 'Créditos adicionados! 🎉'}
+                {mode === 'plan' ? 'Assinatura ativa! 🎉' : mode === 'style' ? 'Estilo adquirido! 🎉' : 'Créditos adicionados! 🎉'}
               </h2>
               <p className="text-white/50 text-sm mb-8 text-center">
                 {mode === 'plan'
                   ? `${plan.credits} créditos foram adicionados à sua conta. Vamos criar!`
+                  : mode === 'style'
+                  ? `O estilo "${styleName}" já está disponível nos seus projetos.`
                   : `+${creditPack.credits} créditos adicionados ao seu saldo.`}
               </p>
-              <button onClick={() => navigate('/')} className="px-6 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
-                Começar a criar
+              <button onClick={() => navigate(mode === 'style' ? '/?tab=marketplace' : '/')} className="px-6 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
+                {mode === 'style' ? 'Voltar ao Marketplace' : 'Começar a criar'}
               </button>
             </motion.div>
           )}

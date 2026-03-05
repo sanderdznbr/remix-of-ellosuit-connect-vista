@@ -32,20 +32,11 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     canvas.height = rect.height;
   }, [imgLoaded]);
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent): { x: number; y: number } | null => {
+  const getPointerPos = (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      if (e.touches.length === 0) return null;
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
   const redrawAll = useCallback(() => {
@@ -70,31 +61,35 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
       ctx.lineJoin = 'round';
       ctx.stroke();
 
-      // Fill effect
       ctx.strokeStyle = 'rgba(255, 100, 100, 0.3)';
       ctx.lineWidth = 50;
       ctx.stroke();
     }
   }, []);
 
-  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    const pos = getPos(e);
+    e.stopPropagation();
+    const canvas = canvasRef.current;
+    if (canvas) canvas.setPointerCapture(e.pointerId);
+    const pos = getPointerPos(e);
     if (!pos) return;
     setIsDrawing(true);
     currentPathRef.current = [pos];
   };
 
-  const moveDraw = (e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.stopPropagation();
     if (!isDrawing) return;
     e.preventDefault();
-    const pos = getPos(e);
+    const pos = getPointerPos(e);
     if (!pos) return;
     currentPathRef.current.push(pos);
     redrawAll();
   };
 
-  const endDraw = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.stopPropagation();
     if (!isDrawing) return;
     setIsDrawing(false);
     if (currentPathRef.current.length > 1) {
@@ -216,13 +211,10 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
             ref={canvasRef}
             className="absolute top-0 left-0 rounded-xl"
             style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none' }}
-            onPointerDown={(e) => { e.stopPropagation(); startDraw(e as any); }}
-            onPointerMove={(e) => { e.stopPropagation(); moveDraw(e as any); }}
-            onPointerUp={(e) => { e.stopPropagation(); endDraw(); }}
-            onPointerLeave={endDraw}
-            onTouchStart={(e) => { e.stopPropagation(); startDraw(e); }}
-            onTouchMove={(e) => { e.stopPropagation(); moveDraw(e); }}
-            onTouchEnd={(e) => { e.stopPropagation(); endDraw(); }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
           />
         )}
       </div>

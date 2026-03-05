@@ -797,9 +797,10 @@ const CarouselGenerator: React.FC = () => {
       if (wearsGlasses) parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
     }
 
-    // Brand colors — only inject when NO marketplace style is active (marketplace styles have their own palette)
-    if (logoBrandColors.length > 0 && !activeMarketplaceStyle?.imageGeneration?.prompt_style) {
-      parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores.`);
+    // Brand colors — inject when NO marketplace style is active, OR when admin user has brand override
+    const isAdminBrandOverride = user?.email === 'admin@gmail.com';
+    if (logoBrandColors.length > 0 && (!activeMarketplaceStyle?.imageGeneration?.prompt_style || isAdminBrandOverride)) {
+      parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca.`);
     }
 
     parts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
@@ -861,7 +862,7 @@ const CarouselGenerator: React.FC = () => {
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyle?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyle._strictInstructions}` : '') } : {}),
-        ...(logoBrandColors.length > 0 && !isFullBleedMarketplace ? { brandColors: logoBrandColors } : {}),
+        ...(logoBrandColors.length > 0 && (!isFullBleedMarketplace || user?.email === 'admin@gmail.com') ? { brandColors: logoBrandColors } : {}),
       },
     });
     

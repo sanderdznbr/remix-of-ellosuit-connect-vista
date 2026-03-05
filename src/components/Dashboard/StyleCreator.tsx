@@ -263,46 +263,62 @@ NOME DO ESTILO: "${styleName}"`;
           ...referenceImages,
         ];
 
-        try {
-          const { data, error } = await supabase.functions.invoke('ai-chat', {
-            body: {
-              messages: [
-                { role: 'system', content: 'Você é um diretor de arte sênior especializado em Instagram. Crie uma imagem original com altíssima qualidade visual, obedecendo rigorosamente o estilo e as referências.' },
-                { role: 'user', content: userContent },
-              ],
-              model: 'google/gemini-3-pro-image-preview',
-              modalities: ['image', 'text'],
-            },
-          });
+        // Use Pro for face posts, Flash for no-face (faster + avoids rate limits)
+        const model = hasFace ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
 
-          if (error) throw error;
+        // Retry up to 3 times per post
+        let success = false;
+        for (let attempt = 0; attempt < 3 && !success; attempt++) {
+          try {
+            if (attempt > 0) {
+              console.log(`Tentativa ${attempt + 1} para post ${cardNumber}...`);
+              await new Promise(r => setTimeout(r, 5000 * attempt));
+            }
 
-          const imageUrl = extractGeneratedImageUrl(data);
-          if (!imageUrl) {
-            throw new Error('A IA retornou resposta sem imagem para este post.');
+            const { data, error } = await supabase.functions.invoke('ai-chat', {
+              body: {
+                messages: [
+                  { role: 'system', content: 'Você é um diretor de arte sênior especializado em Instagram. Crie uma imagem original com altíssima qualidade visual, obedecendo rigorosamente o estilo e as referências.' },
+                  { role: 'user', content: userContent },
+                ],
+                model,
+                modalities: ['image', 'text'],
+              },
+            });
+
+            if (error) throw error;
+
+            const imageUrl = extractGeneratedImageUrl(data);
+            if (!imageUrl) {
+              console.warn(`Post ${cardNumber} sem imagem na resposta. Raw keys:`, data ? Object.keys(data) : 'null');
+              throw new Error('A IA retornou resposta sem imagem.');
+            }
+
+            // Upload generated image to storage
+            const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
+            const byteString = atob(base64Data);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
+            const blob = new Blob([ab], { type: 'image/png' });
+            const file = new File([blob], `generated-${i}.png`, { type: 'image/png' });
+
+            const genUrl = await uploadFile(file, `style-creator/${slug}/generated-${hasFace ? 'face' : 'no-face'}-${i}-${timestamp}.png`);
+
+            const post: GeneratedPost = { imageUrl: genUrl, hasFace, cardIndex: i };
+            posts.push(post);
+            setGeneratedPosts([...posts]);
+            success = true;
+          } catch (err: any) {
+            console.error(`Erro no post ${cardNumber} (tentativa ${attempt + 1}):`, err);
+            if (attempt === 2) {
+              toast.error(`Post ${cardNumber} falhou após 3 tentativas`);
+            }
           }
-
-          // Upload generated image to storage
-          const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
-          const byteString = atob(base64Data);
-          const ab = new ArrayBuffer(byteString.length);
-          const ia = new Uint8Array(ab);
-          for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
-          const blob = new Blob([ab], { type: 'image/png' });
-          const file = new File([blob], `generated-${i}.png`, { type: 'image/png' });
-
-          const genUrl = await uploadFile(file, `style-creator/${slug}/generated-${hasFace ? 'face' : 'no-face'}-${i}-${timestamp}.png`);
-
-          const post: GeneratedPost = { imageUrl: genUrl, hasFace, cardIndex: i };
-          posts.push(post);
-          setGeneratedPosts([...posts]);
-        } catch (err: any) {
-          console.error(`Erro no post ${cardNumber}:`, err);
-          toast.error(`Erro no post ${cardNumber}: ${err.message || 'Tente novamente'}`);
         }
 
-        // Small delay between generations
-        if (i < 9) await new Promise(r => setTimeout(r, 2000));
+        // Delay between generations to avoid rate limits
+        if (i < 9) await new Promise(r => setTimeout(r, 4000));
       }
 
       setProgress({ current: 10, total: 10, message: 'Concluído!' });

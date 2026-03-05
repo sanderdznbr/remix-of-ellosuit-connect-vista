@@ -12,7 +12,7 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const isDrawingRef = useRef(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [editPrompt, setEditPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -32,11 +32,11 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     canvas.height = rect.height;
   }, [imgLoaded]);
 
-  const getPointerPos = (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
+  const getCanvasPos = (clientX: number, clientY: number): { x: number; y: number } | null => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
   const redrawAll = useCallback(() => {
@@ -67,36 +67,51 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
     }
   }, []);
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const canvas = canvasRef.current;
-    if (canvas) canvas.setPointerCapture(e.pointerId);
-    const pos = getPointerPos(e);
+  const startStroke = (clientX: number, clientY: number) => {
+    const pos = getCanvasPos(clientX, clientY);
     if (!pos) return;
-    setIsDrawing(true);
+    isDrawingRef.current = true;
     currentPathRef.current = [pos];
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.stopPropagation();
-    if (!isDrawing) return;
-    e.preventDefault();
-    const pos = getPointerPos(e);
+  const moveStroke = (clientX: number, clientY: number) => {
+    if (!isDrawingRef.current) return;
+    const pos = getCanvasPos(clientX, clientY);
     if (!pos) return;
     currentPathRef.current.push(pos);
     redrawAll();
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.stopPropagation();
-    if (!isDrawing) return;
-    setIsDrawing(false);
+  const endStroke = () => {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
     if (currentPathRef.current.length > 1) {
       pathsRef.current.push([...currentPathRef.current]);
       setHasDrawn(true);
     }
     currentPathRef.current = [];
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
+    }
+    startStroke(e.clientX, e.clientY);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    moveStroke(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    endStroke();
   };
 
   const undoLast = () => {
@@ -209,12 +224,29 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
         {imgLoaded && canvasSize.w > 0 && (
           <canvas
             ref={canvasRef}
-            className="absolute top-0 left-0 rounded-xl"
-            style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none' }}
+            className="absolute top-0 left-0 z-10 rounded-xl"
+            style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none', pointerEvents: 'auto' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startStroke(e.clientX, e.clientY); }}
+            onMouseMove={(e) => { e.preventDefault(); e.stopPropagation(); moveStroke(e.clientX, e.clientY); }}
+            onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); endStroke(); }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const t = e.touches[0];
+              if (t) startStroke(t.clientX, t.clientY);
+            }}
+            onTouchMove={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const t = e.touches[0];
+              if (t) moveStroke(t.clientX, t.clientY);
+            }}
+            onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); endStroke(); }}
           />
         )}
       </div>

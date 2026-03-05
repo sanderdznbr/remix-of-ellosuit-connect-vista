@@ -1,0 +1,1 @@
+DELETE FROM purchased_styles WHERE user_id = '08713e33-dbbd-4041-a394-b938bba0d8e7' AND payment_method = 'brl';

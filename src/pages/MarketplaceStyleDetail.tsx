@@ -127,11 +127,11 @@ const MarketplaceStyleDetail: React.FC = () => {
         ) : (
           <>
           <div className="flex flex-col lg:flex-row gap-8">
-              {/* Left: Images (skip first image = cover) */}
+              {/* Left: Images */}
               <div className="lg:w-3/5">
                 {(() => {
-                  const innerImages = (style.preview_images || []).slice(1);
-                  const currentImg = innerImages[activeImage];
+                  const allImages = style.preview_images || [];
+                  const currentImg = allImages[activeImage];
                   return (
                     <>
                       <div className="rounded-2xl overflow-hidden bg-white/[0.03] mb-4 max-w-sm mx-auto" style={{ aspectRatio: '1080/1350' }}>
@@ -143,9 +143,9 @@ const MarketplaceStyleDetail: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      {innerImages.length > 1 && (
+                      {allImages.length > 1 && (
                         <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
-                          {innerImages.map((img, i) => (
+                          {allImages.map((img, i) => (
                             <button
                               key={i}
                               onClick={() => setActiveImage(i)}

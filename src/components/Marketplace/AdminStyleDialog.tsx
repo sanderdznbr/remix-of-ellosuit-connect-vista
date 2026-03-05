@@ -1,10 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles,
-  Star, StarOff, Eye, EyeOff,
+  Star, StarOff, Eye, EyeOff, GripVertical,
 } from 'lucide-react';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  useSortable, rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableImageItem {
+  id: string;
+  type: 'existing' | 'new';
+  url: string; // display url (existing url or data url preview)
+  originalIndex: number;
+}
+
+const SortableImageThumb: React.FC<{
+  item: SortableImageItem;
+  isFirst: boolean;
+  onRemove: () => void;
+}> = ({ item, isFirst, onRemove }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto' as any,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className={`relative w-20 h-20 rounded-lg overflow-hidden border group ${item.type === 'new' ? 'border-yellow-500/20' : 'border-white/10'}`}>
+      <img src={item.url} alt="ref" className="w-full h-full object-cover pointer-events-none" />
+      {isFirst && <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded bg-yellow-500/80 text-black text-[7px] font-bold">Capa</span>}
+      <div {...attributes} {...listeners} className="absolute top-0.5 left-0.5 w-5 h-5 rounded bg-black/60 text-white/60 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+        <GripVertical className="w-3 h-3" />
+      </div>
+      <button onClick={onRemove}
+        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]">
+        <X className="w-2.5 h-2.5" />
+      </button>
+    </div>
+  );
+};
 
 interface MarketplaceStyleRow {
   id: string;
@@ -44,6 +87,35 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const sortableItems: SortableImageItem[] = useMemo(() => [
+    ...existingImages.map((url, i) => ({ id: `ex-${i}-${url.slice(-20)}`, type: 'existing' as const, url, originalIndex: i })),
+    ...refPreviews.map((url, i) => ({ id: `new-${i}`, type: 'new' as const, url, originalIndex: i })),
+  ], [existingImages, refPreviews]);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortableItems.findIndex(item => item.id === active.id);
+    const newIndex = sortableItems.findIndex(item => item.id === over.id);
+    const reordered = arrayMove(sortableItems, oldIndex, newIndex);
+    setExistingImages(reordered.filter(i => i.type === 'existing').map(i => i.url));
+    const newOrder = reordered.filter(i => i.type === 'new').map(i => i.originalIndex);
+    setRefPreviews(prev => newOrder.map(idx => prev[idx]));
+    setRefFiles(prev => newOrder.map(idx => prev[idx]));
+  };
+
+  const removeItem = (item: SortableImageItem) => {
+    if (item.type === 'existing') {
+      setExistingImages(prev => prev.filter(u => u !== item.url));
+    } else {
+      removeRefFile(item.originalIndex);
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -305,42 +377,30 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
             </div>
           </div>
 
-          {/* Reference photos */}
+          {/* Reference photos - Drag & Drop */}
           <div>
             <label className="text-[10px] text-white/40 mb-2 block">
-              Fotos de Referência * <span className="text-white/20">({existingImages.length + refFiles.length} fotos)</span>
+              Fotos de Referência * <span className="text-white/20">({sortableItems.length} fotos)</span>
             </label>
             <p className="text-[10px] text-white/15 mb-2">
-              A IA usará estas fotos como referência visual para replicar o estilo 100%. A primeira foto será usada como capa.
+              Arraste para reordenar. A primeira foto será usada como capa.
             </p>
-            <div className="flex gap-2 flex-wrap">
-              {existingImages.map((url, i) => (
-                <div key={`existing-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
-                  <img src={url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
-                  {i === 0 && <span className="absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded bg-yellow-500/80 text-black text-[7px] font-bold">Capa</span>}
-                  <button onClick={() => removeExistingImage(i)}
-                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]">
-                    <X className="w-2.5 h-2.5" />
-                  </button>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sortableItems.map(i => i.id)} strategy={rectSortingStrategy}>
+                <div className="flex gap-2 flex-wrap">
+                  {sortableItems.map((item, i) => (
+                    <SortableImageThumb key={item.id} item={item} isFirst={i === 0} onRemove={() => removeItem(item)} />
+                  ))}
+                  <label className="flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
+                    <div className="text-center">
+                      <Plus className="w-4 h-4 text-white/20 mx-auto" />
+                      <span className="text-[9px] text-white/20">Adicionar</span>
+                    </div>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefFilesChange} />
+                  </label>
                 </div>
-              ))}
-              {refPreviews.map((preview, i) => (
-                <div key={`new-${i}`} className="relative w-20 h-20 rounded-lg overflow-hidden border border-yellow-500/20 group">
-                  <img src={preview} alt={`Nova ${i + 1}`} className="w-full h-full object-cover" />
-                  <button onClick={() => removeRefFile(i)}
-                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]">
-                    <X className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-              ))}
-              <label className="flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
-                <div className="text-center">
-                  <Plus className="w-4 h-4 text-white/20 mx-auto" />
-                  <span className="text-[9px] text-white/20">Adicionar</span>
-                </div>
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleRefFilesChange} />
-              </label>
-            </div>
+              </SortableContext>
+            </DndContext>
             {existingImages.length > 0 && (
               <button onClick={async () => {
                 try {

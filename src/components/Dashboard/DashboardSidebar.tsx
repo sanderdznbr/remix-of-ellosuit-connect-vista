@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText, ImageIcon, ShoppingBag, MessageSquareText, Camera } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentIcon from '@/assets/ellocontent_icon.png';
@@ -172,19 +172,32 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <ShoppingBag className="w-4 h-4" />
           Marketplace
         </button>
-        {/* Face Generator - adminmaster only */}
+        {/* Admin-only tools */}
         {email === 'admin@gmail.com' && (
-          <button
-            onClick={() => { onTabChange('face-generator'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'face-generator'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            Gerador de Rosto
-          </button>
+          <>
+            <button
+              onClick={() => { onTabChange('face-generator'); closeSearch(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                activeTab === 'face-generator'
+                  ? 'bg-white/[0.08] text-white font-medium'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              Gerador de Rosto
+            </button>
+            <button
+              onClick={() => { onTabChange('style-creator'); closeSearch(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                activeTab === 'style-creator'
+                  ? 'bg-white/[0.08] text-white font-medium'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Brush className="w-4 h-4" />
+              Criador de Estilos
+            </button>
+          </>
         )}
       </div>
 

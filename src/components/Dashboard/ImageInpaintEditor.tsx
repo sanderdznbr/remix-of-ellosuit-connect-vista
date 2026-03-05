@@ -201,12 +201,12 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
       </div>
 
       {/* Image + Canvas */}
-      <div ref={containerRef} className="relative flex items-center justify-center" style={{ maxWidth: '90vw', maxHeight: '65vh' }}>
+      <div ref={containerRef} className="relative inline-block" style={{ maxWidth: '90vw', maxHeight: '65vh' }}>
         <img
           ref={imgRef}
           src={imageUrl}
           alt="Editar"
-          className="max-w-full max-h-[65vh] object-contain rounded-xl select-none"
+          className="block max-w-full max-h-[65vh] object-contain rounded-xl select-none"
           crossOrigin="anonymous"
           onLoad={() => setImgLoaded(true)}
           draggable={false}
@@ -214,15 +214,15 @@ const ImageInpaintEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited,
         {imgLoaded && canvasSize.w > 0 && (
           <canvas
             ref={canvasRef}
-            className="absolute top-0 left-1/2 -translate-x-1/2 rounded-xl"
+            className="absolute top-0 left-0 rounded-xl"
             style={{ width: canvasSize.w, height: canvasSize.h, cursor: 'crosshair', touchAction: 'none' }}
-            onMouseDown={startDraw}
-            onMouseMove={moveDraw}
-            onMouseUp={endDraw}
-            onMouseLeave={endDraw}
-            onTouchStart={startDraw}
-            onTouchMove={moveDraw}
-            onTouchEnd={endDraw}
+            onPointerDown={(e) => { e.stopPropagation(); startDraw(e as any); }}
+            onPointerMove={(e) => { e.stopPropagation(); moveDraw(e as any); }}
+            onPointerUp={(e) => { e.stopPropagation(); endDraw(); }}
+            onPointerLeave={endDraw}
+            onTouchStart={(e) => { e.stopPropagation(); startDraw(e); }}
+            onTouchMove={(e) => { e.stopPropagation(); moveDraw(e); }}
+            onTouchEnd={(e) => { e.stopPropagation(); endDraw(); }}
           />
         )}
       </div>

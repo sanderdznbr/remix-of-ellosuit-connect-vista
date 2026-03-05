@@ -169,7 +169,7 @@ const StyleCard: React.FC<{
           : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
       }`}
     >
-      <div className="aspect-video relative overflow-hidden bg-white/[0.03]">
+      <div className="relative overflow-hidden bg-white/[0.03]" style={{ aspectRatio: '1080/1350' }}>
         {previewImage ? (
           <img src={previewImage} alt={style.name} className="w-full h-full object-cover" />
         ) : (

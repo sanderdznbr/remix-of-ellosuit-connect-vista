@@ -164,6 +164,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Wizard mode: simple vs advanced
   const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
+  const [continuousMode, setContinuousMode] = useState(false);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -1508,8 +1509,159 @@ const CarouselGenerator: React.FC = () => {
         return true;
       };
 
-      const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
       const updatedCards = [...cards];
+
+      // ========== CONTINUOUS PANORAMIC MODE ==========
+      if (continuousMode && cardCount >= 2) {
+        setImageGenProgress('🌄 Gerando panorama contínuo...');
+
+        // Build a panoramic prompt with all card texts
+        const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
+        const allCardTexts = cards.map((c, i) => {
+          const title = c.title || c.bodyTop || '';
+          const body = c.bodyBottom || c.body || '';
+          return `Seção ${i + 1}: ${title}${body ? ` — ${body}` : ''}`;
+        }).join('\n');
+
+        const panoramaPrompt = [
+          `IDIOMA: Todo texto renderizado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`,
+          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga (proporção ${cardCount * 4}:5) que será dividida em ${cardCount} fatias verticais iguais.`,
+          `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
+          `TEMA: "${cleanTopic}"`,
+          `CONTEÚDO TEXTUAL POR SEÇÃO (distribua tipografia editorial ao longo da panorâmica, cada texto na sua seção correspondente):`,
+          allCardTexts,
+          `ESTILO: Design editorial premium, tipografia integrada à composição visual, cores harmoniosas que fluem ao longo de toda a panorâmica.`,
+          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua.`,
+          brandName ? `MARCA: "${brandName}" discretamente posicionada.` : '',
+        ].filter(Boolean).join('\n');
+
+        const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+        const marketplaceRefUrls: string[] = [];
+        if (activeMarketplaceStyle?._previewImages?.length) {
+          const origin = window.location.origin;
+          marketplaceRefUrls.push(...(activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`));
+        }
+        const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+        const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+        const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+
+        // Generate panoramic image with wider aspect ratio
+        const panoramaAspectRatio = cardCount <= 3 ? '16:9' : cardCount <= 5 ? '21:9' : '21:9';
+        
+        let panoramaUrl: string | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            setImageGenProgress(`🌄 Gerando panorama contínuo... (tentativa ${attempt + 1})`);
+            const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+            const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
+            
+            const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
+              body: {
+                prompt: buildImagePrompt(panoramaPrompt),
+                imageSize: panoramaAspectRatio,
+                topic: cleanTopic,
+                faceReferenceUrls: allFaceRefUrls.length > 0 ? allFaceRefUrls : undefined,
+                styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+                imageModel: resolvedModel === 'higgsfield' ? 'gemini' : resolvedModel,
+                negativePrompt: [styleNeg, 'no visible cuts, no separators, no vertical lines dividing sections, no borders between panels'].filter(Boolean).join(', '),
+                fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
+                ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
+                panoramic: true,
+                panoramicCardCount: cardCount,
+              },
+            });
+            if (imgErr) throw imgErr;
+            if (imgData?.success && imgData?.imageUrl) {
+              panoramaUrl = imgData.imageUrl;
+              break;
+            }
+          } catch (err) {
+            console.warn(`Panorama attempt ${attempt + 1} failed:`, err);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+
+        if (panoramaUrl) {
+          setImageGenProgress('✂️ Fatiando panorama em slides...');
+          
+          // Slice panoramic image into N equal vertical strips using canvas
+          try {
+            const img = document.createElement('img');
+            img.crossOrigin = 'anonymous';
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject(new Error('Failed to load panorama'));
+              img.src = panoramaUrl!;
+            });
+
+            const sliceWidth = Math.floor(img.width / cardCount);
+            const sliceHeight = img.height;
+
+            for (let i = 0; i < cardCount; i++) {
+              const canvas = document.createElement('canvas');
+              canvas.width = sliceWidth;
+              canvas.height = sliceHeight;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, i * sliceWidth, 0, sliceWidth, sliceHeight, 0, 0, sliceWidth, sliceHeight);
+                const sliceDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                updatedCards[i] = {
+                  ...updatedCards[i],
+                  imageUrl: sliceDataUrl,
+                  isAiImage: true,
+                  generatedPrompt: `[Panorama Contínuo - Fatia ${i + 1}/${cardCount}]\n${panoramaPrompt}`,
+                };
+              }
+            }
+            
+            toast({ title: '🌄 Panorama contínuo gerado!', description: `${cardCount} slides com arte contínua` });
+          } catch (sliceErr) {
+            console.error('Panorama slicing failed:', sliceErr);
+            toast({ title: 'Erro ao fatiar panorama', variant: 'destructive' });
+          }
+        } else {
+          toast({ title: 'Falha ao gerar panorama contínuo', description: 'Gerando cards individualmente como fallback...', variant: 'destructive' });
+          // Fall through to normal generation below
+        }
+
+        // If panorama succeeded, skip normal image generation
+        if (panoramaUrl && updatedCards.every(c => c.imageUrl)) {
+          const finalData = { ...data.data, cards: updatedCards };
+          setCarouselData(finalData);
+          setGeneratingAllImages(false);
+          setImageGenProgress('');
+
+          // Auto-save
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            if (userData.user) {
+              const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+              if (companyData) {
+                try {
+                  await supabase.rpc('consume_ai_credits', {
+                    p_company_id: companyData.company_id, p_agent_id: null,
+                    p_amount: finalData.cards.length,
+                    p_description: `Carrossel Contínuo: ${finalData.title || topic} (${finalData.cards.length} cards)`,
+                  });
+                } catch { /* ignore */ }
+                const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, continuousMode: true };
+                const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                if (inserted) {
+                  setCurrentCarouselId(inserted.id);
+                  setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+                  if (localJobId) completeCloudJob(localJobId, inserted.id);
+                }
+              }
+            }
+          } catch (saveErr) { console.error('Auto-save error:', saveErr); }
+          if (localJobId) { setCloudJobId(null); }
+          setGenerating(false);
+          return;
+        }
+      }
+
+      // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
+      const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
       const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
@@ -1561,31 +1713,12 @@ const CarouselGenerator: React.FC = () => {
             cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas. NUNCA gere grades, mosaicos, grids de posts ou capturas de feeds de redes sociais — cada card deve ser UMA ÚNICA composição editorial. NUNCA use o símbolo "@" antes de nomes de marcas ou plataformas nos textos renderizados.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             
-            // Include logo/brand overlay instructions for full-bleed
             if (logoUrl && brandName) {
-              const posMap: Record<string, string> = {
-                'top-left': 'canto superior esquerdo',
-                'top-center': 'centro superior',
-                'top-right': 'canto superior direito',
-                'bottom-left': 'canto inferior esquerdo',
-                'bottom-center': 'centro inferior',
-                'bottom-right': 'canto inferior direito',
-                'middle-left': 'centro esquerdo',
-                'middle-right': 'centro direito',
-              };
+              const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
               const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
               cardTextParts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, sobrepondo o conteúdo com leve destaque (fundo semitransparente ou sombra sutil). A logo deve ser pequena e elegante, sem dominar o layout.`);
             } else if (brandName) {
-              const posMap: Record<string, string> = {
-                'top-left': 'canto superior esquerdo',
-                'top-center': 'centro superior',
-                'top-right': 'canto superior direito',
-                'bottom-left': 'canto inferior esquerdo',
-                'bottom-center': 'centro inferior',
-                'bottom-right': 'canto inferior direito',
-                'middle-left': 'centro esquerdo',
-                'middle-right': 'centro direito',
-              };
+              const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
               const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
               cardTextParts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
             }
@@ -1631,44 +1764,33 @@ const CarouselGenerator: React.FC = () => {
             const origin = window.location.origin;
             const allPreviews = (activeMarketplaceStyle._previewImages as string[])
               .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-            // Send ALL preview images for maximum style fidelity
             marketplaceRefUrls.push(...allPreviews);
           }
           
           let capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
           
-          // Per-card people mode: override when using random people mode
           if (!hasFaceRefsForGen && peopleMode !== 'none') {
             const shouldHaveRandomPerson = randomPeopleCardIndices.has(i);
             if (!shouldHaveRandomPerson) {
               capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
             }
-            // else: the buildImagePrompt already added random person instructions
           } else if (!hasFaceRefsForGen && peopleMode === 'none') {
-            // Already handled in buildImagePrompt, but reinforce per-card
             capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
           }
-          // Multi-person: build grouped face refs with metadata
           let cardFaceRefs: string[] | undefined;
           let cardFacePersonsMeta: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[] | undefined;
-          // Only send face refs to cards designated for faces
           const shouldHaveFace = faceCardIndices.has(i);
           if (!shouldHaveFace) {
             cardFaceRefs = undefined;
             cardFacePersonsMeta = undefined;
           } else if (activeFacePersonsForGen.length > 1 && !allPeopleOnCover) {
-            // Alternate people across cards
             const personForCard = activeFacePersonsForGen[(i - 1) % activeFacePersonsForGen.length];
             cardFaceRefs = personForCard.photos.map(p => p.url);
             cardFacePersonsMeta = undefined;
           } else if (activeFacePersonsForGen.length > 1) {
-            // All people on every card
             cardFaceRefs = activeFacePersonsForGen.flatMap(p => p.photos.map(ph => ph.url));
             cardFacePersonsMeta = activeFacePersonsForGen.map(p => ({
-              label: p.label,
-              gender: p.gender,
-              wearsGlasses: p.wearsGlasses,
-              photoCount: p.photos.length,
+              label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length,
             }));
           } else {
             cardFaceRefs = allFaceRefUrls.length > 0 ? [...allFaceRefUrls] : undefined;
@@ -3502,7 +3624,7 @@ FORBIDDEN:
                         contentMode={isGuest ? 'single-post' : contentMode}
                         setContentMode={isGuest ? () => {} : (mode) => {
                           setContentMode(mode);
-                          if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
+                          if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); setContinuousMode(false); }
                           else if (cardCount < 2) { setCardCount(5); }
                         }}
                         hasFacePhotos={hasFacePhotos}
@@ -3510,6 +3632,8 @@ FORBIDDEN:
                         setFaceCardCount={setFaceCardCount}
                         wizardMode={wizardMode}
                         guestMode={isGuest}
+                        continuousMode={continuousMode}
+                        setContinuousMode={setContinuousMode}
                       />
                     )}
                     {currentStepName === 'Fotos' && (

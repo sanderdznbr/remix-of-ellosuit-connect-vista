@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Sparkles, Lock } from 'lucide-react';
+import { User, Sparkles, Lock, Layers } from 'lucide-react';
 
 interface Props {
   cardCount: number;
@@ -11,9 +11,11 @@ interface Props {
   setFaceCardCount?: (v: number | null) => void;
   wizardMode?: 'simple' | 'advanced';
   guestMode?: boolean;
+  continuousMode?: boolean;
+  setContinuousMode?: (v: boolean) => void;
 }
 
-const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode }) => {
+const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode, continuousMode, setContinuousMode }) => {
   const showFaceSelector = wizardMode === 'advanced' && hasFacePhotos && contentMode === 'carousel' && cardCount >= 2;
   const effectiveFaceCount = faceCardCount != null ? faceCardCount : cardCount;
 
@@ -126,6 +128,41 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
               ))}
             </div>
           </>
+        )}
+
+        {/* Continuous mode toggle (advanced only, carousel only) */}
+        {wizardMode === 'advanced' && contentMode === 'carousel' && cardCount >= 2 && setContinuousMode && (
+          <button
+            onClick={() => setContinuousMode(!continuousMode)}
+            className={`w-full p-4 rounded-2xl text-left transition-all border ${
+              continuousMode
+                ? 'bg-gradient-to-r from-purple-500/15 to-indigo-500/15 border-purple-500/40'
+                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl transition-colors ${continuousMode ? 'bg-purple-500/20' : 'bg-white/[0.06]'}`}>
+                <Layers className={`h-4 w-4 ${continuousMode ? 'text-purple-400' : 'text-white/40'}`} />
+              </div>
+              <div className="flex-1">
+                <p className={`text-sm font-semibold ${continuousMode ? 'text-purple-300' : 'text-white/60'}`}>Carrossel Contínuo</p>
+                <p className="text-[11px] text-white/30 mt-0.5 leading-relaxed">
+                  A arte flui entre os slides sem corte, criando um efeito panorâmico contínuo
+                </p>
+              </div>
+              <div className={`w-10 h-5 rounded-full transition-all relative ${continuousMode ? 'bg-purple-500' : 'bg-white/10'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${continuousMode ? 'left-5' : 'left-0.5'}`} />
+              </div>
+            </div>
+            {continuousMode && (
+              <div className="mt-3 pt-3 flex items-start gap-2" style={{ borderTop: '1px solid rgba(139,92,246,0.15)' }}>
+                <Sparkles className="h-3.5 w-3.5 text-purple-400/60 mt-0.5 shrink-0" />
+                <p className="text-[10px] text-white/25 leading-relaxed">
+                  A IA gera uma composição panorâmica única e fatia automaticamente entre os {cardCount} slides, com texto e elementos visuais fluindo entre eles.
+                </p>
+              </div>
+            )}
+          </button>
         )}
       </div>
 

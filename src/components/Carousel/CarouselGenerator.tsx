@@ -3631,6 +3631,18 @@ FORBIDDEN:
                         setManualPostText={setManualPostText}
                         wizardMode={wizardMode}
                         guestMode={isGuest}
+                        classifyingTopic={classifyingTopic}
+                        webSearchSuggestion={webSearchSuggestion}
+                        onAcceptWebSearch={async () => {
+                          setWebSearchSuggestion(null);
+                          setWebSearchDecisionMade(true);
+                          await handleSearchWeb();
+                        }}
+                        onDeclineWebSearch={() => {
+                          setWebSearchSuggestion(null);
+                          setWebSearchDecisionMade(true);
+                          setSkipWebSearch(true);
+                        }}
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }

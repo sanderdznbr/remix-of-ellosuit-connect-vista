@@ -340,6 +340,9 @@ const CarouselGenerator: React.FC = () => {
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+  const [classifyingTopic, setClassifyingTopic] = useState(false);
+  const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
+  const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
   const handleSearchWeb = async () => {
     if (!topic.trim()) return;

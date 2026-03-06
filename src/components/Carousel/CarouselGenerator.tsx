@@ -161,6 +161,8 @@ const CarouselGenerator: React.FC = () => {
   const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
   const [manualPostText, setManualPostText] = useState('');
   const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
+  const [roteiroGenerated, setRoteiroGenerated] = useState(false);
+  const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
 
   // Wizard mode: simple vs advanced
   const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
@@ -3779,6 +3781,34 @@ FORBIDDEN:
                                 setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                               }
                             }
+                            // Roteiro step: auto-generate on first click, advance on second
+                            if (currentStepName === 'Roteiro') {
+                              const hasAnyCardText = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
+                              if (!hasAnyCardText && !roteiroGenerated) {
+                                // First click: generate the outline
+                                setGeneratingRoteiro(true);
+                                try {
+                                  const totalCards = contentMode === 'single-post' ? 1 : cardCount;
+                                  const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
+                                    body: {
+                                      action: 'generate-outline',
+                                      topic: topic.trim(),
+                                      cardCount: totalCards,
+                                      contentMode,
+                                    },
+                                  });
+                                  if (!outlineErr && outlineData?.outline) {
+                                    setManualCardTexts(outlineData.outline);
+                                    setRoteiroGenerated(true);
+                                  }
+                                } catch (err) {
+                                  console.error('Auto roteiro error:', err);
+                                } finally {
+                                  setGeneratingRoteiro(false);
+                                }
+                                return; // Don't advance yet
+                              }
+                            }
                             let next = wizardStep + 1;
                             const nextName = WIZARD_STEPS[next];
                             // Skip Fotos when toggle is off or no images found (advanced)
@@ -3788,10 +3818,10 @@ FORBIDDEN:
                               while (next < WIZARD_STEPS.length && (WIZARD_STEPS[next] === 'Cores' || WIZARD_STEPS[next] === 'Fontes')) next++;
                             }
                             setWizardStep(next);
-                          }} disabled={!canProceed || searchingWeb}
+                          }} disabled={!canProceed || searchingWeb || generatingRoteiro}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
                           style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
-                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
+                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
                         </button>
                       </div>
                     ) : (

@@ -62,7 +62,7 @@ import StepFonts from './wizard/StepFonts';
 import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepSpeed from './wizard/StepSpeed';
-import StepVisualStyle, { VisualCategory } from './wizard/StepVisualStyle';
+import StepVisualStyle, { VisualCategory, PeopleMode } from './wizard/StepVisualStyle';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
@@ -191,6 +191,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Visual style (when no face is attached)
   const [visualCategory, setVisualCategory] = useState<VisualCategory | null>(null);
+  const [peopleMode, setPeopleMode] = useState<PeopleMode>('none');
+  const [randomFaceCount, setRandomFaceCount] = useState<number | null>(null);
   const [visualSearchQuery, setVisualSearchQuery] = useState('');
   
   // Product state
@@ -795,6 +797,17 @@ const CarouselGenerator: React.FC = () => {
       if (faceGender === 'male') parts.push('The person in the image MUST be MALE with a masculine body and build.');
       else if (faceGender === 'female') parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
       if (wearsGlasses) parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
+    } else if (!hasFaceRefs && peopleMode === 'none') {
+      // Explicit NO PEOPLE instruction
+      parts.push('CRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. The image must contain ONLY visual elements, objects, graphics, text overlays, and abstract/decorative elements. NO HUMANS whatsoever.');
+    } else if (!hasFaceRefs && peopleMode !== 'none') {
+      // Random person mode
+      const genderMap: Record<string, string> = {
+        'random-female': 'The person MUST be FEMALE with a feminine body and build.',
+        'random-male': 'The person MUST be MALE with a masculine body and build.',
+        'random-auto': 'The AI can choose an appropriate gender for the person.',
+      };
+      parts.push(`Include a person/model in this image. ${genderMap[peopleMode] || ''} Use a photorealistic, professional-looking person that fits the editorial context. The person should look confident and natural.`);
     }
 
     // Brand colors — inject when NO marketplace style is active, OR when admin user has brand override
@@ -1389,15 +1402,30 @@ const CarouselGenerator: React.FC = () => {
         // Always include cover (0) and distribute face cards evenly
         faceCardIndices.add(0);
         if (effectiveFaceCount >= cardCount) {
-          // All cards get faces
           for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
         } else {
-          // Distribute face cards: cover + evenly spaced middle cards
           const remaining = effectiveFaceCount - 1;
           const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
           const step = middleIndices.length / remaining;
           for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
             faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+          }
+        }
+      }
+
+      // Determine which cards get random people (when no face refs but peopleMode !== 'none')
+      const randomPeopleCardIndices = new Set<number>();
+      if (!hasFaceRefsForGen && peopleMode !== 'none') {
+        const effectiveRandomCount = randomFaceCount != null ? Math.min(randomFaceCount, cardCount) : cardCount;
+        randomPeopleCardIndices.add(0); // Cover always gets person
+        if (effectiveRandomCount >= cardCount) {
+          for (let ri = 0; ri < cardCount; ri++) randomPeopleCardIndices.add(ri);
+        } else {
+          const remaining = effectiveRandomCount - 1;
+          const middleIndices = Array.from({ length: cardCount - 1 }, (_, ri) => ri + 1);
+          const step = middleIndices.length / remaining;
+          for (let ri = 0; ri < remaining && ri < middleIndices.length; ri++) {
+            randomPeopleCardIndices.add(middleIndices[Math.min(Math.floor(ri * step), middleIndices.length - 1)]);
           }
         }
       }
@@ -1605,7 +1633,19 @@ const CarouselGenerator: React.FC = () => {
             marketplaceRefUrls.push(...allPreviews);
           }
           
-          const capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          let capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          
+          // Per-card people mode: override when using random people mode
+          if (!hasFaceRefsForGen && peopleMode !== 'none') {
+            const shouldHaveRandomPerson = randomPeopleCardIndices.has(i);
+            if (!shouldHaveRandomPerson) {
+              capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
+            }
+            // else: the buildImagePrompt already added random person instructions
+          } else if (!hasFaceRefsForGen && peopleMode === 'none') {
+            // Already handled in buildImagePrompt, but reinforce per-card
+            capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
+          }
           // Multi-person: build grouped face refs with metadata
           let cardFaceRefs: string[] | undefined;
           let cardFacePersonsMeta: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[] | undefined;
@@ -3460,7 +3500,10 @@ FORBIDDEN:
                       <StepVisualStyle
                         selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
-                        referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
+                        referenceImages={referenceImages} setReferenceImages={setReferenceImages}
+                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
+                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
+                        cardCount={cardCount} />
                     )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}

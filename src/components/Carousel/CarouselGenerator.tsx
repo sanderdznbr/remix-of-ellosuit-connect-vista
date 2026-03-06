@@ -3797,6 +3797,7 @@ FORBIDDEN:
                               if (!hasAnyCardText && !roteiroGenerated) {
                                 // First click: generate the outline
                                 setGeneratingRoteiro(true);
+                                let generated = false;
                                 try {
                                   const totalCards = contentMode === 'single-post' ? 1 : cardCount;
                                   const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
@@ -3807,16 +3808,21 @@ FORBIDDEN:
                                       contentMode,
                                     },
                                   });
-                                  if (!outlineErr && outlineData?.outline) {
+                                  if (!outlineErr && outlineData?.outline && outlineData.outline.length > 0) {
                                     setManualCardTexts(outlineData.outline);
                                     setRoteiroGenerated(true);
+                                    generated = true;
                                   }
                                 } catch (err) {
                                   console.error('Auto roteiro error:', err);
                                 } finally {
                                   setGeneratingRoteiro(false);
                                 }
-                                return; // Don't advance yet
+                                if (generated) {
+                                  return; // Stay on step to review generated outline
+                                }
+                                // If generation failed, mark as attempted and advance
+                                setRoteiroGenerated(true);
                               }
                             }
                             let next = wizardStep + 1;

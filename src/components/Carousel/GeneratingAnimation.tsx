@@ -39,19 +39,24 @@ const GeneratingAnimation: React.FC<Props> = ({
   // Build real code lines from actual params
   const CODE_LINES = useMemo(() => {
     const truncatedTopic = topic.length > 40 ? topic.substring(0, 40) + '...' : topic;
+    const styles = ['editorial', 'minimalista', 'moderno', 'criativo', 'corporativo'];
+    const imgStyles = ['photorealistic', 'cinematic', 'editorial', 'lifestyle', 'dramatic'];
+    const webCounts = [30, 40, 50, 60, 80];
+    const formats = ['1080x1350', '1080x1080', '1080x1920'];
+    const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
     const lines: { type: string; text: string }[] = [
       { type: 'comment', text: '// Gerando carrossel com IA...' },
       { type: 'code', text: 'const carousel = await generate({' },
       { type: 'prop', text: `  topic: "${truncatedTopic}",` },
       { type: 'prop', text: `  cards: ${cardCount},` },
-      { type: 'prop', text: '  style: "editorial",' },
+      { type: 'prop', text: `  style: "${pick(styles)}",` },
       { type: 'code', text: '});' },
       { type: 'blank', text: '' },
       { type: 'comment', text: '// Definindo identidade visual' },
       { type: 'code', text: 'carousel.applyBrand({' },
       { type: 'prop', text: `  colors: ["${bgColor}", "${accentColor}"],` },
       { type: 'prop', text: `  textColor: "${textColor}",` },
-      { type: 'prop', text: `  font: "${selectedFont}",` },
       ...(brandName ? [{ type: 'prop', text: `  brand: "${brandName}",` }] : []),
       { type: 'prop', text: `  logo: ${logoUrl ? '"uploaded ✓"' : '"none"'},` },
       { type: 'code', text: '});' },
@@ -63,7 +68,7 @@ const GeneratingAnimation: React.FC<Props> = ({
         { type: 'comment', text: '// Buscando referências visuais' },
         { type: 'code', text: 'const images = await searchWeb({' },
         { type: 'prop', text: `  query: "${truncatedTopic}",` },
-        { type: 'prop', text: '  count: 50,' },
+        { type: 'prop', text: `  count: ${pick(webCounts)},` },
         { type: 'prop', text: '  filter: "no_text",' },
         { type: 'code', text: '});' },
         { type: 'blank', text: '' },
@@ -75,18 +80,18 @@ const GeneratingAnimation: React.FC<Props> = ({
       { type: 'code', text: 'for (const card of carousel.cards) {' },
       { type: 'prop', text: '  card.image = await generateImage({' },
       { type: 'prop', text: '    prompt: card.imagePrompt,' },
-      { type: 'prop', text: '    model: "nano-banana",' },
-      { type: 'prop', text: '    style: "photorealistic",' },
+      { type: 'prop', text: '    model: "elloia",' },
+      { type: 'prop', text: `    style: "${pick(imgStyles)}",` },
       { type: 'code', text: '  });' },
       { type: 'code', text: '}' },
       { type: 'blank', text: '' },
       { type: 'comment', text: '// Aplicando layout final' },
-      { type: 'code', text: `carousel.render({ format: "1080x1350", slides: ${cardCount} });` },
+      { type: 'code', text: `carousel.render({ format: "${pick(formats)}", slides: ${cardCount} });` },
       { type: 'code', text: '// ✓ Carrossel pronto!' },
     );
 
     return lines;
-  }, [topic, cardCount, bgColor, accentColor, textColor, selectedFont, brandName, logoUrl, skipWebSearch]);
+  }, [topic, cardCount, bgColor, accentColor, textColor, brandName, logoUrl, skipWebSearch]);
 
   const STEPS = useMemo(() => [
     { icon: '📝', label: 'Criando textos persuasivos...' },
@@ -94,7 +99,7 @@ const GeneratingAnimation: React.FC<Props> = ({
     { icon: '📐', label: `Calculando layout de ${cardCount} cards...` },
     ...(skipWebSearch ? [] : [{ icon: '🖼️', label: 'Buscando imagens na web...' }]),
     { icon: '✨', label: 'Gerando imagens com IA...' },
-    { icon: '🔤', label: `Aplicando fonte ${selectedFont}...` },
+    { icon: '🔤', label: 'Aplicando tipografia...' },
     { icon: '📱', label: 'Montando carrossel...' },
     { icon: '🚀', label: 'Finalizando...' },
   ], [cardCount, selectedFont, skipWebSearch]);

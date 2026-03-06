@@ -3859,11 +3859,12 @@ FORBIDDEN:
                       </div>
                     ) : (
                       <button onClick={() => {
-                          if (isGuest && cardCount > 1) {
-                            setShowLoginGate(true);
-                            return;
-                          }
-                          if (cardCount === 1) {
+                          if (isGuest) {
+                            // Guests always generate single post
+                            setContentMode('single-post');
+                            setCardCount(1);
+                            setImageCardCount(1);
+                          } else if (cardCount === 1) {
                             setContentMode('single-post');
                             setImageCardCount(1);
                           } else {

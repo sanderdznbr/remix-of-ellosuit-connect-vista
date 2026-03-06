@@ -463,7 +463,7 @@ Responda APENAS em JSON válido:
       let parsed = null;
       let lastRawContent = '';
       const MAX_CONTENT_ATTEMPTS = 3;
-      const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash-preview', 'google/gemini-3-flash-preview'];
+      const models = ['google/gemini-2.5-flash', 'google/gemini-3-flash-preview', 'google/gemini-2.5-pro'];
 
       for (let attempt = 0; attempt < MAX_CONTENT_ATTEMPTS; attempt++) {
         const model = models[attempt] || models[0];

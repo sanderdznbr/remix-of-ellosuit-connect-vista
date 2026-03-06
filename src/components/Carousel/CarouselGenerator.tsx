@@ -3798,8 +3798,21 @@ FORBIDDEN:
                                 // First click: generate the outline
                                 setGeneratingRoteiro(true);
                                 let generated = false;
+                                const totalCards = contentMode === 'single-post' ? 1 : cardCount;
+                                
+                                // Local fallback generator
+                                const localFallback = () => {
+                                  if (contentMode === 'single-post') {
+                                    return [{ title: topic.trim().slice(0, 60), body: '' }];
+                                  }
+                                  return Array.from({ length: totalCards }, (_, i) => {
+                                    if (i === 0) return { title: topic.trim().slice(0, 60), body: 'Descubra tudo sobre este assunto' };
+                                    if (i === totalCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
+                                    return { title: `Ponto ${i}`, body: '' };
+                                  });
+                                };
+
                                 try {
-                                  const totalCards = contentMode === 'single-post' ? 1 : cardCount;
                                   const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
                                     body: {
                                       action: 'generate-outline',
@@ -3810,19 +3823,23 @@ FORBIDDEN:
                                   });
                                   if (!outlineErr && outlineData?.outline && outlineData.outline.length > 0) {
                                     setManualCardTexts(outlineData.outline);
-                                    setRoteiroGenerated(true);
-                                    generated = true;
+                                  } else {
+                                    // Edge function returned empty — use local fallback
+                                    console.warn('Outline API returned empty, using local fallback');
+                                    setManualCardTexts(localFallback());
                                   }
                                 } catch (err) {
-                                  console.error('Auto roteiro error:', err);
-                                } finally {
-                                  setGeneratingRoteiro(false);
+                                  console.error('Auto roteiro error, using local fallback:', err);
+                                  setManualCardTexts(localFallback());
                                 }
+                                
+                                setRoteiroGenerated(true);
+                                generated = true;
+                                setGeneratingRoteiro(false);
+
                                 if (generated) {
                                   return; // Stay on step to review generated outline
                                 }
-                                // If generation failed, mark as attempted and advance
-                                setRoteiroGenerated(true);
                               }
                             }
                             let next = wizardStep + 1;

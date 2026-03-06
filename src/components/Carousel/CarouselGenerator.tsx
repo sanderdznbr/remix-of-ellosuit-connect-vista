@@ -1298,9 +1298,9 @@ const CarouselGenerator: React.FC = () => {
       setImageGenProgress('');
       toast({ title: 'Post gerado com sucesso!' });
 
-      // Guest paywall: show the result for 6 seconds, then overlay paywall
+      // Guest paywall: show immediately to block downloads
       if (isGuest) {
-        setTimeout(() => setShowGuestPaywall(true), 6000);
+        setShowGuestPaywall(true);
       }
 
       // Auto-save

@@ -5039,11 +5039,11 @@ FORBIDDEN:
                   {autoSaveStatus === 'saving' ? <Loader2 className="h-3 w-3 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3 w-3 text-green-400" /> : <Save className="h-3 w-3" />}
                   <span className="hidden sm:inline">{autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : ''}</span>
                 </div>
-                <button onClick={() => setShowExportMenu(true)} disabled={exporting}
+                <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 relative"
                   style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
-                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                  <span className="hidden sm:inline">Exportar</span>
+                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                  <span className="hidden sm:inline">{isGuest ? 'Assine' : 'Exportar'}</span>
                 </button>
               </div>
             </div>

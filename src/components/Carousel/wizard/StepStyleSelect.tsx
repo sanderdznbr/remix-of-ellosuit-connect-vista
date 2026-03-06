@@ -43,6 +43,7 @@ const StepStyleSelect: React.FC<Props> = ({
   const [lockedStyleName, setLockedStyleName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [previewIndex, setPreviewIndex] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchAvailableStyles();

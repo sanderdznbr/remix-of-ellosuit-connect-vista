@@ -131,9 +131,9 @@ Deno.serve(async (req) => {
       const marketplaceRefUrls: string[] = [];
       if (marketplaceStyle?._previewImages?.length) {
         const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
-        // Send up to 6 preview images for maximum style fidelity
-        for (let pi = 0; pi < Math.min(allPreviews.length, 6); pi++) {
-          marketplaceRefUrls.push(allPreviews[pi]);
+        // Send ALL preview images for maximum style fidelity
+        for (const preview of allPreviews) {
+          marketplaceRefUrls.push(preview);
         }
       }
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
@@ -256,9 +256,9 @@ Deno.serve(async (req) => {
     const marketplaceRefUrls: string[] = [];
     if (isFullBleed && marketplaceStyle?._previewImages?.length) {
       const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
-      // Send up to 6 preview images for maximum style fidelity
-      for (let pi = 0; pi < Math.min(allPreviews.length, 6); pi++) {
-        marketplaceRefUrls.push(allPreviews[pi]);
+      // Send ALL preview images for maximum style fidelity
+      for (const preview of allPreviews) {
+        marketplaceRefUrls.push(preview);
       }
     }
     const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];

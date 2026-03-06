@@ -269,11 +269,14 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
     for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
     for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
-    // Model selection — use pro model whenever face refs exist for maximum fidelity
-    const resolvedModel = imageModel === 'auto' 
-      ? (hasFaceRefs ? 'nano-banana' : 'gemini') 
-      : imageModel;
-    const primaryModel = resolvedModel === 'nano-banana' ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
+    // Model selection — treat "elloia" as the premium model (backward compatible with "nano-banana")
+    const requestedModel = (imageModel || 'auto').toString().toLowerCase();
+    const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana';
+    const resolvedModel = requestedModel === 'auto'
+      ? ((hasFaceRefs || hasStyleRefs) ? 'elloia' : 'gemini')
+      : requestedModel;
+    const usePremium = resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
+    const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
     const fallbackModel = 'google/gemini-2.5-flash-image';
     console.log('Image gen model:', primaryModel, 'parts:', messageContent.length);
 
@@ -364,13 +367,13 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       } else {
         retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });
       }
-      for (const ref of validGeneralRefs.slice(0, 1)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      for (const ref of validStyleRefs.slice(0, 2)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      for (const ref of validGeneralRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      for (const ref of validStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch (e2: any) { if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
     }
 
-    // Attempt 3: text-only fallback — still keep style if marketplace
-    if (!generatedImage) {
+    // Attempt 3: text-only fallback (disabled when style refs exist to avoid low-fidelity outputs)
+    if (!generatedImage && validStyleRefs.length === 0) {
       const fallbackPrompt = stylePrompt
         ? `${stylePrompt}\n\n${imagePrompt}\n\nGere a composição editorial completa com tipografia em PORTUGUÊS BRASILEIRO. NÃO use espanhol. NÃO copie informações pessoais das referências. SEM bordas.`
         : `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.`;

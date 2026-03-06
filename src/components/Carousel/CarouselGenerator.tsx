@@ -340,6 +340,9 @@ const CarouselGenerator: React.FC = () => {
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+  const [classifyingTopic, setClassifyingTopic] = useState(false);
+  const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
+  const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
   const handleSearchWeb = async () => {
     if (!topic.trim()) return;
@@ -416,6 +419,9 @@ const CarouselGenerator: React.FC = () => {
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setWebSearchResult(null);
+    setClassifyingTopic(false);
+    setWebSearchSuggestion(null);
+    setWebSearchDecisionMade(false);
     setCurrentCarouselId(null);
     setPexelsImages([]);
     setShowImagePicker(null);
@@ -3625,6 +3631,18 @@ FORBIDDEN:
                         setManualPostText={setManualPostText}
                         wizardMode={wizardMode}
                         guestMode={isGuest}
+                        classifyingTopic={classifyingTopic}
+                        webSearchSuggestion={webSearchSuggestion}
+                        onAcceptWebSearch={async () => {
+                          setWebSearchSuggestion(null);
+                          setWebSearchDecisionMade(true);
+                          await handleSearchWeb();
+                        }}
+                        onDeclineWebSearch={() => {
+                          setWebSearchSuggestion(null);
+                          setWebSearchDecisionMade(true);
+                          setSkipWebSearch(true);
+                        }}
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
@@ -3771,9 +3789,33 @@ FORBIDDEN:
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
-                            // Web search on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
-                              await handleSearchWeb();
+                            // Smart web search classification on Tema step
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
+                              // Classify the topic first
+                              setClassifyingTopic(true);
+                              try {
+                                const { data, error } = await supabase.functions.invoke('generate-carousel', {
+                                  body: { action: 'classify-topic', topic: topic.trim() },
+                                });
+                                if (!error && data) {
+                                  if (data.shouldSearch) {
+                                    // Show suggestion to user - don't advance yet
+                                    setWebSearchSuggestion({ classification: data.classification, reason: data.reason || '' });
+                                    setClassifyingTopic(false);
+                                    return; // Wait for user decision
+                                  } else {
+                                    // Personal/opinion content - skip web search automatically
+                                    setSkipWebSearch(true);
+                                    setWebSearchDecisionMade(true);
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Classification error:', err);
+                                // On error, skip search and continue
+                                setSkipWebSearch(true);
+                                setWebSearchDecisionMade(true);
+                              }
+                              setClassifyingTopic(false);
                             }
                             if (currentStepName === 'Tema' && hasManualText && !topic.trim()) {
                               setTopic(manualPostText.trim());

@@ -116,6 +116,79 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ===== CLASSIFY TOPIC (smart web search decision) =====
+    if (action === 'classify-topic') {
+      const classifyTopic = topic || '';
+      if (!classifyTopic.trim()) {
+        return new Response(JSON.stringify({ classification: 'personal', shouldSearch: false }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      if (!LOVABLE_API_KEY) {
+        // fallback: assume should search
+        return new Response(JSON.stringify({ classification: 'unknown', shouldSearch: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      try {
+        const classifyRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-flash-preview',
+            messages: [
+              {
+                role: 'system',
+                content: `You are a topic classifier. Analyze the user's topic and classify it into one of these categories:
+- "news": Current events, trending topics, factual information that benefits from real-time web data (e.g., "chuvas em minas", "eleições 2026", "bitcoin hoje")
+- "educational": Educational/informational content that could benefit from web enrichment (e.g., "5 dicas de contabilidade", "como investir na bolsa")
+- "personal": Personal, creative, brand-specific, or proprietary content that does NOT need web search (e.g., "lançamento do meu produto", "promoção da minha loja", "minha história", "receita da vovó")
+- "opinion": Personal opinions, motivational content, creative writing (e.g., "frases motivacionais", "minha visão sobre liderança")
+
+Respond ONLY with a JSON object: {"classification": "news|educational|personal|opinion", "reason_pt": "brief reason in Portuguese"}
+Do not include markdown or extra text.`
+              },
+              { role: 'user', content: classifyTopic }
+            ],
+            temperature: 0.1,
+          }),
+        });
+
+        if (classifyRes.ok) {
+          const classifyData = await classifyRes.json();
+          const content = classifyData.choices?.[0]?.message?.content || '';
+          try {
+            const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+            const classification = parsed.classification || 'unknown';
+            const shouldSearch = classification === 'news' || classification === 'educational';
+            return new Response(JSON.stringify({
+              classification,
+              shouldSearch,
+              reason: parsed.reason_pt || '',
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          } catch {
+            console.error('Failed to parse classification:', content);
+          }
+        }
+      } catch (err) {
+        console.error('Classification error:', err);
+      }
+
+      // Fallback
+      return new Response(JSON.stringify({ classification: 'unknown', shouldSearch: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // ===== WEB SEARCH for reference images (Brave Search only) =====
     if (action === 'web-search') {
       const searchQuery = query || topic || '';

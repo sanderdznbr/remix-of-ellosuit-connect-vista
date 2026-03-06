@@ -34,6 +34,10 @@ interface Props {
   wizardMode?: 'simple' | 'advanced';
   setContentMode?: (mode: 'carousel' | 'single-post') => void;
   guestMode?: boolean;
+  webSearchSuggestion?: { classification: string; reason: string } | null;
+  onAcceptWebSearch?: () => void;
+  onDeclineWebSearch?: () => void;
+  classifyingTopic?: boolean;
 }
 
 const StepTopic: React.FC<Props> = ({

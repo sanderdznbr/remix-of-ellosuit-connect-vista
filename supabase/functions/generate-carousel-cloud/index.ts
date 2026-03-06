@@ -131,8 +131,10 @@ Deno.serve(async (req) => {
       const marketplaceRefUrls: string[] = [];
       if (marketplaceStyle?._previewImages?.length) {
         const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
-        if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-        if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
+        // Send up to 6 preview images for maximum style fidelity
+        for (let pi = 0; pi < Math.min(allPreviews.length, 6); pi++) {
+          marketplaceRefUrls.push(allPreviews[pi]);
+        }
       }
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
 
@@ -254,9 +256,10 @@ Deno.serve(async (req) => {
     const marketplaceRefUrls: string[] = [];
     if (isFullBleed && marketplaceStyle?._previewImages?.length) {
       const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
-      if (allPreviews.length > 0) marketplaceRefUrls.push(allPreviews[0]);
-      if (allPreviews.length > 2) marketplaceRefUrls.push(allPreviews[Math.floor(allPreviews.length / 2)]);
-      if (allPreviews.length > 4) marketplaceRefUrls.push(allPreviews[Math.min(4, allPreviews.length - 1)]);
+      // Send up to 6 preview images for maximum style fidelity
+      for (let pi = 0; pi < Math.min(allPreviews.length, 6); pi++) {
+        marketplaceRefUrls.push(allPreviews[pi]);
+      }
     }
     const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
 
@@ -281,6 +284,7 @@ Deno.serve(async (req) => {
         parts.push(`TEMA: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie @handles, nomes de empresas ou informações pessoais das referências. NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas referências — use pessoas DIFERENTES com aparências variadas.`);
         parts.push(`SEM BORDAS: Full bleed, sem barras no topo ou base.`);
+        parts.push(`FIDELIDADE AO ESTILO: As imagens de referência de estilo definem a IDENTIDADE VISUAL OBRIGATÓRIA. Replique EXATAMENTE: paleta de cores, estilo tipográfico, elementos decorativos (linhas, formas, texturas, overlays, gradientes), composição de layout, tratamento fotográfico (filtros, contraste, grain). O resultado DEVE parecer parte da MESMA SÉRIE/COLEÇÃO das referências.`);
         // Logo/brand overlay
         if (job.logo_url && job.brand_name) {
           const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
@@ -295,7 +299,7 @@ Deno.serve(async (req) => {
           parts.push(`CARD DE CAPA (1 de ${cards.length}).`);
           parts.push(`TÍTULO: "${card.title || cleanTopic}"`);
           if (card.subtitle) parts.push(`SUBTÍTULO: "${card.subtitle}"`);
-          parts.push(`Estilo capa de revista, tipografia grande e impactante.`);
+          parts.push(`Estilo capa de revista, tipografia grande e impactante. SIGA FIELMENTE o estilo visual das referências.`);
         } else if (isCta) {
           parts.push(`CARD FINAL DE CTA (${i + 1} de ${cards.length}).`);
           if (card.title) parts.push(`TÍTULO: "${card.title}"`);
@@ -305,7 +309,7 @@ Deno.serve(async (req) => {
           const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
           if (bodyText) parts.push(`TEXTO PRINCIPAL: "${bodyText}"`);
           if (card.bodyBottom) parts.push(`TEXTO SECUNDÁRIO: "${card.bodyBottom}"`);
-          parts.push(`Layout editorial variado — NÃO estilo capa/hero.`);
+          parts.push(`Layout editorial variado dentro do MESMO SISTEMA VISUAL das referências — NÃO estilo capa/hero. Cada card deve ter variação de layout mas MESMA identidade visual.`);
         }
         imgPrompt = parts.join('\n');
       } else {

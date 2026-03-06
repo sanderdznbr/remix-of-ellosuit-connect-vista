@@ -1218,8 +1218,8 @@ const CarouselGenerator: React.FC = () => {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyle._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        // Send ALL preview images for maximum style fidelity
-        marketplaceRefUrls.push(...allPreviews);
+        // Limit to 8 style refs to maintain quality
+        marketplaceRefUrls.push(...allPreviews.slice(0, 8));
       }
 
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
@@ -2285,13 +2285,15 @@ const CarouselGenerator: React.FC = () => {
         if (activeMarketplaceStyle?._previewImages?.length) {
           const origin = window.location.origin;
           const allPreviews = (activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-          // Send ALL preview images for maximum style fidelity
-          marketplaceRefUrls.push(...allPreviews);
+          // Limit marketplace preview images to avoid overwhelming the model
+          marketplaceRefUrls.push(...allPreviews.slice(0, 8));
         }
 
-        // Use the cover image as style reference to maintain visual consistency
-        const coverStyleRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];
-        const capturedStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef].length > 0 ? [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef] : undefined;
+        // Use the cover image as style reference ONLY if it's a URL (not base64) to avoid huge payloads
+        const coverStyleRef = coverCard.imageUrl && !coverCard.imageUrl.startsWith('data:') ? [coverCard.imageUrl] : [];
+        // Cap total style refs to 8 max to maintain quality
+        const allStyleCandidates = [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef];
+        const capturedStyleRefs = allStyleCandidates.length > 0 ? allStyleCandidates.slice(0, 8) : undefined;
 
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;

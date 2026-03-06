@@ -1447,6 +1447,8 @@ const CarouselGenerator: React.FC = () => {
           topic: cleanMentionsFromTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount,
+          brandName: brandName || undefined,
+          userName: userName || undefined,
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),

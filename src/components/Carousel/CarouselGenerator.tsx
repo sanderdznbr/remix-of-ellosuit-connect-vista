@@ -2215,13 +2215,17 @@ const CarouselGenerator: React.FC = () => {
       setGeneratingAllImages(true);
       setImageGenProgress('🎨 Gerando imagens dos cards...');
 
-      // IMPORTANT: Use the cover image itself as face reference to maintain the same person
-      // The cover already contains the correct face, so we use it as the primary face ref
-      // Only fall back to wizard referenceImages if they match what was used for this cover
+      // IMPORTANT: Collect face refs from BOTH facePersons (multi-person mode) and referenceImages
       const coverFaceRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];
-      const wizardFaceRefs = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const activeFP = facePersons.filter(p => p.photos.length > 0);
+      const wizardFaceRefs = activeFP.length > 0
+        ? activeFP.flatMap(p => p.photos.map(ph => ph.url))
+        : referenceImages.filter(r => r.category === 'face').map(r => r.url);
       // Prioritize: wizard face refs if available (they were used for the cover), otherwise use cover image itself
       const faceRefUrls = wizardFaceRefs.length > 0 ? [...wizardFaceRefs, ...coverFaceRef] : coverFaceRef;
+      const facePersonsMeta = activeFP.length > 1
+        ? activeFP.map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length }))
+        : undefined;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const updatedCards = [...cards];
@@ -2300,6 +2304,7 @@ const CarouselGenerator: React.FC = () => {
             styleReferenceUrls: capturedStyleRefs,
             referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
             negativePrompt: finalNegative + (!showPerson && faceRefUrls.length > 0 ? ', no people, no faces, no portraits' : ''),
+            facePersonsMetadata: showPerson ? facePersonsMeta : undefined,
           }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
         });
       }
@@ -2629,7 +2634,10 @@ FORBIDDEN:
       // 2. Regenerate image using AI with face/style references
       let newImageUrl = card.imageUrl;
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
-      const wizardFaceRefs = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const activeFPRegen = facePersons.filter(p => p.photos.length > 0);
+      const wizardFaceRefs = activeFPRegen.length > 0
+        ? activeFPRegen.flatMap(p => p.photos.map(ph => ph.url))
+        : referenceImages.filter(r => r.category === 'face').map(r => r.url);
       // For text-only cards, never inject face references
       const allowFaceReferences = !disallowPeople;
       // If no wizard face refs, use the cover image as face reference to maintain the same person

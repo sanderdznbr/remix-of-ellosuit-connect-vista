@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata, imageSize } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount } = body;
     // facePersonsMetadata: optional array of { label, gender, wearsGlasses, photoCount } to map grouped face refs
 
     // === FACE REGENERATION MODE (Image Editing) ===
@@ -98,6 +98,31 @@ Deno.serve(async (req) => {
     const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;
     const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
+    const outputAspectRatio = typeof imageSize === 'string' && imageSize.trim() ? imageSize.trim() : '3:4';
+    const isPanoramicMode = Boolean(panoramic);
+    const panoramicSections = Number.isFinite(Number(panoramicCardCount))
+      ? Math.max(2, Number(panoramicCardCount))
+      : 2;
+
+    const formatInstruction = (() => {
+      if (isPanoramicMode) {
+        return `Gere UMA imagem PANORÂMICA CONTÍNUA no formato ${outputAspectRatio}. A arte deve fluir continuamente da esquerda para a direita, sem cortes, sem divisórias internas, sem bordas entre seções. Esta panorâmica será fatiada em ${panoramicSections} partes verticais iguais, então mantenha continuidade visual total entre todas as seções.`;
+      }
+
+      if (outputAspectRatio === '9:16') {
+        return 'Gere em formato retrato 9:16 (1080x1920), imagem alta vertical, sem barras pretas e preenchendo todo o quadro.';
+      }
+
+      if (outputAspectRatio === '21:9' || outputAspectRatio === '16:9') {
+        return `Gere em formato horizontal ${outputAspectRatio}, ocupando todo o quadro sem letterbox ou barras.`;
+      }
+
+      if (outputAspectRatio === '3:4') {
+        return 'Gere em formato retrato 3:4 (1080x1440), composição vertical completa.';
+      }
+
+      return `Gere no formato ${outputAspectRatio}, preenchendo 100% da imagem sem barras ou margens vazias.`;
+    })();
 
     // Filter out URLs from domains that block hotlinking (Gemini can't fetch them)
     const BLOCKED_DOMAINS = ['shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'alamy.com', 'depositphotos.com', 'dreamstime.com', '123rf.com', 'stock.adobe.com'];
@@ -137,7 +162,7 @@ Deno.serve(async (req) => {
 
 ${imagePrompt}`;
     } else {
-      textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post (4:5 portrait aspect ratio, 1080x1350px).
+      textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post.
 
 DESCRIPTION: ${imagePrompt}
 
@@ -147,6 +172,8 @@ STYLE REQUIREMENTS:
 - Clean composition suitable for overlay text
 - Ultra high resolution, photorealistic quality`;
     }
+
+    textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
 
     // Always add hardcoded negative instructions to prevent common AI mistakes
     textPrompt += `\n\nPROIBIDO (NUNCA inclua na imagem):
@@ -295,12 +322,13 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
     const requestedModel = (imageModel || 'auto').toString().toLowerCase();
     const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana';
     const resolvedModel = requestedModel === 'auto'
-      ? ((hasFaceRefs || hasStyleRefs) ? 'elloia' : 'gemini')
+      ? ((hasFaceRefs || hasStyleRefs || isPanoramicMode) ? 'elloia' : 'gemini')
       : requestedModel;
-    const usePremium = resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
+    const forcePremiumForPanorama = isPanoramicMode;
+    const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
     const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
     const fallbackModel = 'google/gemini-2.5-flash-image';
-    console.log('Image gen model:', primaryModel, 'parts:', messageContent.length);
+    console.log('Image gen model:', primaryModel, 'parts:', messageContent.length, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 
     async function tryGenerate(model: string, content: any[], attempt: number): Promise<string | null> {
       console.log(`Attempt ${attempt} model=${model}`);
@@ -408,9 +436,9 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. SEM bordas.` });
+        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nFORMATO OBRIGATÓRIO: ${formatInstruction}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. SEM bordas.` });
       } else {
-        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${activeFaceCount > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}` });
+        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality. FORMAT MANDATORY: ${formatInstruction}.${activeFaceCount > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}` });
       }
       for (const ref of validGeneralRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
       try { generatedImage = await tryGenerate(primaryModel, retryContent, 2); } catch (e2: any) {
@@ -428,9 +456,9 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
+        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nFORMATO OBRIGATÓRIO: ${formatInstruction}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
       } else {
-        textOnlyContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.` });
+        textOnlyContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality. FORMAT MANDATORY: ${formatInstruction}.` });
       }
       try { generatedImage = await tryGenerate(primaryModel, textOnlyContent, 3); } catch (e3: any) {
         if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
@@ -443,9 +471,9 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
       for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
+        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nFORMATO OBRIGATÓRIO: ${formatInstruction}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
       } else {
-        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Magazine quality, 4:5 portrait format.` });
+        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. FORMAT MANDATORY: ${formatInstruction}.` });
       }
       try { generatedImage = await tryGenerate('google/gemini-2.5-flash-image', fallbackContent, 4); } catch (e4: any) {
         if (e4?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }

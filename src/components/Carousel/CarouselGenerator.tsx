@@ -4494,7 +4494,7 @@ FORBIDDEN:
                         Regenerar rosto
                       </button>
                     )}
-                    {card.generatedPrompt && (
+                    {(card.generatedPrompt || card.imagePrompt || card.isAiImage) && (
                       <button
                         onClick={() => { setModifyMenuCard(null); setViewPromptCard(cardIdx); }}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors">
@@ -4604,7 +4604,8 @@ FORBIDDEN:
       <AnimatePresence>
         {viewPromptCard !== null && carouselData && (() => {
           const card = carouselData.cards[viewPromptCard];
-          if (!card?.generatedPrompt) return null;
+          const promptText = card?.generatedPrompt || card?.imagePrompt || '';
+          if (!card || !promptText) return null;
           return (
             <motion.div
               key="view-prompt-modal"
@@ -4634,12 +4635,12 @@ FORBIDDEN:
                 </div>
                 <div className="flex-1 overflow-y-auto px-5 py-4">
                   <pre className="text-white/80 text-xs leading-relaxed whitespace-pre-wrap font-mono" style={{ wordBreak: 'break-word' }}>
-                    {card.generatedPrompt}
+                    {promptText}
                   </pre>
                 </div>
                 <div className="px-5 py-3 flex justify-end gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(card.generatedPrompt || ''); sonnerToast.success('Prompt copiado!'); }}
+                    onClick={() => { navigator.clipboard.writeText(promptText); sonnerToast.success('Prompt copiado!'); }}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors">
                     <Copy className="h-3.5 w-3.5" /> Copiar
                   </button>

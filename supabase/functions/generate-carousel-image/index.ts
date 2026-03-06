@@ -155,8 +155,8 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
     }
 
-    // Brand colors from logo
-    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0) {
+    // Brand colors from logo (only for non-style generations)
+    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0) {
       textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
     }
 
@@ -241,7 +241,14 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
 8. **ABSOLUTELY DO NOT** reproduce ANY text, names, brands, credits, attributions, or watermarks visible in the style reference images. The references are for VISUAL STYLE ONLY (colors, typography style, layout, decorative elements). All actual text content must come from the user prompt above.`;
     }
 
-    // CRITICAL: Face references MUST come FIRST in the message content
+    // CRITICAL: when style refs exist, place them before instructions to improve visual anchoring
+    if (validStyleRefs.length > 0) {
+      messageContent.push({ type: 'text', text: `=== MANDATORY STYLE REFERENCES (${validStyleRefs.length}) ===` });
+      for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      messageContent.push({ type: 'text', text: 'The images above define the REQUIRED visual DNA. Follow them strictly for colors, typography style, composition, spacing, and decorative motifs.' });
+    }
+
+    // CRITICAL: Face references MUST come before the prompt when provided
     // so the model treats them as highest priority identity references
     if (validFaceRefs.length > 0 && isMultiPerson) {
       // Group face refs by person with clear labels
@@ -266,7 +273,6 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       }
     }
     messageContent.push({ type: 'text', text: textPrompt });
-    for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
     for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
     // Model selection — treat "elloia" as the premium model (backward compatible with "nano-banana")
@@ -292,6 +298,7 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
           model,
           messages: [{ role: 'user', content }],
           modalities: ['image', 'text'],
+          ...(validStyleRefs.length > 0 ? { temperature: 0.2 } : {}),
         }),
       });
 

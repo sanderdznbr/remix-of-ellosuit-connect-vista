@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
           marketplaceRefUrls.push(preview);
         }
       }
-      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+      const allStyleRefs = [...new Set([...styleRefUrls, ...marketplaceRefUrls])];
 
       const promptParts: string[] = [];
       promptParts.push('IDIOMA OBRIGATÓRIO: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO correto e fluente.');
@@ -150,7 +150,8 @@ Deno.serve(async (req) => {
       }
       promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
       if (job.brand_name) promptParts.push(`MARCA: Inclua "${job.brand_name}" como texto pequeno.`);
-      if (brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
+      const isMarketplaceStyle = !!marketplaceStyle?.imageGeneration?.prompt_style;
+      if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
       const finalPrompt = marketplaceStyle?.imageGeneration?.prompt_style 
         ? `${marketplaceStyle.imageGeneration.prompt_style}\n\n${promptParts.join('\n')}`
@@ -169,7 +170,7 @@ Deno.serve(async (req) => {
         fidelity: imageSettings.fidelity || 'balanced',
         facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
         ...(marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
-        ...(brandColors.length > 0 ? { brandColors } : {}),
+        ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
       });
 
       if (!imageUrl) {
@@ -261,7 +262,7 @@ Deno.serve(async (req) => {
         marketplaceRefUrls.push(preview);
       }
     }
-    const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+    const allStyleRefs = [...new Set([...styleRefUrls, ...marketplaceRefUrls])];
 
     // Extract brandColors once before the loop
     const brandColors = (imageSettings.brandColors as string[] | undefined) || [];

@@ -3860,18 +3860,23 @@ FORBIDDEN:
                     ) : (
                       <button onClick={() => {
                           if (isGuest) {
-                            // Guests always generate single post
+                            // Guests always generate single post - set state AND call directly
                             setContentMode('single-post');
                             setCardCount(1);
                             setImageCardCount(1);
-                          } else if (cardCount === 1) {
-                            setContentMode('single-post');
-                            setImageCardCount(1);
+                            setTransitionToGenerate(true);
+                            // Call generateSinglePost directly to avoid state timing issues
+                            setTimeout(() => generateSinglePost(), 1200);
                           } else {
-                            setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                            if (cardCount === 1) {
+                              setContentMode('single-post');
+                              setImageCardCount(1);
+                            } else {
+                              setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                            }
+                            setTransitionToGenerate(true);
+                            setTimeout(() => generateContent(), 1200);
                           }
-                          setTransitionToGenerate(true);
-                          setTimeout(() => generateContent(), 1200);
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
                         style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>

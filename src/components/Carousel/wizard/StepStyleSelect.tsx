@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock } from 'lucide-react';
+import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 
 interface MarketplaceStyle {
@@ -43,6 +43,7 @@ const StepStyleSelect: React.FC<Props> = ({
   const [lockedStyleName, setLockedStyleName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [previewIndex, setPreviewIndex] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchAvailableStyles();
@@ -171,9 +172,12 @@ const StepStyleSelect: React.FC<Props> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {filteredStyles.map(style => {
               const isActive = activeStyleId === style.id;
-              const previewImg = style.preview_images?.[0];
+              const images = style.preview_images || [];
+              const currentIdx = previewIndex[style.id] || 0;
+              const currentImg = images[currentIdx] || images[0];
               const isFree = (style as any).is_free;
               const isLocked = !user && !isFree;
+              const hasMultiple = images.length > 1;
               return (
                 <button key={style.id}
                   onClick={() => {
@@ -183,20 +187,41 @@ const StepStyleSelect: React.FC<Props> = ({
                     }
                     applyMarketplaceStyle(style);
                   }}
-                  className={`relative rounded-xl overflow-hidden border transition-all text-left cursor-pointer ${
+                  className={`relative rounded-xl overflow-hidden border transition-all text-left cursor-pointer group ${
                     isLocked
                       ? 'border-white/[0.04] opacity-70'
                       : isActive
                         ? 'border-purple-500 ring-1 ring-purple-500/50'
                         : 'border-white/[0.06] hover:border-white/15'
                   }`}>
-                  {previewImg && (
-                    <div className="aspect-[16/9] bg-white/[0.03] relative">
-                      <img src={previewImg} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="lazy" />
+                  {currentImg && (
+                    <div className="aspect-[4/5] bg-white/[0.03] relative overflow-hidden">
+                      <img src={currentImg} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="lazy" />
                       {isLocked && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <Lock className="w-5 h-5 text-white/60" />
                         </div>
+                      )}
+                      {/* Slider arrows */}
+                      {hasMultiple && !isLocked && (
+                        <>
+                          <div
+                            className="absolute left-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(prev => ({ ...prev, [style.id]: (currentIdx - 1 + images.length) % images.length })); }}>
+                            <ChevronLeft className="w-3 h-3 text-white" />
+                          </div>
+                          <div
+                            className="absolute right-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(prev => ({ ...prev, [style.id]: (currentIdx + 1) % images.length })); }}>
+                            <ChevronRight className="w-3 h-3 text-white" />
+                          </div>
+                          {/* Dots */}
+                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 z-10">
+                            {images.slice(0, 6).map((_, i) => (
+                              <div key={i} className={`w-1 h-1 rounded-full transition-colors ${i === currentIdx ? 'bg-white' : 'bg-white/30'}`} />
+                            ))}
+                          </div>
+                        </>
                       )}
                     </div>
                   )}

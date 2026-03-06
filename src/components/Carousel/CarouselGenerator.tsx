@@ -1298,9 +1298,9 @@ const CarouselGenerator: React.FC = () => {
       setImageGenProgress('');
       toast({ title: 'Post gerado com sucesso!' });
 
-      // Guest paywall: show the result for 6 seconds, then overlay paywall
+      // Guest paywall: show immediately to block downloads
       if (isGuest) {
-        setTimeout(() => setShowGuestPaywall(true), 6000);
+        setShowGuestPaywall(true);
       }
 
       // Auto-save
@@ -4388,11 +4388,11 @@ FORBIDDEN:
                 {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
               </div>
               {/* Export button */}
-              <button data-tour="btn-export" onClick={isGuest ? () => navigate('/checkout') : () => setShowExportMenu(true)} disabled={exporting}
+              <button data-tour="btn-export" onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
                 style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-                {isGuest ? 'Cadastre-se' : 'Exportar'}
+                {isGuest ? 'Assine para baixar' : 'Exportar'}
               </button>
               {/* Generate Stories */}
               {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
@@ -5039,11 +5039,11 @@ FORBIDDEN:
                   {autoSaveStatus === 'saving' ? <Loader2 className="h-3 w-3 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3 w-3 text-green-400" /> : <Save className="h-3 w-3" />}
                   <span className="hidden sm:inline">{autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : ''}</span>
                 </div>
-                <button onClick={() => setShowExportMenu(true)} disabled={exporting}
+                <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 relative"
                   style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
-                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                  <span className="hidden sm:inline">Exportar</span>
+                  {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
+                  <span className="hidden sm:inline">{isGuest ? 'Assine' : 'Exportar'}</span>
                 </button>
               </div>
             </div>
@@ -5258,7 +5258,7 @@ FORBIDDEN:
             </div>
             <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>
             <p className="text-white/50 text-sm mb-6 leading-relaxed">
-              Esse foi seu teste gratuito! Para baixar, editar e gerar mais conteúdos incríveis com IA, assine um plano.
+              Seu post foi gerado com sucesso! Para baixar, editar e criar conteúdos ilimitados com IA, assine um dos nossos planos.
             </p>
             <div className="space-y-3">
               <button

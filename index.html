@@ -93,6 +93,17 @@
         background-color: #0a0a0f;
         min-height: 100vh;
       }
+
+      /* Prevent image saving via drag/right-click */
+      img, canvas {
+        -webkit-user-drag: none;
+        -khtml-user-drag: none;
+        -moz-user-drag: none;
+        -o-user-drag: none;
+        user-drag: none;
+        -webkit-touch-callout: none;
+        pointer-events: auto;
+      }
     </style>
   </head>
 
@@ -113,6 +124,30 @@
         }
       });
       observer.observe(document.getElementById('root'), { childList: true });
+
+      // Block right-click context menu on images
+      document.addEventListener('contextmenu', function(e) {
+        if (e.target && (e.target.tagName === 'IMG' || e.target.tagName === 'CANVAS' || e.target.closest('[data-protected]'))) {
+          e.preventDefault();
+          return false;
+        }
+      });
+
+      // Block common DevTools shortcuts
+      document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12') { e.preventDefault(); return false; }
+        // Ctrl+Shift+I / Cmd+Option+I (Inspect)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) { e.preventDefault(); return false; }
+        // Ctrl+Shift+C / Cmd+Option+C (Element picker)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c')) { e.preventDefault(); return false; }
+        // Ctrl+Shift+J / Cmd+Option+J (Console)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j')) { e.preventDefault(); return false; }
+        // Ctrl+U / Cmd+U (View Source)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); return false; }
+        // Ctrl+S / Cmd+S (Save page)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'S' || e.key === 's')) { e.preventDefault(); return false; }
+      });
     </script>
   </body>
 </html>

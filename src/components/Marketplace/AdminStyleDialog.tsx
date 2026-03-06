@@ -440,6 +440,24 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
+            {editStyle && (
+              <button onClick={async () => {
+                if (!confirm(`Excluir o estilo "${editStyle.name}" permanentemente?`)) return;
+                try {
+                  const { error } = await supabase.from('marketplace_styles').delete().eq('id', editStyle.id);
+                  if (error) throw error;
+                  toast.success('Estilo excluído!');
+                  onOpenChange(false);
+                  onSaved();
+                } catch (err: any) {
+                  toast.error('Erro ao excluir: ' + (err.message || ''));
+                }
+              }}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors cursor-pointer border border-red-500/20">
+                <Trash2 className="w-4 h-4" />
+                Excluir
+              </button>
+            )}
             <button onClick={handleSave} disabled={saving}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-yellow-600 to-amber-600 text-white text-sm font-semibold hover:from-yellow-500 hover:to-amber-500 transition-all disabled:opacity-50 cursor-pointer">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

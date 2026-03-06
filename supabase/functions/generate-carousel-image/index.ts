@@ -361,10 +361,28 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       }
     }
 
-    // Attempt 2: retry with fallback model but keep ALL face refs for fidelity
+    // Attempt 2: retry with SAME pro model but simplified prompt (keep quality)
+    if (!generatedImage && usePremium) {
+      const retryContent: any[] = [];
+      // Send face refs first
+      for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (validFaceRefs.length > 0) {
+        retryContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
+      }
+      // Send max 4 style refs to reduce payload
+      for (const ref of validStyleRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (stylePrompt) {
+        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. SEM bordas.` });
+      } else {
+        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}` });
+      }
+      for (const ref of validGeneralRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      try { generatedImage = await tryGenerate(primaryModel, retryContent, 2); } catch (e2: any) { if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
+    }
+
+    // Attempt 3: fallback to flash model with simplified prompt
     if (!generatedImage) {
       const retryContent: any[] = [];
-      // CRITICAL: Send ALL face refs first for maximum fidelity (not just 1)
       for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validFaceRefs.length > 0) {
         retryContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
@@ -375,18 +393,18 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
         retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });
       }
       for (const ref of validGeneralRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      for (const ref of validStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      try { generatedImage = await tryGenerate(fallbackModel, retryContent, 2); } catch (e2: any) { if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
+      for (const ref of validStyleRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      try { generatedImage = await tryGenerate(fallbackModel, retryContent, 3); } catch (e3: any) { if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
     }
 
-    // Attempt 3: text-only fallback (disabled when style refs exist to avoid low-fidelity outputs)
+    // Attempt 4: text-only fallback (disabled when style refs exist to avoid low-fidelity outputs)
     if (!generatedImage && validStyleRefs.length === 0) {
       const fallbackPrompt = stylePrompt
         ? `${stylePrompt}\n\n${imagePrompt}\n\nGere a composição editorial completa com tipografia em PORTUGUÊS BRASILEIRO. NÃO use espanhol. NÃO copie informações pessoais das referências. SEM bordas.`
         : `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.`;
       try {
-        generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: fallbackPrompt }], 3);
-      } catch (e3: any) { if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
+        generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: fallbackPrompt }], 4);
+      } catch (e4: any) { if (e4?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
     }
 
     if (!generatedImage) {

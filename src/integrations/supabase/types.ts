@@ -3425,6 +3425,203 @@ export type Database = {
           },
         ]
       }
+      meta_whatsapp_conversations: {
+        Row: {
+          ai_auto_reply_enabled: boolean | null
+          assigned_agent_id: string | null
+          company_id: string
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          id: string
+          labels: string[] | null
+          last_message: string | null
+          last_message_at: string | null
+          pipeline_stage: string | null
+          profile_picture: string | null
+          session_id: string | null
+          status: string
+          unread_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_auto_reply_enabled?: boolean | null
+          assigned_agent_id?: string | null
+          company_id: string
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string
+          id?: string
+          labels?: string[] | null
+          last_message?: string | null
+          last_message_at?: string | null
+          pipeline_stage?: string | null
+          profile_picture?: string | null
+          session_id?: string | null
+          status?: string
+          unread_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_auto_reply_enabled?: boolean | null
+          assigned_agent_id?: string | null
+          company_id?: string
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          labels?: string[] | null
+          last_message?: string | null
+          last_message_at?: string | null
+          pipeline_stage?: string | null
+          profile_picture?: string | null
+          session_id?: string | null
+          status?: string
+          unread_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_whatsapp_conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_whatsapp_conversations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "meta_whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_whatsapp_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          from_me: boolean
+          id: string
+          media_mime_type: string | null
+          media_url: string | null
+          message_type: string | null
+          reply_to_id: string | null
+          sender_name: string | null
+          session_id: string | null
+          status: string
+          wa_message_id: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          reply_to_id?: string | null
+          sender_name?: string | null
+          session_id?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          from_me?: boolean
+          id?: string
+          media_mime_type?: string | null
+          media_url?: string | null
+          message_type?: string | null
+          reply_to_id?: string | null
+          sender_name?: string | null
+          session_id?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "meta_whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_whatsapp_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "meta_whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_whatsapp_sessions: {
+        Row: {
+          access_token: string | null
+          company_id: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          instance_name: string
+          phone_name: string | null
+          phone_number: string | null
+          phone_number_id: string | null
+          profile_picture: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          waba_id: string | null
+          webhook_verify_token: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          company_id: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_name?: string
+          phone_name?: string | null
+          phone_number?: string | null
+          phone_number_id?: string | null
+          profile_picture?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          waba_id?: string | null
+          webhook_verify_token?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          company_id?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_name?: string
+          phone_name?: string | null
+          phone_number?: string | null
+          phone_number_id?: string | null
+          profile_picture?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          waba_id?: string | null
+          webhook_verify_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_whatsapp_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           categories: Json
@@ -4786,6 +4983,81 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          card_brand: string | null
+          card_last_digits: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          description: string | null
+          due_date: string | null
+          id: string
+          invoice_url: string | null
+          metadata: Json | null
+          pagarme_charge_id: string | null
+          paid_at: string | null
+          payment_method: string | null
+          status: string
+          subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          card_brand?: string | null
+          card_last_digits?: string | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_url?: string | null
+          metadata?: Json | null
+          pagarme_charge_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          card_brand?: string | null
+          card_last_digits?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_url?: string | null
+          metadata?: Json | null
+          pagarme_charge_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_usage: {
         Row: {
           company_id: string
@@ -5682,6 +5954,7 @@ export type Database = {
       whatsapp_conversations: {
         Row: {
           ai_auto_reply_enabled: boolean | null
+          api_managed: boolean | null
           assigned_agent_id: string | null
           assigned_to: string | null
           assigned_user_id: string | null
@@ -5711,6 +5984,7 @@ export type Database = {
         }
         Insert: {
           ai_auto_reply_enabled?: boolean | null
+          api_managed?: boolean | null
           assigned_agent_id?: string | null
           assigned_to?: string | null
           assigned_user_id?: string | null
@@ -5740,6 +6014,7 @@ export type Database = {
         }
         Update: {
           ai_auto_reply_enabled?: boolean | null
+          api_managed?: boolean | null
           assigned_agent_id?: string | null
           assigned_to?: string | null
           assigned_user_id?: string | null

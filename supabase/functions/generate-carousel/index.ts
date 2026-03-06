@@ -451,58 +451,85 @@ Responda APENAS em JSON válido:
   ]
 }`;
 
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Tópico: ${topic}\nPalavras-chave: ${(keywords || []).join(', ')}${
+      const userMessage = `Tópico: ${topic}\nPalavras-chave: ${(keywords || []).join(', ')}${
               body.coverAlreadyExists ? `\n\nIMPORTANTE — CAPA JÁ EXISTE: O card 1 (cover) já foi gerado previamente com título "${body.existingCoverTitle || ''}" e subtítulo "${body.existingCoverBody || ''}". Você DEVE gerar conteúdo COMPLETAMENTE DIFERENTE para o card 2 em diante. O card 2 NÃO pode repetir nem parafrasear o título ou subtítulo da capa. Cada card de conteúdo deve abordar um SUBTEMA ou ÂNGULO DIFERENTE do tópico principal.` : ''
               }${
               body.webSearchContent ? `\n\nDADOS REAIS DA WEB (USE OBRIGATORIAMENTE estes dados verificados para criar o conteúdo):\nTítulo: ${body.webSearchContent.title}\nResumo: ${body.webSearchContent.summary}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body} (Fonte: ${f.source})`).join('\n')}\n\nFontes: ${(body.webSearchCitations || []).slice(0, 5).join(', ')}\n\nIMPORTANTE: Baseie TODO o conteúdo nesses dados reais e verificados. Cite estatísticas e fatos reais.` : ''
             }${
               body.productContext ? `\n\nPRODUTO IDENTIFICADO:\n- Tipo: ${body.productContext.productType}\n- Descrição: ${body.productContext.productDescription}\n\nIMPORTANTE: O carrossel deve destacar este produto. Use o produto como referência criativa — NÃO precisa replicá-lo exatamente. Varie ângulos, cenários, composições e contextos de uso em cada card. Para roupas, mostre em modelos diferentes, ângulos variados, combinações criativas. Para objetos, alterne entre mockups, flat-lays, alguém segurando, contexto de uso real. Para alimentos, varie entre close-ups, composições com ingredientes, mesa posta. Cada imagePrompt deve criar uma cena ÚNICA e DIFERENTE com o produto.` : ''
-            }` },
-          ],
-        }),
-      });
+            }`;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('AI Gateway error:', response.status, errText);
-        if (response.status === 429) {
-          return new Response(JSON.stringify({ error: 'Rate limit exceeded. Tente novamente em alguns segundos.' }), {
-            status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        if (response.status === 402) {
-          return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
-            status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        return new Response(JSON.stringify({ error: 'Erro ao gerar conteúdo' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      // Retry logic: attempt up to 3 times if AI returns empty content
+      let parsed = null;
+      let lastRawContent = '';
+      const MAX_CONTENT_ATTEMPTS = 3;
+      const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash-preview', 'google/gemini-3-flash-preview'];
+
+      for (let attempt = 0; attempt < MAX_CONTENT_ATTEMPTS; attempt++) {
+        const model = models[attempt] || models[0];
+        console.log(`[generate-content] Attempt ${attempt + 1}/${MAX_CONTENT_ATTEMPTS} with model ${model}`);
+
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessage },
+            ],
+          }),
         });
-      }
 
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
-      
-      let parsed;
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-      } catch {
-        parsed = null;
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error(`[generate-content] Attempt ${attempt + 1} API error:`, response.status, errText);
+          if (response.status === 429) {
+            return new Response(JSON.stringify({ error: 'Rate limit exceeded. Tente novamente em alguns segundos.' }), {
+              status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          if (response.status === 402) {
+            return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
+              status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          // On other errors, retry
+          if (attempt < MAX_CONTENT_ATTEMPTS - 1) {
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          return new Response(JSON.stringify({ error: 'Erro ao gerar conteúdo' }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        lastRawContent = content;
+        console.log(`[generate-content] Attempt ${attempt + 1} content length: ${content.length}`);
+
+        if (content.length > 10) {
+          try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+          } catch {
+            parsed = null;
+          }
+        }
+
+        if (parsed) break;
+        console.warn(`[generate-content] Attempt ${attempt + 1} returned empty/invalid content, retrying...`);
+        if (attempt < MAX_CONTENT_ATTEMPTS - 1) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
       }
 
       if (!parsed) {
-        return new Response(JSON.stringify({ error: 'Não foi possível processar o conteúdo gerado', raw: content }), {
+        return new Response(JSON.stringify({ error: 'Não foi possível processar o conteúdo gerado após múltiplas tentativas', raw: lastRawContent.slice(0, 500) }), {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

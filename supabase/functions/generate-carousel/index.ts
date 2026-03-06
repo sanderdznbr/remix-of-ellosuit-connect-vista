@@ -254,46 +254,83 @@ Respond ONLY with the JSON object, no markdown or explanation.` },
     // ===== GENERATE OUTLINE (for StepCardTexts AI fill) =====
     if (action === 'generate-outline') {
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-      if (!LOVABLE_API_KEY) {
-        return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
       const numCards = body.cardCount || 7;
       const mode = body.contentMode || 'carousel';
+
+      // Local fallback: generates a basic outline without AI
+      const generateLocalFallback = () => {
+        if (mode === 'single-post') {
+          return [{ title: topic?.slice(0, 60) || 'Post', body: '' }];
+        }
+        return Array.from({ length: numCards }, (_, i) => {
+          if (i === 0) return { title: topic?.slice(0, 60) || 'Título', body: 'Descubra tudo sobre este assunto' };
+          if (i === numCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
+          return { title: `Ponto ${i}`, body: '' };
+        });
+      };
+
+      if (!LOVABLE_API_KEY) {
+        console.warn('LOVABLE_API_KEY not configured, using local fallback for outline');
+        return new Response(JSON.stringify({ success: true, outline: generateLocalFallback() }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const outlinePrompt = mode === 'single-post'
         ? `Gere um outline para 1 post único sobre: "${topic}". Retorne JSON: { "outline": [{ "title": "...", "body": "..." }] }`
         : `Gere um outline para um carrossel de ${numCards} cards sobre: "${topic}". Card 1 é capa (título impactante + subtítulo), cards intermediários são conteúdo (título + corpo informativo), último card é CTA. Retorne JSON: { "outline": [{ "title": "...", "body": "..." }, ...] } com exatamente ${numCards} itens. Em português brasileiro.`;
 
-      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
-          messages: [
-            { role: 'system', content: 'Você gera outlines de carrosséis em JSON. Responda APENAS com JSON válido.' },
-            { role: 'user', content: outlinePrompt },
-          ],
-        }),
+      // Try multiple models in order
+      const MODELS = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'];
+      let outline: { title?: string; body?: string }[] | null = null;
+
+      for (const model of MODELS) {
+        try {
+          console.log(`[generate-outline] Trying model: ${model}`);
+          const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: 'Você gera outlines de carrosséis em JSON. Responda APENAS com JSON válido, sem markdown.' },
+                { role: 'user', content: outlinePrompt },
+              ],
+            }),
+          });
+
+          if (!res.ok) {
+            const errText = await res.text();
+            console.warn(`[generate-outline] Model ${model} failed (${res.status}): ${errText.slice(0, 200)}`);
+            continue;
+          }
+
+          const aiData = await res.json();
+          const content = aiData.choices?.[0]?.message?.content || '';
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed?.outline && Array.isArray(parsed.outline) && parsed.outline.length > 0) {
+              outline = parsed.outline;
+              console.log(`[generate-outline] Success with model ${model}, ${outline.length} cards`);
+              break;
+            }
+          }
+          console.warn(`[generate-outline] Model ${model} returned no valid outline from content: ${content.slice(0, 200)}`);
+        } catch (err) {
+          console.warn(`[generate-outline] Model ${model} error:`, err);
+        }
+      }
+
+      // If all models failed, use local fallback
+      if (!outline || outline.length === 0) {
+        console.warn('[generate-outline] All models failed, using local fallback');
+        outline = generateLocalFallback();
+      }
+
+      return new Response(JSON.stringify({ success: true, outline }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-      if (!res.ok) {
-        return new Response(JSON.stringify({ error: 'Erro ao gerar outline' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const aiData = await res.json();
-      const content = aiData.choices?.[0]?.message?.content || '';
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-        return new Response(JSON.stringify({ success: true, outline: parsed?.outline || [] }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch {
-        return new Response(JSON.stringify({ success: true, outline: [] }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
     }
 
     // ===== ENHANCE PROMPT =====

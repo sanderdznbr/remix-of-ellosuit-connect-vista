@@ -99,15 +99,31 @@ Deno.serve(async (req) => {
     const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
 
+    // Filter out URLs from domains that block hotlinking (Gemini can't fetch them)
+    const BLOCKED_DOMAINS = ['shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'alamy.com', 'depositphotos.com', 'dreamstime.com', '123rf.com', 'stock.adobe.com'];
+    const isUrlAccessible = (url: string) => {
+      if (!url) return false;
+      if (url.startsWith('data:')) return true;
+      if (!url.startsWith('http')) return false;
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        return !BLOCKED_DOMAINS.some(d => hostname.includes(d));
+      } catch { return false; }
+    };
+
     const validFaceRefs = hasFaceRefs 
-      ? faceReferenceUrls.slice(0, 12).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      ? faceReferenceUrls.slice(0, 12).filter(isUrlAccessible)
       : [];
     const validStyleRefs = hasStyleRefs 
-      ? styleReferenceUrls.slice(0, 8).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      ? styleReferenceUrls.slice(0, 8).filter(isUrlAccessible)
       : [];
     const validGeneralRefs = hasGeneralRefs
-      ? referenceImageUrls.slice(0, 2).filter((u: string) => u && (u.startsWith('http') || u.startsWith('data:')))
+      ? referenceImageUrls.slice(0, 2).filter(isUrlAccessible)
       : [];
+    
+    // Log filtered URLs for debugging
+    const filteredCount = (faceReferenceUrls?.length || 0) + (styleReferenceUrls?.length || 0) + (referenceImageUrls?.length || 0) - validFaceRefs.length - validStyleRefs.length - validGeneralRefs.length;
+    if (filteredCount > 0) console.log(`Filtered out ${filteredCount} blocked/inaccessible URLs`);
 
     console.log('Image refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length, hasStylePrompt: !!stylePrompt });
 
@@ -311,6 +327,11 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
         if (lowerErr.includes('safety') || lowerErr.includes('block') || lowerErr.includes('prohibited') || lowerErr.includes('harmful') || lowerErr.includes('sexual') || lowerErr.includes('nsfw') || lowerErr.includes('policy')) {
           throw { status: 451, reason: 'nsfw' };
         }
+        // Detect 403 fetching errors — extract the blocked URL so caller can remove it
+        const fetchErrorMatch = errText.match(/Received 403 status code when fetching image from URL:\s*(https?:\/\/[^\s"]+)/);
+        if (fetchErrorMatch) {
+          throw { status: 400, reason: 'blocked_url', blockedUrl: fetchErrorMatch[1] };
+        }
         return null;
       }
 
@@ -339,6 +360,17 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       return null;
     }
 
+    // Helper: remove blocked URLs from content array
+    const blockedUrls = new Set<string>();
+    function filterContent(content: any[]): any[] {
+      return content.filter(part => {
+        if (part.type === 'image_url' && part.image_url?.url) {
+          return !blockedUrls.has(part.image_url.url);
+        }
+        return true;
+      });
+    }
+
     // Attempt 1: full prompt
     let generatedImage: string | null = null;
     try {
@@ -359,53 +391,67 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
           status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      if (e?.reason === 'blocked_url' && e?.blockedUrl) {
+        blockedUrls.add(e.blockedUrl);
+        console.log('Blocked URL detected and removed:', e.blockedUrl);
+      }
     }
 
-    // Attempt 2: retry with SAME pro model but simplified prompt (keep quality)
+    // Attempt 2: retry with same pro model, removing any blocked URLs
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
-      // Send face refs first
-      for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      if (validFaceRefs.length > 0) {
-        retryContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
+      for (const ref of validFaceRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
+      const activeFaceCount = validFaceRefs.filter(r => !blockedUrls.has(r)).length;
+      if (activeFaceCount > 0) {
+        retryContent.push({ type: 'text', text: `The ${activeFaceCount} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
       }
-      // Send max 4 style refs to reduce payload
-      for (const ref of validStyleRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
         retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. SEM bordas.` });
       } else {
-        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}` });
+        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${activeFaceCount > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}` });
       }
-      for (const ref of validGeneralRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      try { generatedImage = await tryGenerate(primaryModel, retryContent, 2); } catch (e2: any) { if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
+      for (const ref of validGeneralRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
+      try { generatedImage = await tryGenerate(primaryModel, retryContent, 2); } catch (e2: any) {
+        if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
+        if (e2?.reason === 'blocked_url' && e2?.blockedUrl) { blockedUrls.add(e2.blockedUrl); console.log('Blocked URL detected and removed:', e2.blockedUrl); }
+      }
     }
 
-    // Attempt 3: fallback to flash model with simplified prompt
-    if (!generatedImage) {
-      const retryContent: any[] = [];
-      for (const ref of validFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      if (validFaceRefs.length > 0) {
-        retryContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
-      }
+    // Attempt 3: pro model text-only (no image refs that could be blocked)
+    if (!generatedImage && usePremium) {
+      const textOnlyContent: any[] = [];
+      // Only include data: URLs (base64) which are always accessible
+      const safeStyleRefs = validStyleRefs.filter(r => r.startsWith('data:'));
+      const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
+      for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
+      for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. Siga o estilo editorial descrito acima fielmente. NÃO copie nomes, @handles ou informações pessoais das referências. SEM bordas no topo ou base da imagem.` });
+        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
       } else {
-        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.${validFaceRefs.length > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}${validGeneralRefs.length > 0 ? ' The product in the attached reference MUST appear.' : ''}${validStyleRefs.length > 0 ? ' Match the visual style and brand aesthetic of the brand reference images.' : ''}` });
+        textOnlyContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality, 4:5 portrait ratio.` });
       }
-      for (const ref of validGeneralRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      for (const ref of validStyleRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      try { generatedImage = await tryGenerate(fallbackModel, retryContent, 3); } catch (e3: any) { if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
+      try { generatedImage = await tryGenerate(primaryModel, textOnlyContent, 3); } catch (e3: any) {
+        if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
+      }
     }
 
-    // Attempt 4: text-only fallback (disabled when style refs exist to avoid low-fidelity outputs)
-    if (!generatedImage && validStyleRefs.length === 0) {
-      const fallbackPrompt = stylePrompt
-        ? `${stylePrompt}\n\n${imagePrompt}\n\nGere a composição editorial completa com tipografia em PORTUGUÊS BRASILEIRO. NÃO use espanhol. NÃO copie informações pessoais das referências. SEM bordas.`
-        : `Beautiful professional stock photo: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Clean, well-lit, magazine quality, 4:5 portrait format.`;
-      try {
-        generatedImage = await tryGenerate('google/gemini-2.5-flash-image', [{ type: 'text', text: fallbackPrompt }], 4);
-      } catch (e4: any) { if (e4?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança. Envie fotos apropriadas e tente novamente.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); } }
+    // Attempt 4: flash fallback text-only (last resort, still not nano-banana)
+    if (!generatedImage) {
+      const fallbackContent: any[] = [];
+      const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
+      for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (stylePrompt) {
+        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
+      } else {
+        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. Magazine quality, 4:5 portrait format.` });
+      }
+      try { generatedImage = await tryGenerate('google/gemini-2.5-flash-image', fallbackContent, 4); } catch (e4: any) {
+        if (e4?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
+      }
     }
+
 
     if (!generatedImage) {
       return new Response(JSON.stringify({ error: 'Não foi possível gerar a imagem.' }), {

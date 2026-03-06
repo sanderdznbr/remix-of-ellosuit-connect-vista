@@ -1883,6 +1883,8 @@ const CarouselGenerator: React.FC = () => {
     if (!currentData) return;
 
     const newIndex = currentData.cards.length;
+    const isTextOnlyCard = mode === 'solid';
+
     const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
     const requiresImage = mode === 'composed' || isFullBleedMarketplace;
 
@@ -1905,11 +1907,11 @@ const CarouselGenerator: React.FC = () => {
     window.setTimeout(async () => {
       try {
         if (requiresImage) {
-          let success = await regenerateCard(newIndex, true);
+          let success = await regenerateCard(newIndex, true, isTextOnlyCard);
 
           if (!success) {
             await new Promise((r) => setTimeout(r, 900));
-            success = await regenerateCard(newIndex, true);
+            success = await regenerateCard(newIndex, true, isTextOnlyCard);
           }
 
           if (!success) {
@@ -2432,7 +2434,7 @@ FORBIDDEN:
     if (activeCardIndex >= cards.length) setActiveCardIndex(cards.length - 1);
   };
 
-  const regenerateCard = async (cardIndex: number, forceImageRequired = false): Promise<boolean> => {
+  const regenerateCard = async (cardIndex: number, forceImageRequired = false, disallowPeople = false): Promise<boolean> => {
     const currentData = carouselDataRef.current;
     if (!currentData) return false;
     const carouselData = currentData;
@@ -2502,11 +2504,13 @@ FORBIDDEN:
       let newImageUrl = card.imageUrl;
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const wizardFaceRefs = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      // For text-only cards, never inject face references
+      const allowFaceReferences = !disallowPeople;
       // If no wizard face refs, use the cover image as face reference to maintain the same person
       const coverImageUrl = carouselData.cards[0]?.imageUrl;
-      const faceRefUrls = wizardFaceRefs.length > 0 
-        ? wizardFaceRefs 
-        : (coverImageUrl && !coverImageUrl.startsWith('data:') ? [coverImageUrl] : []);
+      const faceRefUrls = allowFaceReferences
+        ? (wizardFaceRefs.length > 0 ? wizardFaceRefs : (coverImageUrl && !coverImageUrl.startsWith('data:') ? [coverImageUrl] : []))
+        : [];
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
       const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
@@ -2523,6 +2527,10 @@ FORBIDDEN:
         parts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
         parts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+        if (disallowPeople) {
+          parts.push(`DIREÇÃO VISUAL OBRIGATÓRIA: card tipográfico/editorial SOMENTE com elementos gráficos (formas, textura, gradientes, composição).`);
+          parts.push(`NÃO use retrato, pessoa, modelo, rosto, mãos, corpo humano ou silhuetas humanas.`);
+        }
         
         // Include logo/brand overlay instructions for full-bleed regeneration
         if (logoUrl && brandName) {
@@ -2563,7 +2571,9 @@ FORBIDDEN:
       } else {
         // For standard styles, build a richer prompt that maintains consistency
         const cardType = card.type === 'cover' ? 'capa editorial' : card.type === 'cta' ? 'card final de chamada para ação' : 'slide de conteúdo informativo';
-        imgPrompt = `${cardType} sobre "${cleanTopic}". ${newImagePrompt || newBody.slice(0, 150)}. Manter o mesmo estilo visual, cores e atmosfera dos outros cards do carrossel.`;
+        imgPrompt = disallowPeople
+          ? `Fundo gráfico editorial para ${cardType} sobre "${cleanTopic}". Visual tipográfico/abstrato com formas, textura e luz; sem pessoas, sem retratos e sem silhuetas humanas.`
+          : `${cardType} sobre "${cleanTopic}". ${newImagePrompt || newBody.slice(0, 150)}. Manter o mesmo estilo visual, cores e atmosfera dos outros cards do carrossel.`;
         negPrompt = imageSettings.negativePrompt || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
       }
       

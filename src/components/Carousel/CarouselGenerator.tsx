@@ -3789,9 +3789,33 @@ FORBIDDEN:
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
-                            // Web search on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
-                              await handleSearchWeb();
+                            // Smart web search classification on Tema step
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
+                              // Classify the topic first
+                              setClassifyingTopic(true);
+                              try {
+                                const { data, error } = await supabase.functions.invoke('generate-carousel', {
+                                  body: { action: 'classify-topic', topic: topic.trim() },
+                                });
+                                if (!error && data) {
+                                  if (data.shouldSearch) {
+                                    // Show suggestion to user - don't advance yet
+                                    setWebSearchSuggestion({ classification: data.classification, reason: data.reason || '' });
+                                    setClassifyingTopic(false);
+                                    return; // Wait for user decision
+                                  } else {
+                                    // Personal/opinion content - skip web search automatically
+                                    setSkipWebSearch(true);
+                                    setWebSearchDecisionMade(true);
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Classification error:', err);
+                                // On error, skip search and continue
+                                setSkipWebSearch(true);
+                                setWebSearchDecisionMade(true);
+                              }
+                              setClassifyingTopic(false);
                             }
                             if (currentStepName === 'Tema' && hasManualText && !topic.trim()) {
                               setTopic(manualPostText.trim());

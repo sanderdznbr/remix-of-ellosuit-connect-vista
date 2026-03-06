@@ -49,6 +49,7 @@ const StepTopic: React.FC<Props> = ({
   mentionedPrompts = [], onMentionAdd, onMentionRemove,
   contentMode, manualPostText, setManualPostText,
   wizardMode = 'advanced', setContentMode, guestMode = false,
+  webSearchSuggestion, onAcceptWebSearch, onDeclineWebSearch, classifyingTopic,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
   const [advancedMode, setAdvancedMode] = useState(false);

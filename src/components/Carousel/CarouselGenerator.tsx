@@ -1883,6 +1883,8 @@ const CarouselGenerator: React.FC = () => {
     if (!currentData) return;
 
     const newIndex = currentData.cards.length;
+    const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
+    const requiresImage = mode === 'composed' || isFullBleedMarketplace;
 
     setCarouselData((prev) => {
       if (!prev) return prev;
@@ -1893,7 +1895,7 @@ const CarouselGenerator: React.FC = () => {
         bodyTop: manualText?.title || '',
         bodyBottom: manualText?.body || '',
         layout: 'dark',
-        needsImage: mode === 'composed',
+        needsImage: requiresImage,
       };
       return { ...prev, cards: [...prev.cards, newCard] };
     });
@@ -1901,36 +1903,52 @@ const CarouselGenerator: React.FC = () => {
     setActiveCardIndex(newIndex);
 
     window.setTimeout(async () => {
-      if (mode === 'composed') {
-        let success = await regenerateCard(newIndex, true);
+      try {
+        if (requiresImage) {
+          let success = await regenerateCard(newIndex, true);
 
-        if (!success) {
-          await new Promise((r) => setTimeout(r, 900));
-          success = await regenerateCard(newIndex, true);
-        }
+          if (!success) {
+            await new Promise((r) => setTimeout(r, 900));
+            success = await regenerateCard(newIndex, true);
+          }
 
-        if (!success) {
-          setCarouselData((prev) => {
-            if (!prev || !prev.cards[newIndex]) return prev;
-            const cards = [...prev.cards];
-            cards.splice(newIndex, 1);
-            return { ...prev, cards };
-          });
-          setActiveCardIndex((prev) => Math.max(0, Math.min(prev, newIndex - 1)));
-          toast({
-            title: 'Falha ao gerar o novo card',
-            description: 'Tente novamente em alguns segundos.',
-            variant: 'destructive',
-          });
-        }
-      } else {
-        // For solid mode with manual text, just set the text (no regeneration needed)
-        if (manualText?.title || manualText?.body) {
-          // Already set above, just show success
-          toast({ title: 'Card de texto criado!' });
+          if (!success) {
+            setCarouselData((prev) => {
+              if (!prev || !prev.cards[newIndex]) return prev;
+              const cards = [...prev.cards];
+              cards.splice(newIndex, 1);
+              return { ...prev, cards };
+            });
+            setActiveCardIndex((prev) => Math.max(0, Math.min(prev, newIndex - 1)));
+            toast({
+              title: 'Falha ao gerar o novo card',
+              description: 'Tente novamente em alguns segundos.',
+              variant: 'destructive',
+            });
+          }
         } else {
-          void regenerateCardTextOnly(newIndex);
+          // For solid mode with manual text, just set the text (no regeneration needed)
+          if (manualText?.title || manualText?.body) {
+            // Already set above, just show success
+            toast({ title: 'Card de texto criado!' });
+          } else {
+            await regenerateCardTextOnly(newIndex);
+          }
         }
+      } catch (err: any) {
+        console.error('Erro ao adicionar novo card:', err);
+        setCarouselData((prev) => {
+          if (!prev || !prev.cards[newIndex]) return prev;
+          const cards = [...prev.cards];
+          cards.splice(newIndex, 1);
+          return { ...prev, cards };
+        });
+        setActiveCardIndex((prev) => Math.max(0, Math.min(prev, newIndex - 1)));
+        toast({
+          title: 'Erro ao criar o novo card',
+          description: err?.message || 'Tente novamente em alguns segundos.',
+          variant: 'destructive',
+        });
       }
     }, 120);
   };

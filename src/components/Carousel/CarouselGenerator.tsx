@@ -5258,7 +5258,7 @@ FORBIDDEN:
             </div>
             <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>
             <p className="text-white/50 text-sm mb-6 leading-relaxed">
-              Esse foi seu teste gratuito! Para baixar, editar e gerar mais conteúdos incríveis com IA, assine um plano.
+              Seu post foi gerado com sucesso! Para baixar, editar e criar conteúdos ilimitados com IA, assine um dos nossos planos.
             </p>
             <div className="space-y-3">
               <button

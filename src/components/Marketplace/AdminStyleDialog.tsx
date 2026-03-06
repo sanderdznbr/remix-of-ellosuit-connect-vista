@@ -316,13 +316,14 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
             <div>
               <label className="text-[10px] text-white/40 mb-1 block">Categoria</label>
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white outline-none">
-                <option value="editorial">Editorial</option>
-                <option value="minimalista">Minimalista</option>
-                <option value="moderno">Moderno</option>
-                <option value="criativo">Criativo</option>
-                <option value="corporativo">Corporativo</option>
-                <option value="lifestyle">Lifestyle</option>
+                className="w-full px-3 py-2 rounded-lg border border-white/[0.08] text-sm text-white outline-none appearance-none cursor-pointer"
+                style={{ backgroundColor: '#1a1a24' }}>
+                <option value="editorial" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Editorial</option>
+                <option value="minimalista" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Minimalista</option>
+                <option value="moderno" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Moderno</option>
+                <option value="criativo" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Criativo</option>
+                <option value="corporativo" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Corporativo</option>
+                <option value="lifestyle" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Lifestyle</option>
               </select>
             </div>
           </div>

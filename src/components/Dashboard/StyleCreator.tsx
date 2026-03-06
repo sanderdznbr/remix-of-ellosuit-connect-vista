@@ -6,7 +6,9 @@ import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import {
   ArrowLeft, ArrowRight, Upload, X, Loader2, Palette, Sparkles,
   Image as ImageIcon, User, Monitor, Wand2, Check, Plus, Eye, Download,
+  Building2,
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 const SUPABASE_URL = 'https://jwddiyuezqrpuakazvgg.supabase.co';
 
@@ -16,7 +18,7 @@ interface GeneratedPost {
   cardIndex: number;
 }
 
-const STEPS = [
+const BASE_STEPS = [
   { key: 'references', label: 'Referências de Estilo', icon: ImageIcon },
   { key: 'brand', label: 'Elementos da Marca', icon: Palette },
   { key: 'mockups', label: 'Fotos p/ Mockups', icon: Monitor },
@@ -25,9 +27,28 @@ const STEPS = [
   { key: 'generate', label: 'Gerar Posts', icon: Wand2 },
 ];
 
+const PROPERTY_STEP = { key: 'property', label: 'Fotos do Imóvel', icon: Building2 };
+
 const StyleCreator: React.FC = () => {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
+  const [isRealEstate, setIsRealEstate] = useState(false);
+
+  // Dynamic steps based on real estate toggle
+  const STEPS = React.useMemo(() => {
+    if (isRealEstate) {
+      // Insert property step after references (index 1), remove face step
+      return [
+        BASE_STEPS[0], // references
+        PROPERTY_STEP,  // property photos
+        BASE_STEPS[1], // brand
+        BASE_STEPS[2], // mockups
+        BASE_STEPS[3], // logo
+        BASE_STEPS[5], // generate (skip face)
+      ];
+    }
+    return BASE_STEPS;
+  }, [isRealEstate]);
 
   // Step data
   const [refFiles, setRefFiles] = useState<File[]>([]);
@@ -47,6 +68,9 @@ const StyleCreator: React.FC = () => {
 
   const [faceFiles, setFaceFiles] = useState<File[]>([]);
   const [facePreviews, setFacePreviews] = useState<string[]>([]);
+
+  const [propertyFiles, setPropertyFiles] = useState<File[]>([]);
+  const [propertyPreviews, setPropertyPreviews] = useState<string[]>([]);
 
   const [styleName, setStyleName] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -115,6 +139,7 @@ const StyleCreator: React.FC = () => {
   const handleGenerate = async () => {
     if (!styleName.trim()) { toast.error('Dê um nome ao estilo'); return; }
     if (refFiles.length === 0) { toast.error('Adicione pelo menos 1 referência de estilo'); return; }
+    if (isRealEstate && propertyFiles.length < 3) { toast.error('Adicione pelo menos 3 fotos do imóvel'); return; }
 
     setGenerating(true);
     setGeneratedPosts([]);
@@ -156,6 +181,12 @@ const StyleCreator: React.FC = () => {
         faceUrls.push(url);
       }
 
+      const propertyUrls: string[] = [];
+      for (let i = 0; i < propertyFiles.length; i++) {
+        const url = await uploadFile(propertyFiles[i], `style-creator/${slug}/property-${i}-${timestamp}.${propertyFiles[i].name.split('.').pop()}`);
+        propertyUrls.push(url);
+      }
+
       // AI identifica o DNA do estilo a partir das referências
       let styleDna = '';
       try {
@@ -185,12 +216,15 @@ const StyleCreator: React.FC = () => {
         console.warn('Falha ao extrair DNA do estilo, seguindo com prompt base:', err);
       }
 
-      // Generate 10 posts (5 with face, 5 without)
+      // Generate 10 posts
       for (let i = 0; i < 10; i++) {
-        const hasFace = i < 5; // first 5 with face
+        const hasFace = !isRealEstate && i < 5; // first 5 with face (not in real estate mode)
         const cardNumber = i + 1;
 
-        setProgress({ current: i, total: 10, message: `Gerando post ${cardNumber}/10 ${hasFace ? '(com rosto)' : '(sem rosto)'}...` });
+        const cardLabel = isRealEstate
+          ? `(imóvel ${(i % propertyUrls.length) + 1})`
+          : hasFace ? '(com rosto)' : '(sem rosto)';
+        setProgress({ current: i, total: 10, message: `Gerando post ${cardNumber}/10 ${cardLabel}...` });
 
         const referenceImages: { type: string; image_url: { url: string } }[] = [];
 
@@ -204,7 +238,18 @@ const StyleCreator: React.FC = () => {
           referenceImages.push({ type: 'image_url', image_url: { url } });
         }
 
-        // Face references (only for face posts)
+        // Real estate: distribute property photos across cards
+        if (isRealEstate && propertyUrls.length > 0) {
+          // Each card gets 1-2 property photos, cycling through all of them
+          const primaryIdx = i % propertyUrls.length;
+          const secondaryIdx = (i + Math.floor(propertyUrls.length / 2)) % propertyUrls.length;
+          referenceImages.push({ type: 'image_url', image_url: { url: propertyUrls[primaryIdx] } });
+          if (propertyUrls.length > 2 && primaryIdx !== secondaryIdx) {
+            referenceImages.push({ type: 'image_url', image_url: { url: propertyUrls[secondaryIdx] } });
+          }
+        }
+
+        // Face references (only for face posts, not real estate)
         if (hasFace && faceUrls.length > 0) {
           referenceImages.push({ type: 'image_url', image_url: { url: faceUrls[0] } });
         }
@@ -239,7 +284,18 @@ NOME DO ESTILO: "${styleName}"`;
           prompt += `\n\nMOCKUPS: Uma das imagens de referência contém fotos para serem usadas em mockups (${mockupDesc}). Integre essas fotos dentro de telas de dispositivos (notebook 3D, celular, tablet) de forma natural e profissional no design.`;
         }
 
-        if (hasFace && faceUrls.length > 0) {
+        // Real estate specific prompt
+        if (isRealEstate) {
+          const roomTypes = ['fachada', 'sala de estar', 'quarto', 'cozinha', 'banheiro', 'área externa', 'varanda', 'escritório', 'área gourmet', 'jardim'];
+          const roomHint = roomTypes[i % roomTypes.length];
+          prompt += `\n\nIMÓVEL: Este é um post IMOBILIÁRIO. As fotos do imóvel fornecidas devem ser integradas ao layout do estilo de forma elegante e profissional.
+- Use a(s) foto(s) do imóvel como elemento principal do design
+- Crie textos de marketing imobiliário em PORTUGUÊS BRASILEIRO (ex: "Seu novo lar", "Apartamento dos sonhos", "Conforto e elegância")
+- Destaque: ${roomHint}
+- Layout editorial premium para o mercado imobiliário
+- NÃO invente fotos de imóveis: use EXATAMENTE as fotos fornecidas, integrando-as no layout
+- Varie entre layouts com foto grande, mosaico, foto com overlay de texto, foto em moldura editorial`;
+        } else if (hasFace && faceUrls.length > 0) {
           prompt += `\n\nROSTO: Este post DEVE incluir o rosto da pessoa fornecida nas referências. A pessoa deve aparecer de forma natural e integrada ao design, mantendo FIDELIDADE TOTAL aos traços faciais da referência.`;
         } else {
           prompt += `\n\nSEM ROSTO: Este post NÃO deve conter rostos humanos. Foque em tipografia, elementos visuais, patterns e composição editorial.`;
@@ -263,7 +319,7 @@ NOME DO ESTILO: "${styleName}"`;
           ...referenceImages,
         ];
 
-        // Use Pro for face posts, Flash for no-face (faster + avoids rate limits)
+        // Model selection: Pro for face posts, Flash for others
         const model = hasFace ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
 
         // Retry up to 3 times per post
@@ -333,12 +389,16 @@ NOME DO ESTILO: "${styleName}"`;
   };
 
   const canAdvance = () => {
-    switch (step) {
-      case 0: return refFiles.length > 0;
-      case 5: return styleName.trim().length > 0;
-      default: return true; // optional steps
+    const currentKey = STEPS[step]?.key;
+    switch (currentKey) {
+      case 'references': return refFiles.length > 0;
+      case 'property': return propertyFiles.length >= 3;
+      case 'generate': return styleName.trim().length > 0;
+      default: return true;
     }
   };
+
+  const currentStepKey = STEPS[step]?.key;
 
   const renderImageGrid = (
     previews: string[],
@@ -372,22 +432,69 @@ NOME DO ESTILO: "${styleName}"`;
   );
 
   const renderStep = () => {
-    switch (step) {
-      case 0: // References
-        return renderImageGrid(
-          refPreviews, setRefFiles, setRefPreviews,
-          (e) => addFiles(setRefFiles, setRefPreviews, e.target.files),
-          'Adicionar', 'Adicione prints de posts que você gosta. Eles servirão como referência visual para o estilo.'
+    switch (currentStepKey) {
+      case 'references': // References
+        return (
+          <div className="space-y-6">
+            {/* Real estate toggle */}
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <Building2 className="w-5 h-5 text-amber-400" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white/80">Estilo Imobiliário</p>
+                <p className="text-xs text-white/35">Ativa etapa de fotos do imóvel e adapta a geração para o mercado imobiliário</p>
+              </div>
+              <Switch checked={isRealEstate} onCheckedChange={(v) => { setIsRealEstate(v); setStep(0); }} />
+            </div>
+            {renderImageGrid(
+              refPreviews, setRefFiles, setRefPreviews,
+              (e) => addFiles(setRefFiles, setRefPreviews, e.target.files),
+              'Adicionar', 'Adicione prints de posts que você gosta. Eles servirão como referência visual para o estilo.'
+            )}
+          </div>
         );
 
-      case 1: // Brand elements
+      case 'property': // Property photos (real estate)
+        return (
+          <div>
+            <p className="text-sm text-white/60 mb-3">
+              Adicione fotos do imóvel (mínimo 3). A IA distribuirá automaticamente entre os 10 cards, variando ambientes e ângulos no layout do estilo.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              {propertyPreviews.map((url, i) => (
+                <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-white/10 group">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button onClick={() => removeFile(i, setPropertyFiles, setPropertyPreviews)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                  <div className="absolute bottom-0 inset-x-0 bg-black/60 px-1 py-0.5">
+                    <span className="text-[9px] text-white/60">Foto {i + 1}</span>
+                  </div>
+                </div>
+              ))}
+              <label className="flex items-center justify-center w-24 h-24 rounded-xl border-2 border-dashed border-white/15 cursor-pointer hover:border-amber-500/40 transition-colors">
+                <div className="text-center">
+                  <Building2 className="w-5 h-5 text-white/25 mx-auto mb-1" />
+                  <span className="text-[10px] text-white/25">Imóvel</span>
+                </div>
+                <input type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e) => addFiles(setPropertyFiles, setPropertyPreviews, e.target.files)} />
+              </label>
+            </div>
+            {propertyFiles.length > 0 && propertyFiles.length < 3 && (
+              <p className="text-xs text-amber-400/70 mt-2">Adicione pelo menos 3 fotos do imóvel ({propertyFiles.length}/3)</p>
+            )}
+          </div>
+        );
+
+      case 'brand': // Brand elements
         return renderImageGrid(
           brandPreviews, setBrandFiles, setBrandPreviews,
           (e) => addFiles(setBrandFiles, setBrandPreviews, e.target.files),
           'Adicionar', 'Adicione patterns, texturas, elementos gráficos da marca (opcional).'
         );
 
-      case 2: // Mockups
+      case 'mockups': // Mockups
         return (
           <div>
             <p className="text-sm text-white/60 mb-3">
@@ -437,7 +544,7 @@ NOME DO ESTILO: "${styleName}"`;
           </div>
         );
 
-      case 3: // Logo
+      case 'logo': // Logo
         return (
           <div className="space-y-4">
             <p className="text-sm text-white/60">Faça upload da logo para extrair as cores da marca.</p>
@@ -484,31 +591,32 @@ NOME DO ESTILO: "${styleName}"`;
           </div>
         );
 
-      case 4: // Face
+      case 'face': // Face
         return renderImageGrid(
           facePreviews, setFaceFiles, setFacePreviews,
           (e) => addFiles(setFaceFiles, setFacePreviews, e.target.files),
           'Adicionar', 'Adicione fotos do rosto. 5 dos 10 posts terão o rosto integrado ao design.'
         );
 
-      case 5: // Generate
+      case 'generate': // Generate
         return (
           <div className="space-y-6">
             <div>
               <label className="text-xs text-white/40 mb-1 block">Nome do Estilo *</label>
               <input value={styleName} onChange={e => setStyleName(e.target.value)}
-                placeholder="Ex: Neon Editorial"
+                placeholder={isRealEstate ? 'Ex: Luxo Imobiliário' : 'Ex: Neon Editorial'}
                 className="w-full max-w-sm px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none focus:border-yellow-500/40" />
             </div>
 
             {/* Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className={`grid grid-cols-2 sm:grid-cols-${isRealEstate ? '4' : '5'} gap-3`}>
               {[
                 { label: 'Referências', count: refFiles.length },
+                ...(isRealEstate ? [{ label: 'Imóvel', count: propertyFiles.length }] : []),
                 { label: 'Marca', count: brandFiles.length },
                 { label: 'Mockups', count: mockupFiles.length },
                 { label: 'Cores', count: extractedColors.length },
-                { label: 'Rostos', count: faceFiles.length },
+                ...(!isRealEstate ? [{ label: 'Rostos', count: faceFiles.length }] : []),
               ].map(s => (
                 <div key={s.label} className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
                   <p className="text-[10px] text-white/30 mb-0.5">{s.label}</p>
@@ -516,6 +624,13 @@ NOME DO ESTILO: "${styleName}"`;
                 </div>
               ))}
             </div>
+
+            {isRealEstate && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <Building2 className="w-4 h-4 text-amber-400" />
+                <span className="text-xs text-amber-300/80">Modo Imobiliário: as fotos do imóvel serão distribuídas entre os 10 cards</span>
+              </div>
+            )}
 
             {generating && (
               <div className="space-y-2">
@@ -541,7 +656,7 @@ NOME DO ESTILO: "${styleName}"`;
                         <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-black/60 text-[9px] text-white/60 flex items-center justify-between">
-                        <span>{post.hasFace ? '👤 Com rosto' : '📐 Sem rosto'}</span>
+                        <span>{post.hasFace ? '👤 Com rosto' : isRealEstate ? '🏠 Imóvel' : '📐 Sem rosto'}</span>
                         <Eye className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
@@ -641,17 +756,17 @@ NOME DO ESTILO: "${styleName}"`;
               </button>
             </div>
 
-            {/* With face */}
-            {generatedPosts.filter(p => p.hasFace).length > 0 && (
+            {/* Real estate: single grid */}
+            {isRealEstate ? (
               <div className="mb-8">
-                <h3 className="text-sm font-semibold text-white/50 mb-3">👤 Com Rosto ({generatedPosts.filter(p => p.hasFace).length})</h3>
+                <h3 className="text-sm font-semibold text-white/50 mb-3">🏠 Posts Imobiliários ({generatedPosts.length})</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                  {generatedPosts.filter(p => p.hasFace).map((post, i) => (
-                    <div key={`face-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
+                  {generatedPosts.map((post, i) => (
+                    <div key={`prop-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
                       <div className="aspect-[4/5] cursor-pointer" onClick={() => setPreviewPost(post.imageUrl)}>
                         <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
                       </div>
-                      <a href={post.imageUrl} download={`${styleName}-face-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
+                      <a href={post.imageUrl} download={`${styleName}-imovel-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
                         className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/80">
                         <Download className="w-3.5 h-3.5" />
                       </a>
@@ -659,26 +774,47 @@ NOME DO ESTILO: "${styleName}"`;
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Without face */}
-            {generatedPosts.filter(p => !p.hasFace).length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-white/50 mb-3">📐 Sem Rosto ({generatedPosts.filter(p => !p.hasFace).length})</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                  {generatedPosts.filter(p => !p.hasFace).map((post, i) => (
-                    <div key={`noface-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
-                      <div className="aspect-[4/5] cursor-pointer" onClick={() => setPreviewPost(post.imageUrl)}>
-                        <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
-                      </div>
-                      <a href={post.imageUrl} download={`${styleName}-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/80">
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
+            ) : (
+              <>
+                {/* With face */}
+                {generatedPosts.filter(p => p.hasFace).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-semibold text-white/50 mb-3">👤 Com Rosto ({generatedPosts.filter(p => p.hasFace).length})</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                      {generatedPosts.filter(p => p.hasFace).map((post, i) => (
+                        <div key={`face-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
+                          <div className="aspect-[4/5] cursor-pointer" onClick={() => setPreviewPost(post.imageUrl)}>
+                            <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                          <a href={post.imageUrl} download={`${styleName}-face-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
+                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/80">
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
+                {/* Without face */}
+                {generatedPosts.filter(p => !p.hasFace).length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-sm font-semibold text-white/50 mb-3">📐 Sem Rosto ({generatedPosts.filter(p => !p.hasFace).length})</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                      {generatedPosts.filter(p => !p.hasFace).map((post, i) => (
+                        <div key={`noface-${i}`} className="relative rounded-xl overflow-hidden border border-white/10 group">
+                          <div className="aspect-[4/5] cursor-pointer" onClick={() => setPreviewPost(post.imageUrl)}>
+                            <img src={post.imageUrl} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                          <a href={post.imageUrl} download={`${styleName}-${i + 1}.png`} target="_blank" rel="noopener noreferrer"
+                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-black/80">
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

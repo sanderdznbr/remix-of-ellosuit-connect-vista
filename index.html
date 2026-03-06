@@ -93,6 +93,17 @@
         background-color: #0a0a0f;
         min-height: 100vh;
       }
+
+      /* Prevent image saving via drag/right-click */
+      img, canvas {
+        -webkit-user-drag: none;
+        -khtml-user-drag: none;
+        -moz-user-drag: none;
+        -o-user-drag: none;
+        user-drag: none;
+        -webkit-touch-callout: none;
+        pointer-events: auto;
+      }
     </style>
   </head>
 

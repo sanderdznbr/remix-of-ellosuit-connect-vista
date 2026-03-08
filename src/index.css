@@ -526,7 +526,7 @@ body[data-scroll-locked] {
 /* ===== Custom Scrollbar ===== */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(252 60% 30%) transparent;
+  scrollbar-color: #333 transparent;
 }
 *::-webkit-scrollbar {
   width: 6px;
@@ -536,11 +536,11 @@ body[data-scroll-locked] {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: hsl(252 60% 30%);
+  background: #333;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: hsl(252 80% 50%);
+  background: #555;
 }
 
 /* Sidebar scrollbar – slimmer */
@@ -549,5 +549,5 @@ body[data-scroll-locked] {
 }
 .sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: hsl(252 60% 25% / 0.5) transparent;
+  scrollbar-color: #2a2a2a transparent;
 }

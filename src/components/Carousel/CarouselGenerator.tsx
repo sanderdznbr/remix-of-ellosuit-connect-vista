@@ -2863,13 +2863,14 @@ FORBIDDEN:
           `IDIOMA OBRIGATÓRIO: Todo texto renderizado DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. Revise cada palavra. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência.`,
           `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
           `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
-          `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções.`,
+          `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes, fotos, pessoas e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções.`,
+          `REGRA CRÍTICA DE TEXTO: Todo texto/tipografia DEVE estar 100% contido dentro da sua seção correspondente. NENHUMA palavra, frase ou bloco de texto pode começar em uma seção e terminar em outra. Cada fatia vertical (seção) deve ter seus textos completamente legíveis de forma independente. Apenas elementos visuais (fotos, design, cenários, gradientes, pessoas, objetos) podem fluir entre seções — TEXTO NUNCA.`,
           `TEMA: "${cleanTopic}"`,
-          `CONTEÚDO TEXTUAL POR SEÇÃO:`,
+          `CONTEÚDO TEXTUAL POR SEÇÃO (cada texto DEVE ficar inteiramente dentro da sua seção, sem ultrapassar as bordas verticais de corte):`,
           allCardTexts,
           `ESTILO: Design editorial premium, tipografia integrada à composição visual, cores harmoniosas que fluem ao longo de toda a panorâmica.`,
-          `MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 8% em cada borda. NENHUM texto deve encostar nas bordas.`,
-          `PROIBIDO: NÃO crie divisões, separadores ou bordas entre seções. NÃO copie nomes de marcas das referências. NÃO coloque texto colado nas bordas.`,
+          `MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 12% nas bordas esquerda e direita de CADA SEÇÃO (pontos de corte). 8% no topo e base. NENHUM texto próximo dos pontos de corte.`,
+          `PROIBIDO: NÃO crie divisões, separadores ou bordas entre seções. NÃO copie nomes de marcas das referências. NÃO coloque texto colado nas bordas. NÃO permita que texto cruze de uma seção para outra.`,
           brandName ? `MARCA: "${brandName}" discretamente posicionada.` : '',
         ].filter(Boolean).join('\n');
 

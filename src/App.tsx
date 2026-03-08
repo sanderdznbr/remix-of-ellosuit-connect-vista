@@ -20,6 +20,7 @@ import Suporte from './pages/Suporte';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import PostPublic from './pages/PostPublic';
+import Presentear from './pages/Presentear';
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/perfil/:username" element={<Profile />} />
             <Route path="/configuracoes" element={<Settings />} />
             <Route path="/post/:postId" element={<PostPublic />} />
+            <Route path="/presentear" element={<Presentear />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

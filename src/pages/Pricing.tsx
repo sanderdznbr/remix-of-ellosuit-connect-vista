@@ -24,9 +24,9 @@ const CREDIT_TOPUPS = [
 ];
 
 const GIFT_PACKAGES = [
-  { credits: 100, price: 139.90, label: '100 Créditos', description: '~10 carrosséis ou ~14 posts estáticos' },
-  { credits: 200, price: 229.90, label: '200 Créditos', description: '~20 carrosséis ou ~28 posts estáticos' },
-  { credits: 300, price: 287.90, label: '300 Créditos', description: '~30 carrosséis ou ~42 posts estáticos' },
+  { credits: 100, price: 129.90, label: '100 Créditos', description: '~10 carrosséis ou ~14 posts estáticos' },
+  { credits: 200, price: 209.90, label: '200 Créditos', description: '~20 carrosséis ou ~28 posts estáticos' },
+  { credits: 300, price: 239.90, label: '300 Créditos', description: '~30 carrosséis ou ~42 posts estáticos' },
 ];
 
 const plans = [

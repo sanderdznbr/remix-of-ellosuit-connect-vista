@@ -21,7 +21,7 @@ const GIFT_PACKAGES = [
   { credits: 300, price: 239.90, label: '300 Créditos', front: giftCard300Front, back: giftCard300Back },
 ];
 
-/** Renders the gift code directly onto the back card image via canvas */
+/** Renders the gift code directly onto the back card image via canvas — text only, large & centered */
 async function renderCodeOnCard(backImageSrc: string, code: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -35,37 +35,21 @@ async function renderCodeOnCard(backImageSrc: string, code: string): Promise<str
 
       ctx.drawImage(img, 0, 0);
 
-      // Draw code pill in the lower-center area of the card
-      const pillW = canvas.width * 0.6;
-      const pillH = canvas.height * 0.11;
-      const pillX = (canvas.width - pillW) / 2;
-      const pillY = canvas.height * 0.68;
-      const radius = pillH / 2;
-
-      // White rounded pill
-      ctx.beginPath();
-      ctx.moveTo(pillX + radius, pillY);
-      ctx.lineTo(pillX + pillW - radius, pillY);
-      ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, radius);
-      ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, radius);
-      ctx.arcTo(pillX, pillY + pillH, pillX, pillY, radius);
-      ctx.arcTo(pillX, pillY, pillX + pillW, pillY, radius);
-      ctx.closePath();
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.shadowColor = 'rgba(0,0,0,0.15)';
-      ctx.shadowBlur = 12;
-      ctx.shadowOffsetY = 4;
-      ctx.fill();
-      ctx.shadowColor = 'transparent';
-
-      // Code text
-      const fontSize = Math.round(canvas.width * 0.038);
+      // Large centered code text — no pill background
+      const fontSize = Math.round(canvas.width * 0.065);
       ctx.font = `bold ${fontSize}px "SF Mono", "Fira Code", "Courier New", monospace`;
-      ctx.fillStyle = '#1a1a2e';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(code, canvas.width / 2, pillY + pillH / 2);
+
+      // Subtle shadow for readability
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(code, canvas.width / 2, canvas.height / 2 + canvas.height * 0.08);
+
+      ctx.shadowColor = 'transparent';
 
       resolve(canvas.toDataURL('image/png'));
     };

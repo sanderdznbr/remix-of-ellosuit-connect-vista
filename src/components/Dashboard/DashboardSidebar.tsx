@@ -166,7 +166,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <FolderOpen className="w-4 h-4" />
-          Todos os projetos
+          Conteúdos
         </button>
         <button
           onClick={() => { onTabChange('starred'); closeSearch(); }}

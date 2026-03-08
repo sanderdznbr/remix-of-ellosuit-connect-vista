@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentIcon from '@/assets/ellocontent_icon.png';
@@ -187,6 +187,23 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           Estilos
         </button>
       </div>
+
+      {/* Recentes */}
+      {recentProjects.length > 0 && (
+        <div className="px-2 mt-5">
+          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Recentes</p>
+          {recentProjects.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => { onLoadCarousel?.(p); closeSearch(); }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors cursor-pointer truncate"
+            >
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{p.title || p.topic || 'Sem título'}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Comunidade section */}
       <div className="px-2 mt-5">

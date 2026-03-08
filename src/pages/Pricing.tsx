@@ -460,6 +460,31 @@ function LoggedInPricing() {
                   );
                 })}
               </div>
+
+              {/* Redeem code section */}
+              <div className="mt-8 rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
+                <h3 className="text-white text-sm font-semibold mb-1">🎁 Resgatar código</h3>
+                <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate créditos ou planos aqui.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Digite o código"
+                    value={redeemCode}
+                    onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter') handleRedeemCode(); }}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+                  />
+                  <button
+                    onClick={handleRedeemCode}
+                    disabled={redeemLoading || !redeemCode.trim()}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-40"
+                    style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+                  >
+                    {redeemLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Resgatar'}
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>

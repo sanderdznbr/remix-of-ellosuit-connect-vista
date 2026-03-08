@@ -3,8 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
-import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy } from 'lucide-react';
+import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+
+const PLAN_BADGES: Record<string, { label: string; color: string }> = {
+  starter: { label: 'STARTER', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  base: { label: 'STARTER', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  pro: { label: 'PRO', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  growth: { label: 'GROWTH', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  business: { label: 'BUSINESS', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+};
 
 interface Profile {
   id: string;
@@ -53,6 +61,8 @@ const ProfilePage: React.FC = () => {
   const [postCaption, setPostCaption] = useState('');
   const [selectedCarouselId, setSelectedCarouselId] = useState<string | null>(null);
   const [creatingPost, setCreatingPost] = useState(false);
+  const [planType, setPlanType] = useState<string | null>(null);
+  const [planStatus, setPlanStatus] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,48 +108,62 @@ const ProfilePage: React.FC = () => {
       setProfile(profileData);
 
       if (profileData) {
-        let carouselsData: any[] = [];
-
-        const { data: ownCarousels } = await supabase
-          .from('generated_carousels')
-          .select('id, title, cover_url, card_count, created_at, carousel_data')
-          .eq('user_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        carouselsData = ownCarousels || [];
-
-        if (carouselsData.length === 0 && user && user.id === profileData.id) {
-          const { data: companyUser } = await supabase
+        // Parallelize all queries
+        const [carouselsRes, postsRes, companyRes] = await Promise.all([
+          supabase
+            .from('generated_carousels')
+            .select('id, title, cover_url, card_count, created_at, carousel_data')
+            .eq('user_id', profileData.id)
+            .order('created_at', { ascending: false })
+            .limit(50),
+          supabase
+            .from('community_posts')
+            .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+            .eq('user_id', profileData.id)
+            .order('created_at', { ascending: false }),
+          user ? supabase
             .from('company_users')
             .select('company_id')
-            .eq('user_id', user.id)
+            .eq('user_id', profileData.id)
             .limit(1)
-            .maybeSingle();
+            .maybeSingle() : Promise.resolve({ data: null }),
+        ]);
 
-          if (companyUser?.company_id) {
-            const { data: companyCarousels } = await supabase
-              .from('generated_carousels')
-              .select('id, title, cover_url, card_count, created_at, carousel_data')
-              .eq('company_id', companyUser.company_id)
-              .order('created_at', { ascending: false })
-              .limit(50);
+        let carouselsData = carouselsRes.data || [];
 
-            carouselsData = companyCarousels || [];
-          }
+        // If no carousels by user_id, try company_id
+        if (carouselsData.length === 0 && companyRes.data?.company_id && user?.id === profileData.id) {
+          const { data: companyCarousels } = await supabase
+            .from('generated_carousels')
+            .select('id, title, cover_url, card_count, created_at, carousel_data')
+            .eq('company_id', companyRes.data.company_id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+          carouselsData = companyCarousels || [];
         }
 
         setCarousels(carouselsData as CarouselItem[]);
 
-        const { data: posts } = await supabase
-          .from('community_posts')
-          .select('id, carousel_id, cover_url, caption, likes_count, created_at')
-          .eq('user_id', profileData.id)
-          .order('created_at', { ascending: false });
-
-        const postList = (posts as CommunityPostItem[]) || [];
+        const postList = (postsRes.data as CommunityPostItem[]) || [];
         setPublishedPosts(postList);
         setCommunityPosts(new Set(postList.map((p) => p.carousel_id)));
+
+        // Fetch subscription for badge
+        if (companyRes.data?.company_id) {
+          const [subRes, elloRes] = await Promise.all([
+            supabase.from('subscriptions').select('plan_type, status').eq('company_id', companyRes.data.company_id).maybeSingle(),
+            supabase.from('ellocontent_subscriptions').select('plan_name, status').eq('company_id', companyRes.data.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          const ello = elloRes.data as any;
+          const sub = subRes.data as any;
+          if (ello?.status === 'active' || ello?.status === 'trialing') {
+            setPlanType(ello.plan_name?.toLowerCase());
+            setPlanStatus(ello.status);
+          } else if (sub && sub.status !== 'free') {
+            setPlanType(sub.plan_type);
+            setPlanStatus(sub.status);
+          }
+        }
       }
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -368,17 +392,35 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
             <div className="flex-1 pb-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">{profile.display_name || 'Usuário'}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">{profile.display_name || 'Usuário'}</h1>
+                {planType && PLAN_BADGES[planType] && (planStatus === 'active' || planStatus === 'trialing') && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${PLAN_BADGES[planType].color}`}>
+                    <Crown className="w-3 h-3" />
+                    {PLAN_BADGES[planType].label}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-white/30">@{profile.username}</p>
             </div>
-            {isOwnProfile && !editing && (
-              <button
-                onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" /> Editar perfil
-              </button>
-            )}
+            <div className="flex gap-2">
+              {isOwnProfile && (
+                <button
+                  onClick={() => navigate('/configuracoes')}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium text-purple-300 border border-purple-500/20 hover:bg-purple-500/10 transition-colors cursor-pointer"
+                >
+                  Ver detalhes de assinatura
+                </button>
+              )}
+              {isOwnProfile && !editing && (
+                <button
+                  onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Editar perfil
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Edit form */}
@@ -520,60 +562,52 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {carousels.length === 0 ? (
+          {publishedPosts.length === 0 ? (
             <div className="text-center py-16 text-white/20">
               <p className="text-sm">Nenhum post criado ainda</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {carousels.map(carousel => {
-                const cover = getCoverImage(carousel);
-                const isPublished = communityPosts.has(carousel.id);
+              {publishedPosts.map(post => {
                 return (
-                  <div key={carousel.id} className="relative group rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/15 transition-all">
+                  <div key={post.id} className="relative group rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer" onClick={() => navigate(`/post/${post.id}`)}>
                     <div style={{ aspectRatio: '4/5' }} className="bg-white/[0.03]">
-                      {cover ? (
-                        <img src={cover} alt={carousel.title} className="w-full h-full object-cover" loading="lazy" />
+                      {post.cover_url ? (
+                        <img src={post.cover_url} alt={post.caption || ''} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/10 text-xs">Sem capa</div>
                       )}
                     </div>
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                      <p className="text-white text-xs font-medium text-center line-clamp-2">{carousel.title}</p>
-                      <p className="text-white/30 text-[10px]">{carousel.card_count} cards</p>
+                      <p className="text-white text-xs font-medium text-center line-clamp-2">{post.caption || 'Post'}</p>
+                      <div className="flex items-center gap-1 text-white/40 text-[10px]">
+                        <Heart className="w-3 h-3" /> {post.likes_count || 0}
+                      </div>
                       <div className="flex gap-2 mt-1">
                         <button
-                          onClick={() => navigate(`/carousel/${carousel.id}`)}
+                          onClick={(e) => { e.stopPropagation(); copyPostLink(post.id); }}
                           className="px-3 py-1.5 rounded-lg text-[10px] font-medium text-white bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
                         >
-                          <ExternalLink className="w-3 h-3 inline mr-1" /> Ver
+                          <Copy className="w-3 h-3 inline mr-1" /> Link
                         </button>
                         {isOwnProfile && (
                           <button
-                            onClick={() => handlePublishToCommunity(carousel)}
-                            disabled={publishingId === carousel.id}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                              isPublished
-                                ? 'bg-green-500/20 text-green-300 hover:bg-red-500/20 hover:text-red-300'
-                                : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const carousel = carousels.find(c => c.id === post.carousel_id);
+                              if (carousel) handlePublishToCommunity(carousel);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors cursor-pointer"
                           >
-                            {publishingId === carousel.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : isPublished ? (
-                              <><Heart className="w-3 h-3 inline mr-1 fill-current" /> Publicado</>
-                            ) : (
-                              <><Share2 className="w-3 h-3 inline mr-1" /> Publicar</>
-                            )}
+                            <X className="w-3 h-3 inline mr-1" /> Remover
                           </button>
                         )}
                       </div>
                     </div>
-                    {isPublished && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center">
-                        <Heart className="w-3 h-3 text-white fill-white" />
-                      </div>
-                    )}
+                    <div className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-sm">
+                      <Heart className="w-2.5 h-2.5 text-white/50" />
+                      <span className="text-[9px] text-white/50">{post.likes_count || 0}</span>
+                    </div>
                   </div>
                 );
               })}

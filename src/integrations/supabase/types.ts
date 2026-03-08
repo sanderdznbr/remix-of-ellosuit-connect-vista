@@ -44,6 +44,183 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at: string
+          id: string
+          order_amount: number
+          order_type: string
+          referral_id: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at?: string
+          id?: string
+          order_amount: number
+          order_type: string
+          referral_id?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_amount?: number
+          commission_percent?: number
+          created_at?: string
+          id?: string
+          order_amount?: number
+          order_type?: string
+          referral_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_partners: {
+        Row: {
+          affiliate_code: string
+          available_balance: number
+          commission_percent: number
+          company_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          total_earnings: number
+          total_withdrawn: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_code: string
+          available_balance?: number
+          commission_percent?: number
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          total_earnings?: number
+          total_withdrawn?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          affiliate_code?: string
+          available_balance?: number
+          commission_percent?: number
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          total_earnings?: number
+          total_withdrawn?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_partners_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          converted: boolean
+          created_at: string
+          id: string
+          ip_address: string | null
+          referred_user_id: string | null
+          source_url: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          converted?: boolean
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          referred_user_id?: string | null
+          source_url?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          converted?: boolean
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          referred_user_id?: string | null
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_withdrawals: {
+        Row: {
+          affiliate_id: string
+          amount: number
+          completed_at: string | null
+          id: string
+          pix_key: string
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          affiliate_id: string
+          amount: number
+          completed_at?: string | null
+          id?: string
+          pix_key: string
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          affiliate_id?: string
+          amount?: number
+          completed_at?: string | null
+          id?: string
+          pix_key?: string
+          requested_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_withdrawals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_media: {
         Row: {
           agent_id: string

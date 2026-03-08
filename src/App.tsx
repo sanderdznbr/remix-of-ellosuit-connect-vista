@@ -23,6 +23,7 @@ import Settings from './pages/Settings';
 import PostPublic from './pages/PostPublic';
 import Presentear from './pages/Presentear';
 import Parceiros from './pages/Parceiros';
+import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
 

@@ -23,6 +23,7 @@ import Settings from './pages/Settings';
 import PostPublic from './pages/PostPublic';
 import Presentear from './pages/Presentear';
 import Parceiros from './pages/Parceiros';
+import Admin from './pages/Admin';
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/post/:postId" element={<PostPublic />} />
               <Route path="/presentear" element={<Presentear />} />
               <Route path="/parceiros" element={<Parceiros />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

@@ -1541,7 +1541,8 @@ const CarouselGenerator: React.FC = () => {
           `CONTEÚDO TEXTUAL POR SEÇÃO (distribua tipografia editorial ao longo da panorâmica, cada texto na sua seção correspondente):`,
           allCardTexts,
           `ESTILO: Design editorial premium, tipografia integrada à composição visual, cores harmoniosas que fluem ao longo de toda a panorâmica.`,
-          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua.`,
+          `MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso entre o texto e as extremidades.`,
+          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua. NÃO coloque texto colado nas bordas.`,
           brandName ? `MARCA: "${brandName}" discretamente posicionada.` : '',
         ].filter(Boolean).join('\n');
 

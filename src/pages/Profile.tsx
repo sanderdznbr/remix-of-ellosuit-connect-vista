@@ -170,18 +170,30 @@ const ProfilePage: React.FC = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+
+    const normalizedUsername = (editForm.username || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '');
+
+    if (!normalizedUsername) {
+      toast.error('Defina um nome de usuário válido');
+      return;
+    }
+
     try {
       const { error } = await supabase.from('profiles').update({
         display_name: editForm.display_name,
-        username: editForm.username,
+        username: normalizedUsername,
         bio: editForm.bio,
         website: editForm.website,
         instagram: editForm.instagram,
       } as any).eq('id', user.id);
       if (error) throw error;
-      setProfile(prev => prev ? { ...prev, ...editForm } : prev);
+
+      setProfile(prev => prev ? { ...prev, ...editForm, username: normalizedUsername } : prev);
       setEditing(false);
       toast.success('Perfil atualizado!');
+      navigate('/perfil');
     } catch (err: any) {
       toast.error('Erro: ' + err.message);
     }

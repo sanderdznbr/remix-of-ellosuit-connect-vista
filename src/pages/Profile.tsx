@@ -356,7 +356,7 @@ const ProfilePage: React.FC = () => {
               {isOwnProfile ? 'Meus Posts' : 'Posts'} 
               <span className="text-white/20 text-sm font-normal ml-2">{carousels.length}</span>
             </h2>
-            {isOwnProfile && carousels.length > 0 && (
+            {isOwnProfile && (
               <button
                 onClick={() => setShowPostDialog(true)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white cursor-pointer transition-all hover:opacity-90"

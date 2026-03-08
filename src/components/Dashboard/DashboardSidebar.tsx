@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Search, FolderOpen, Star, Clock, Settings, LogOut, ChevronDown, User, CreditCard, X, FileText, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,33 +16,73 @@ interface DashboardSidebarProps {
 const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch, onLoadCarousel }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [displayBalance, setDisplayBalance] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
-  const email = user?.email || '';
+  const prevBalanceRef = useRef<number | null>(null);
 
   // Fetch recent projects + credit balance
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      try {
-        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
-        if (!cu) return;
-        const [{ data: carousels }, { data: credits }] = await Promise.all([
-          supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
-          supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
-        ]);
-        setRecentProjects(carousels || []);
-        setCreditBalance(credits?.balance ?? 0);
-      } catch {}
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
+      if (!cu) return;
+      const [{ data: carousels }, { data: credits }] = await Promise.all([
+        supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
+      ]);
+      setRecentProjects(carousels || []);
+      const newBalance = credits?.balance ?? 0;
+      setCreditBalance(newBalance);
+    } catch {}
   }, [user]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Re-fetch when window regains focus (e.g. returning from checkout)
+  useEffect(() => {
+    const onFocus = () => fetchData();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchData]);
+
+  // Also re-fetch on route changes (returning from /checkout, /precos, etc.)
+  useEffect(() => { fetchData(); }, [location.pathname, fetchData]);
+
+  // Animate credit count when balance changes
+  useEffect(() => {
+    if (creditBalance === null) return;
+    const prev = prevBalanceRef.current;
+    if (prev === null || prev === creditBalance) {
+      setDisplayBalance(creditBalance);
+      prevBalanceRef.current = creditBalance;
+      return;
+    }
+    // Animate from prev to creditBalance
+    const start = prev;
+    const end = creditBalance;
+    const duration = 1200;
+    const startTime = performance.now();
+    prevBalanceRef.current = creditBalance;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayBalance(Math.round(start + (end - start) * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [creditBalance]);
+
+  const email = user?.email || '';
+  const username = email.split('@')[0] || 'user';
 
   const handleSignOut = async () => {
     await signOut();
@@ -238,10 +278,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors rounded-lg" onClick={() => navigate('/precos')}>
           <div className="flex items-center justify-between text-xs">
             <span className="text-white/40">Créditos</span>
-            <span className="text-white/70 font-medium">{creditBalance !== null ? `${Math.floor(creditBalance)} restantes` : '...'}</span>
+            <span className="text-white/70 font-medium">{displayBalance !== null ? `${Math.floor(displayBalance)} restantes` : '...'}</span>
           </div>
           <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-            <div className="h-full rounded-full bg-purple-500/60" style={{ width: `${Math.min(100, ((creditBalance ?? 0) / 100) * 100)}%` }} />
+            <div className="h-full rounded-full bg-purple-500/60 transition-all duration-700" style={{ width: `${Math.min(100, ((displayBalance ?? 0) / 100) * 100)}%` }} />
           </div>
         </div>
 

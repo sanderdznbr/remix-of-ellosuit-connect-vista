@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2 } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [carousels, setCarousels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
 
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 
@@ -77,6 +78,36 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
     } else {
       setDeleteConfirmId(id);
       setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+    }
+  };
+
+  const handlePublish = async (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    if (!user) return;
+    setPublishingId(item.id);
+    try {
+      const coverUrl = item.cover_url || null;
+      const { error } = await supabase
+        .from('community_posts')
+        .insert({
+          user_id: user.id,
+          carousel_id: item.id,
+          cover_url: coverUrl,
+          caption: item.title || item.topic,
+        } as any);
+      if (error) {
+        if (error.message?.includes('duplicate') || error.code === '23505') {
+          toast.info('Este projeto já foi publicado na comunidade');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Publicado na comunidade! 🎉');
+      }
+    } catch (err: any) {
+      toast.error('Erro ao publicar: ' + err.message);
+    } finally {
+      setPublishingId(null);
     }
   };
 
@@ -239,6 +270,15 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={(e) => handlePublish(e, item)}
+                    className="p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.15)' : 'rgba(168,85,247,0.6)' }}
+                    title="Publicar na comunidade"
+                    disabled={publishingId === item.id}
+                  >
+                    {publishingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                  </button>
                 </div>
               );
             }
@@ -282,6 +322,15 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={(e) => handlePublish(e, item)}
+                    className="p-1.5 rounded-lg cursor-pointer"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: publishingId === item.id ? 'rgba(255,255,255,0.3)' : 'rgba(168,85,247,0.8)' }}
+                    title="Publicar na comunidade"
+                    disabled={publishingId === item.id}
+                  >
+                    {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
                 {item.is_starred && !deleteConfirmId && (

@@ -468,29 +468,33 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 {/* Project Selection */}
-                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto gerado</label>
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
-                  {unpublishedCarousels.map(c => {
+                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto</label>
+                <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto mb-4 pr-1">
+                  {carousels.map(c => {
                     const cover = getCoverImage(c);
                     const isSelected = selectedCarouselId === c.id;
+                    const alreadyPublished = communityPosts.has(c.id);
                     return (
                       <button
                         key={c.id}
-                        onClick={() => setSelectedCarouselId(c.id)}
-                        className={`relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${isSelected ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-white/[0.06] hover:border-white/15'}`}
+                        onClick={() => !alreadyPublished && setSelectedCarouselId(c.id)}
+                        className={`relative rounded-xl overflow-hidden border-2 transition-all ${alreadyPublished ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${isSelected ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-white/[0.06] hover:border-white/15'}`}
                       >
                         <div style={{ aspectRatio: '4/5' }} className="bg-white/[0.03]">
                           {cover ? <img src={cover} alt={c.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/10 text-[10px]">Sem capa</div>}
                         </div>
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                          <p className="text-[9px] text-white/70 truncate">{c.title}</p>
+                        </div>
+                        {alreadyPublished && (
+                          <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-green-500/80 text-[8px] text-white font-medium">Publicado</div>
+                        )}
                         {isSelected && <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center"><Check className="w-5 h-5 text-purple-300" /></div>}
                       </button>
                     );
                   })}
                   {carousels.length === 0 && (
-                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Nenhum projeto encontrado para publicar</p>
-                  )}
-                  {carousels.length > 0 && unpublishedCarousels.length === 0 && (
-                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Todos os seus projetos já foram publicados</p>
+                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Nenhum projeto encontrado. Crie um carrossel primeiro!</p>
                   )}
                 </div>
 

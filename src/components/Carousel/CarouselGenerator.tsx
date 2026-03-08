@@ -1520,11 +1520,13 @@ const CarouselGenerator: React.FC = () => {
 
       // ========== CONTINUOUS PANORAMIC MODE ==========
       if (continuousMode && cardCount >= 2) {
+        // Force 3 cards for continuous mode
+        const panelCount = Math.min(cardCount, 3);
         setImageGenProgress('🌄 Gerando panorama contínuo...');
 
         // Build a panoramic prompt with all card texts
         const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
-        const allCardTexts = cards.map((c, i) => {
+        const allCardTexts = cards.slice(0, panelCount).map((c, i) => {
           const title = c.title || c.bodyTop || '';
           const body = c.bodyBottom || c.body || '';
           return `Seção ${i + 1}: ${title}${body ? ` — ${body}` : ''}`;
@@ -1532,7 +1534,8 @@ const CarouselGenerator: React.FC = () => {
 
         const panoramaPrompt = [
           `IDIOMA: Todo texto renderizado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`,
-          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga (proporção ${cardCount * 4}:5) que será dividida em ${cardCount} fatias verticais iguais.`,
+          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
+          `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
           `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
           `TEMA: "${cleanTopic}"`,
           `CONTEÚDO TEXTUAL POR SEÇÃO (distribua tipografia editorial ao longo da panorâmica, cada texto na sua seção correspondente):`,
@@ -1552,8 +1555,8 @@ const CarouselGenerator: React.FC = () => {
         const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
         const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
 
-        // Generate panoramic image with wider aspect ratio
-        const panoramaAspectRatio = cardCount <= 3 ? '16:9' : cardCount <= 5 ? '21:9' : '21:9';
+        // Use exact aspect ratio: 12:5 for 3 cards (3 * 4:5), 8:5 for 2 cards
+        const panoramaAspectRatio = panelCount === 2 ? '8:5' : '12:5';
         
         let panoramaUrl: string | null = null;
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -1574,7 +1577,7 @@ const CarouselGenerator: React.FC = () => {
                 fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
-                panoramicCardCount: cardCount,
+                panoramicCardCount: panelCount,
               },
             });
             if (imgErr) throw imgErr;
@@ -1601,10 +1604,10 @@ const CarouselGenerator: React.FC = () => {
               img.src = panoramaUrl!;
             });
 
-            const sliceWidth = Math.floor(img.width / cardCount);
+            const sliceWidth = Math.floor(img.width / panelCount);
             const sliceHeight = img.height;
 
-            for (let i = 0; i < cardCount; i++) {
+            for (let i = 0; i < panelCount; i++) {
               const canvas = document.createElement('canvas');
               canvas.width = sliceWidth;
               canvas.height = sliceHeight;
@@ -1616,12 +1619,12 @@ const CarouselGenerator: React.FC = () => {
                   ...updatedCards[i],
                   imageUrl: sliceDataUrl,
                   isAiImage: true,
-                  generatedPrompt: `[Panorama Contínuo - Fatia ${i + 1}/${cardCount}]\n${panoramaPrompt}`,
+                  generatedPrompt: `[Panorama Contínuo - Fatia ${i + 1}/${panelCount}]\n${panoramaPrompt}`,
                 };
               }
             }
             
-            toast({ title: '🌄 Panorama contínuo gerado!', description: `${cardCount} slides com arte contínua` });
+            toast({ title: '🌄 Panorama contínuo gerado!', description: `${panelCount} slides com arte contínua` });
           } catch (sliceErr) {
             console.error('Panorama slicing failed:', sliceErr);
             toast({ title: 'Erro ao fatiar panorama', variant: 'destructive' });

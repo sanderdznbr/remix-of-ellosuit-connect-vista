@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy, Tag } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy, Tag, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
@@ -31,6 +31,12 @@ const CREDIT_TOPUPS = [
   { credits: 500, price: 399 },
 ];
 
+const GIFT_PRICES: Record<number, number> = {
+  100: 129.90,
+  200: 209.90,
+  300: 239.90,
+};
+
 // ── Format helpers ──
 const formatCPF = (v: string) => {
   const d = v.replace(/\D/g, '').slice(0, 11);
@@ -58,13 +64,17 @@ function CheckoutContent() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
-  // Mode: 'plan' for subscription, 'credits' for avulso, 'style' for marketplace style
+  // Mode: 'plan' for subscription, 'credits' for avulso, 'style' for marketplace style, 'gift' for presente
   const modoParam = searchParams.get('modo');
-  const mode = modoParam === 'creditos' ? 'credits' : modoParam === 'style' ? 'style' : 'plan';
+  const mode = modoParam === 'creditos' ? 'credits' : modoParam === 'style' ? 'style' : modoParam === 'presente' ? 'gift' : 'plan';
   const planKey = searchParams.get('plano') || 'starter';
   const creditIdx = parseInt(searchParams.get('creditos') || '2');
   const plan = PLANS[planKey] || PLANS.starter;
   const creditPack = CREDIT_TOPUPS[creditIdx] || CREDIT_TOPUPS[2];
+
+  // Gift params
+  const giftCredits = parseInt(searchParams.get('credits') || '100');
+  const giftPrice = parseFloat(searchParams.get('price') || '129.90');
 
   // Style purchase params
   const styleId = searchParams.get('style_id');
@@ -94,6 +104,9 @@ function CheckoutContent() {
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount_percent: number; discount_fixed: number } | null>(null);
+
+  // Admin check
+  const isAdmin = user?.email === 'admin@gmail.com';
 
   useEffect(() => {
     if (!user) return;
@@ -130,7 +143,6 @@ function CheckoutContent() {
         toast({ title: 'Cupom esgotado', variant: 'destructive' });
         return;
       }
-      // Check if user already used it
       const { data: existing } = await supabase
         .from('coupon_redemptions')
         .select('id')
@@ -152,6 +164,63 @@ function CheckoutContent() {
       toast({ title: 'Erro ao validar cupom', variant: 'destructive' });
     } finally {
       setCouponLoading(false);
+    }
+  };
+
+  const handleAdminConfirm = async () => {
+    if (!isAdmin || !user) return;
+    setLoading(true);
+    setStep('processing');
+    try {
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+      if (!cu) throw new Error('Sem empresa');
+
+      if (mode === 'plan') {
+        // Activate subscription directly
+        const planConfig = PLANS[planKey];
+        await supabase.from('subscriptions').upsert({
+          company_id: cu.company_id,
+          plan_type: planKey as any,
+          status: 'active' as any,
+          monthly_price: planConfig.price,
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
+        }, { onConflict: 'company_id' });
+
+        // Add credits
+        await supabase.rpc('add_ai_credits', {
+          p_company_id: cu.company_id,
+          p_amount: planConfig.credits,
+          p_description: `Admin: Plano ${planConfig.name} ativado`,
+        });
+      } else if (mode === 'credits') {
+        await supabase.rpc('add_ai_credits', {
+          p_company_id: cu.company_id,
+          p_amount: creditPack.credits,
+          p_description: `Admin: +${creditPack.credits} créditos`,
+        });
+      } else if (mode === 'gift') {
+        // For gift, redirect back to presentear to generate key
+        setStep('success');
+        setLoading(false);
+        return;
+      } else if (mode === 'style' && styleId) {
+        await supabase.from('marketplace_purchases' as any).insert({
+          user_id: user.id,
+          company_id: cu.company_id,
+          style_id: styleId,
+          payment_method: 'admin',
+          amount_paid: 0,
+        } as any);
+      }
+
+      setStep('success');
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      setStep('form');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -211,6 +280,16 @@ function CheckoutContent() {
           customer,
           card: cardData,
         };
+      } else if (mode === 'gift') {
+        body = {
+          action: 'buy_credits',
+          credits: giftCredits,
+          price_cents: Math.round(giftPrice * 100),
+          payment_method: paymentMethod,
+          customer,
+          card: cardData,
+          is_gift: true,
+        };
       } else {
         body = {
           action: 'buy_credits',
@@ -249,25 +328,37 @@ function CheckoutContent() {
     return <Navigate to="/auth" replace />;
   }
 
-  const basePrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : creditPack.price;
+  const basePrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
   const discount = appliedCoupon
     ? appliedCoupon.discount_percent > 0
       ? basePrice * (appliedCoupon.discount_percent / 100)
       : appliedCoupon.discount_fixed
     : 0;
   const displayPrice = Math.max(0, basePrice - discount);
-  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : `+${creditPack.credits} créditos`;
+  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : mode === 'gift' ? `Presente: ${giftCredits} créditos` : `+${creditPack.credits} créditos`;
   const displaySubtitle = mode === 'plan'
     ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`
     : mode === 'style'
     ? `Compra avulsa do estilo do Marketplace`
+    : mode === 'gift'
+    ? `Chave de presente para enviar a alguém`
     : `Créditos avulsos para uso imediato`;
+
+  const handleSuccessAction = () => {
+    if (mode === 'gift') {
+      navigate(`/presentear?purchased=true&credits=${giftCredits}&price=${giftPrice}`);
+    } else if (mode === 'style') {
+      navigate('/?tab=marketplace');
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
       <div className="max-w-lg mx-auto px-4 py-8 md:py-16">
-        <button onClick={() => navigate('/precos')} className="flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-8 cursor-pointer transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Voltar aos planos
+        <button onClick={() => navigate(mode === 'gift' ? '/presentear' : '/precos')} className="flex items-center gap-2 text-white/40 hover:text-white/70 text-sm mb-8 cursor-pointer transition-colors">
+          <ArrowLeft className="w-4 h-4" /> {mode === 'gift' ? 'Voltar' : 'Voltar aos planos'}
         </button>
 
         <AnimatePresence mode="wait">
@@ -288,12 +379,25 @@ function CheckoutContent() {
                     <span className="text-white/40 text-xs block">{mode === 'plan' ? '/mês' : ''}</span>
                   </div>
                 </div>
-                {currentBalance !== null && (
+                {currentBalance !== null && mode !== 'gift' && (
                   <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(123, 80, 220, 0.8)' }}>
                     <Sparkles className="w-3 h-3" /> Saldo atual: {Math.floor(currentBalance)} créditos
                   </div>
                 )}
               </div>
+
+              {/* Admin bypass button */}
+              {isAdmin && (
+                <button
+                  onClick={handleAdminConfirm}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all mb-6 disabled:opacity-50"
+                  style={{ backgroundColor: 'rgba(74, 222, 128, 0.15)', border: '1px solid rgba(74, 222, 128, 0.3)', color: '#4ade80' }}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Confirmar admin
+                </button>
+              )}
 
               {/* Coupon */}
               <div className="mb-6">
@@ -332,8 +436,8 @@ function CheckoutContent() {
                 )}
               </div>
 
-              {/* Payment method - only show toggle for credits */}
-              {mode === 'credits' && (
+              {/* Payment method - show toggle for credits and gifts */}
+              {(mode === 'credits' || mode === 'gift') && (
                 <>
                   <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Método de pagamento</h3>
                   <div className="grid grid-cols-2 gap-3 mb-6">
@@ -414,7 +518,7 @@ function CheckoutContent() {
           {step === 'processing' && (
             <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-10 h-10 animate-spin mb-4" style={{ color: '#7B50DC' }} />
-              <p className="text-white/60 text-sm">Processando pagamento...</p>
+              <p className="text-white/60 text-sm">Processando...</p>
             </motion.div>
           )}
 
@@ -446,17 +550,19 @@ function CheckoutContent() {
                 <Zap className="w-8 h-8" style={{ color: '#7B50DC' }} />
               </div>
               <h2 className="text-white text-2xl font-bold mb-2">
-                {mode === 'plan' ? 'Assinatura ativa! 🎉' : mode === 'style' ? 'Estilo adquirido! 🎉' : 'Créditos adicionados! 🎉'}
+                {mode === 'plan' ? 'Assinatura ativa!' : mode === 'style' ? 'Estilo adquirido!' : mode === 'gift' ? 'Pagamento confirmado!' : 'Créditos adicionados!'}
               </h2>
               <p className="text-white/50 text-sm mb-8 text-center">
                 {mode === 'plan'
-                  ? `${plan.credits} créditos foram adicionados à sua conta. Vamos criar!`
+                  ? `${plan.credits} créditos foram adicionados à sua conta.`
                   : mode === 'style'
-                  ? `O estilo "${styleName}" já está disponível nos seus projetos.`
+                  ? `O estilo "${styleName}" já está disponível.`
+                  : mode === 'gift'
+                  ? `Agora vamos gerar sua chave de presente.`
                   : `+${creditPack.credits} créditos adicionados ao seu saldo.`}
               </p>
-              <button onClick={() => navigate(mode === 'style' ? '/?tab=marketplace' : '/')} className="px-6 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
-                {mode === 'style' ? 'Voltar ao Marketplace' : 'Começar a criar'}
+              <button onClick={handleSuccessAction} className="px-6 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
+                {mode === 'gift' ? 'Gerar chave de presente' : mode === 'style' ? 'Voltar ao Marketplace' : 'Começar a criar'}
               </button>
             </motion.div>
           )}

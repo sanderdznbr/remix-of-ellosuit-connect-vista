@@ -186,6 +186,8 @@ function LoggedInPricing() {
   const [showTopUp, setShowTopUp] = useState(false);
   const [showTopUpDropdown, setShowTopUpDropdown] = useState(false);
   const [selectedTopup, setSelectedTopup] = useState(2);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {

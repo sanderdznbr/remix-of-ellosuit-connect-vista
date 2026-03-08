@@ -164,6 +164,7 @@ export default function Presentear() {
       }, 600);
 
       toast.success('Chave de presente gerada!');
+      loadHistory();
     } catch (err: any) {
       console.error(err);
       toast.error('Erro ao gerar chave. Tente novamente.');

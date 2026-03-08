@@ -522,12 +522,8 @@ function LoggedInPricing() {
                   Resgatar cupom
                 </button>
                 <button
-                  onClick={() => { setActiveSection(activeSection === 'gift' ? 'none' : 'gift'); setGeneratedKey(null); }}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                    activeSection === 'gift'
-                      ? 'bg-purple-600 text-white'
-                      : 'border border-white/[0.12] text-white/70 hover:bg-white/[0.06]'
-                  }`}
+                  onClick={() => navigate('/presentear')}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border border-white/[0.12] text-white/70 hover:bg-white/[0.06]"
                 >
                   <Gift className="w-4 h-4" />
                   Presentear

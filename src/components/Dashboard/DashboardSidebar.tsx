@@ -210,7 +210,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <ShoppingBag className="w-4 h-4" />
-          Marketplace
+          Estilos
         </button>
         {/* Admin-only tools — temporarily hidden */}
         {/* {email === 'admin@gmail.com' && (

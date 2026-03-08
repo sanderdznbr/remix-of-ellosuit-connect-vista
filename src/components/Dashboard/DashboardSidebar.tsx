@@ -281,7 +281,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             <span className="text-white/70 font-medium">{displayBalance !== null ? `${Math.floor(displayBalance)} restantes` : '...'}</span>
           </div>
           <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-            <div className="h-full rounded-full bg-purple-500/60" style={{ width: `${Math.min(100, ((creditBalance ?? 0) / 100) * 100)}%` }} />
+            <div className="h-full rounded-full bg-purple-500/60 transition-all duration-700" style={{ width: `${Math.min(100, ((displayBalance ?? 0) / 100) * 100)}%` }} />
           </div>
         </div>
 

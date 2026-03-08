@@ -2963,6 +2963,8 @@ FORBIDDEN:
         }
         toast({ title: '✨ Todos os cards regenerados!' });
       }
+      // Auto-save after regeneration
+      setTimeout(() => saveCarousel(), 500);
     } catch (err: any) {
       console.error('Regenerate all error:', err);
       toast({ title: 'Erro ao regenerar tudo', description: err.message, variant: 'destructive' });

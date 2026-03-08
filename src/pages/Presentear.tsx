@@ -105,9 +105,9 @@ export default function Presentear() {
           .from('profiles')
           .select('id, display_name')
           .in('id', redeemerIds) as any;
-        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name]));
-        items.forEach(i => {
-          if (i.redeemed_by) i.redeemed_email = profileMap.get(i.redeemed_by) || i.redeemed_by;
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name as string]));
+        items.forEach((i: GiftHistory) => {
+          if (i.redeemed_by) i.redeemed_email = profileMap.get(i.redeemed_by) || String(i.redeemed_by);
         });
       }
       setHistory(items);

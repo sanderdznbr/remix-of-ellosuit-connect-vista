@@ -280,10 +280,6 @@ function LoggedInPricing() {
           current_period_start: new Date().toISOString(),
           current_period_end: new Date(Date.now() + (coupon.plan_months || 1) * 30 * 86400000).toISOString(),
         }).eq('company_id', companyId);
-          monthly_price: 0,
-          current_period_start: new Date().toISOString(),
-          current_period_end: new Date(Date.now() + (coupon.plan_months || 1) * 30 * 86400000).toISOString(),
-        }).eq('company_id', companyId);
       }
 
       // Record redemption & increment usage

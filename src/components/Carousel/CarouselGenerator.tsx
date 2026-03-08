@@ -4692,6 +4692,15 @@ FORBIDDEN:
                   <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
                 </button>
               )}
+              {/* Regenerate All button */}
+              {carouselData.cards.length >= 2 && !isGuest && (
+                <button onClick={regenerateAll} disabled={regeneratingAll || regeneratingCard !== null}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
+                  style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                  {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                  {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
+                </button>
+              )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>

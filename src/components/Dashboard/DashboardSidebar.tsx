@@ -21,28 +21,64 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [searchQuery, setSearchQuery] = useState('');
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [displayBalance, setDisplayBalance] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';
-  const email = user?.email || '';
+  const prevBalanceRef = useRef<number | null>(null);
 
   // Fetch recent projects + credit balance
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      try {
-        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
-        if (!cu) return;
-        const [{ data: carousels }, { data: credits }] = await Promise.all([
-          supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
-          supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
-        ]);
-        setRecentProjects(carousels || []);
-        setCreditBalance(credits?.balance ?? 0);
-      } catch {}
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
+      if (!cu) return;
+      const [{ data: carousels }, { data: credits }] = await Promise.all([
+        supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
+        supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
+      ]);
+      setRecentProjects(carousels || []);
+      const newBalance = credits?.balance ?? 0;
+      setCreditBalance(newBalance);
+    } catch {}
   }, [user]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Re-fetch when window regains focus (e.g. returning from checkout)
+  useEffect(() => {
+    const onFocus = () => fetchData();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchData]);
+
+  // Also re-fetch on route changes (returning from /checkout, /precos, etc.)
+  useEffect(() => { fetchData(); }, [location.pathname, fetchData]);
+
+  // Animate credit count when balance changes
+  useEffect(() => {
+    if (creditBalance === null) return;
+    const prev = prevBalanceRef.current;
+    if (prev === null || prev === creditBalance) {
+      setDisplayBalance(creditBalance);
+      prevBalanceRef.current = creditBalance;
+      return;
+    }
+    // Animate from prev to creditBalance
+    const start = prev;
+    const end = creditBalance;
+    const duration = 1200;
+    const startTime = performance.now();
+    prevBalanceRef.current = creditBalance;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayBalance(Math.round(start + (end - start) * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [creditBalance]);
 
   const handleSignOut = async () => {
     await signOut();

@@ -38,7 +38,7 @@ interface CommunityPostItem {
 
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [carousels, setCarousels] = useState<CarouselItem[]>([]);

@@ -155,6 +155,7 @@ function CheckoutContent() {
     }
   };
 
+  const handleSubmit = async () => {
     if (!customerName.trim() || !customerDocument.trim()) {
       toast({ title: 'Preencha nome e CPF', variant: 'destructive' });
       return;

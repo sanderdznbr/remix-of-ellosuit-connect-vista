@@ -84,7 +84,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   };
 
   const renderContent = () => {
-    if (children) return <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>;
+    if (children) return <div className="flex-1 min-h-0 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>{children}</div>;
     switch (activeTab) {
       case 'projects':
         return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;

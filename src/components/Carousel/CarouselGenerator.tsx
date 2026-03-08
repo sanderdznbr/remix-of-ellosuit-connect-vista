@@ -1530,6 +1530,8 @@ const CarouselGenerator: React.FC = () => {
       if (continuousMode && cardCount >= 2) {
         // Force 3 cards for continuous mode
         const panelCount = Math.min(cardCount, 3);
+        const targetPanoramaAspect = (panelCount * 4) / 5;
+        const minAcceptedPanoramaAspect = targetPanoramaAspect * 0.82;
         setImageGenProgress('🌄 Gerando panorama contínuo...');
 
         // Build a panoramic prompt with all card texts

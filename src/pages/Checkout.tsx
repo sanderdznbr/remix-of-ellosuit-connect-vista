@@ -249,7 +249,13 @@ function CheckoutContent() {
     return <Navigate to="/auth" replace />;
   }
 
-  const displayPrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : creditPack.price;
+  const basePrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : creditPack.price;
+  const discount = appliedCoupon
+    ? appliedCoupon.discount_percent > 0
+      ? basePrice * (appliedCoupon.discount_percent / 100)
+      : appliedCoupon.discount_fixed
+    : 0;
+  const displayPrice = Math.max(0, basePrice - discount);
   const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : `+${creditPack.credits} créditos`;
   const displaySubtitle = mode === 'plan'
     ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`

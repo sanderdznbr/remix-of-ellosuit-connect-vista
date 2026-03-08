@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { getAffiliateRef } from '@/hooks/useAffiliateTracking';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import '@/styles/carousel-loader.css';
 
@@ -88,6 +89,16 @@ export default function Register() {
         return;
       }
       if (data?.user) {
+        // Track affiliate referral
+        const affiliateRef = getAffiliateRef();
+        if (affiliateRef) {
+          supabase.from('affiliate_referrals' as any).insert({
+            affiliate_id: affiliateRef, // will be resolved server-side
+            referred_user_id: data.user.id,
+            converted: false,
+            source_url: window.location.href,
+          }).then(() => {});
+        }
         try {
           supabase.functions.invoke('send-system-email', {
             body: { template_key: 'welcome', recipient_email: email, recipient_name: username || email.split('@')[0] },

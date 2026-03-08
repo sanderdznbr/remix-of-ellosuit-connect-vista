@@ -61,6 +61,8 @@ const ProfilePage: React.FC = () => {
   const [postCaption, setPostCaption] = useState('');
   const [selectedCarouselId, setSelectedCarouselId] = useState<string | null>(null);
   const [creatingPost, setCreatingPost] = useState(false);
+  const [planType, setPlanType] = useState<string | null>(null);
+  const [planStatus, setPlanStatus] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 

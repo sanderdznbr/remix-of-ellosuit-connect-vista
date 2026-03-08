@@ -9,8 +9,8 @@ import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; price: number; credits: number; extraPrice: string; features: string[] }> = {
   starter: {
-    name: 'Starter', price: 79.90, credits: 80, extraPrice: 'R$1,50',
-    features: ['8 carrosséis/mês (até 10 slides)', '12 posts estáticos/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG', 'Galeria de marca'],
+    name: 'Starter', price: 64.50, credits: 50, extraPrice: 'R$1,50',
+    features: ['~5 carrosséis/mês (até 10 slides)', '~7 posts estáticos/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG', 'Galeria de marca'],
   },
   pro: {
     name: 'Pro', price: 124.90, credits: 120, extraPrice: 'R$1,20',

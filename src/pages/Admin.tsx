@@ -66,7 +66,7 @@ function AdminContent() {
     setLoading(true);
     try {
       const [{ count: usersCount }, { count: activeSubs }, { data: elloSubs }, { count: carouselsCount }] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('source', 'ellocontent'),
         supabase.from('ellocontent_subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('ellocontent_subscriptions').select('monthly_price, status'),
         supabase.from('generated_carousels').select('*', { count: 'exact', head: true }),

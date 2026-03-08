@@ -46,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -301,6 +301,7 @@ const CarouselGenerator: React.FC = () => {
   const [storiesImageUrl, setStoriesImageUrl] = useState<string | null>(null);
   const [showStoriesPreview, setShowStoriesPreview] = useState(false);
   const [showAddCardMenu, setShowAddCardMenu] = useState(false);
+  const [showRegenModeMenu, setShowRegenModeMenu] = useState(false);
   const [addCardModal, setAddCardModal] = useState<{ open: boolean; cardType: 'composed' | 'solid'; step: 'type' | 'text-mode' | 'manual' | 'auto-preview'; autoText: { title: string; body: string } | null; manualText: { title: string; body: string }; generatingAutoText: boolean }>({ open: false, cardType: 'composed', step: 'type', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false });
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
@@ -4768,14 +4769,40 @@ FORBIDDEN:
                   <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
                 </button>
               )}
-              {/* Regenerate All button */}
+              {/* Regenerate All button with mode selector */}
               {carouselData.cards.length >= 2 && !isGuest && (
-                <button onClick={regenerateAll} disabled={regeneratingAll || regeneratingCard !== null}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
-                  style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
-                  {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                  {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
-                </button>
+                <div className="relative">
+                  <button onClick={() => {
+                    if (regeneratingAll || regeneratingCard !== null) return;
+                    setShowRegenModeMenu(prev => !prev);
+                  }} disabled={regeneratingAll || regeneratingCard !== null}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
+                    style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                    {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                    {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
+                  </button>
+                  {showRegenModeMenu && !regeneratingAll && (
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
+                      <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
+                        className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                        <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
+                        <div>
+                          <p className="font-semibold">Normal</p>
+                          <p className="text-[10px] text-white/40 mt-0.5">Cada card com imagem independente</p>
+                        </div>
+                      </button>
+                      <div className="h-px bg-white/[0.06]" />
+                      <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
+                        className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                        <Layers className="h-3.5 w-3.5 text-purple-400" />
+                        <div>
+                          <p className="font-semibold">Contínuo</p>
+                          <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"

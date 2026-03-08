@@ -107,14 +107,18 @@ export default function Presentear() {
         .join('')
         .slice(0, 10)}`;
 
-      const { error } = await supabase.from('gift_keys' as any).insert({
+      const insertData = {
         gift_key: key,
         credits,
         price_brl: price,
         purchased_by: user!.id,
         status: 'available',
-      } as any);
+      };
+      console.log('[Gift] Inserting key:', insertData);
 
+      const { data: insertResult, error } = await supabase.from('gift_keys' as any).insert(insertData as any).select();
+
+      console.log('[Gift] Insert result:', insertResult, 'Error:', error);
       if (error) throw error;
 
       const pkg = GIFT_PACKAGES.find(p => p.credits === credits) || GIFT_PACKAGES[0];

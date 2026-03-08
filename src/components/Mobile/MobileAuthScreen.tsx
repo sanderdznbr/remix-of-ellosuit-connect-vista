@@ -74,7 +74,7 @@ const MobileAuthScreen = () => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email, password,
-        options: { data: { full_name: name, company_name: company }, emailRedirectTo: `${window.location.origin}/` }
+        options: { data: { full_name: name, company_name: company, source: 'ellocontent' }, emailRedirectTo: `${window.location.origin}/` }
       });
       if (error) { setError(String(error.message)); return; }
       if (data?.user && !data.session) {

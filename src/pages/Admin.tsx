@@ -51,10 +51,13 @@ function AdminContent() {
   const [actionTarget, setActionTarget] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
 
-  // Auth guard
+  // Auth guard — only block non-admin AFTER auth loads
   useEffect(() => {
-    if (!authLoading && (!user || user.email !== ADMIN_EMAIL)) {
+    if (!authLoading && user && user.email !== ADMIN_EMAIL) {
       navigate('/');
+    }
+    if (!authLoading && !user) {
+      navigate('/auth');
     }
   }, [user, authLoading, navigate]);
 

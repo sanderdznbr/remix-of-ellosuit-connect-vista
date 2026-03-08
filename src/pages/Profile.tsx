@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
-import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, Upload, X, Check } from 'lucide-react';
+import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, Upload, X, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Profile {
@@ -39,6 +39,10 @@ const ProfilePage: React.FC = () => {
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
   const [uploading, setUploading] = useState<'avatar' | 'banner' | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [showPostDialog, setShowPostDialog] = useState(false);
+  const [postCaption, setPostCaption] = useState('');
+  const [selectedCarouselId, setSelectedCarouselId] = useState<string | null>(null);
+  const [creatingPost, setCreatingPost] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -177,6 +181,31 @@ const ProfilePage: React.FC = () => {
     return c.cover_url || c.carousel_data?.cards?.[0]?.imageUrl || null;
   };
 
+  const handleCreatePost = async () => {
+    if (!user || !selectedCarouselId) return;
+    setCreatingPost(true);
+    try {
+      const carousel = carousels.find(c => c.id === selectedCarouselId);
+      if (!carousel) return;
+      const coverUrl = getCoverImage(carousel);
+      await supabase.from('community_posts').insert({
+        user_id: user.id,
+        carousel_id: carousel.id,
+        cover_url: coverUrl,
+        caption: postCaption || carousel.title,
+      } as any);
+      setCommunityPosts(prev => new Set([...prev, carousel.id]));
+      setShowPostDialog(false);
+      setPostCaption('');
+      setSelectedCarouselId(null);
+      toast.success('Post publicado na comunidade! 🎉');
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
+    } finally {
+      setCreatingPost(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -206,7 +235,7 @@ const ProfilePage: React.FC = () => {
           {profile.banner_url ? (
             <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }} />
+            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }} />
           )}
           {isOwnProfile && (
             <>
@@ -321,7 +350,71 @@ const ProfilePage: React.FC = () => {
               {isOwnProfile ? 'Meus Posts' : 'Posts'} 
               <span className="text-white/20 text-sm font-normal ml-2">{carousels.length}</span>
             </h2>
+            {isOwnProfile && carousels.length > 0 && (
+              <button
+                onClick={() => setShowPostDialog(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white cursor-pointer transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #7B50DC, #9B6BFF)' }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Criar Post
+              </button>
+            )}
           </div>
+
+          {/* Create Post Dialog */}
+          {showPostDialog && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowPostDialog(false)}>
+              <div className="w-full max-w-md mx-4 rounded-2xl border border-white/[0.08] p-6" style={{ backgroundColor: '#111116' }} onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-bold text-white">Criar Post</h3>
+                  <button onClick={() => setShowPostDialog(false)} className="text-white/30 hover:text-white/60 cursor-pointer"><X className="w-5 h-5" /></button>
+                </div>
+
+                {/* Project Selection */}
+                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto</label>
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
+                  {carousels.filter(c => !communityPosts.has(c.id)).map(c => {
+                    const cover = getCoverImage(c);
+                    const isSelected = selectedCarouselId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCarouselId(c.id)}
+                        className={`relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${isSelected ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-white/[0.06] hover:border-white/15'}`}
+                      >
+                        <div style={{ aspectRatio: '4/5' }} className="bg-white/[0.03]">
+                          {cover ? <img src={cover} alt={c.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/10 text-[10px]">Sem capa</div>}
+                        </div>
+                        {isSelected && <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center"><Check className="w-5 h-5 text-purple-300" /></div>}
+                      </button>
+                    );
+                  })}
+                  {carousels.filter(c => !communityPosts.has(c.id)).length === 0 && (
+                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Todos os projetos já foram publicados</p>
+                  )}
+                </div>
+
+                {/* Caption */}
+                <label className="text-[11px] text-white/30 font-medium mb-1 block">Comentário (opcional)</label>
+                <textarea
+                  value={postCaption}
+                  onChange={e => setPostCaption(e.target.value)}
+                  rows={2}
+                  placeholder="Escreva algo sobre esse post..."
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white outline-none focus:border-purple-500/40 resize-none mb-4"
+                />
+
+                <button
+                  onClick={handleCreatePost}
+                  disabled={!selectedCarouselId || creatingPost}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 cursor-pointer transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg, #7B50DC, #9B6BFF)' }}
+                >
+                  {creatingPost ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Publicar na Comunidade'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {carousels.length === 0 ? (
             <div className="text-center py-16 text-white/20">

@@ -4108,26 +4108,74 @@ FORBIDDEN:
                 </div>
 
             {/* Carousel viewport */}
-                <div className="relative overflow-hidden" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000' }}
+                <div className="relative overflow-hidden select-none" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000', cursor: 'grab' }}
+                  onMouseDown={(e) => {
+                    const el = e.currentTarget as any;
+                    el._dragStartX = e.clientX;
+                    el._dragStartY = e.clientY;
+                    el._isDragging = false;
+                    el._dragDeltaX = 0;
+                    const onMove = (ev: MouseEvent) => {
+                      const dx = ev.clientX - el._dragStartX;
+                      const dy = ev.clientY - el._dragStartY;
+                      if (!el._isDragging && Math.abs(dx) > 5) el._isDragging = true;
+                      if (el._isDragging) {
+                        el._dragDeltaX = dx;
+                        el.style.cursor = 'grabbing';
+                        const inner = el.querySelector('[data-drag-track]') as HTMLElement;
+                        if (inner) inner.style.transform = `translateX(${dx}px)`;
+                      }
+                    };
+                    const onUp = () => {
+                      window.removeEventListener('mousemove', onMove);
+                      window.removeEventListener('mouseup', onUp);
+                      el.style.cursor = 'grab';
+                      const inner = el.querySelector('[data-drag-track]') as HTMLElement;
+                      if (inner) { inner.style.transition = 'transform 0.3s ease'; inner.style.transform = 'translateX(0)'; setTimeout(() => { inner.style.transition = ''; }, 300); }
+                      if (el._isDragging && Math.abs(el._dragDeltaX) > 50) {
+                        if (el._dragDeltaX < 0 && activeCardIndex < carouselData.cards.length - 1 && !isCardLocked(activeCardIndex + 1)) {
+                          setActiveCardIndex(activeCardIndex + 1);
+                        } else if (el._dragDeltaX > 0 && activeCardIndex > 0) {
+                          setActiveCardIndex(activeCardIndex - 1);
+                        }
+                      }
+                      el._isDragging = false;
+                    };
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                  }}
                   onTouchStart={(e) => {
                     const touch = e.touches[0];
-                    (e.currentTarget as any)._touchStartX = touch.clientX;
+                    const el = e.currentTarget as any;
+                    el._touchStartX = touch.clientX;
+                    el._touchDragging = false;
+                    el._touchDeltaX = 0;
+                  }}
+                  onTouchMove={(e) => {
+                    const el = e.currentTarget as any;
+                    if (el._touchStartX == null) return;
+                    const dx = e.touches[0].clientX - el._touchStartX;
+                    el._touchDragging = true;
+                    el._touchDeltaX = dx;
+                    const inner = el.querySelector('[data-drag-track]') as HTMLElement;
+                    if (inner) inner.style.transform = `translateX(${dx}px)`;
                   }}
                   onTouchEnd={(e) => {
-                    const startX = (e.currentTarget as any)._touchStartX;
-                    if (startX == null) return;
-                    const endX = e.changedTouches[0].clientX;
-                    const diff = startX - endX;
-                    if (Math.abs(diff) > 40) {
-                      if (diff > 0 && activeCardIndex < carouselData.cards.length - 1 && !isCardLocked(activeCardIndex + 1)) {
+                    const el = e.currentTarget as any;
+                    const inner = el.querySelector('[data-drag-track]') as HTMLElement;
+                    if (inner) { inner.style.transition = 'transform 0.3s ease'; inner.style.transform = 'translateX(0)'; setTimeout(() => { inner.style.transition = ''; }, 300); }
+                    if (el._touchDragging && Math.abs(el._touchDeltaX) > 40) {
+                      if (el._touchDeltaX < 0 && activeCardIndex < carouselData.cards.length - 1 && !isCardLocked(activeCardIndex + 1)) {
                         setActiveCardIndex(activeCardIndex + 1);
-                      } else if (diff < 0 && activeCardIndex > 0) {
+                      } else if (el._touchDeltaX > 0 && activeCardIndex > 0) {
                         setActiveCardIndex(activeCardIndex - 1);
                       }
                     }
+                    el._touchStartX = null;
+                    el._touchDragging = false;
                   }}
                 >
-                  <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                  <div data-drag-track style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
                     <div style={{
                       width: PREVIEW_W,
                       height: PREVIEW_H,
@@ -4160,14 +4208,14 @@ FORBIDDEN:
                   {/* Swipe indicators */}
                   {activeCardIndex > 0 && (
                     <button onClick={() => setActiveCardIndex(activeCardIndex - 1)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110 z-10"
                       style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
                       <ChevronLeft className="h-3.5 w-3.5 text-white" />
                     </button>
                   )}
                   {activeCardIndex < carouselData.cards.length - 1 && (
                     <button onClick={() => { if (isCardLocked(activeCardIndex + 1)) return; setActiveCardIndex(activeCardIndex + 1); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:scale-110 z-10"
                       style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
                       {isCardLocked(activeCardIndex + 1) ? <Lock className="h-3 w-3 text-white/60" /> : <ChevronRight className="h-3.5 w-3.5 text-white" />}
                     </button>

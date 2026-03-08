@@ -86,6 +86,38 @@ export default function Presentear() {
   const [history, setHistory] = useState<GiftHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  const loadHistory = useCallback(async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('gift_keys' as any)
+        .select('id, gift_key, credits, price_brl, purchased_at, status, redeemed_at, redeemed_by')
+        .eq('purchased_by', user.id)
+        .order('purchased_at', { ascending: false }) as any;
+      if (error) throw error;
+
+      // Resolve redeemed_by emails
+      const items: GiftHistory[] = data || [];
+      const redeemerIds = items.filter(i => i.redeemed_by).map(i => i.redeemed_by!);
+      if (redeemerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', redeemerIds) as any;
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p.display_name]));
+        items.forEach(i => {
+          if (i.redeemed_by) i.redeemed_email = profileMap.get(i.redeemed_by) || i.redeemed_by;
+        });
+      }
+      setHistory(items);
+    } catch (e) {
+      console.error('Error loading gift history:', e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     const purchased = searchParams.get('purchased');
     const credits = parseInt(searchParams.get('credits') || '0');
@@ -96,6 +128,8 @@ export default function Presentear() {
       generateGiftKey(credits, price);
     }
   }, [searchParams, user]);
+
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const generateGiftKey = async (credits: number, price: number) => {
     setGeneratingKey(true);

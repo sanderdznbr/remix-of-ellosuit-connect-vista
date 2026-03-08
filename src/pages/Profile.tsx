@@ -43,6 +43,7 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [carousels, setCarousels] = useState<CarouselItem[]>([]);
   const [communityPosts, setCommunityPosts] = useState<Set<string>>(new Set());
+  const [publishedPosts, setPublishedPosts] = useState<CommunityPostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});

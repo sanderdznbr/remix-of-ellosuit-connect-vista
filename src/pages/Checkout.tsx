@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy, Tag, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { getAffiliateRef } from '@/hooks/useAffiliateTracking';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { toast } from '@/hooks/use-toast';
 

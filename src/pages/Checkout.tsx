@@ -295,6 +295,43 @@ function CheckoutContent() {
                 )}
               </div>
 
+              {/* Coupon */}
+              <div className="mb-6">
+                <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Cupom de desconto</h3>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: 'rgba(123, 80, 220, 0.1)', border: '1px solid rgba(123, 80, 220, 0.25)' }}>
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4" style={{ color: '#7B50DC' }} />
+                      <span className="text-sm text-white/80 font-medium">{appliedCoupon.code}</span>
+                      <span className="text-xs" style={{ color: '#7B50DC' }}>
+                        {appliedCoupon.discount_percent > 0 ? `-${appliedCoupon.discount_percent}%` : `-R$${appliedCoupon.discount_fixed.toFixed(2).replace('.', ',')}`}
+                      </span>
+                    </div>
+                    <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-white/30 hover:text-white/60 text-xs cursor-pointer">Remover</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Digite o cupom"
+                      value={couponCode}
+                      onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => { if (e.key === 'Enter') handleApplyCoupon(); }}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+                      style={inputStyle}
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all disabled:opacity-40"
+                      style={{ backgroundColor: 'rgba(123, 80, 220, 0.2)', color: '#7B50DC', border: '1px solid rgba(123, 80, 220, 0.3)' }}
+                    >
+                      {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aplicar'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Payment method - only show toggle for credits */}
               {mode === 'credits' && (
                 <>

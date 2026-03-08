@@ -343,6 +343,78 @@ export default function Presentear() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Purchase History */}
+        {user && !purchasedCard && !generatingKey && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-20"
+          >
+            <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-white/40" />
+              Histórico de compras
+            </h2>
+
+            {loadingHistory ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-5 h-5 animate-spin text-white/30" />
+              </div>
+            ) : history.length === 0 ? (
+              <p className="text-white/25 text-sm text-center py-12">Nenhuma compra realizada ainda.</p>
+            ) : (
+              <div className="space-y-3">
+                {history.map((item) => {
+                  const isRedeemed = item.status === 'redeemed';
+                  const purchasedDate = new Date(item.purchased_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+                  const redeemedDate = item.redeemed_at ? new Date(item.redeemed_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 rounded-xl px-5 py-4 transition-colors"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <div className={`flex items-center justify-center w-9 h-9 rounded-full shrink-0 ${isRedeemed ? 'bg-green-500/10' : 'bg-purple-500/10'}`}>
+                        {isRedeemed ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Gift className="w-4 h-4 text-purple-400" />}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-white font-mono text-sm font-medium">{item.gift_key}</span>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(item.gift_key); toast.success('Chave copiada!'); }}
+                            className="text-white/20 hover:text-white/50 transition-colors cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-white/30 text-xs">
+                          {item.credits} créditos · R${Number(item.price_brl).toFixed(2).replace('.', ',')} · {purchasedDate}
+                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        {isRedeemed ? (
+                          <>
+                            <span className="inline-block text-xs font-medium text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full mb-1">Resgatado</span>
+                            <p className="text-white/25 text-[11px]">
+                              {redeemedDate}
+                              {item.redeemed_email && <><br />por {item.redeemed_email}</>}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="inline-block text-xs font-medium text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-full">Disponível</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );

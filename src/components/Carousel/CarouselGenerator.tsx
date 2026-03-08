@@ -1079,6 +1079,8 @@ const CarouselGenerator: React.FC = () => {
       if (sc.wearsGlasses !== undefined) setWearsGlasses(sc.wearsGlasses);
       if (sc.facePersons?.length) setFacePersons(sc.facePersons);
       if (sc.allPeopleOnCover !== undefined) setAllPeopleOnCover(sc.allPeopleOnCover);
+      // Restore continuous mode
+      if (sc.continuousMode) setContinuousMode(true); else setContinuousMode(false);
     }
     setShowHistory(false);
     setActiveCardIndex(0);

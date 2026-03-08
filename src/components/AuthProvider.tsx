@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         data: {
           username,
           company_name: companyName,
+          source: 'ellocontent',
           ...(phone ? { phone } : {}),
         },
       },

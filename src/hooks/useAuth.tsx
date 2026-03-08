@@ -98,6 +98,7 @@ export const useAuth = () => {
         data: {
           username: username,
           company_name: companyName,
+          source: 'ellocontent',
           ...(phone ? { phone: phone.replace(/\D/g, '') } : {})
         }
       }

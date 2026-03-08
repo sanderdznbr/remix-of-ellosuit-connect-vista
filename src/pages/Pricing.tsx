@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, X, Zap, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, X, Zap, Loader2, Gift, Copy, Ticket } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';

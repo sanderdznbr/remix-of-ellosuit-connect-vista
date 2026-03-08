@@ -83,50 +83,55 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
             <div className="flex items-center justify-center">
               <span className="text-5xl font-bold text-white tabular-nums">{cardCount}</span>
             </div>
-            <div className="px-2">
-              <input
-                type="range"
-                min={2}
-                max={10}
-                value={cardCount}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setCardCount(v);
-                  // Adjust faceCardCount if it exceeds new cardCount
-                  if (setFaceCardCount && faceCardCount != null && faceCardCount > v) {
-                    setFaceCardCount(v);
-                  }
-                }}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #7B50DC 0%, #9B6BFF ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) 100%)`,
-                }}
-              />
-              <div className="flex justify-between mt-2 text-[10px] text-white/20 font-medium">
-                <span>2</span>
-                <span>4</span>
-                <span>6</span>
-                <span>8</span>
-                <span>10</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              {[2, 3, 5, 7, 10].map(n => (
-                <button key={n} onClick={() => {
-                  setCardCount(n);
-                  if (setFaceCardCount && faceCardCount != null && faceCardCount > n) {
-                    setFaceCardCount(n);
-                  }
-                }}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                    cardCount === n
-                      ? 'bg-white text-black'
-                      : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
-                  }`}>
-                  {n}
-                </button>
-              ))}
-            </div>
+            {continuousMode ? (
+              <p className="text-center text-[11px] text-purple-300/60">Modo contínuo: fixo em 3 slides panorâmicos</p>
+            ) : (
+              <>
+                <div className="px-2">
+                  <input
+                    type="range"
+                    min={2}
+                    max={10}
+                    value={cardCount}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setCardCount(v);
+                      if (setFaceCardCount && faceCardCount != null && faceCardCount > v) {
+                        setFaceCardCount(v);
+                      }
+                    }}
+                    className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #7B50DC 0%, #9B6BFF ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) 100%)`,
+                    }}
+                  />
+                  <div className="flex justify-between mt-2 text-[10px] text-white/20 font-medium">
+                    <span>2</span>
+                    <span>4</span>
+                    <span>6</span>
+                    <span>8</span>
+                    <span>10</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  {[2, 3, 5, 7, 10].map(n => (
+                    <button key={n} onClick={() => {
+                      setCardCount(n);
+                      if (setFaceCardCount && faceCardCount != null && faceCardCount > n) {
+                        setFaceCardCount(n);
+                      }
+                    }}
+                      className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        cardCount === n
+                          ? 'bg-white text-black'
+                          : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
+                      }`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
 

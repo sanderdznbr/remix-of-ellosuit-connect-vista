@@ -272,6 +272,18 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const unpublishedCarousels = carousels.filter((c) => !communityPosts.has(c.id));
+
+  const copyPostLink = async (postId: string) => {
+    const link = `${window.location.origin}/post/${postId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o link');
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>

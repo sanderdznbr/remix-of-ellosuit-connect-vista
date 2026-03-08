@@ -2271,6 +2271,7 @@ const CarouselGenerator: React.FC = () => {
           cardTextParts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
           cardTextParts.push(`TEMA: "${cleanTopic}"`);
           cardTextParts.push(`SEM BORDAS: Full bleed.`);
+          cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 8% em cada borda. NENHUM texto deve encostar nas bordas.`);
           cardTextParts.push(`COMPOSIÇÃO: ${variation}. Este é o card ${i + 1} de ${updatedCards.length} — deve ser DIFERENTE de todos os outros cards.`);
           if (!showPerson && faceRefUrls.length > 0) {
             cardTextParts.push(`ESTE CARD: layout editorial sem pessoa — fundo abstrato ou texturizado com texto em destaque.`);

@@ -270,6 +270,15 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  <button
+                    onClick={(e) => handlePublish(e, item)}
+                    className="p-1.5 rounded-lg transition-colors cursor-pointer"
+                    style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.15)' : 'rgba(168,85,247,0.6)' }}
+                    title="Publicar na comunidade"
+                    disabled={publishingId === item.id}
+                  >
+                    {publishingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                  </button>
                 </div>
               );
             }

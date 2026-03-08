@@ -300,6 +300,11 @@ const ProfilePage: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white outline-none focus:border-purple-500/40" />
                 </div>
                 <div>
+                  <label className="text-[11px] text-white/30 font-medium mb-1 block">Usuário</label>
+                  <input value={editForm.username || ''} onChange={e => setEditForm(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))} placeholder="meu_usuario"
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white outline-none focus:border-purple-500/40" />
+                </div>
+                <div>
                   <label className="text-[11px] text-white/30 font-medium mb-1 block">Instagram</label>
                   <input value={editForm.instagram || ''} onChange={e => setEditForm(prev => ({ ...prev, instagram: e.target.value }))} placeholder="@usuario"
                     className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white outline-none focus:border-purple-500/40" />

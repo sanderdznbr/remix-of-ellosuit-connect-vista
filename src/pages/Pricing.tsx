@@ -9,7 +9,7 @@ import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
 
 const PLAN_CONFIG: Record<string, { label: string; price: number; credits: number; extraCredit: number }> = {
-  starter: { label: 'Starter', price: 79.90, credits: 80, extraCredit: 1.50 },
+  starter: { label: 'Starter', price: 64.50, credits: 50, extraCredit: 1.50 },
   pro: { label: 'Pro', price: 124.90, credits: 120, extraCredit: 1.20 },
   growth: { label: 'Growth', price: 189.90, credits: 240, extraCredit: 0.90 },
 };
@@ -28,14 +28,14 @@ const plans = [
     key: 'starter',
     name: 'Starter',
     description: 'Ideal para quem está começando a criar conteúdo com IA.',
-    price: 'R$79,90',
+    price: 'R$64,50',
     period: '/mês',
-    subtitle: '80 créditos/mês',
+    subtitle: '50 créditos/mês',
     badge: null,
     includedLabel: 'O que está incluso:',
     features: [
-      '80 créditos mensais',
-      '~8 carrosséis (até 10 slides) ou ~12 posts estáticos',
+      '50 créditos mensais',
+      '~5 carrosséis (até 10 slides) ou ~7 posts estáticos',
       'Imagens geradas por IA em cada slide',
       'Exportação em PNG/JPG',
       'Galeria de marca e prompts',

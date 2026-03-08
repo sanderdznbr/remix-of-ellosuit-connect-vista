@@ -4261,6 +4261,7 @@ export type Database = {
           display_name: string | null
           id: string
           instagram: string | null
+          source: string | null
           updated_at: string
           username: string | null
           website: string | null
@@ -4273,6 +4274,7 @@ export type Database = {
           display_name?: string | null
           id: string
           instagram?: string | null
+          source?: string | null
           updated_at?: string
           username?: string | null
           website?: string | null
@@ -4285,6 +4287,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           instagram?: string | null
+          source?: string | null
           updated_at?: string
           username?: string | null
           website?: string | null

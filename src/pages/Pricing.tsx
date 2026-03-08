@@ -9,7 +9,7 @@ import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
 
 const PLAN_CONFIG: Record<string, { label: string; price: number; credits: number; extraCredit: number }> = {
-  starter: { label: 'Starter', price: 79.90, credits: 80, extraCredit: 1.50 },
+  starter: { label: 'Starter', price: 64.50, credits: 50, extraCredit: 1.50 },
   pro: { label: 'Pro', price: 124.90, credits: 120, extraCredit: 1.20 },
   growth: { label: 'Growth', price: 189.90, credits: 240, extraCredit: 0.90 },
 };

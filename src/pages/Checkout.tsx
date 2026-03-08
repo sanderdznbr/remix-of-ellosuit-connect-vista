@@ -9,26 +9,26 @@ import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; price: number; credits: number; extraPrice: string; features: string[] }> = {
   starter: {
-    name: 'Starter', price: 67, credits: 50, extraPrice: 'R$2,50',
-    features: ['50 créditos mensais', 'Até 6 cards de conteúdo/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG'],
+    name: 'Starter', price: 79.90, credits: 80, extraPrice: 'R$1,50',
+    features: ['8 carrosséis/mês (até 10 slides)', '12 posts estáticos/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG', 'Galeria de marca'],
   },
   pro: {
-    name: 'Pro', price: 127, credits: 120, extraPrice: 'R$1,90',
-    features: ['120 créditos mensais', 'Até 15 cards de conteúdo/mês', 'Estilos do Marketplace', 'Publicação em redes sociais', 'Suporte prioritário'],
+    name: 'Pro', price: 124.90, credits: 120, extraPrice: 'R$1,20',
+    features: ['12 carrosséis/mês (até 10 slides)', '16 posts estáticos/mês', 'Estilos do Marketplace', 'Publicação em redes sociais', 'Suporte prioritário'],
   },
   growth: {
-    name: 'Growth', price: 247, credits: 300, extraPrice: 'R$1,40',
-    features: ['300 créditos mensais', 'Até 37 cards de conteúdo/mês', 'Templates personalizados', 'Workspace de equipe', 'Projetos privados'],
+    name: 'Growth', price: 189.90, credits: 240, extraPrice: 'R$0,90',
+    features: ['24 carrosséis/mês (até 15 slides)', '32 posts estáticos/mês', 'Templates personalizados', 'Workspace de equipe', 'Projetos privados'],
   },
 };
 
 const CREDIT_TOPUPS = [
-  { credits: 10, price: 25 },
-  { credits: 20, price: 45 },
-  { credits: 50, price: 100 },
-  { credits: 100, price: 180 },
-  { credits: 200, price: 340 },
-  { credits: 500, price: 750 },
+  { credits: 10, price: 15 },
+  { credits: 25, price: 30 },
+  { credits: 50, price: 55 },
+  { credits: 100, price: 99 },
+  { credits: 250, price: 220 },
+  { credits: 500, price: 399 },
 ];
 
 // ── Format helpers ──

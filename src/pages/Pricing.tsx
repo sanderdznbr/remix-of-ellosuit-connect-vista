@@ -47,7 +47,7 @@ const plans = [
     key: 'pro',
     name: 'Pro',
     description: 'Para criadores que publicam conteúdo visual com frequência.',
-    price: 'R$125',
+    price: 'R$124,90',
     period: '/mês',
     subtitle: '12 carrosséis ou 16 posts estáticos',
     badge: 'Mais popular',

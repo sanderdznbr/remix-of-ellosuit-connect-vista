@@ -336,7 +336,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={(e) => handlePublish(e, item)}
+                    onClick={(e) => openPublishDialog(e, item)}
                     className="p-1.5 rounded-lg cursor-pointer"
                     style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: publishingId === item.id ? 'rgba(255,255,255,0.3)' : 'rgba(168,85,247,0.8)' }}
                     title="Publicar na comunidade"

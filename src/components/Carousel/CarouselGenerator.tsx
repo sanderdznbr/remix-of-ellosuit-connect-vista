@@ -1304,10 +1304,7 @@ const CarouselGenerator: React.FC = () => {
       setImageGenProgress('');
       toast({ title: 'Post gerado com sucesso!' });
 
-      // Guest paywall: show immediately to block downloads
-      if (isGuest) {
-        setShowGuestPaywall(true);
-      }
+      // Guest: don't show blocking paywall immediately, let them see the result
 
       // Auto-save
       try {
@@ -5290,10 +5287,10 @@ FORBIDDEN:
 
       {/* Tour removed */}
 
-      {/* Guest Paywall Modal - shown after free generation */}
+      {/* Guest Paywall Modal - now non-blocking, dismissable */}
       {showGuestPaywall && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-md" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowGuestPaywall(false)} />
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -5301,12 +5298,15 @@ FORBIDDEN:
             className="relative w-full max-w-md rounded-2xl overflow-hidden p-8 text-center"
             style={{ backgroundColor: '#18181f', border: '1px solid rgba(139,92,246,0.3)' }}
           >
+            <button onClick={() => setShowGuestPaywall(false)} className="absolute top-3 right-3 p-1 text-white/30 hover:text-white/60 cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
             <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
               <Sparkles className="w-8 h-8" style={{ color: '#9B6BFF' }} />
             </div>
             <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>
             <p className="text-white/50 text-sm mb-6 leading-relaxed">
-              Seu post foi gerado com sucesso! Para baixar, editar e criar conteúdos ilimitados com IA, assine um dos nossos planos.
+              Para baixar, editar e criar conteúdos ilimitados com IA, crie sua conta.
             </p>
             <div className="space-y-3">
               <button

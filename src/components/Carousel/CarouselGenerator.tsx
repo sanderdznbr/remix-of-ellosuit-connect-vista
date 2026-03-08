@@ -1541,7 +1541,8 @@ const CarouselGenerator: React.FC = () => {
           `CONTEÚDO TEXTUAL POR SEÇÃO (distribua tipografia editorial ao longo da panorâmica, cada texto na sua seção correspondente):`,
           allCardTexts,
           `ESTILO: Design editorial premium, tipografia integrada à composição visual, cores harmoniosas que fluem ao longo de toda a panorâmica.`,
-          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua.`,
+          `MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso entre o texto e as extremidades.`,
+          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua. NÃO coloque texto colado nas bordas.`,
           brandName ? `MARCA: "${brandName}" discretamente posicionada.` : '',
         ].filter(Boolean).join('\n');
 
@@ -1722,6 +1723,7 @@ const CarouselGenerator: React.FC = () => {
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
             cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas. NUNCA gere grades, mosaicos, grids de posts ou capturas de feeds de redes sociais — cada card deve ser UMA ÚNICA composição editorial. NUNCA use o símbolo "@" antes de nomes de marcas ou plataformas nos textos renderizados.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+            cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso.`);
             
             if (logoUrl && brandName) {
               const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
@@ -2269,6 +2271,7 @@ const CarouselGenerator: React.FC = () => {
           cardTextParts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
           cardTextParts.push(`TEMA: "${cleanTopic}"`);
           cardTextParts.push(`SEM BORDAS: Full bleed.`);
+          cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 8% em cada borda. NENHUM texto deve encostar nas bordas.`);
           cardTextParts.push(`COMPOSIÇÃO: ${variation}. Este é o card ${i + 1} de ${updatedCards.length} — deve ser DIFERENTE de todos os outros cards.`);
           if (!showPerson && faceRefUrls.length > 0) {
             cardTextParts.push(`ESTE CARD: layout editorial sem pessoa — fundo abstrato ou texturizado com texto em destaque.`);

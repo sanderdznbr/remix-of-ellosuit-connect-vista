@@ -89,6 +89,11 @@ function CheckoutContent() {
   const [cardCvv, setCardCvv] = useState('');
 
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  
+  // Coupon
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount_percent: number; discount_fixed: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;

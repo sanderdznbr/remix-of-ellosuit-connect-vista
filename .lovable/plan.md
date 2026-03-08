@@ -1,145 +1,73 @@
 
 
-# Wizard Redesign: Modo Simples + Avancado com Edicao de Texto por Card
+## ROOT CAUSE ANALYSIS
 
-## Resumo
+Through network request inspection and code audit, I identified why the continuous panoramic carousel generation is failing:
 
-Reorganizar o wizard de criacao em dois modos: **Simples** (fluxo rapido, menos etapas) e **Avancado** (controle total, incluindo edicao de texto por card). Ambos os modos suportam Post Unico e Carrossel, com a nova funcionalidade de definir o texto exato de cada card antes da geracao.
-
----
-
-## Fluxo Proposto
-
-### Tela Inicial do Wizard (Step 0) - NOVO
-
-Antes de comecar, o usuario escolhe:
-
-```text
-+------------------------------------------+
-|  Como voce quer criar?                    |
-|                                           |
-|  [  Simples  ]    [  Avancado  ]          |
-|  Rapido, a IA       Controle total:       |
-|  cuida de tudo      textos, rosto,        |
-|                     produto, cores...     |
-+------------------------------------------+
-```
-
-Um toggle/chip no topo do wizard que pode ser alternado a qualquer momento.
-
-### Modo Simples (4 etapas)
-
-| Step | Conteudo |
-|------|----------|
-| 0 | Tema + Formato (Post Unico / Carrossel + slider de quantidade) |
-| 1 | Rosto (opcional, com botao "Pular") |
-| 2 | Logo + Marca (upload logo, nome da marca) |
-| 3 | Velocidade (Flash vs Pro) -> Gerar |
-
-- Cores, fontes e estilo sao aplicados automaticamente (paleta aleatoria ou da marca)
-- Sem etapa de produto, sem referencias de marca, sem cores/fontes manuais
-- Web search fica ativo por padrao (sem toggle visivel)
-
-### Modo Avancado (manter as 11 etapas atuais + nova etapa de texto por card)
-
-| Step | Conteudo |
-|------|----------|
-| 0 | Tema (com engrenagem de texto exato e toggle de web search) |
-| 1 | Formato (Post Unico / Carrossel + slider) |
-| 2 | Imagens da Web (skip automatico se desativado) |
-| 3 | Rosto (multi-pessoa, ate 4) |
-| 4 | Produto |
-| 5 | Referencias de Marca |
-| 6 | Estilo (presets / marketplace) |
-| 7 | Cores |
-| 8 | Fontes |
-| 9 | **Roteiro por Card** (NOVO) |
-| 10 | Logo + Marca |
-| 11 | Velocidade -> Gerar |
-
-### Nova Etapa: Roteiro por Card (Step 9 no modo avancado)
-
-```text
-+------------------------------------------+
-|  Defina o texto de cada card              |
-|  (opcional - a IA preenche o que faltar)  |
-|                                           |
-|  Card 1 (Capa)                            |
-|  [____________________________]           |
-|  [____________________________]           |
-|                                           |
-|  Card 2                                   |
-|  [____________________________]           |
-|  [____________________________]           |
-|                                           |
-|  ...                                      |
-|                                           |
-|  [+ Preencher todos com IA]              |
-+------------------------------------------+
-```
-
-- Cada card tera campos para titulo e corpo
-- Campos pre-preenchidos pela IA (via prompt) OU deixados vazios para a IA decidir
-- Botao "Preencher com IA" gera sugestoes para todos os cards de uma vez
-- O texto definido aqui sera enviado ao `generate-carousel` como `manualCardTexts`
-- No post unico, mostra apenas 1 card com titulo, subtitulo e CTA
-
----
-
-## Detalhes Tecnicos
-
-### 1. Novo estado `wizardMode`
-
+### Issue 1: Marketplace Style Overriding Panoramic Instructions
+In `supabase/functions/generate-carousel-image/index.ts`, when a marketplace style is active (like "Clássico"), the edge function constructs the prompt as:
 ```typescript
-const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
+textPrompt = `${stylePrompt}
+
+${imagePrompt}`;
 ```
 
-### 2. Mapeamento de steps dinamico
+The `stylePrompt` includes portrait-specific instructions like "1080x1350 portrait format". Even though the `formatInstruction` (panoramic) is appended later, the LLM prioritizes the MORE SPECIFIC portrait dimensions mentioned early in the style prompt, effectively ignoring the panoramic override.
 
-Criar duas constantes de steps:
-
+### Issue 2: Frontend Prompt Wrapping
+In the `buildImagePrompt()` function, when marketplace styles are active, the panoramic prompt gets wrapped as:
 ```typescript
-const SIMPLE_STEPS = ['Tema', 'Rosto', 'Logo', 'Velocidade'];
-const ADVANCED_STEPS = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+parts.push(`CONTENT FOR THIS CARD: ${basePrompt}`);
 ```
 
-A constante `WIZARD_STEPS` sera derivada do `wizardMode`.
+This makes the entire panoramic instruction appear as just "content" rather than the main generation directive, causing the style system to dominate over the panoramic requirements.
 
-### 3. Navegacao condicional
+### Issue 3: Weak Fallback Instructions
+The edge function's retry attempts (2-4) use simplified prompts that only mention the `formatInstruction` as a short sentence, not the explicit panoramic dimensions. This allows the LLM to fall back to portrait mode.
 
-A logica de `next`/`prev` no wizard usara o array de steps correto. No modo simples, o step 0 (Tema) incluira o seletor de formato embutido (Post Unico/Carrossel + slider), eliminando a necessidade de um step separado.
+### Issue 4: Card Limit Validation Missing
+Per user preference, when >3 cards exist and continuous mode is selected, the system should block with an error message rather than silently reducing the count.
 
-### 4. Novo estado `manualCardTexts`
+## COMPREHENSIVE FIX PLAN
 
-```typescript
-const [manualCardTexts, setManualCardTexts] = useState<
-  { title?: string; body?: string }[]
->([]);
-```
+### 1. Edge Function Panoramic Enforcement
+- **Priority Override**: When `panoramic: true` is detected, completely override any aspect ratio instructions from marketplace styles
+- **Explicit Dimensions**: Force the exact pixel dimensions (3240x1350 for 3 cards) as the primary instruction
+- **Model Selection**: Ensure panoramic requests always use the premium model for better instruction following
 
-### 5. Novo componente `StepCardTexts.tsx`
+### 2. Frontend Prompt Restructuring  
+- **Panoramic Detection**: Modify `buildImagePrompt()` to detect panoramic requests and avoid injecting conflicting aspect ratios
+- **Style Sanitization**: Strip width/height directives from marketplace style prompts when panoramic mode is active
+- **Instruction Hierarchy**: Place panoramic dimensions as the PRIMARY instruction, not as supplementary content
 
-- Recebe `cardCount`, `contentMode`, `manualCardTexts`, `setManualCardTexts`
-- Renderiza um accordion/lista de cards com campos de titulo e corpo
-- Botao "Preencher com IA" chama `generate-carousel` com action `generate-outline`
-- Cada card editavel individualmente
+### 3. Validation and UX Improvements
+- **Card Limit Check**: Add validation in the "Regenerar Tudo > Contínuo" flow to block attempts with >3 cards
+- **Clear Error Messages**: Show specific guidance about the 3-card limit for continuous panoramic mode
+- **State Consistency**: Ensure continuous mode flag synchronization across React state updates
 
-### 6. Integracao com geracao
+### 4. Fail-Safe Mechanisms
+- **Aspect Ratio Validation**: Strengthen the client-side image aspect ratio checking to reject narrow images
+- **Retry Logic**: Improve fallback attempts to maintain panoramic constraints throughout all retry attempts
+- **Debug Logging**: Add detailed console logs for panoramic generation attempts
 
-No `generateContent()`, enviar `manualCardTexts` ao `generate-carousel` edge function. O backend usara esses textos como base, preenchendo apenas os que estiverem vazios.
+## TECHNICAL IMPLEMENTATION
 
-### 7. Toggle simples/avancado
+The fix involves:
 
-Um chip no canto superior direito do wizard que permite alternar entre modos a qualquer momento. Ao mudar de avancado para simples, os dados preenchidos sao preservados (nao resetados).
+1. **Edge Function Updates** (`supabase/functions/generate-carousel-image/index.ts`):
+   - Add panoramic override logic before prompt construction
+   - Strip conflicting aspect ratio instructions from marketplace styles
+   - Ensure all retry attempts maintain panoramic constraints
 
----
+2. **Frontend Updates** (`src/components/Carousel/CarouselGenerator.tsx`):
+   - Enhance `buildImagePrompt()` with panoramic awareness
+   - Add validation for continuous mode card limits
+   - Improve error messaging for blocked operations
 
-## Arquivos a Criar/Editar
+3. **Validation Logic**:
+   - Block continuous mode selection when >3 cards exist
+   - Show clear error messages with guidance
+   - Prevent execution rather than silent fallbacks
 
-| Arquivo | Acao |
-|---------|------|
-| `src/components/Carousel/wizard/StepCardTexts.tsx` | **Criar** - novo componente de roteiro por card |
-| `src/components/Carousel/CarouselGenerator.tsx` | **Editar** - adicionar wizardMode, manualCardTexts, logica de steps condicional, toggle de modo |
-| `src/components/Carousel/wizard/StepTopic.tsx` | **Editar** - no modo simples, embutir seletor de formato |
-| `supabase/functions/generate-carousel/index.ts` | **Editar** - aceitar `manualCardTexts` e usa-los na geracao |
+This comprehensive approach addresses the prompt hierarchy conflicts, ensures consistent panoramic generation, and provides better user guidance for continuous carousel creation.
 

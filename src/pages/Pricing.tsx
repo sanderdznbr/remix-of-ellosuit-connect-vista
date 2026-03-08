@@ -472,30 +472,151 @@ function LoggedInPricing() {
                 })}
               </div>
 
-              {/* Redeem code section */}
-              <div className="mt-8 rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
-                <h3 className="text-white text-sm font-semibold mb-1">🎁 Resgatar código</h3>
-                <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate créditos ou planos aqui.</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Digite o código"
-                    value={redeemCode}
-                    onChange={e => setRedeemCode(e.target.value.toUpperCase())}
-                    onKeyDown={e => { if (e.key === 'Enter') handleRedeemCode(); }}
-                    className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
-                  />
-                  <button
-                    onClick={handleRedeemCode}
-                    disabled={redeemLoading || !redeemCode.trim()}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-40"
-                    style={{ backgroundColor: '#7B50DC', color: '#fff' }}
-                  >
-                    {redeemLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Resgatar'}
-                  </button>
-                </div>
+              {/* Action buttons */}
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={() => setActiveSection(activeSection === 'redeem' ? 'none' : 'redeem')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    activeSection === 'redeem'
+                      ? 'bg-purple-600 text-white'
+                      : 'border border-white/[0.12] text-white/70 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <Ticket className="w-4 h-4" />
+                  Resgatar cupom
+                </button>
+                <button
+                  onClick={() => { setActiveSection(activeSection === 'gift' ? 'none' : 'gift'); setGeneratedKey(null); }}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    activeSection === 'gift'
+                      ? 'bg-purple-600 text-white'
+                      : 'border border-white/[0.12] text-white/70 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <Gift className="w-4 h-4" />
+                  Presentear
+                </button>
               </div>
+
+              {/* Redeem section */}
+              {activeSection === 'redeem' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 rounded-2xl p-5 border border-white/[0.06]"
+                  style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}
+                >
+                  <h3 className="text-white text-sm font-semibold mb-1">🎁 Resgatar código</h3>
+                  <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate créditos ou planos aqui.</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Digite o código"
+                      value={redeemCode}
+                      onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => { if (e.key === 'Enter') handleRedeemCode(); }}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+                    />
+                    <button
+                      onClick={handleRedeemCode}
+                      disabled={redeemLoading || !redeemCode.trim()}
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-40"
+                      style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+                    >
+                      {redeemLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Resgatar'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Gift section */}
+              {activeSection === 'gift' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 rounded-2xl p-5 border border-white/[0.06]"
+                  style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}
+                >
+                  <h3 className="text-white text-sm font-semibold mb-1">🎁 Presentear com créditos</h3>
+                  <p className="text-white/30 text-xs mb-5">Compre um pacote de créditos e receba uma chave para presentear alguém.</p>
+
+                  {generatedKey ? (
+                    <div className="text-center py-6">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/20 mb-4">
+                        <Check className="w-6 h-6 text-green-400" />
+                      </div>
+                      <h4 className="text-white font-semibold mb-2">Chave gerada com sucesso!</h4>
+                      <p className="text-white/40 text-xs mb-4">{purchasedGiftCredits} créditos prontos para presentear</p>
+                      <div className="flex items-center gap-2 justify-center">
+                        <code className="px-4 py-2.5 rounded-xl text-sm font-mono text-purple-300 select-all"
+                          style={{ backgroundColor: 'rgba(123,80,220,0.15)', border: '1px solid rgba(123,80,220,0.3)' }}>
+                          {generatedKey}
+                        </code>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(generatedKey); toast.success('Chave copiada!'); }}
+                          className="p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors cursor-pointer"
+                        >
+                          <Copy className="w-4 h-4 text-white/60" />
+                        </button>
+                      </div>
+                      <p className="text-white/25 text-[11px] mt-3">Compartilhe esta chave. Quem receber pode resgatar em "Resgatar cupom".</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {GIFT_PACKAGES.map((pkg, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl border border-white/[0.08] p-4 flex flex-col items-center text-center hover:border-purple-500/40 transition-all"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}
+                        >
+                          {/* Placeholder cover */}
+                          <div className="w-full h-28 rounded-lg mb-4 flex items-center justify-center"
+                            style={{ background: `linear-gradient(135deg, rgba(123,80,220,${0.15 + i * 0.1}), rgba(123,80,220,${0.05 + i * 0.05}))` }}>
+                            <Gift className="w-10 h-10 text-purple-400/60" />
+                          </div>
+                          <h4 className="text-white font-semibold text-sm mb-1">{pkg.label}</h4>
+                          <p className="text-white/30 text-[11px] mb-2">{pkg.description}</p>
+                          <p className="text-white text-lg font-bold mb-3">R${pkg.price.toFixed(2).replace('.', ',')}</p>
+                          <button
+                            onClick={async () => {
+                              if (!user || !companyId) return;
+                              setGiftLoading(true);
+                              try {
+                                // Generate a random gift key
+                                const key = `GIFT-${Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => b.toString(36).toUpperCase().padStart(2, '0')).join('').slice(0, 10)}`;
+
+                                // Insert into gift_keys
+                                const { error } = await supabase.from('gift_keys' as any).insert({
+                                  gift_key: key,
+                                  credits: pkg.credits,
+                                  price_brl: pkg.price,
+                                  purchased_by: user.id,
+                                  status: 'available',
+                                } as any);
+
+                                if (error) throw error;
+
+                                setGeneratedKey(key);
+                                setPurchasedGiftCredits(pkg.credits);
+                                toast.success('Chave de presente gerada!');
+                              } catch (err: any) {
+                                console.error(err);
+                                toast.error('Erro ao gerar chave. Tente novamente.');
+                              } finally {
+                                setGiftLoading(false);
+                              }
+                            }}
+                            disabled={giftLoading}
+                            className="w-full py-2 rounded-xl text-sm font-semibold cursor-pointer transition-colors disabled:opacity-40"
+                            style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+                          >
+                            {giftLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Comprar presente'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
             </>
           )}
         </div>

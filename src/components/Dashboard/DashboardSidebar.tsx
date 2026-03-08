@@ -199,7 +199,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <MessageSquareText className="w-4 h-4" />
-          Galeria de Prompts
+          Prompts
         </button>
         <button
           onClick={() => { onTabChange('marketplace'); closeSearch(); }}

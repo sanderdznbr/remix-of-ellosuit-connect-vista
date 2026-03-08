@@ -1803,6 +1803,105 @@ export type Database = {
           },
         ]
       }
+      coupon_redemptions: {
+        Row: {
+          company_id: string
+          coupon_id: string
+          id: string
+          metadata: Json | null
+          redeemed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          coupon_id: string
+          id?: string
+          metadata?: Json | null
+          redeemed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          coupon_id?: string
+          id?: string
+          metadata?: Json | null
+          redeemed_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          coupon_type: string
+          created_at: string | null
+          credits_amount: number | null
+          current_uses: number | null
+          description: string | null
+          discount_fixed: number | null
+          discount_percent: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_purchase: number | null
+          plan_months: number | null
+          plan_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          coupon_type?: string
+          created_at?: string | null
+          credits_amount?: number | null
+          current_uses?: number | null
+          description?: string | null
+          discount_fixed?: number | null
+          discount_percent?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_purchase?: number | null
+          plan_months?: number | null
+          plan_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          coupon_type?: string
+          created_at?: string | null
+          credits_amount?: number | null
+          current_uses?: number | null
+          description?: string | null
+          discount_fixed?: number | null
+          discount_percent?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_purchase?: number | null
+          plan_months?: number | null
+          plan_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dashboard_widgets: {
         Row: {
           company_id: string

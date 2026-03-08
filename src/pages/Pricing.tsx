@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronDown, X, Zap } from 'lucide-react';
+import { Check, ChevronDown, X, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 const PLAN_CONFIG: Record<string, { label: string; price: number; credits: number; extraCredit: number }> = {
   starter: { label: 'Starter', price: 79.90, credits: 80, extraCredit: 1.50 },
-  pro: { label: 'Pro', price: 125, credits: 120, extraCredit: 1.20 },
+  pro: { label: 'Pro', price: 124.90, credits: 120, extraCredit: 1.20 },
   growth: { label: 'Growth', price: 189.90, credits: 240, extraCredit: 0.90 },
 };
 
@@ -47,7 +47,7 @@ const plans = [
     key: 'pro',
     name: 'Pro',
     description: 'Para criadores que publicam conteúdo visual com frequência.',
-    price: 'R$125',
+    price: 'R$124,90',
     period: '/mês',
     subtitle: '12 carrosséis ou 16 posts estáticos',
     badge: 'Mais popular',
@@ -186,6 +186,8 @@ function LoggedInPricing() {
   const [showTopUp, setShowTopUp] = useState(false);
   const [showTopUpDropdown, setShowTopUpDropdown] = useState(false);
   const [selectedTopup, setSelectedTopup] = useState(2);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -220,6 +222,87 @@ function LoggedInPricing() {
   const handleTabChange = (tab: string) => {
     if (tab === 'home') navigate('/');
     else if (tab === 'projects') navigate('/');
+  };
+
+  const handleRedeemCode = async () => {
+    if (!redeemCode.trim() || !user || !companyId) return;
+    setRedeemLoading(true);
+    try {
+      const { data: coupon, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', redeemCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error || !coupon) {
+        toast.error('Código inválido. Verifique e tente novamente.');
+        return;
+      }
+      if (!['credits', 'plan'].includes(coupon.coupon_type)) {
+        toast.error('Este código não é um código de resgate.');
+        return;
+      }
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        toast.error('Código expirado.');
+        return;
+      }
+      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+        toast.error('Código já foi totalmente utilizado.');
+        return;
+      }
+      // Check if already redeemed
+      const { data: existing } = await supabase
+        .from('coupon_redemptions')
+        .select('id')
+        .eq('coupon_id', coupon.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (existing) {
+        toast.error('Você já resgatou este código.');
+        return;
+      }
+
+      if (coupon.coupon_type === 'credits') {
+        // Add credits
+        const { error: rpcErr } = await supabase.rpc('add_ai_credits', {
+          p_company_id: companyId,
+          p_amount: coupon.credits_amount,
+          p_description: `Resgate de cupom: ${coupon.code}`,
+        });
+        if (rpcErr) throw rpcErr;
+      } else if (coupon.coupon_type === 'plan' && coupon.plan_type) {
+        // Activate plan
+        await supabase.from('subscriptions').update({
+          plan_type: coupon.plan_type as any,
+          status: 'active' as any,
+          monthly_price: 0,
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + (coupon.plan_months || 1) * 30 * 86400000).toISOString(),
+        }).eq('company_id', companyId);
+      }
+
+      // Record redemption & increment usage
+      await supabase.from('coupon_redemptions').insert({
+        coupon_id: coupon.id,
+        user_id: user.id,
+        company_id: companyId,
+      });
+
+      toast.success(
+        coupon.coupon_type === 'credits'
+          ? `+${coupon.credits_amount} créditos adicionados! 🎉`
+          : `Plano ${coupon.plan_type} ativado por ${coupon.plan_months || 1} mês(es)! 🎉`
+      );
+      setRedeemCode('');
+      // Refresh data
+      window.location.reload();
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao resgatar código.');
+    } finally {
+      setRedeemLoading(false);
+    }
   };
 
   return (
@@ -376,6 +459,31 @@ function LoggedInPricing() {
                     </motion.div>
                   );
                 })}
+              </div>
+
+              {/* Redeem code section */}
+              <div className="mt-8 rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
+                <h3 className="text-white text-sm font-semibold mb-1">🎁 Resgatar código</h3>
+                <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate créditos ou planos aqui.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Digite o código"
+                    value={redeemCode}
+                    onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter') handleRedeemCode(); }}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+                  />
+                  <button
+                    onClick={handleRedeemCode}
+                    disabled={redeemLoading || !redeemCode.trim()}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-40"
+                    style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+                  >
+                    {redeemLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Resgatar'}
+                  </button>
+                </div>
               </div>
             </>
           )}

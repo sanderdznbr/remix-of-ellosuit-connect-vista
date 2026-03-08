@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy, Tag } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
@@ -9,26 +9,26 @@ import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; price: number; credits: number; extraPrice: string; features: string[] }> = {
   starter: {
-    name: 'Starter', price: 67, credits: 50, extraPrice: 'R$2,50',
-    features: ['50 créditos mensais', 'Até 6 cards de conteúdo/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG'],
+    name: 'Starter', price: 79.90, credits: 80, extraPrice: 'R$1,50',
+    features: ['8 carrosséis/mês (até 10 slides)', '12 posts estáticos/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG', 'Galeria de marca'],
   },
   pro: {
-    name: 'Pro', price: 127, credits: 120, extraPrice: 'R$1,90',
-    features: ['120 créditos mensais', 'Até 15 cards de conteúdo/mês', 'Estilos do Marketplace', 'Publicação em redes sociais', 'Suporte prioritário'],
+    name: 'Pro', price: 124.90, credits: 120, extraPrice: 'R$1,20',
+    features: ['12 carrosséis/mês (até 10 slides)', '16 posts estáticos/mês', 'Estilos do Marketplace', 'Publicação em redes sociais', 'Suporte prioritário'],
   },
   growth: {
-    name: 'Growth', price: 247, credits: 300, extraPrice: 'R$1,40',
-    features: ['300 créditos mensais', 'Até 37 cards de conteúdo/mês', 'Templates personalizados', 'Workspace de equipe', 'Projetos privados'],
+    name: 'Growth', price: 189.90, credits: 240, extraPrice: 'R$0,90',
+    features: ['24 carrosséis/mês (até 15 slides)', '32 posts estáticos/mês', 'Templates personalizados', 'Workspace de equipe', 'Projetos privados'],
   },
 };
 
 const CREDIT_TOPUPS = [
-  { credits: 10, price: 25 },
-  { credits: 20, price: 45 },
-  { credits: 50, price: 100 },
-  { credits: 100, price: 180 },
-  { credits: 200, price: 340 },
-  { credits: 500, price: 750 },
+  { credits: 10, price: 15 },
+  { credits: 25, price: 30 },
+  { credits: 50, price: 55 },
+  { credits: 100, price: 99 },
+  { credits: 250, price: 220 },
+  { credits: 500, price: 399 },
 ];
 
 // ── Format helpers ──
@@ -89,6 +89,11 @@ function CheckoutContent() {
   const [cardCvv, setCardCvv] = useState('');
 
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  
+  // Coupon
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount_percent: number; discount_fixed: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -100,6 +105,55 @@ function CheckoutContent() {
     };
     fetchBalance();
   }, [user]);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const { data: coupon, error } = await supabase
+        .from('coupons')
+        .select('id, code, coupon_type, discount_percent, discount_fixed, max_uses, current_uses, expires_at')
+        .eq('code', couponCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .eq('coupon_type', 'discount')
+        .maybeSingle();
+
+      if (error || !coupon) {
+        toast({ title: 'Cupom inválido', description: 'Verifique o código e tente novamente.', variant: 'destructive' });
+        return;
+      }
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        toast({ title: 'Cupom expirado', variant: 'destructive' });
+        return;
+      }
+      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+        toast({ title: 'Cupom esgotado', variant: 'destructive' });
+        return;
+      }
+      // Check if user already used it
+      const { data: existing } = await supabase
+        .from('coupon_redemptions')
+        .select('id')
+        .eq('coupon_id', coupon.id)
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (existing) {
+        toast({ title: 'Você já usou este cupom', variant: 'destructive' });
+        return;
+      }
+      setAppliedCoupon({
+        id: coupon.id,
+        code: coupon.code,
+        discount_percent: coupon.discount_percent || 0,
+        discount_fixed: coupon.discount_fixed || 0,
+      });
+      toast({ title: `Cupom ${coupon.code} aplicado!` });
+    } catch {
+      toast({ title: 'Erro ao validar cupom', variant: 'destructive' });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!customerName.trim() || !customerDocument.trim()) {
@@ -195,7 +249,13 @@ function CheckoutContent() {
     return <Navigate to="/auth" replace />;
   }
 
-  const displayPrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : creditPack.price;
+  const basePrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : creditPack.price;
+  const discount = appliedCoupon
+    ? appliedCoupon.discount_percent > 0
+      ? basePrice * (appliedCoupon.discount_percent / 100)
+      : appliedCoupon.discount_fixed
+    : 0;
+  const displayPrice = Math.max(0, basePrice - discount);
   const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : `+${creditPack.credits} créditos`;
   const displaySubtitle = mode === 'plan'
     ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`
@@ -221,13 +281,53 @@ function CheckoutContent() {
                     <p className="text-white/40 text-xs mt-0.5">{displaySubtitle}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-white text-2xl font-bold">R${displayPrice}</span>
+                    {discount > 0 && (
+                      <span className="text-white/30 text-sm line-through block">R${basePrice.toFixed(2).replace('.', ',')}</span>
+                    )}
+                    <span className="text-white text-2xl font-bold">R${displayPrice.toFixed(2).replace('.', ',')}</span>
                     <span className="text-white/40 text-xs block">{mode === 'plan' ? '/mês' : ''}</span>
                   </div>
                 </div>
                 {currentBalance !== null && (
                   <div className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(123, 80, 220, 0.8)' }}>
                     <Sparkles className="w-3 h-3" /> Saldo atual: {Math.floor(currentBalance)} créditos
+                  </div>
+                )}
+              </div>
+
+              {/* Coupon */}
+              <div className="mb-6">
+                <h3 className="text-white/60 text-xs font-medium mb-3 uppercase tracking-wider">Cupom de desconto</h3>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: 'rgba(123, 80, 220, 0.1)', border: '1px solid rgba(123, 80, 220, 0.25)' }}>
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4" style={{ color: '#7B50DC' }} />
+                      <span className="text-sm text-white/80 font-medium">{appliedCoupon.code}</span>
+                      <span className="text-xs" style={{ color: '#7B50DC' }}>
+                        {appliedCoupon.discount_percent > 0 ? `-${appliedCoupon.discount_percent}%` : `-R$${appliedCoupon.discount_fixed.toFixed(2).replace('.', ',')}`}
+                      </span>
+                    </div>
+                    <button onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-white/30 hover:text-white/60 text-xs cursor-pointer">Remover</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Digite o cupom"
+                      value={couponCode}
+                      onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => { if (e.key === 'Enter') handleApplyCoupon(); }}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+                      style={inputStyle}
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all disabled:opacity-40"
+                      style={{ backgroundColor: 'rgba(123, 80, 220, 0.2)', color: '#7B50DC', border: '1px solid rgba(123, 80, 220, 0.3)' }}
+                    >
+                      {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aplicar'}
+                    </button>
                   </div>
                 )}
               </div>
@@ -301,7 +401,7 @@ function CheckoutContent() {
               )}
 
               <button onClick={handleSubmit} disabled={loading} className="w-full py-3.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-50" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : mode === 'plan' ? `Assinar por R$${displayPrice}/mês` : `Pagar R$${displayPrice}`}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : mode === 'plan' ? `Assinar por R$${displayPrice.toFixed(2).replace('.', ',')}/mês` : `Pagar R$${displayPrice.toFixed(2).replace('.', ',')}`}
               </button>
 
               <div className="flex items-center justify-center gap-1.5 mt-3">

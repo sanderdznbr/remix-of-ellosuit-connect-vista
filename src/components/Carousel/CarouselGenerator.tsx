@@ -2938,7 +2938,21 @@ FORBIDDEN:
             });
             if (imgErr) throw imgErr;
             if (imgData?.success && imgData?.imageUrl) {
-              panoramaUrl = imgData.imageUrl;
+              const candidateUrl = imgData.imageUrl as string;
+              const candidateAspect = await new Promise<number>((resolve, reject) => {
+                const probe = document.createElement('img');
+                probe.crossOrigin = 'anonymous';
+                probe.onload = () => resolve(probe.width / Math.max(probe.height, 1));
+                probe.onerror = () => reject(new Error('Failed to load panorama candidate'));
+                probe.src = candidateUrl;
+              });
+
+              if (candidateAspect < minAcceptedPanoramaAspect) {
+                console.warn(`Panorama regen candidate rejected (aspect ${candidateAspect.toFixed(2)} < ${minAcceptedPanoramaAspect.toFixed(2)})`);
+                continue;
+              }
+
+              panoramaUrl = candidateUrl;
               break;
             }
           } catch (err) {

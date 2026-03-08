@@ -195,6 +195,10 @@ function LoggedInPricing() {
   const [selectedTopup, setSelectedTopup] = useState(2);
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState<'none' | 'redeem' | 'gift'>('none');
+  const [giftLoading, setGiftLoading] = useState(false);
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+  const [purchasedGiftCredits, setPurchasedGiftCredits] = useState<number>(0);
 
   useEffect(() => {
     const fetchData = async () => {

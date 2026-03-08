@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Copy, Tag } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';

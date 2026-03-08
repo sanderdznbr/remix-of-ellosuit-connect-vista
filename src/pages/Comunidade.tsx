@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageCircle, Loader2, User, Send, X } from 'lucide-react';
+import { Heart, MessageCircle, Loader2, User, Send, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ interface Post {
   likes_count: number;
   created_at: string;
   profile?: { display_name: string | null; username: string | null; avatar_url: string | null };
+  carousel_cards?: { imageUrl?: string; title?: string; body?: string }[];
 }
 
 interface Comment {
@@ -25,6 +26,86 @@ interface Comment {
   content: string;
   created_at: string;
   profile?: { display_name: string | null; username: string | null; avatar_url: string | null };
+}
+
+function PostImageSlider({ post, onClick }: { post: Post; onClick: () => void }) {
+  const cards = post.carousel_cards || [];
+  const hasMultipleCards = cards.length > 1;
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // If no carousel cards, show cover image
+  if (cards.length === 0) {
+    if (!post.cover_url) return null;
+    return (
+      <div className="w-full cursor-pointer" style={{ aspectRatio: '4/5' }} onClick={onClick}>
+        <img src={post.cover_url} alt={post.caption || ''} className="w-full h-full object-cover" loading="lazy" />
+      </div>
+    );
+  }
+
+  const currentCard = cards[activeIndex];
+  const imageUrl = currentCard?.imageUrl || post.cover_url;
+
+  return (
+    <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
+      {/* Image */}
+      <div className="w-full h-full cursor-pointer" onClick={onClick}>
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center p-6 text-center bg-white/[0.03]">
+            <div>
+              <p className="text-white font-bold text-base mb-1">{currentCard?.title || ''}</p>
+              <p className="text-white/50 text-sm">{currentCard?.body || ''}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation arrows */}
+      {hasMultipleCards && (
+        <>
+          {activeIndex > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setActiveIndex(prev => prev - 1); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
+          {activeIndex < cards.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setActiveIndex(prev => prev + 1); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Dots indicator */}
+      {hasMultipleCards && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+          {cards.map((_, idx) => (
+            <div
+              key={idx}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                idx === activeIndex ? 'bg-white w-3' : 'bg-white/40'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Card counter badge */}
+      {hasMultipleCards && (
+        <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/80 text-[11px] font-medium">
+          {activeIndex + 1}/{cards.length}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CommunityContent() {
@@ -53,17 +134,28 @@ function CommunityContent() {
       if (!postsData || postsData.length === 0) { setPosts([]); return; }
 
       const userIds = [...new Set((postsData as Post[]).map(p => p.user_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name, username, avatar_url')
-        .in('id', userIds);
+      const carouselIds = [...new Set((postsData as Post[]).map(p => p.carousel_id).filter(Boolean))];
+
+      // Fetch profiles and carousel data in parallel
+      const [{ data: profiles }, carouselResult] = await Promise.all([
+        supabase.from('profiles').select('id, display_name, username, avatar_url').in('id', userIds),
+        carouselIds.length > 0
+          ? (supabase.from('generated_carousels').select('id, carousel_data').in('id', carouselIds) as any)
+          : { data: [] },
+      ]);
 
       const profileMap: Record<string, any> = {};
       (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
 
+      const carouselMap: Record<string, any[]> = {};
+      ((carouselResult?.data || []) as any[]).forEach((c: any) => {
+        carouselMap[c.id] = c.carousel_data?.cards || [];
+      });
+
       const enriched = (postsData as Post[]).map(p => ({
         ...p,
         profile: profileMap[p.user_id] || null,
+        carousel_cards: carouselMap[p.carousel_id] || [],
       }));
 
       setPosts(enriched);
@@ -89,7 +181,6 @@ function CommunityContent() {
     if (!user) { toast.error('Faça login para curtir'); return; }
     const isLiked = likedPosts.has(postId);
 
-    // Optimistic
     setLikedPosts(prev => {
       const n = new Set(prev);
       isLiked ? n.delete(postId) : n.add(postId);
@@ -104,7 +195,6 @@ function CommunityContent() {
         await supabase.from('community_post_likes').insert({ post_id: postId, user_id: user.id } as any);
       }
     } catch {
-      // Revert
       setLikedPosts(prev => {
         const n = new Set(prev);
         isLiked ? n.add(postId) : n.delete(postId);
@@ -176,7 +266,7 @@ function CommunityContent() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
+    <div className="max-w-lg mx-auto py-8 px-4">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-xl font-bold text-white mb-1">Comunidade</h1>
         <p className="text-white/30 text-xs mb-8">Descubra e inspire-se com criações de outros usuários</p>
@@ -217,16 +307,8 @@ function CommunityContent() {
                 </button>
               </div>
 
-              {/* Image */}
-              {post.cover_url && (
-                <div
-                  className="w-full cursor-pointer"
-                  style={{ aspectRatio: '4/5', maxHeight: '360px' }}
-                  onClick={() => navigate(`/post/${post.id}`)}
-                >
-                  <img src={post.cover_url} alt={post.caption || ''} className="w-full h-full object-cover" loading="lazy" />
-                </div>
-              )}
+              {/* Image / Carousel Slider */}
+              <PostImageSlider post={post} onClick={() => navigate(`/post/${post.id}`)} />
 
               {/* Actions */}
               <div className="px-4 py-3">

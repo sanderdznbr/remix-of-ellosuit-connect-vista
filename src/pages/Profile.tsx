@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
-import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, Upload, X, Check, Plus } from 'lucide-react';
+import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Profile {
@@ -25,6 +25,15 @@ interface CarouselItem {
   created_at: string;
   carousel_data: any;
   is_published?: boolean;
+}
+
+interface CommunityPostItem {
+  id: string;
+  carousel_id: string;
+  caption: string | null;
+  cover_url: string | null;
+  likes_count: number;
+  created_at: string;
 }
 
 const ProfilePage: React.FC = () => {

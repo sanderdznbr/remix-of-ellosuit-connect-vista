@@ -137,6 +137,17 @@ export default function Parceiros() {
     toast.success('Link copiado!');
   };
 
+  if (!user) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center gap-4" style={{ backgroundColor: '#0a0a0f' }}>
+        <p className="text-white/50 text-sm">Faça login para acessar o programa de parceiros.</p>
+        <button onClick={() => navigate('/auth')} className="px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer" style={{ backgroundColor: '#7B50DC', color: '#fff' }}>
+          Fazer login
+        </button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: '#0a0a0f' }}>

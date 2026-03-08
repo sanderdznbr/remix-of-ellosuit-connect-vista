@@ -2268,7 +2268,7 @@ const CarouselGenerator: React.FC = () => {
         if (isFullBleedStyle) {
           const isCta = card.type === 'cta' || i === updatedCards.length - 1;
           const cardTextParts: string[] = [];
-          cardTextParts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
+          cardTextParts.push(`IDIOMA OBRIGATÓRIO: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência — use APENAS o estilo visual.`);
           cardTextParts.push(`TEMA: "${cleanTopic}"`);
           cardTextParts.push(`SEM BORDAS: Full bleed.`);
           cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 8% em cada borda. NENHUM texto deve encostar nas bordas.`);

@@ -560,7 +560,10 @@ function LoggedInPricing() {
                   </div>
                 </motion.div>
               )}
-
+            </>
+          )}
+        </div>
+      </div>
 
       <TopUpModal open={showTopUp} onClose={() => { setShowTopUp(false); window.location.reload(); }} currentPlan={currentPlanKey} companyId={companyId} initialTopup={selectedTopup} />
     </div>

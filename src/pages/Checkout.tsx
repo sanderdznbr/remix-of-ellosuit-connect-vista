@@ -302,6 +302,12 @@ function CheckoutContent() {
         };
       }
 
+      // Attach affiliate tracking if present
+      const affiliateRef = getAffiliateRef();
+      if (affiliateRef) {
+        body.affiliate_code = affiliateRef;
+      }
+
       const { data, error } = await supabase.functions.invoke('pagarme-checkout', { body });
 
       if (error) throw error;

@@ -454,9 +454,9 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 {/* Project Selection */}
-                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto</label>
+                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto gerado</label>
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
-                  {carousels.filter(c => !communityPosts.has(c.id)).map(c => {
+                  {unpublishedCarousels.map(c => {
                     const cover = getCoverImage(c);
                     const isSelected = selectedCarouselId === c.id;
                     return (
@@ -472,8 +472,11 @@ const ProfilePage: React.FC = () => {
                       </button>
                     );
                   })}
-                  {carousels.filter(c => !communityPosts.has(c.id)).length === 0 && (
-                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Todos os projetos já foram publicados</p>
+                  {carousels.length === 0 && (
+                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Nenhum projeto encontrado para publicar</p>
+                  )}
+                  {carousels.length > 0 && unpublishedCarousels.length === 0 && (
+                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Todos os seus projetos já foram publicados</p>
                   )}
                 </div>
 

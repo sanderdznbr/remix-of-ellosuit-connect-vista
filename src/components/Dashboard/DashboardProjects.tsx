@@ -4,6 +4,9 @@ import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2 } fro
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface DashboardProjectsProps {
   onStartCarousel: (topic?: string) => void;
@@ -21,6 +24,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [loading, setLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
+  const [publishCaption, setPublishCaption] = useState('');
 
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 
@@ -81,19 +86,24 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
     }
   };
 
-  const handlePublish = async (e: React.MouseEvent, item: any) => {
+  const openPublishDialog = (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
-    if (!user) return;
+    setPublishDialogItem(item);
+    setPublishCaption(item.title || item.topic || '');
+  };
+
+  const confirmPublish = async () => {
+    if (!user || !publishDialogItem) return;
+    const item = publishDialogItem;
     setPublishingId(item.id);
     try {
-      const coverUrl = item.cover_url || null;
       const { error } = await supabase
         .from('community_posts')
         .insert({
           user_id: user.id,
           carousel_id: item.id,
-          cover_url: coverUrl,
-          caption: item.title || item.topic,
+          cover_url: item.cover_url || null,
+          caption: publishCaption || item.title || item.topic,
         } as any);
       if (error) {
         if (error.message?.includes('duplicate') || error.code === '23505') {
@@ -108,6 +118,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
       toast.error('Erro ao publicar: ' + err.message);
     } finally {
       setPublishingId(null);
+      setPublishDialogItem(null);
+      setPublishCaption('');
     }
   };
 
@@ -271,7 +283,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={(e) => handlePublish(e, item)}
+                    onClick={(e) => openPublishDialog(e, item)}
                     className="p-1.5 rounded-lg transition-colors cursor-pointer"
                     style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.15)' : 'rgba(168,85,247,0.6)' }}
                     title="Publicar na comunidade"
@@ -324,7 +336,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={(e) => handlePublish(e, item)}
+                    onClick={(e) => openPublishDialog(e, item)}
                     className="p-1.5 rounded-lg cursor-pointer"
                     style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: publishingId === item.id ? 'rgba(255,255,255,0.3)' : 'rgba(168,85,247,0.8)' }}
                     title="Publicar na comunidade"
@@ -368,6 +380,51 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
           )}
         </motion.div>
       </div>
+
+      {/* Publish Dialog */}
+      <Dialog open={!!publishDialogItem} onOpenChange={(open) => { if (!open) { setPublishDialogItem(null); setPublishCaption(''); } }}>
+        <DialogContent className="sm:max-w-md" style={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: '#fff' }}>Publicar na Comunidade</DialogTitle>
+            <DialogDescription style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Seu projeto será visível para todos na comunidade. Adicione uma legenda para descrever seu trabalho.
+            </DialogDescription>
+          </DialogHeader>
+
+          {publishDialogItem?.cover_url && (
+            <div className="rounded-lg overflow-hidden aspect-video">
+              <img src={publishDialogItem.cover_url} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.6)' }}>Legenda</label>
+            <Textarea
+              value={publishCaption}
+              onChange={(e) => setPublishCaption(e.target.value)}
+              placeholder="Descreva seu projeto..."
+              className="resize-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => { setPublishDialogItem(null); setPublishCaption(''); }} style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmPublish}
+              disabled={publishingId === publishDialogItem?.id}
+              className="gap-2"
+              style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)' }}
+            >
+              {publishingId === publishDialogItem?.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+              Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

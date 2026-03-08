@@ -1604,10 +1604,10 @@ const CarouselGenerator: React.FC = () => {
               img.src = panoramaUrl!;
             });
 
-            const sliceWidth = Math.floor(img.width / cardCount);
+            const sliceWidth = Math.floor(img.width / panelCount);
             const sliceHeight = img.height;
 
-            for (let i = 0; i < cardCount; i++) {
+            for (let i = 0; i < panelCount; i++) {
               const canvas = document.createElement('canvas');
               canvas.width = sliceWidth;
               canvas.height = sliceHeight;
@@ -1619,12 +1619,12 @@ const CarouselGenerator: React.FC = () => {
                   ...updatedCards[i],
                   imageUrl: sliceDataUrl,
                   isAiImage: true,
-                  generatedPrompt: `[Panorama Contínuo - Fatia ${i + 1}/${cardCount}]\n${panoramaPrompt}`,
+                  generatedPrompt: `[Panorama Contínuo - Fatia ${i + 1}/${panelCount}]\n${panoramaPrompt}`,
                 };
               }
             }
             
-            toast({ title: '🌄 Panorama contínuo gerado!', description: `${cardCount} slides com arte contínua` });
+            toast({ title: '🌄 Panorama contínuo gerado!', description: `${panelCount} slides com arte contínua` });
           } catch (sliceErr) {
             console.error('Panorama slicing failed:', sliceErr);
             toast({ title: 'Erro ao fatiar panorama', variant: 'destructive' });

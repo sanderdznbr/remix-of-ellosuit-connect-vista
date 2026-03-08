@@ -4699,7 +4699,7 @@ FORBIDDEN:
               )}
               
               {/* Generate carousel from cover */}
-              {carouselData.cards[0]?.imageUrl && !isGuest && (
+              {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
                 <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-purple-300 hover:text-purple-200 border transition-all"
                   style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>

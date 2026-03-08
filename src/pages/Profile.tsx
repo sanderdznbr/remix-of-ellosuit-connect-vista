@@ -137,6 +137,7 @@ const ProfilePage: React.FC = () => {
     try {
       const { error } = await supabase.from('profiles').update({
         display_name: editForm.display_name,
+        username: editForm.username,
         bio: editForm.bio,
         website: editForm.website,
         instagram: editForm.instagram,

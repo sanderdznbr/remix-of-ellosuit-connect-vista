@@ -61,6 +61,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   }, [user]);
 
   const handleTabChange = (tab: string) => {
+    // If we're on a sub-page (children mode), navigate back to main dashboard
+    if (children) {
+      navigate(`/?tab=${tab}`);
+      return;
+    }
     setActiveTab(tab);
     setSearchQuery('');
     setSidebarOpen(false);

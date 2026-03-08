@@ -16,6 +16,7 @@ interface DashboardSidebarProps {
 const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch, onLoadCarousel }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

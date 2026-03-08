@@ -380,6 +380,51 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
           )}
         </motion.div>
       </div>
+
+      {/* Publish Dialog */}
+      <Dialog open={!!publishDialogItem} onOpenChange={(open) => { if (!open) { setPublishDialogItem(null); setPublishCaption(''); } }}>
+        <DialogContent className="sm:max-w-md" style={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <DialogHeader>
+            <DialogTitle style={{ color: '#fff' }}>Publicar na Comunidade</DialogTitle>
+            <DialogDescription style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Seu projeto será visível para todos na comunidade. Adicione uma legenda para descrever seu trabalho.
+            </DialogDescription>
+          </DialogHeader>
+
+          {publishDialogItem?.cover_url && (
+            <div className="rounded-lg overflow-hidden aspect-video">
+              <img src={publishDialogItem.cover_url} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.6)' }}>Legenda</label>
+            <Textarea
+              value={publishCaption}
+              onChange={(e) => setPublishCaption(e.target.value)}
+              placeholder="Descreva seu projeto..."
+              className="resize-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => { setPublishDialogItem(null); setPublishCaption(''); }} style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmPublish}
+              disabled={publishingId === publishDialogItem?.id}
+              className="gap-2"
+              style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)' }}
+            >
+              {publishingId === publishDialogItem?.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+              Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

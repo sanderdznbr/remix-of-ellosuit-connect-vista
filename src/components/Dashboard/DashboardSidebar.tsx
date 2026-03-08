@@ -186,23 +186,47 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <ShoppingBag className="w-4 h-4" />
           Estilos
         </button>
-        {/* Admin-only tools — temporarily hidden */}
-        {/* {email === 'admin@gmail.com' && (
-          <>
-            <button onClick={() => { onTabChange('face-generator'); closeSearch(); }} className="...">
-              <Camera className="w-4 h-4" /> Gerador de Rosto
-            </button>
-            <button onClick={() => { onTabChange('style-creator'); closeSearch(); }} className="...">
-              <Brush className="w-4 h-4" /> Criador de Estilos
-            </button>
-          </>
-        )} */}
-        {/* Partners */}
+      </div>
+
+      {/* Comunidade section */}
+      <div className="px-2 mt-5">
+        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Comunidade</p>
+        <button
+          onClick={() => { navigate('/comunidade'); closeSearch(); }}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            location.pathname === '/comunidade'
+              ? 'bg-white/[0.08] text-white font-medium'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Explorar
+        </button>
+        <button
+          onClick={() => { navigate('/perfil'); closeSearch(); }}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
+              ? 'bg-white/[0.08] text-white font-medium'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+          }`}
+        >
+          <User className="w-4 h-4" />
+          Meu Perfil
+        </button>
+      </div>
+
+      {/* Parceiros section */}
+      <div className="px-2 mt-5">
+        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Parceiros</p>
         <button
           onClick={() => { navigate('/parceiros'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-white/50 hover:text-white/80 hover:bg-white/[0.04]`}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            location.pathname === '/parceiros'
+              ? 'bg-white/[0.08] text-white font-medium'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+          }`}
         >
-          <CreditCard className="w-4 h-4" />
+          <Handshake className="w-4 h-4" />
           Afiliados
         </button>
         {/* Admin Panel - only for admin@gmail.com */}

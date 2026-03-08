@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, Copy, Loader2, Download, Share2, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Loader2, Download, Share2, ShoppingBag, Clock, Gift, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';

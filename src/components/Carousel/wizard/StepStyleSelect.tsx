@@ -212,7 +212,7 @@ const StepStyleSelect: React.FC<Props> = ({
                   }`}>
                   {currentImg && (
                     <div className="bg-white/[0.03] relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
-                      <img src={currentImg} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="lazy" />
+                      <img src={optimizeImageUrl(currentImg, 350)} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="lazy" decoding="async" />
                       {isLocked && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <Lock className="w-5 h-5 text-white/60" />

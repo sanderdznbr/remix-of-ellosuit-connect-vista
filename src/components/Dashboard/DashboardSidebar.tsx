@@ -126,32 +126,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           Home
         </button>
 
-        {/* Search - expandable */}
-        {searchOpen ? (
-          <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white/[0.08]">
-            <Search className="w-4 h-4 text-white/40 shrink-0" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Buscar projetos..."
-              className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/25 outline-none"
-              onKeyDown={(e) => { if (e.key === 'Escape') closeSearch(); }}
-            />
-            <button onClick={closeSearch} className="p-0.5 text-white/30 hover:text-white/60 cursor-pointer">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={handleSearchClick}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
-          >
-            <Search className="w-4 h-4" />
-            Buscar
-          </button>
-        )}
       </nav>
 
       {/* Projects section */}

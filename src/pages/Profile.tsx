@@ -3,8 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
-import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy } from 'lucide-react';
+import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+
+const PLAN_BADGES: Record<string, { label: string; color: string }> = {
+  starter: { label: 'STARTER', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  base: { label: 'STARTER', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  pro: { label: 'PRO', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  growth: { label: 'GROWTH', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  business: { label: 'BUSINESS', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+};
 
 interface Profile {
   id: string;

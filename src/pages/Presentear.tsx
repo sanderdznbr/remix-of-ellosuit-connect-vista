@@ -58,6 +58,18 @@ async function renderCodeOnCard(backImageSrc: string, code: string): Promise<str
   });
 }
 
+interface GiftHistory {
+  id: string;
+  gift_key: string;
+  credits: number;
+  price_brl: number;
+  purchased_at: string;
+  status: string;
+  redeemed_at: string | null;
+  redeemed_by: string | null;
+  redeemed_email?: string;
+}
+
 export default function Presentear() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -66,11 +78,13 @@ export default function Presentear() {
   const [purchasedCard, setPurchasedCard] = useState<{
     key: string;
     credits: number;
-    backWithCode: string; // rendered back image with code burned in
+    backWithCode: string;
     frontSrc: string;
   } | null>(null);
   const [showFlip, setShowFlip] = useState(false);
   const hasGeneratedRef = useRef(false);
+  const [history, setHistory] = useState<GiftHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     const purchased = searchParams.get('purchased');

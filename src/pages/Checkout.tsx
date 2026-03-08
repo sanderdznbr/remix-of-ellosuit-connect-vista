@@ -106,7 +106,55 @@ function CheckoutContent() {
     fetchBalance();
   }, [user]);
 
-  const handleSubmit = async () => {
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const { data: coupon, error } = await supabase
+        .from('coupons')
+        .select('id, code, coupon_type, discount_percent, discount_fixed, max_uses, current_uses, expires_at')
+        .eq('code', couponCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .eq('coupon_type', 'discount')
+        .maybeSingle();
+
+      if (error || !coupon) {
+        toast({ title: 'Cupom inválido', description: 'Verifique o código e tente novamente.', variant: 'destructive' });
+        return;
+      }
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        toast({ title: 'Cupom expirado', variant: 'destructive' });
+        return;
+      }
+      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+        toast({ title: 'Cupom esgotado', variant: 'destructive' });
+        return;
+      }
+      // Check if user already used it
+      const { data: existing } = await supabase
+        .from('coupon_redemptions')
+        .select('id')
+        .eq('coupon_id', coupon.id)
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (existing) {
+        toast({ title: 'Você já usou este cupom', variant: 'destructive' });
+        return;
+      }
+      setAppliedCoupon({
+        id: coupon.id,
+        code: coupon.code,
+        discount_percent: coupon.discount_percent || 0,
+        discount_fixed: coupon.discount_fixed || 0,
+      });
+      toast({ title: `Cupom ${coupon.code} aplicado!` });
+    } catch {
+      toast({ title: 'Erro ao validar cupom', variant: 'destructive' });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
     if (!customerName.trim() || !customerDocument.trim()) {
       toast({ title: 'Preencha nome e CPF', variant: 'destructive' });
       return;

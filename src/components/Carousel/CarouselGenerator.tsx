@@ -1656,8 +1656,15 @@ const CarouselGenerator: React.FC = () => {
             toast({ title: 'Erro ao fatiar panorama', variant: 'destructive' });
           }
         } else {
-          toast({ title: 'Falha ao gerar panorama contínuo', description: 'Gerando cards individualmente como fallback...', variant: 'destructive' });
-          // Fall through to normal generation below
+          toast({ title: 'Falha ao gerar carrossel contínuo', description: 'A IA não retornou panorama largo suficiente. Tente regenerar novamente no modo contínuo.', variant: 'destructive' });
+          setGeneratingAllImages(false);
+          setImageGenProgress('');
+          if (localJobId) {
+            failCloudJob(localJobId, 'Falha ao gerar panorama contínuo válido');
+            setCloudJobId(null);
+          }
+          setGenerating(false);
+          return;
         }
 
         // If panorama succeeded, skip normal image generation

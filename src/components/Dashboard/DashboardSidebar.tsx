@@ -264,8 +264,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
       )}
 
-      {/* Spacer */}
-      <div className="flex-1" />
+      </div>{/* end scrollable nav area */}
+
 
       {/* Bottom: Profile */}
       <div className="mt-auto border-t border-white/[0.06]">

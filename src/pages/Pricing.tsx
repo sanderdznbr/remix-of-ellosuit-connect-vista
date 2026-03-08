@@ -274,8 +274,12 @@ function LoggedInPricing() {
       } else if (coupon.coupon_type === 'plan' && coupon.plan_type) {
         // Activate plan
         await supabase.from('subscriptions').update({
-          plan_type: coupon.plan_type,
-          status: 'active',
+          plan_type: coupon.plan_type as any,
+          status: 'active' as any,
+          monthly_price: 0,
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + (coupon.plan_months || 1) * 30 * 86400000).toISOString(),
+        }).eq('company_id', companyId);
           monthly_price: 0,
           current_period_start: new Date().toISOString(),
           current_period_end: new Date(Date.now() + (coupon.plan_months || 1) * 30 * 86400000).toISOString(),

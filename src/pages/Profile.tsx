@@ -206,7 +206,7 @@ const ProfilePage: React.FC = () => {
           {profile.banner_url ? (
             <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }} />
+            <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }} />
           )}
           {isOwnProfile && (
             <>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2 } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';

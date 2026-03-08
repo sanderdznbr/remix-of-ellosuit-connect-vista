@@ -4309,35 +4309,49 @@ FORBIDDEN:
                     el._touchDragging = false;
                   }}
                 >
-                  <div data-drag-track style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-                    <div style={{
-                      width: PREVIEW_W,
-                      height: PREVIEW_H,
-                      transform: `scale(${369 / PREVIEW_W})`,
-                      transformOrigin: 'top left',
-                    }}>
-                      {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
+                  <div data-drag-track style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', width: '300%', marginLeft: '-100%' }}>
+                    {/* Previous card */}
+                    <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden' }}>
+                      {activeCardIndex > 0 ? (
+                        <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                          {renderCardPreview(carouselData.cards[activeCardIndex - 1], activeCardIndex - 1, false)}
+                        </div>
+                      ) : null}
                     </div>
-                    {/* Regenerating overlay on mockup */}
-                    {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
-                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                        <div className="w-10 h-10 rounded-full border-3 border-purple-500/30 border-t-purple-500 animate-spin mb-3" />
-                        <p className="text-white/80 text-xs font-medium">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                    {/* Current card */}
+                    <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                        {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                       </div>
-                    )}
-                    {/* Guest lock overlay */}
-                    {isCardLocked(activeCardIndex) && (
-                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                        <Lock className="w-8 h-8 mb-3" style={{ color: '#8B5CF6' }} />
-                        <p className="text-white font-semibold text-sm mb-1">Card bloqueado</p>
-                        <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
-                        <button onClick={() => navigate('/checkout')}
-                          className="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
-                          style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
-                          Cadastrar e Desbloquear
-                        </button>
-                      </div>
-                    )}
+                      {/* Regenerating overlay on mockup */}
+                      {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+                          <div className="w-10 h-10 rounded-full border-3 border-purple-500/30 border-t-purple-500 animate-spin mb-3" />
+                          <p className="text-white/80 text-xs font-medium">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                        </div>
+                      )}
+                      {/* Guest lock overlay */}
+                      {isCardLocked(activeCardIndex) && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                          <Lock className="w-8 h-8 mb-3" style={{ color: '#8B5CF6' }} />
+                          <p className="text-white font-semibold text-sm mb-1">Card bloqueado</p>
+                          <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
+                          <button onClick={() => navigate('/checkout')}
+                            className="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                            style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                            Cadastrar e Desbloquear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {/* Next card */}
+                    <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden' }}>
+                      {activeCardIndex < carouselData.cards.length - 1 ? (
+                        <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                          {renderCardPreview(carouselData.cards[activeCardIndex + 1], activeCardIndex + 1, false)}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                   {/* Swipe indicators */}
                   {activeCardIndex > 0 && (

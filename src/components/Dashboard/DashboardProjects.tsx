@@ -86,19 +86,24 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
     }
   };
 
-  const handlePublish = async (e: React.MouseEvent, item: any) => {
+  const openPublishDialog = (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
-    if (!user) return;
+    setPublishDialogItem(item);
+    setPublishCaption(item.title || item.topic || '');
+  };
+
+  const confirmPublish = async () => {
+    if (!user || !publishDialogItem) return;
+    const item = publishDialogItem;
     setPublishingId(item.id);
     try {
-      const coverUrl = item.cover_url || null;
       const { error } = await supabase
         .from('community_posts')
         .insert({
           user_id: user.id,
           carousel_id: item.id,
-          cover_url: coverUrl,
-          caption: item.title || item.topic,
+          cover_url: item.cover_url || null,
+          caption: publishCaption || item.title || item.topic,
         } as any);
       if (error) {
         if (error.message?.includes('duplicate') || error.code === '23505') {
@@ -113,6 +118,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
       toast.error('Erro ao publicar: ' + err.message);
     } finally {
       setPublishingId(null);
+      setPublishDialogItem(null);
+      setPublishCaption('');
     }
   };
 

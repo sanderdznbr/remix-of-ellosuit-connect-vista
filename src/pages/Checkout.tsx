@@ -281,7 +281,10 @@ function CheckoutContent() {
                     <p className="text-white/40 text-xs mt-0.5">{displaySubtitle}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-white text-2xl font-bold">R${displayPrice}</span>
+                    {discount > 0 && (
+                      <span className="text-white/30 text-sm line-through block">R${basePrice.toFixed(2).replace('.', ',')}</span>
+                    )}
+                    <span className="text-white text-2xl font-bold">R${displayPrice.toFixed(2).replace('.', ',')}</span>
                     <span className="text-white/40 text-xs block">{mode === 'plan' ? '/mês' : ''}</span>
                   </div>
                 </div>

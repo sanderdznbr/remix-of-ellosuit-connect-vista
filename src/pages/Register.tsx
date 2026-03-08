@@ -92,12 +92,22 @@ export default function Register() {
         // Track affiliate referral
         const affiliateRef = getAffiliateRef();
         if (affiliateRef) {
-          supabase.from('affiliate_referrals' as any).insert({
-            affiliate_id: affiliateRef, // will be resolved server-side
-            referred_user_id: data.user.id,
-            converted: false,
-            source_url: window.location.href,
-          }).then(() => {});
+          supabase
+            .from('affiliate_partners' as any)
+            .select('id')
+            .eq('affiliate_code', affiliateRef)
+            .eq('is_active', true)
+            .maybeSingle()
+            .then(({ data: partner }) => {
+              if (partner) {
+                supabase.from('affiliate_referrals' as any).insert({
+                  affiliate_id: (partner as any).id,
+                  referred_user_id: data.user.id,
+                  converted: false,
+                  source_url: window.location.href,
+                } as any).then(() => {});
+              }
+            });
         }
         try {
           supabase.functions.invoke('send-system-email', {

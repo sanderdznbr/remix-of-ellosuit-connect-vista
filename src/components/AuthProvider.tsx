@@ -44,6 +44,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
+    // Tag user as ellocontent if not already tagged
+    const tagAsEllocontent = async (userId: string) => {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('source')
+          .eq('id', userId)
+          .single();
+        if (profile && !profile.source) {
+          await supabase.from('profiles').update({ source: 'ellocontent' } as any).eq('id', userId);
+        }
+      } catch {}
+    };
+
     // Listen for auth changes
     const {
       data: { subscription },
@@ -51,6 +65,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) {
+        setTimeout(() => tagAsEllocontent(session.user.id), 500);
+      }
     });
 
     return () => subscription.unsubscribe();

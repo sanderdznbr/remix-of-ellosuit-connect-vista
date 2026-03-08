@@ -2941,6 +2941,62 @@ export type Database = {
           },
         ]
       }
+      gift_keys: {
+        Row: {
+          beehive_status: string | null
+          beehive_transaction_id: string | null
+          created_at: string
+          credits: number
+          gift_key: string
+          id: string
+          price_brl: number
+          purchased_at: string
+          purchased_by: string | null
+          redeemed_at: string | null
+          redeemed_by: string | null
+          redeemed_company_id: string | null
+          status: string
+        }
+        Insert: {
+          beehive_status?: string | null
+          beehive_transaction_id?: string | null
+          created_at?: string
+          credits: number
+          gift_key: string
+          id?: string
+          price_brl: number
+          purchased_at?: string
+          purchased_by?: string | null
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          redeemed_company_id?: string | null
+          status?: string
+        }
+        Update: {
+          beehive_status?: string | null
+          beehive_transaction_id?: string | null
+          created_at?: string
+          credits?: number
+          gift_key?: string
+          id?: string
+          price_brl?: number
+          purchased_at?: string
+          purchased_by?: string | null
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          redeemed_company_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_keys_redeemed_company_id_fkey"
+            columns: ["redeemed_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       holidays: {
         Row: {
           company_id: string

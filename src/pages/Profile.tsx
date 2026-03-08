@@ -82,8 +82,7 @@ const ProfilePage: React.FC = () => {
           .eq('id', user.id)
           .maybeSingle();
         profileData = data as Profile | null;
-        
-        // Auto-create profile if missing
+
         if (!profileData && user) {
           const newProfile: any = {
             id: user.id,
@@ -98,21 +97,48 @@ const ProfilePage: React.FC = () => {
       setProfile(profileData);
 
       if (profileData) {
-        // Load carousels
-        const { data: carouselData } = await supabase
+        let carouselsData: any[] = [];
+
+        const { data: ownCarousels } = await supabase
           .from('generated_carousels')
           .select('id, title, cover_url, card_count, created_at, carousel_data')
           .eq('user_id', profileData.id)
           .order('created_at', { ascending: false })
           .limit(50);
-        setCarousels((carouselData as any[]) || []);
 
-        // Load community posts
+        carouselsData = ownCarousels || [];
+
+        if (carouselsData.length === 0 && user && user.id === profileData.id) {
+          const { data: companyUser } = await supabase
+            .from('company_users')
+            .select('company_id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (companyUser?.company_id) {
+            const { data: companyCarousels } = await supabase
+              .from('generated_carousels')
+              .select('id, title, cover_url, card_count, created_at, carousel_data')
+              .eq('company_id', companyUser.company_id)
+              .order('created_at', { ascending: false })
+              .limit(50);
+
+            carouselsData = companyCarousels || [];
+          }
+        }
+
+        setCarousels(carouselsData as CarouselItem[]);
+
         const { data: posts } = await supabase
           .from('community_posts')
-          .select('carousel_id')
-          .eq('user_id', profileData.id);
-        setCommunityPosts(new Set((posts as any[])?.map(p => p.carousel_id) || []));
+          .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+          .eq('user_id', profileData.id)
+          .order('created_at', { ascending: false });
+
+        const postList = (posts as CommunityPostItem[]) || [];
+        setPublishedPosts(postList);
+        setCommunityPosts(new Set(postList.map((p) => p.carousel_id)));
       }
     } catch (err) {
       console.error('Error loading profile:', err);

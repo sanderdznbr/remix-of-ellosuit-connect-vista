@@ -80,7 +80,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     requestAnimationFrame(animate);
   }, [creditBalance]);
 
-  const handleSignOut = async () => {
+  const email = user?.email || '';
+  const username = email.split('@')[0] || 'user';
+
     await signOut();
     navigate('/');
   };

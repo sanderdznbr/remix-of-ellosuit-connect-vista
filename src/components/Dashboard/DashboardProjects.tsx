@@ -81,6 +81,36 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
     }
   };
 
+  const handlePublish = async (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    if (!user) return;
+    setPublishingId(item.id);
+    try {
+      const coverUrl = item.cover_url || null;
+      const { error } = await supabase
+        .from('community_posts')
+        .insert({
+          user_id: user.id,
+          carousel_id: item.id,
+          cover_url: coverUrl,
+          caption: item.title || item.topic,
+        } as any);
+      if (error) {
+        if (error.message?.includes('duplicate') || error.code === '23505') {
+          toast.info('Este projeto já foi publicado na comunidade');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Publicado na comunidade! 🎉');
+      }
+    } catch (err: any) {
+      toast.error('Erro ao publicar: ' + err.message);
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
   // Filter & sort
   const filtered = carousels.filter(c => {
     if (!localSearch) return true;

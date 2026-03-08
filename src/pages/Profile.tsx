@@ -445,7 +445,7 @@ const ProfilePage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white">
               {isOwnProfile ? 'Meus Posts' : 'Posts'} 
-              <span className="text-white/20 text-sm font-normal ml-2">{carousels.length}</span>
+              <span className="text-white/20 text-sm font-normal ml-2">{publishedPosts.length}</span>
             </h2>
             {isOwnProfile && (
               <button

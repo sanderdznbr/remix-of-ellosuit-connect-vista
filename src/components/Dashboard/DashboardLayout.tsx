@@ -17,11 +17,12 @@ import { useNavigate } from 'react-router-dom';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface DashboardLayoutProps {
-  onStartCarousel: (topic?: string) => void;
+  onStartCarousel?: (topic?: string) => void;
   onLoadCarousel?: (carouselItem: any) => void;
+  children?: React.ReactNode;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel, children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'home');
   const [searchQuery, setSearchQuery] = useState('');

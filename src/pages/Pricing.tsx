@@ -224,6 +224,87 @@ function LoggedInPricing() {
     else if (tab === 'projects') navigate('/');
   };
 
+  const handleRedeemCode = async () => {
+    if (!redeemCode.trim() || !user || !companyId) return;
+    setRedeemLoading(true);
+    try {
+      const { data: coupon, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', redeemCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error || !coupon) {
+        toast.error('Código inválido. Verifique e tente novamente.');
+        return;
+      }
+      if (!['credits', 'plan'].includes(coupon.coupon_type)) {
+        toast.error('Este código não é um código de resgate.');
+        return;
+      }
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+        toast.error('Código expirado.');
+        return;
+      }
+      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+        toast.error('Código já foi totalmente utilizado.');
+        return;
+      }
+      // Check if already redeemed
+      const { data: existing } = await supabase
+        .from('coupon_redemptions')
+        .select('id')
+        .eq('coupon_id', coupon.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (existing) {
+        toast.error('Você já resgatou este código.');
+        return;
+      }
+
+      if (coupon.coupon_type === 'credits') {
+        // Add credits
+        const { error: rpcErr } = await supabase.rpc('add_ai_credits', {
+          p_company_id: companyId,
+          p_amount: coupon.credits_amount,
+          p_description: `Resgate de cupom: ${coupon.code}`,
+        });
+        if (rpcErr) throw rpcErr;
+      } else if (coupon.coupon_type === 'plan' && coupon.plan_type) {
+        // Activate plan
+        await supabase.from('subscriptions').update({
+          plan_type: coupon.plan_type,
+          status: 'active',
+          monthly_price: 0,
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + (coupon.plan_months || 1) * 30 * 86400000).toISOString(),
+        }).eq('company_id', companyId);
+      }
+
+      // Record redemption & increment usage
+      await supabase.from('coupon_redemptions').insert({
+        coupon_id: coupon.id,
+        user_id: user.id,
+        company_id: companyId,
+      });
+
+      toast.success(
+        coupon.coupon_type === 'credits'
+          ? `+${coupon.credits_amount} créditos adicionados! 🎉`
+          : `Plano ${coupon.plan_type} ativado por ${coupon.plan_months || 1} mês(es)! 🎉`
+      );
+      setRedeemCode('');
+      // Refresh data
+      window.location.reload();
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao resgatar código.');
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
       <div className="hidden md:block">

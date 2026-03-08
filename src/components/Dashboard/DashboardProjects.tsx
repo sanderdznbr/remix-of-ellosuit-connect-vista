@@ -4,6 +4,9 @@ import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2 } fro
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface DashboardProjectsProps {
   onStartCarousel: (topic?: string) => void;
@@ -21,6 +24,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [loading, setLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
+  const [publishCaption, setPublishCaption] = useState('');
 
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 

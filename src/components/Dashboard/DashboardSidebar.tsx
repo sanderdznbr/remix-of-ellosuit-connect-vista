@@ -166,7 +166,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <FolderOpen className="w-4 h-4" />
-          Todos os projetos
+          Conteúdos
         </button>
         <button
           onClick={() => { onTabChange('starred'); closeSearch(); }}
@@ -188,7 +188,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <ImageIcon className="w-4 h-4" />
-          Galeria de Marca
+          Galeria
         </button>
         <button
           onClick={() => { onTabChange('prompts'); closeSearch(); }}
@@ -199,7 +199,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <MessageSquareText className="w-4 h-4" />
-          Galeria de Prompts
+          Prompts
         </button>
         <button
           onClick={() => { onTabChange('marketplace'); closeSearch(); }}
@@ -210,7 +210,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <ShoppingBag className="w-4 h-4" />
-          Marketplace
+          Estilos
         </button>
         {/* Admin-only tools — temporarily hidden */}
         {/* {email === 'admin@gmail.com' && (

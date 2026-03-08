@@ -79,11 +79,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   };
 
   const renderContent = () => {
+    if (children) return <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>;
     switch (activeTab) {
       case 'projects':
-        return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
+        return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
       case 'starred':
-        return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
+        return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
       case 'gallery':
         return <BrandGallery />;
       case 'prompts':
@@ -95,7 +96,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       case 'style-creator':
         return <StyleCreator />;
       default:
-        return <DashboardHome onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
+        return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }
   };
 

@@ -236,13 +236,30 @@ const ProfilePage: React.FC = () => {
     try {
       const carousel = carousels.find(c => c.id === selectedCarouselId);
       if (!carousel) return;
+
+      if (communityPosts.has(carousel.id)) {
+        toast.error('Este projeto já foi publicado');
+        return;
+      }
+
       const coverUrl = getCoverImage(carousel);
-      await supabase.from('community_posts').insert({
-        user_id: user.id,
-        carousel_id: carousel.id,
-        cover_url: coverUrl,
-        caption: postCaption || carousel.title,
-      } as any);
+      const { data: insertedPost, error } = await supabase
+        .from('community_posts')
+        .insert({
+          user_id: user.id,
+          carousel_id: carousel.id,
+          cover_url: coverUrl,
+          caption: postCaption || carousel.title,
+        } as any)
+        .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+        .single();
+
+      if (error) throw error;
+
+      if (insertedPost) {
+        setPublishedPosts((prev) => [insertedPost as CommunityPostItem, ...prev]);
+      }
+
       setCommunityPosts(prev => new Set([...prev, carousel.id]));
       setShowPostDialog(false);
       setPostCaption('');

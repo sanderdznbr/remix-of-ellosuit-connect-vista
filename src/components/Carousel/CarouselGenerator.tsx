@@ -1533,7 +1533,7 @@ const CarouselGenerator: React.FC = () => {
         }).join('\n');
 
         const panoramaPrompt = [
-          `IDIOMA: Todo texto renderizado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`,
+          `IDIOMA OBRIGATÓRIO: Todo texto renderizado DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. Revise cada palavra. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência.`,
           `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
           `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
           `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
@@ -1719,9 +1719,9 @@ const CarouselGenerator: React.FC = () => {
             const isCover = card.type === 'cover' || i === 0;
             const isCta = card.type === 'cta' || i === updatedCards.length - 1;
             const cardTextParts: string[] = [];
-            cardTextParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
+            cardTextParts.push(`IDIOMA OBRIGATÓRIO: Todo texto renderizado na imagem DEVE estar em PORTUGUÊS BRASILEIRO CORRETO e sem erros ortográficos. NÃO use espanhol (ex: "descubra" não "descbura", "segunda" não "secunda", "maior" não "magior", "tornou" não "tornão", "rentável" não "rentábel", "história" não "históría"). Revise CADA palavra antes de renderizar. NÃO use inglês.`);
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
-            cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas. NUNCA gere grades, mosaicos, grids de posts ou capturas de feeds de redes sociais — cada card deve ser UMA ÚNICA composição editorial. NUNCA use o símbolo "@" antes de nomes de marcas ou plataformas nos textos renderizados.`);
+            cardTextParts.push(`PROIBIDO COPIAR DAS REFERÊNCIAS: NÃO copie NENHUM texto, nome de marca, crédito de autor, watermark, assinatura ou rodapé das imagens de referência (ex: "marketing para...", "by ...", "@...", nomes de pessoas ou empresas). Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS das referências. NUNCA gere grades, mosaicos ou grids. NUNCA use "@" antes de nomes. Todo texto na imagem deve vir EXCLUSIVAMENTE do conteúdo fornecido pelo usuário abaixo.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso.`);
             
@@ -2268,7 +2268,7 @@ const CarouselGenerator: React.FC = () => {
         if (isFullBleedStyle) {
           const isCta = card.type === 'cta' || i === updatedCards.length - 1;
           const cardTextParts: string[] = [];
-          cardTextParts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
+          cardTextParts.push(`IDIOMA OBRIGATÓRIO: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência — use APENAS o estilo visual.`);
           cardTextParts.push(`TEMA: "${cleanTopic}"`);
           cardTextParts.push(`SEM BORDAS: Full bleed.`);
           cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 8% em cada borda. NENHUM texto deve encostar nas bordas.`);

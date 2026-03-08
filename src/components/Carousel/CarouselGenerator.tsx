@@ -1539,13 +1539,14 @@ const CarouselGenerator: React.FC = () => {
           `IDIOMA OBRIGATÓRIO: Todo texto renderizado DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. Revise cada palavra. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência.`,
           `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
           `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
-          `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
+          `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes, fotos, pessoas e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
+          `REGRA CRÍTICA DE TEXTO: Todo texto/tipografia DEVE estar 100% contido dentro da sua seção correspondente. NENHUMA palavra, frase ou bloco de texto pode começar em uma seção e terminar em outra. Cada fatia vertical (seção) deve ter seus textos completamente legíveis de forma independente. Apenas elementos visuais (fotos, design, cenários, gradientes, pessoas, objetos) podem fluir entre seções — TEXTO NUNCA.`,
           `TEMA: "${cleanTopic}"`,
-          `CONTEÚDO TEXTUAL POR SEÇÃO (distribua tipografia editorial ao longo da panorâmica, cada texto na sua seção correspondente):`,
+          `CONTEÚDO TEXTUAL POR SEÇÃO (cada texto DEVE ficar inteiramente dentro da sua seção, sem ultrapassar as bordas verticais de corte):`,
           allCardTexts,
           `ESTILO: Design editorial premium, tipografia integrada à composição visual, cores harmoniosas que fluem ao longo de toda a panorâmica.`,
-          `MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso entre o texto e as extremidades.`,
-          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua. NÃO coloque texto colado nas bordas.`,
+          `MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 12% nas bordas esquerda e direita de CADA SEÇÃO (considerando os pontos de corte em ${Array.from({length: panelCount - 1}, (_, i) => `${((i + 1) / panelCount * 100).toFixed(0)}%`).join(', ')} da largura total). Texto também deve respeitar 8% de margem no topo e base. NENHUM texto deve ficar próximo dos pontos de corte entre seções.`,
+          `PROIBIDO: NÃO crie divisões, separadores, linhas verticais ou bordas entre seções. NÃO copie nomes de marcas das referências. A imagem deve ser totalmente contínua. NÃO coloque texto colado nas bordas. NÃO permita que texto cruze de uma seção para outra.`,
           brandName ? `MARCA: "${brandName}" discretamente posicionada.` : '',
         ].filter(Boolean).join('\n');
 

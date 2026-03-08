@@ -51,10 +51,13 @@ function AdminContent() {
   const [actionTarget, setActionTarget] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
 
-  // Auth guard
+  // Auth guard — only block non-admin AFTER auth loads
   useEffect(() => {
-    if (!authLoading && (!user || user.email !== ADMIN_EMAIL)) {
+    if (!authLoading && user && user.email !== ADMIN_EMAIL) {
       navigate('/');
+    }
+    if (!authLoading && !user) {
+      navigate('/auth');
     }
   }, [user, authLoading, navigate]);
 
@@ -63,7 +66,7 @@ function AdminContent() {
     setLoading(true);
     try {
       const [{ count: usersCount }, { count: activeSubs }, { data: elloSubs }, { count: carouselsCount }] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('source', 'ellocontent'),
         supabase.from('ellocontent_subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('ellocontent_subscriptions').select('monthly_price, status'),
         supabase.from('generated_carousels').select('*', { count: 'exact', head: true }),
@@ -96,7 +99,8 @@ function AdminContent() {
     try {
       let query = supabase
         .from('profiles')
-        .select('id, display_name, username, avatar_url, created_at')
+        .select('id, display_name, username, avatar_url, created_at, source')
+        .eq('source', 'ellocontent')
         .order('created_at', { ascending: false })
         .limit(100);
 

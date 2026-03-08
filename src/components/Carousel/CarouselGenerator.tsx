@@ -1577,7 +1577,7 @@ const CarouselGenerator: React.FC = () => {
                 fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
-                panoramicCardCount: cardCount,
+                panoramicCardCount: panelCount,
               },
             });
             if (imgErr) throw imgErr;

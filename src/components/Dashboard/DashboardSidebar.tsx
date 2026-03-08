@@ -205,6 +205,20 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <CreditCard className="w-4 h-4" />
           Afiliados
         </button>
+        {/* Admin Panel - only for admin@gmail.com */}
+        {email === 'admin@gmail.com' && (
+          <button
+            onClick={() => { navigate('/admin'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              location.pathname === '/admin'
+                ? 'bg-purple-500/20 text-purple-400 font-medium'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Painel Admin
+          </button>
+        )}
       </div>
 
       {/* Recents */}

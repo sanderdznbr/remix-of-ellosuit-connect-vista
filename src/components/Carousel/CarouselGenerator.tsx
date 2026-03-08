@@ -1017,7 +1017,7 @@ const CarouselGenerator: React.FC = () => {
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover, continuousMode };
       if (currentCarouselId) {
         await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselId);
         // Capture real rendered card as cover in background
@@ -1079,6 +1079,8 @@ const CarouselGenerator: React.FC = () => {
       if (sc.wearsGlasses !== undefined) setWearsGlasses(sc.wearsGlasses);
       if (sc.facePersons?.length) setFacePersons(sc.facePersons);
       if (sc.allPeopleOnCover !== undefined) setAllPeopleOnCover(sc.allPeopleOnCover);
+      // Restore continuous mode
+      if (sc.continuousMode) setContinuousMode(true); else setContinuousMode(false);
     }
     setShowHistory(false);
     setActiveCardIndex(0);

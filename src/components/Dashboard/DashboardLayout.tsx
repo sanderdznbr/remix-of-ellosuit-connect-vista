@@ -17,11 +17,12 @@ import { useNavigate } from 'react-router-dom';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface DashboardLayoutProps {
-  onStartCarousel: (topic?: string) => void;
+  onStartCarousel?: (topic?: string) => void;
   onLoadCarousel?: (carouselItem: any) => void;
+  children?: React.ReactNode;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel, children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,11 +79,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   };
 
   const renderContent = () => {
+    if (children) return <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>;
     switch (activeTab) {
       case 'projects':
-        return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
+        return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
       case 'starred':
-        return <DashboardProjects onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
+        return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
       case 'gallery':
         return <BrandGallery />;
       case 'prompts':
@@ -94,7 +96,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       case 'style-creator':
         return <StyleCreator />;
       default:
-        return <DashboardHome onStartCarousel={onStartCarousel} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
+        return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }
   };
 
@@ -137,10 +139,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                     <div className="h-full rounded-full bg-purple-500/60" style={{ width: `${Math.min(100, ((creditBalance ?? 0) / 100) * 100)}%` }} />
                   </div>
                 </div>
-                <button onClick={() => { setProfileOpen(false); toast.info('Perfil em breve!'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                <button onClick={() => { setProfileOpen(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                   <User className="w-4 h-4" /> Perfil
                 </button>
-                <button onClick={() => { setProfileOpen(false); toast.info('Configurações em breve!'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                <button onClick={() => { setProfileOpen(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                   <Settings className="w-4 h-4" /> Configurações
                 </button>
                 <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">

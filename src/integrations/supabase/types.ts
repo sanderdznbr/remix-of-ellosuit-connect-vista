@@ -1397,6 +1397,44 @@ export type Database = {
           },
         ]
       }
+      community_posts: {
+        Row: {
+          caption: string | null
+          carousel_id: string
+          cover_url: string | null
+          created_at: string
+          id: string
+          likes_count: number
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          carousel_id: string
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          likes_count?: number
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          carousel_id?: string
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          likes_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_carousel_id_fkey"
+            columns: ["carousel_id"]
+            isOneToOne: true
+            referencedRelation: "generated_carousels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           created_at: string
@@ -3815,6 +3853,45 @@ export type Database = {
           id?: string
           phone?: string
           verified?: boolean | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          banner_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          instagram: string | null
+          updated_at: string
+          username: string | null
+          website: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          banner_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          instagram?: string | null
+          updated_at?: string
+          username?: string | null
+          website?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          banner_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          instagram?: string | null
+          updated_at?: string
+          username?: string | null
+          website?: string | null
         }
         Relationships: []
       }

@@ -17,6 +17,8 @@ import Checkout from './pages/Checkout';
 import MarketplaceStyleDetail from './pages/MarketplaceStyleDetail';
 import Recursos from './pages/Recursos';
 import Suporte from './pages/Suporte';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
 const queryClient = new QueryClient();
 
@@ -41,6 +43,9 @@ const App = () => (
             <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
             <Route path="/recursos" element={<Recursos />} />
             <Route path="/suporte" element={<Suporte />} />
+            <Route path="/perfil" element={<Profile />} />
+            <Route path="/perfil/:username" element={<Profile />} />
+            <Route path="/configuracoes" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

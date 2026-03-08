@@ -2877,6 +2877,8 @@ FORBIDDEN:
     try {
       const isContinuous = continuousMode || currentData.cards.some(c => c.generatedPrompt?.includes('Panorama Contínuo'));
       const panelCount = currentData.cards.length;
+      const targetPanoramaAspect = (panelCount * 4) / 5;
+      const minAcceptedPanoramaAspect = targetPanoramaAspect * 0.82;
       
       if (isContinuous && panelCount >= 2 && panelCount <= 3) {
         // Re-generate as panoramic continuous

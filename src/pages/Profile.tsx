@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
-import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, Upload, X, Check } from 'lucide-react';
+import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, Upload, X, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Profile {

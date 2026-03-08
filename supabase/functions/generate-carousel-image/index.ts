@@ -106,7 +106,8 @@ Deno.serve(async (req) => {
 
     const formatInstruction = (() => {
       if (isPanoramicMode) {
-        return `Gere UMA imagem PANORÂMICA CONTÍNUA no formato ${outputAspectRatio}. A arte deve fluir continuamente da esquerda para a direita, sem cortes, sem divisórias internas, sem bordas entre seções. Esta panorâmica será fatiada em ${panoramicSections} partes verticais iguais, então mantenha continuidade visual total entre todas as seções.`;
+        const totalWidth = panoramicSections * 1080;
+        return `CRITICAL PANORAMIC IMAGE: Generate ONE SINGLE ultra-wide panoramic image. Exact dimensions: ${totalWidth}x1350 pixels (aspect ratio ${outputAspectRatio}). The image MUST be MUCH WIDER than it is tall — approximately ${panoramicSections}x wider. This is a HORIZONTAL LANDSCAPE panorama, NOT a portrait. The entire scene must flow continuously from left edge to right edge as ONE unified composition — no divisions, no panels, no separators. Visual elements (backgrounds, scenery, objects, people, gradients) must span seamlessly across the full width. This panorama will be sliced into ${panoramicSections} equal vertical strips, so ensure visual continuity at every potential cut point.`;
       }
 
       if (outputAspectRatio === '9:16') {

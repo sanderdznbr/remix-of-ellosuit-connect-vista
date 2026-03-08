@@ -392,17 +392,35 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
             <div className="flex-1 pb-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">{profile.display_name || 'Usuário'}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">{profile.display_name || 'Usuário'}</h1>
+                {planType && PLAN_BADGES[planType] && (planStatus === 'active' || planStatus === 'trialing') && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${PLAN_BADGES[planType].color}`}>
+                    <Crown className="w-3 h-3" />
+                    {PLAN_BADGES[planType].label}
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-white/30">@{profile.username}</p>
             </div>
-            {isOwnProfile && !editing && (
-              <button
-                onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" /> Editar perfil
-              </button>
-            )}
+            <div className="flex gap-2">
+              {isOwnProfile && (
+                <button
+                  onClick={() => navigate('/configuracoes')}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium text-purple-300 border border-purple-500/20 hover:bg-purple-500/10 transition-colors cursor-pointer"
+                >
+                  Ver detalhes de assinatura
+                </button>
+              )}
+              {isOwnProfile && !editing && (
+                <button
+                  onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Editar perfil
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Edit form */}

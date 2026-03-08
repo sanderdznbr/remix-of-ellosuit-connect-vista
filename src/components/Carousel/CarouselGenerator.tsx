@@ -1723,6 +1723,7 @@ const CarouselGenerator: React.FC = () => {
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
             cardTextParts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas imagens de referência — use pessoas DIFERENTES com aparências variadas. NUNCA gere grades, mosaicos, grids de posts ou capturas de feeds de redes sociais — cada card deve ser UMA ÚNICA composição editorial. NUNCA use o símbolo "@" antes de nomes de marcas ou plataformas nos textos renderizados.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+            cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso.`);
             
             if (logoUrl && brandName) {
               const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };

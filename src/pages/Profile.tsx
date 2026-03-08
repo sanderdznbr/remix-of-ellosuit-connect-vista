@@ -568,54 +568,46 @@ const ProfilePage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {carousels.map(carousel => {
-                const cover = getCoverImage(carousel);
-                const isPublished = communityPosts.has(carousel.id);
+              {publishedPosts.map(post => {
                 return (
-                  <div key={carousel.id} className="relative group rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/15 transition-all">
+                  <div key={post.id} className="relative group rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/15 transition-all cursor-pointer" onClick={() => navigate(`/post/${post.id}`)}>
                     <div style={{ aspectRatio: '4/5' }} className="bg-white/[0.03]">
-                      {cover ? (
-                        <img src={cover} alt={carousel.title} className="w-full h-full object-cover" loading="lazy" />
+                      {post.cover_url ? (
+                        <img src={post.cover_url} alt={post.caption || ''} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/10 text-xs">Sem capa</div>
                       )}
                     </div>
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                      <p className="text-white text-xs font-medium text-center line-clamp-2">{carousel.title}</p>
-                      <p className="text-white/30 text-[10px]">{carousel.card_count} cards</p>
+                      <p className="text-white text-xs font-medium text-center line-clamp-2">{post.caption || 'Post'}</p>
+                      <div className="flex items-center gap-1 text-white/40 text-[10px]">
+                        <Heart className="w-3 h-3" /> {post.likes_count || 0}
+                      </div>
                       <div className="flex gap-2 mt-1">
                         <button
-                          onClick={() => navigate(`/carousel/${carousel.id}`)}
+                          onClick={(e) => { e.stopPropagation(); copyPostLink(post.id); }}
                           className="px-3 py-1.5 rounded-lg text-[10px] font-medium text-white bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
                         >
-                          <ExternalLink className="w-3 h-3 inline mr-1" /> Ver
+                          <Copy className="w-3 h-3 inline mr-1" /> Link
                         </button>
                         {isOwnProfile && (
                           <button
-                            onClick={() => handlePublishToCommunity(carousel)}
-                            disabled={publishingId === carousel.id}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                              isPublished
-                                ? 'bg-green-500/20 text-green-300 hover:bg-red-500/20 hover:text-red-300'
-                                : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const carousel = carousels.find(c => c.id === post.carousel_id);
+                              if (carousel) handlePublishToCommunity(carousel);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors cursor-pointer"
                           >
-                            {publishingId === carousel.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : isPublished ? (
-                              <><Heart className="w-3 h-3 inline mr-1 fill-current" /> Publicado</>
-                            ) : (
-                              <><Share2 className="w-3 h-3 inline mr-1" /> Publicar</>
-                            )}
+                            <X className="w-3 h-3 inline mr-1" /> Remover
                           </button>
                         )}
                       </div>
                     </div>
-                    {isPublished && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center">
-                        <Heart className="w-3 h-3 text-white fill-white" />
-                      </div>
-                    )}
+                    <div className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/50 backdrop-blur-sm">
+                      <Heart className="w-2.5 h-2.5 text-white/50" />
+                      <span className="text-[9px] text-white/50">{post.likes_count || 0}</span>
+                    </div>
                   </div>
                 );
               })}

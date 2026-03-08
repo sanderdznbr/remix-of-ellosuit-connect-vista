@@ -203,7 +203,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-white/50 hover:text-white/80 hover:bg-white/[0.04]`}
         >
           <CreditCard className="w-4 h-4" />
-          Parceiros
+          Afiliados
         </button>
       </div>
 

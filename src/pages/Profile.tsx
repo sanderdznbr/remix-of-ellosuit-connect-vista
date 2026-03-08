@@ -39,6 +39,10 @@ const ProfilePage: React.FC = () => {
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
   const [uploading, setUploading] = useState<'avatar' | 'banner' | null>(null);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [showPostDialog, setShowPostDialog] = useState(false);
+  const [postCaption, setPostCaption] = useState('');
+  const [selectedCarouselId, setSelectedCarouselId] = useState<string | null>(null);
+  const [creatingPost, setCreatingPost] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 

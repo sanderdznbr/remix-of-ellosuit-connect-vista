@@ -133,7 +133,14 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
         {/* Continuous mode toggle (advanced only, carousel only) */}
         {wizardMode === 'advanced' && contentMode === 'carousel' && cardCount >= 2 && setContinuousMode && (
           <button
-            onClick={() => setContinuousMode(!continuousMode)}
+            onClick={() => {
+              const newVal = !continuousMode;
+              setContinuousMode(newVal);
+              // Force 3 cards max when enabling continuous mode
+              if (newVal && cardCount > 3) {
+                setCardCount(3);
+              }
+            }}
             className={`w-full p-4 rounded-2xl text-left transition-all border ${
               continuousMode
                 ? 'bg-gradient-to-r from-purple-500/15 to-indigo-500/15 border-purple-500/40'
@@ -147,7 +154,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
               <div className="flex-1">
                 <p className={`text-sm font-semibold ${continuousMode ? 'text-purple-300' : 'text-white/60'}`}>Carrossel Contínuo</p>
                 <p className="text-[11px] text-white/30 mt-0.5 leading-relaxed">
-                  A arte flui entre os slides sem corte, criando um efeito panorâmico contínuo
+                  Arte panorâmica contínua dividida em 3 slides sem corte
                 </p>
               </div>
               <div className={`w-10 h-5 rounded-full transition-all relative ${continuousMode ? 'bg-purple-500' : 'bg-white/10'}`}>
@@ -158,7 +165,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
               <div className="mt-3 pt-3 flex items-start gap-2" style={{ borderTop: '1px solid rgba(139,92,246,0.15)' }}>
                 <Sparkles className="h-3.5 w-3.5 text-purple-400/60 mt-0.5 shrink-0" />
                 <p className="text-[10px] text-white/25 leading-relaxed">
-                  A IA gera uma composição panorâmica única e fatia automaticamente entre os {cardCount} slides, com texto e elementos visuais fluindo entre eles.
+                  A IA gera uma composição panorâmica única e fatia automaticamente em 3 slides, com elementos visuais fluindo entre eles.
                 </p>
               </div>
             )}

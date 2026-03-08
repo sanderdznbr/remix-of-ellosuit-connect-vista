@@ -181,6 +181,31 @@ const ProfilePage: React.FC = () => {
     return c.cover_url || c.carousel_data?.cards?.[0]?.imageUrl || null;
   };
 
+  const handleCreatePost = async () => {
+    if (!user || !selectedCarouselId) return;
+    setCreatingPost(true);
+    try {
+      const carousel = carousels.find(c => c.id === selectedCarouselId);
+      if (!carousel) return;
+      const coverUrl = getCoverImage(carousel);
+      await supabase.from('community_posts').insert({
+        user_id: user.id,
+        carousel_id: carousel.id,
+        cover_url: coverUrl,
+        caption: postCaption || carousel.title,
+      } as any);
+      setCommunityPosts(prev => new Set([...prev, carousel.id]));
+      setShowPostDialog(false);
+      setPostCaption('');
+      setSelectedCarouselId(null);
+      toast.success('Post publicado na comunidade! 🎉');
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
+    } finally {
+      setCreatingPost(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>

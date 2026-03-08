@@ -137,6 +137,7 @@ const ProfilePage: React.FC = () => {
     try {
       const { error } = await supabase.from('profiles').update({
         display_name: editForm.display_name,
+        username: editForm.username,
         bio: editForm.bio,
         website: editForm.website,
         instagram: editForm.instagram,
@@ -281,7 +282,7 @@ const ProfilePage: React.FC = () => {
             </div>
             {isOwnProfile && !editing && (
               <button
-                onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
+                onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" /> Editar perfil
@@ -296,6 +297,11 @@ const ProfilePage: React.FC = () => {
                 <div>
                   <label className="text-[11px] text-white/30 font-medium mb-1 block">Nome</label>
                   <input value={editForm.display_name || ''} onChange={e => setEditForm(prev => ({ ...prev, display_name: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white outline-none focus:border-purple-500/40" />
+                </div>
+                <div>
+                  <label className="text-[11px] text-white/30 font-medium mb-1 block">Usuário</label>
+                  <input value={editForm.username || ''} onChange={e => setEditForm(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))} placeholder="meu_usuario"
                     className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white outline-none focus:border-purple-500/40" />
                 </div>
                 <div>
@@ -350,7 +356,7 @@ const ProfilePage: React.FC = () => {
               {isOwnProfile ? 'Meus Posts' : 'Posts'} 
               <span className="text-white/20 text-sm font-normal ml-2">{carousels.length}</span>
             </h2>
-            {isOwnProfile && carousels.length > 0 && (
+            {isOwnProfile && (
               <button
                 onClick={() => setShowPostDialog(true)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white cursor-pointer transition-all hover:opacity-90"

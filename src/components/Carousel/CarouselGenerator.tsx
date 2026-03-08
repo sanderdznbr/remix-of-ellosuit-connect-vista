@@ -1735,21 +1735,23 @@ const CarouselGenerator: React.FC = () => {
               cardTextParts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
             }
             
+            cardTextParts.push(`REGRA CRÍTICA DE TEXTO: Copie os textos abaixo LETRA POR LETRA, EXATAMENTE como escritos. NÃO invente, NÃO altere, NÃO troque letras, NÃO adicione acentos incorretos. Se o texto diz "os", escreva "os" (NÃO "on"). Se diz "financeiros", escreva "financeiros" (NÃO "financierios"). Se diz "Descubra", escreva "Descubra" (NÃO "Desctura"). Cada caractere deve ser idêntico ao fornecido.`);
+            
             if (isCover) {
               cardTextParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${updatedCards.length}).`);
-              cardTextParts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${card.title || cleanTopic}"`);
-              if (card.subtitle) cardTextParts.push(`SUBTÍTULO: "${card.subtitle}"`);
+              cardTextParts.push(`TÍTULO EXATO PARA RENDERIZAR (copie caractere por caractere): "${card.title || cleanTopic}"`);
+              if (card.subtitle) cardTextParts.push(`SUBTÍTULO EXATO (copie caractere por caractere): "${card.subtitle}"`);
               cardTextParts.push(`Deve ser o card mais impactante, estilo capa de revista, com tipografia grande.`);
             } else if (isCta) {
               cardTextParts.push(`ESTE É O CARD FINAL DE CTA (Card ${i + 1} de ${updatedCards.length}).`);
-              if (card.title) cardTextParts.push(`TÍTULO DO CTA: "${card.title}"`);
-              if (card.body) cardTextParts.push(`TEXTO DO CTA: "${card.body}"`);
+              if (card.title) cardTextParts.push(`TÍTULO EXATO DO CTA (copie caractere por caractere): "${card.title}"`);
+              if (card.body) cardTextParts.push(`TEXTO EXATO DO CTA (copie caractere por caractere): "${card.body}"`);
               cardTextParts.push(`Card de encerramento com call-to-action. NÃO é uma capa/hero.`);
             } else {
               cardTextParts.push(`CARD DE CONTEÚDO ${i + 1} de ${updatedCards.length} (NÃO é capa, NÃO é hero).`);
               const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
-              if (bodyText) cardTextParts.push(`TEXTO PRINCIPAL PARA RENDERIZAR NA IMAGEM: "${bodyText}"`);
-              if (card.bodyBottom) cardTextParts.push(`TEXTO SECUNDÁRIO: "${card.bodyBottom}"`);
+              if (bodyText) cardTextParts.push(`TEXTO PRINCIPAL EXATO PARA RENDERIZAR (copie caractere por caractere, sem alterar NENHUMA letra): "${bodyText}"`);
+              if (card.bodyBottom) cardTextParts.push(`TEXTO SECUNDÁRIO EXATO (copie caractere por caractere): "${card.bodyBottom}"`);
               cardTextParts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
             }
             imgPrompt = cardTextParts.join('\n');

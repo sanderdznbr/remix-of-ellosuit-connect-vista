@@ -221,7 +221,7 @@ function CommunityContent() {
               {post.cover_url && (
                 <div
                   className="w-full cursor-pointer"
-                  style={{ aspectRatio: '4/5' }}
+                  style={{ aspectRatio: '4/5', maxHeight: '360px' }}
                   onClick={() => navigate(`/post/${post.id}`)}
                 >
                   <img src={post.cover_url} alt={post.caption || ''} className="w-full h-full object-cover" loading="lazy" />

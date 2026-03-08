@@ -271,13 +271,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               </div>
               <div className="py-1">
                 <button
-                  onClick={() => { setShowProfileMenu(false); toast.info('Perfil em breve!'); }}
+                  onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
                 >
                   <User className="w-4 h-4" /> Perfil
                 </button>
                 <button
-                  onClick={() => { setShowProfileMenu(false); toast.info('Configurações em breve!'); }}
+                  onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
                 >
                   <Settings className="w-4 h-4" /> Configurações

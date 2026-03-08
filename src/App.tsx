@@ -21,6 +21,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import PostPublic from './pages/PostPublic';
 import Presentear from './pages/Presentear';
+import Parceiros from './pages/Parceiros';
 
 const queryClient = new QueryClient();
 

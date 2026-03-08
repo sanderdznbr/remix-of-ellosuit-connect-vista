@@ -562,7 +562,7 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {carousels.length === 0 ? (
+          {publishedPosts.length === 0 ? (
             <div className="text-center py-16 text-white/20">
               <p className="text-sm">Nenhum post criado ainda</p>
             </div>

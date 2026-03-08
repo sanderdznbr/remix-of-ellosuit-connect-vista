@@ -57,7 +57,7 @@ const ProfilePage: React.FC = () => {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const isOwnProfile = user && profile && user.id === profile.id;
-  const profileUserId = username ? null : user?.id;
+  
 
   useEffect(() => {
     loadProfile();

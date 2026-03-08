@@ -445,7 +445,7 @@ const ProfilePage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white">
               {isOwnProfile ? 'Meus Posts' : 'Posts'} 
-              <span className="text-white/20 text-sm font-normal ml-2">{carousels.length}</span>
+              <span className="text-white/20 text-sm font-normal ml-2">{publishedPosts.length}</span>
             </h2>
             {isOwnProfile && (
               <button
@@ -580,42 +580,15 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
 
-          {/* Published posts section */}
-          {publishedPosts.length > 0 && (
-            <div className="mt-10">
-              <h3 className="text-base font-semibold text-white mb-3">Publicados na comunidade</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {publishedPosts.map((post) => (
-                  <div key={post.id} className="rounded-xl border border-white/[0.08] p-3 bg-white/[0.02]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/[0.04] shrink-0">
-                        {post.cover_url ? (
-                          <img src={post.cover_url} alt={post.caption || 'Post'} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">Sem capa</div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-white/80 line-clamp-2">{post.caption || 'Sem descrição'}</p>
-                        <p className="text-xs text-white/35 mt-1">{new Date(post.created_at).toLocaleDateString('pt-BR')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <button onClick={() => navigate(`/post/${post.id}`)} className="px-3 py-1.5 rounded-lg text-xs text-white bg-white/10 hover:bg-white/20 cursor-pointer transition-colors">
-                        <ExternalLink className="w-3 h-3 inline mr-1" /> Abrir
-                      </button>
-                      <button onClick={() => copyPostLink(post.id)} className="px-3 py-1.5 rounded-lg text-xs text-purple-300 bg-purple-500/20 hover:bg-purple-500/30 cursor-pointer transition-colors">
-                        <Copy className="w-3 h-3 inline mr-1" /> Copiar link
-                      </button>
-                      <span className="text-xs text-white/35 ml-auto inline-flex items-center gap-1">
-                        <Heart className="w-3 h-3" /> {post.likes_count || 0}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Ver comunidade button */}
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => navigate('/comunidade')}
+              className="px-6 py-2.5 rounded-xl text-sm font-medium text-purple-300 border border-purple-500/30 hover:bg-purple-500/10 transition-colors cursor-pointer"
+            >
+              Ver Comunidade
+            </button>
+          </div>
         </div>
       </div>
     </DashboardLayout>

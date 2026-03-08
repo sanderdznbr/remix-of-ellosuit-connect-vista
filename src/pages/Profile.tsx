@@ -282,7 +282,7 @@ const ProfilePage: React.FC = () => {
             </div>
             {isOwnProfile && !editing && (
               <button
-                onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
+                onClick={() => { setEditing(true); setEditForm({ display_name: profile.display_name, username: profile.username, bio: profile.bio, website: profile.website, instagram: profile.instagram }); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" /> Editar perfil

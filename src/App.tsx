@@ -47,6 +47,7 @@ const App = () => (
             <Route path="/perfil" element={<Profile />} />
             <Route path="/perfil/:username" element={<Profile />} />
             <Route path="/configuracoes" element={<Settings />} />
+            <Route path="/post/:postId" element={<PostPublic />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

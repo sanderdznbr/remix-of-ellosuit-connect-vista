@@ -269,6 +269,7 @@ const CarouselGenerator: React.FC = () => {
   const [editingCard, setEditingCard] = useState<number | null>(null);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
+  const [regeneratingAll, setRegeneratingAll] = useState(false);
    const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
    const [faceUploadMode, setFaceUploadMode] = useState(false);
    const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);
@@ -2835,6 +2836,137 @@ FORBIDDEN:
     }
   };
 
+  // ===== REGENERATE ALL CARDS (re-generates entire carousel, respects continuous/panoramic mode) =====
+  const regenerateAll = async () => {
+    const currentData = carouselDataRef.current;
+    if (!currentData || currentData.cards.length === 0) return;
+    
+    setRegeneratingAll(true);
+    
+    try {
+      const isContinuous = continuousMode || currentData.cards.some(c => c.generatedPrompt?.includes('Panorama Contínuo'));
+      const panelCount = currentData.cards.length;
+      
+      if (isContinuous && panelCount >= 2 && panelCount <= 3) {
+        // Re-generate as panoramic continuous
+        const cleanTopic = cleanMentionsFromTopic(topic.split('\n')[0].trim());
+        const allCardTexts = currentData.cards.map((c, i) => {
+          const title = c.title || c.bodyTop || '';
+          const body = c.bodyBottom || c.body || '';
+          return `Seção ${i + 1}: ${title}${body ? ` — ${body}` : ''}`;
+        }).join('\n');
+
+        const panoramaPrompt = [
+          `IDIOMA OBRIGATÓRIO: Todo texto renderizado DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. Revise cada palavra. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência.`,
+          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
+          `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
+          `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções.`,
+          `TEMA: "${cleanTopic}"`,
+          `CONTEÚDO TEXTUAL POR SEÇÃO:`,
+          allCardTexts,
+          `ESTILO: Design editorial premium, tipografia integrada à composição visual, cores harmoniosas que fluem ao longo de toda a panorâmica.`,
+          `MARGENS DE SEGURANÇA: Todo texto deve respeitar margem interna de 8% em cada borda. NENHUM texto deve encostar nas bordas.`,
+          `PROIBIDO: NÃO crie divisões, separadores ou bordas entre seções. NÃO copie nomes de marcas das referências. NÃO coloque texto colado nas bordas.`,
+          brandName ? `MARCA: "${brandName}" discretamente posicionada.` : '',
+        ].filter(Boolean).join('\n');
+
+        const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+        const marketplaceRefUrls: string[] = [];
+        if (activeMarketplaceStyle?._previewImages?.length) {
+          const origin = window.location.origin;
+          marketplaceRefUrls.push(...(activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`));
+        }
+        const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+        const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+        const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+        const panoramaAspectRatio = panelCount === 2 ? '8:5' : '12:5';
+        
+        let panoramaUrl: string | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+            const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
+            
+            const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
+              body: {
+                prompt: buildImagePrompt(panoramaPrompt),
+                imageSize: panoramaAspectRatio,
+                topic: cleanTopic,
+                faceReferenceUrls: allFaceRefUrls.length > 0 ? allFaceRefUrls : undefined,
+                styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+                imageModel: resolvedModel === 'higgsfield' ? 'gemini' : resolvedModel,
+                negativePrompt: [styleNeg, 'no visible cuts, no separators, no vertical lines dividing sections'].filter(Boolean).join(', '),
+                fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
+                ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
+                panoramic: true,
+                panoramicCardCount: panelCount,
+              },
+            });
+            if (imgErr) throw imgErr;
+            if (imgData?.success && imgData?.imageUrl) {
+              panoramaUrl = imgData.imageUrl;
+              break;
+            }
+          } catch (err) {
+            console.warn(`Panorama regen attempt ${attempt + 1} failed:`, err);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+
+        if (panoramaUrl) {
+          const img = document.createElement('img');
+          img.crossOrigin = 'anonymous';
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('Failed to load panorama'));
+            img.src = panoramaUrl!;
+          });
+
+          const sliceWidth = Math.floor(img.width / panelCount);
+          const updatedCards = [...currentData.cards];
+          for (let i = 0; i < panelCount; i++) {
+            const canvas = document.createElement('canvas');
+            canvas.width = sliceWidth;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, i * sliceWidth, 0, sliceWidth, img.height, 0, 0, sliceWidth, img.height);
+              updatedCards[i] = {
+                ...updatedCards[i],
+                imageUrl: canvas.toDataURL('image/jpeg', 0.92),
+                isAiImage: true,
+                generatedPrompt: `[Panorama Contínuo - Fatia ${i + 1}/${panelCount}]\n${panoramaPrompt}`,
+              };
+            }
+          }
+          setCarouselData({ ...currentData, cards: updatedCards });
+          toast({ title: '🌄 Panorama regenerado!', description: `${panelCount} slides regenerados com continuidade` });
+        } else {
+          toast({ title: 'Falha ao regenerar panorama', variant: 'destructive' });
+        }
+      } else {
+        // Non-continuous: regenerate each card sequentially
+        for (let i = 0; i < currentData.cards.length; i++) {
+          setRegeneratingCard(i);
+          try {
+            await regenerateCard(i);
+          } catch (err) {
+            console.warn(`Failed to regenerate card ${i}:`, err);
+          }
+          setRegeneratingCard(null);
+          // Small delay between cards
+          if (i < currentData.cards.length - 1) await new Promise(r => setTimeout(r, 500));
+        }
+        toast({ title: '✨ Todos os cards regenerados!' });
+      }
+    } catch (err: any) {
+      console.error('Regenerate all error:', err);
+      toast({ title: 'Erro ao regenerar tudo', description: err.message, variant: 'destructive' });
+    } finally {
+      setRegeneratingAll(false);
+    }
+  };
+
   // ===== REGENERATE FACE ONLY (Image editing via Gemini) =====
   const regenerateFace = async (cardIndex: number, overrideFaceUrls?: string[]) => {
     if (!carouselData) return;
@@ -4558,6 +4690,15 @@ FORBIDDEN:
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-purple-300 hover:text-purple-200 border transition-all"
                   style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
                   <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
+                </button>
+              )}
+              {/* Regenerate All button */}
+              {carouselData.cards.length >= 2 && !isGuest && (
+                <button onClick={regenerateAll} disabled={regeneratingAll || regeneratingCard !== null}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
+                  style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                  {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                  {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
                 </button>
               )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}

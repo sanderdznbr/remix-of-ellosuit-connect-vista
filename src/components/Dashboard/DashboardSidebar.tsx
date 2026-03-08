@@ -188,7 +188,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
         >
           <ImageIcon className="w-4 h-4" />
-          Galeria de Marca
+          Galeria
         </button>
         <button
           onClick={() => { onTabChange('prompts'); closeSearch(); }}

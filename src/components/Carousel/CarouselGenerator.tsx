@@ -1530,6 +1530,8 @@ const CarouselGenerator: React.FC = () => {
       if (continuousMode && cardCount >= 2) {
         // Force 3 cards for continuous mode
         const panelCount = Math.min(cardCount, 3);
+        const targetPanoramaAspect = (panelCount * 4) / 5;
+        const minAcceptedPanoramaAspect = targetPanoramaAspect * 0.82;
         setImageGenProgress('🌄 Gerando panorama contínuo...');
 
         // Build a panoramic prompt with all card texts
@@ -1592,7 +1594,21 @@ const CarouselGenerator: React.FC = () => {
             });
             if (imgErr) throw imgErr;
             if (imgData?.success && imgData?.imageUrl) {
-              panoramaUrl = imgData.imageUrl;
+              const candidateUrl = imgData.imageUrl as string;
+              const candidateAspect = await new Promise<number>((resolve, reject) => {
+                const probe = document.createElement('img');
+                probe.crossOrigin = 'anonymous';
+                probe.onload = () => resolve(probe.width / Math.max(probe.height, 1));
+                probe.onerror = () => reject(new Error('Failed to load panorama candidate'));
+                probe.src = candidateUrl;
+              });
+
+              if (candidateAspect < minAcceptedPanoramaAspect) {
+                console.warn(`Panorama candidate rejected (aspect ${candidateAspect.toFixed(2)} < ${minAcceptedPanoramaAspect.toFixed(2)})`);
+                continue;
+              }
+
+              panoramaUrl = candidateUrl;
               break;
             }
           } catch (err) {
@@ -1640,8 +1656,15 @@ const CarouselGenerator: React.FC = () => {
             toast({ title: 'Erro ao fatiar panorama', variant: 'destructive' });
           }
         } else {
-          toast({ title: 'Falha ao gerar panorama contínuo', description: 'Gerando cards individualmente como fallback...', variant: 'destructive' });
-          // Fall through to normal generation below
+          toast({ title: 'Falha ao gerar carrossel contínuo', description: 'A IA não retornou panorama largo suficiente. Tente regenerar novamente no modo contínuo.', variant: 'destructive' });
+          setGeneratingAllImages(false);
+          setImageGenProgress('');
+          if (localJobId) {
+            failCloudJob(localJobId, 'Falha ao gerar panorama contínuo válido');
+            setCloudJobId(null);
+          }
+          setGenerating(false);
+          return;
         }
 
         // If panorama succeeded, skip normal image generation
@@ -2854,6 +2877,8 @@ FORBIDDEN:
     try {
       const isContinuous = continuousMode || currentData.cards.some(c => c.generatedPrompt?.includes('Panorama Contínuo'));
       const panelCount = currentData.cards.length;
+      const targetPanoramaAspect = (panelCount * 4) / 5;
+      const minAcceptedPanoramaAspect = targetPanoramaAspect * 0.82;
       
       if (isContinuous && panelCount >= 2 && panelCount <= 3) {
         // Re-generate as panoramic continuous
@@ -2913,7 +2938,21 @@ FORBIDDEN:
             });
             if (imgErr) throw imgErr;
             if (imgData?.success && imgData?.imageUrl) {
-              panoramaUrl = imgData.imageUrl;
+              const candidateUrl = imgData.imageUrl as string;
+              const candidateAspect = await new Promise<number>((resolve, reject) => {
+                const probe = document.createElement('img');
+                probe.crossOrigin = 'anonymous';
+                probe.onload = () => resolve(probe.width / Math.max(probe.height, 1));
+                probe.onerror = () => reject(new Error('Failed to load panorama candidate'));
+                probe.src = candidateUrl;
+              });
+
+              if (candidateAspect < minAcceptedPanoramaAspect) {
+                console.warn(`Panorama regen candidate rejected (aspect ${candidateAspect.toFixed(2)} < ${minAcceptedPanoramaAspect.toFixed(2)})`);
+                continue;
+              }
+
+              panoramaUrl = candidateUrl;
               break;
             }
           } catch (err) {

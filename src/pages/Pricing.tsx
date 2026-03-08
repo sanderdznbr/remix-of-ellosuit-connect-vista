@@ -239,10 +239,51 @@ function LoggedInPricing() {
     if (!redeemCode.trim() || !user || !companyId) return;
     setRedeemLoading(true);
     try {
+      const code = redeemCode.trim().toUpperCase();
+
+      // First check if it's a gift key
+      if (code.startsWith('GIFT-')) {
+        const { data: giftKey, error: giftErr } = await supabase
+          .from('gift_keys' as any)
+          .select('*')
+          .eq('gift_key', code)
+          .eq('status', 'available')
+          .maybeSingle();
+
+        if (giftErr || !giftKey) {
+          toast.error('Código inválido ou já resgatado.');
+          return;
+        }
+
+        const gk = giftKey as any;
+
+        // Add credits
+        const { error: rpcErr } = await supabase.rpc('add_ai_credits', {
+          p_company_id: companyId,
+          p_amount: gk.credits,
+          p_description: `Presente resgatado: ${code}`,
+        });
+        if (rpcErr) throw rpcErr;
+
+        // Mark key as redeemed
+        await supabase.from('gift_keys' as any).update({
+          status: 'redeemed',
+          redeemed_by: user.id,
+          redeemed_at: new Date().toISOString(),
+          redeemed_company_id: companyId,
+        } as any).eq('gift_key', code);
+
+        toast.success(`+${gk.credits} créditos adicionados! 🎉`);
+        setRedeemCode('');
+        window.location.reload();
+        return;
+      }
+
+      // Otherwise check coupons table
       const { data: coupon, error } = await supabase
         .from('coupons')
         .select('*')
-        .eq('code', redeemCode.trim().toUpperCase())
+        .eq('code', code)
         .eq('is_active', true)
         .maybeSingle();
 
@@ -262,7 +303,6 @@ function LoggedInPricing() {
         toast.error('Código já foi totalmente utilizado.');
         return;
       }
-      // Check if already redeemed
       const { data: existing } = await supabase
         .from('coupon_redemptions')
         .select('id')
@@ -275,7 +315,6 @@ function LoggedInPricing() {
       }
 
       if (coupon.coupon_type === 'credits') {
-        // Add credits
         const { error: rpcErr } = await supabase.rpc('add_ai_credits', {
           p_company_id: companyId,
           p_amount: coupon.credits_amount,
@@ -283,7 +322,6 @@ function LoggedInPricing() {
         });
         if (rpcErr) throw rpcErr;
       } else if (coupon.coupon_type === 'plan' && coupon.plan_type) {
-        // Activate plan
         await supabase.from('subscriptions').update({
           plan_type: coupon.plan_type as any,
           status: 'active' as any,
@@ -293,7 +331,6 @@ function LoggedInPricing() {
         }).eq('company_id', companyId);
       }
 
-      // Record redemption & increment usage
       await supabase.from('coupon_redemptions').insert({
         coupon_id: coupon.id,
         user_id: user.id,
@@ -306,7 +343,6 @@ function LoggedInPricing() {
           : `Plano ${coupon.plan_type} ativado por ${coupon.plan_months || 1} mês(es)! 🎉`
       );
       setRedeemCode('');
-      // Refresh data
       window.location.reload();
     } catch (err: any) {
       console.error(err);

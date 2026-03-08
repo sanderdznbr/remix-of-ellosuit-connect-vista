@@ -301,6 +301,7 @@ const CarouselGenerator: React.FC = () => {
   const [storiesImageUrl, setStoriesImageUrl] = useState<string | null>(null);
   const [showStoriesPreview, setShowStoriesPreview] = useState(false);
   const [showAddCardMenu, setShowAddCardMenu] = useState(false);
+  const [showRegenModeMenu, setShowRegenModeMenu] = useState(false);
   const [addCardModal, setAddCardModal] = useState<{ open: boolean; cardType: 'composed' | 'solid'; step: 'type' | 'text-mode' | 'manual' | 'auto-preview'; autoText: { title: string; body: string } | null; manualText: { title: string; body: string }; generatingAutoText: boolean }>({ open: false, cardType: 'composed', step: 'type', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false });
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);

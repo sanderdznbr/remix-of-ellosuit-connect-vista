@@ -401,7 +401,7 @@ function CheckoutContent() {
               )}
 
               <button onClick={handleSubmit} disabled={loading} className="w-full py-3.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-50" style={{ backgroundColor: '#7B50DC', color: '#ffffff' }}>
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : mode === 'plan' ? `Assinar por R$${displayPrice}/mês` : `Pagar R$${displayPrice}`}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : mode === 'plan' ? `Assinar por R$${displayPrice.toFixed(2).replace('.', ',')}/mês` : `Pagar R$${displayPrice.toFixed(2).replace('.', ',')}`}
               </button>
 
               <div className="flex items-center justify-center gap-1.5 mt-3">

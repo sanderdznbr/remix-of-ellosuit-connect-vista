@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
-import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, Upload, X, Check, Plus } from 'lucide-react';
+import { Camera, Edit3, Globe, Instagram, Loader2, Heart, ExternalLink, Share2, X, Check, Plus, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Profile {
@@ -27,6 +27,15 @@ interface CarouselItem {
   is_published?: boolean;
 }
 
+interface CommunityPostItem {
+  id: string;
+  carousel_id: string;
+  caption: string | null;
+  cover_url: string | null;
+  likes_count: number;
+  created_at: string;
+}
+
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
@@ -34,6 +43,7 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [carousels, setCarousels] = useState<CarouselItem[]>([]);
   const [communityPosts, setCommunityPosts] = useState<Set<string>>(new Set());
+  const [publishedPosts, setPublishedPosts] = useState<CommunityPostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Profile>>({});
@@ -47,7 +57,7 @@ const ProfilePage: React.FC = () => {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const isOwnProfile = user && profile && user.id === profile.id;
-  const profileUserId = username ? null : user?.id;
+  
 
   useEffect(() => {
     loadProfile();
@@ -72,8 +82,7 @@ const ProfilePage: React.FC = () => {
           .eq('id', user.id)
           .maybeSingle();
         profileData = data as Profile | null;
-        
-        // Auto-create profile if missing
+
         if (!profileData && user) {
           const newProfile: any = {
             id: user.id,
@@ -88,21 +97,48 @@ const ProfilePage: React.FC = () => {
       setProfile(profileData);
 
       if (profileData) {
-        // Load carousels
-        const { data: carouselData } = await supabase
+        let carouselsData: any[] = [];
+
+        const { data: ownCarousels } = await supabase
           .from('generated_carousels')
           .select('id, title, cover_url, card_count, created_at, carousel_data')
           .eq('user_id', profileData.id)
           .order('created_at', { ascending: false })
           .limit(50);
-        setCarousels((carouselData as any[]) || []);
 
-        // Load community posts
+        carouselsData = ownCarousels || [];
+
+        if (carouselsData.length === 0 && user && user.id === profileData.id) {
+          const { data: companyUser } = await supabase
+            .from('company_users')
+            .select('company_id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (companyUser?.company_id) {
+            const { data: companyCarousels } = await supabase
+              .from('generated_carousels')
+              .select('id, title, cover_url, card_count, created_at, carousel_data')
+              .eq('company_id', companyUser.company_id)
+              .order('created_at', { ascending: false })
+              .limit(50);
+
+            carouselsData = companyCarousels || [];
+          }
+        }
+
+        setCarousels(carouselsData as CarouselItem[]);
+
         const { data: posts } = await supabase
           .from('community_posts')
-          .select('carousel_id')
-          .eq('user_id', profileData.id);
-        setCommunityPosts(new Set((posts as any[])?.map(p => p.carousel_id) || []));
+          .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+          .eq('user_id', profileData.id)
+          .order('created_at', { ascending: false });
+
+        const postList = (posts as CommunityPostItem[]) || [];
+        setPublishedPosts(postList);
+        setCommunityPosts(new Set(postList.map((p) => p.carousel_id)));
       }
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -134,18 +170,30 @@ const ProfilePage: React.FC = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+
+    const normalizedUsername = (editForm.username || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '');
+
+    if (!normalizedUsername) {
+      toast.error('Defina um nome de usuário válido');
+      return;
+    }
+
     try {
       const { error } = await supabase.from('profiles').update({
         display_name: editForm.display_name,
-        username: editForm.username,
+        username: normalizedUsername,
         bio: editForm.bio,
         website: editForm.website,
         instagram: editForm.instagram,
       } as any).eq('id', user.id);
       if (error) throw error;
-      setProfile(prev => prev ? { ...prev, ...editForm } : prev);
+
+      setProfile(prev => prev ? { ...prev, ...editForm, username: normalizedUsername } : prev);
       setEditing(false);
       toast.success('Perfil atualizado!');
+      navigate('/perfil');
     } catch (err: any) {
       toast.error('Erro: ' + err.message);
     }
@@ -157,17 +205,30 @@ const ProfilePage: React.FC = () => {
     try {
       const isPublished = communityPosts.has(carousel.id);
       if (isPublished) {
-        await supabase.from('community_posts').delete().eq('carousel_id', carousel.id).eq('user_id', user.id);
+        const postToRemove = publishedPosts.find((p) => p.carousel_id === carousel.id);
+        if (postToRemove) {
+          await supabase.from('community_posts').delete().eq('id', postToRemove.id).eq('user_id', user.id);
+          setPublishedPosts((prev) => prev.filter((p) => p.id !== postToRemove.id));
+        }
         setCommunityPosts(prev => { const n = new Set(prev); n.delete(carousel.id); return n; });
         toast.success('Post removido da comunidade');
       } else {
         const coverUrl = carousel.cover_url || carousel.carousel_data?.cards?.[0]?.imageUrl || null;
-        await supabase.from('community_posts').insert({
-          user_id: user.id,
-          carousel_id: carousel.id,
-          cover_url: coverUrl,
-          caption: carousel.title,
-        } as any);
+        const { data: insertedPost, error } = await supabase
+          .from('community_posts')
+          .insert({
+            user_id: user.id,
+            carousel_id: carousel.id,
+            cover_url: coverUrl,
+            caption: carousel.title,
+          } as any)
+          .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+          .single();
+
+        if (error) throw error;
+        if (insertedPost) {
+          setPublishedPosts((prev) => [insertedPost as CommunityPostItem, ...prev]);
+        }
         setCommunityPosts(prev => new Set([...prev, carousel.id]));
         toast.success('Post publicado na comunidade! 🎉');
       }
@@ -188,13 +249,30 @@ const ProfilePage: React.FC = () => {
     try {
       const carousel = carousels.find(c => c.id === selectedCarouselId);
       if (!carousel) return;
+
+      if (communityPosts.has(carousel.id)) {
+        toast.error('Este projeto já foi publicado');
+        return;
+      }
+
       const coverUrl = getCoverImage(carousel);
-      await supabase.from('community_posts').insert({
-        user_id: user.id,
-        carousel_id: carousel.id,
-        cover_url: coverUrl,
-        caption: postCaption || carousel.title,
-      } as any);
+      const { data: insertedPost, error } = await supabase
+        .from('community_posts')
+        .insert({
+          user_id: user.id,
+          carousel_id: carousel.id,
+          cover_url: coverUrl,
+          caption: postCaption || carousel.title,
+        } as any)
+        .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+        .single();
+
+      if (error) throw error;
+
+      if (insertedPost) {
+        setPublishedPosts((prev) => [insertedPost as CommunityPostItem, ...prev]);
+      }
+
       setCommunityPosts(prev => new Set([...prev, carousel.id]));
       setShowPostDialog(false);
       setPostCaption('');
@@ -204,6 +282,18 @@ const ProfilePage: React.FC = () => {
       toast.error('Erro: ' + err.message);
     } finally {
       setCreatingPost(false);
+    }
+  };
+
+  const unpublishedCarousels = carousels.filter((c) => !communityPosts.has(c.id));
+
+  const copyPostLink = async (postId: string) => {
+    const link = `${window.location.origin}/post/${postId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o link');
     }
   };
 
@@ -377,9 +467,9 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 {/* Project Selection */}
-                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto</label>
+                <label className="text-[11px] text-white/30 font-medium mb-2 block">Selecione um projeto gerado</label>
                 <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-4 pr-1">
-                  {carousels.filter(c => !communityPosts.has(c.id)).map(c => {
+                  {unpublishedCarousels.map(c => {
                     const cover = getCoverImage(c);
                     const isSelected = selectedCarouselId === c.id;
                     return (
@@ -395,8 +485,11 @@ const ProfilePage: React.FC = () => {
                       </button>
                     );
                   })}
-                  {carousels.filter(c => !communityPosts.has(c.id)).length === 0 && (
-                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Todos os projetos já foram publicados</p>
+                  {carousels.length === 0 && (
+                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Nenhum projeto encontrado para publicar</p>
+                  )}
+                  {carousels.length > 0 && unpublishedCarousels.length === 0 && (
+                    <p className="col-span-3 text-center text-white/20 text-xs py-4">Todos os seus projetos já foram publicados</p>
                   )}
                 </div>
 
@@ -440,7 +533,6 @@ const ProfilePage: React.FC = () => {
                         <div className="w-full h-full flex items-center justify-center text-white/10 text-xs">Sem capa</div>
                       )}
                     </div>
-                    {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
                       <p className="text-white text-xs font-medium text-center line-clamp-2">{carousel.title}</p>
                       <p className="text-white/30 text-[10px]">{carousel.card_count} cards</p>
@@ -472,7 +564,6 @@ const ProfilePage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    {/* Published badge */}
                     {isPublished && (
                       <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center">
                         <Heart className="w-3 h-3 text-white fill-white" />
@@ -481,6 +572,43 @@ const ProfilePage: React.FC = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Published posts section */}
+          {publishedPosts.length > 0 && (
+            <div className="mt-10">
+              <h3 className="text-base font-semibold text-white mb-3">Publicados na comunidade</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {publishedPosts.map((post) => (
+                  <div key={post.id} className="rounded-xl border border-white/[0.08] p-3 bg-white/[0.02]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/[0.04] shrink-0">
+                        {post.cover_url ? (
+                          <img src={post.cover_url} alt={post.caption || 'Post'} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">Sem capa</div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-white/80 line-clamp-2">{post.caption || 'Sem descrição'}</p>
+                        <p className="text-xs text-white/35 mt-1">{new Date(post.created_at).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <button onClick={() => navigate(`/post/${post.id}`)} className="px-3 py-1.5 rounded-lg text-xs text-white bg-white/10 hover:bg-white/20 cursor-pointer transition-colors">
+                        <ExternalLink className="w-3 h-3 inline mr-1" /> Abrir
+                      </button>
+                      <button onClick={() => copyPostLink(post.id)} className="px-3 py-1.5 rounded-lg text-xs text-purple-300 bg-purple-500/20 hover:bg-purple-500/30 cursor-pointer transition-colors">
+                        <Copy className="w-3 h-3 inline mr-1" /> Copiar link
+                      </button>
+                      <span className="text-xs text-white/35 ml-auto inline-flex items-center gap-1">
+                        <Heart className="w-3 h-3" /> {post.likes_count || 0}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

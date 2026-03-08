@@ -205,17 +205,30 @@ const ProfilePage: React.FC = () => {
     try {
       const isPublished = communityPosts.has(carousel.id);
       if (isPublished) {
-        await supabase.from('community_posts').delete().eq('carousel_id', carousel.id).eq('user_id', user.id);
+        const postToRemove = publishedPosts.find((p) => p.carousel_id === carousel.id);
+        if (postToRemove) {
+          await supabase.from('community_posts').delete().eq('id', postToRemove.id).eq('user_id', user.id);
+          setPublishedPosts((prev) => prev.filter((p) => p.id !== postToRemove.id));
+        }
         setCommunityPosts(prev => { const n = new Set(prev); n.delete(carousel.id); return n; });
         toast.success('Post removido da comunidade');
       } else {
         const coverUrl = carousel.cover_url || carousel.carousel_data?.cards?.[0]?.imageUrl || null;
-        await supabase.from('community_posts').insert({
-          user_id: user.id,
-          carousel_id: carousel.id,
-          cover_url: coverUrl,
-          caption: carousel.title,
-        } as any);
+        const { data: insertedPost, error } = await supabase
+          .from('community_posts')
+          .insert({
+            user_id: user.id,
+            carousel_id: carousel.id,
+            cover_url: coverUrl,
+            caption: carousel.title,
+          } as any)
+          .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+          .single();
+
+        if (error) throw error;
+        if (insertedPost) {
+          setPublishedPosts((prev) => [insertedPost as CommunityPostItem, ...prev]);
+        }
         setCommunityPosts(prev => new Set([...prev, carousel.id]));
         toast.success('Post publicado na comunidade! 🎉');
       }

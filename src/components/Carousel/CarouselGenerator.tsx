@@ -3805,8 +3805,8 @@ FORBIDDEN:
                         setFaceCardCount={setFaceCardCount}
                         wizardMode={wizardMode}
                         guestMode={isGuest}
-                        continuousMode={user?.email === 'admin@gmail.com' ? continuousMode : false}
-                        setContinuousMode={user?.email === 'admin@gmail.com' ? setContinuousMode : undefined}
+                        continuousMode={continuousMode}
+                        setContinuousMode={setContinuousMode}
                       />
                     )}
                     {currentStepName === 'Fotos' && (

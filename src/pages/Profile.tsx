@@ -108,48 +108,62 @@ const ProfilePage: React.FC = () => {
       setProfile(profileData);
 
       if (profileData) {
-        let carouselsData: any[] = [];
-
-        const { data: ownCarousels } = await supabase
-          .from('generated_carousels')
-          .select('id, title, cover_url, card_count, created_at, carousel_data')
-          .eq('user_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        carouselsData = ownCarousels || [];
-
-        if (carouselsData.length === 0 && user && user.id === profileData.id) {
-          const { data: companyUser } = await supabase
+        // Parallelize all queries
+        const [carouselsRes, postsRes, companyRes] = await Promise.all([
+          supabase
+            .from('generated_carousels')
+            .select('id, title, cover_url, card_count, created_at, carousel_data')
+            .eq('user_id', profileData.id)
+            .order('created_at', { ascending: false })
+            .limit(50),
+          supabase
+            .from('community_posts')
+            .select('id, carousel_id, cover_url, caption, likes_count, created_at')
+            .eq('user_id', profileData.id)
+            .order('created_at', { ascending: false }),
+          user ? supabase
             .from('company_users')
             .select('company_id')
-            .eq('user_id', user.id)
+            .eq('user_id', profileData.id)
             .limit(1)
-            .maybeSingle();
+            .maybeSingle() : Promise.resolve({ data: null }),
+        ]);
 
-          if (companyUser?.company_id) {
-            const { data: companyCarousels } = await supabase
-              .from('generated_carousels')
-              .select('id, title, cover_url, card_count, created_at, carousel_data')
-              .eq('company_id', companyUser.company_id)
-              .order('created_at', { ascending: false })
-              .limit(50);
+        let carouselsData = carouselsRes.data || [];
 
-            carouselsData = companyCarousels || [];
-          }
+        // If no carousels by user_id, try company_id
+        if (carouselsData.length === 0 && companyRes.data?.company_id && user?.id === profileData.id) {
+          const { data: companyCarousels } = await supabase
+            .from('generated_carousels')
+            .select('id, title, cover_url, card_count, created_at, carousel_data')
+            .eq('company_id', companyRes.data.company_id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+          carouselsData = companyCarousels || [];
         }
 
         setCarousels(carouselsData as CarouselItem[]);
 
-        const { data: posts } = await supabase
-          .from('community_posts')
-          .select('id, carousel_id, cover_url, caption, likes_count, created_at')
-          .eq('user_id', profileData.id)
-          .order('created_at', { ascending: false });
-
-        const postList = (posts as CommunityPostItem[]) || [];
+        const postList = (postsRes.data as CommunityPostItem[]) || [];
         setPublishedPosts(postList);
         setCommunityPosts(new Set(postList.map((p) => p.carousel_id)));
+
+        // Fetch subscription for badge
+        if (companyRes.data?.company_id) {
+          const [subRes, elloRes] = await Promise.all([
+            supabase.from('subscriptions').select('plan_type, status').eq('company_id', companyRes.data.company_id).maybeSingle(),
+            supabase.from('ellocontent_subscriptions').select('plan_name, status').eq('company_id', companyRes.data.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          const ello = elloRes.data as any;
+          const sub = subRes.data as any;
+          if (ello?.status === 'active' || ello?.status === 'trialing') {
+            setPlanType(ello.plan_name?.toLowerCase());
+            setPlanStatus(ello.status);
+          } else if (sub && sub.status !== 'free') {
+            setPlanType(sub.plan_type);
+            setPlanStatus(sub.status);
+          }
+        }
       }
     } catch (err) {
       console.error('Error loading profile:', err);

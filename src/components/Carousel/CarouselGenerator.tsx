@@ -4249,6 +4249,8 @@ FORBIDDEN:
                     el._dragStartY = e.clientY;
                     el._isDragging = false;
                     el._dragDeltaX = 0;
+                    const inner = el.querySelector('[data-drag-track]') as HTMLElement;
+                    const viewportWidth = el.getBoundingClientRect().width;
                     const onMove = (ev: MouseEvent) => {
                       const dx = ev.clientX - el._dragStartX;
                       const dy = ev.clientY - el._dragStartY;
@@ -4256,22 +4258,26 @@ FORBIDDEN:
                       if (el._isDragging) {
                         el._dragDeltaX = dx;
                         el.style.cursor = 'grabbing';
-                        const inner = el.querySelector('[data-drag-track]') as HTMLElement;
-                        if (inner) inner.style.transform = `translateX(${dx}px)`;
+                        if (inner) { inner.style.transition = 'none'; inner.style.transform = `translateX(${dx}px)`; }
                       }
                     };
                     const onUp = () => {
                       window.removeEventListener('mousemove', onMove);
                       window.removeEventListener('mouseup', onUp);
                       el.style.cursor = 'grab';
-                      const inner = el.querySelector('[data-drag-track]') as HTMLElement;
-                      if (inner) { inner.style.transition = 'transform 0.3s ease'; inner.style.transform = 'translateX(0)'; setTimeout(() => { inner.style.transition = ''; }, 300); }
                       if (el._isDragging && Math.abs(el._dragDeltaX) > 50) {
                         if (el._dragDeltaX < 0 && activeCardIndex < carouselData.cards.length - 1 && !isCardLocked(activeCardIndex + 1)) {
-                          setActiveCardIndex(activeCardIndex + 1);
+                          // Animate slide to left, then change index
+                          if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = `translateX(${-viewportWidth}px)`; }
+                          setTimeout(() => { setActiveCardIndex(activeCardIndex + 1); if (inner) { inner.style.transition = 'none'; inner.style.transform = 'translateX(0)'; } }, 300);
                         } else if (el._dragDeltaX > 0 && activeCardIndex > 0) {
-                          setActiveCardIndex(activeCardIndex - 1);
+                          if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = `translateX(${viewportWidth}px)`; }
+                          setTimeout(() => { setActiveCardIndex(activeCardIndex - 1); if (inner) { inner.style.transition = 'none'; inner.style.transform = 'translateX(0)'; } }, 300);
+                        } else {
+                          if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = 'translateX(0)'; }
                         }
+                      } else {
+                        if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = 'translateX(0)'; }
                       }
                       el._isDragging = false;
                     };
@@ -4292,18 +4298,24 @@ FORBIDDEN:
                     el._touchDragging = true;
                     el._touchDeltaX = dx;
                     const inner = el.querySelector('[data-drag-track]') as HTMLElement;
-                    if (inner) inner.style.transform = `translateX(${dx}px)`;
+                    if (inner) { inner.style.transition = 'none'; inner.style.transform = `translateX(${dx}px)`; }
                   }}
                   onTouchEnd={(e) => {
                     const el = e.currentTarget as any;
                     const inner = el.querySelector('[data-drag-track]') as HTMLElement;
-                    if (inner) { inner.style.transition = 'transform 0.3s ease'; inner.style.transform = 'translateX(0)'; setTimeout(() => { inner.style.transition = ''; }, 300); }
+                    const viewportWidth = el.getBoundingClientRect().width;
                     if (el._touchDragging && Math.abs(el._touchDeltaX) > 40) {
                       if (el._touchDeltaX < 0 && activeCardIndex < carouselData.cards.length - 1 && !isCardLocked(activeCardIndex + 1)) {
-                        setActiveCardIndex(activeCardIndex + 1);
+                        if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = `translateX(${-viewportWidth}px)`; }
+                        setTimeout(() => { setActiveCardIndex(activeCardIndex + 1); if (inner) { inner.style.transition = 'none'; inner.style.transform = 'translateX(0)'; } }, 300);
                       } else if (el._touchDeltaX > 0 && activeCardIndex > 0) {
-                        setActiveCardIndex(activeCardIndex - 1);
+                        if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = `translateX(${viewportWidth}px)`; }
+                        setTimeout(() => { setActiveCardIndex(activeCardIndex - 1); if (inner) { inner.style.transition = 'none'; inner.style.transform = 'translateX(0)'; } }, 300);
+                      } else {
+                        if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = 'translateX(0)'; }
                       }
+                    } else {
+                      if (inner) { inner.style.transition = 'transform 0.3s cubic-bezier(0.25,0.1,0.25,1)'; inner.style.transform = 'translateX(0)'; }
                     }
                     el._touchStartX = null;
                     el._touchDragging = false;

@@ -60,8 +60,9 @@ const ProfilePage: React.FC = () => {
   
 
   useEffect(() => {
+    if (authLoading) return;
     loadProfile();
-  }, [username, user]);
+  }, [username, user, authLoading]);
 
   const loadProfile = async () => {
     setLoading(true);

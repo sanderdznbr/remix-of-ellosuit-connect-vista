@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, Copy, Loader2, Download, Share2, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Loader2, Download, Share2, ShoppingBag, Clock, Gift, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
@@ -58,6 +58,18 @@ async function renderCodeOnCard(backImageSrc: string, code: string): Promise<str
   });
 }
 
+interface GiftHistory {
+  id: string;
+  gift_key: string;
+  credits: number;
+  price_brl: number;
+  purchased_at: string;
+  status: string;
+  redeemed_at: string | null;
+  redeemed_by: string | null;
+  redeemed_email?: string;
+}
+
 export default function Presentear() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -66,11 +78,46 @@ export default function Presentear() {
   const [purchasedCard, setPurchasedCard] = useState<{
     key: string;
     credits: number;
-    backWithCode: string; // rendered back image with code burned in
+    backWithCode: string;
     frontSrc: string;
   } | null>(null);
   const [showFlip, setShowFlip] = useState(false);
   const hasGeneratedRef = useRef(false);
+  const [history, setHistory] = useState<GiftHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('gift_keys' as any)
+        .select('id, gift_key, credits, price_brl, purchased_at, status, redeemed_at, redeemed_by')
+        .eq('purchased_by', user.id)
+        .order('purchased_at', { ascending: false }) as any;
+      if (error) throw error;
+
+      // Resolve redeemed_by emails
+      const items: GiftHistory[] = data || [];
+      const redeemerIds = items.filter(i => i.redeemed_by).map(i => i.redeemed_by!);
+      if (redeemerIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', redeemerIds) as any;
+        const profileMap: Record<string, string> = {};
+        (profiles || []).forEach((p: any) => { profileMap[p.id] = p.display_name || p.id; });
+        items.forEach((i: GiftHistory) => {
+          if (i.redeemed_by) i.redeemed_email = profileMap[i.redeemed_by] || String(i.redeemed_by);
+        });
+      }
+      setHistory(items);
+    } catch (e) {
+      console.error('Error loading gift history:', e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     const purchased = searchParams.get('purchased');
@@ -82,6 +129,8 @@ export default function Presentear() {
       generateGiftKey(credits, price);
     }
   }, [searchParams, user]);
+
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const generateGiftKey = async (credits: number, price: number) => {
     setGeneratingKey(true);
@@ -116,6 +165,7 @@ export default function Presentear() {
       }, 600);
 
       toast.success('Chave de presente gerada!');
+      loadHistory();
     } catch (err: any) {
       console.error(err);
       toast.error('Erro ao gerar chave. Tente novamente.');
@@ -294,6 +344,78 @@ export default function Presentear() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Purchase History */}
+        {user && !purchasedCard && !generatingKey && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-20"
+          >
+            <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-white/40" />
+              Histórico de compras
+            </h2>
+
+            {loadingHistory ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-5 h-5 animate-spin text-white/30" />
+              </div>
+            ) : history.length === 0 ? (
+              <p className="text-white/25 text-sm text-center py-12">Nenhuma compra realizada ainda.</p>
+            ) : (
+              <div className="space-y-3">
+                {history.map((item) => {
+                  const isRedeemed = item.status === 'redeemed';
+                  const purchasedDate = new Date(item.purchased_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+                  const redeemedDate = item.redeemed_at ? new Date(item.redeemed_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 rounded-xl px-5 py-4 transition-colors"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <div className={`flex items-center justify-center w-9 h-9 rounded-full shrink-0 ${isRedeemed ? 'bg-green-500/10' : 'bg-purple-500/10'}`}>
+                        {isRedeemed ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Gift className="w-4 h-4 text-purple-400" />}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-white font-mono text-sm font-medium">{item.gift_key}</span>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(item.gift_key); toast.success('Chave copiada!'); }}
+                            className="text-white/20 hover:text-white/50 transition-colors cursor-pointer"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-white/30 text-xs">
+                          {item.credits} créditos · R${Number(item.price_brl).toFixed(2).replace('.', ',')} · {purchasedDate}
+                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        {isRedeemed ? (
+                          <>
+                            <span className="inline-block text-xs font-medium text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full mb-1">Resgatado</span>
+                            <p className="text-white/25 text-[11px]">
+                              {redeemedDate}
+                              {item.redeemed_email && <><br />por {item.redeemed_email}</>}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="inline-block text-xs font-medium text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded-full">Disponível</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );

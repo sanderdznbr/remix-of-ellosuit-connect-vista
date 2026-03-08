@@ -99,7 +99,8 @@ function AdminContent() {
     try {
       let query = supabase
         .from('profiles')
-        .select('id, display_name, username, avatar_url, created_at')
+        .select('id, display_name, username, avatar_url, created_at, source')
+        .eq('source', 'ellocontent')
         .order('created_at', { ascending: false })
         .limit(100);
 

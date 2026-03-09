@@ -213,27 +213,27 @@ const ImageCard: React.FC<CardProps> = ({
         boxShadow: isCurrentlySelecting ? '0 0 0 2px rgba(123,80,220,0.3)' : 'none',
       }}
     >
-      <div className="relative w-full aspect-square overflow-hidden select-none">
-        <img
-          src={displaySrc}
-          alt=""
-          className="w-full h-full object-cover"
-          style={{
-            filter: phase === 'selecting' && itemIndex > selectionIndex && item.status === 'idle'
-              ? 'brightness(0.4)' : 'none',
-          }}
-          draggable={false}
-        />
+        <div className="relative w-full aspect-[4/5] overflow-hidden select-none">
+          <img
+            src={displaySrc}
+            alt=""
+            className="w-full h-full object-contain"
+            style={{
+              filter: phase === 'selecting' && itemIndex > selectionIndex && item.status === 'idle'
+                ? 'brightness(0.4)' : 'none',
+            }}
+            draggable={false}
+          />
 
-        {/* Region boxes preview */}
-        {item.regions.map(r => (
-          <div key={r.id} className="absolute pointer-events-none" style={{
-            left: `${r.x}%`, top: `${r.y}%`,
-            width: `${r.width}%`, height: `${r.height}%`,
-            border: '2px solid #ef4444',
-            backgroundColor: 'rgba(239,68,68,0.15)',
-          }} />
-        ))}
+          {/* Region boxes preview (only during selection/processing, never in final done state) */}
+          {item.status !== 'done' && item.regions.map(r => (
+            <div key={r.id} className="absolute pointer-events-none" style={{
+              left: `${r.x}%`, top: `${r.y}%`,
+              width: `${r.width}%`, height: `${r.height}%`,
+              border: '2px solid #ef4444',
+              backgroundColor: 'rgba(239,68,68,0.15)',
+            }} />
+          ))}
 
         {item.status === 'removing' && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>

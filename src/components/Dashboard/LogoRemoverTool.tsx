@@ -503,6 +503,7 @@ interface LogoRemoverToolProps {
 }
 
 const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onInitialFilesConsumed }) => {
+  const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);

@@ -17,11 +17,6 @@ import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
-import { useNavigate } from 'react-router-dom';
-import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface DashboardLayoutProps {
   onStartCarousel?: (topic?: string) => void;

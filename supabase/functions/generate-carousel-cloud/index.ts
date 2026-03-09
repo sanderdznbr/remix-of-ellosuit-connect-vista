@@ -244,7 +244,8 @@ Deno.serve(async (req) => {
     });
 
     const marketplaceStyle = job.marketplace_style_config;
-    const isFullBleed = !!marketplaceStyle?.imageGeneration?.prompt_style;
+    let promptStyle = marketplaceStyle?.imageGeneration?.prompt_style || '';
+    const isFullBleed = !!promptStyle;
     const styleNeg = marketplaceStyle?.imageGeneration?.negative_prompt || '';
     const baseNeg = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
     const antiFaceNeg = 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.';
@@ -257,12 +258,102 @@ Deno.serve(async (req) => {
     const marketplaceRefUrls: string[] = [];
     if (isFullBleed && marketplaceStyle?._previewImages?.length) {
       const allPreviews = (marketplaceStyle._previewImages as string[]).filter((p: string) => p.startsWith('http'));
-      // Send ALL preview images for maximum style fidelity
       for (const preview of allPreviews) {
         marketplaceRefUrls.push(preview);
       }
     }
     const allStyleRefs = [...new Set([...styleRefUrls, ...marketplaceRefUrls])];
+
+    // === STYLE DNA ANALYSIS: Detect generic prompts and enhance with AI vision ===
+    const isGenericPrompt = promptStyle.includes('EXACTLY replicates the visual style shown in the reference images') && !promptStyle.includes('=== BACKGROUND ===');
+    if (isGenericPrompt && allStyleRefs.length > 0 && timeLeft() > 60_000) {
+      console.log('Detected generic prompt_style — running AI visual DNA analysis...');
+      await updateJob(jobId, { progress_message: '🔍 Analisando DNA visual do estilo...' });
+      try {
+        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+        const analysisContent: any[] = [];
+        // Send up to 4 reference images for analysis
+        for (const ref of allStyleRefs.slice(0, 4)) {
+          analysisContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
+        analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:
+{
+  "background": "exact background description (colors, gradients, textures, patterns, solid/gradient/photo)",
+  "typography": "exact font style description (serif/sans-serif/display/handwritten, weight bold/light/regular, size hierarchy, effects like outline/shadow/glow/3D/gradient-fill, letter-spacing, transforms)",
+  "layout": "exact layout description (grid structure, text zones vs image zones, alignment left/center/right, margins, padding, vertical/horizontal flow)",
+  "colors_hex": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
+  "color_roles": "which color is used for what (background, text, accent, highlight, decorative)",
+  "decorative": "exact decorative elements (geometric shapes, lines, dots, circles, icons, textures, overlays, gradients, shadows, glows, borders, dividers)",
+  "photo_treatment": "photo style (duotone, high-contrast, muted, vibrant, grain, blur, cutout, masked, no-photo)",
+  "mood": "overall aesthetic mood in 2-3 words",
+  "signature": "the ONE most distinctive recognizable feature of this style"
+}
+Be EXTREMELY specific. Use exact descriptions, not generalities. No markdown, pure JSON only.` });
+
+        const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{ role: 'user', content: analysisContent }],
+          }),
+        });
+
+        if (dnaRes.ok) {
+          const dnaData = await dnaRes.json();
+          const dnaText = dnaData?.choices?.[0]?.message?.content || '';
+          const cleaned = dnaText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const dna = JSON.parse(cleaned);
+          console.log('Visual DNA analyzed:', JSON.stringify(dna).slice(0, 300));
+
+          // Build enhanced prompt_style from DNA analysis
+          promptStyle = `Create an Instagram carousel post with MAXIMUM FIDELITY to the reference style. Follow these EXACT visual specifications:
+
+=== BACKGROUND ===
+${dna.background || 'Match backgrounds from references exactly.'}
+
+=== TYPOGRAPHY ===
+${dna.typography || 'Match typography from references exactly.'}
+- Reproduce the EXACT font style, weight, size hierarchy, and text effects.
+
+=== LAYOUT & COMPOSITION ===
+${dna.layout || 'Follow the exact layout from references.'}
+
+=== COLOR PALETTE (MANDATORY — use ONLY these colors) ===
+Hex values: ${(dna.colors_hex || []).join(', ')}
+Roles: ${dna.color_roles || 'Match color usage from references.'}
+Do NOT introduce colors outside this palette.
+
+=== DECORATIVE ELEMENTS ===
+${dna.decorative || 'Reproduce decorative elements from references.'}
+
+=== PHOTO TREATMENT ===
+${dna.photo_treatment || 'Match photo treatment from references.'}
+
+=== MOOD: ${dna.mood || 'Match mood from references.'} ===
+
+=== SIGNATURE ELEMENT (MUST be present) ===
+${dna.signature || 'Replicate the most distinctive feature.'}
+
+=== CRITICAL RULES ===
+1. PROIBIDO: NÃO copie nomes de usuário (@), empresas, marcas, logos ou informações pessoais.
+2. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
+3. SEM BORDAS: Full bleed, sem barras ou bordas.
+4. O resultado DEVE parecer parte da MESMA COLEÇÃO que as referências.
+5. Cada card deve ter variação de layout MAS MESMA identidade visual.`;
+
+          // Update the marketplace style config in the job for consistency
+          if (marketplaceStyle?.imageGeneration) {
+            marketplaceStyle.imageGeneration.prompt_style = promptStyle;
+          }
+        }
+      } catch (dnaErr) {
+        console.error('DNA analysis failed (continuing with generic prompt):', dnaErr);
+      }
+    }
 
     // Extract brandColors once before the loop
     const brandColors = (imageSettings.brandColors as string[] | undefined) || [];

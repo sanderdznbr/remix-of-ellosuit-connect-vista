@@ -106,6 +106,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <StyleCreator />;
       case 'logo-remover':
         return <LogoRemoverTool initialFiles={behanceFiles} onInitialFilesConsumed={() => setBehanceFiles(undefined)} />;
+      case 'logo-history':
+        return <LogoRemoverHistory />;
       case 'behance-import':
         return <BehanceImporter onSendToLogoRemover={(files) => {
           setBehanceFiles(files);

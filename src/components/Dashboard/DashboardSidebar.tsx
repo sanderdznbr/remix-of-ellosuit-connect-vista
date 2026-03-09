@@ -206,6 +206,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             Remover Logo
           </button>
           <button
+            onClick={() => { onTabChange('logo-history'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              activeTab === 'logo-history'
+                ? 'bg-white/[0.08] text-white font-medium'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            Histórico Remoções
+          </button>
+          <button
             onClick={() => { onTabChange('behance-import'); closeSearch(); }}
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
               activeTab === 'behance-import'

@@ -396,6 +396,7 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [createStyleOpen, setCreateStyleOpen] = useState(false);
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));

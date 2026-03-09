@@ -4,12 +4,13 @@ import JSZip from 'jszip';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package,
-  ImageOff, ArrowRight, ZoomIn,
+  ImageOff, ArrowRight, ZoomIn, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import LogoRegionEditor from './LogoRegionEditor';
+import CreateStyleFromImages from './CreateStyleFromImages';
 
 interface LogoRegion {
   id: string;
@@ -395,6 +396,7 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [createStyleOpen, setCreateStyleOpen] = useState(false);
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
@@ -768,6 +770,14 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
           )}
           {phase === 'done' && withResultCount > 0 && (
             <>
+              <button
+                onClick={() => setCreateStyleOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer"
+                style={{ backgroundColor: 'rgba(123,80,220,0.15)', color: '#a78bfa', border: '1px solid rgba(123,80,220,0.25)' }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Criar Estilo
+              </button>
               {withResultCount > 1 && (
                 <button
                   onClick={downloadZip}
@@ -795,6 +805,13 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
           stepTotal={items.length}
         />
       )}
+
+      {/* Create Style Dialog */}
+      <CreateStyleFromImages
+        open={createStyleOpen}
+        onOpenChange={setCreateStyleOpen}
+        imageBase64s={items.filter(i => i.status === 'done' && i.resultBase64).map(i => i.resultBase64!)}
+      />
     </div>
   );
 };

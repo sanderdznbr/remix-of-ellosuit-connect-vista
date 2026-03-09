@@ -191,20 +191,22 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       </div>
 
       {/* Ferramentas section */}
-      <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ferramentas</p>
-        <button
-          onClick={() => { onTabChange('logo-remover'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeTab === 'logo-remover'
-              ? 'bg-white/[0.08] text-white font-medium'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-        >
-          <Eraser className="w-4 h-4" />
-          Remover Logo
-        </button>
-      </div>
+      {email === 'admin@gmail.com' && (
+        <div className="px-2 mt-5">
+          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ferramentas</p>
+          <button
+            onClick={() => { onTabChange('logo-remover'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              activeTab === 'logo-remover'
+                ? 'bg-white/[0.08] text-white font-medium'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Eraser className="w-4 h-4" />
+            Remover Logo
+          </button>
+        </div>
+      )}
 
       {/* Comunidade section */}
       <div className="px-2 mt-5">

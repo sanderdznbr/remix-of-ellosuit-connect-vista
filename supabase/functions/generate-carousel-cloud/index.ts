@@ -200,7 +200,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         negativePrompt: marketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces from reference images',
         fidelity: imageSettings.fidelity || 'balanced',
         facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
-        ...(marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
+        ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
         ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
       });
 

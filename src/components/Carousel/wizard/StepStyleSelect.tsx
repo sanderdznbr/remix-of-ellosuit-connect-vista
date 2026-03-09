@@ -4,22 +4,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 
-// Optimize Supabase storage URLs to use WebP transform + resize for thumbnails
-const optimizeImageUrl = (url: string, width = 400): string => {
-  if (!url) return url;
-  // Only transform Supabase storage URLs
-  if (url.includes('/storage/v1/object/public/')) {
-    // Use Supabase image transformation: render/image + width + format
-    const transformed = url.replace(
-      '/storage/v1/object/public/',
-      `/storage/v1/render/image/public/`
-    );
-    const separator = transformed.includes('?') ? '&' : '?';
-    return `${transformed}${separator}width=${width}&format=webp&quality=75`;
-  }
-  return url;
-};
-
 interface MarketplaceStyle {
   id: string;
   name: string;

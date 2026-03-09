@@ -16,26 +16,12 @@ async function callWithRetry(url: string, options: RequestInit, maxRetries = 3):
   return fetch(url, options);
 }
 
-// Extract base64 image from raw response text using regex (avoids large JSON parse issues)
-function extractBase64FromText(text: string): { base64: string; mimeType: string } | null {
-  // Try to find data URI pattern
-  const dataUriMatch = text.match(/data:(image\/\w+);base64,([A-Za-z0-9+/=]+)/);
-  if (dataUriMatch) {
-    return { mimeType: dataUriMatch[1], base64: dataUriMatch[2] };
-  }
-  // Try to find raw base64 in image_url url field
-  const urlMatch = text.match(/"url"\s*:\s*"data:(image\/\w+);base64,([A-Za-z0-9+/=]+)"/);
-  if (urlMatch) {
-    return { mimeType: urlMatch[1], base64: urlMatch[2] };
-  }
-  // Try inline_data (native Gemini format)
-  const inlineMatch = text.match(/"data"\s*:\s*"([A-Za-z0-9+/=]{100,})"/);
-  const mimeMatch = text.match(/"mime_type"\s*:\s*"(image\/\w+)"/);
-  if (inlineMatch && mimeMatch) {
-    return { mimeType: mimeMatch[1], base64: inlineMatch[1] };
-  }
-  return null;
-}
+const b64ToBytes = (b64: string): Uint8Array => {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -48,99 +34,62 @@ serve(async (req) => {
   }
 
   try {
-    const { action, imageBase64, mimeType, regions } = await req.json();
+    const { action, imageBase64, maskBase64 } = await req.json();
 
-    // ── REMOVE ──────────────────────────────────────────────
     if (action === 'remove') {
-      const regionsDesc = (regions as any[]).map((r, i) =>
-        `Region ${i + 1}: from ${r.x.toFixed(1)}% left, ${r.y.toFixed(1)}% top, spanning ${r.width.toFixed(1)}% wide × ${r.height.toFixed(1)}% tall`
-      ).join('; ');
+      if (!imageBase64 || !maskBase64) {
+        return new Response(JSON.stringify({ error: 'imageBase64 and maskBase64 are required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
 
-      const response = await callWithRetry('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const imageBytes = b64ToBytes(imageBase64);
+      const maskBytes = b64ToBytes(maskBase64);
+
+      // Build multipart form for DALL-E 2 inpainting
+      // image: RGBA PNG 1024x1024
+      // mask: RGBA PNG 1024x1024 (transparent = edit, opaque = preserve)
+      const formData = new FormData();
+      formData.append('model', 'dall-e-2');
+      formData.append('image', new Blob([imageBytes], { type: 'image/png' }), 'image.png');
+      formData.append('mask', new Blob([maskBytes], { type: 'image/png' }), 'mask.png');
+      formData.append(
+        'prompt',
+        'Fill the transparent masked areas with a seamless, natural background that perfectly matches the surrounding colors, textures, gradients, and lighting. No logos, text, or new elements. Photorealistic result.'
+      );
+      formData.append('n', '1');
+      formData.append('size', '1024x1024');
+      formData.append('response_format', 'b64_json');
+
+      console.log('Calling DALL-E 2 inpainting...');
+      const response = await callWithRetry('https://ai.gateway.lovable.dev/v1/images/edits', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
-           messages: [{
-             role: 'user',
-             content: [
-               {
-                 type: 'text',
-                 text: `I own this image and have permission to edit it. Reconstruct the natural background inside the selected rectangular regions (remove any overlaid marks/graphics/text in those regions) and blend seamlessly with surrounding pixels (matching color, texture, lighting). Do NOT add any new text, logos, watermarks, or elements. Keep everything else in the image identical. Regions to inpaint: ${regionsDesc}. Return the full edited image.`
-               },
-               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
-             ]
-           }],
-           modalities: ['image', 'text']
-        })
+        headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}` },
+        body: formData,
       }, 3);
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error('Remove error:', response.status, errText);
-        if (response.status === 429) return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in a moment.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        if (response.status === 402) return new Response(JSON.stringify({ error: 'Payment required. Please add credits.' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        throw new Error(`AI gateway error: ${response.status}`);
+        console.error('Inpaint error:', response.status, errText);
+        if (response.status === 429) return new Response(JSON.stringify({ error: 'Rate limit exceeded. Tente novamente em instantes.' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        if (response.status === 402) return new Response(JSON.stringify({ error: 'Créditos insuficientes.' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        throw new Error(`AI gateway error: ${response.status} — ${errText.slice(0, 300)}`);
       }
 
-      // Read raw text first to handle large base64 payloads efficiently
-      const rawText = await response.text();
-      console.log('Remove response length:', rawText.length);
-
-      // Strategy 1: extract base64 from raw text (fast, avoids large JSON parse)
-      const extracted = extractBase64FromText(rawText);
-      if (extracted) {
-        console.log('Image extracted via text search, mime:', extracted.mimeType);
-        return new Response(JSON.stringify({ processedImageBase64: extracted.base64, mimeType: extracted.mimeType }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+      const data = await response.json();
+      const b64Result = data?.data?.[0]?.b64_json;
+      if (!b64Result) {
+        console.error('No b64_json. Response keys:', JSON.stringify(Object.keys(data || {})));
+        throw new Error('No image returned from AI');
       }
 
-      // Strategy 2: parse JSON and check images array
-       let data: any;
-       try {
-         data = JSON.parse(rawText);
-       } catch (e) {
-         console.error('Failed to parse response JSON:', e);
-         throw new Error('No image returned from AI');
-       }
-
-       const refusal = data?.choices?.[0]?.message?.refusal;
-       if (refusal) {
-         console.error('Model refusal:', refusal);
-         return new Response(JSON.stringify({
-           error: 'A IA recusou a edição desta imagem (política de segurança). Tente selecionar uma área menor/mais específica ou use uma imagem sem marca d\'água.',
-           code: 'MODEL_REFUSAL',
-           refusal,
-         }), { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-       }
-
-      const imageResult = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (imageResult) {
-        const base64 = imageResult.replace(/^data:image\/\w+;base64,/, '');
-        const resultMimeType = imageResult.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
-        return new Response(JSON.stringify({ processedImageBase64: base64, mimeType: resultMimeType }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Strategy 3: check content array for inline_data (native Gemini format)
-      const contentParts = data.choices?.[0]?.message?.content;
-      if (Array.isArray(contentParts)) {
-        for (const part of contentParts) {
-          if (part.inline_data?.data && part.inline_data?.mime_type) {
-            return new Response(JSON.stringify({ processedImageBase64: part.inline_data.data, mimeType: part.inline_data.mime_type }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-        }
-      }
-
-      console.error('No image found in response. Keys:', JSON.stringify(Object.keys(data.choices?.[0]?.message || {})));
-      throw new Error('No image returned from AI');
+      console.log('Inpainting successful, result length:', b64Result.length);
+      return new Response(JSON.stringify({ processedImageBase64: b64Result, mimeType: 'image/png' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action. Use "detect" or "remove".' }), {
+    return new Response(JSON.stringify({ error: 'Invalid action. Use "remove".' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 

@@ -480,7 +480,7 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
             negativePrompt: task.negPrompt,
             fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
             facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
-            ...(isFullBleed && marketplaceStyle?.imageGeneration?.prompt_style ? { stylePrompt: marketplaceStyle.imageGeneration.prompt_style } : {}),
+            ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
             ...(brandColors && brandColors.length > 0 ? { brandColors } : {}),
           });
           if (url) return { index: task.index, url };

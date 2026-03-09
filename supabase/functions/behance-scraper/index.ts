@@ -77,14 +77,14 @@ Deno.serve(async (req) => {
 
     // Extract image URLs from srcset attributes in project module pictures
     // Pattern: mir-s3-cdn-cf.behance.net/project_modules/...
-    const imageUrls: string[] = [];
+    const galleryImageUrls: string[] = [];
     const seen = new Set<string>();
 
     const pushUrl = (imgUrl: string) => {
       const fileKey = imgUrl.split('?')[0].split('/').pop() || imgUrl;
       if (!seen.has(fileKey)) {
         seen.add(fileKey);
-        imageUrls.push(imgUrl);
+        galleryImageUrls.push(imgUrl);
       }
     };
 
@@ -119,10 +119,10 @@ Deno.serve(async (req) => {
     const titleMatch = html.match(/<title>([^<]+)<\/title>/);
     const title = titleMatch ? titleMatch[1].replace(' on Behance', '').trim() : 'Behance Gallery';
 
-    console.log(`Found ${imageUrls.length} images in gallery: ${title}`);
+    console.log(`Found ${galleryImageUrls.length} images in gallery: ${title}`);
 
     return new Response(
-      JSON.stringify({ title, images: imageUrls, count: imageUrls.length }),
+      JSON.stringify({ title, images: galleryImageUrls, count: galleryImageUrls.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

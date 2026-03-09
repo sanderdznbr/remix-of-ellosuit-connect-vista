@@ -385,7 +385,12 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
 );
 
 // ──────────────── Main Component ────────────────
-const LogoRemoverTool: React.FC = () => {
+interface LogoRemoverToolProps {
+  initialFiles?: File[];
+  onInitialFilesConsumed?: () => void;
+}
+
+const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onInitialFilesConsumed }) => {
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
@@ -441,6 +446,21 @@ const LogoRemoverTool: React.FC = () => {
         toast.error('Arquivo muito grande. Máximo 5MB por imagem.');
     },
   });
+  // Handle initial files from Behance importer
+  React.useEffect(() => {
+    if (initialFiles && initialFiles.length > 0 && phase === 'upload') {
+      const newItems: ImageItem[] = initialFiles.slice(0, 15).map(file => ({
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        mimeType: file.type || 'image/jpeg',
+        status: 'idle' as const,
+        regions: [],
+      }));
+      setItems(newItems);
+      onInitialFilesConsumed?.();
+    }
+  }, [initialFiles]);
 
   const removeImage = (id: string) => {
     setItems(prev => {

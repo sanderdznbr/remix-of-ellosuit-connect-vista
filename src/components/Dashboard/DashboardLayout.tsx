@@ -10,6 +10,7 @@ import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
 import FaceGenerator from './FaceGenerator';
 import StyleCreator from './StyleCreator';
 import LogoRemoverTool from './LogoRemoverTool';
+import BehanceImporter from './BehanceImporter';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
@@ -30,6 +31,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [behanceFiles, setBehanceFiles] = useState<File[] | undefined>(undefined);
   const { isMobile } = useIsMobile();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -102,7 +104,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       case 'style-creator':
         return <StyleCreator />;
       case 'logo-remover':
-        return <LogoRemoverTool />;
+        return <LogoRemoverTool initialFiles={behanceFiles} onInitialFilesConsumed={() => setBehanceFiles(undefined)} />;
+      case 'behance-import':
+        return <BehanceImporter onSendToLogoRemover={(files) => {
+          setBehanceFiles(files);
+          setActiveTab('logo-remover');
+        }} />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

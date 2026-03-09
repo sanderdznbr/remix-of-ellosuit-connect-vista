@@ -5243,13 +5243,21 @@ FORBIDDEN:
               style={{ backgroundColor: 'rgba(20,20,28,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)' }}
               onClick={(e) => e.stopPropagation()}>
               
-              <div className="px-5 pt-5 pb-3">
-                <p className="text-white/50 text-[11px] font-medium uppercase tracking-wider">
-                  Novo Card {addCardModal.cardType === 'composed' ? 'Composto' : 'Sólido'}
-                </p>
-                <p className="text-white text-sm font-semibold mt-1">
-                  {addCardModal.step === 'text-mode' ? 'Como definir o texto?' : addCardModal.step === 'manual' ? 'Texto do card' : 'Texto gerado pela IA'}
-                </p>
+              <div className="px-5 pt-4 pb-3 flex items-start justify-between">
+                <div>
+                  <p className="text-white/50 text-[11px] font-medium uppercase tracking-wider">
+                    Novo Card {addCardModal.cardType === 'composed' ? 'Composto' : 'Sólido'}
+                  </p>
+                  <p className="text-white text-sm font-semibold mt-1">
+                    {addCardModal.step === 'text-mode' ? 'Como definir o texto?' : addCardModal.step === 'manual' ? 'Texto do card' : 'Texto gerado pela IA'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAddCardModal(prev => ({ ...prev, open: false }))}
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors mt-0.5 shrink-0"
+                >
+                  <X className="h-4 w-4 text-white/40" />
+                </button>
               </div>
 
               {/* Step: text-mode selection */}

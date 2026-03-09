@@ -302,7 +302,7 @@ const CarouselGenerator: React.FC = () => {
   const [showStoriesPreview, setShowStoriesPreview] = useState(false);
   const [showAddCardMenu, setShowAddCardMenu] = useState(false);
   const [showRegenModeMenu, setShowRegenModeMenu] = useState(false);
-  const [addCardModal, setAddCardModal] = useState<{ open: boolean; cardType: 'composed' | 'solid'; step: 'type' | 'text-mode' | 'manual' | 'auto-preview'; autoText: { title: string; body: string } | null; manualText: { title: string; body: string }; generatingAutoText: boolean }>({ open: false, cardType: 'composed', step: 'type', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false });
+  const [addCardModal, setAddCardModal] = useState<{ open: boolean; cardType: 'composed' | 'solid'; step: 'type' | 'text-mode' | 'manual' | 'auto-preview'; autoText: { title: string; body: string } | null; manualText: { title: string; body: string }; generatingAutoText: boolean; textSize: 'short' | 'medium' | 'long' }>({ open: false, cardType: 'composed', step: 'type', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
   const [cloudJobId, setCloudJobId] = useState<string | null>(null);
   const cloudJobIdRef = useRef<string | null>(null);
   const carouselDataRef = useRef<CarouselData | null>(null);

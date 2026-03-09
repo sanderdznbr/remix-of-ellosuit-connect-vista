@@ -109,7 +109,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       case 'style-creator':
         return <StyleCreator />;
       case 'logo-remover':
-        return <LogoRemoverTool />;
+        return <LogoRemoverTool initialFiles={behanceFiles} onInitialFilesConsumed={() => setBehanceFiles(undefined)} />;
+      case 'behance-import':
+        return <BehanceImporter onSendToLogoRemover={(files) => {
+          setBehanceFiles(files);
+          setActiveTab('logo-remover');
+        }} />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

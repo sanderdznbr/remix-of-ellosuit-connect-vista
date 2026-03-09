@@ -61,17 +61,17 @@ serve(async (req) => {
         headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash-image',
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Remove ONLY the logos/watermarks/brand marks in the following regions of this image. Fill each region with the natural background that would be there (matching surrounding colors, textures, patterns). Do NOT add any new text, logos, or elements. Keep everything else in the image completely identical. Regions to clean: ${regionsDesc}. Return the full image with only those areas removed and filled naturally.`
-              },
-              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
-            ]
-          }],
-          modalities: ['image', 'text']
+           messages: [{
+             role: 'user',
+             content: [
+               {
+                 type: 'text',
+                 text: `I own this image and have permission to edit it. Reconstruct the natural background inside the selected rectangular regions (remove any overlaid marks/graphics/text in those regions) and blend seamlessly with surrounding pixels (matching color, texture, lighting). Do NOT add any new text, logos, watermarks, or elements. Keep everything else in the image identical. Regions to inpaint: ${regionsDesc}. Return the full edited image.`
+               },
+               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
+             ]
+           }],
+           modalities: ['image', 'text']
         })
       }, 3);
 

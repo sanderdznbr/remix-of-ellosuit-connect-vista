@@ -9,6 +9,7 @@ import PromptGallery from './PromptGallery';
 import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
 import FaceGenerator from './FaceGenerator';
 import StyleCreator from './StyleCreator';
+import LogoRemoverTool from './LogoRemoverTool';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
@@ -100,6 +101,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <FaceGenerator />;
       case 'style-creator':
         return <StyleCreator />;
+      case 'logo-remover':
+        return <LogoRemoverTool />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

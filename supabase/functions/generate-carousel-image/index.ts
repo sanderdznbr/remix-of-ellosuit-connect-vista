@@ -158,7 +158,27 @@ Deno.serve(async (req) => {
 
     // If a marketplace style prompt is provided, use it as the main instruction
     let textPrompt: string;
-    if (stylePrompt) {
+    if (isPanoramicMode) {
+      // === PANORAMIC MODE ===
+      // Format instruction MUST come FIRST and dominate over any style prompt
+      // This prevents marketplace style prompts (which specify portrait 1080x1350) from overriding panoramic
+      textPrompt = `${formatInstruction}\n\n${imagePrompt}`;
+
+      if (stylePrompt) {
+        // Sanitize stylePrompt: strip portrait/vertical dimension instructions that conflict with panoramic
+        const sanitizedStyle = stylePrompt
+          .replace(/\d{3,4}\s*x\s*\d{3,4}(?:\s*pixels?)?/gi, '') // Remove pixel dimensions like 1080x1350
+          .replace(/(?:formato?\s+)?(?:retrat[oa]|portrait)(?:\s+format[oa]?)?/gi, '') // Remove portrait/retrato
+          .replace(/(?:vertical)\s+(?:format[oa]?|orientation)/gi, '') // Remove vertical format/orientation
+          .replace(/aspect\s+ratio\s+(?:3:4|4:5)/gi, '') // Remove portrait aspect ratios
+          .replace(/proporção\s+(?:3:4|4:5)/gi, '') // Remove Portuguese portrait proportions
+          .replace(/\s{2,}/g, ' ') // Clean extra spaces
+          .trim();
+        if (sanitizedStyle) {
+          textPrompt += `\n\nESTILO VISUAL A INTEGRAR NA COMPOSIÇÃO PANORÂMICA:\n${sanitizedStyle}`;
+        }
+      }
+    } else if (stylePrompt) {
       textPrompt = `${stylePrompt}
 
 ${imagePrompt}`;
@@ -174,7 +194,9 @@ STYLE REQUIREMENTS:
 - Ultra high resolution, photorealistic quality`;
     }
 
-    textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
+    if (!isPanoramicMode) {
+      textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
+    }
 
     // Always add hardcoded negative instructions to prevent common AI mistakes
     textPrompt += `\n\nPROIBIDO (NUNCA inclua na imagem):

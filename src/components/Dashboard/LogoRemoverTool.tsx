@@ -941,6 +941,8 @@ Return ONLY the JSON array, no other text.`
     setItems([]);
     setPhase('upload');
     setSelectionIndex(0);
+    setRemovalMode(null);
+    setAutoDetectProgress({ current: 0, total: 0 });
   };
 
   const doneCount = items.filter(i => i.status === 'done').length;

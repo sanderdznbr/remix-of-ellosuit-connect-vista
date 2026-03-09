@@ -797,18 +797,13 @@ Return ONLY the JSON array, no other text.`
 
     // Process ONE at a time to avoid WORKER_LIMIT
     for (let i = 0; i < updatedItems.length; i++) {
-      const batch = [updatedItems[i]];
-      const results = await Promise.all(batch.map(item => detectRegionsForImage(item)));
+      const item = updatedItems[i];
+      const regions = await detectRegionsForImage(item);
 
-      results.forEach((regions, batchIdx) => {
-        const itemIdx = i + batchIdx;
-        if (itemIdx < updatedItems.length) {
-          updatedItems[itemIdx] = { ...updatedItems[itemIdx], regions, status: 'ready' };
-          updateItem(updatedItems[itemIdx].id, { regions, status: 'ready' });
-        }
-      });
+      updatedItems[i] = { ...item, regions, status: 'ready' };
+      updateItem(item.id, { regions, status: 'ready' });
 
-      setAutoDetectProgress({ current: Math.min(i + 2, updatedItems.length), total: updatedItems.length });
+      setAutoDetectProgress({ current: i + 1, total: updatedItems.length });
     }
 
     // Go to selecting phase for confirmation

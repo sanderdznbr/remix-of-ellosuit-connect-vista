@@ -119,6 +119,21 @@ Deno.serve(async (req) => {
             .join('\n')
         : '';
 
+    // Lightweight mode for heavy multimodal calls (e.g. logo auto-detection)
+    if (lightweight) {
+      return new Response(JSON.stringify({
+        response: assistantMessage,
+        message: assistantMessage,
+        content: assistantMessage,
+        model,
+        usage: data.usage,
+        choices: data?.choices || [],
+        images: firstMessage?.images || [],
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Log cost based on usage tokens
     const usage = data.usage || {};
     const inputTokens = usage.prompt_tokens || 0;
@@ -148,7 +163,6 @@ Deno.serve(async (req) => {
       usage: data.usage,
       choices: data?.choices || [],
       images: firstMessage?.images || [],
-      raw: data,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

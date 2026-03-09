@@ -418,7 +418,7 @@ const MarketplacePopup: React.FC<{
                   }`}>
                     <div className="aspect-video bg-white/[0.03]">
                       {previewImg ? (
-                        <img src={optimizeImageUrl(previewImg, 400)} alt={style.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                        <img src={previewImg} alt={style.name} className="w-full h-full object-cover" loading="eager" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Sparkles className="w-8 h-8 text-white/10" /></div>
                       )}

@@ -462,7 +462,7 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     }
   }, [initialFiles]);
 
-
+  const removeImage = (id: string) => {
     setItems(prev => {
       const item = prev.find(i => i.id === id);
       if (item) URL.revokeObjectURL(item.previewUrl);

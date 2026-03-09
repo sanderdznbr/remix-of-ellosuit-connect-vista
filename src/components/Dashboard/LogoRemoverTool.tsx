@@ -41,7 +41,8 @@ interface ImageItem {
   lastDiffScore?: number;
 }
 
-type Phase = 'upload' | 'selecting' | 'processing' | 'done';
+type Phase = 'upload' | 'mode-select' | 'auto-detecting' | 'selecting' | 'processing' | 'done';
+type RemovalMode = 'manual' | 'auto';
 
 // ──────────────── Canvas helpers ────────────────
 

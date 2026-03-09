@@ -385,7 +385,12 @@ const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose
 );
 
 // ──────────────── Main Component ────────────────
-const LogoRemoverTool: React.FC = () => {
+interface LogoRemoverToolProps {
+  initialFiles?: File[];
+  onInitialFilesConsumed?: () => void;
+}
+
+const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onInitialFilesConsumed }) => {
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);

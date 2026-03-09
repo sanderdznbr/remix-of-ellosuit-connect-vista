@@ -10,6 +10,7 @@ import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
 import FaceGenerator from './FaceGenerator';
 import StyleCreator from './StyleCreator';
 import LogoRemoverTool from './LogoRemoverTool';
+import LogoRemoverHistory from './LogoRemoverHistory';
 import BehanceImporter from './BehanceImporter';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';

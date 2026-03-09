@@ -292,7 +292,7 @@ interface CardProps {
 
 const ImageCard: React.FC<CardProps> = ({
   item, phase, selectionIndex, itemIndex,
-  onRemoveImage, onDownload, onZoom,
+  onRemoveImage, onDownload, onZoom, onDelete, onRegenerate,
 }) => {
   const showResult = item.status === 'done' && item.resultBase64;
   const displaySrc = showResult

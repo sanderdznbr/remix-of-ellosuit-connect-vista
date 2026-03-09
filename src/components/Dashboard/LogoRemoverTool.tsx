@@ -5,7 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package, Trash2,
-  ImageOff, ArrowRight, ZoomIn, Sparkles,
+  ImageOff, ArrowRight, ZoomIn, Sparkles, Wand2, MousePointerClick, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';

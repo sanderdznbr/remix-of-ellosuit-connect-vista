@@ -506,10 +506,12 @@ interface LogoRemoverToolProps {
 const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onInitialFilesConsumed }) => {
   const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>('upload');
+  const [removalMode, setRemovalMode] = useState<RemovalMode | null>(null);
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [createStyleOpen, setCreateStyleOpen] = useState(false);
+  const [autoDetectProgress, setAutoDetectProgress] = useState({ current: 0, total: 0 });
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));

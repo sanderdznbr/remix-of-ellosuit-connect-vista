@@ -40,28 +40,64 @@ function extractBase64Image(data: any): { base64: string; mimeType: string } | n
   return null;
 }
 
-async function callEdit({
-  LOVABLE_API_KEY,
-  model,
-  prompt,
-  imageBase64,
-  maskBase64,
-}: {
-  LOVABLE_API_KEY: string;
-  model: string;
-  prompt: string;
-  imageBase64: string;
-  maskBase64?: string;
-}): Promise<Response> {
-  const content: any[] = [
-    { type: "text", text: prompt },
-    { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
-  ];
+function buildMessages(imageBase64: string, annotatedBase64?: string) {
+  // Two-image approach: original + annotated with red marks
+  if (annotatedBase64) {
+    return [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `You are an expert image inpainting tool. You will receive TWO images:
 
-  if (maskBase64) {
-    content.push({ type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } });
+IMAGE 1: The ORIGINAL clean image (no marks).
+IMAGE 2: The SAME image but with semi-transparent RED rectangles painted over areas that must be REMOVED.
+
+YOUR TASK:
+1. Look at IMAGE 2 to identify the RED-marked regions.
+2. In those regions ONLY, erase the content (logos, text, watermarks, objects) and reconstruct a seamless, natural background that perfectly blends with the surrounding pixels (colors, gradients, textures, lighting).
+3. Everything OUTSIDE the red regions must remain PIXEL-PERFECT identical to IMAGE 1.
+4. The red overlay itself must NOT appear in your output.
+5. Do NOT add any new text, logos, watermarks, or objects.
+6. Return ONLY the final edited image.`,
+          },
+          {
+            type: "image_url",
+            image_url: { url: `data:image/png;base64,${imageBase64}` },
+          },
+          {
+            type: "image_url",
+            image_url: { url: `data:image/png;base64,${annotatedBase64}` },
+          },
+        ],
+      },
+    ];
   }
 
+  // Single-image fallback (annotated only)
+  return [
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: `You are an expert image inpainting tool. The image has semi-transparent RED rectangles painted over areas that must be REMOVED. Erase the content under the red marks and reconstruct a seamless natural background matching surrounding colors, gradients, textures and lighting. The red overlay itself must NOT appear in the output. Do NOT change anything outside the red regions. Do NOT add new text, logos, or objects. Return ONLY the final edited image.`,
+        },
+        {
+          type: "image_url",
+          image_url: { url: `data:image/png;base64,${imageBase64}` },
+        },
+      ],
+    },
+  ];
+}
+
+async function callEdit(
+  LOVABLE_API_KEY: string,
+  model: string,
+  messages: any[],
+): Promise<Response> {
   return callWithRetry(
     "https://ai.gateway.lovable.dev/v1/chat/completions",
     {
@@ -72,7 +108,7 @@ async function callEdit({
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "user", content }],
+        messages,
         modalities: ["image", "text"],
         temperature: 0.2,
         stream: false,
@@ -94,7 +130,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, imageBase64, maskBase64 } = await req.json();
+    const { action, imageBase64, annotatedBase64, maskBase64 } = await req.json();
 
     if (action !== "remove") {
       return new Response(JSON.stringify({ error: 'Invalid action. Use "remove".' }), {
@@ -110,21 +146,11 @@ serve(async (req) => {
       });
     }
 
-    const hasMask = typeof maskBase64 === "string" && maskBase64.length > 0;
+    const messages = buildMessages(imageBase64, annotatedBase64 || undefined);
 
-    const prompt = hasMask
-      ? "You will receive two images: (1) the ORIGINAL image, and (2) a MASK image. In the MASK image, TRANSPARENT pixels mark the area to EDIT/REMOVE; opaque pixels must be preserved. Remove the content ONLY in the transparent masked region and inpaint it with a seamless, natural background matching surrounding colors, texture, gradients and lighting. Do NOT change anything outside the masked area. No text, no logos, no new objects. Return the edited image."
-      : "You will receive ONE image. The areas to remove are marked with a semi-transparent RED overlay. Remove the logo/object under the red overlay and reconstruct a seamless natural background that matches the surroundings. IMPORTANT: do NOT alter anything outside the red-marked areas, and also remove the red overlay itself. No text, no logos, no new objects. Return the edited image.";
-
-    console.log("Calling Lovable AI for logo removal...", { hasMask });
-
-    // Try fast model first
-    let response = await callEdit({
-      LOVABLE_API_KEY,
-      model: "google/gemini-2.5-flash-image",
-      prompt,
-      imageBase64,
-      ...(hasMask ? { maskBase64 } : {}),
+    console.log("Calling AI for logo removal...", {
+      hasAnnotated: !!annotatedBase64,
+      hasMask: !!maskBase64,
     });
 
     const handleBad = async (res: Response) => {
@@ -143,21 +169,17 @@ serve(async (req) => {
       throw new Error(`AI gateway error: ${res.status} — ${errText.slice(0, 300)}`);
     };
 
+    // Try pro model first (more reliable for inpainting)
+    let response = await callEdit(LOVABLE_API_KEY, "google/gemini-2.5-flash-image", messages);
     if (!response.ok) return await handleBad(response);
 
     let data = await response.json();
     let extracted = extractBase64Image(data);
 
-    // Fallback to higher-quality model if it returned no image (or ignored the edit)
+    // Fallback to higher-quality model
     if (!extracted) {
-      console.log("No image returned; retrying with google/gemini-3-pro-image-preview...");
-      response = await callEdit({
-        LOVABLE_API_KEY,
-        model: "google/gemini-3-pro-image-preview",
-        prompt,
-        imageBase64,
-        ...(hasMask ? { maskBase64 } : {}),
-      });
+      console.log("No image from flash; retrying with pro model...");
+      response = await callEdit(LOVABLE_API_KEY, "google/gemini-3-pro-image-preview", messages);
       if (!response.ok) return await handleBad(response);
       data = await response.json();
       extracted = extractBase64Image(data);
@@ -165,9 +187,9 @@ serve(async (req) => {
 
     if (!extracted) {
       console.error(
-        "No image returned. Top-level keys:",
+        "No image returned. Keys:",
         JSON.stringify(Object.keys(data || {})),
-        "message keys:",
+        "msg keys:",
         JSON.stringify(Object.keys(data?.choices?.[0]?.message || {})),
       );
       throw new Error("No image returned from AI");

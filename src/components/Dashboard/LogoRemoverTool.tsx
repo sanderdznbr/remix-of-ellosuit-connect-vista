@@ -462,13 +462,14 @@ const LogoRemoverTool: React.FC = () => {
           }
           updateItem(item.id, { status: 'removing' });
           try {
-            // Generate 1024×1024 letterboxed image with red overlays (areas to remove)
+            // Generate 1024×1024 letterboxed original + annotated with red overlays
             const prep = await prepareForRedAnnotation(item.file, item.regions);
 
             const { data, error } = await supabase.functions.invoke('logo-removal', {
               body: {
                 action: 'remove',
-                imageBase64: prep.annotatedPng,
+                imageBase64: prep.originalPng,
+                annotatedBase64: prep.annotatedPng,
               }
             });
             if (error) throw new Error(error.message);

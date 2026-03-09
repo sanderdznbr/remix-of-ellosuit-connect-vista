@@ -5,7 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package, Trash2,
-  ImageOff, ArrowRight, ZoomIn, Sparkles,
+  ImageOff, ArrowRight, ZoomIn, Sparkles, Wand2, MousePointerClick, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +41,8 @@ interface ImageItem {
   lastDiffScore?: number;
 }
 
-type Phase = 'upload' | 'selecting' | 'processing' | 'done';
+type Phase = 'upload' | 'mode-select' | 'auto-detecting' | 'selecting' | 'processing' | 'done';
+type RemovalMode = 'manual' | 'auto';
 
 // ──────────────── Canvas helpers ────────────────
 
@@ -450,10 +451,10 @@ const ImageCard: React.FC<CardProps> = ({
           )}
           <button
             onClick={onDelete}
-            disabled={phase === 'selecting' || phase === 'processing'}
+            disabled={phase === 'selecting' || phase === 'processing' || phase === 'auto-detecting'}
             className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.18)' }}
-            title={phase === 'selecting' || phase === 'processing' ? 'Aguarde para excluir' : 'Excluir'}
+            title={phase === 'selecting' || phase === 'processing' || phase === 'auto-detecting' ? 'Aguarde para excluir' : 'Excluir'}
           >
             <Trash2 className="w-3 h-3" />
           </button>
@@ -505,10 +506,12 @@ interface LogoRemoverToolProps {
 const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onInitialFilesConsumed }) => {
   const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>('upload');
+  const [removalMode, setRemovalMode] = useState<RemovalMode | null>(null);
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [createStyleOpen, setCreateStyleOpen] = useState(false);
+  const [autoDetectProgress, setAutoDetectProgress] = useState({ current: 0, total: 0 });
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
@@ -674,8 +677,116 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
 
   const startSelecting = () => {
     if (items.length === 0) return;
+    setPhase('mode-select');
+  };
+
+  const startManualMode = () => {
+    setRemovalMode('manual');
     setSelectionIndex(0);
     setPhase('selecting');
+  };
+
+  /** Convert a File to a base64 data URL for AI vision */
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  /** Use AI to detect logos, watermarks, site links, @ mentions in an image */
+  const detectRegionsForImage = async (item: ImageItem): Promise<LogoRegion[]> => {
+    try {
+      const dataUrl = await fileToBase64(item.file);
+
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this image and identify ALL of the following elements that should be removed:
+1. Logos (company logos, brand marks, watermarks, emblems)
+2. Website URLs or domain names visible as text overlays
+3. @ mentions or social media handles visible as text overlays
+4. Any brand identity text overlaid on the image (not part of the actual content)
+
+For each element found, return its bounding box as percentage coordinates (0-100) relative to the image dimensions.
+
+IMPORTANT: Only detect overlaid/superimposed elements, NOT the main content of the image.
+
+Return a JSON array of objects, each with: x (left %), y (top %), width (%), height (%), label (description).
+If nothing is found, return an empty array [].
+Return ONLY the JSON array, no other text.`
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: dataUrl }
+                }
+              ]
+            }
+          ],
+          temperature: 0.1,
+        },
+      });
+
+      if (error) throw error;
+
+      const responseText = data?.response || data?.message || '';
+      // Extract JSON array from response
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) return [];
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed
+        .filter((r: any) => r.x != null && r.y != null && r.width != null && r.height != null)
+        .map((r: any) => ({
+          id: crypto.randomUUID(),
+          x: Math.max(0, Math.min(100, Number(r.x))),
+          y: Math.max(0, Math.min(100, Number(r.y))),
+          width: Math.max(1, Math.min(100 - Number(r.x), Number(r.width))),
+          height: Math.max(1, Math.min(100 - Number(r.y), Number(r.height))),
+          label: r.label || 'Logo',
+        }));
+    } catch (err) {
+      console.error('Auto-detect error for', item.file.name, err);
+      return [];
+    }
+  };
+
+  const startAutoMode = async () => {
+    setRemovalMode('auto');
+    setPhase('auto-detecting');
+    setAutoDetectProgress({ current: 0, total: items.length });
+
+    const updatedItems = [...items];
+
+    // Process 2 at a time for speed
+    for (let i = 0; i < updatedItems.length; i += 2) {
+      const batch = updatedItems.slice(i, i + 2);
+      const results = await Promise.all(batch.map(item => detectRegionsForImage(item)));
+
+      results.forEach((regions, batchIdx) => {
+        const itemIdx = i + batchIdx;
+        if (itemIdx < updatedItems.length) {
+          updatedItems[itemIdx] = { ...updatedItems[itemIdx], regions, status: 'ready' };
+          updateItem(updatedItems[itemIdx].id, { regions, status: 'ready' });
+        }
+      });
+
+      setAutoDetectProgress({ current: Math.min(i + 2, updatedItems.length), total: updatedItems.length });
+    }
+
+    // Go to selecting phase for confirmation
+    setSelectionIndex(0);
+    setPhase('selecting');
+    toast.success('Detecção automática concluída! Confirme as áreas detectadas.');
   };
 
   const handleSelectionSave = (regions: LogoRegion[]) => {
@@ -830,6 +941,8 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     setItems([]);
     setPhase('upload');
     setSelectionIndex(0);
+    setRemovalMode(null);
+    setAutoDetectProgress({ current: 0, total: 0 });
   };
 
   const doneCount = items.filter(i => i.status === 'done').length;
@@ -856,7 +969,12 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
               ? 'Carregue até 15 imagens e marque manualmente as áreas com logo'
               : `${items.length} imagem${items.length !== 1 ? 'ns' : ''} selecionada${items.length !== 1 ? 's' : ''} — clique em Avançar para marcar as logos`
             )}
-            {phase === 'selecting' && `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}`}
+            {phase === 'mode-select' && 'Escolha como deseja identificar as logos'}
+            {phase === 'auto-detecting' && `Detectando logos automaticamente... ${autoDetectProgress.current}/${autoDetectProgress.total}`}
+            {phase === 'selecting' && (removalMode === 'auto'
+              ? `Confirme as áreas detectadas — imagem ${selectionIndex + 1} de ${items.length}`
+              : `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}`
+            )}
             {phase === 'processing' && `Removendo logos com IA... ${doneCount}/${items.length} concluída${doneCount !== 1 ? 's' : ''}`}
             {phase === 'done' && `Concluído! ${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} processada${withResultCount !== 1 ? 's' : ''} sem logos`}
           </p>
@@ -903,7 +1021,107 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
           </div>
         )}
 
-        {items.length > 0 && (
+        {/* Mode selection */}
+        {phase === 'mode-select' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center gap-6 py-12"
+          >
+            <div className="text-center mb-2">
+              <h2 className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                Como deseja identificar as logos?
+              </h2>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Escolha o modo de detecção para {items.length} imagem{items.length !== 1 ? 'ns' : ''}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+              {/* Auto mode */}
+              <button
+                onClick={startAutoMode}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl transition-all cursor-pointer group"
+                style={{
+                  border: '1px solid rgba(123,80,220,0.2)',
+                  backgroundColor: 'rgba(123,80,220,0.06)',
+                }}
+              >
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:scale-105"
+                  style={{ backgroundColor: 'rgba(123,80,220,0.15)' }}>
+                  <Wand2 className="w-6 h-6" style={{ color: '#a78bfa' }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>Automático</p>
+                  <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    A IA identifica logos, links, @menções e marcas d'água automaticamente
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(123,80,220,0.12)' }}>
+                  <Sparkles className="w-3 h-3" style={{ color: '#a78bfa' }} />
+                  <span className="text-xs font-medium" style={{ color: '#a78bfa' }}>Recomendado</span>
+                </div>
+              </button>
+
+              {/* Manual mode */}
+              <button
+                onClick={startManualMode}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl transition-all cursor-pointer group"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                }}
+              >
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:scale-105"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                  <MousePointerClick className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.5)' }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>Manual</p>
+                  <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Selecione manualmente as áreas com logo em cada imagem
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                  <Eye className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                  <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>Controle total</span>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Auto-detecting progress */}
+        {phase === 'auto-detecting' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center gap-6 py-16"
+          >
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(123,80,220,0.12)' }}>
+              <Wand2 className="w-7 h-7 animate-pulse" style={{ color: '#a78bfa' }} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                Detectando logos automaticamente...
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Analisando {autoDetectProgress.current} de {autoDetectProgress.total} imagens
+              </p>
+            </div>
+            <div className="w-64 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              <motion.div
+                className="h-full rounded-full"
+                style={{ backgroundColor: '#7B50DC' }}
+                animate={{ width: `${autoDetectProgress.total > 0 ? (autoDetectProgress.current / autoDetectProgress.total) * 100 : 0}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {items.length > 0 && phase !== 'mode-select' && phase !== 'auto-detecting' && (
           <div>
             {phase === 'upload' && items.length < 15 && (
               <div
@@ -929,13 +1147,15 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium" style={{ color: 'rgba(167,139,250,0.9)' }}>
                     {phase === 'selecting'
-                      ? `Marcando áreas — ${selectionIndex + 1} de ${items.length}`
+                      ? (removalMode === 'auto'
+                        ? `Confirme as detecções — ${selectionIndex + 1} de ${items.length}`
+                        : `Marcando áreas — ${selectionIndex + 1} de ${items.length}`)
                       : `Processando com IA — ${doneCount} de ${items.length}`
                     }
                   </span>
                   {phase === 'selecting' && (
                     <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {readyCount} marcadas
+                      {readyCount} {removalMode === 'auto' ? 'confirmadas' : 'marcadas'}
                     </span>
                   )}
                 </div>
@@ -991,7 +1211,14 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
       >
         <div className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
           {phase === 'upload' && items.length > 0 && `${items.length} imagem${items.length !== 1 ? 'ns' : ''} pronta${items.length !== 1 ? 's' : ''}`}
-          {phase === 'selecting' && `${totalRegions} área${totalRegions !== 1 ? 's' : ''} marcada${totalRegions !== 1 ? 's' : ''} até agora`}
+          {phase === 'mode-select' && 'Escolha o modo de detecção'}
+          {phase === 'auto-detecting' && (
+            <span className="flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Detectando logos...
+            </span>
+          )}
+          {phase === 'selecting' && `${totalRegions} área${totalRegions !== 1 ? 's' : ''} ${removalMode === 'auto' ? 'detectada' : 'marcada'}${totalRegions !== 1 ? 's' : ''} até agora`}
           {phase === 'processing' && (
             <span className="flex items-center gap-1.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

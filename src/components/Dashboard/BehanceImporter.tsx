@@ -73,30 +73,39 @@ const BehanceImporter: React.FC<BehanceImporterProps> = ({ onSendToLogoRemover }
     if (!selected.length) return;
 
     setSending(true);
-    toast.info(`Baixando ${selected.length} imagens...`);
+    toast.info(`Baixando ${selected.length} imagens via servidor...`);
 
     try {
+      // Use edge function to proxy download (avoids CORS)
+      const { data, error } = await supabase.functions.invoke('behance-scraper', {
+        body: { action: 'download', urls: selected.map(s => s.url) },
+      });
+
+      if (error) throw error;
+      if (!data?.images?.length) throw new Error('Falha ao baixar imagens');
+
       const files: File[] = [];
-      for (const img of selected) {
+      for (const img of data.images) {
         try {
-          const resp = await fetch(img.url);
-          if (!resp.ok) continue;
-          const blob = await resp.blob();
-          const ext = img.url.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || 'jpg';
-          const name = `behance-${Date.now()}-${files.length}.${ext}`;
-          files.push(new File([blob], name, { type: blob.type || `image/${ext}` }));
+          const binary = atob(img.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const blob = new Blob([bytes], { type: img.mimeType || 'image/jpeg' });
+          const name = `behance-${Date.now()}-${files.length}.${img.mimeType?.split('/')[1] || 'jpg'}`;
+          files.push(new File([blob], name, { type: blob.type }));
         } catch {
-          console.warn('Failed to download:', img.url);
+          console.warn('Failed to process image');
         }
       }
+
       if (files.length === 0) {
-        toast.error('Não foi possível baixar nenhuma imagem');
+        toast.error('Não foi possível processar nenhuma imagem');
         return;
       }
       toast.success(`${files.length} imagens prontas! Enviando ao removedor...`);
       onSendToLogoRemover(files);
-    } catch (err) {
-      toast.error('Erro ao processar imagens');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao baixar imagens');
     } finally {
       setSending(false);
     }
@@ -213,6 +222,7 @@ const BehanceImporter: React.FC<BehanceImporterProps> = ({ onSendToLogoRemover }
                     </div>
                   )}
                   
+                  {/* Image without crossOrigin to avoid CORS blocking display */}
                   <img
                     src={img.url}
                     alt=""
@@ -220,7 +230,7 @@ const BehanceImporter: React.FC<BehanceImporterProps> = ({ onSendToLogoRemover }
                     loading="lazy"
                     onLoad={() => handleImageLoad(i)}
                     onError={() => handleImageError(i)}
-                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
                   />
 
                   {/* Selection overlay */}

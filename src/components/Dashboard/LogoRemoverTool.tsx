@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
+import { useAuth } from '@/components/AuthProvider';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package, Trash2,
@@ -502,6 +503,7 @@ interface LogoRemoverToolProps {
 }
 
 const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onInitialFilesConsumed }) => {
+  const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
@@ -731,6 +733,8 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
         setItems(latest => {
           const successCount = latest.filter(i => i.status === 'done').length;
           toast.success(`${successCount} imagem${successCount !== 1 ? 'ns' : ''} processada${successCount !== 1 ? 's' : ''} com sucesso!`);
+          // Auto-save to history
+          saveSessionToHistory(latest);
           return latest;
         });
       })();
@@ -767,6 +771,59 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     URL.revokeObjectURL(url);
     toast.success('ZIP baixado!');
   };
+
+  const saveSessionToHistory = useCallback(async (finalItems: ImageItem[]) => {
+    if (!user) return;
+    try {
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
+      if (!cu) return;
+
+      const withResult = finalItems.filter(i => i.status === 'done' && i.resultBase64);
+      if (withResult.length === 0) return;
+
+      const { data: session, error: sErr } = await supabase
+        .from('logo_removal_sessions')
+        .insert({
+          user_id: user.id,
+          company_id: cu.company_id,
+          title: `Remoção — ${withResult.length} imagens`,
+          total_images: finalItems.length,
+          processed_images: withResult.length,
+        } as any)
+        .select('id')
+        .single();
+
+      if (sErr || !session) { console.error('Save session error:', sErr); return; }
+
+      for (const item of withResult) {
+        try {
+          const bytes = Uint8Array.from(atob(item.resultBase64!), c => c.charCodeAt(0));
+          const fileName = `logo-removal/${cu.company_id}/${session.id}/${item.id}.png`;
+          await supabase.storage.from('brand-assets').upload(fileName, bytes, { contentType: 'image/png', upsert: true });
+          const { data: pub } = supabase.storage.from('brand-assets').getPublicUrl(fileName);
+
+          const origBytes = await item.file.arrayBuffer();
+          const origName = `logo-removal/${cu.company_id}/${session.id}/orig-${item.id}.${item.file.name.split('.').pop() || 'png'}`;
+          await supabase.storage.from('brand-assets').upload(origName, new Uint8Array(origBytes), { contentType: item.mimeType, upsert: true });
+          const { data: origPub } = supabase.storage.from('brand-assets').getPublicUrl(origName);
+
+          await supabase.from('logo_removal_images').insert({
+            session_id: session.id,
+            original_url: origPub.publicUrl,
+            result_url: pub.publicUrl,
+            status: 'done',
+            regions: item.regions,
+          } as any);
+        } catch (err) {
+          console.error('Save image error:', err);
+        }
+      }
+
+      console.log('✅ Session saved:', session.id);
+    } catch (err) {
+      console.error('saveSessionToHistory error:', err);
+    }
+  }, [user]);
 
   const reset = () => {
     items.forEach(i => URL.revokeObjectURL(i.previewUrl));

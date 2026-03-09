@@ -3453,6 +3453,85 @@ export type Database = {
           },
         ]
       }
+      logo_removal_images: {
+        Row: {
+          created_at: string
+          id: string
+          original_url: string
+          regions: Json | null
+          result_url: string | null
+          session_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          original_url: string
+          regions?: Json | null
+          result_url?: string | null
+          session_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          original_url?: string
+          regions?: Json | null
+          result_url?: string | null
+          session_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logo_removal_images_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "logo_removal_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logo_removal_sessions: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          processed_images: number
+          title: string
+          total_images: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          processed_images?: number
+          title?: string
+          total_images?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          processed_images?: number
+          title?: string
+          total_images?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logo_removal_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_styles: {
         Row: {
           category: string

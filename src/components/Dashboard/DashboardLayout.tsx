@@ -10,6 +10,7 @@ import MarketplaceContent from '@/components/Marketplace/MarketplaceContent';
 import FaceGenerator from './FaceGenerator';
 import StyleCreator from './StyleCreator';
 import LogoRemoverTool from './LogoRemoverTool';
+import LogoRemoverHistory from './LogoRemoverHistory';
 import BehanceImporter from './BehanceImporter';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -105,6 +106,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <StyleCreator />;
       case 'logo-remover':
         return <LogoRemoverTool initialFiles={behanceFiles} onInitialFilesConsumed={() => setBehanceFiles(undefined)} />;
+      case 'logo-history':
+        return <LogoRemoverHistory />;
       case 'behance-import':
         return <BehanceImporter onSendToLogoRemover={(files) => {
           setBehanceFiles(files);

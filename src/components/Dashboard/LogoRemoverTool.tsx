@@ -699,23 +699,21 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
       (async () => {
         const removeOne = async (item: ImageItem) => {
           if (item.regions.length === 0) {
-            updateItem(item.id, { status: 'done' });
+            updateItem(item.id, { status: 'done', attempts: 0, lastDiffScore: 1 });
             return;
           }
-          updateItem(item.id, { status: 'removing' });
+
+          updateItem(item.id, { status: 'removing', error: undefined });
+
           try {
-            // Generate 1024×1024 letterboxed original + annotated with red overlays
-            const prep = await prepareForRedAnnotation(item.file, item.regions);
-
-            const data = await invokeLogoRemovalWithRetry({
-              action: 'remove',
-              imageBase64: prep.originalPng,
-              annotatedBase64: prep.annotatedPng,
-            }, 3);
-
-            // Crop DALL-E result (1024×1024) back to original image dimensions
-            const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);
-            updateItem(item.id, { status: 'done', resultBase64: finalBase64, resultMimeType: 'image/png' });
+            const { finalBase64, diff, attempts } = await removeWithAutoRetry(item, { startAttempt: 1, maxAttempts: 3 });
+            updateItem(item.id, {
+              status: 'done',
+              resultBase64: finalBase64,
+              resultMimeType: 'image/png',
+              attempts,
+              lastDiffScore: diff,
+            });
           } catch (err) {
             console.error('removeOne error:', err);
             updateItem(item.id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao remover' });

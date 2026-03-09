@@ -395,6 +395,29 @@ const LogoRemoverTool: React.FC = () => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   }, []);
 
+  const invokeLogoRemovalWithRetry = useCallback(async (
+    payload: { action: 'remove'; imageBase64: string; annotatedBase64: string },
+    maxAttempts = 3,
+  ) => {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke('logo-removal', { body: payload });
+        if (error) throw new Error(error.message || 'Falha ao chamar função de remoção');
+        if (!data?.processedImageBase64) throw new Error('Sem imagem retornada');
+        return data as { processedImageBase64: string; mimeType?: string };
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 1200 * attempt));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Erro ao remover logo');
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
     maxSize: 5 * 1024 * 1024,

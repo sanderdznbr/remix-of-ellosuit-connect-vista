@@ -677,8 +677,116 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
 
   const startSelecting = () => {
     if (items.length === 0) return;
+    setPhase('mode-select');
+  };
+
+  const startManualMode = () => {
+    setRemovalMode('manual');
     setSelectionIndex(0);
     setPhase('selecting');
+  };
+
+  /** Convert a File to a base64 data URL for AI vision */
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  /** Use AI to detect logos, watermarks, site links, @ mentions in an image */
+  const detectRegionsForImage = async (item: ImageItem): Promise<LogoRegion[]> => {
+    try {
+      const dataUrl = await fileToBase64(item.file);
+
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this image and identify ALL of the following elements that should be removed:
+1. Logos (company logos, brand marks, watermarks, emblems)
+2. Website URLs or domain names visible as text overlays
+3. @ mentions or social media handles visible as text overlays
+4. Any brand identity text overlaid on the image (not part of the actual content)
+
+For each element found, return its bounding box as percentage coordinates (0-100) relative to the image dimensions.
+
+IMPORTANT: Only detect overlaid/superimposed elements, NOT the main content of the image.
+
+Return a JSON array of objects, each with: x (left %), y (top %), width (%), height (%), label (description).
+If nothing is found, return an empty array [].
+Return ONLY the JSON array, no other text.`
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: dataUrl }
+                }
+              ]
+            }
+          ],
+          temperature: 0.1,
+        },
+      });
+
+      if (error) throw error;
+
+      const responseText = data?.response || data?.message || '';
+      // Extract JSON array from response
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) return [];
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed
+        .filter((r: any) => r.x != null && r.y != null && r.width != null && r.height != null)
+        .map((r: any) => ({
+          id: crypto.randomUUID(),
+          x: Math.max(0, Math.min(100, Number(r.x))),
+          y: Math.max(0, Math.min(100, Number(r.y))),
+          width: Math.max(1, Math.min(100 - Number(r.x), Number(r.width))),
+          height: Math.max(1, Math.min(100 - Number(r.y), Number(r.height))),
+          label: r.label || 'Logo',
+        }));
+    } catch (err) {
+      console.error('Auto-detect error for', item.file.name, err);
+      return [];
+    }
+  };
+
+  const startAutoMode = async () => {
+    setRemovalMode('auto');
+    setPhase('auto-detecting');
+    setAutoDetectProgress({ current: 0, total: items.length });
+
+    const updatedItems = [...items];
+
+    // Process 2 at a time for speed
+    for (let i = 0; i < updatedItems.length; i += 2) {
+      const batch = updatedItems.slice(i, i + 2);
+      const results = await Promise.all(batch.map(item => detectRegionsForImage(item)));
+
+      results.forEach((regions, batchIdx) => {
+        const itemIdx = i + batchIdx;
+        if (itemIdx < updatedItems.length) {
+          updatedItems[itemIdx] = { ...updatedItems[itemIdx], regions, status: 'ready' };
+          updateItem(updatedItems[itemIdx].id, { regions, status: 'ready' });
+        }
+      });
+
+      setAutoDetectProgress({ current: Math.min(i + 2, updatedItems.length), total: updatedItems.length });
+    }
+
+    // Go to selecting phase for confirmation
+    setSelectionIndex(0);
+    setPhase('selecting');
+    toast.success('Detecção automática concluída! Confirme as áreas detectadas.');
   };
 
   const handleSelectionSave = (regions: LogoRegion[]) => {

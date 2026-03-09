@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package,
-  ImageOff, ArrowRight, ZoomIn,
+  ImageOff, ArrowRight, ZoomIn, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';

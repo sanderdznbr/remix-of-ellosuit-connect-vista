@@ -1,10 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
 import {
-  Upload, X, Scan, Download, Loader2, AlertCircle,
+  Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package,
-  Pencil, ImageOff
+  ImageOff, ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,14 +26,14 @@ interface ImageItem {
   previewUrl: string;
   base64?: string;
   mimeType: string;
-  status: 'idle' | 'detecting' | 'detected' | 'removing' | 'done' | 'error';
+  status: 'idle' | 'ready' | 'removing' | 'done' | 'error';
   regions: LogoRegion[];
   resultBase64?: string;
   resultMimeType?: string;
   error?: string;
 }
 
-type Phase = 'upload' | 'detecting' | 'ready' | 'processing' | 'done';
+type Phase = 'upload' | 'selecting' | 'processing' | 'done';
 
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -45,8 +45,7 @@ const fileToBase64 = (file: File): Promise<string> =>
 
 const STATUS_COLOR: Record<string, string> = {
   idle: 'rgba(255,255,255,0.1)',
-  detecting: '#f59e0b',
-  detected: '#10b981',
+  ready: 'rgba(16,185,129,0.4)',
   removing: '#a855f7',
   done: '#10b981',
   error: '#ef4444',
@@ -56,23 +55,31 @@ const STATUS_COLOR: Record<string, string> = {
 interface CardProps {
   item: ImageItem;
   phase: Phase;
+  selectionIndex: number;
+  itemIndex: number;
   onRemoveImage: () => void;
-  onEdit: () => void;
   onDownload: () => void;
 }
 
-const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, onDownload }) => {
+const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex, onRemoveImage, onDownload }) => {
   const showResult = item.status === 'done' && item.resultBase64;
   const displaySrc = showResult
     ? `data:${item.resultMimeType || 'image/png'};base64,${item.resultBase64}`
     : item.previewUrl;
 
-  const canEdit = phase === 'ready' && (item.status === 'detected' || item.status === 'error' || item.status === 'idle');
+  // In selecting phase, highlight current/done/pending
+  const isCurrentlySelecting = phase === 'selecting' && itemIndex === selectionIndex;
+  const isSelectionDone = phase === 'selecting' && item.status === 'ready';
+  const isSelectionPending = phase === 'selecting' && item.status === 'idle';
 
   return (
     <div
-      className="relative rounded-xl overflow-hidden flex flex-col"
-      style={{ border: `1px solid ${STATUS_COLOR[item.status]}33`, backgroundColor: '#111116' }}
+      className="relative rounded-xl overflow-hidden flex flex-col transition-all"
+      style={{
+        border: `1px solid ${isCurrentlySelecting ? 'rgba(123,80,220,0.6)' : STATUS_COLOR[item.status] + '55'}`,
+        backgroundColor: '#111116',
+        boxShadow: isCurrentlySelecting ? '0 0 0 2px rgba(123,80,220,0.3)' : 'none',
+      }}
     >
       {/* Image area */}
       <div className="relative w-full aspect-square overflow-hidden select-none">
@@ -80,42 +87,25 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, on
           src={displaySrc}
           alt=""
           className="w-full h-full object-cover"
+          style={{ filter: isSelectionPending && phase === 'selecting' && itemIndex > selectionIndex ? 'brightness(0.4)' : 'none' }}
           draggable={false}
         />
 
         {/* Region boxes (read-only preview) */}
-        {(phase === 'detecting' || phase === 'ready' || phase === 'processing') &&
-          item.regions.map(r => (
-            <div
-              key={r.id}
-              className="absolute pointer-events-none"
-              style={{
-                left: `${r.x}%`, top: `${r.y}%`,
-                width: `${r.width}%`, height: `${r.height}%`,
-                border: '2px solid #ef4444',
-                backgroundColor: 'rgba(239,68,68,0.15)',
-              }}
-            >
-              {r.label && (
-                <div
-                  className="absolute bottom-0 left-0 right-0 px-1 truncate leading-tight py-0.5"
-                  style={{ fontSize: '8px', backgroundColor: 'rgba(239,68,68,0.8)', color: '#fff' }}
-                >
-                  {r.label}
-                </div>
-              )}
-            </div>
-          ))}
+        {item.regions.map(r => (
+          <div
+            key={r.id}
+            className="absolute pointer-events-none"
+            style={{
+              left: `${r.x}%`, top: `${r.y}%`,
+              width: `${r.width}%`, height: `${r.height}%`,
+              border: '2px solid #ef4444',
+              backgroundColor: 'rgba(239,68,68,0.15)',
+            }}
+          />
+        ))}
 
         {/* Status overlays */}
-        {item.status === 'detecting' && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
-              <span className="text-white/60" style={{ fontSize: '10px' }}>Detectando...</span>
-            </div>
-          </div>
-        )}
         {item.status === 'removing' && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
             <div className="flex flex-col items-center gap-2">
@@ -147,7 +137,27 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, on
           </div>
         )}
 
-        {/* Remove image button (upload phase) */}
+        {/* Current selection indicator */}
+        {isCurrentlySelecting && (
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(123,80,220,0.12)' }}>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+              <span className="text-purple-300 font-medium" style={{ fontSize: '9px' }}>Selecionando...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Selection done badge */}
+        {isSelectionDone && (
+          <div className="absolute top-2 left-2">
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-400" style={{ fontSize: '9px' }}>
+              <CheckCircle2 className="w-2.5 h-2.5" />
+              {item.regions.length > 0 ? `${item.regions.length} área${item.regions.length > 1 ? 's' : ''}` : 'Pulado'}
+            </div>
+          </div>
+        )}
+
+        {/* Remove image button (upload phase only) */}
         {phase === 'upload' && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemoveImage(); }}
@@ -155,21 +165,6 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, on
             style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
           >
             <X className="w-3.5 h-3.5 text-white/70" />
-          </button>
-        )}
-
-        {/* Edit overlay button (ready phase) */}
-        {canEdit && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="absolute inset-0 w-full h-full flex items-end justify-center pb-2 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }}
-          >
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white"
-              style={{ backgroundColor: 'rgba(123,80,220,0.85)' }}>
-              <Pencil className="w-3 h-3" />
-              Editar seleções
-            </span>
           </button>
         )}
       </div>
@@ -180,28 +175,14 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, on
         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
         <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
-          {item.status === 'idle' ? item.file.name.slice(0, 18) + (item.file.name.length > 18 ? '…' : '') : null}
-          {item.status === 'detected' ? `${item.regions.length} logo${item.regions.length !== 1 ? 's' : ''}` : null}
-          {item.status === 'detecting' ? 'Analisando...' : null}
-          {item.status === 'removing' ? 'Processando...' : null}
-          {item.status === 'done' ? (item.resultBase64 ? 'Logo removida ✓' : 'Sem logos') : null}
-          {item.status === 'error' ? 'Erro' : null}
+          {item.status === 'idle' && item.file.name.slice(0, 18) + (item.file.name.length > 18 ? '…' : '')}
+          {item.status === 'ready' && (item.regions.length > 0 ? `${item.regions.length} área${item.regions.length > 1 ? 's' : ''}` : 'Sem logo')}
+          {item.status === 'removing' && 'Processando...'}
+          {item.status === 'done' && (item.resultBase64 ? 'Logo removida ✓' : 'Sem logos')}
+          {item.status === 'error' && 'Erro'}
         </span>
 
         <div className="flex items-center gap-1">
-          {/* Edit button (ready phase) */}
-          {canEdit && (
-            <button
-              onClick={onEdit}
-              title="Editar áreas detectadas"
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors cursor-pointer"
-              style={{ backgroundColor: 'rgba(123,80,220,0.15)', color: '#a78bfa' }}
-            >
-              <Pencil className="w-2.5 h-2.5" />
-              Editar
-            </button>
-          )}
-          {/* Download (done phase) */}
           {item.status === 'done' && item.resultBase64 && (
             <button
               onClick={onDownload}
@@ -222,7 +203,7 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, on
 const LogoRemoverTool: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
-  const [editModalId, setEditModalId] = useState<string | null>(null);
+  const [selectionIndex, setSelectionIndex] = useState(0);
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
@@ -261,74 +242,80 @@ const LogoRemoverTool: React.FC = () => {
     });
   };
 
-  // ── Detect ──
-  const detectAll = async () => {
+  // ── Start selection flow ──
+  const startSelecting = () => {
     if (items.length === 0) return;
-    setPhase('detecting');
+    setSelectionIndex(0);
+    setPhase('selecting');
+  };
 
-    const detectOne = async (item: ImageItem) => {
-      updateItem(item.id, { status: 'detecting' });
-      try {
-        const base64 = await fileToBase64(item.file);
-        const { data, error } = await supabase.functions.invoke('logo-removal', {
-          body: { action: 'detect', imageBase64: base64, mimeType: item.mimeType }
-        });
-        if (error) throw new Error(error.message);
-        const regions: LogoRegion[] = (data.logos || []).map((l: any) => ({
-          id: crypto.randomUUID(),
-          x: Number(l.x), y: Number(l.y),
-          width: Number(l.width), height: Number(l.height),
-          label: l.label,
-        }));
-        updateItem(item.id, { status: 'detected', base64, regions });
-      } catch (err) {
-        updateItem(item.id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao detectar' });
-      }
-    };
+  // ── Handle save from region editor (step mode) ──
+  const handleSelectionSave = (regions: LogoRegion[]) => {
+    const currentItem = items[selectionIndex];
+    if (!currentItem) return;
+    updateItem(currentItem.id, { regions, status: 'ready' });
+  };
 
-    await Promise.all(items.map(detectOne));
-    setPhase('ready');
-    toast.success('Detecção concluída! Revise as marcações e clique em Remover.');
+  const handleSelectionClose = () => {
+    const nextIndex = selectionIndex + 1;
+    if (nextIndex >= items.length) {
+      // All images selected — start processing
+      startRemoving();
+    } else {
+      setSelectionIndex(nextIndex);
+    }
   };
 
   // ── Remove ──
-  const removeAll = async () => {
-    const toProcess = items.filter(i => i.status === 'detected' || i.status === 'error' || i.status === 'idle');
-    if (toProcess.length === 0) { toast.error('Nenhuma imagem pronta para processar'); return; }
-
+  const startRemoving = async () => {
     setPhase('processing');
-    setEditModalId(null);
 
-    const removeOne = async (item: ImageItem) => {
-      if (item.regions.length === 0) { updateItem(item.id, { status: 'done' }); return; }
-      updateItem(item.id, { status: 'removing' });
-      try {
-        const base64 = item.base64 || await fileToBase64(item.file);
-        const { data, error } = await supabase.functions.invoke('logo-removal', {
-          body: {
-            action: 'remove',
-            imageBase64: base64,
-            mimeType: item.mimeType,
-            regions: item.regions.map(r => ({ x: r.x, y: r.y, width: r.width, height: r.height }))
+    // Get latest items snapshot
+    setItems(currentItems => {
+      const toProcess = currentItems.filter(i => i.status === 'ready');
+      
+      // Kick off async processing
+      (async () => {
+        const removeOne = async (item: ImageItem) => {
+          if (item.regions.length === 0) {
+            updateItem(item.id, { status: 'done' });
+            return;
           }
+          updateItem(item.id, { status: 'removing' });
+          try {
+            const base64 = item.base64 || await fileToBase64(item.file);
+            const { data, error } = await supabase.functions.invoke('logo-removal', {
+              body: {
+                action: 'remove',
+                imageBase64: base64,
+                mimeType: item.mimeType,
+                regions: item.regions.map(r => ({ x: r.x, y: r.y, width: r.width, height: r.height }))
+              }
+            });
+            if (error) throw new Error(error.message);
+            if (!data.processedImageBase64) throw new Error('Sem imagem retornada');
+            updateItem(item.id, { status: 'done', resultBase64: data.processedImageBase64, resultMimeType: data.mimeType });
+          } catch (err) {
+            updateItem(item.id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao remover' });
+          }
+        };
+
+        // Batch 3 at a time
+        for (let i = 0; i < toProcess.length; i += 3) {
+          await Promise.all(toProcess.slice(i, i + 3).map(removeOne));
+          if (i + 3 < toProcess.length) await new Promise(r => setTimeout(r, 1500));
+        }
+
+        setPhase('done');
+        setItems(latest => {
+          const successCount = latest.filter(i => i.status === 'done').length;
+          toast.success(`${successCount} imagem${successCount !== 1 ? 'ns' : ''} processada${successCount !== 1 ? 's' : ''} com sucesso!`);
+          return latest;
         });
-        if (error) throw new Error(error.message);
-        if (!data.processedImageBase64) throw new Error('Sem imagem retornada');
-        updateItem(item.id, { status: 'done', resultBase64: data.processedImageBase64, resultMimeType: data.mimeType });
-      } catch (err) {
-        updateItem(item.id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao remover' });
-      }
-    };
+      })();
 
-    // Batch 3 at a time
-    for (let i = 0; i < toProcess.length; i += 3) {
-      await Promise.all(toProcess.slice(i, i + 3).map(removeOne));
-      if (i + 3 < toProcess.length) await new Promise(r => setTimeout(r, 1500));
-    }
-
-    setPhase('done');
-    const successCount = items.filter(i => i.status === 'done').length;
-    toast.success(`${successCount} imagem(ns) processada(s) com sucesso!`);
+      return currentItems;
+    });
   };
 
   // ── Download ──
@@ -365,17 +352,18 @@ const LogoRemoverTool: React.FC = () => {
     items.forEach(i => URL.revokeObjectURL(i.previewUrl));
     setItems([]);
     setPhase('upload');
-    setEditModalId(null);
+    setSelectionIndex(0);
   };
 
   // ── Derived ──
-  const totalRegions = items.reduce((s, i) => s + i.regions.length, 0);
   const doneCount = items.filter(i => i.status === 'done').length;
-  const processingCount = items.filter(i => i.status === 'removing' || i.status === 'detecting').length;
+  const processingCount = items.filter(i => i.status === 'removing').length;
   const withResultCount = items.filter(i => i.status === 'done' && i.resultBase64).length;
+  const readyCount = items.filter(i => i.status === 'ready').length;
+  const totalRegions = items.reduce((s, i) => s + i.regions.length, 0);
 
-  // ── Edit modal item ──
-  const editingItem = editModalId ? items.find(i => i.id === editModalId) : null;
+  // ── Current selection item ──
+  const selectingItem = phase === 'selecting' ? items[selectionIndex] : null;
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#0a0a0f' }}>
@@ -387,11 +375,13 @@ const LogoRemoverTool: React.FC = () => {
             Remover Logos
           </h1>
           <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            {phase === 'upload' && 'Carregue até 15 posts — a IA detecta e remove as logos automaticamente'}
-            {phase === 'detecting' && 'Analisando imagens com IA...'}
-            {phase === 'ready' && `${items.length} imagem(ns) analisada(s) · ${totalRegions} região(ões) marcada(s) · Clique em "Editar" para ajustar as seleções`}
-            {phase === 'processing' && `Removendo logos... ${doneCount}/${items.length} concluída(s)`}
-            {phase === 'done' && `Concluído! ${withResultCount} imagem(ns) processada(s) sem logos`}
+            {phase === 'upload' && (items.length === 0
+              ? 'Carregue até 15 imagens e marque manualmente as áreas com logo'
+              : `${items.length} imagem${items.length !== 1 ? 'ns' : ''} selecionada${items.length !== 1 ? 's' : ''} — clique em Avançar para marcar as logos`
+            )}
+            {phase === 'selecting' && `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}`}
+            {phase === 'processing' && `Removendo logos com IA... ${doneCount}/${items.length} concluída${doneCount !== 1 ? 's' : ''}`}
+            {phase === 'done' && `Concluído! ${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} processada${withResultCount !== 1 ? 's' : ''} sem logos`}
           </p>
         </div>
 
@@ -428,10 +418,10 @@ const LogoRemoverTool: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {isDragActive ? 'Solte as imagens aqui' : 'Arraste posts aqui ou clique para selecionar'}
+                  {isDragActive ? 'Solte as imagens aqui' : 'Arraste imagens aqui ou clique para selecionar'}
                 </p>
                 <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  JPG, PNG, WEBP · Máx. 5MB por imagem · Até 15 posts
+                  JPG, PNG, WEBP · Máx. 5MB por imagem · Até 15 imagens
                 </p>
               </div>
             </div>
@@ -456,13 +446,48 @@ const LogoRemoverTool: React.FC = () => {
               </div>
             )}
 
+            {/* Progress bar (selecting/processing phase) */}
+            {(phase === 'selecting' || phase === 'processing') && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 rounded-xl p-3"
+                style={{ backgroundColor: 'rgba(123,80,220,0.06)', border: '1px solid rgba(123,80,220,0.15)' }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium" style={{ color: 'rgba(167,139,250,0.9)' }}>
+                    {phase === 'selecting'
+                      ? `Marcando áreas — ${selectionIndex + 1} de ${items.length}`
+                      : `Processando com IA — ${doneCount} de ${items.length}`
+                    }
+                  </span>
+                  {phase === 'selecting' && (
+                    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      {readyCount} marcadas
+                    </span>
+                  )}
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: phase === 'selecting' ? '#7B50DC' : '#10b981' }}
+                    animate={{
+                      width: phase === 'selecting'
+                        ? `${(selectionIndex / items.length) * 100}%`
+                        : `${(doneCount / items.length) * 100}%`
+                    }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </motion.div>
+            )}
+
             {/* Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               <AnimatePresence>
-                {items.map(item => (
+                {items.map((item, idx) => (
                   <motion.div
                     key={item.id}
-                    className="group"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
@@ -471,30 +496,15 @@ const LogoRemoverTool: React.FC = () => {
                     <ImageCard
                       item={item}
                       phase={phase}
+                      selectionIndex={selectionIndex}
+                      itemIndex={idx}
                       onRemoveImage={() => removeImage(item.id)}
-                      onEdit={() => setEditModalId(item.id)}
                       onDownload={() => downloadSingle(item)}
                     />
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
-
-            {/* Ready phase tip */}
-            {phase === 'ready' && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 flex items-center gap-2 px-3 py-2.5 rounded-lg"
-                style={{ backgroundColor: 'rgba(123,80,220,0.06)', border: '1px solid rgba(123,80,220,0.15)' }}
-              >
-                <Pencil className="w-3.5 h-3.5 shrink-0 text-purple-400" />
-                <p className="text-xs" style={{ color: 'rgba(167,139,250,0.8)' }}>
-                  A IA detectou as regiões acima. <span style={{ color: '#a78bfa' }}>Passe o mouse sobre uma imagem</span> e clique em{' '}
-                  <strong style={{ color: '#a78bfa' }}>"Editar seleções"</strong> para ajustar as marcações antes de remover.
-                </p>
-              </motion.div>
-            )}
           </div>
         )}
       </div>
@@ -505,40 +515,28 @@ const LogoRemoverTool: React.FC = () => {
         style={{ borderTop: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#0d0d12' }}
       >
         <div className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-          {phase === 'upload' && items.length > 0 && `${items.length} imagem(ns) selecionada(s)`}
-          {phase === 'ready' && `${totalRegions} área(s) para remover`}
+          {phase === 'upload' && items.length > 0 && `${items.length} imagem${items.length !== 1 ? 'ns' : ''} pronta${items.length !== 1 ? 's' : ''}`}
+          {phase === 'selecting' && `${totalRegions} área${totalRegions !== 1 ? 's' : ''} marcada${totalRegions !== 1 ? 's' : ''} até agora`}
           {phase === 'processing' && (
             <span className="flex items-center gap-1.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               {processingCount > 0 ? `${processingCount} em processamento...` : 'Finalizando...'}
             </span>
           )}
-          {phase === 'done' && `${withResultCount} imagem(ns) pronta(s) para download`}
+          {phase === 'done' && `${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} pronta${withResultCount !== 1 ? 's' : ''} para download`}
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Detect button */}
+          {/* Avançar button */}
           {phase === 'upload' && (
             <button
-              onClick={detectAll}
+              onClick={startSelecting}
               disabled={items.length === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#7B50DC', color: '#fff' }}
             >
-              <Scan className="w-4 h-4" />
-              Detectar Logos
-            </button>
-          )}
-
-          {/* Remove button */}
-          {phase === 'ready' && (
-            <button
-              onClick={removeAll}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer"
-              style={{ backgroundColor: '#7B50DC', color: '#fff' }}
-            >
-              <Eraser className="w-4 h-4" />
-              Remover Logos {totalRegions > 0 && `(${totalRegions})`}
+              <ArrowRight className="w-4 h-4" />
+              Avançar
             </button>
           )}
 
@@ -572,20 +570,16 @@ const LogoRemoverTool: React.FC = () => {
         </div>
       </div>
 
-      {/* Region Editor Modal */}
-      {editingItem && (
+      {/* Step-mode Region Editor Modal */}
+      {selectingItem && (
         <LogoRegionEditor
-          imageUrl={editingItem.previewUrl}
-          imageName={editingItem.file.name}
-          initialRegions={editingItem.regions}
-          onSave={(newRegions) => {
-            updateItem(editingItem.id, {
-              regions: newRegions,
-              status: 'detected',
-            });
-            toast.success('Seleções atualizadas!');
-          }}
-          onClose={() => setEditModalId(null)}
+          imageUrl={selectingItem.previewUrl}
+          imageName={selectingItem.file.name}
+          initialRegions={selectingItem.regions}
+          onSave={handleSelectionSave}
+          onClose={handleSelectionClose}
+          stepCurrent={selectionIndex + 1}
+          stepTotal={items.length}
         />
       )}
     </div>

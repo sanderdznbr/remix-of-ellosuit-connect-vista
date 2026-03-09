@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { X, Trash2, Plus, Check, Info, RotateCcw } from 'lucide-react';
+import { X, Trash2, Plus, Check, Info, ArrowRight } from 'lucide-react';
 
 interface LogoRegion {
   id: string;
@@ -16,11 +16,17 @@ interface Props {
   initialRegions: LogoRegion[];
   onSave: (regions: LogoRegion[]) => void;
   onClose: () => void;
+  // Step mode (sequential flow)
+  stepCurrent?: number;
+  stepTotal?: number;
 }
 
 const LogoRegionEditor: React.FC<Props> = ({
-  imageUrl, imageName, initialRegions, onSave, onClose
+  imageUrl, imageName, initialRegions, onSave, onClose,
+  stepCurrent, stepTotal,
 }) => {
+  const isStepMode = stepCurrent !== undefined && stepTotal !== undefined;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -32,11 +38,12 @@ const LogoRegionEditor: React.FC<Props> = ({
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [drawBox, setDrawBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
-  // Reset if imageUrl changes
+  // Reset when image changes
   useEffect(() => {
     setRegions(initialRegions);
     setSelectedId(null);
     setDrawBox(null);
+    setImgLoaded(false);
   }, [imageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getPercent = useCallback((clientX: number, clientY: number) => {
@@ -51,7 +58,6 @@ const LogoRegionEditor: React.FC<Props> = ({
 
   // ── Mouse ──
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only start drawing on the image background (not on region boxes)
     if ((e.target as HTMLElement).dataset.region) return;
     e.preventDefault();
     const pos = getPercent(e.clientX, e.clientY);
@@ -75,7 +81,6 @@ const LogoRegionEditor: React.FC<Props> = ({
             id: crypto.randomUUID(),
             x: prev.x, y: prev.y,
             width: prev.w, height: prev.h,
-            label: 'Manual',
           }]);
         }
         return null;
@@ -118,7 +123,6 @@ const LogoRegionEditor: React.FC<Props> = ({
             id: crypto.randomUUID(),
             x: prev.x, y: prev.y,
             width: prev.w, height: prev.h,
-            label: 'Manual',
           }]);
         }
         return null;
@@ -143,15 +147,15 @@ const LogoRegionEditor: React.FC<Props> = ({
     setSelectedId(null);
   };
 
-  const resetToOriginal = () => {
-    setRegions(initialRegions);
-    setSelectedId(null);
-  };
-
-  const handleSave = () => {
+  const handleConfirm = () => {
     onSave(regions);
     onClose();
   };
+
+  const isLast = isStepMode && stepCurrent === stepTotal;
+  const confirmLabel = isStepMode
+    ? (isLast ? 'Concluir' : 'Próximo')
+    : 'Confirmar seleções';
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4">
@@ -159,12 +163,39 @@ const LogoRegionEditor: React.FC<Props> = ({
       {/* Header */}
       <div className="w-full max-w-3xl flex items-center justify-between mb-3 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
-            style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171' }}>
-            <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
-            {regions.length} área{regions.length !== 1 ? 's' : ''} selecionada{regions.length !== 1 ? 's' : ''}
-          </div>
-          <span className="text-xs max-w-[180px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          {isStepMode ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                style={{ backgroundColor: 'rgba(123,80,220,0.15)', color: '#a78bfa' }}>
+                {stepCurrent} / {stepTotal}
+              </div>
+              {/* Step dots */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: stepTotal! }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-full transition-all"
+                    style={{
+                      width: i + 1 === stepCurrent ? '16px' : '6px',
+                      height: '6px',
+                      backgroundColor: i + 1 < stepCurrent!
+                        ? '#10b981'
+                        : i + 1 === stepCurrent
+                        ? '#7B50DC'
+                        : 'rgba(255,255,255,0.15)',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
+              style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171' }}>
+              <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+              {regions.length} área{regions.length !== 1 ? 's' : ''} selecionada{regions.length !== 1 ? 's' : ''}
+            </div>
+          )}
+          <span className="text-xs max-w-[200px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
             {imageName}
           </span>
         </div>
@@ -177,24 +208,18 @@ const LogoRegionEditor: React.FC<Props> = ({
               style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#f87171' }}
               title="Limpar todas as seleções"
             >
-              <Trash2 className="w-3 h-3" /> Limpar tudo
+              <Trash2 className="w-3 h-3" /> Limpar
             </button>
           )}
-          <button
-            onClick={resetToOriginal}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
-            title="Restaurar detecções originais da IA"
-          >
-            <RotateCcw className="w-3 h-3" /> Restaurar IA
-          </button>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors cursor-pointer"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {!isStepMode && (
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors cursor-pointer"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -204,9 +229,12 @@ const LogoRegionEditor: React.FC<Props> = ({
           style={{ backgroundColor: 'rgba(123,80,220,0.08)', border: '1px solid rgba(123,80,220,0.15)' }}>
           <Info className="w-3.5 h-3.5 shrink-0 text-purple-400" />
           <span className="text-xs text-purple-400/80">
-            <strong className="text-purple-400">Clique</strong> numa caixa vermelha para removê-la ·{' '}
-            <strong className="text-purple-400">Arraste</strong> na imagem para adicionar nova área ·{' '}
-            <strong className="text-purple-400">Dois cliques</strong> na caixa selecionada para deletar
+            <strong className="text-purple-400">Arraste</strong> na imagem para marcar a área com logo ·{' '}
+            <strong className="text-purple-400">Clique</strong> numa caixa selecionada para remover ·{' '}
+            {isStepMode
+              ? <><strong className="text-purple-400">Pule</strong> se não houver logo nesta imagem</>
+              : <><strong className="text-purple-400">Dois cliques</strong> numa caixa para deletar</>
+            }
           </span>
         </div>
       </div>
@@ -226,7 +254,7 @@ const LogoRegionEditor: React.FC<Props> = ({
         <img
           ref={imgRef}
           src={imageUrl}
-          alt="Editar regiões"
+          alt="Selecionar área"
           className="block rounded-xl"
           style={{ maxWidth: '80vw', maxHeight: '60vh', objectFit: 'contain', pointerEvents: 'none' }}
           draggable={false}
@@ -251,24 +279,13 @@ const LogoRegionEditor: React.FC<Props> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 if (isSelected) {
-                  // second click deletes
                   deleteRegion(r.id);
                 } else {
                   setSelectedId(r.id);
                 }
               }}
             >
-              {/* Label */}
-              {r.label && r.height > 6 && (
-                <div
-                  className="absolute bottom-0 left-0 right-0 px-1 truncate text-[9px] leading-tight py-0.5"
-                  style={{ backgroundColor: isSelected ? 'rgba(245,158,11,0.85)' : 'rgba(239,68,68,0.8)', color: '#fff', pointerEvents: 'none' }}
-                >
-                  {r.label}
-                </div>
-              )}
-
-              {/* Delete X always visible when selected */}
+              {/* Delete X when selected */}
               {isSelected && (
                 <button
                   data-region="1"
@@ -279,16 +296,6 @@ const LogoRegionEditor: React.FC<Props> = ({
                 >
                   <X className="w-3 h-3" />
                 </button>
-              )}
-
-              {/* Corner indicator (not selected) */}
-              {!isSelected && (
-                <div
-                  className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity"
-                  style={{ backgroundColor: '#ef4444', pointerEvents: 'none' }}
-                >
-                  <X className="w-2 h-2 text-white" />
-                </div>
               )}
             </div>
           );
@@ -318,27 +325,49 @@ const LogoRegionEditor: React.FC<Props> = ({
       <div className="w-full max-w-3xl flex items-center justify-between mt-4 shrink-0 gap-3">
         <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
           {regions.length === 0
-            ? 'Nenhuma área selecionada — a imagem será mantida sem alterações'
+            ? isStepMode ? 'Nenhuma área — clique em Pular se não houver logo' : 'Nenhuma área selecionada'
             : `${regions.length} área${regions.length !== 1 ? 's' : ''} será${regions.length !== 1 ? 'ão' : ''} removida${regions.length !== 1 ? 's' : ''}`
           }
         </p>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer"
-            style={{ backgroundColor: '#7B50DC', color: '#fff' }}
-          >
-            <Check className="w-4 h-4" />
-            Confirmar seleções
-          </button>
+          {isStepMode ? (
+            <>
+              <button
+                onClick={() => { onSave([]); onClose(); }}
+                className="px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer"
+                style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                Pular
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+              >
+                {isLast ? <Check className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                {confirmLabel}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer"
+                style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                style={{ backgroundColor: '#7B50DC', color: '#fff' }}
+              >
+                <Check className="w-4 h-4" />
+                {confirmLabel}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

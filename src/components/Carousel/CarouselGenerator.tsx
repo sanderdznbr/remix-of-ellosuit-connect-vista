@@ -1580,14 +1580,16 @@ const CarouselGenerator: React.FC = () => {
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
               body: {
-                prompt: buildImagePrompt(panoramaPrompt),
+                // PANORAMIC: do NOT use buildImagePrompt() — it adds portrait-specific settings that conflict
+                prompt: panoramaPrompt,
                 imageSize: panoramaAspectRatio,
                 topic: cleanTopic,
                 faceReferenceUrls: allFaceRefUrls.length > 0 ? allFaceRefUrls : undefined,
                 styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
                 imageModel: resolvedModel === 'higgsfield' ? 'gemini' : resolvedModel,
-                negativePrompt: [styleNeg, 'no visible cuts, no separators, no vertical lines dividing sections, no borders between panels'].filter(Boolean).join(', '),
-                fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
+                negativePrompt: [styleNeg, 'no visible cuts, no separators, no vertical lines dividing sections, no borders between panels', 'portrait format, vertical format, 1080x1350'].filter(Boolean).join(', '),
+                fidelity: imageSettings.fidelity,
+                // Pass stylePrompt so edge function can extract visual DNA (it will strip portrait dimensions)
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
                 panoramicCardCount: panelCount,
@@ -2924,14 +2926,15 @@ FORBIDDEN:
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
               body: {
-                prompt: buildImagePrompt(panoramaPrompt),
+                // PANORAMIC: do NOT use buildImagePrompt() — it adds portrait-specific settings that conflict
+                prompt: panoramaPrompt,
                 imageSize: panoramaAspectRatio,
                 topic: cleanTopic,
                 faceReferenceUrls: allFaceRefUrls.length > 0 ? allFaceRefUrls : undefined,
                 styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
                 imageModel: resolvedModel === 'higgsfield' ? 'gemini' : resolvedModel,
-                negativePrompt: [styleNeg, 'no visible cuts, no separators, no vertical lines dividing sections'].filter(Boolean).join(', '),
-                fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
+                negativePrompt: [styleNeg, 'no visible cuts, no separators, no vertical lines dividing sections', 'portrait format, vertical format, 1080x1350'].filter(Boolean).join(', '),
+                fidelity: imageSettings.fidelity,
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
                 panoramicCardCount: panelCount,

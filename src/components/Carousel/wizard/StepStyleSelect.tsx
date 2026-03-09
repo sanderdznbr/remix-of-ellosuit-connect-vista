@@ -4,22 +4,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 
-// Optimize Supabase storage URLs to use WebP transform + resize for thumbnails
-const optimizeImageUrl = (url: string, width = 400): string => {
-  if (!url) return url;
-  // Only transform Supabase storage URLs
-  if (url.includes('/storage/v1/object/public/')) {
-    // Use Supabase image transformation: render/image + width + format
-    const transformed = url.replace(
-      '/storage/v1/object/public/',
-      `/storage/v1/render/image/public/`
-    );
-    const separator = transformed.includes('?') ? '&' : '?';
-    return `${transformed}${separator}width=${width}&format=webp&quality=75`;
-  }
-  return url;
-};
-
 interface MarketplaceStyle {
   id: string;
   name: string;
@@ -212,7 +196,7 @@ const StepStyleSelect: React.FC<Props> = ({
                   }`}>
                   {currentImg && (
                     <div className="bg-white/[0.03] relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
-                      <img src={optimizeImageUrl(currentImg, 350)} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="lazy" decoding="async" />
+                      <img src={currentImg} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="eager" />
                       {isLocked && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                           <Lock className="w-5 h-5 text-white/60" />
@@ -434,7 +418,7 @@ const MarketplacePopup: React.FC<{
                   }`}>
                     <div className="aspect-video bg-white/[0.03]">
                       {previewImg ? (
-                        <img src={optimizeImageUrl(previewImg, 400)} alt={style.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                        <img src={previewImg} alt={style.name} className="w-full h-full object-cover" loading="eager" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Sparkles className="w-8 h-8 text-white/10" /></div>
                       )}

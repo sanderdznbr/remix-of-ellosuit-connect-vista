@@ -695,10 +695,32 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
       reader.readAsDataURL(file);
     });
 
+  /** Resize image to max 800px for AI detection to avoid WORKER_LIMIT */
+  const resizeImageForDetection = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          const scale = MAX / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+
   /** Use AI to detect logos, watermarks, site links, @ mentions in an image */
   const detectRegionsForImage = async (item: ImageItem): Promise<LogoRegion[]> => {
     try {
-      const dataUrl = await fileToBase64(item.file);
+      const dataUrl = await resizeImageForDetection(item.file);
 
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
@@ -737,7 +759,6 @@ Return ONLY the JSON array, no other text.`
       if (error) throw error;
 
       const responseText = data?.response || data?.message || '';
-      // Extract JSON array from response
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (!jsonMatch) return [];
 
@@ -767,9 +788,9 @@ Return ONLY the JSON array, no other text.`
 
     const updatedItems = [...items];
 
-    // Process 2 at a time for speed
-    for (let i = 0; i < updatedItems.length; i += 2) {
-      const batch = updatedItems.slice(i, i + 2);
+    // Process ONE at a time to avoid WORKER_LIMIT
+    for (let i = 0; i < updatedItems.length; i++) {
+      const batch = [updatedItems[i]];
       const results = await Promise.all(batch.map(item => detectRegionsForImage(item)));
 
       results.forEach((regions, batchIdx) => {

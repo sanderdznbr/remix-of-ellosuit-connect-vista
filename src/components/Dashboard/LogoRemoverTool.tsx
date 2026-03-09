@@ -3,7 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
 import {
   Upload, X, Download, Loader2, AlertCircle,
-  CheckCircle2, Eraser, Plus, RotateCcw, Package,
+  CheckCircle2, Eraser, Plus, RotateCcw, Package, Trash2,
   ImageOff, ArrowRight, ZoomIn, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -36,6 +36,8 @@ interface ImageItem {
   resultBase64?: string;
   resultMimeType?: string;
   error?: string;
+  attempts?: number;
+  lastDiffScore?: number;
 }
 
 type Phase = 'upload' | 'selecting' | 'processing' | 'done';
@@ -109,6 +111,7 @@ const prepareForInpainting = (
 const prepareForRedAnnotation = (
   file: File,
   regions: LogoRegion[],
+  opts?: { pad?: number; alpha?: number },
 ): Promise<{ originalPng: string; annotatedPng: string; crop: CropParams }> =>
   new Promise((resolve, reject) => {
     const img = new Image();
@@ -139,13 +142,16 @@ const prepareForRedAnnotation = (
       annCanvas.height = SIZE;
       const aCtx = annCanvas.getContext('2d')!;
       aCtx.drawImage(origCanvas, 0, 0);
-      aCtx.fillStyle = 'rgba(255,0,0,0.55)';
+
+      const pad = opts?.pad ?? 4;
+      const alpha = Math.max(0.35, Math.min(0.95, opts?.alpha ?? 0.55));
+      aCtx.fillStyle = `rgba(255,0,0,${alpha})`;
+
       for (const r of regions) {
         const rx = ox + (r.x / 100) * w;
         const ry = oy + (r.y / 100) * h;
         const rw = (r.width / 100) * w;
         const rh = (r.height / 100) * h;
-        const pad = 4;
         aCtx.fillRect(rx - pad, ry - pad, rw + pad * 2, rh + pad * 2);
       }
 
@@ -188,6 +194,89 @@ const STATUS_COLOR: Record<string, string> = {
   error: '#ef4444',
 };
 
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
+/**
+ * Compute how much the selected regions changed after processing.
+ * 0 = identical (likely failed), 1 = very different.
+ */
+const computeRegionDiffScore = async (
+  file: File,
+  resultBase64: string,
+  regions: LogoRegion[],
+): Promise<number> => {
+  if (regions.length === 0) return 1;
+
+  const origUrl = URL.createObjectURL(file);
+  try {
+    const [origImg, resultImg] = await Promise.all([
+      loadImage(origUrl),
+      loadImage(`data:image/png;base64,${resultBase64}`),
+    ]);
+
+    const maxSide = 280;
+    const scale = Math.min(maxSide / origImg.width, maxSide / origImg.height);
+    const w = Math.max(1, Math.round(origImg.width * scale));
+    const h = Math.max(1, Math.round(origImg.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return 1;
+
+    // Draw original
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(origImg, 0, 0, w, h);
+    const origData = ctx.getImageData(0, 0, w, h).data;
+
+    // Draw result
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(resultImg, 0, 0, w, h);
+    const resData = ctx.getImageData(0, 0, w, h).data;
+
+    const regionBounds = regions.map(r => ({
+      x1: Math.floor((r.x / 100) * w),
+      y1: Math.floor((r.y / 100) * h),
+      x2: Math.ceil(((r.x + r.width) / 100) * w),
+      y2: Math.ceil(((r.y + r.height) / 100) * h),
+    }));
+
+    const inRegion = (x: number, y: number) =>
+      regionBounds.some(b => x >= b.x1 && x < b.x2 && y >= b.y1 && y < b.y2);
+
+    let sum = 0;
+    let count = 0;
+
+    // Sample every 2px for speed
+    for (let y = 0; y < h; y += 2) {
+      for (let x = 0; x < w; x += 2) {
+        if (!inRegion(x, y)) continue;
+        const i = (y * w + x) * 4;
+        sum += Math.abs(origData[i] - resData[i]);
+        sum += Math.abs(origData[i + 1] - resData[i + 1]);
+        sum += Math.abs(origData[i + 2] - resData[i + 2]);
+        count++;
+      }
+    }
+
+    if (count === 0) return 1;
+    const max = count * 255 * 3;
+    return Math.min(1, Math.max(0, sum / max));
+  } catch {
+    return 1;
+  } finally {
+    URL.revokeObjectURL(origUrl);
+  }
+};
+
 // ──────────────── ImageCard ────────────────
 interface CardProps {
   item: ImageItem;
@@ -197,11 +286,13 @@ interface CardProps {
   onRemoveImage: () => void;
   onDownload: () => void;
   onZoom: (src: string) => void;
+  onDelete: () => void;
+  onRegenerate: () => void;
 }
 
 const ImageCard: React.FC<CardProps> = ({
   item, phase, selectionIndex, itemIndex,
-  onRemoveImage, onDownload, onZoom,
+  onRemoveImage, onDownload, onZoom, onDelete, onRegenerate,
 }) => {
   const showResult = item.status === 'done' && item.resultBase64;
   const displaySrc = showResult
@@ -336,6 +427,16 @@ const ImageCard: React.FC<CardProps> = ({
           {item.status === 'error' && 'Erro'}
         </span>
         <div className="flex items-center gap-1">
+          {(item.status === 'done' || item.status === 'error') && item.regions.length > 0 && (
+            <button
+              onClick={onRegenerate}
+              className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer"
+              style={{ backgroundColor: 'rgba(123,80,220,0.14)', color: '#a78bfa', border: '1px solid rgba(123,80,220,0.18)' }}
+              title="Regenerar"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </button>
+          )}
           {item.status === 'done' && item.resultBase64 && (
             <button
               onClick={onDownload}
@@ -346,6 +447,15 @@ const ImageCard: React.FC<CardProps> = ({
               <Download className="w-3 h-3" />
             </button>
           )}
+          <button
+            onClick={onDelete}
+            disabled={phase === 'selecting' || phase === 'processing'}
+            className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.18)' }}
+            title={phase === 'selecting' || phase === 'processing' ? 'Aguarde para excluir' : 'Excluir'}
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
         </div>
       </div>
     </div>
@@ -425,6 +535,53 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     throw lastError instanceof Error ? lastError : new Error('Erro ao remover logo');
   }, []);
 
+  const removeWithAutoRetry = useCallback(async (
+    item: ImageItem,
+    opts?: { startAttempt?: number; maxAttempts?: number },
+  ) => {
+    const maxAttempts = opts?.maxAttempts ?? 3;
+    let lastError: unknown = null;
+
+    for (let attempt = opts?.startAttempt ?? 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const pad = 4 + (attempt - 1) * 8;
+        const alpha = 0.55 + (attempt - 1) * 0.18;
+
+        // Generate 1024×1024 letterboxed original + annotated with red overlays
+        const prep = await prepareForRedAnnotation(item.file, item.regions, { pad, alpha });
+
+        const data = await invokeLogoRemovalWithRetry({
+          action: 'remove',
+          imageBase64: prep.originalPng,
+          annotatedBase64: prep.annotatedPng,
+        }, 3);
+
+        // Crop result (1024×1024) back to original image dimensions
+        const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);
+        const diff = await computeRegionDiffScore(item.file, finalBase64, item.regions);
+
+        console.log('[logo-remover] attempt', attempt, 'diff', diff.toFixed(4));
+
+        // If the edited region barely changed, likely a failure → retry automatically with stronger mask
+        if (diff < 0.02 && attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 700 * attempt));
+          continue;
+        }
+
+        return { finalBase64, diff, attempts: attempt };
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 900 * attempt));
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Erro ao remover logo');
+  }, [invokeLogoRemovalWithRetry]);
+
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
     maxSize: 5 * 1024 * 1024,
@@ -472,6 +629,47 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     });
   };
 
+  const handleDelete = useCallback((id: string) => {
+    setItems(prev => {
+      const item = prev.find(i => i.id === id);
+      if (!item) return prev;
+      if (item.status === 'removing') {
+        toast.error('Aguarde finalizar o processamento para excluir');
+        return prev;
+      }
+      URL.revokeObjectURL(item.previewUrl);
+      return prev.filter(i => i.id !== id);
+    });
+  }, []);
+
+  const regenerate = useCallback(async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    if (item.status === 'removing') return;
+    if (item.regions.length === 0) {
+      toast.info('Sem áreas marcadas para remover');
+      return;
+    }
+
+    updateItem(id, { status: 'removing', error: undefined });
+
+    try {
+      const { finalBase64, diff, attempts } = await removeWithAutoRetry(item, { startAttempt: 2, maxAttempts: 3 });
+      updateItem(id, {
+        status: 'done',
+        resultBase64: finalBase64,
+        resultMimeType: 'image/png',
+        attempts,
+        lastDiffScore: diff,
+      });
+      toast.success('Regenerado!');
+    } catch (err) {
+      console.error('regenerate error:', err);
+      updateItem(id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao regenerar' });
+      toast.error('Falha ao regenerar');
+    }
+  }, [items, removeWithAutoRetry, updateItem]);
+
   const startSelecting = () => {
     if (items.length === 0) return;
     setSelectionIndex(0);
@@ -502,23 +700,21 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
       (async () => {
         const removeOne = async (item: ImageItem) => {
           if (item.regions.length === 0) {
-            updateItem(item.id, { status: 'done' });
+            updateItem(item.id, { status: 'done', attempts: 0, lastDiffScore: 1 });
             return;
           }
-          updateItem(item.id, { status: 'removing' });
+
+          updateItem(item.id, { status: 'removing', error: undefined });
+
           try {
-            // Generate 1024×1024 letterboxed original + annotated with red overlays
-            const prep = await prepareForRedAnnotation(item.file, item.regions);
-
-            const data = await invokeLogoRemovalWithRetry({
-              action: 'remove',
-              imageBase64: prep.originalPng,
-              annotatedBase64: prep.annotatedPng,
-            }, 3);
-
-            // Crop DALL-E result (1024×1024) back to original image dimensions
-            const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);
-            updateItem(item.id, { status: 'done', resultBase64: finalBase64, resultMimeType: 'image/png' });
+            const { finalBase64, diff, attempts } = await removeWithAutoRetry(item, { startAttempt: 1, maxAttempts: 3 });
+            updateItem(item.id, {
+              status: 'done',
+              resultBase64: finalBase64,
+              resultMimeType: 'image/png',
+              attempts,
+              lastDiffScore: diff,
+            });
           } catch (err) {
             console.error('removeOne error:', err);
             updateItem(item.id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao remover' });
@@ -720,6 +916,8 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
                       onRemoveImage={() => removeImage(item.id)}
                       onDownload={() => downloadSingle(item)}
                       onZoom={setLightboxSrc}
+                      onDelete={() => handleDelete(item.id)}
+                      onRegenerate={() => regenerate(item.id)}
                     />
                   </motion.div>
                 ))}

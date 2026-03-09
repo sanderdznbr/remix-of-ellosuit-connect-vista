@@ -1019,7 +1019,107 @@ Return ONLY the JSON array, no other text.`
           </div>
         )}
 
-        {items.length > 0 && (
+        {/* Mode selection */}
+        {phase === 'mode-select' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center gap-6 py-12"
+          >
+            <div className="text-center mb-2">
+              <h2 className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                Como deseja identificar as logos?
+              </h2>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Escolha o modo de detecção para {items.length} imagem{items.length !== 1 ? 'ns' : ''}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+              {/* Auto mode */}
+              <button
+                onClick={startAutoMode}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl transition-all cursor-pointer group"
+                style={{
+                  border: '1px solid rgba(123,80,220,0.2)',
+                  backgroundColor: 'rgba(123,80,220,0.06)',
+                }}
+              >
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:scale-105"
+                  style={{ backgroundColor: 'rgba(123,80,220,0.15)' }}>
+                  <Wand2 className="w-6 h-6" style={{ color: '#a78bfa' }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>Automático</p>
+                  <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    A IA identifica logos, links, @menções e marcas d'água automaticamente
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(123,80,220,0.12)' }}>
+                  <Sparkles className="w-3 h-3" style={{ color: '#a78bfa' }} />
+                  <span className="text-xs font-medium" style={{ color: '#a78bfa' }}>Recomendado</span>
+                </div>
+              </button>
+
+              {/* Manual mode */}
+              <button
+                onClick={startManualMode}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl transition-all cursor-pointer group"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                }}
+              >
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors group-hover:scale-105"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                  <MousePointerClick className="w-6 h-6" style={{ color: 'rgba(255,255,255,0.5)' }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>Manual</p>
+                  <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Selecione manualmente as áreas com logo em cada imagem
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                  <Eye className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                  <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>Controle total</span>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Auto-detecting progress */}
+        {phase === 'auto-detecting' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center gap-6 py-16"
+          >
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(123,80,220,0.12)' }}>
+              <Wand2 className="w-7 h-7 animate-pulse" style={{ color: '#a78bfa' }} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                Detectando logos automaticamente...
+              </p>
+              <p className="text-xs mt-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Analisando {autoDetectProgress.current} de {autoDetectProgress.total} imagens
+              </p>
+            </div>
+            <div className="w-64 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              <motion.div
+                className="h-full rounded-full"
+                style={{ backgroundColor: '#7B50DC' }}
+                animate={{ width: `${autoDetectProgress.total > 0 ? (autoDetectProgress.current / autoDetectProgress.total) * 100 : 0}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {items.length > 0 && phase !== 'mode-select' && phase !== 'auto-detecting' && (
           <div>
             {phase === 'upload' && items.length < 15 && (
               <div
@@ -1045,13 +1145,15 @@ Return ONLY the JSON array, no other text.`
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium" style={{ color: 'rgba(167,139,250,0.9)' }}>
                     {phase === 'selecting'
-                      ? `Marcando áreas — ${selectionIndex + 1} de ${items.length}`
+                      ? (removalMode === 'auto'
+                        ? `Confirme as detecções — ${selectionIndex + 1} de ${items.length}`
+                        : `Marcando áreas — ${selectionIndex + 1} de ${items.length}`)
                       : `Processando com IA — ${doneCount} de ${items.length}`
                     }
                   </span>
                   {phase === 'selecting' && (
                     <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {readyCount} marcadas
+                      {readyCount} {removalMode === 'auto' ? 'confirmadas' : 'marcadas'}
                     </span>
                   )}
                 </div>

@@ -468,6 +468,12 @@ REGRAS:
 
       const numCards = cardCount || 7;
       const imageCardIndices = body.imageCardIndices || []; // which cards should have images
+      const textSizeHint = body.textSizeHint || 'short';
+      const textSizeConfig = {
+        short:  { bodyTop: '10-20 palavras', bodyBottom: '8-12 palavras' },
+        medium: { bodyTop: '20-35 palavras', bodyBottom: '12-20 palavras' },
+        long:   { bodyTop: '30-60 palavras', bodyBottom: '20-40 palavras' },
+      }[textSizeHint] || { bodyTop: '10-20 palavras', bodyBottom: '8-12 palavras' };
       const styleConfig = body.marketplaceStyleConfig;
       const hasMarketplaceStyle = styleConfig?.imageGeneration?.prompt_style;
 

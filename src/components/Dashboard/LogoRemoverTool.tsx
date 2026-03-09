@@ -628,6 +628,47 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     });
   };
 
+  const handleDelete = useCallback((id: string) => {
+    setItems(prev => {
+      const item = prev.find(i => i.id === id);
+      if (!item) return prev;
+      if (item.status === 'removing') {
+        toast.error('Aguarde finalizar o processamento para excluir');
+        return prev;
+      }
+      URL.revokeObjectURL(item.previewUrl);
+      return prev.filter(i => i.id !== id);
+    });
+  }, []);
+
+  const regenerate = useCallback(async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    if (item.status === 'removing') return;
+    if (item.regions.length === 0) {
+      toast.info('Sem áreas marcadas para remover');
+      return;
+    }
+
+    updateItem(id, { status: 'removing', error: undefined });
+
+    try {
+      const { finalBase64, diff, attempts } = await removeWithAutoRetry(item, { startAttempt: 2, maxAttempts: 3 });
+      updateItem(id, {
+        status: 'done',
+        resultBase64: finalBase64,
+        resultMimeType: 'image/png',
+        attempts,
+        lastDiffScore: diff,
+      });
+      toast.success('Regenerado!');
+    } catch (err) {
+      console.error('regenerate error:', err);
+      updateItem(id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao regenerar' });
+      toast.error('Falha ao regenerar');
+    }
+  }, [items, removeWithAutoRetry, updateItem]);
+
   const startSelecting = () => {
     if (items.length === 0) return;
     setSelectionIndex(0);

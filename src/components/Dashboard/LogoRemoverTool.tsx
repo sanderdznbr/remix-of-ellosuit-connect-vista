@@ -967,7 +967,12 @@ Return ONLY the JSON array, no other text.`
               ? 'Carregue até 15 imagens e marque manualmente as áreas com logo'
               : `${items.length} imagem${items.length !== 1 ? 'ns' : ''} selecionada${items.length !== 1 ? 's' : ''} — clique em Avançar para marcar as logos`
             )}
-            {phase === 'selecting' && `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}`}
+            {phase === 'mode-select' && 'Escolha como deseja identificar as logos'}
+            {phase === 'auto-detecting' && `Detectando logos automaticamente... ${autoDetectProgress.current}/${autoDetectProgress.total}`}
+            {phase === 'selecting' && (removalMode === 'auto'
+              ? `Confirme as áreas detectadas — imagem ${selectionIndex + 1} de ${items.length}`
+              : `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}`
+            )}
             {phase === 'processing' && `Removendo logos com IA... ${doneCount}/${items.length} concluída${doneCount !== 1 ? 's' : ''}`}
             {phase === 'done' && `Concluído! ${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} processada${withResultCount !== 1 ? 's' : ''} sem logos`}
           </p>

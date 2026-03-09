@@ -519,8 +519,8 @@ PROIBIDO nos imagePrompts e no conteúdo dos cards:
 REGRAS DE LAYOUT (siga EXATAMENTE):
 - Card 1 (cover): Título impactante em CAIXA ALTA (máx 10 palavras) + subtítulo curto descritivo
 - Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:
-  - "bodyTop": Parágrafo principal (30-60 palavras), informativo e denso. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 15 palavras destacadas)
-  - "bodyBottom": Segundo parágrafo (20-40 palavras), complementar, dados adicionais ou contexto
+  - "bodyTop": Parágrafo principal (${textSizeConfig.bodyTop}), informativo e direto. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 8 palavras destacadas)
+  - "bodyBottom": Segundo parágrafo (${textSizeConfig.bodyBottom}), complementar e conciso
   - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. ${hasMarketplaceStyle ? 'DEVE seguir o estilo visual definido abaixo.' : 'Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes'}
   - "searchTerms": Array de termos para buscar fotos de referência na web (ex: ["Toguro fitness", "Cimed logo", "suplemento proteico"]). Inclua nomes reais de pessoas e marcas mencionadas.
   - "needsImage": boolean - true se este card precisa de imagem baseado no conteúdo

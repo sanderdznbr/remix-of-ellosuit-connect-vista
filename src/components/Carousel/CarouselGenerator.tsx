@@ -2022,6 +2022,7 @@ const CarouselGenerator: React.FC = () => {
           ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
           regenerateCardIndex: currentData?.cards.length || 0,
           existingCardSummaries,
+          textSizeHint: addCardModal.textSize,
         },
       });
 

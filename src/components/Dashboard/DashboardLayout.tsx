@@ -36,6 +36,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [behanceFiles, setBehanceFiles] = useState<File[] | undefined>(undefined);
   const { isMobile } = useIsMobile();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();

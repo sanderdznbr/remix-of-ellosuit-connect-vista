@@ -9,7 +9,45 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    const body = await req.json();
+    const { action, url, urls } = body;
+
+    // Action: download images via proxy (server-side, no CORS restrictions)
+    if (action === 'download' && Array.isArray(urls)) {
+      console.log(`Proxying download for ${urls.length} images`);
+      const results: { base64: string; mimeType: string }[] = [];
+
+      for (const imgUrl of urls.slice(0, 20)) { // max 20
+        try {
+          const resp = await fetch(imgUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+              'Accept': 'image/*',
+              'Referer': 'https://www.behance.net/',
+            },
+          });
+          if (!resp.ok) continue;
+
+          const buffer = await resp.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = '';
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          const base64 = btoa(binary);
+
+          const contentType = resp.headers.get('content-type') || 'image/jpeg';
+          results.push({ base64, mimeType: contentType });
+        } catch (e) {
+          console.warn('Failed to download:', imgUrl, e);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ images: results, count: results.length }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Default action: scrape gallery for image URLs
     if (!url || !url.includes('behance.net/gallery/')) {
       return new Response(
         JSON.stringify({ error: 'URL de galeria do Behance inválida' }),

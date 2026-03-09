@@ -446,8 +446,23 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
         toast.error('Arquivo muito grande. Máximo 5MB por imagem.');
     },
   });
+  // Handle initial files from Behance importer
+  React.useEffect(() => {
+    if (initialFiles && initialFiles.length > 0 && phase === 'upload') {
+      const newItems: ImageItem[] = initialFiles.slice(0, 15).map(file => ({
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        mimeType: file.type || 'image/jpeg',
+        status: 'idle' as const,
+        regions: [],
+      }));
+      setItems(newItems);
+      onInitialFilesConsumed?.();
+    }
+  }, [initialFiles]);
 
-  const removeImage = (id: string) => {
+
     setItems(prev => {
       const item = prev.find(i => i.id === id);
       if (item) URL.revokeObjectURL(item.previewUrl);

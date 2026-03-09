@@ -722,9 +722,14 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     try {
       const dataUrl = await resizeImageForDetection(item.file);
 
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout na detecção automática')), 20000)
+      );
+
+      const invokePromise = supabase.functions.invoke('ai-chat', {
         body: {
-          model: 'google/gemini-2.5-flash',
+          model: 'google/gemini-2.5-flash-lite',
+          lightweight: true,
           messages: [
             {
               role: 'user',
@@ -755,6 +760,8 @@ Return ONLY the JSON array, no other text.`
           temperature: 0.1,
         },
       });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
 
       if (error) throw error;
 
@@ -790,18 +797,13 @@ Return ONLY the JSON array, no other text.`
 
     // Process ONE at a time to avoid WORKER_LIMIT
     for (let i = 0; i < updatedItems.length; i++) {
-      const batch = [updatedItems[i]];
-      const results = await Promise.all(batch.map(item => detectRegionsForImage(item)));
+      const item = updatedItems[i];
+      const regions = await detectRegionsForImage(item);
 
-      results.forEach((regions, batchIdx) => {
-        const itemIdx = i + batchIdx;
-        if (itemIdx < updatedItems.length) {
-          updatedItems[itemIdx] = { ...updatedItems[itemIdx], regions, status: 'ready' };
-          updateItem(updatedItems[itemIdx].id, { regions, status: 'ready' });
-        }
-      });
+      updatedItems[i] = { ...item, regions, status: 'ready' };
+      updateItem(item.id, { regions, status: 'ready' });
 
-      setAutoDetectProgress({ current: Math.min(i + 2, updatedItems.length), total: updatedItems.length });
+      setAutoDetectProgress({ current: i + 1, total: updatedItems.length });
     }
 
     // Go to selecting phase for confirmation

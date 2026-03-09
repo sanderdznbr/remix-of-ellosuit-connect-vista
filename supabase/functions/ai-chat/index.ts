@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, message, personality, instructions, model = 'google/gemini-3-flash-preview', stream = false, temperature, modalities } = await req.json();
+    const { messages, message, personality, instructions, model = 'google/gemini-3-flash-preview', stream = false, temperature, modalities, lightweight = false } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -119,6 +119,21 @@ Deno.serve(async (req) => {
             .join('\n')
         : '';
 
+    // Lightweight mode for heavy multimodal calls (e.g. logo auto-detection)
+    if (lightweight) {
+      return new Response(JSON.stringify({
+        response: assistantMessage,
+        message: assistantMessage,
+        content: assistantMessage,
+        model,
+        usage: data.usage,
+        choices: data?.choices || [],
+        images: firstMessage?.images || [],
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Log cost based on usage tokens
     const usage = data.usage || {};
     const inputTokens = usage.prompt_tokens || 0;
@@ -148,7 +163,6 @@ Deno.serve(async (req) => {
       usage: data.usage,
       choices: data?.choices || [],
       images: firstMessage?.images || [],
-      raw: data,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

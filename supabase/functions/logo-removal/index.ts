@@ -97,13 +97,23 @@ serve(async (req) => {
       }
 
       // Strategy 2: parse JSON and check images array
-      let data: any;
-      try {
-        data = JSON.parse(rawText);
-      } catch (e) {
-        console.error('Failed to parse response JSON:', e);
-        throw new Error('No image returned from AI');
-      }
+       let data: any;
+       try {
+         data = JSON.parse(rawText);
+       } catch (e) {
+         console.error('Failed to parse response JSON:', e);
+         throw new Error('No image returned from AI');
+       }
+
+       const refusal = data?.choices?.[0]?.message?.refusal;
+       if (refusal) {
+         console.error('Model refusal:', refusal);
+         return new Response(JSON.stringify({
+           error: 'A IA recusou a edição desta imagem (política de segurança). Tente selecionar uma área menor/mais específica ou use uma imagem sem marca d\'água.',
+           code: 'MODEL_REFUSAL',
+           refusal,
+         }), { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+       }
 
       const imageResult = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (imageResult) {

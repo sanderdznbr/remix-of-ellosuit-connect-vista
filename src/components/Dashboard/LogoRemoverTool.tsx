@@ -111,6 +111,7 @@ const prepareForInpainting = (
 const prepareForRedAnnotation = (
   file: File,
   regions: LogoRegion[],
+  opts?: { pad?: number; alpha?: number },
 ): Promise<{ originalPng: string; annotatedPng: string; crop: CropParams }> =>
   new Promise((resolve, reject) => {
     const img = new Image();
@@ -141,13 +142,16 @@ const prepareForRedAnnotation = (
       annCanvas.height = SIZE;
       const aCtx = annCanvas.getContext('2d')!;
       aCtx.drawImage(origCanvas, 0, 0);
-      aCtx.fillStyle = 'rgba(255,0,0,0.55)';
+
+      const pad = opts?.pad ?? 4;
+      const alpha = Math.max(0.35, Math.min(0.95, opts?.alpha ?? 0.55));
+      aCtx.fillStyle = `rgba(255,0,0,${alpha})`;
+
       for (const r of regions) {
         const rx = ox + (r.x / 100) * w;
         const ry = oy + (r.y / 100) * h;
         const rw = (r.width / 100) * w;
         const rh = (r.height / 100) * h;
-        const pad = 4;
         aCtx.fillRect(rx - pad, ry - pad, rw + pad * 2, rh + pad * 2);
       }
 

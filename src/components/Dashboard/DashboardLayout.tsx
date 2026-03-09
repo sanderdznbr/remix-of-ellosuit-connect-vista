@@ -114,6 +114,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           setBehanceFiles(files);
           setActiveTab('logo-remover');
         }} />;
+      case 'instagram-import':
+        return <InstagramImporter onSendToLogoRemover={(files) => {
+          setBehanceFiles(files);
+          setActiveTab('logo-remover');
+        }} />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

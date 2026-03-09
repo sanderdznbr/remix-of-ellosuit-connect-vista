@@ -227,6 +227,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             <Globe className="w-4 h-4" />
             Importar do Behance
           </button>
+          <button
+            onClick={() => { onTabChange('instagram-import'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              activeTab === 'instagram-import'
+                ? 'bg-white/[0.08] text-white font-medium'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Instagram className="w-4 h-4" />
+            Importar do Instagram
+          </button>
         </div>
       )}
 

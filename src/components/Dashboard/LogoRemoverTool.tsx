@@ -4,11 +4,12 @@ import JSZip from 'jszip';
 import {
   Upload, X, Scan, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package,
-  MousePointer2, Pencil, ImageOff
+  Pencil, ImageOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import LogoRegionEditor from './LogoRegionEditor';
 
 interface LogoRegion {
   id: string;
@@ -55,79 +56,26 @@ const STATUS_COLOR: Record<string, string> = {
 interface CardProps {
   item: ImageItem;
   phase: Phase;
-  isEditing: boolean;
-  onToggleEdit: () => void;
   onRemoveImage: () => void;
-  onRemoveRegion: (regionId: string) => void;
-  onAddRegion: (region: Omit<LogoRegion, 'id'>) => void;
+  onEdit: () => void;
   onDownload: () => void;
 }
 
-const ImageCard: React.FC<CardProps> = ({
-  item, phase, isEditing, onToggleEdit, onRemoveImage,
-  onRemoveRegion, onAddRegion, onDownload
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [drawing, setDrawing] = useState(false);
-  const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
-  const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
-
-  const getPos = (e: React.MouseEvent) => {
-    const rect = containerRef.current!.getBoundingClientRect();
-    return {
-      x: Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)),
-      y: Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100)),
-    };
-  };
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!isEditing) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    setDrawing(true);
-    setDrawStart(pos);
-    setDrawCurrent(pos);
-  };
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!drawing || !isEditing) return;
-    setDrawCurrent(getPos(e));
-  };
-  const onMouseUp = () => {
-    if (!drawing || !isEditing) return;
-    setDrawing(false);
-    const x = Math.min(drawStart.x, drawCurrent.x);
-    const y = Math.min(drawStart.y, drawCurrent.y);
-    const w = Math.abs(drawCurrent.x - drawStart.x);
-    const h = Math.abs(drawCurrent.y - drawStart.y);
-    if (w > 2 && h > 2) onAddRegion({ x, y, width: w, height: h });
-  };
-
-  const drawBox = drawing ? {
-    x: Math.min(drawStart.x, drawCurrent.x),
-    y: Math.min(drawStart.y, drawCurrent.y),
-    w: Math.abs(drawCurrent.x - drawStart.x),
-    h: Math.abs(drawCurrent.y - drawStart.y),
-  } : null;
-
+const ImageCard: React.FC<CardProps> = ({ item, phase, onRemoveImage, onEdit, onDownload }) => {
   const showResult = item.status === 'done' && item.resultBase64;
   const displaySrc = showResult
     ? `data:${item.resultMimeType || 'image/png'};base64,${item.resultBase64}`
     : item.previewUrl;
 
-  return (
-    <div className="relative rounded-xl overflow-hidden flex flex-col"
-      style={{ border: `1px solid ${STATUS_COLOR[item.status]}33`, backgroundColor: '#111116' }}>
+  const canEdit = phase === 'ready' && (item.status === 'detected' || item.status === 'error' || item.status === 'idle');
 
+  return (
+    <div
+      className="relative rounded-xl overflow-hidden flex flex-col"
+      style={{ border: `1px solid ${STATUS_COLOR[item.status]}33`, backgroundColor: '#111116' }}
+    >
       {/* Image area */}
-      <div
-        ref={containerRef}
-        className="relative w-full aspect-square overflow-hidden select-none"
-        style={{ cursor: isEditing ? 'crosshair' : 'default' }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-      >
+      <div className="relative w-full aspect-square overflow-hidden select-none">
         <img
           src={displaySrc}
           alt=""
@@ -135,105 +83,103 @@ const ImageCard: React.FC<CardProps> = ({
           draggable={false}
         />
 
-        {/* Region boxes */}
+        {/* Region boxes (read-only preview) */}
         {(phase === 'detecting' || phase === 'ready' || phase === 'processing') &&
           item.regions.map(r => (
             <div
               key={r.id}
-              className="absolute group/box"
+              className="absolute pointer-events-none"
               style={{
                 left: `${r.x}%`, top: `${r.y}%`,
                 width: `${r.width}%`, height: `${r.height}%`,
                 border: '2px solid #ef4444',
                 backgroundColor: 'rgba(239,68,68,0.15)',
-                cursor: isEditing ? 'pointer' : 'default',
               }}
-              onClick={(e) => { if (isEditing) { e.stopPropagation(); onRemoveRegion(r.id); } }}
             >
-              {isEditing && (
-                <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-red-500 flex items-center justify-center opacity-0 group-hover/box:opacity-100 transition-opacity">
-                  <X className="w-2.5 h-2.5 text-white" />
-                </div>
-              )}
               {r.label && (
-                <div className="absolute bottom-0 left-0 right-0 px-1 truncate text-[8px] text-white"
-                  style={{ backgroundColor: 'rgba(239,68,68,0.8)' }}>
+                <div
+                  className="absolute bottom-0 left-0 right-0 px-1 truncate leading-tight py-0.5"
+                  style={{ fontSize: '8px', backgroundColor: 'rgba(239,68,68,0.8)', color: '#fff' }}
+                >
                   {r.label}
                 </div>
               )}
             </div>
           ))}
 
-        {/* Drawing preview */}
-        {drawBox && (
-          <div className="absolute pointer-events-none"
-            style={{
-              left: `${drawBox.x}%`, top: `${drawBox.y}%`,
-              width: `${drawBox.w}%`, height: `${drawBox.h}%`,
-              border: '2px dashed #f59e0b',
-              backgroundColor: 'rgba(245,158,11,0.2)',
-            }} />
-        )}
-
         {/* Status overlays */}
         {item.status === 'detecting' && (
-          <div className="absolute inset-0 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
-              <span className="text-[10px] text-white/60">Detectando...</span>
+              <span className="text-white/60" style={{ fontSize: '10px' }}>Detectando...</span>
             </div>
           </div>
         )}
         {item.status === 'removing' && (
-          <div className="absolute inset-0 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-              <span className="text-[10px] text-white/60">Removendo...</span>
+              <span className="text-white/60" style={{ fontSize: '10px' }}>Removendo...</span>
             </div>
           </div>
         )}
         {item.status === 'error' && (
-          <div className="absolute inset-0 flex items-center justify-center p-3"
-            style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="absolute inset-0 flex items-center justify-center p-3" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
             <div className="flex flex-col items-center gap-1.5 text-center">
               <AlertCircle className="w-6 h-6 text-red-400" />
-              <span className="text-[10px] text-red-300">{item.error || 'Erro'}</span>
+              <span className="text-red-300" style={{ fontSize: '10px' }}>{item.error || 'Erro'}</span>
             </div>
           </div>
         )}
         {item.status === 'done' && !item.resultBase64 && (
           <div className="absolute top-2 right-2">
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-emerald-500/20 text-emerald-400">
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-400" style={{ fontSize: '9px' }}>
               <ImageOff className="w-2.5 h-2.5" /> Sem logo
             </div>
           </div>
         )}
         {item.status === 'done' && item.resultBase64 && (
           <div className="absolute top-2 right-2">
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-emerald-500/20 text-emerald-400">
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-400" style={{ fontSize: '9px' }}>
               <CheckCircle2 className="w-2.5 h-2.5" /> Pronta
             </div>
           </div>
         )}
 
-        {/* Upload phase remove button */}
-        {(phase === 'upload' || phase === 'ready') && item.status !== 'removing' && (
+        {/* Remove image button (upload phase) */}
+        {phase === 'upload' && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemoveImage(); }}
-            className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity cursor-pointer"
+            className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
             style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
           >
             <X className="w-3.5 h-3.5 text-white/70" />
           </button>
         )}
+
+        {/* Edit overlay button (ready phase) */}
+        {canEdit && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="absolute inset-0 w-full h-full flex items-end justify-center pb-2 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)' }}
+          >
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white"
+              style={{ backgroundColor: 'rgba(123,80,220,0.85)' }}>
+              <Pencil className="w-3 h-3" />
+              Editar seleções
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Card footer */}
-      <div className="px-2.5 py-2 flex items-center justify-between gap-1.5"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+      <div
+        className="px-2.5 py-2 flex items-center justify-between gap-1.5"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+      >
+        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
           {item.status === 'idle' ? item.file.name.slice(0, 18) + (item.file.name.length > 18 ? '…' : '') : null}
           {item.status === 'detected' ? `${item.regions.length} logo${item.regions.length !== 1 ? 's' : ''}` : null}
           {item.status === 'detecting' ? 'Analisando...' : null}
@@ -243,18 +189,16 @@ const ImageCard: React.FC<CardProps> = ({
         </span>
 
         <div className="flex items-center gap-1">
-          {/* Edit toggle (only in ready phase) */}
-          {phase === 'ready' && (item.status === 'detected' || item.status === 'error') && (
+          {/* Edit button (ready phase) */}
+          {canEdit && (
             <button
-              onClick={onToggleEdit}
-              title={isEditing ? 'Sair da edição' : 'Editar regiões (clique para remover, arraste para adicionar)'}
-              className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer"
-              style={{
-                backgroundColor: isEditing ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
-                color: isEditing ? '#f59e0b' : 'rgba(255,255,255,0.35)',
-              }}
+              onClick={onEdit}
+              title="Editar áreas detectadas"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors cursor-pointer"
+              style={{ backgroundColor: 'rgba(123,80,220,0.15)', color: '#a78bfa' }}
             >
-              {isEditing ? <MousePointer2 className="w-3 h-3" /> : <Pencil className="w-3 h-3" />}
+              <Pencil className="w-2.5 h-2.5" />
+              Editar
             </button>
           )}
           {/* Download (done phase) */}
@@ -278,7 +222,7 @@ const ImageCard: React.FC<CardProps> = ({
 const LogoRemoverTool: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editModalId, setEditModalId] = useState<string | null>(null);
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
@@ -349,11 +293,11 @@ const LogoRemoverTool: React.FC = () => {
 
   // ── Remove ──
   const removeAll = async () => {
-    const toProcess = items.filter(i => i.status === 'detected' || i.status === 'error');
+    const toProcess = items.filter(i => i.status === 'detected' || i.status === 'error' || i.status === 'idle');
     if (toProcess.length === 0) { toast.error('Nenhuma imagem pronta para processar'); return; }
 
     setPhase('processing');
-    setEditingId(null);
+    setEditModalId(null);
 
     const removeOne = async (item: ImageItem) => {
       if (item.regions.length === 0) { updateItem(item.id, { status: 'done' }); return; }
@@ -421,7 +365,7 @@ const LogoRemoverTool: React.FC = () => {
     items.forEach(i => URL.revokeObjectURL(i.previewUrl));
     setItems([]);
     setPhase('upload');
-    setEditingId(null);
+    setEditModalId(null);
   };
 
   // ── Derived ──
@@ -429,6 +373,9 @@ const LogoRemoverTool: React.FC = () => {
   const doneCount = items.filter(i => i.status === 'done').length;
   const processingCount = items.filter(i => i.status === 'removing' || i.status === 'detecting').length;
   const withResultCount = items.filter(i => i.status === 'done' && i.resultBase64).length;
+
+  // ── Edit modal item ──
+  const editingItem = editModalId ? items.find(i => i.id === editModalId) : null;
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#0a0a0f' }}>
@@ -442,7 +389,7 @@ const LogoRemoverTool: React.FC = () => {
           <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {phase === 'upload' && 'Carregue até 15 posts — a IA detecta e remove as logos automaticamente'}
             {phase === 'detecting' && 'Analisando imagens com IA...'}
-            {phase === 'ready' && `${items.length} imagem(ns) analisada(s) · ${totalRegions} região(ões) marcada(s) · Clique nas caixas vermelhas para remover ou edite manualmente`}
+            {phase === 'ready' && `${items.length} imagem(ns) analisada(s) · ${totalRegions} região(ões) marcada(s) · Clique em "Editar" para ajustar as seleções`}
             {phase === 'processing' && `Removendo logos... ${doneCount}/${items.length} concluída(s)`}
             {phase === 'done' && `Concluído! ${withResultCount} imagem(ns) processada(s) sem logos`}
           </p>
@@ -524,15 +471,8 @@ const LogoRemoverTool: React.FC = () => {
                     <ImageCard
                       item={item}
                       phase={phase}
-                      isEditing={editingId === item.id}
-                      onToggleEdit={() => setEditingId(prev => prev === item.id ? null : item.id)}
                       onRemoveImage={() => removeImage(item.id)}
-                      onRemoveRegion={(rId) => setItems(prev => prev.map(i =>
-                        i.id === item.id ? { ...i, regions: i.regions.filter(r => r.id !== rId) } : i
-                      ))}
-                      onAddRegion={(r) => setItems(prev => prev.map(i =>
-                        i.id === item.id ? { ...i, regions: [...i.regions, { ...r, id: crypto.randomUUID() }] } : i
-                      ))}
+                      onEdit={() => setEditModalId(item.id)}
                       onDownload={() => downloadSingle(item)}
                     />
                   </motion.div>
@@ -540,17 +480,18 @@ const LogoRemoverTool: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            {/* Editing hint */}
-            {phase === 'ready' && editingId && (
+            {/* Ready phase tip */}
+            {phase === 'ready' && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-4 flex items-center gap-2 px-3 py-2.5 rounded-lg"
-                style={{ backgroundColor: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}
+                style={{ backgroundColor: 'rgba(123,80,220,0.06)', border: '1px solid rgba(123,80,220,0.15)' }}
               >
-                <Pencil className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                <p className="text-xs text-amber-400/80">
-                  Modo de edição ativo · <span className="text-amber-400">Clique numa caixa vermelha para remover</span> · <span className="text-amber-400">Arraste na imagem para adicionar nova área</span>
+                <Pencil className="w-3.5 h-3.5 shrink-0 text-purple-400" />
+                <p className="text-xs" style={{ color: 'rgba(167,139,250,0.8)' }}>
+                  A IA detectou as regiões acima. <span style={{ color: '#a78bfa' }}>Passe o mouse sobre uma imagem</span> e clique em{' '}
+                  <strong style={{ color: '#a78bfa' }}>"Editar seleções"</strong> para ajustar as marcações antes de remover.
                 </p>
               </motion.div>
             )}
@@ -559,9 +500,10 @@ const LogoRemoverTool: React.FC = () => {
       </div>
 
       {/* Action bar */}
-      <div className="shrink-0 px-6 py-4 flex items-center justify-between gap-3"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#0d0d12' }}>
-
+      <div
+        className="shrink-0 px-6 py-4 flex items-center justify-between gap-3"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.05)', backgroundColor: '#0d0d12' }}
+      >
         <div className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
           {phase === 'upload' && items.length > 0 && `${items.length} imagem(ns) selecionada(s)`}
           {phase === 'ready' && `${totalRegions} área(s) para remover`}
@@ -629,6 +571,23 @@ const LogoRemoverTool: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Region Editor Modal */}
+      {editingItem && (
+        <LogoRegionEditor
+          imageUrl={editingItem.previewUrl}
+          imageName={editingItem.file.name}
+          initialRegions={editingItem.regions}
+          onSave={(newRegions) => {
+            updateItem(editingItem.id, {
+              regions: newRegions,
+              status: 'detected',
+            });
+            toast.success('Seleções atualizadas!');
+          }}
+          onClose={() => setEditModalId(null)}
+        />
+      )}
     </div>
   );
 };

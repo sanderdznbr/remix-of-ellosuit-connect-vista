@@ -1209,7 +1209,14 @@ Return ONLY the JSON array, no other text.`
       >
         <div className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
           {phase === 'upload' && items.length > 0 && `${items.length} imagem${items.length !== 1 ? 'ns' : ''} pronta${items.length !== 1 ? 's' : ''}`}
-          {phase === 'selecting' && `${totalRegions} área${totalRegions !== 1 ? 's' : ''} marcada${totalRegions !== 1 ? 's' : ''} até agora`}
+          {phase === 'mode-select' && 'Escolha o modo de detecção'}
+          {phase === 'auto-detecting' && (
+            <span className="flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Detectando logos...
+            </span>
+          )}
+          {phase === 'selecting' && `${totalRegions} área${totalRegions !== 1 ? 's' : ''} ${removalMode === 'auto' ? 'detectada' : 'marcada'}${totalRegions !== 1 ? 's' : ''} até agora`}
           {phase === 'processing' && (
             <span className="flex items-center gap-1.5">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

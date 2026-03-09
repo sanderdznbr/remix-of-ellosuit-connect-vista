@@ -36,6 +36,8 @@ interface ImageItem {
   resultBase64?: string;
   resultMimeType?: string;
   error?: string;
+  attempts?: number;
+  lastDiffScore?: number;
 }
 
 type Phase = 'upload' | 'selecting' | 'processing' | 'done';

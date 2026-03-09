@@ -829,6 +829,8 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
                       onRemoveImage={() => removeImage(item.id)}
                       onDownload={() => downloadSingle(item)}
                       onZoom={setLightboxSrc}
+                      onDelete={() => handleDelete(item.id)}
+                      onRegenerate={() => regenerate(item.id)}
                     />
                   </motion.div>
                 ))}

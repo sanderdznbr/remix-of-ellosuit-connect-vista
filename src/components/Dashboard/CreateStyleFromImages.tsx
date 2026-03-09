@@ -20,8 +20,9 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
   const [isFree, setIsFree] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [detailedPromptStyle, setDetailedPromptStyle] = useState('');
 
-  // Auto-generate name + description on open
+  // Auto-generate name + description + detailed prompt on open
   useEffect(() => {
     if (!open || imageBase64s.length === 0) return;
     generateNameAndDescription();
@@ -30,7 +31,7 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
   const generateNameAndDescription = async () => {
     setGenerating(true);
     try {
-      const imageContent = imageBase64s.slice(0, 4).map(b64 => ({
+      const imageContent = imageBase64s.slice(0, 6).map(b64 => ({
         type: 'image_url' as const,
         image_url: { url: `data:image/png;base64,${b64}` },
       }));
@@ -40,17 +41,35 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
           messages: [
             {
               role: 'system',
-              content: 'Você é um especialista em design de posts para Instagram. Analise as imagens e responda APENAS em JSON válido com este formato: {"name": "Nome Criativo do Estilo (2-3 palavras)", "description": "Descrição curta do estilo visual (máx 100 chars)", "category": "editorial|minimalista|moderno|criativo|corporativo|lifestyle", "tags": ["tag1", "tag2", "tag3"]}. Não use markdown, apenas JSON puro.',
+              content: `Você é um especialista em design de posts para Instagram. Analise as imagens e responda APENAS em JSON válido com este formato:
+{
+  "name": "Nome Criativo do Estilo (2-3 palavras)",
+  "description": "Descrição curta do estilo visual (máx 100 chars)",
+  "category": "editorial|minimalista|moderno|criativo|corporativo|lifestyle",
+  "tags": ["tag1", "tag2", "tag3"],
+  "visual_dna": {
+    "background": "descrição detalhada dos fundos (cores, gradientes, texturas, padrões)",
+    "typography": "descrição detalhada da tipografia (fonte tipo serif/sans/display, peso, tamanho, hierarquia, efeitos como outline/shadow/glow)",
+    "layout": "descrição detalhada do layout (grid, alinhamento, espaçamento, zonas de texto vs imagem, composição)",
+    "colors": "lista EXATA de todas as cores dominantes em hex (#XXXXXX) com seus papéis (fundo, texto, acento, destaque)",
+    "decorative": "elementos decorativos específicos (linhas, formas geométricas, texturas, overlays, gradientes, sombras, brilhos, ícones)",
+    "photo_treatment": "tratamento fotográfico (filtros, contraste, saturação, grain, blur, duotone, recorte)",
+    "mood": "atmosfera geral (futurista, orgânico, corporativo, bold, suave, dramático)",
+    "unique_features": "características únicas e diferenciadoras que tornam esse estilo reconhecível"
+  }
+}
+Não use markdown, apenas JSON puro. Seja EXTREMAMENTE detalhado e específico no visual_dna — descreva exatamente o que vê, não generalize.`,
             },
             {
               role: 'user',
               content: [
-                { type: 'text', text: 'Analise estas imagens de um estilo de post para Instagram e gere nome, descrição, categoria e tags baseados no visual.' },
+                { type: 'text', text: 'Analise estas imagens de um estilo de post para Instagram e gere nome, descrição, categoria, tags e uma análise visual detalhada.' },
                 ...imageContent,
               ],
             },
           ],
           model: 'google/gemini-2.5-flash',
+          lightweight: true,
         },
       });
 
@@ -62,6 +81,13 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
       if (parsed.description) setDescription(parsed.description);
       if (parsed.category) setCategory(parsed.category);
       if (parsed.tags) setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
+
+      // Build a detailed prompt_style from visual_dna
+      if (parsed.visual_dna) {
+        const dna = parsed.visual_dna;
+        const detailedPrompt = buildDetailedPromptStyle(parsed.name || 'Custom Style', dna);
+        setDetailedPromptStyle(detailedPrompt);
+      }
     } catch (err) {
       console.error('Auto-generate error:', err);
       setName('Novo Estilo');
@@ -69,6 +95,47 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
     } finally {
       setGenerating(false);
     }
+  };
+
+  const buildDetailedPromptStyle = (styleName: string, dna: any): string => {
+    return `Create an Instagram carousel post in the "${styleName}" style. Follow these MANDATORY visual rules with MAXIMUM FIDELITY:
+
+=== BACKGROUND ===
+${dna.background || 'Match the exact background treatment from references.'}
+
+=== TYPOGRAPHY ===
+${dna.typography || 'Match the exact typography from references.'}
+- Reproduce the EXACT font style, weight, size hierarchy, and text effects (outline, shadow, glow, 3D, gradient fills).
+- Match letter-spacing, line-height, and text transforms (uppercase, lowercase, mixed).
+
+=== LAYOUT & COMPOSITION ===
+${dna.layout || 'Follow the exact layout grid from references.'}
+- Match the exact positioning of text blocks, images, and decorative elements.
+- Replicate the same margins, padding, and visual breathing room.
+
+=== COLOR PALETTE (MANDATORY) ===
+${dna.colors || 'Extract and use the exact colors from references.'}
+- These colors MUST dominate the composition. Do NOT introduce colors outside this palette.
+
+=== DECORATIVE ELEMENTS ===
+${dna.decorative || 'Reproduce decorative elements from references.'}
+- Replicate the EXACT types of lines, shapes, textures, overlays, and visual accents.
+
+=== PHOTOGRAPHY / IMAGE TREATMENT ===
+${dna.photo_treatment || 'Match the photo treatment from references.'}
+
+=== MOOD & ATMOSPHERE ===
+${dna.mood || 'Match the overall mood from references.'}
+
+=== UNIQUE SIGNATURE ELEMENTS ===
+${dna.unique_features || 'Replicate the unique visual signatures from references.'}
+
+=== CRITICAL RULES ===
+1. PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas, logos ou informações pessoais das referências.
+2. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
+3. SEM BORDAS: Full bleed, sem barras ou bordas.
+4. O resultado DEVE parecer parte da MESMA COLEÇÃO/SÉRIE que as referências — reconhecível instantaneamente como o mesmo estilo.
+5. Cada card deve ter variação de layout MAS manter a MESMA identidade visual (paleta, tipografia, elementos decorativos).`;
   };
 
   const handlePublish = async () => {
@@ -92,19 +159,11 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
         uploadedUrls.push(`${SUPABASE_URL}/storage/v1/object/public/marketplace-assets/${path}`);
       }
 
-      const promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
-1. COPY THE EXACT VISUAL DNA: Replicate the same color palette, typography style, layout composition, decorative elements, and overall aesthetic from the reference images.
-2. TYPOGRAPHY: Match the exact font styles, sizes, weights, and placement patterns from the references.
-3. COLOR PALETTE: Extract and use the EXACT same colors from the reference images.
-4. LAYOUT & COMPOSITION: Follow the same grid, spacing, alignment, and element placement as the references.
-5. DECORATIVE ELEMENTS: Reproduce the same types of decorative elements seen in the references.
-6. PHOTOGRAPHY STYLE: Match the same photo treatment from the references.
-7. PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas, logos ou informações pessoais das referências.
-8. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
-9. SEM BORDAS: Full bleed, sem barras ou bordas.`;
+      // Use the detailed AI-generated prompt or fallback to generic
+      const promptStyle = detailedPromptStyle || buildFallbackPromptStyle();
 
       const styleConfig = {
-        description: 'Estilo customizado baseado em referências visuais.',
+        description: description || 'Estilo customizado baseado em referências visuais.',
         colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
         imageGeneration: {
           prompt_style: promptStyle,
@@ -151,6 +210,17 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
     }
   };
 
+  const buildFallbackPromptStyle = () => `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
+1. COPY THE EXACT VISUAL DNA: Replicate the same color palette, typography style, layout composition, decorative elements, and overall aesthetic from the reference images.
+2. TYPOGRAPHY: Match the exact font styles, sizes, weights, and placement patterns from the references.
+3. COLOR PALETTE: Extract and use the EXACT same colors from the reference images.
+4. LAYOUT & COMPOSITION: Follow the same grid, spacing, alignment, and element placement as the references.
+5. DECORATIVE ELEMENTS: Reproduce the same types of decorative elements seen in the references.
+6. PHOTOGRAPHY STYLE: Match the same photo treatment from the references.
+7. PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas, logos ou informações pessoais das referências.
+8. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
+9. SEM BORDAS: Full bleed, sem barras ou bordas.`;
+
   if (!open) return null;
 
   return (
@@ -171,7 +241,7 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
         {generating ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-            <span className="text-sm text-white/50">Analisando visual e gerando detalhes...</span>
+            <span className="text-sm text-white/50">Analisando DNA visual e gerando detalhes...</span>
           </div>
         ) : (
           <div className="space-y-4">
@@ -206,6 +276,13 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
               <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
                 className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none resize-none focus:border-purple-500/40" />
             </div>
+
+            {/* Visual DNA indicator */}
+            {detailedPromptStyle && (
+              <div className="p-2.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                <span className="text-[10px] text-green-300 font-medium">✓ DNA Visual analisado — prompt detalhado gerado automaticamente</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

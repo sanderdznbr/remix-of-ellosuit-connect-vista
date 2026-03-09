@@ -230,7 +230,6 @@ const BehanceImporter: React.FC<BehanceImporterProps> = ({ onSendToLogoRemover }
                     loading="lazy"
                     onLoad={() => handleImageLoad(i)}
                     onError={() => handleImageError(i)}
-                    referrerPolicy="no-referrer"
                   />
 
                   {/* Selection overlay */}

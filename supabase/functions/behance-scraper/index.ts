@@ -1,6 +1,6 @@
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 Deno.serve(async (req) => {
@@ -80,38 +80,35 @@ Deno.serve(async (req) => {
     const imageUrls: string[] = [];
     const seen = new Set<string>();
 
-    // Match srcset URLs from source and img tags
-    const srcsetRegex = /srcset="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
-    let match;
-    while ((match = srcsetRegex.exec(html)) !== null) {
-      let imgUrl = match[1].split(' ')[0]; // remove width descriptor like "1080w"
-      
-      // Upgrade to highest quality: replace max_1200_webp or similar with max_3840
-      imgUrl = imgUrl.replace(/\/max_\d+_webp\//, '/max_3840/');
-      imgUrl = imgUrl.replace(/\/max_\d+\//, '/max_3840/');
-      imgUrl = imgUrl.replace(/\/disp\//, '/max_3840/');
-      
-      // Deduplicate by the unique file hash (everything after the last /)
+    // Prefer: <source data-ut="project-module-source-webp" srcset="...">
+    const imageUrls: string[] = [];
+    const seen = new Set<string>();
+
+    const pushUrl = (raw: string) => {
+      const imgUrl = raw.split(' ')[0]; // remove width descriptor like "1080w"
       const fileKey = imgUrl.split('/').pop() || imgUrl;
       if (!seen.has(fileKey)) {
         seen.add(fileKey);
         imageUrls.push(imgUrl);
       }
+    };
+
+    const webpSourceRegex = /<source[^>]*data-ut="project-module-source-webp"[^>]*srcset="([^"]+)"/g;
+    let match;
+    while ((match = webpSourceRegex.exec(html)) !== null) {
+      pushUrl(match[1]);
     }
 
-    // Also try img src for any missed images
+    // Fallback: any srcset URLs pointing to project_modules
+    const srcsetRegex = /srcset="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
+    while ((match = srcsetRegex.exec(html)) !== null) {
+      pushUrl(match[1]);
+    }
+
+    // Fallback: img src URLs
     const imgSrcRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
     while ((match = imgSrcRegex.exec(html)) !== null) {
-      let imgUrl = match[1];
-      imgUrl = imgUrl.replace(/\/max_\d+_webp\//, '/max_3840/');
-      imgUrl = imgUrl.replace(/\/max_\d+\//, '/max_3840/');
-      imgUrl = imgUrl.replace(/\/disp\//, '/max_3840/');
-      
-      const fileKey = imgUrl.split('/').pop() || imgUrl;
-      if (!seen.has(fileKey)) {
-        seen.add(fileKey);
-        imageUrls.push(imgUrl);
-      }
+      pushUrl(match[1]);
     }
 
     // Extract title

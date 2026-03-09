@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package,
-  ImageOff, ArrowRight,
+  ImageOff, ArrowRight, ZoomIn,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,11 +20,15 @@ interface LogoRegion {
   label?: string;
 }
 
+interface CropParams {
+  ox: number; oy: number; w: number; h: number;
+  origW: number; origH: number;
+}
+
 interface ImageItem {
   id: string;
   file: File;
   previewUrl: string;
-  base64?: string;
   mimeType: string;
   status: 'idle' | 'ready' | 'removing' | 'done' | 'error';
   regions: LogoRegion[];
@@ -35,12 +39,87 @@ interface ImageItem {
 
 type Phase = 'upload' | 'selecting' | 'processing' | 'done';
 
-const fileToBase64 = (file: File): Promise<string> =>
+// ──────────────── Canvas helpers ────────────────
+
+/**
+ * Letterbox image into 1024×1024, generate DALL-E-2-compatible RGBA PNG image + mask.
+ * Mask: opaque white = preserve, transparent = edit (inpaint).
+ */
+const prepareForInpainting = (
+  file: File,
+  regions: LogoRegion[],
+): Promise<{ imagePng: string; maskPng: string; crop: CropParams }> =>
   new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const SIZE = 1024;
+      const origW = img.width;
+      const origH = img.height;
+      const scale = Math.min(SIZE / origW, SIZE / origH);
+      const w = Math.round(origW * scale);
+      const h = Math.round(origH * scale);
+      const ox = Math.round((SIZE - w) / 2);
+      const oy = Math.round((SIZE - h) / 2);
+
+      // ── Image canvas (RGBA) ──
+      const imgCanvas = document.createElement('canvas');
+      imgCanvas.width = SIZE;
+      imgCanvas.height = SIZE;
+      const iCtx = imgCanvas.getContext('2d')!;
+      // Black letterbox background
+      iCtx.fillStyle = 'rgba(0,0,0,255)';
+      iCtx.fillRect(0, 0, SIZE, SIZE);
+      iCtx.drawImage(img, ox, oy, w, h);
+
+      // ── Mask canvas (RGBA): white = preserve, transparent = inpaint ──
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = SIZE;
+      maskCanvas.height = SIZE;
+      const mCtx = maskCanvas.getContext('2d')!;
+      mCtx.fillStyle = 'rgba(255,255,255,1)';
+      mCtx.fillRect(0, 0, SIZE, SIZE);
+      // Cut out (make transparent) the selected regions
+      mCtx.globalCompositeOperation = 'destination-out';
+      for (const r of regions) {
+        const rx = ox + (r.x / 100) * w;
+        const ry = oy + (r.y / 100) * h;
+        const rw = (r.width / 100) * w;
+        const rh = (r.height / 100) * h;
+        mCtx.fillStyle = 'rgba(0,0,0,1)';
+        mCtx.fillRect(rx, ry, rw, rh);
+      }
+
+      resolve({
+        imagePng: imgCanvas.toDataURL('image/png').split(',')[1],
+        maskPng: maskCanvas.toDataURL('image/png').split(',')[1],
+        crop: { ox, oy, w, h, origW, origH },
+      });
+    };
+    img.onerror = reject;
+    img.src = objUrl;
+  });
+
+/**
+ * Crop the 1024×1024 DALL-E result back to original image dimensions.
+ */
+const applyInpaintResult = (
+  resultB64: string,
+  crop: CropParams,
+): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = crop.origW;
+      canvas.height = crop.origH;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, crop.ox, crop.oy, crop.w, crop.h, 0, 0, crop.origW, crop.origH);
+      resolve(canvas.toDataURL('image/png').split(',')[1]);
+    };
+    img.onerror = reject;
+    img.src = `data:image/png;base64,${resultB64}`;
   });
 
 const STATUS_COLOR: Record<string, string> = {
@@ -59,18 +138,20 @@ interface CardProps {
   itemIndex: number;
   onRemoveImage: () => void;
   onDownload: () => void;
+  onZoom: (src: string) => void;
 }
 
-const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex, onRemoveImage, onDownload }) => {
+const ImageCard: React.FC<CardProps> = ({
+  item, phase, selectionIndex, itemIndex,
+  onRemoveImage, onDownload, onZoom,
+}) => {
   const showResult = item.status === 'done' && item.resultBase64;
   const displaySrc = showResult
     ? `data:${item.resultMimeType || 'image/png'};base64,${item.resultBase64}`
     : item.previewUrl;
 
-  // In selecting phase, highlight current/done/pending
   const isCurrentlySelecting = phase === 'selecting' && itemIndex === selectionIndex;
   const isSelectionDone = phase === 'selecting' && item.status === 'ready';
-  const isSelectionPending = phase === 'selecting' && item.status === 'idle';
 
   return (
     <div
@@ -81,31 +162,28 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
         boxShadow: isCurrentlySelecting ? '0 0 0 2px rgba(123,80,220,0.3)' : 'none',
       }}
     >
-      {/* Image area */}
       <div className="relative w-full aspect-square overflow-hidden select-none">
         <img
           src={displaySrc}
           alt=""
           className="w-full h-full object-cover"
-          style={{ filter: isSelectionPending && phase === 'selecting' && itemIndex > selectionIndex ? 'brightness(0.4)' : 'none' }}
+          style={{
+            filter: phase === 'selecting' && itemIndex > selectionIndex && item.status === 'idle'
+              ? 'brightness(0.4)' : 'none',
+          }}
           draggable={false}
         />
 
-        {/* Region boxes (read-only preview) */}
+        {/* Region boxes preview */}
         {item.regions.map(r => (
-          <div
-            key={r.id}
-            className="absolute pointer-events-none"
-            style={{
-              left: `${r.x}%`, top: `${r.y}%`,
-              width: `${r.width}%`, height: `${r.height}%`,
-              border: '2px solid #ef4444',
-              backgroundColor: 'rgba(239,68,68,0.15)',
-            }}
-          />
+          <div key={r.id} className="absolute pointer-events-none" style={{
+            left: `${r.x}%`, top: `${r.y}%`,
+            width: `${r.width}%`, height: `${r.height}%`,
+            border: '2px solid #ef4444',
+            backgroundColor: 'rgba(239,68,68,0.15)',
+          }} />
         ))}
 
-        {/* Status overlays */}
         {item.status === 'removing' && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
             <div className="flex flex-col items-center gap-2">
@@ -130,14 +208,24 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
           </div>
         )}
         {item.status === 'done' && item.resultBase64 && (
-          <div className="absolute top-2 right-2">
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-400" style={{ fontSize: '9px' }}>
-              <CheckCircle2 className="w-2.5 h-2.5" /> Pronta
+          <>
+            <div className="absolute top-2 right-2">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-400" style={{ fontSize: '9px' }}>
+                <CheckCircle2 className="w-2.5 h-2.5" /> Pronta
+              </div>
             </div>
-          </div>
+            {/* Zoom button */}
+            <button
+              onClick={() => onZoom(displaySrc)}
+              className="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer opacity-0 hover:opacity-100 group-hover:opacity-100"
+              style={{ backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff' }}
+              title="Ver em tela cheia"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+          </>
         )}
 
-        {/* Current selection indicator */}
         {isCurrentlySelecting && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(123,80,220,0.12)' }}>
             <div className="flex flex-col items-center gap-1">
@@ -146,8 +234,6 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
             </div>
           </div>
         )}
-
-        {/* Selection done badge */}
         {isSelectionDone && (
           <div className="absolute top-2 left-2">
             <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-400" style={{ fontSize: '9px' }}>
@@ -156,8 +242,6 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
             </div>
           </div>
         )}
-
-        {/* Remove image button (upload phase only) */}
         {phase === 'upload' && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemoveImage(); }}
@@ -167,13 +251,25 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
             <X className="w-3.5 h-3.5 text-white/70" />
           </button>
         )}
+
+        {/* Clickable zoom overlay for done images */}
+        {item.status === 'done' && item.resultBase64 && (
+          <button
+            onClick={() => onZoom(displaySrc)}
+            className="absolute inset-0 w-full h-full flex items-end justify-end p-2 cursor-zoom-in group"
+            style={{ backgroundColor: 'transparent' }}
+            title="Ver em tela cheia"
+          >
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+              style={{ backgroundColor: 'rgba(0,0,0,0.75)', color: '#fff' }}>
+              <ZoomIn className="w-3.5 h-3.5" />
+            </div>
+          </button>
+        )}
       </div>
 
-      {/* Card footer */}
-      <div
-        className="px-2.5 py-2 flex items-center justify-between gap-1.5"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-      >
+      <div className="px-2.5 py-2 flex items-center justify-between gap-1.5"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)' }}>
           {item.status === 'idle' && item.file.name.slice(0, 18) + (item.file.name.length > 18 ? '…' : '')}
           {item.status === 'ready' && (item.regions.length > 0 ? `${item.regions.length} área${item.regions.length > 1 ? 's' : ''}` : 'Sem logo')}
@@ -181,7 +277,6 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
           {item.status === 'done' && (item.resultBase64 ? 'Logo removida ✓' : 'Sem logos')}
           {item.status === 'error' && 'Erro'}
         </span>
-
         <div className="flex items-center gap-1">
           {item.status === 'done' && item.resultBase64 && (
             <button
@@ -199,17 +294,50 @@ const ImageCard: React.FC<CardProps> = ({ item, phase, selectionIndex, itemIndex
   );
 };
 
+// ──────────────── Lightbox ────────────────
+const Lightbox: React.FC<{ src: string; onClose: () => void }> = ({ src, onClose }) => (
+  <AnimatePresence>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.92)' }}
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer z-10"
+        style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <motion.img
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        src={src}
+        alt="Resultado"
+        className="rounded-xl shadow-2xl"
+        style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain' }}
+        onClick={(e) => e.stopPropagation()}
+        draggable={false}
+      />
+    </motion.div>
+  </AnimatePresence>
+);
+
 // ──────────────── Main Component ────────────────
 const LogoRemoverTool: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('upload');
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectionIndex, setSelectionIndex] = useState(0);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const updateItem = useCallback((id: string, updates: Partial<ImageItem>) => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   }, []);
 
-  // ── Dropzone ──
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
     maxSize: 5 * 1024 * 1024,
@@ -242,14 +370,12 @@ const LogoRemoverTool: React.FC = () => {
     });
   };
 
-  // ── Start selection flow ──
   const startSelecting = () => {
     if (items.length === 0) return;
     setSelectionIndex(0);
     setPhase('selecting');
   };
 
-  // ── Handle save from region editor (step mode) ──
   const handleSelectionSave = (regions: LogoRegion[]) => {
     const currentItem = items[selectionIndex];
     if (!currentItem) return;
@@ -259,22 +385,18 @@ const LogoRemoverTool: React.FC = () => {
   const handleSelectionClose = () => {
     const nextIndex = selectionIndex + 1;
     if (nextIndex >= items.length) {
-      // All images selected — start processing
       startRemoving();
     } else {
       setSelectionIndex(nextIndex);
     }
   };
 
-  // ── Remove ──
   const startRemoving = async () => {
     setPhase('processing');
 
-    // Get latest items snapshot
     setItems(currentItems => {
       const toProcess = currentItems.filter(i => i.status === 'ready');
-      
-      // Kick off async processing
+
       (async () => {
         const removeOne = async (item: ImageItem) => {
           if (item.regions.length === 0) {
@@ -283,27 +405,32 @@ const LogoRemoverTool: React.FC = () => {
           }
           updateItem(item.id, { status: 'removing' });
           try {
-            const base64 = item.base64 || await fileToBase64(item.file);
+            // Generate 1024×1024 letterboxed image + mask client-side
+            const prep = await prepareForInpainting(item.file, item.regions);
+
             const { data, error } = await supabase.functions.invoke('logo-removal', {
               body: {
                 action: 'remove',
-                imageBase64: base64,
-                mimeType: item.mimeType,
-                regions: item.regions.map(r => ({ x: r.x, y: r.y, width: r.width, height: r.height }))
+                imageBase64: prep.imagePng,
+                maskBase64: prep.maskPng,
               }
             });
             if (error) throw new Error(error.message);
-            if (!data.processedImageBase64) throw new Error('Sem imagem retornada');
-            updateItem(item.id, { status: 'done', resultBase64: data.processedImageBase64, resultMimeType: data.mimeType });
+            if (!data?.processedImageBase64) throw new Error('Sem imagem retornada');
+
+            // Crop DALL-E result (1024×1024) back to original image dimensions
+            const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);
+            updateItem(item.id, { status: 'done', resultBase64: finalBase64, resultMimeType: 'image/png' });
           } catch (err) {
+            console.error('removeOne error:', err);
             updateItem(item.id, { status: 'error', error: err instanceof Error ? err.message : 'Erro ao remover' });
           }
         };
 
-        // Batch 3 at a time
-        for (let i = 0; i < toProcess.length; i += 3) {
-          await Promise.all(toProcess.slice(i, i + 3).map(removeOne));
-          if (i + 3 < toProcess.length) await new Promise(r => setTimeout(r, 1500));
+        // Process 2 at a time (DALL-E 2 is slower)
+        for (let i = 0; i < toProcess.length; i += 2) {
+          await Promise.all(toProcess.slice(i, i + 2).map(removeOne));
+          if (i + 2 < toProcess.length) await new Promise(r => setTimeout(r, 1000));
         }
 
         setPhase('done');
@@ -318,7 +445,6 @@ const LogoRemoverTool: React.FC = () => {
     });
   };
 
-  // ── Download ──
   const downloadSingle = (item: ImageItem) => {
     if (!item.resultBase64) return;
     const mime = item.resultMimeType || 'image/png';
@@ -355,18 +481,18 @@ const LogoRemoverTool: React.FC = () => {
     setSelectionIndex(0);
   };
 
-  // ── Derived ──
   const doneCount = items.filter(i => i.status === 'done').length;
   const processingCount = items.filter(i => i.status === 'removing').length;
   const withResultCount = items.filter(i => i.status === 'done' && i.resultBase64).length;
   const readyCount = items.filter(i => i.status === 'ready').length;
   const totalRegions = items.reduce((s, i) => s + i.regions.length, 0);
-
-  // ── Current selection item ──
   const selectingItem = phase === 'selecting' ? items[selectionIndex] : null;
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#0a0a0f' }}>
+
+      {/* Lightbox */}
+      {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
       {/* Header */}
       <div className="shrink-0 px-6 pt-6 pb-4 flex items-start justify-between gap-4">
@@ -384,7 +510,6 @@ const LogoRemoverTool: React.FC = () => {
             {phase === 'done' && `Concluído! ${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} processada${withResultCount !== 1 ? 's' : ''} sem logos`}
           </p>
         </div>
-
         {phase !== 'upload' && (
           <button
             onClick={reset}
@@ -399,7 +524,6 @@ const LogoRemoverTool: React.FC = () => {
       {/* Main area */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
 
-        {/* Upload dropzone (empty state) */}
         {phase === 'upload' && items.length === 0 && (
           <div
             {...getRootProps()}
@@ -428,10 +552,8 @@ const LogoRemoverTool: React.FC = () => {
           </div>
         )}
 
-        {/* Image grid */}
         {items.length > 0 && (
           <div>
-            {/* "Add more" bar when in upload phase */}
             {phase === 'upload' && items.length < 15 && (
               <div
                 {...getRootProps()}
@@ -446,7 +568,6 @@ const LogoRemoverTool: React.FC = () => {
               </div>
             )}
 
-            {/* Progress bar (selecting/processing phase) */}
             {(phase === 'selecting' || phase === 'processing') && (
               <motion.div
                 initial={{ opacity: 0, y: -6 }}
@@ -482,7 +603,6 @@ const LogoRemoverTool: React.FC = () => {
               </motion.div>
             )}
 
-            {/* Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               <AnimatePresence>
                 {items.map((item, idx) => (
@@ -492,6 +612,7 @@ const LogoRemoverTool: React.FC = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ duration: 0.15 }}
+                    className="group"
                   >
                     <ImageCard
                       item={item}
@@ -500,6 +621,7 @@ const LogoRemoverTool: React.FC = () => {
                       itemIndex={idx}
                       onRemoveImage={() => removeImage(item.id)}
                       onDownload={() => downloadSingle(item)}
+                      onZoom={setLightboxSrc}
                     />
                   </motion.div>
                 ))}
@@ -527,7 +649,6 @@ const LogoRemoverTool: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Avançar button */}
           {phase === 'upload' && (
             <button
               onClick={startSelecting}
@@ -539,8 +660,6 @@ const LogoRemoverTool: React.FC = () => {
               Avançar
             </button>
           )}
-
-          {/* Processing state */}
           {phase === 'processing' && (
             <button
               disabled
@@ -551,8 +670,6 @@ const LogoRemoverTool: React.FC = () => {
               Processando...
             </button>
           )}
-
-          {/* Done downloads */}
           {phase === 'done' && withResultCount > 0 && (
             <>
               {withResultCount > 1 && (

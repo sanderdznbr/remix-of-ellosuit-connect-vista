@@ -534,6 +534,53 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
     throw lastError instanceof Error ? lastError : new Error('Erro ao remover logo');
   }, []);
 
+  const removeWithAutoRetry = useCallback(async (
+    item: ImageItem,
+    opts?: { startAttempt?: number; maxAttempts?: number },
+  ) => {
+    const maxAttempts = opts?.maxAttempts ?? 3;
+    let lastError: unknown = null;
+
+    for (let attempt = opts?.startAttempt ?? 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const pad = 4 + (attempt - 1) * 8;
+        const alpha = 0.55 + (attempt - 1) * 0.18;
+
+        // Generate 1024×1024 letterboxed original + annotated with red overlays
+        const prep = await prepareForRedAnnotation(item.file, item.regions, { pad, alpha });
+
+        const data = await invokeLogoRemovalWithRetry({
+          action: 'remove',
+          imageBase64: prep.originalPng,
+          annotatedBase64: prep.annotatedPng,
+        }, 3);
+
+        // Crop result (1024×1024) back to original image dimensions
+        const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);
+        const diff = await computeRegionDiffScore(item.file, finalBase64, item.regions);
+
+        console.log('[logo-remover] attempt', attempt, 'diff', diff.toFixed(4));
+
+        // If the edited region barely changed, likely a failure → retry automatically with stronger mask
+        if (diff < 0.02 && attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 700 * attempt));
+          continue;
+        }
+
+        return { finalBase64, diff, attempts: attempt };
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 900 * attempt));
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Erro ao remover logo');
+  }, [invokeLogoRemovalWithRetry]);
+
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
     maxSize: 5 * 1024 * 1024,

@@ -138,6 +138,37 @@ Deno.serve(async (req) => {
       }
       const allStyleRefs = [...new Set([...styleRefUrls, ...marketplaceRefUrls])];
 
+      // === STYLE DNA ANALYSIS for single post ===
+      let singlePromptStyle = marketplaceStyle?.imageGeneration?.prompt_style || '';
+      const isSingleGeneric = singlePromptStyle.includes('EXACTLY replicates the visual style shown in the reference images') && !singlePromptStyle.includes('=== BACKGROUND ===');
+      if (isSingleGeneric && allStyleRefs.length > 0 && timeLeft() > 60_000) {
+        console.log('Single-post: Detected generic prompt — running AI visual DNA analysis...');
+        await updateJob(jobId, { progress_message: '🔍 Analisando DNA visual do estilo...' });
+        try {
+          const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+          const analysisContent: any[] = [];
+          for (const ref of allStyleRefs.slice(0, 4)) {
+            analysisContent.push({ type: 'image_url', image_url: { url: ref } });
+          }
+          analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:
+{"background":"exact bg description","typography":"exact font style","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature"}
+Be EXTREMELY specific. No markdown, pure JSON only.` });
+
+          const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [{ role: 'user', content: analysisContent }] }),
+          });
+          if (dnaRes.ok) {
+            const dnaData = await dnaRes.json();
+            const dnaText = dnaData?.choices?.[0]?.message?.content || '';
+            const cleaned = dnaText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const dna = JSON.parse(cleaned);
+            singlePromptStyle = `Create an Instagram post with MAXIMUM FIDELITY to the reference style.\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.`;
+          }
+        } catch (dnaErr) { console.error('Single-post DNA analysis failed:', dnaErr); }
+      }
+
       const promptParts: string[] = [];
       promptParts.push('IDIOMA OBRIGATÓRIO: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO correto e fluente.');
       const manualText = styleConfig.manualPostText;
@@ -150,11 +181,11 @@ Deno.serve(async (req) => {
       }
       promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
       if (job.brand_name) promptParts.push(`MARCA: Inclua "${job.brand_name}" como texto pequeno.`);
-      const isMarketplaceStyle = !!marketplaceStyle?.imageGeneration?.prompt_style;
+      const isMarketplaceStyle = !!singlePromptStyle;
       if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
-      const finalPrompt = marketplaceStyle?.imageGeneration?.prompt_style 
-        ? `${marketplaceStyle.imageGeneration.prompt_style}\n\n${promptParts.join('\n')}`
+      const finalPrompt = singlePromptStyle 
+        ? `${singlePromptStyle}\n\n${promptParts.join('\n')}`
         : promptParts.join('\n');
 
       const facePersonsMeta = imageSettings.facePersonsMetadata;

@@ -409,9 +409,9 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
       }
 
       const promptParts = [];
-      if (marketplaceStyle?.imageGeneration?.prompt_style) {
-        promptParts.push(marketplaceStyle.imageGeneration.prompt_style);
-        if (marketplaceStyle.imageGeneration?.prompt_prefix) promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
+      if (promptStyle) {
+        promptParts.push(promptStyle);
+        if (marketplaceStyle?.imageGeneration?.prompt_prefix) promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
         promptParts.push(`CONTENT FOR THIS CARD: ${imgPrompt}`);
       } else {
         promptParts.push('Professional photograph');

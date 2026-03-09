@@ -805,6 +805,13 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
           stepTotal={items.length}
         />
       )}
+
+      {/* Create Style Dialog */}
+      <CreateStyleFromImages
+        open={createStyleOpen}
+        onOpenChange={setCreateStyleOpen}
+        imageBase64s={items.filter(i => i.status === 'done' && i.resultBase64).map(i => i.resultBase64!)}
+      />
     </div>
   );
 };

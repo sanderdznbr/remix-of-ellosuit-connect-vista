@@ -395,6 +395,29 @@ const LogoRemoverTool: React.FC = () => {
     setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   }, []);
 
+  const invokeLogoRemovalWithRetry = useCallback(async (
+    payload: { action: 'remove'; imageBase64: string; annotatedBase64: string },
+    maxAttempts = 3,
+  ) => {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke('logo-removal', { body: payload });
+        if (error) throw new Error(error.message || 'Falha ao chamar função de remoção');
+        if (!data?.processedImageBase64) throw new Error('Sem imagem retornada');
+        return data as { processedImageBase64: string; mimeType?: string };
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 1200 * attempt));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Erro ao remover logo');
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp'] },
     maxSize: 5 * 1024 * 1024,
@@ -465,15 +488,11 @@ const LogoRemoverTool: React.FC = () => {
             // Generate 1024×1024 letterboxed original + annotated with red overlays
             const prep = await prepareForRedAnnotation(item.file, item.regions);
 
-            const { data, error } = await supabase.functions.invoke('logo-removal', {
-              body: {
-                action: 'remove',
-                imageBase64: prep.originalPng,
-                annotatedBase64: prep.annotatedPng,
-              }
-            });
-            if (error) throw new Error(error.message);
-            if (!data?.processedImageBase64) throw new Error('Sem imagem retornada');
+            const data = await invokeLogoRemovalWithRetry({
+              action: 'remove',
+              imageBase64: prep.originalPng,
+              annotatedBase64: prep.annotatedPng,
+            }, 3);
 
             // Crop DALL-E result (1024×1024) back to original image dimensions
             const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);

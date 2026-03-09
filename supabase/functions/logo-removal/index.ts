@@ -6,83 +6,136 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type ExtractedImage = { base64: string; mimeType: string };
+
+type PromptVariant = "dual_strict" | "dual_concise" | "annotated_only";
+
 async function callWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: unknown;
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const res = await fetch(url, options);
-    if (res.status !== 503 && res.status !== 429) return res;
-    const delay = (attempt + 1) * 2000;
-    console.log(`Attempt ${attempt + 1} failed with ${res.status}, retrying in ${delay}ms...`);
-    await new Promise((r) => setTimeout(r, delay));
+    try {
+      const res = await fetch(url, options);
+      if (res.status !== 503 && res.status !== 429) return res;
+
+      const delay = (attempt + 1) * 2000;
+      console.log(`Attempt ${attempt + 1} failed with ${res.status}, retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+    } catch (err) {
+      lastError = err;
+      const delay = (attempt + 1) * 2000;
+      console.log(`Attempt ${attempt + 1} fetch error, retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
+
+  if (lastError) throw lastError;
   return fetch(url, options);
 }
 
-function extractBase64Image(data: any): { base64: string; mimeType: string } | null {
-  const msg = data?.choices?.[0]?.message;
+function parseDataUrl(url: string): ExtractedImage | null {
+  const match = url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1], base64: match[2] };
+}
 
-  const url = msg?.images?.[0]?.image_url?.url;
-  if (typeof url === "string") {
-    const match = url.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-    if (match) return { mimeType: match[1], base64: match[2] };
-  }
+function parseLooseBase64(value: string, fallbackMime = "image/png"): ExtractedImage | null {
+  const parsedDataUrl = parseDataUrl(value);
+  if (parsedDataUrl) return parsedDataUrl;
 
-  const b64 = msg?.images?.[0]?.b64_json;
-  if (typeof b64 === "string" && b64.length > 0) {
-    return { mimeType: "image/png", base64: b64 };
-  }
-
-  const content = msg?.content;
-  if (typeof content === "string") {
-    const m = content.match(/data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/);
-    if (m) return { mimeType: m[1], base64: m[2] };
+  // Accept raw base64 payloads too
+  if (/^[A-Za-z0-9+/=\s]+$/.test(value) && value.trim().length > 128) {
+    return { mimeType: fallbackMime, base64: value.replace(/\s+/g, "") };
   }
 
   return null;
 }
 
-function buildMessages(imageBase64: string, annotatedBase64?: string) {
-  // Two-image approach: original + annotated with red marks
-  if (annotatedBase64) {
+function extractFromContentNode(node: any): ExtractedImage | null {
+  if (!node) return null;
+
+  if (typeof node === "string") {
+    const match = node.match(/data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/);
+    return match ? { mimeType: match[1], base64: match[2] } : null;
+  }
+
+  if (typeof node !== "object") return null;
+
+  const candidateStrings = [
+    node?.image_url?.url,
+    node?.url,
+    node?.b64_json,
+    node?.base64,
+    node?.source?.data,
+  ].filter((v) => typeof v === "string") as string[];
+
+  for (const value of candidateStrings) {
+    const extracted = parseLooseBase64(value);
+    if (extracted) return extracted;
+  }
+
+  if (Array.isArray(node?.content)) {
+    for (const child of node.content) {
+      const extracted = extractFromContentNode(child);
+      if (extracted) return extracted;
+    }
+  }
+
+  return null;
+}
+
+function extractBase64Image(data: any): ExtractedImage | null {
+  const message = data?.choices?.[0]?.message;
+  if (!message) return null;
+
+  const directCandidates = [
+    message?.images,
+    message?.content,
+    data?.images,
+    data?.output,
+  ];
+
+  for (const candidate of directCandidates) {
+    if (Array.isArray(candidate)) {
+      for (const item of candidate) {
+        const extracted = extractFromContentNode(item);
+        if (extracted) return extracted;
+      }
+    } else {
+      const extracted = extractFromContentNode(candidate);
+      if (extracted) return extracted;
+    }
+  }
+
+  return null;
+}
+
+function buildMessages(imageBase64: string, annotatedBase64?: string, variant: PromptVariant = "dual_strict") {
+  if (annotatedBase64 && variant !== "annotated_only") {
+    const strictText = `You are an expert image inpainting tool. You will receive TWO images:\n\nIMAGE 1: The ORIGINAL clean image (no marks).\nIMAGE 2: The SAME image but with semi-transparent RED rectangles painted over areas that must be REMOVED.\n\nYOUR TASK:\n1. Look at IMAGE 2 to identify the RED-marked regions.\n2. In those regions ONLY, erase the content (logos, text, watermarks, objects) and reconstruct a seamless, natural background that perfectly blends with surrounding pixels (colors, gradients, textures, lighting).\n3. Everything OUTSIDE the red regions must remain pixel-identical to IMAGE 1.\n4. The red overlay itself must NOT appear in your output.\n5. Do NOT add any new text, logos, watermarks, or objects.\n6. Return ONLY the final edited image.`;
+
+    const conciseText = `Edit IMAGE 1 using IMAGE 2 as mask reference. Remove anything under red overlays and reconstruct background naturally. Keep all non-red areas unchanged. Output only the edited image with no red marks.`;
+
     return [
       {
         role: "user",
         content: [
-          {
-            type: "text",
-            text: `You are an expert image inpainting tool. You will receive TWO images:
-
-IMAGE 1: The ORIGINAL clean image (no marks).
-IMAGE 2: The SAME image but with semi-transparent RED rectangles painted over areas that must be REMOVED.
-
-YOUR TASK:
-1. Look at IMAGE 2 to identify the RED-marked regions.
-2. In those regions ONLY, erase the content (logos, text, watermarks, objects) and reconstruct a seamless, natural background that perfectly blends with the surrounding pixels (colors, gradients, textures, lighting).
-3. Everything OUTSIDE the red regions must remain PIXEL-PERFECT identical to IMAGE 1.
-4. The red overlay itself must NOT appear in your output.
-5. Do NOT add any new text, logos, watermarks, or objects.
-6. Return ONLY the final edited image.`,
-          },
-          {
-            type: "image_url",
-            image_url: { url: `data:image/png;base64,${imageBase64}` },
-          },
-          {
-            type: "image_url",
-            image_url: { url: `data:image/png;base64,${annotatedBase64}` },
-          },
+          { type: "text", text: variant === "dual_concise" ? conciseText : strictText },
+          { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
+          { type: "image_url", image_url: { url: `data:image/png;base64,${annotatedBase64}` } },
         ],
       },
     ];
   }
 
-  // Single-image fallback (annotated only)
   return [
     {
       role: "user",
       content: [
         {
           type: "text",
-          text: `You are an expert image inpainting tool. The image has semi-transparent RED rectangles painted over areas that must be REMOVED. Erase the content under the red marks and reconstruct a seamless natural background matching surrounding colors, gradients, textures and lighting. The red overlay itself must NOT appear in the output. Do NOT change anything outside the red regions. Do NOT add new text, logos, or objects. Return ONLY the final edited image.`,
+          text:
+            "The image has semi-transparent RED rectangles over content to remove. Erase only the red-marked regions, rebuild seamless background, remove the red overlay, and keep all other areas unchanged. Return only the edited image.",
         },
         {
           type: "image_url",
@@ -93,11 +146,7 @@ YOUR TASK:
   ];
 }
 
-async function callEdit(
-  LOVABLE_API_KEY: string,
-  model: string,
-  messages: any[],
-): Promise<Response> {
+async function callEdit(LOVABLE_API_KEY: string, model: string, messages: any[]): Promise<Response> {
   return callWithRetry(
     "https://ai.gateway.lovable.dev/v1/chat/completions",
     {
@@ -110,12 +159,37 @@ async function callEdit(
         model,
         messages,
         modalities: ["image", "text"],
-        temperature: 0.2,
+        temperature: 0.1,
         stream: false,
       }),
     },
     3,
   );
+}
+
+function buildAttemptPlan(imageBase64: string, annotatedBase64?: string) {
+  const variants: PromptVariant[] = annotatedBase64
+    ? ["dual_strict", "dual_concise", "annotated_only"]
+    : ["annotated_only"];
+
+  const models = ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"];
+
+  const plan: Array<{ model: string; variant: PromptVariant; messages: any[] }> = [];
+  for (const variant of variants) {
+    for (const model of models) {
+      const baseImageForVariant = variant === "annotated_only" && annotatedBase64
+        ? annotatedBase64
+        : imageBase64;
+
+      plan.push({
+        model,
+        variant,
+        messages: buildMessages(baseImageForVariant, annotatedBase64, variant),
+      });
+    }
+  }
+
+  return plan;
 }
 
 serve(async (req) => {
@@ -130,7 +204,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, imageBase64, annotatedBase64, maskBase64 } = await req.json();
+    const { action, imageBase64, annotatedBase64 } = await req.json();
 
     if (action !== "remove") {
       return new Response(JSON.stringify({ error: 'Invalid action. Use "remove".' }), {
@@ -146,59 +220,60 @@ serve(async (req) => {
       });
     }
 
-    const messages = buildMessages(imageBase64, annotatedBase64 || undefined);
-
     console.log("Calling AI for logo removal...", {
       hasAnnotated: !!annotatedBase64,
-      hasMask: !!maskBase64,
     });
 
-    const handleBad = async (res: Response) => {
-      const errText = await res.text();
-      console.error("AI error:", res.status, errText);
-      if (res.status === 429)
+    const attempts = buildAttemptPlan(imageBase64, annotatedBase64 || undefined);
+    let lastErrorSummary = "";
+
+    for (const attempt of attempts) {
+      const label = `${attempt.model} (${attempt.variant})`;
+
+      const response = await callEdit(LOVABLE_API_KEY, attempt.model, attempt.messages);
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("AI error:", response.status, label, errText);
+
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded. Tente novamente em instantes." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        lastErrorSummary = `gateway ${response.status}: ${errText.slice(0, 180)}`;
+        continue;
+      }
+
+      const data = await response.json();
+      const extracted = extractBase64Image(data);
+
+      if (extracted) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Tente novamente em instantes." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({ processedImageBase64: extracted.base64, mimeType: extracted.mimeType }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
-      if (res.status === 402)
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      throw new Error(`AI gateway error: ${res.status} — ${errText.slice(0, 300)}`);
-    };
+      }
 
-    // Try pro model first (more reliable for inpainting)
-    let response = await callEdit(LOVABLE_API_KEY, "google/gemini-2.5-flash-image", messages);
-    if (!response.ok) return await handleBad(response);
-
-    let data = await response.json();
-    let extracted = extractBase64Image(data);
-
-    // Fallback to higher-quality model
-    if (!extracted) {
-      console.log("No image from flash; retrying with pro model...");
-      response = await callEdit(LOVABLE_API_KEY, "google/gemini-3-pro-image-preview", messages);
-      if (!response.ok) return await handleBad(response);
-      data = await response.json();
-      extracted = extractBase64Image(data);
-    }
-
-    if (!extracted) {
       console.error(
-        "No image returned. Keys:",
+        `No image returned on ${label}. Keys:`,
         JSON.stringify(Object.keys(data || {})),
         "msg keys:",
         JSON.stringify(Object.keys(data?.choices?.[0]?.message || {})),
       );
-      throw new Error("No image returned from AI");
+
+      lastErrorSummary = `no image payload on ${label}`;
     }
 
-    return new Response(
-      JSON.stringify({ processedImageBase64: extracted.base64, mimeType: extracted.mimeType }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    throw new Error(`No image returned from AI (${lastErrorSummary || "all attempts exhausted"})`);
   } catch (error) {
     console.error("logo-removal error:", error);
     return new Response(

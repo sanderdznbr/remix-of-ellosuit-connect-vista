@@ -80,29 +80,33 @@ Deno.serve(async (req) => {
     const imageUrls: string[] = [];
     const seen = new Set<string>();
 
-    // Prefer: <source data-ut="project-module-source-webp" srcset="...">
-    const imageUrls: string[] = [];
-    const seen = new Set<string>();
-
-    const pushUrl = (raw: string) => {
-      const imgUrl = raw.split(' ')[0]; // remove width descriptor like "1080w"
-      const fileKey = imgUrl.split('/').pop() || imgUrl;
+    const pushUrl = (imgUrl: string) => {
+      const fileKey = imgUrl.split('?')[0].split('/').pop() || imgUrl;
       if (!seen.has(fileKey)) {
         seen.add(fileKey);
         imageUrls.push(imgUrl);
       }
     };
 
+    const pushFromSrcset = (srcset: string) => {
+      // srcset can be: "url1 600w, url2 1080w" OR "url 1080w"
+      for (const part of srcset.split(',')) {
+        const token = part.trim().split(' ')[0];
+        if (token?.startsWith('https://')) pushUrl(token);
+      }
+    };
+
+    // Prefer: <source data-ut="project-module-source-webp" srcset="...">
     const webpSourceRegex = /<source[^>]*data-ut="project-module-source-webp"[^>]*srcset="([^"]+)"/g;
     let match;
     while ((match = webpSourceRegex.exec(html)) !== null) {
-      pushUrl(match[1]);
+      pushFromSrcset(match[1]);
     }
 
     // Fallback: any srcset URLs pointing to project_modules
     const srcsetRegex = /srcset="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
     while ((match = srcsetRegex.exec(html)) !== null) {
-      pushUrl(match[1]);
+      pushFromSrcset(match[1]);
     }
 
     // Fallback: img src URLs

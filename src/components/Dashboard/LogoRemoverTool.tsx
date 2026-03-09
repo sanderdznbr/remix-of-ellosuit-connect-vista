@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import JSZip from 'jszip';
+import { useAuth } from '@/components/AuthProvider';
 import {
   Upload, X, Download, Loader2, AlertCircle,
   CheckCircle2, Eraser, Plus, RotateCcw, Package, Trash2,

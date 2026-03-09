@@ -102,6 +102,57 @@ const prepareForInpainting = (
   });
 
 /**
+ * Create a 1024×1024 letterboxed image with semi-transparent red overlays indicating
+ * the regions to remove (Gemini edit-friendly).
+ */
+const prepareForRedAnnotation = (
+  file: File,
+  regions: LogoRegion[],
+): Promise<{ annotatedPng: string; crop: CropParams }> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const SIZE = 1024;
+      const origW = img.width;
+      const origH = img.height;
+      const scale = Math.min(SIZE / origW, SIZE / origH);
+      const w = Math.round(origW * scale);
+      const h = Math.round(origH * scale);
+      const ox = Math.round((SIZE - w) / 2);
+      const oy = Math.round((SIZE - h) / 2);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = 'rgba(0,0,0,255)';
+      ctx.fillRect(0, 0, SIZE, SIZE);
+      ctx.drawImage(img, ox, oy, w, h);
+
+      // Red overlays = areas to remove
+      ctx.fillStyle = 'rgba(255,0,0,0.60)';
+      for (const r of regions) {
+        const rx = ox + (r.x / 100) * w;
+        const ry = oy + (r.y / 100) * h;
+        const rw = (r.width / 100) * w;
+        const rh = (r.height / 100) * h;
+        // Slight padding improves coverage
+        const pad = 4;
+        ctx.fillRect(rx - pad, ry - pad, rw + pad * 2, rh + pad * 2);
+      }
+
+      resolve({
+        annotatedPng: canvas.toDataURL('image/png').split(',')[1],
+        crop: { ox, oy, w, h, origW, origH },
+      });
+    };
+    img.onerror = reject;
+    img.src = objUrl;
+  });
+
+/**
  * Crop the 1024×1024 DALL-E result back to original image dimensions.
  */
 const applyInpaintResult = (
@@ -405,14 +456,13 @@ const LogoRemoverTool: React.FC = () => {
           }
           updateItem(item.id, { status: 'removing' });
           try {
-            // Generate 1024×1024 letterboxed image + mask client-side
-            const prep = await prepareForInpainting(item.file, item.regions);
+            // Generate 1024×1024 letterboxed image with red overlays (areas to remove)
+            const prep = await prepareForRedAnnotation(item.file, item.regions);
 
             const { data, error } = await supabase.functions.invoke('logo-removal', {
               body: {
                 action: 'remove',
-                imageBase64: prep.imagePng,
-                maskBase64: prep.maskPng,
+                imageBase64: prep.annotatedPng,
               }
             });
             if (error) throw new Error(error.message);

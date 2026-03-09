@@ -286,6 +286,8 @@ interface CardProps {
   onRemoveImage: () => void;
   onDownload: () => void;
   onZoom: (src: string) => void;
+  onDelete: () => void;
+  onRegenerate: () => void;
 }
 
 const ImageCard: React.FC<CardProps> = ({

@@ -12,6 +12,7 @@ import StyleCreator from './StyleCreator';
 import LogoRemoverTool from './LogoRemoverTool';
 import LogoRemoverHistory from './LogoRemoverHistory';
 import BehanceImporter from './BehanceImporter';
+import InstagramImporter from './InstagramImporter';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
@@ -110,6 +111,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <LogoRemoverHistory />;
       case 'behance-import':
         return <BehanceImporter onSendToLogoRemover={(files) => {
+          setBehanceFiles(files);
+          setActiveTab('logo-remover');
+        }} />;
+      case 'instagram-import':
+        return <InstagramImporter onSendToLogoRemover={(files) => {
           setBehanceFiles(files);
           setActiveTab('logo-remover');
         }} />;

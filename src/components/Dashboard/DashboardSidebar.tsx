@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentIcon from '@/assets/ellocontent_icon.png';
@@ -226,6 +226,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           >
             <Globe className="w-4 h-4" />
             Importar do Behance
+          </button>
+          <button
+            onClick={() => { onTabChange('instagram-import'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              activeTab === 'instagram-import'
+                ? 'bg-white/[0.08] text-white font-medium'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <Instagram className="w-4 h-4" />
+            Importar do Instagram
           </button>
         </div>
       )}

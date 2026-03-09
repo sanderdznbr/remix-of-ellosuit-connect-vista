@@ -488,15 +488,11 @@ const LogoRemoverTool: React.FC = () => {
             // Generate 1024×1024 letterboxed original + annotated with red overlays
             const prep = await prepareForRedAnnotation(item.file, item.regions);
 
-            const { data, error } = await supabase.functions.invoke('logo-removal', {
-              body: {
-                action: 'remove',
-                imageBase64: prep.originalPng,
-                annotatedBase64: prep.annotatedPng,
-              }
-            });
-            if (error) throw new Error(error.message);
-            if (!data?.processedImageBase64) throw new Error('Sem imagem retornada');
+            const data = await invokeLogoRemovalWithRetry({
+              action: 'remove',
+              imageBase64: prep.originalPng,
+              annotatedBase64: prep.annotatedPng,
+            }, 3);
 
             // Crop DALL-E result (1024×1024) back to original image dimensions
             const finalBase64 = await applyInpaintResult(data.processedImageBase64, prep.crop);

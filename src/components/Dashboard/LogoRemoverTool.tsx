@@ -770,6 +770,14 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
           )}
           {phase === 'done' && withResultCount > 0 && (
             <>
+              <button
+                onClick={() => setCreateStyleOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer"
+                style={{ backgroundColor: 'rgba(123,80,220,0.15)', color: '#a78bfa', border: '1px solid rgba(123,80,220,0.25)' }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Criar Estilo
+              </button>
               {withResultCount > 1 && (
                 <button
                   onClick={downloadZip}

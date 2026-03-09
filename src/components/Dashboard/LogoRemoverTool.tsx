@@ -427,6 +427,16 @@ const ImageCard: React.FC<CardProps> = ({
           {item.status === 'error' && 'Erro'}
         </span>
         <div className="flex items-center gap-1">
+          {(item.status === 'done' || item.status === 'error') && item.regions.length > 0 && (
+            <button
+              onClick={onRegenerate}
+              className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer"
+              style={{ backgroundColor: 'rgba(123,80,220,0.14)', color: '#a78bfa', border: '1px solid rgba(123,80,220,0.18)' }}
+              title="Regenerar"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </button>
+          )}
           {item.status === 'done' && item.resultBase64 && (
             <button
               onClick={onDownload}
@@ -437,6 +447,14 @@ const ImageCard: React.FC<CardProps> = ({
               <Download className="w-3 h-3" />
             </button>
           )}
+          <button
+            onClick={onDelete}
+            className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer"
+            style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.18)' }}
+            title="Excluir"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
         </div>
       </div>
     </div>

@@ -449,9 +449,10 @@ const ImageCard: React.FC<CardProps> = ({
           )}
           <button
             onClick={onDelete}
-            className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer"
+            disabled={phase === 'selecting' || phase === 'processing'}
+            className="w-6 h-6 rounded flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.18)' }}
-            title="Excluir"
+            title={phase === 'selecting' || phase === 'processing' ? 'Aguarde para excluir' : 'Excluir'}
           >
             <Trash2 className="w-3 h-3" />
           </button>

@@ -733,6 +733,8 @@ const LogoRemoverTool: React.FC<LogoRemoverToolProps> = ({ initialFiles, onIniti
         setItems(latest => {
           const successCount = latest.filter(i => i.status === 'done').length;
           toast.success(`${successCount} imagem${successCount !== 1 ? 'ns' : ''} processada${successCount !== 1 ? 's' : ''} com sucesso!`);
+          // Auto-save to history
+          saveSessionToHistory(latest);
           return latest;
         });
       })();

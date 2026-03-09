@@ -108,7 +108,7 @@ const prepareForInpainting = (
 const prepareForRedAnnotation = (
   file: File,
   regions: LogoRegion[],
-): Promise<{ annotatedPng: string; crop: CropParams }> =>
+): Promise<{ originalPng: string; annotatedPng: string; crop: CropParams }> =>
   new Promise((resolve, reject) => {
     const img = new Image();
     const objUrl = URL.createObjectURL(file);
@@ -123,28 +123,34 @@ const prepareForRedAnnotation = (
       const ox = Math.round((SIZE - w) / 2);
       const oy = Math.round((SIZE - h) / 2);
 
-      const canvas = document.createElement('canvas');
-      canvas.width = SIZE;
-      canvas.height = SIZE;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = 'rgba(0,0,0,255)';
-      ctx.fillRect(0, 0, SIZE, SIZE);
-      ctx.drawImage(img, ox, oy, w, h);
+      // Clean original (letterboxed)
+      const origCanvas = document.createElement('canvas');
+      origCanvas.width = SIZE;
+      origCanvas.height = SIZE;
+      const oCtx = origCanvas.getContext('2d')!;
+      oCtx.fillStyle = '#000';
+      oCtx.fillRect(0, 0, SIZE, SIZE);
+      oCtx.drawImage(img, ox, oy, w, h);
 
-      // Red overlays = areas to remove
-      ctx.fillStyle = 'rgba(255,0,0,0.60)';
+      // Annotated copy with red overlays
+      const annCanvas = document.createElement('canvas');
+      annCanvas.width = SIZE;
+      annCanvas.height = SIZE;
+      const aCtx = annCanvas.getContext('2d')!;
+      aCtx.drawImage(origCanvas, 0, 0);
+      aCtx.fillStyle = 'rgba(255,0,0,0.55)';
       for (const r of regions) {
         const rx = ox + (r.x / 100) * w;
         const ry = oy + (r.y / 100) * h;
         const rw = (r.width / 100) * w;
         const rh = (r.height / 100) * h;
-        // Slight padding improves coverage
         const pad = 4;
-        ctx.fillRect(rx - pad, ry - pad, rw + pad * 2, rh + pad * 2);
+        aCtx.fillRect(rx - pad, ry - pad, rw + pad * 2, rh + pad * 2);
       }
 
       resolve({
-        annotatedPng: canvas.toDataURL('image/png').split(',')[1],
+        originalPng: origCanvas.toDataURL('image/png').split(',')[1],
+        annotatedPng: annCanvas.toDataURL('image/png').split(',')[1],
         crop: { ox, oy, w, h, origW, origH },
       });
     };
@@ -456,13 +462,14 @@ const LogoRemoverTool: React.FC = () => {
           }
           updateItem(item.id, { status: 'removing' });
           try {
-            // Generate 1024×1024 letterboxed image with red overlays (areas to remove)
+            // Generate 1024×1024 letterboxed original + annotated with red overlays
             const prep = await prepareForRedAnnotation(item.file, item.regions);
 
             const { data, error } = await supabase.functions.invoke('logo-removal', {
               body: {
                 action: 'remove',
-                imageBase64: prep.annotatedPng,
+                imageBase64: prep.originalPng,
+                annotatedBase64: prep.annotatedPng,
               }
             });
             if (error) throw new Error(error.message);

@@ -5262,7 +5262,31 @@ FORBIDDEN:
 
               {/* Step: text-mode selection */}
               {addCardModal.step === 'text-mode' && (
-                <div className="flex flex-col px-3 pb-4 gap-1.5">
+                <div className="flex flex-col px-3 pb-4 gap-3">
+                  {/* Text size selector */}
+                  <div className="px-1">
+                    <p className="text-[11px] text-white/40 uppercase tracking-wider mb-2">Tamanho do texto</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([
+                        { value: 'short', label: 'Curto', desc: '~15 palavras' },
+                        { value: 'medium', label: 'Médio', desc: '~30 palavras' },
+                        { value: 'long', label: 'Longo', desc: '~50 palavras' },
+                      ] as const).map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setAddCardModal(prev => ({ ...prev, textSize: opt.value }))}
+                          className="flex flex-col items-center py-2.5 px-2 rounded-xl border transition-all"
+                          style={{
+                            borderColor: addCardModal.textSize === opt.value ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.08)',
+                            backgroundColor: addCardModal.textSize === opt.value ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)',
+                          }}
+                        >
+                          <span className="text-[13px] font-medium text-white/80">{opt.label}</span>
+                          <span className="text-[10px] text-white/30 mt-0.5">{opt.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <button
                     onClick={() => { generateAddCardAutoText(); }}
                     disabled={addCardModal.generatingAutoText}

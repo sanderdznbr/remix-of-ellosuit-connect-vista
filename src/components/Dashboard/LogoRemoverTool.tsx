@@ -194,6 +194,89 @@ const STATUS_COLOR: Record<string, string> = {
   error: '#ef4444',
 };
 
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
+/**
+ * Compute how much the selected regions changed after processing.
+ * 0 = identical (likely failed), 1 = very different.
+ */
+const computeRegionDiffScore = async (
+  file: File,
+  resultBase64: string,
+  regions: LogoRegion[],
+): Promise<number> => {
+  if (regions.length === 0) return 1;
+
+  const origUrl = URL.createObjectURL(file);
+  try {
+    const [origImg, resultImg] = await Promise.all([
+      loadImage(origUrl),
+      loadImage(`data:image/png;base64,${resultBase64}`),
+    ]);
+
+    const maxSide = 280;
+    const scale = Math.min(maxSide / origImg.width, maxSide / origImg.height);
+    const w = Math.max(1, Math.round(origImg.width * scale));
+    const h = Math.max(1, Math.round(origImg.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return 1;
+
+    // Draw original
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(origImg, 0, 0, w, h);
+    const origData = ctx.getImageData(0, 0, w, h).data;
+
+    // Draw result
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(resultImg, 0, 0, w, h);
+    const resData = ctx.getImageData(0, 0, w, h).data;
+
+    const regionBounds = regions.map(r => ({
+      x1: Math.floor((r.x / 100) * w),
+      y1: Math.floor((r.y / 100) * h),
+      x2: Math.ceil(((r.x + r.width) / 100) * w),
+      y2: Math.ceil(((r.y + r.height) / 100) * h),
+    }));
+
+    const inRegion = (x: number, y: number) =>
+      regionBounds.some(b => x >= b.x1 && x < b.x2 && y >= b.y1 && y < b.y2);
+
+    let sum = 0;
+    let count = 0;
+
+    // Sample every 2px for speed
+    for (let y = 0; y < h; y += 2) {
+      for (let x = 0; x < w; x += 2) {
+        if (!inRegion(x, y)) continue;
+        const i = (y * w + x) * 4;
+        sum += Math.abs(origData[i] - resData[i]);
+        sum += Math.abs(origData[i + 1] - resData[i + 1]);
+        sum += Math.abs(origData[i + 2] - resData[i + 2]);
+        count++;
+      }
+    }
+
+    if (count === 0) return 1;
+    const max = count * 255 * 3;
+    return Math.min(1, Math.max(0, sum / max));
+  } catch {
+    return 1;
+  } finally {
+    URL.revokeObjectURL(origUrl);
+  }
+};
+
 // ──────────────── ImageCard ────────────────
 interface CardProps {
   item: ImageItem;

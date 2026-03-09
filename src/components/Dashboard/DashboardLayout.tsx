@@ -101,6 +101,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         return <FaceGenerator />;
       case 'style-creator':
         return <StyleCreator />;
+      case 'logo-remover':
+        return <LogoRemoverTool />;
       default:
         return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
     }

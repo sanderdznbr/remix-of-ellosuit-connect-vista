@@ -1830,6 +1830,9 @@ const CarouselGenerator: React.FC = () => {
             }
           } else if (!hasFaceRefsForGen && peopleMode === 'none') {
             capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
+          } else if (hasFaceRefsForGen && !faceCardIndices.has(i)) {
+            // Card has face refs available but this specific card should NOT show a face
+            capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS. Focus on the topic, objects, scenery, or editorial design elements only.';
           }
           let cardFaceRefs: string[] | undefined;
           let cardFacePersonsMeta: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[] | undefined;

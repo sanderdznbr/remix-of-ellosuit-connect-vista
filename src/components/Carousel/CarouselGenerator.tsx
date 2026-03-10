@@ -68,6 +68,8 @@ import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
+import StepPropertyPhotos from './wizard/StepPropertyPhotos';
+import StepPropertyInfo from './wizard/StepPropertyInfo';
 import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -300,10 +302,10 @@ const CarouselGenerator: React.FC = () => {
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Logo', 'Velocidade']
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -4012,12 +4014,19 @@ FORBIDDEN:
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
                     )}
-                    {currentStepName === 'Imóvel' && (
-                      <StepProperty
+                    {currentStepName === 'Fotos Imóvel' && (
+                      <StepPropertyPhotos
                         properties={propertyList}
                         setProperties={setPropertyList}
                         realEstateMode={realEstateMode}
                         cardCount={cardCount}
+                      />
+                    )}
+                    {currentStepName === 'Info Imóvel' && (
+                      <StepPropertyInfo
+                        properties={propertyList}
+                        setProperties={setPropertyList}
+                        realEstateMode={realEstateMode}
                       />
                     )}
                     {currentStepName === 'Produto' && (

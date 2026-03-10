@@ -1,0 +1,139 @@
+import React, { useRef } from 'react';
+import { Camera, Plus, X, Upload } from 'lucide-react';
+import { PropertyData, createEmptyProperty } from './StepProperty';
+
+interface StepPropertyPhotosProps {
+  properties: PropertyData[];
+  setProperties: React.Dispatch<React.SetStateAction<PropertyData[]>>;
+  realEstateMode: 'single' | 'multiple';
+  cardCount?: number;
+}
+
+const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, setProperties, realEstateMode, cardCount }) => {
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const addPhotos = (id: string, files: FileList) => {
+    const newPhotos = Array.from(files).map(file => ({
+      url: URL.createObjectURL(file),
+      file,
+    }));
+    setProperties(prev => prev.map(p =>
+      p.id === id ? { ...p, photos: [...p.photos, ...newPhotos] } : p
+    ));
+  };
+
+  const removePhoto = (propId: string, photoIdx: number) => {
+    setProperties(prev => prev.map(p =>
+      p.id === propId ? { ...p, photos: p.photos.filter((_, i) => i !== photoIdx) } : p
+    ));
+  };
+
+  const addProperty = () => {
+    if (properties.length >= 10) return;
+    setProperties(prev => [...prev, createEmptyProperty()]);
+  };
+
+  const removeProperty = (id: string) => {
+    if (properties.length <= 1) return;
+    setProperties(prev => prev.filter(p => p.id !== id));
+  };
+
+  const totalPhotos = properties.reduce((sum, p) => sum + p.photos.length, 0);
+  const requiredPhotos = realEstateMode === 'single' ? (cardCount || 5) : properties.length;
+
+  const renderPropertyPhotos = (prop: PropertyData, index: number) => (
+    <div key={prop.id} className="p-4 rounded-xl border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+      {realEstateMode === 'multiple' && (
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-medium text-amber-300">Imóvel {index + 1}</span>
+          {properties.length > 1 && (
+            <button onClick={() => removeProperty(prop.id)}
+              className="p-1 rounded hover:bg-red-500/20 text-white/20 hover:text-red-400 cursor-pointer">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        {prop.photos.map((photo, pi) => (
+          <div key={pi} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
+            <img src={photo.url} alt="" className="w-full h-full object-cover" />
+            <button onClick={() => removePhoto(prop.id, pi)}
+              className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer">
+              <X className="w-3 h-3" />
+            </button>
+            {realEstateMode === 'single' && (
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center">
+                <span className="text-[8px] text-white/70">Card {pi + 1}</span>
+              </div>
+            )}
+          </div>
+        ))}
+        <label className="flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-amber-500/30 transition-colors">
+          <div className="text-center">
+            <Upload className="w-4 h-4 text-white/20 mx-auto mb-1" />
+            <span className="text-[9px] text-white/20">Adicionar</span>
+          </div>
+          <input
+            type="file" accept="image/*" multiple className="hidden"
+            ref={el => { fileInputRefs.current[prop.id] = el; }}
+            onChange={e => { if (e.target.files) addPhotos(prop.id, e.target.files); }}
+          />
+        </label>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Camera className="w-5 h-5 text-amber-400" />
+        <div>
+          <h3 className="text-sm font-semibold text-white">
+            {realEstateMode === 'single' ? 'Fotos do Imóvel' : 'Fotos dos Imóveis'}
+          </h3>
+          <p className="text-[10px] text-white/30">
+            {realEstateMode === 'single'
+              ? `Adicione ${cardCount || 'várias'} fotos do imóvel — cada foto será usada em 1 card`
+              : 'Adicione pelo menos 1 foto para cada imóvel do carrossel'}
+          </p>
+        </div>
+      </div>
+
+      {/* Progress indicator */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-white/40">Progresso</span>
+            <span className={`text-[10px] font-medium ${totalPhotos >= requiredPhotos ? 'text-green-400' : 'text-amber-400'}`}>
+              {totalPhotos}/{requiredPhotos} fotos
+            </span>
+          </div>
+          <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${Math.min(100, (totalPhotos / requiredPhotos) * 100)}%`,
+                backgroundColor: totalPhotos >= requiredPhotos ? '#4ade80' : '#f59e0b',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
+        {properties.map((prop, i) => renderPropertyPhotos(prop, i))}
+      </div>
+
+      {realEstateMode === 'multiple' && properties.length < 10 && (
+        <button onClick={addProperty}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-white/10 text-xs text-white/30 hover:border-amber-500/30 hover:text-amber-300 cursor-pointer transition-colors">
+          <Plus className="w-3.5 h-3.5" /> Adicionar Imóvel ({properties.length}/10)
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default StepPropertyPhotos;

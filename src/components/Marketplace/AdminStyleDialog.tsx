@@ -172,7 +172,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   };
 
   const buildStyleConfig = () => {
-    const promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
+    let promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
 1. COPY THE EXACT VISUAL DNA: Replicate the same color palette, typography style, layout composition, decorative elements, and overall aesthetic from the reference images.
 2. TYPOGRAPHY: Match the exact font styles, sizes, weights, and placement patterns from the references.
 3. COLOR PALETTE: Extract and use the EXACT same colors from the reference images.
@@ -183,12 +183,26 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
 8. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
 9. SEM BORDAS: Full bleed, sem barras ou bordas.`;
 
-    return {
-      description: 'Estilo customizado baseado em referências visuais.',
+    if (form.is_real_estate) {
+      promptStyle += `\n\n=== MODO IMOBILIÁRIO ===
+Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
+- Use as fotos do imóvel fornecidas pelo usuário como base visual do post.
+- Destaque informações como: metragem (m²), quartos, suítes, banheiros, vagas, valor e localização.
+- Tipografia de marketing premium: títulos impactantes como "Seu Novo Lar", "Oportunidade Única", "Viva com Estilo".
+- Mantenha a identidade visual do estilo mas adapte para contexto imobiliário.
+- ${form.real_estate_mode === 'single' ? 'MODO IMÓVEL ÚNICO: Cada card mostra um ângulo/cômodo diferente do MESMO imóvel.' : 'MODO VÁRIOS IMÓVEIS: Cada card do carrossel apresenta um imóvel DIFERENTE com suas características.'}`;
+    }
+
+    const config: any = {
+      description: form.is_real_estate ? 'Estilo imobiliário baseado em referências visuais.' : 'Estilo customizado baseado em referências visuais.',
+      is_real_estate: form.is_real_estate,
+      real_estate_mode: form.is_real_estate ? form.real_estate_mode : undefined,
       colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
       imageGeneration: {
         prompt_style: promptStyle,
-        prompt_prefix: 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
+        prompt_prefix: form.is_real_estate
+          ? 'Premium real estate marketing post for Instagram. Showcase property with professional photography and bold typography. 1080x1350 portrait format.'
+          : 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
         negative_prompt: 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
         imageType: 'photo', lightingStyle: 'cinematic', cameraAngle: 'front', fidelity: 'high',
       },
@@ -199,6 +213,8 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
         { type: 'light_editorial', description: 'Light background variation with editorial elements' },
       ],
     };
+
+    return config;
   };
 
   const handleSave = async () => {

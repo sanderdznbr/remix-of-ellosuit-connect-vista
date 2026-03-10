@@ -67,6 +67,7 @@ import StepPeopleMode from './wizard/StepPeopleMode';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
+import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import SocialPublishDialog from './SocialPublishDialog';
@@ -207,11 +208,10 @@ const CarouselGenerator: React.FC = () => {
   const [analyzingProduct, setAnalyzingProduct] = useState(false);
   const [productSize, setProductSize] = useState<ProductSize>('medium');
 
-  // Compute wizard steps after all state is declared
-  const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
-  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
-  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  // Real estate property state
+  const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
+
+  // NOTE: isRealEstateStyle, realEstateMode, and WIZARD_STEPS are computed after activeMarketplaceStyle is declared (see below)
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
@@ -294,6 +294,18 @@ const CarouselGenerator: React.FC = () => {
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
   const [loadedMarketplaceStyleId, setLoadedMarketplaceStyleId] = useState<string | null>(null);
   const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+  const isRealEstateStyle = !!activeMarketplaceStyle?.is_real_estate;
+  const realEstateMode = (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single';
+
+  // Compute wizard steps after all state is declared
+  const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
+  const SIMPLE_STEPS = isRealEstateStyle
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = isRealEstateStyle
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -716,7 +728,7 @@ const CarouselGenerator: React.FC = () => {
   // Export dialog is now a centered modal, no outside-click handler needed
 
   // ===== BUILD IMAGE PROMPT with settings =====
-  const buildImagePrompt = (basePrompt: string): string => {
+  const buildImagePrompt = (basePrompt: string, cardIndex?: number): string => {
     const parts: string[] = [];
 
     // If marketplace style has imageGeneration config, use its prompt_style as the foundation
@@ -849,6 +861,12 @@ const CarouselGenerator: React.FC = () => {
       parts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
     } else {
       parts.push('ultra high resolution');
+    }
+
+    // Real estate property context
+    if (isRealEstateStyle && propertyList.length > 0 && propertyList.some(p => p.price || p.area || p.photos.length > 0)) {
+      const propContext = buildPropertyPromptContext(propertyList, realEstateMode, cardIndex ?? 0);
+      if (propContext) parts.push(propContext);
     }
 
     return parts.filter(Boolean).join('. ');
@@ -1185,7 +1203,9 @@ const CarouselGenerator: React.FC = () => {
         image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined, facePersonsMetadata: facePersons.filter(p => p.photos.length > 0).length > 1 ? facePersons.filter(p => p.photos.length > 0).map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined, allPeopleOnCover } as any,
         reference_images: referenceImages as any,
         face_ref_urls: (() => { const active = facePersons.filter(p => p.photos.length > 0); return active.length > 0 ? active.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url); })() as any,
-        product_context: productContext,
+        product_context: isRealEstateStyle
+          ? `REAL_ESTATE_DATA:${JSON.stringify({ properties: propertyList.map(p => ({ ...p, photos: p.photos.map(ph => ph.url) })), mode: realEstateMode })}`
+          : productContext,
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
         negative_prompt: imageSettings.negativePrompt || null,
@@ -3936,6 +3956,13 @@ FORBIDDEN:
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
                     )}
+                    {currentStepName === 'Imóvel' && (
+                      <StepProperty
+                        properties={propertyList}
+                        setProperties={setPropertyList}
+                        realEstateMode={realEstateMode}
+                      />
+                    )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
                         productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}
@@ -4026,7 +4053,7 @@ FORBIDDEN:
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Rosto' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
+                        {(currentStepName === 'Rosto' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro' || currentStepName === 'Imóvel') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

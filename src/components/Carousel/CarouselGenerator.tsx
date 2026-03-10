@@ -1232,9 +1232,9 @@ const CarouselGenerator: React.FC = () => {
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.map(p => p.url);
       const marketplaceRefUrls: string[] = [];
-      if (activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyleRef.current?._previewImages?.length) {
         const origin = window.location.origin;
-        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+        const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
         // Limit to 8 style refs to maintain quality
         marketplaceRefUrls.push(...allPreviews.slice(0, 8));
@@ -1286,7 +1286,7 @@ const CarouselGenerator: React.FC = () => {
       }
 
       const finalPrompt = buildImagePrompt(promptParts.join('\n'));
-      const negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
+      const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
       // Pass product images as referenceImageUrls (general refs) so the edge function
       // triggers the face+product combined logic, and style refs stay separate
@@ -1329,7 +1329,7 @@ const CarouselGenerator: React.FC = () => {
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
-            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
             if (insertErr) {
               console.error('Single post save failed:', insertErr);
             }
@@ -4556,7 +4556,8 @@ FORBIDDEN:
                         setShowStylePanel(false);
                         setTransitionToGenerate(true);
                         setCurrentCarouselId(null);
-                        setTimeout(() => generateContent(), 1200);
+                        const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                        setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
                       }} />
                   </div>
                 </motion.div>
@@ -4613,7 +4614,8 @@ FORBIDDEN:
                           setShowStylePanel(false);
                           setTransitionToGenerate(true);
                           setCurrentCarouselId(null);
-                          setTimeout(() => generateContent(), 1200);
+                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
                         }} />
                     </div>
                   </motion.div>

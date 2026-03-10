@@ -2029,7 +2029,7 @@ const CarouselGenerator: React.FC = () => {
         const totalToGen = updatedCards.length;
         
         for (let i = 0; i < updatedCards.length; i++) {
-          const propIdx = realEstateModeNow === 'multiple' ? (i % currentPropertyList.length) : 0;
+          const propIdx = snapshotRealEstateMode === 'multiple' ? (i % currentPropertyList.length) : 0;
           const prop = currentPropertyList[propIdx] || currentPropertyList[0];
           const photoIdx = i % Math.max(prop.photos.length, 1);
           const photo = prop.photos[photoIdx]?.url || '';

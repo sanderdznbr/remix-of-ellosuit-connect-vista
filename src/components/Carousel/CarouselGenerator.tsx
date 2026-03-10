@@ -5339,7 +5339,7 @@ FORBIDDEN:
                   </p>
                 </div>
                 <button
-                  onClick={() => setAddCardModal(prev => ({ ...prev, open: false }))}
+                  onClick={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}
                   className="p-1.5 rounded-lg hover:bg-white/10 transition-colors mt-0.5 shrink-0"
                 >
                   <X className="h-4 w-4 text-white/40" />

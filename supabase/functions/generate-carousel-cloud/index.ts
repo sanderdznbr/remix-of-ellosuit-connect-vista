@@ -399,9 +399,8 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         const parts: string[] = [];
         parts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
         parts.push(`TEMA: "${cleanTopic}"`);
-        parts.push(`PROIBIDO: NÃO copie @handles, nomes de empresas ou informações pessoais das referências. NÃO COPIE OS ROSTOS OU IDENTIDADES das pessoas nas referências — use pessoas DIFERENTES com aparências variadas.`);
-        parts.push(`SEM BORDAS: Full bleed, sem barras no topo ou base.`);
-        parts.push(`FIDELIDADE AO ESTILO: As imagens de referência de estilo definem a IDENTIDADE VISUAL OBRIGATÓRIA. Replique EXATAMENTE: paleta de cores, estilo tipográfico, elementos decorativos (linhas, formas, texturas, overlays, gradientes), composição de layout, tratamento fotográfico (filtros, contraste, grain). O resultado DEVE parecer parte da MESMA SÉRIE/COLEÇÃO das referências.`);
+        parts.push(`LAYOUT: A imagem DEVE preencher 100% do canvas de ponta a ponta (full bleed). Conteúdo vai até as bordas. Tipografia grande e proeminente (40-60% da largura). UMA ÚNICA composição editorial que ocupa TODO o espaço.`);
+        parts.push(`FIDELIDADE AO ESTILO: As imagens de referência definem a IDENTIDADE VISUAL OBRIGATÓRIA. Replique EXATAMENTE: paleta de cores, estilo tipográfico, elementos decorativos, composição de layout, tratamento fotográfico. O resultado DEVE parecer parte da MESMA SÉRIE das referências.`);
         // Logo/brand overlay
         if (job.logo_url && job.brand_name) {
           const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };

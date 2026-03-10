@@ -208,11 +208,9 @@ Deno.serve(async (req) => {
       }
       textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      // 2-STAGE MODE: Stage 1 generates with a person silhouette/placeholder, Stage 2 swaps face
-      textPrompt += `\n\nPESSOA + PRODUTO: Gere uma pessoa ${singleGender || 'profissional'} usando/segurando o produto. A pessoa DEVE ter um rosto GENÉRICO neutro e atraente (será substituído na pós-produção). Foque na composição, pose, iluminação e integração com o produto. O rosto NÃO precisa ser fiel a ninguém — apenas gere um rosto limpo e bem iluminado de frente ou 3/4.`;
+      textPrompt += `\n\nPESSOA + PRODUTO: Gere esta EXATA pessoa (das fotos de referência) usando/segurando o produto. ${singleGender} COPIE FIELMENTE: estrutura óssea, olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor/textura do cabelo. Rosto visível de frente ou 3/4, bem iluminado. A pessoa DEVE interagir naturalmente com o produto.`;
     } else if (validFaceRefs.length > 0) {
-      // 2-STAGE MODE: Stage 1 generates with placeholder face, Stage 2 swaps
-      textPrompt += `\n\nPESSOA NA CENA: Gere uma pessoa ${singleGender || 'profissional atraente'} que se encaixe perfeitamente na composição. A pessoa DEVE ter rosto GENÉRICO neutro e bem iluminado (será substituído na pós-produção). Foque em: pose natural, iluminação consistente, enquadramento editorial. Rosto visível de frente ou 3/4, sem obstruções. O rosto NÃO precisa ser fiel a nenhuma referência — apenas limpo e claro.`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: A pessoa na imagem DEVE ser EXATAMENTE a pessoa das fotos de referência. ${singleGender} Copie com precisão cirúrgica: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo, formato do rosto. Rosto visível de frente ou 3/4, bem iluminado, sem obstruções. Esta é a prioridade #1 da geração — fidelidade facial absoluta.`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

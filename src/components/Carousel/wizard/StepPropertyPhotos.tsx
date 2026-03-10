@@ -79,13 +79,24 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
       <div className="flex gap-3 flex-wrap">
         {prop.photos.map((photo, pi) => (
           <div key={pi} className="relative w-28 h-28 rounded-xl overflow-hidden border border-white/10 group">
-            <img src={photo.url} alt="" className="w-full h-full object-cover" />
+            <img src={photo.url} alt="" className="w-full h-full object-cover"
+              style={{ objectPosition: photo.focalPoint === 'top' ? 'center top' : photo.focalPoint === 'bottom' ? 'center bottom' : 'center center' }} />
             <button onClick={() => removePhoto(prop.id, pi)}
               className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
               <X className="w-3 h-3" />
             </button>
+            {/* Focal point picker */}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 flex items-center justify-center gap-1 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {(['top', 'center', 'bottom'] as PhotoFocalPoint[]).map(fp => (
+                <button key={fp} onClick={() => setFocalPoint(prop.id, pi, fp)}
+                  className={`w-5 h-5 rounded flex items-center justify-center cursor-pointer transition-colors ${(photo.focalPoint || 'center') === fp ? 'bg-white/30 text-white' : 'text-white/40 hover:text-white/70'}`}
+                  title={fp === 'top' ? 'Foco no topo' : fp === 'bottom' ? 'Foco na base' : 'Foco no centro'}>
+                  {fp === 'top' ? <ArrowUp className="w-3 h-3" /> : fp === 'bottom' ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                </button>
+              ))}
+            </div>
             {realEstateMode === 'single' && (
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-0.5">
+              <div className={`absolute top-0 left-0 right-0 bg-black/60 text-center py-0.5 ${(photo.focalPoint || 'center') !== 'center' ? '' : 'opacity-0 group-hover:opacity-0'}`}>
                 <span className="text-[9px] text-white/70">Card {pi + 1}</span>
               </div>
             )}

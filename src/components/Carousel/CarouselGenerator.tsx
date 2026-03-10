@@ -2064,6 +2064,13 @@ const CarouselGenerator: React.FC = () => {
     setShowAddCardMenu(false);
     setAddCardModal(prev => ({ ...prev, open: false }));
 
+    // Apply pending style if coming from "Estilo Diferente" flow
+    if (pendingAddCardStyle) {
+      setActiveMarketplaceStyle(pendingAddCardStyle);
+      setIsLoadedFullBleed(!!pendingAddCardStyle?.imageGeneration?.prompt_style);
+      setPendingAddCardStyle(null);
+    }
+
     const currentData = carouselDataRef.current;
     if (!currentData) return;
 

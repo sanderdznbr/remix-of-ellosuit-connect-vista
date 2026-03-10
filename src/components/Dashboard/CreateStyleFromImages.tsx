@@ -21,6 +21,8 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [detailedPromptStyle, setDetailedPromptStyle] = useState('');
+  const [recommendedNoFaces, setRecommendedNoFaces] = useState(false);
+  const [faceRecommendationReason, setFaceRecommendationReason] = useState('');
 
   // Auto-generate name + description + detailed prompt on open
   useEffect(() => {
@@ -47,6 +49,9 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
   "description": "Descrição curta do estilo visual (máx 100 chars)",
   "category": "editorial|minimalista|moderno|criativo|corporativo|lifestyle",
   "tags": ["tag1", "tag2", "tag3"],
+  "has_people": true/false,
+  "recommended_no_faces": true/false,
+  "face_recommendation_reason": "motivo curto se recommended_no_faces=true",
   "visual_dna": {
     "background": "descrição detalhada dos fundos (cores, gradientes, texturas, padrões)",
     "typography": "descrição detalhada da tipografia (fonte tipo serif/sans/display, peso, tamanho, hierarquia, efeitos como outline/shadow/glow)",
@@ -58,6 +63,12 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
     "unique_features": "características únicas e diferenciadoras que tornam esse estilo reconhecível"
   }
 }
+
+Regras para has_people e recommended_no_faces:
+- has_people: true se as referências contêm rostos/figuras humanas como parte do estilo
+- recommended_no_faces: true se o estilo é PREDOMINANTEMENTE tipográfico, gráfico, abstrato, ou baseado em objetos/cenários — onde adicionar rostos humanos PREJUDICARIA a fidelidade ao estilo original. Exemplos: estilos com fundo sólido + tipografia, estilos 3D, estilos com padrões geométricos, estilos minimalistas sem pessoas.
+- recommended_no_faces: false se o estilo NATURALMENTE incorpora pessoas/rostos como parte do design.
+
 Não use markdown, apenas JSON puro. Seja EXTREMAMENTE detalhado e específico no visual_dna — descreva exatamente o que vê, não generalize.`,
             },
             {
@@ -82,11 +93,20 @@ Não use markdown, apenas JSON puro. Seja EXTREMAMENTE detalhado e específico n
       if (parsed.category) setCategory(parsed.category);
       if (parsed.tags) setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
 
+      // Face recommendation
+      if (parsed.recommended_no_faces !== undefined) setRecommendedNoFaces(!!parsed.recommended_no_faces);
+      if (parsed.face_recommendation_reason) setFaceRecommendationReason(parsed.face_recommendation_reason);
+
       // Build a detailed prompt_style from visual_dna
       if (parsed.visual_dna) {
         const dna = parsed.visual_dna;
         const detailedPrompt = buildDetailedPromptStyle(parsed.name || 'Custom Style', dna);
         setDetailedPromptStyle(detailedPrompt);
+
+        // If recommended_no_faces, add anti-face instructions to prompt
+        if (parsed.recommended_no_faces) {
+          setDetailedPromptStyle(prev => prev + '\n\n=== PEOPLE/FACES ===\nThis style does NOT use human faces or people. Do NOT include any people, faces, portraits, or human figures. Focus exclusively on typography, graphic elements, objects, and abstract/editorial compositions.');
+        }
       }
     } catch (err) {
       console.error('Auto-generate error:', err);
@@ -164,11 +184,13 @@ ${dna.unique_features || 'Replicate the unique visual signatures from references
 
       const styleConfig = {
         description: description || 'Estilo customizado baseado em referências visuais.',
+        recommended_no_faces: recommendedNoFaces,
+        face_recommendation_reason: faceRecommendationReason,
         colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
         imageGeneration: {
           prompt_style: promptStyle,
           prompt_prefix: 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
-          negative_prompt: 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
+          negative_prompt: `cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design${recommendedNoFaces ? ', human faces, people, person, portrait, selfie, headshot' : ''}`,
           imageType: 'photo', lightingStyle: 'cinematic', cameraAngle: 'front', fidelity: 'high',
         },
         cardVariations: [
@@ -281,6 +303,13 @@ ${dna.unique_features || 'Replicate the unique visual signatures from references
             {detailedPromptStyle && (
               <div className="p-2.5 rounded-lg bg-green-500/10 border border-green-500/20">
                 <span className="text-[10px] text-green-300 font-medium">✓ DNA Visual analisado — prompt detalhado gerado automaticamente</span>
+              </div>
+            )}
+
+            {/* Face recommendation indicator */}
+            {recommendedNoFaces && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <span className="text-[10px] text-amber-300 font-medium">⚠ Recomendado SEM rostos — {faceRecommendationReason || 'estilo tipográfico/gráfico funciona melhor sem pessoas'}</span>
               </div>
             )}
 

@@ -407,7 +407,27 @@ No markdown, pure JSON only.` });
           const dna = JSON.parse(cleaned);
           console.log('Visual DNA analyzed:', JSON.stringify(dna).slice(0, 500));
 
+          // Extract text character limits from DNA analysis
+          const dnaTextLimits = dna.text_limits || {};
+          if (dnaTextLimits.cover_title_max_chars) {
+            console.log('Text limits from DNA:', JSON.stringify(dnaTextLimits));
+            // Store in marketplace style config so it gets passed to text generation
+            if (marketplaceStyle) {
+              marketplaceStyle._textLimits = dnaTextLimits;
+            }
+          }
+
           // Build enhanced prompt_style — CONCISE but hyper-specific
+          const textLimitSection = dnaTextLimits.cover_title_max_chars
+            ? `\nTEXT LENGTH LIMITS (MANDATORY — from style reference analysis):
+- Cover title: max ${dnaTextLimits.cover_title_max_chars} chars
+- Cover subtitle: max ${dnaTextLimits.cover_subtitle_max_chars || 60} chars  
+- Content bodyTop: max ${dnaTextLimits.content_body_top_max_chars || 150} chars
+- Content bodyBottom: max ${dnaTextLimits.content_body_bottom_max_chars || 100} chars
+- CTA title: max ${dnaTextLimits.cta_title_max_chars || 30} chars
+Keep text within these limits to match the style's visual density.`
+            : '';
+
           promptStyle = `REPLICATE THIS EXACT VISUAL STYLE (from the reference images):
 
 BACKGROUND: ${dna.background}
@@ -418,7 +438,7 @@ LAYOUT: ${dna.layout}
 COLORS (USE ONLY THESE): ${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}
 DECORATIVE ELEMENTS: ${dna.decorative}
 PHOTO TREATMENT: ${dna.photo_treatment}
-SIGNATURE: ${dna.signature}
+SIGNATURE: ${dna.signature}${textLimitSection}
 
 RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.`;
 

@@ -1828,8 +1828,12 @@ const CarouselGenerator: React.FC = () => {
       // === REAL ESTATE: Convert property photos from blob URLs to base64 data URLs ===
       const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
       let propertyPhotoDataUrls: string[][] = [];
+      console.log('[BLEND_DETECT] useRealEstateBlend:', useRealEstateBlend, 
+        'snapshotIsRealEstate:', snapshotIsRealEstate,
+        'propertyCount:', snapshotPropertyList.length,
+        'photosPerProp:', snapshotPropertyList.map(p => p.photos?.length || 0));
       if (useRealEstateBlend) {
-        console.log('[BLEND] ✅ Real estate blend mode ACTIVE — will generate AI on black bg then blend with real photos');
+        console.log('[BLEND] ✅ Real estate blend mode ACTIVE — photos will be composited after AI generation');
         setImageGenProgress('📸 Processando fotos dos imóveis...');
         propertyPhotoDataUrls = await Promise.all(
           snapshotPropertyList.map(async (prop) => {

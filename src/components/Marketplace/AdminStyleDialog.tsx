@@ -122,6 +122,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   useEffect(() => {
     if (open) {
       if (editStyle) {
+        const sc = editStyle.style_config || {};
         setForm({
           name: editStyle.name,
           description: editStyle.description || '',
@@ -132,10 +133,12 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
           is_featured: editStyle.is_featured,
           is_free: (editStyle as any).is_free || false,
           strict_instructions: (editStyle as any).strict_instructions || '',
+          is_real_estate: !!sc.is_real_estate,
+          real_estate_mode: sc.real_estate_mode || 'single',
         });
         setExistingImages(editStyle.preview_images || []);
       } else {
-        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '' });
+        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single' });
         setExistingImages([]);
       }
       setRefFiles([]);

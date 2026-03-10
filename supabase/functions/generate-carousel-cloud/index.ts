@@ -517,7 +517,7 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
             styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
             imageModel: imageSettings.model || 'auto',
             negativePrompt: task.negPrompt,
-            fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
+            fidelity: isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced'),
             facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
             ...(brandColors && brandColors.length > 0 ? { brandColors } : {}),

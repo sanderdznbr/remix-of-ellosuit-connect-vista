@@ -208,8 +208,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
-  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Visual']), 'Logo', 'Velocidade'];
-  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
 
   // Step 3: Image settings

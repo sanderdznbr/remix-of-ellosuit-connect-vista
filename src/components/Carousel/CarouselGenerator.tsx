@@ -895,7 +895,7 @@ const CarouselGenerator: React.FC = () => {
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
-        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyle?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyle._strictInstructions}` : '') } : {}),
+        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(logoBrandColors.length > 0 && (!isFullBleedMarketplace || user?.email === 'admin@gmail.com') ? { brandColors: logoBrandColors } : {}),
       },
     });

@@ -1454,7 +1454,6 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             else if (focalPoint === 'bottom') sy = maxSy;
             else sy = maxSy / 2;
           }
-          }
           ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
 
           // STEP 2: Dark gradient for text readability

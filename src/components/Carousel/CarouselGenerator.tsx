@@ -2359,10 +2359,10 @@ const CarouselGenerator: React.FC = () => {
           marketplaceRefUrls.push(...allPreviews.slice(0, 8));
         }
 
-        // Use the cover image as style reference ONLY if it's a URL (not base64) to avoid huge payloads
+        // Use the cover image as PRIORITY style reference — it defines the visual series
         const coverStyleRef = coverCard.imageUrl && !coverCard.imageUrl.startsWith('data:') ? [coverCard.imageUrl] : [];
-        // Cap total style refs to 8 max to maintain quality
-        const allStyleCandidates = [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef];
+        // Cap total style refs to 8 max — cover image FIRST for highest priority
+        const allStyleCandidates = [...coverStyleRef, ...styleRefUrls, ...marketplaceRefUrls];
         const capturedStyleRefs = allStyleCandidates.length > 0 ? allStyleCandidates.slice(0, 8) : undefined;
 
         // For text-only cards, don't send face references

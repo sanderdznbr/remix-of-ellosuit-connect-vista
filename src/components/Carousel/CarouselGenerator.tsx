@@ -4012,12 +4012,19 @@ FORBIDDEN:
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
                     )}
-                    {currentStepName === 'Imóvel' && (
-                      <StepProperty
+                    {currentStepName === 'Fotos Imóvel' && (
+                      <StepPropertyPhotos
                         properties={propertyList}
                         setProperties={setPropertyList}
                         realEstateMode={realEstateMode}
                         cardCount={cardCount}
+                      />
+                    )}
+                    {currentStepName === 'Info Imóvel' && (
+                      <StepPropertyInfo
+                        properties={propertyList}
+                        setProperties={setPropertyList}
+                        realEstateMode={realEstateMode}
                       />
                     )}
                     {currentStepName === 'Produto' && (

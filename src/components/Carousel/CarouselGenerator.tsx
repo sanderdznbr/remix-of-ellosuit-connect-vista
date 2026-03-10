@@ -463,8 +463,12 @@ const CarouselGenerator: React.FC = () => {
   }, [user?.id]);
 
   // Load carousel from route param /carousel/:id
+  const hasManuallyNavigatedAway = useRef(false);
   useEffect(() => {
     if (!routeCarouselId || !user || showWelcome) return;
+    if (hasManuallyNavigatedAway.current) return;
+    // Don't reload if we already have this carousel loaded
+    if (currentCarouselId === routeCarouselId) return;
     const loadFromRoute = async () => {
       try {
         const { data } = await supabase.from('generated_carousels').select('*').eq('id', routeCarouselId).single();
@@ -480,16 +484,21 @@ const CarouselGenerator: React.FC = () => {
   // Update URL when carousel ID changes — only when not on the welcome/dashboard screen
   useEffect(() => {
     if (showWelcome) {
+      hasManuallyNavigatedAway.current = true;
       // When returning to dashboard, reset URL to root
       if (window.location.pathname.startsWith('/carousel/')) {
-        window.history.replaceState({}, '', '/');
+        navigate('/', { replace: true });
       }
       return;
     }
+    hasManuallyNavigatedAway.current = false;
     if (currentCarouselId) {
-      window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
+      // Use replaceState only — don't use navigate to avoid re-renders
+      if (!window.location.pathname.includes(currentCarouselId)) {
+        window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
+      }
     } else if (window.location.pathname.startsWith('/carousel/')) {
-      window.history.replaceState({}, '', '/');
+      navigate('/', { replace: true });
     }
   }, [currentCarouselId, showWelcome]);
 

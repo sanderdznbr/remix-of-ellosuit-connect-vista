@@ -728,7 +728,7 @@ const CarouselGenerator: React.FC = () => {
   // Export dialog is now a centered modal, no outside-click handler needed
 
   // ===== BUILD IMAGE PROMPT with settings =====
-  const buildImagePrompt = (basePrompt: string): string => {
+  const buildImagePrompt = (basePrompt: string, cardIndex?: number): string => {
     const parts: string[] = [];
 
     // If marketplace style has imageGeneration config, use its prompt_style as the foundation

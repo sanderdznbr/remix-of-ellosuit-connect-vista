@@ -1790,7 +1790,7 @@ const CarouselGenerator: React.FC = () => {
             const ctx = canvas.getContext('2d');
             if (!ctx) { reject('No canvas context'); return; }
             
-            const photoImg = new Image();
+            const photoImg = document.createElement('img') as HTMLImageElement;
             photoImg.crossOrigin = 'anonymous';
             
             photoImg.onload = () => {

@@ -1128,6 +1128,8 @@ const CarouselGenerator: React.FC = () => {
       if (sc.allPeopleOnCover !== undefined) setAllPeopleOnCover(sc.allPeopleOnCover);
       // Restore continuous mode
       if (sc.continuousMode) setContinuousMode(true); else setContinuousMode(false);
+      // Restore real estate property data
+      if (sc.propertyList?.length) setPropertyList(sc.propertyList);
     }
     setShowHistory(false);
     setActiveCardIndex(0);

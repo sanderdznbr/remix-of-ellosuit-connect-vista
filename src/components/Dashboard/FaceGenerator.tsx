@@ -37,14 +37,18 @@ const FaceGenerator: React.FC = () => {
   const [selectedMarketplaceStyle, setSelectedMarketplaceStyle] = useState<string | null>(null);
   const [marketplaceStyles, setMarketplaceStyles] = useState<MarketplaceStyle[]>([]);
   const [prompt, setPrompt] = useState('');
+  const [photoCount, setPhotoCount] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [gallery, setGallery] = useState<GeneratedPortrait[]>([]);
   const [showGallery, setShowGallery] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
+  const [lastGeneratedUrls, setLastGeneratedUrls] = useState<string[]>([]);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [inpaintUrl, setInpaintUrl] = useState<string | null>(null);
   const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  const [cloudJobIds, setCloudJobIds] = useState<string[]>([]);
 
   useEffect(() => {
     const loadData = async () => {

@@ -2338,17 +2338,18 @@ const CarouselGenerator: React.FC = () => {
               ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;
           
-          // Real estate: add property photo instruction to prompt
+          // Real estate: instruct AI to use BLACK background (we blend real photo later)
           let cardPrompt = capturedPrompt;
-          if (isRealEstateStyle && capturedProductRefs && capturedProductRefs.length > 0) {
-            cardPrompt += `\n\n🏠 INSTRUÇÃO CRÍTICA — FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA):
-A imagem de referência fornecida é uma FOTOGRAFIA REAL de um imóvel. Você DEVE:
-1. Usar esta foto EXATA como o FUNDO PRINCIPAL do card, ocupando 80-100% da área da imagem
-2. A foto do imóvel deve aparecer em TAMANHO CHEIO, sem ser reduzida, cortada excessivamente ou colocada em um frame/moldura pequena
-3. NÃO gere, invente ou substitua por uma casa/imóvel diferente — use SOMENTE a foto fornecida
-4. Aplique sobre a foto real: gradientes sutis para legibilidade, textos, badges, ícones e elementos gráficos do estilo editorial
-5. A foto real deve ser claramente reconhecível — é a mesma casa/imóvel que o cliente fotografou
-6. PROIBIDO: criar uma ilustração, renderização 3D ou foto diferente do imóvel. A foto fornecida É o imóvel real.`;
+          if (isRealEstateStyle && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
+            cardPrompt += `\n\n🏠 INSTRUÇÃO CRÍTICA — CARD IMOBILIÁRIO:
+Use um FUNDO SÓLIDO PRETO (#000000) puro como base da imagem. NÃO gere nenhuma foto de casa, prédio, imóvel ou cenário de fundo.
+O fundo DEVE ser completamente preto/escuro.
+Sobreponha no fundo preto: textos editorials, badges de preço, ícones de especificações (quartos, vagas, m²), 
+elementos gráficos decorativos do estilo visual, gradientes sutis e tipografia impactante.
+A composição final deve ser como um overlay/HUD elegante sobre fundo escuro.
+PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENAS fundo preto com overlay gráfico.`;
+            // Don't send property photos as reference - we blend them later
+            capturedProductRefs = undefined;
           }
 
           imageFactories.push({

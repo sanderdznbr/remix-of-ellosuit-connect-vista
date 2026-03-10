@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import { Camera, Plus, X, Upload } from 'lucide-react';
-import { PropertyData, createEmptyProperty } from './StepProperty';
+import { Camera, Plus, X, Upload, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { PropertyData, createEmptyProperty, PhotoFocalPoint } from './StepProperty';
 
 interface StepPropertyPhotosProps {
   properties: PropertyData[];

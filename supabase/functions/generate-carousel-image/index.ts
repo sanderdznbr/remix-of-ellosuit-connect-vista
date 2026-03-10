@@ -250,11 +250,12 @@ Deno.serve(async (req) => {
         messageContent.push({ type: 'text', text: `Acima: fotos de referência facial. Agora aplique o ESTILO VISUAL das referências abaixo, mantendo o rosto IDÊNTICO.` });
       }
 
-      // Style refs AFTER face refs
-      for (const ref of validStyleRefs) {
+      // Style refs AFTER face refs — limit count when faces present to avoid overwhelming
+      const styleRefsToSend = validFaceRefs.length > 0 ? validStyleRefs.slice(0, 4) : validStyleRefs;
+      for (const ref of styleRefsToSend) {
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE — mas NÃO copie os rostos das referências de estilo.` });
+      messageContent.push({ type: 'text', text: `As ${styleRefsToSend.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE — mas NÃO copie os rostos das referências de estilo. Use APENAS o rosto das fotos de referência facial acima.` });
 
       messageContent.push({ type: 'text', text: textPrompt });
 

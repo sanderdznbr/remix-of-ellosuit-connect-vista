@@ -1766,8 +1766,11 @@ const CarouselGenerator: React.FC = () => {
       }
 
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
-      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))));
-      if (isRealEstateStyle) {
+      // Use ref to avoid stale closure — isRealEstateStyle from render closure may be outdated
+      const isRealEstateNow = isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
+      const realEstateModeNow = (activeMarketplaceStyleRef.current?.real_estate_mode as 'single' | 'multiple') || realEstateMode || 'single';
+      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'isRealEstateNow (ref):', isRealEstateNow, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))), 'propertyListRef:', JSON.stringify(propertyListRef.current.map(p => ({ photos: p.photos.length, price: p.price }))));
+      if (isRealEstateNow) {
         // Use ref to avoid stale closure — propertyList state may be outdated in async context
         const currentPropertyList = propertyListRef.current;
         const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
@@ -2004,7 +2007,7 @@ const CarouselGenerator: React.FC = () => {
         const totalToGen = updatedCards.length;
         
         for (let i = 0; i < updatedCards.length; i++) {
-          const propIdx = realEstateMode === 'multiple' ? (i % currentPropertyList.length) : 0;
+          const propIdx = realEstateModeNow === 'multiple' ? (i % currentPropertyList.length) : 0;
           const prop = currentPropertyList[propIdx] || currentPropertyList[0];
           const photoIdx = i % Math.max(prop.photos.length, 1);
           const photo = prop.photos[photoIdx]?.url || '';
@@ -4579,6 +4582,9 @@ FORBIDDEN:
                             } else {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
+                            // Sync refs immediately to avoid stale closures in setTimeout
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
                             setTimeout(() => generateContent(), 1200);
                           }
@@ -5078,6 +5084,8 @@ FORBIDDEN:
                           setActiveMarketplaceStyle(config);
                           setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                           setShowStylePanel(false);
+                          propertyListRef.current = propertyList;
+                          activeMarketplaceStyleRef.current = config;
                           setTransitionToGenerate(true);
                           setCurrentCarouselId(null);
                           const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
@@ -5147,6 +5155,8 @@ FORBIDDEN:
                             setActiveMarketplaceStyle(config);
                             setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                             setShowStylePanel(false);
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = config;
                             setTransitionToGenerate(true);
                             setCurrentCarouselId(null);
                             const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);

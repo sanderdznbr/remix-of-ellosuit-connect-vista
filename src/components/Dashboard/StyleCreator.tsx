@@ -511,10 +511,44 @@ INSTRUÇÕES:
     const currentKey = STEPS[step]?.key;
     switch (currentKey) {
       case 'references': return refFiles.length > 0;
-      case 'property': return propertyFiles.length >= 3;
+      case 'property': return properties.some(p => p.photos.length >= 1);
       case 'generate': return styleName.trim().length > 0;
       default: return true;
     }
+  };
+
+  // Property helpers
+  const updateProperty = (idx: number, updates: Partial<PropertyDetails>) => {
+    setProperties(prev => prev.map((p, i) => i === idx ? { ...p, ...updates } : p));
+  };
+
+  const addPropertyPhoto = (propIdx: number, files: FileList | null) => {
+    if (!files) return;
+    const arr = Array.from(files);
+    setProperties(prev => prev.map((p, i) => {
+      if (i !== propIdx) return p;
+      const newPhotos = [...p.photos, ...arr];
+      const newPreviews = [...p.photoPreviews];
+      arr.forEach(f => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          setProperties(pr => pr.map((pp, ii) => ii !== propIdx ? pp : { ...pp, photoPreviews: [...pp.photoPreviews, e.target?.result as string] }));
+        };
+        reader.readAsDataURL(f);
+      });
+      return { ...p, photos: newPhotos };
+    }));
+  };
+
+  const removePropertyPhoto = (propIdx: number, photoIdx: number) => {
+    setProperties(prev => prev.map((p, i) => {
+      if (i !== propIdx) return p;
+      return {
+        ...p,
+        photos: p.photos.filter((_, j) => j !== photoIdx),
+        photoPreviews: p.photoPreviews.filter((_, j) => j !== photoIdx),
+      };
+    }));
   };
 
   const currentStepKey = STEPS[step]?.key;

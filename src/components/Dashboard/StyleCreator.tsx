@@ -606,37 +606,191 @@ INSTRUÇÕES:
           </div>
         );
 
-      case 'property': // Property photos (real estate)
+      case 'property': // Property details (real estate)
         return (
-          <div>
-            <p className="text-sm text-white/60 mb-3">
-              Adicione fotos do imóvel (mínimo 3). A IA distribuirá automaticamente entre os 10 cards, variando ambientes e ângulos no layout do estilo.
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              {propertyPreviews.map((url, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-white/10 group">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removeFile(i, setPropertyFiles, setPropertyPreviews)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <X className="w-3 h-3" />
+          <div className="space-y-5">
+            {/* Single vs Multi toggle */}
+            <div className="flex gap-2">
+              <button onClick={() => { setPropertyMode('single'); setProperties([properties[0] || createEmptyProperty()]); setActivePropertyIdx(0); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${propertyMode === 'single' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 border border-white/[0.06]'}`}>
+                <Home className="w-3.5 h-3.5" /> Imóvel Único
+              </button>
+              <button onClick={() => { setPropertyMode('multi'); if (properties.length < 2) setProperties([...properties, createEmptyProperty()]); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${propertyMode === 'multi' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 border border-white/[0.06]'}`}>
+                <Building2 className="w-3.5 h-3.5" /> Vários Imóveis
+              </button>
+            </div>
+
+            {propertyMode === 'single' ? (
+              <p className="text-xs text-white/40">Preencha os dados do imóvel. A IA gerará 10 posts variando ângulos e ambientes no estilo selecionado.</p>
+            ) : (
+              <p className="text-xs text-white/40">Adicione até 10 imóveis. A IA criará um carrossel onde cada card apresenta um imóvel diferente.</p>
+            )}
+
+            {/* Property tabs (multi mode) */}
+            {propertyMode === 'multi' && (
+              <div className="flex gap-1.5 flex-wrap items-center">
+                {properties.map((prop, idx) => (
+                  <button key={prop.id} onClick={() => setActivePropertyIdx(idx)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${activePropertyIdx === idx ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/35 border border-white/[0.06]'}`}>
+                    <Home className="w-3 h-3" />
+                    {prop.title || `Imóvel ${idx + 1}`}
+                    {properties.length > 1 && (
+                      <X className="w-3 h-3 ml-1 opacity-50 hover:opacity-100" onClick={(e) => {
+                        e.stopPropagation();
+                        setProperties(prev => prev.filter((_, i) => i !== idx));
+                        setActivePropertyIdx(Math.min(activePropertyIdx, properties.length - 2));
+                      }} />
+                    )}
                   </button>
-                  <div className="absolute bottom-0 inset-x-0 bg-black/60 px-1 py-0.5">
-                    <span className="text-[9px] text-white/60">Foto {i + 1}</span>
+                ))}
+                {properties.length < 10 && (
+                  <button onClick={() => { setProperties(prev => [...prev, createEmptyProperty()]); setActivePropertyIdx(properties.length); }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.03] text-white/25 border border-dashed border-white/10 hover:border-amber-500/30 transition-all cursor-pointer">
+                    <Plus className="w-3 h-3" /> Adicionar
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Active property form */}
+            {(() => {
+              const prop = properties[activePropertyIdx] || properties[0];
+              const idx = activePropertyIdx;
+              if (!prop) return null;
+              const inputCls = "w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 outline-none focus:border-amber-500/40";
+              const labelCls = "text-[11px] text-white/40 font-medium mb-1 block";
+              return (
+                <div className="space-y-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  {/* Photos */}
+                  <div>
+                    <span className={labelCls}>Fotos do Imóvel *</span>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {prop.photoPreviews.map((url, pi) => (
+                        <div key={pi} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => removePropertyPhoto(idx, pi)}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-amber-500/30 transition-colors">
+                        <div className="text-center">
+                          <Plus className="w-4 h-4 text-white/20 mx-auto" />
+                          <span className="text-[9px] text-white/20">Foto</span>
+                        </div>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => addPropertyPhoto(idx, e.target.files)} />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <span className={labelCls}>Título / Nome do empreendimento</span>
+                    <input value={prop.title} onChange={e => updateProperty(idx, { title: e.target.value })}
+                      placeholder="Ex: Residencial Vista Mar" className={inputCls} />
+                  </div>
+
+                  {/* Type + Mode row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className={labelCls}>Tipo</span>
+                      <select value={prop.type} onChange={e => updateProperty(idx, { type: e.target.value as PropertyDetails['type'] })}
+                        className={inputCls}>
+                        {PROPERTY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span className={labelCls}>Modalidade</span>
+                      <div className="flex gap-2 mt-1">
+                        <button onClick={() => updateProperty(idx, { mode: 'sale' })}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${prop.mode === 'sale' ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-white/[0.04] text-white/35 border border-white/[0.06]'}`}>
+                          Venda
+                        </button>
+                        <button onClick={() => updateProperty(idx, { mode: 'rent' })}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${prop.mode === 'rent' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.04] text-white/35 border border-white/[0.06]'}`}>
+                          Aluguel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price + Area */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className={labelCls}><DollarSign className="w-3 h-3 inline" /> Valor (R$)</span>
+                      <input value={prop.price} onChange={e => updateProperty(idx, { price: e.target.value })}
+                        placeholder="450.000" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}><Ruler className="w-3 h-3 inline" /> Área (m²)</span>
+                      <input value={prop.area} onChange={e => updateProperty(idx, { area: e.target.value })}
+                        placeholder="120" className={inputCls} />
+                    </div>
+                  </div>
+
+                  {/* Rooms row */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <span className={labelCls}><BedDouble className="w-3 h-3 inline" /> Quartos</span>
+                      <input value={prop.bedrooms} onChange={e => updateProperty(idx, { bedrooms: e.target.value })}
+                        placeholder="3" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}>Suítes</span>
+                      <input value={prop.suites} onChange={e => updateProperty(idx, { suites: e.target.value })}
+                        placeholder="1" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}><Bath className="w-3 h-3 inline" /> Banheiros</span>
+                      <input value={prop.bathrooms} onChange={e => updateProperty(idx, { bathrooms: e.target.value })}
+                        placeholder="2" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}>Vagas</span>
+                      <input value={prop.parkingSpots} onChange={e => updateProperty(idx, { parkingSpots: e.target.value })}
+                        placeholder="2" className={inputCls} />
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className={labelCls}><MapPin className="w-3 h-3 inline" /> Bairro</span>
+                      <input value={prop.neighborhood} onChange={e => updateProperty(idx, { neighborhood: e.target.value })}
+                        placeholder="Copacabana" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}>Cidade</span>
+                      <input value={prop.city} onChange={e => updateProperty(idx, { city: e.target.value })}
+                        placeholder="Rio de Janeiro" className={inputCls} />
+                    </div>
+                  </div>
+                  <div>
+                    <span className={labelCls}>Endereço (opcional)</span>
+                    <input value={prop.location} onChange={e => updateProperty(idx, { location: e.target.value })}
+                      placeholder="Av. Atlântica, 1500" className={inputCls} />
+                  </div>
+
+                  {/* Highlights */}
+                  <div>
+                    <span className={labelCls}>Diferenciais</span>
+                    <input value={prop.highlights} onChange={e => updateProperty(idx, { highlights: e.target.value })}
+                      placeholder="Piscina, churrasqueira, vista mar, academia" className={inputCls} />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <span className={labelCls}>Descrição (opcional)</span>
+                    <textarea value={prop.description} onChange={e => updateProperty(idx, { description: e.target.value })}
+                      placeholder="Descreva o imóvel em poucas palavras..."
+                      className={`${inputCls} resize-none min-h-[60px]`} rows={2} />
                   </div>
                 </div>
-              ))}
-              <label className="flex items-center justify-center w-24 h-24 rounded-xl border-2 border-dashed border-white/15 cursor-pointer hover:border-amber-500/40 transition-colors">
-                <div className="text-center">
-                  <Building2 className="w-5 h-5 text-white/25 mx-auto mb-1" />
-                  <span className="text-[10px] text-white/25">Imóvel</span>
-                </div>
-                <input type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => addFiles(setPropertyFiles, setPropertyPreviews, e.target.files)} />
-              </label>
-            </div>
-            {propertyFiles.length > 0 && propertyFiles.length < 3 && (
-              <p className="text-xs text-amber-400/70 mt-2">Adicione pelo menos 3 fotos do imóvel ({propertyFiles.length}/3)</p>
-            )}
+              );
+            })()}
           </div>
         );
 

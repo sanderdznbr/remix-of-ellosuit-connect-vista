@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
       textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. Reproduza o rosto EXATO — mesma estrutura óssea, formato dos olhos, nariz, boca, sobrancelhas, tom de pele e textura do cabelo. ${singleGender}`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. NÃO gere um rosto diferente ou genérico — a pessoa na imagem final DEVE ser RECONHECÍVEL como a MESMA pessoa das referências. ${singleGender}`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA (PRIORIDADE #1 — ACIMA DE TUDO): Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. A pessoa na imagem final DEVE ser instantaneamente RECONHECÍVEL como a MESMA pessoa das referências — NÃO gere um rosto diferente, genérico ou inspirado. Se houver conflito entre fidelidade facial e estilo visual, PRIORIZE o rosto. ${singleGender}`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

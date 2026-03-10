@@ -470,6 +470,15 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       imageTasks.push({ index: i, prompt: finalPrompt, negPrompt });
     }
 
+    // === DIAGNOSTIC LOG ===
+    console.log('=== CAROUSEL IMAGE GENERATION ===');
+    console.log('Style refs:', allStyleRefs.length, 'Face refs:', faceRefUrls.length);
+    console.log('isFullBleed:', isFullBleed, 'promptStyle length:', promptStyle.length);
+    console.log('Total image tasks:', imageTasks.length, '/', cards.length, 'cards');
+    if (imageTasks.length > 0) {
+      console.log('Sample prompt (card 0):', imageTasks[0].prompt.slice(0, 300));
+    }
+
     // Process images in parallel batches of 3
     const BATCH_SIZE = 3;
     let timedOut = false;
@@ -505,7 +514,8 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
             fidelity: isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced'),
             facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
-            ...(brandColors && brandColors.length > 0 ? { brandColors } : {}),
+            // Only send brandColors when NOT in fullbleed marketplace mode
+            ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
           });
           if (url) return { index: task.index, url };
         }

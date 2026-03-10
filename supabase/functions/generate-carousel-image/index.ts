@@ -143,14 +143,24 @@ Deno.serve(async (req) => {
     // Determine if this is a marketplace/fullbleed style (stylePrompt + style refs = visual clone mode)
     const isVisualCloneMode = !!stylePrompt && validStyleRefs.length > 0;
 
+    // === SANITIZE stylePrompt: remove any style/template names that could leak into the image ===
+    let cleanStylePrompt = stylePrompt || '';
+    if (cleanStylePrompt) {
+      // Remove lines that look like style names (short ALL-CAPS lines, or lines starting with "NOME DO ESTILO")
+      cleanStylePrompt = cleanStylePrompt
+        .replace(/^(?:NOME|NAME|ESTILO|STYLE|TEMPLATE|TÍTULO).*$/gmi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+    }
+
     // Build message content
     const messageContent: any[] = [];
     let textPrompt: string;
 
     if (isPanoramicMode) {
       textPrompt = `${formatInstruction}\n\n${imagePrompt}`;
-      if (stylePrompt) {
-        const sanitizedStyle = stylePrompt
+      if (cleanStylePrompt) {
+        const sanitizedStyle = cleanStylePrompt
           .replace(/\d{3,4}\s*x\s*\d{3,4}(?:\s*pixels?)?/gi, '')
           .replace(/(?:formato?\s+)?(?:retrat[oa]|portrait)(?:\s+format[oa]?)?/gi, '')
           .replace(/(?:vertical)\s+(?:format[oa]?|orientation)/gi, '')
@@ -163,9 +173,12 @@ Deno.serve(async (req) => {
         }
       }
     } else if (isVisualCloneMode) {
-      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas. É TERMINANTEMENTE PROIBIDO gerar bordas brancas, molduras, margens, frames ou qualquer espaço vazio nas laterais/topo/base. A arte vai de ponta a ponta.\n- NÃO copie @handles, nomes de marcas ou rostos das referências — copie APENAS o estilo visual.\n- NUNCA renderize o nome do estilo/template como texto na imagem. Se as referências contêm um título/nome do estilo, NÃO o copie — use SOMENTE os textos fornecidos pelo usuário.\n- Gere elementos visuais CRIATIVOS e RELEVANTES ao assunto do post — ilustrações, ícones, cenários contextuais. Cada card deve ter composição ÚNICA.\n- ${formatInstruction}`;
-    } else if (stylePrompt) {
-      textPrompt = `${stylePrompt}\n\n${imagePrompt}`;
+      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência de estilo.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\n${formatInstruction}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas, de ponta a ponta. ZERO bordas.\n- PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, subtítulos, nomes, @handles, marcas d'água ou QUALQUER texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no campo CONTEÚDO DO POST acima.\n- Se as referências contêm textos como nomes de estilos, categorias, ou rótulos (ex: "Estratégia Profunda", "Business Pro", etc.), IGNORE-OS COMPLETAMENTE — eles são metadados do template, NÃO conteúdo do post.\n- Gere elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.`;
+      if (cleanStylePrompt) {
+        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, tipografia e layout — NÃO copie textos):\n${cleanStylePrompt}`;
+      }
+    } else if (cleanStylePrompt) {
+      textPrompt = `${cleanStylePrompt}\n\n${imagePrompt}\n\nIMPORTANTE: NÃO copie textos das referências. Use APENAS os textos fornecidos acima.`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post.\n\nDESCRIPTION: ${imagePrompt}\n\nSTYLE REQUIREMENTS:\n- High-end editorial/magazine aesthetic\n- Rich colors and professional color grading\n- Clean composition suitable for overlay text\n- Ultra high resolution, photorealistic quality`;
     }
@@ -174,8 +187,8 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nFORMATO: ${formatInstruction}`;
     }
 
-    // Anti-border instruction for ALL modes
-    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem gerada DEVE preencher 100% do canvas sem NENHUMA borda branca, moldura, margem ou espaço vazio. A arte vai de ponta a ponta, cobrindo cada pixel do quadro.`;
+    // Anti-border + anti-text-copy instruction for ALL modes
+    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity
@@ -248,13 +261,13 @@ Deno.serve(async (req) => {
         for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos das referências de estilo. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial.` });
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
       } else {
         // No face refs — send all style refs
         for (const ref of validStyleRefs) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências.` });
+        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie textos, títulos, nomes, @handles ou qualquer texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no prompt do usuário.` });
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
@@ -286,7 +299,7 @@ Deno.serve(async (req) => {
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, tipografia, layout). NÃO copie textos visíveis nas referências:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
@@ -294,10 +307,10 @@ Deno.serve(async (req) => {
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, tipografia, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. Renderize APENAS os textos fornecidos no prompt.` });
       }
       if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência — mesma estrutura óssea, olhos, nariz, lábios, maxilar, tom de pele.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência.` });
       }
     }
 

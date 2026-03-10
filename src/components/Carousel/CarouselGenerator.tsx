@@ -279,6 +279,7 @@ const CarouselGenerator: React.FC = () => {
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card'>('toolbar');
+  const [pendingAddCardStyle, setPendingAddCardStyle] = useState<any>(null);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
@@ -2062,6 +2063,13 @@ const CarouselGenerator: React.FC = () => {
   const addOneMoreCard = async (mode: 'composed' | 'solid' = 'composed', manualText?: { title: string; body: string }) => {
     setShowAddCardMenu(false);
     setAddCardModal(prev => ({ ...prev, open: false }));
+
+    // Apply pending style if coming from "Estilo Diferente" flow
+    if (pendingAddCardStyle) {
+      setActiveMarketplaceStyle(pendingAddCardStyle);
+      setIsLoadedFullBleed(!!pendingAddCardStyle?.imageGeneration?.prompt_style);
+      setPendingAddCardStyle(null);
+    }
 
     const currentData = carouselDataRef.current;
     if (!currentData) return;
@@ -4547,11 +4555,10 @@ FORBIDDEN:
                     </div>
                     {styleChangeSource === 'add-card' ? (
                       <AddCardStylePicker onSelectStyle={(config) => {
-                        setActiveMarketplaceStyle(config);
-                        setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                        setPendingAddCardStyle(config);
                         setShowStylePanel(false);
                         setStyleChangeSource('toolbar');
-                        setTimeout(() => addOneMoreCard('composed'), 300);
+                        setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                       }} />
                     ) : (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
@@ -4617,11 +4624,10 @@ FORBIDDEN:
                     <div className="overflow-y-auto flex-1 px-4 pb-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
                       {styleChangeSource === 'add-card' ? (
                         <AddCardStylePicker onSelectStyle={(config) => {
-                          setActiveMarketplaceStyle(config);
-                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                          setPendingAddCardStyle(config);
                           setShowStylePanel(false);
                           setStyleChangeSource('toolbar');
-                          setTimeout(() => addOneMoreCard('composed'), 300);
+                          setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                         }} />
                       ) : (
                         <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
@@ -5312,7 +5318,7 @@ FORBIDDEN:
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={() => setAddCardModal(prev => ({ ...prev, open: false }))}>
+            onClick={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}>
             <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -5333,7 +5339,7 @@ FORBIDDEN:
                   </p>
                 </div>
                 <button
-                  onClick={() => setAddCardModal(prev => ({ ...prev, open: false }))}
+                  onClick={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}
                   className="p-1.5 rounded-lg hover:bg-white/10 transition-colors mt-0.5 shrink-0"
                 >
                   <X className="h-4 w-4 text-white/40" />

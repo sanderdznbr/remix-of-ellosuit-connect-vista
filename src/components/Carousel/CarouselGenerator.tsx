@@ -2021,7 +2021,7 @@ const CarouselGenerator: React.FC = () => {
           
           // Real estate: instruct AI to use BLACK background (we blend real photo later)
           let cardPrompt = capturedPrompt;
-          if (isRealEstateStyle && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
+          if (useRealEstateBlend && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
             cardPrompt += `\n\n🏠 INSTRUÇÃO CRÍTICA — CARD IMOBILIÁRIO:
 Use um FUNDO SÓLIDO PRETO (#000000) puro como base da imagem. NÃO gere nenhuma foto de casa, prédio, imóvel ou cenário de fundo.
 O fundo DEVE ser completamente preto/escuro.

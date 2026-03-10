@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles,
-  Star, StarOff, Eye, EyeOff, GripVertical,
+  Star, StarOff, Eye, EyeOff, GripVertical, Building2,
 } from 'lucide-react';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
@@ -81,6 +81,8 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     name: '', description: '', category: 'editorial',
     price_credits: 50, price_brl: 9.90, tags: '',
     is_featured: false, is_free: false, strict_instructions: '',
+    is_real_estate: false,
+    real_estate_mode: 'single' as 'single' | 'multiple',
   });
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [refPreviews, setRefPreviews] = useState<string[]>([]);
@@ -120,6 +122,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   useEffect(() => {
     if (open) {
       if (editStyle) {
+        const sc = editStyle.style_config || {};
         setForm({
           name: editStyle.name,
           description: editStyle.description || '',
@@ -130,10 +133,12 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
           is_featured: editStyle.is_featured,
           is_free: (editStyle as any).is_free || false,
           strict_instructions: (editStyle as any).strict_instructions || '',
+          is_real_estate: !!sc.is_real_estate,
+          real_estate_mode: sc.real_estate_mode || 'single',
         });
         setExistingImages(editStyle.preview_images || []);
       } else {
-        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '' });
+        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single' });
         setExistingImages([]);
       }
       setRefFiles([]);
@@ -167,7 +172,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   };
 
   const buildStyleConfig = () => {
-    const promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
+    let promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
 1. COPY THE EXACT VISUAL DNA: Replicate the same color palette, typography style, layout composition, decorative elements, and overall aesthetic from the reference images.
 2. TYPOGRAPHY: Match the exact font styles, sizes, weights, and placement patterns from the references.
 3. COLOR PALETTE: Extract and use the EXACT same colors from the reference images.
@@ -178,12 +183,26 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
 8. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
 9. SEM BORDAS: Full bleed, sem barras ou bordas.`;
 
-    return {
-      description: 'Estilo customizado baseado em referências visuais.',
+    if (form.is_real_estate) {
+      promptStyle += `\n\n=== MODO IMOBILIÁRIO ===
+Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
+- Use as fotos do imóvel fornecidas pelo usuário como base visual do post.
+- Destaque informações como: metragem (m²), quartos, suítes, banheiros, vagas, valor e localização.
+- Tipografia de marketing premium: títulos impactantes como "Seu Novo Lar", "Oportunidade Única", "Viva com Estilo".
+- Mantenha a identidade visual do estilo mas adapte para contexto imobiliário.
+- ${form.real_estate_mode === 'single' ? 'MODO IMÓVEL ÚNICO: Cada card mostra um ângulo/cômodo diferente do MESMO imóvel.' : 'MODO VÁRIOS IMÓVEIS: Cada card do carrossel apresenta um imóvel DIFERENTE com suas características.'}`;
+    }
+
+    const config: any = {
+      description: form.is_real_estate ? 'Estilo imobiliário baseado em referências visuais.' : 'Estilo customizado baseado em referências visuais.',
+      is_real_estate: form.is_real_estate,
+      real_estate_mode: form.is_real_estate ? form.real_estate_mode : undefined,
       colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
       imageGeneration: {
         prompt_style: promptStyle,
-        prompt_prefix: 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
+        prompt_prefix: form.is_real_estate
+          ? 'Premium real estate marketing post for Instagram. Showcase property with professional photography and bold typography. 1080x1350 portrait format.'
+          : 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
         negative_prompt: 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
         imageType: 'photo', lightingStyle: 'cinematic', cameraAngle: 'front', fidelity: 'high',
       },
@@ -194,6 +213,8 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
         { type: 'light_editorial', description: 'Light background variation with editorial elements' },
       ],
     };
+
+    return config;
   };
 
   const handleSave = async () => {
@@ -376,6 +397,52 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
                 {form.is_free ? '✓' : '○'} Grátis
               </button>
             </div>
+          </div>
+
+          {/* Real Estate Toggle */}
+          <div className="p-3 rounded-xl border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-amber-400" />
+                <div>
+                  <span className="text-xs font-medium text-white">Modo Imobiliária</span>
+                  <p className="text-[9px] text-white/30">Ativa wizard especializado para imóveis</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setForm(f => ({ ...f, is_real_estate: !f.is_real_estate }))}
+                className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${form.is_real_estate ? 'bg-amber-500' : 'bg-white/10'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.is_real_estate ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {form.is_real_estate && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+                <label className="text-[10px] text-white/40 block">Tipo de divulgação</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setForm(f => ({ ...f, real_estate_mode: 'single' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border ${form.real_estate_mode === 'single' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06]'}`}
+                  >
+                    🏠 Imóvel Único
+                    <p className="text-[9px] mt-0.5 opacity-60">Vários cards do mesmo imóvel</p>
+                  </button>
+                  <button
+                    onClick={() => setForm(f => ({ ...f, real_estate_mode: 'multiple' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border ${form.real_estate_mode === 'multiple' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06]'}`}
+                  >
+                    🏘️ Vários Imóveis
+                    <p className="text-[9px] mt-0.5 opacity-60">Cada card = 1 imóvel diferente</p>
+                  </button>
+                </div>
+                <p className="text-[9px] text-amber-300/50">
+                  {form.real_estate_mode === 'single'
+                    ? 'No wizard, o usuário preencherá dados de 1 imóvel (m², quartos, valor, fotos) e a IA gerará cards variados.'
+                    : 'No wizard, o usuário adicionará vários imóveis e cada card do carrossel destacará um imóvel diferente.'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Reference photos - Drag & Drop */}

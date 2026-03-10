@@ -1582,7 +1582,7 @@ const CarouselGenerator: React.FC = () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             setImageGenProgress(`🌄 Gerando panorama contínuo... (tentativa ${attempt + 1})`);
-            const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+            const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
             const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {

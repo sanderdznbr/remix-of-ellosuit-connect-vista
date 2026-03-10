@@ -1423,6 +1423,15 @@ const CarouselGenerator: React.FC = () => {
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1');
 
   const generateContent = async () => {
+    console.log('[GENERATE_FLOW] generateContent() called');
+    console.log('[GENERATE_FLOW] snapshot ref:', JSON.stringify({
+      exists: !!generationSnapshotRef.current,
+      isRealEstate: generationSnapshotRef.current?.isRealEstate,
+      propertyCount: generationSnapshotRef.current?.propertyList?.length,
+      photoCounts: generationSnapshotRef.current?.propertyList?.map(p => p.photos?.length),
+    }));
+    console.log('[GENERATE_FLOW] direct state: isRealEstateStyle:', isRealEstateStyle, 'propertyList photos:', propertyList.map(p => p.photos.length));
+    console.log('[GENERATE_FLOW] refs: activeMarketplaceStyleRef.is_real_estate:', !!activeMarketplaceStyleRef.current?.is_real_estate, 'propertyListRef photos:', propertyListRef.current.map(p => p.photos.length));
     if (!topic.trim()) { sonnerToast.error('Insira um tópico para gerar'); setTransitionToGenerate(false); return; }
 
     // === SINGLE POST MODE ===
@@ -1777,29 +1786,44 @@ const CarouselGenerator: React.FC = () => {
       }
 
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
-      // DEFINITIVE: Read from generation snapshot (captured at click time) — immune to stale closures
+      // DEFINITIVE FIX: Triple-source detection — snapshot, ref, AND direct state
       const snapshot = generationSnapshotRef.current;
-      const snapshotIsRealEstate = snapshot?.isRealEstate || isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
-      const snapshotRealEstateMode = snapshot?.realEstateMode || realEstateMode || 'single';
-      const snapshotPropertyList = snapshot?.propertyList || propertyListRef.current;
+      const snapshotPropertyList = snapshot?.propertyList && snapshot.propertyList.length > 0 
+        ? snapshot.propertyList 
+        : (propertyListRef.current && propertyListRef.current.length > 0 ? propertyListRef.current : propertyList);
       
-      console.log('[REAL_ESTATE_DEBUG] snapshot:', JSON.stringify({
-        snapshotIsRealEstate,
-        snapshotRealEstateMode,
-        snapshotPropertyPhotos: snapshotPropertyList.map(p => p.photos.length),
-        hasSnapshot: !!snapshot,
-        isRealEstateStyle,
-        refIsRealEstate: !!activeMarketplaceStyleRef.current?.is_real_estate,
-      }));
+      // Detect real estate by ANY of these conditions:
+      // 1. Snapshot says it's real estate
+      // 2. Current style ref says it's real estate  
+      // 3. Closure state says it's real estate
+      // 4. FAILSAFE: Property list has photos (user uploaded them, so they expect them to be used!)
+      const hasPropertyPhotosAnywhere = snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
+      const snapshotIsRealEstate = 
+        snapshot?.isRealEstate || 
+        isRealEstateStyle || 
+        !!activeMarketplaceStyleRef.current?.is_real_estate ||
+        hasPropertyPhotosAnywhere; // FAILSAFE: if photos exist, assume real estate mode
+      
+      const snapshotRealEstateMode = snapshot?.realEstateMode || realEstateMode || 'single';
+      
+      console.log('[REAL_ESTATE_DEBUG] ===== DETECTION =====');
+      console.log('[REAL_ESTATE_DEBUG] snapshot?.isRealEstate:', snapshot?.isRealEstate);
+      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle (closure):', isRealEstateStyle);
+      console.log('[REAL_ESTATE_DEBUG] ref is_real_estate:', !!activeMarketplaceStyleRef.current?.is_real_estate);
+      console.log('[REAL_ESTATE_DEBUG] hasPropertyPhotosAnywhere:', hasPropertyPhotosAnywhere);
+      console.log('[REAL_ESTATE_DEBUG] FINAL snapshotIsRealEstate:', snapshotIsRealEstate);
+      console.log('[REAL_ESTATE_DEBUG] snapshotPropertyList length:', snapshotPropertyList.length);
+      console.log('[REAL_ESTATE_DEBUG] photos per property:', snapshotPropertyList.map(p => ({ photos: p.photos?.length || 0, firstPhotoUrl: p.photos?.[0]?.url?.substring(0, 60) || 'NONE' })));
       
       if (snapshotIsRealEstate) {
         const currentPropertyList = snapshotPropertyList;
-        const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
-        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'photos per property:', currentPropertyList.map(p => p.photos.length));
+        const hasPhotos = currentPropertyList.some(p => p.photos && p.photos.length > 0);
+        console.log('[REAL_ESTATE_DEBUG] Entering Canvas path. hasPhotos:', hasPhotos);
         if (!hasPhotos) {
-          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Falling through to AI generation.');
-          toast({ title: '⚠️ Nenhuma foto do imóvel encontrada', description: 'Usando imagem gerada por IA como alternativa. Para usar suas fotos reais, adicione-as no passo "Fotos do Imóvel".', variant: 'default' });
+          console.warn('[REAL_ESTATE_DEBUG] No photos despite detection — falling through to AI.');
+          toast({ title: '⚠️ Nenhuma foto do imóvel encontrada', description: 'Usando imagem gerada por IA como alternativa.', variant: 'default' });
         } else {
+          console.log('[REAL_ESTATE_DEBUG] ✅ CANVAS PATH ACTIVATED — using real photos as backgrounds!');
         setImageGenProgress('🏠 Gerando cards imobiliários...');
         
         const convertToBase64 = async (url: string): Promise<string> => {

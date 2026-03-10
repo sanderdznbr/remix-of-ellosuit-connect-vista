@@ -54,11 +54,25 @@ const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, 
     setProperties(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 
-  const addPhotos = (id: string, files: FileList) => {
-    const newPhotos = Array.from(files).map(file => ({
-      url: URL.createObjectURL(file),
-      file,
-    }));
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const addPhotos = async (id: string, files: FileList) => {
+    const newPhotos: { url: string; file: File }[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        const base64Url = await fileToBase64(file);
+        newPhotos.push({ url: base64Url, file });
+      } catch {
+        newPhotos.push({ url: URL.createObjectURL(file), file });
+      }
+    }
     setProperties(prev => prev.map(p =>
       p.id === id ? { ...p, photos: [...p.photos, ...newPhotos] } : p
     ));

@@ -4308,8 +4308,8 @@ FORBIDDEN:
                             <Palette className="h-3.5 w-3.5 text-emerald-400" />
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-white/90">Mudar Estilo</p>
-                            <p className="text-[10px] text-white/40">Recriar em outro estilo</p>
+                            <p className="text-xs font-medium text-white/90">Estilo Diferente</p>
+                            <p className="text-[10px] text-white/40">+1 card em outro estilo</p>
                           </div>
                         </button>
                       </div>

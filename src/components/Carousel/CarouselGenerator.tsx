@@ -210,19 +210,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
-  const isRealEstateStyle = !!activeMarketplaceStyle?.is_real_estate;
-  const realEstateMode = (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single';
 
-  // Compute wizard steps after all state is declared
-  const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
-  const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
-  const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
-
+  // NOTE: isRealEstateStyle, realEstateMode, and WIZARD_STEPS are computed after activeMarketplaceStyle is declared (see below)
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);

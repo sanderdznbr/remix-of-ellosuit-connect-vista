@@ -4555,10 +4555,15 @@ FORBIDDEN:
                         setActiveMarketplaceStyle(config);
                         setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                         setShowStylePanel(false);
-                        setTransitionToGenerate(true);
-                        setCurrentCarouselId(null);
-                        const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
-                        setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                        if (styleChangeSource === 'add-card') {
+                          setStyleChangeSource('toolbar');
+                          setTimeout(() => addOneMoreCard('composed'), 300);
+                        } else {
+                          setTransitionToGenerate(true);
+                          setCurrentCarouselId(null);
+                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                        }
                       }} />
                   </div>
                 </motion.div>

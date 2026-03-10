@@ -875,7 +875,7 @@ const CarouselGenerator: React.FC = () => {
     }
 
     // === GEMINI / NANO BANANA PATH ===
-    const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+    const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
     
     // Add timeout to prevent infinite loading (90s max per image)
     const timeoutPromise = new Promise<never>((_, reject) => 

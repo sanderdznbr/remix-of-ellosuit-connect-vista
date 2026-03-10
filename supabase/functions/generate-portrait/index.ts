@@ -238,6 +238,7 @@ ${styleInstructions}`;
         model: "google/gemini-3-pro-image-preview",
         messages,
         modalities: ["image", "text"],
+        temperature: 0.1,
       }),
     });
 

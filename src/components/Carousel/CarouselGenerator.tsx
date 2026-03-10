@@ -1414,19 +1414,23 @@ const CarouselGenerator: React.FC = () => {
       const shuffled = contentIndices.sort(() => Math.random() - 0.5);
       for (let i = 0; i < Math.min(effectiveImageCardCount - 1, shuffled.length); i++) imageCardIndices.push(shuffled[i]);
       // Determine which cards get face refs (faceCardCount controls this)
+      // DEFAULT: ~25% of cards get faces (cover + ~25% of remaining), user can override
       const faceCardIndices = new Set<number>();
       if (hasFaceRefsForGen) {
-        const effectiveFaceCount = faceCardCount != null ? Math.min(faceCardCount, cardCount) : cardCount;
+        const defaultFaceCount = faceCardCount != null ? faceCardCount : Math.max(1, Math.round(cardCount * 0.25));
+        const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
         // Always include cover (0) and distribute face cards evenly
         faceCardIndices.add(0);
         if (effectiveFaceCount >= cardCount) {
           for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
         } else {
           const remaining = effectiveFaceCount - 1;
-          const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
-          const step = middleIndices.length / remaining;
-          for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
-            faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+          if (remaining > 0) {
+            const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+            const step = middleIndices.length / remaining;
+            for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+              faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+            }
           }
         }
       }

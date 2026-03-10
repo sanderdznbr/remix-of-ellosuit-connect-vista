@@ -1348,10 +1348,12 @@ const CarouselGenerator: React.FC = () => {
         promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
       }
 
-      // === REAL ESTATE BLEND DETECTION (same triple-source as generateContent) ===
+      // === REAL ESTATE BLEND DETECTION (triple-source: snapshot > ref > state) ===
       const snapshot = generationSnapshotRef.current;
       const snapshotIsRealEstate = snapshot?.isRealEstate ?? isRealEstateStyle;
-      const snapshotPropertyList: PropertyData[] = snapshot?.propertyList ?? propertyList;
+      const snapshotPropertyList: PropertyData[] = (snapshot?.propertyList && snapshot.propertyList.length > 0)
+        ? snapshot.propertyList
+        : (propertyListRef.current && propertyListRef.current.length > 0 ? propertyListRef.current : propertyList);
       const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
       
       console.log('[SINGLE_BLEND_DETECT] useRealEstateBlend:', useRealEstateBlend,

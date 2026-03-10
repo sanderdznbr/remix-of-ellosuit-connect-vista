@@ -227,21 +227,16 @@ Deno.serve(async (req) => {
     // For other modes: Standard assembly
 
     if (isVisualCloneMode) {
-      // VISUAL CLONE: Style refs → Face refs → Simple prompt → Product refs
-      // NO extra "priority" text blocks — the images speak for themselves
-      for (const ref of validStyleRefs) {
-        messageContent.push({ type: 'image_url', image_url: { url: ref } });
-      }
-      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE.` });
+      // VISUAL CLONE: Face refs FIRST → Style refs → Prompt → Product refs
+      // Face identity MUST be established before style to prevent random faces
 
-      // Face refs
       if (validFaceRefs.length > 0 && isMultiPerson) {
         let photoOffset = 0;
         for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
           const pm = facePersonsMetadata[pi];
           const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
           if (count <= 0) break;
-          messageContent.push({ type: 'text', text: `=== ROSTO: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ===` });
+          messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) — Esta pessoa DEVE aparecer no resultado ⚠️` });
           for (let j = 0; j < count; j++) {
             if (photoOffset + j < validFaceRefs.length) {
               messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
@@ -250,62 +245,60 @@ Deno.serve(async (req) => {
           photoOffset += count;
         }
       } else if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS FACIAIS OBRIGATÓRIAS (${validFaceRefs.length} fotos). Estude CADA foto e reproduza esta EXATA pessoa com fidelidade absoluta — mesma estrutura óssea, olhos, nariz, boca, tom de pele, cabelo:` });
+        messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL — PRIORIDADE MÁXIMA ⚠️\nAs ${validFaceRefs.length} fotos abaixo são a ÚNICA referência de identidade. A pessoa no resultado DEVE ser EXATAMENTE esta pessoa — mesma estrutura óssea, mesmos olhos, nariz, boca, tom de pele, cabelo. NÃO gere um rosto diferente ou genérico:` });
+        for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        messageContent.push({ type: 'text', text: `Acima: fotos de referência facial. Agora aplique o ESTILO VISUAL das referências abaixo, mantendo o rosto IDÊNTICO.` });
+      }
+
+      // Style refs AFTER face refs
+      for (const ref of validStyleRefs) {
+        messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
+      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE — mas NÃO copie os rostos das referências de estilo.` });
+
+      messageContent.push({ type: 'text', text: textPrompt });
+
+      for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL: Compare o rosto gerado com as fotos de referência do INÍCIO. A pessoa DEVE ser RECONHECÍVEL como a MESMA pessoa. Fidelidade facial > tudo.` });
+      }
+    } else {
+      // STANDARD MODE: Face refs FIRST, then style refs
+
+      if (validFaceRefs.length > 0 && isMultiPerson) {
+        let photoOffset = 0;
+        for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
+          const pm = facePersonsMetadata[pi];
+          const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
+          if (count <= 0) break;
+          messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ⚠️` });
+          for (let j = 0; j < count; j++) {
+            if (photoOffset + j < validFaceRefs.length) {
+              messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
+            }
+          }
+          photoOffset += count;
+        }
+      } else if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA (${validFaceRefs.length} fotos) — reproduza este EXATO rosto:` });
         for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Main prompt (already minimal)
-      messageContent.push({ type: 'text', text: textPrompt });
-
-      // Product refs
-      for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-
-      // Face fidelity reminder (sandwich technique for visual clone)
-      if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A pessoa gerada DEVE ser a MESMA PESSOA das fotos de referência facial. NÃO gere uma pessoa diferente. Fidelidade facial é PRIORIDADE ABSOLUTA.` });
-      }
-    } else {
-      // STANDARD MODE: More detailed instructions needed
-
-      // Style refs with brief instruction
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
-      // Face refs
-      if (validFaceRefs.length > 0 && isMultiPerson) {
-        let photoOffset = 0;
-        for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
-          const pm = facePersonsMetadata[pi];
-          const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
-          if (count <= 0) break;
-          messageContent.push({ type: 'text', text: `=== ROSTO: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ===` });
-          for (let j = 0; j < count; j++) {
-            if (photoOffset + j < validFaceRefs.length) {
-              messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
-            }
-          }
-          photoOffset += count;
-        }
-      } else if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS FACIAIS OBRIGATÓRIAS (${validFaceRefs.length} fotos) — reproduza este EXATO rosto com fidelidade absoluta:` });
-        for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-      }
-
-      // Main prompt
       messageContent.push({ type: 'text', text: textPrompt });
 
-      // Product refs
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
-      // Style reminder (only for non-clone mode with style refs)
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências acima.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências.` });
       }
-      // Face fidelity reminder at the end (sandwich technique)
       if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE FINAL DE FIDELIDADE FACIAL: A pessoa gerada DEVE ser a MESMA PESSOA das fotos de referência facial acima. NÃO gere uma pessoa diferente. Verifique: mesma estrutura óssea, mesmos olhos, mesmo nariz, mesma boca, mesmo tom de pele, mesmo cabelo.` });
+        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL: O rosto gerado DEVE ser a MESMA PESSOA das fotos de referência. Mesma estrutura óssea, olhos, nariz, boca, tom de pele, cabelo.` });
       }
     }
 

@@ -4548,11 +4548,10 @@ FORBIDDEN:
                     </div>
                     {styleChangeSource === 'add-card' ? (
                       <AddCardStylePicker onSelectStyle={(config) => {
-                        setActiveMarketplaceStyle(config);
-                        setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                        setPendingAddCardStyle(config);
                         setShowStylePanel(false);
                         setStyleChangeSource('toolbar');
-                        setTimeout(() => addOneMoreCard('composed'), 300);
+                        setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                       }} />
                     ) : (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}

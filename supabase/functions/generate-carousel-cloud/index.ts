@@ -551,12 +551,13 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
           const url = await generateOneImage({
             prompt: task.prompt,
             topic: task.prompt.slice(0, 200),
-            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            // Only send face refs to cards that should have the user's face
+            faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
             styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
             imageModel: imageSettings.model || 'auto',
             negativePrompt: task.negPrompt,
-            fidelity: isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced'),
-            facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
+            fidelity: task.cardGetsFace ? 'high' : (isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced')),
+            facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
             // Only send brandColors when NOT in fullbleed marketplace mode
             ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),

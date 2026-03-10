@@ -1961,7 +1961,14 @@ const CarouselGenerator: React.FC = () => {
           // Real estate: add property photo instruction to prompt
           let cardPrompt = capturedPrompt;
           if (isRealEstateStyle && capturedProductRefs && capturedProductRefs.length > 0) {
-            cardPrompt += '\n\nFOTO DO IMÓVEL (OBRIGATÓRIO): A foto de referência do imóvel fornecida DEVE aparecer na imagem gerada. Use EXATAMENTE esta foto do imóvel como a imagem principal/destaque do card. A foto real do imóvel deve ser incorporada no layout editorial, NÃO gere uma imagem artificial do imóvel — use a FOTO REAL fornecida. Integre-a no design com sobreposições de texto, badges de informações e elementos decorativos ao redor da foto real.';
+            cardPrompt += `\n\n🏠 INSTRUÇÃO CRÍTICA — FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA):
+A imagem de referência fornecida é uma FOTOGRAFIA REAL de um imóvel. Você DEVE:
+1. Usar esta foto EXATA como o FUNDO PRINCIPAL do card, ocupando 80-100% da área da imagem
+2. A foto do imóvel deve aparecer em TAMANHO CHEIO, sem ser reduzida, cortada excessivamente ou colocada em um frame/moldura pequena
+3. NÃO gere, invente ou substitua por uma casa/imóvel diferente — use SOMENTE a foto fornecida
+4. Aplique sobre a foto real: gradientes sutis para legibilidade, textos, badges, ícones e elementos gráficos do estilo editorial
+5. A foto real deve ser claramente reconhecível — é a mesma casa/imóvel que o cliente fotografou
+6. PROIBIDO: criar uma ilustração, renderização 3D ou foto diferente do imóvel. A foto fornecida É o imóvel real.`;
           }
 
           imageFactories.push({

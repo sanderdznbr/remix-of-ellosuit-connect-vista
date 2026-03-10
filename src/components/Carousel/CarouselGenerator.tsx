@@ -4395,6 +4395,12 @@ FORBIDDEN:
                         cardCount={cardCount}
                       />
                     )}
+                    {currentStepName === 'Crop Imóvel' && (
+                      <StepPropertyCrop
+                        properties={propertyList}
+                        setProperties={setPropertyList}
+                      />
+                    )}
                     {currentStepName === 'Info Imóvel' && (
                       <StepPropertyInfo
                         properties={propertyList}

@@ -1789,9 +1789,15 @@ const CarouselGenerator: React.FC = () => {
         const loadImage = (src: string): Promise<HTMLImageElement> => {
           return new Promise((resolve, reject) => {
             const img = document.createElement('img') as HTMLImageElement;
-            img.crossOrigin = 'anonymous';
+            // Only set crossOrigin for http(s) URLs, NOT for data: or blob: URLs
+            if (src.startsWith('http')) {
+              img.crossOrigin = 'anonymous';
+            }
             img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error('Image load failed'));
+            img.onerror = (e) => {
+              console.error('[REAL_ESTATE_DEBUG] Image load error for src:', src.substring(0, 80), e);
+              reject(new Error('Image load failed: ' + src.substring(0, 50)));
+            };
             img.src = src;
           });
         };

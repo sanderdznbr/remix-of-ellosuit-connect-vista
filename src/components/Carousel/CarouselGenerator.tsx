@@ -272,6 +272,7 @@ const CarouselGenerator: React.FC = () => {
   const [generatingAiImage, setGeneratingAiImage] = useState(false);
   const [aiImagePrompt, setAiImagePrompt] = useState('');
   const [editingCard, setEditingCard] = useState<number | null>(null);
+  const [showInlineEditor, setShowInlineEditor] = useState(false);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
   const [regeneratingAll, setRegeneratingAll] = useState(false);
@@ -4458,8 +4459,68 @@ FORBIDDEN:
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
 
-            {/* Center area: phone + inline style panel */}
-            <div className="flex flex-row items-start justify-center gap-8 flex-1 relative z-10">
+            {/* Center area: phone + inline editor panel */}
+            <div className="flex flex-row items-start justify-center gap-0 md:gap-0 flex-1 relative z-10">
+
+            {/* Inline Editor Panel - slides in from left */}
+            <AnimatePresence>
+              {showInlineEditor && carouselData && (
+                <motion.div
+                  key="inline-editor-panel"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 360, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  className="hidden md:block overflow-hidden flex-shrink-0 h-[85vh] sticky top-0"
+                >
+                  <div className="w-[360px] h-full overflow-y-auto rounded-2xl"
+                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <CarouselEditorSidebar
+                      card={carouselData.cards[activeCardIndex]}
+                      cardIndex={activeCardIndex}
+                      totalCards={carouselData.cards.length}
+                      bgColor={bgColor}
+                      accentColor={accentColor}
+                      textColor={textColor}
+                      onUpdateCard={updateCard}
+                      onUpdateAllCards={updateAllCards}
+                      onClose={() => setShowInlineEditor(false)}
+                      onUploadImage={handleFileUpload}
+                      onOpenImagePicker={(i) => { setShowImagePicker(i); }}
+                      onGenerateAiImage={generateAiImage}
+                      generatingAiImage={generatingAiImage}
+                      aiImagePrompt={aiImagePrompt}
+                      setAiImagePrompt={setAiImagePrompt}
+                      onChangeBgColor={setBgColor}
+                      onChangeAccentColor={setAccentColor}
+                      onChangeTextColor={setTextColor}
+                      fontOptions={FONT_OPTIONS}
+                      selectedFont={selectedFont}
+                      onChangeFont={setSelectedFont}
+                      referenceImageUrl={editorRefImage}
+                      onUploadReferenceImage={handleEditorRefImageUpload}
+                      onRemoveReferenceImage={() => setEditorRefImage(null)}
+                      isRealEstate={isRealEstateStyle && propertyList.length > 0}
+                      propertyData={isRealEstateStyle && propertyList.length > 0 ? (() => {
+                        const propIdx = realEstateMode === 'multiple' ? (activeCardIndex % propertyList.length) : 0;
+                        const p = propertyList[propIdx];
+                        return p ? { price: p.price, area: p.area, bedrooms: p.bedrooms, bathrooms: p.bathrooms, parking: p.parking, location: p.location, neighborhood: p.neighborhood, highlights: p.highlights, title: p.title } : undefined;
+                      })() : undefined}
+                      onPropertyFieldChange={isRealEstateStyle && propertyList.length > 0 ? ((field: string, value: string) => {
+                        const propIdx = realEstateMode === 'multiple' ? (activeCardIndex % propertyList.length) : 0;
+                        setPropertyList(prev => {
+                          const updated = [...prev];
+                          const p = { ...updated[propIdx] };
+                          (p as any)[field] = value;
+                          updated[propIdx] = p;
+                          return updated;
+                        });
+                      }) : undefined}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Instagram Phone Mockup */}
             <motion.div
@@ -4473,12 +4534,9 @@ FORBIDDEN:
                 {/* Edit button - left side */}
                 <div className="absolute top-1/2 left-2 md:-left-14 -translate-y-1/2 z-40">
                   <button
-                    onClick={() => {
-                      setEditingCard(activeCardIndex);
-                      setAiImagePrompt(carouselData.cards[activeCardIndex]?.imagePrompt || carouselData.cards[activeCardIndex]?.title || '');
-                    }}
+                    onClick={() => setShowInlineEditor(!showInlineEditor)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all hover:scale-110"
-                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(20,20,30,0.85)' }}
+                    style={{ borderColor: showInlineEditor ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.2)', backgroundColor: showInlineEditor ? 'rgba(139,92,246,0.25)' : 'rgba(20,20,30,0.85)' }}
                     aria-label="Editar card"
                   >
                     <Pencil className="h-4.5 w-4.5" />

@@ -4606,36 +4606,43 @@ FORBIDDEN:
                     <div className="flex items-center justify-between px-4 pb-3 shrink-0">
                       <div className="flex items-center gap-2">
                         <Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} />
-                        <h3 className="font-bold text-white text-base">Estilo</h3>
+                        <h3 className="font-bold text-white text-base">
+                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
+                        </h3>
                       </div>
                       <button onClick={() => setShowStylePanel(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
                         <X className="h-4 w-4 text-white/60" />
                       </button>
                     </div>
                     <div className="overflow-y-auto flex-1 px-4 pb-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
-                      <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
-                        textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
-                        brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
-                        dateLabel={dateLabel} setDateLabel={setDateLabel}
-                        showHeader={showHeader} setShowHeader={setShowHeader}
-                        logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition}
-                        globalFontScale={Math.round((carouselData?.cards?.[0]?.fontScale ?? 1) * 100)}
-                        onChangeGlobalFontScale={(v) => updateAllCards({ fontScale: v / 100 })}
-                        onApplyPreset={(preset) => setActivePresetId(preset.id)}
-                        onRecreateWithStyle={(config) => {
+                      {styleChangeSource === 'add-card' ? (
+                        <AddCardStylePicker onSelectStyle={(config) => {
                           setActiveMarketplaceStyle(config);
                           setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                           setShowStylePanel(false);
-                          if (styleChangeSource === 'add-card') {
-                            setStyleChangeSource('toolbar');
-                            setTimeout(() => addOneMoreCard('composed'), 300);
-                          } else {
+                          setStyleChangeSource('toolbar');
+                          setTimeout(() => addOneMoreCard('composed'), 300);
+                        }} />
+                      ) : (
+                        <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
+                          textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                          brandName={brandName} setBrandName={setBrandName} userName={userName} setUserName={setUserName}
+                          dateLabel={dateLabel} setDateLabel={setDateLabel}
+                          showHeader={showHeader} setShowHeader={setShowHeader}
+                          logoUrl={logoUrl} setLogoUrl={setLogoUrl} logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+                          globalFontScale={Math.round((carouselData?.cards?.[0]?.fontScale ?? 1) * 100)}
+                          onChangeGlobalFontScale={(v) => updateAllCards({ fontScale: v / 100 })}
+                          onApplyPreset={(preset) => setActivePresetId(preset.id)}
+                          onRecreateWithStyle={(config) => {
+                            setActiveMarketplaceStyle(config);
+                            setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                            setShowStylePanel(false);
                             setTransitionToGenerate(true);
                             setCurrentCarouselId(null);
                             const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
                             setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
-                          }
-                        }} />
+                          }} />
+                      )}
                     </div>
                   </motion.div>
                 </>

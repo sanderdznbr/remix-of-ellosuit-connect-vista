@@ -21,6 +21,8 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [detailedPromptStyle, setDetailedPromptStyle] = useState('');
+  const [recommendedNoFaces, setRecommendedNoFaces] = useState(false);
+  const [faceRecommendationReason, setFaceRecommendationReason] = useState('');
 
   // Auto-generate name + description + detailed prompt on open
   useEffect(() => {

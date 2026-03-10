@@ -2006,7 +2006,7 @@ const CarouselGenerator: React.FC = () => {
             console.log('[REAL_ESTATE_DEBUG] Card', i, 'Canvas render SUCCESS, dataUrl length:', finalImage.length);
             updatedCards[i] = { ...updatedCards[i], imageUrl: finalImage, isAiImage: true };
           } catch (err) {
-            console.error('Real estate card render error for card', i, err);
+            console.error('[REAL_ESTATE_DEBUG] Canvas render FAILED for card', i, err);
             try {
               const photoBase64 = await convertToBase64(photo);
               updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };

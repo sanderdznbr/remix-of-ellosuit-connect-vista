@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, ChevronRight, ChevronLeft, Sparkles, Image as ImageIcon, Loader2, Download, Trash2, Maximize2, Pencil } from 'lucide-react';
+import { Upload, X, ChevronRight, ChevronLeft, Sparkles, Image as ImageIcon, Loader2, Download, Trash2, Maximize2, Pencil, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import ImageInpaintEditor from './ImageInpaintEditor';
+import GalleryPicker from '@/components/Carousel/wizard/GalleryPicker';
 
 interface MarketplaceStyle {
   id: string;
@@ -43,6 +44,7 @@ const FaceGenerator: React.FC = () => {
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [inpaintUrl, setInpaintUrl] = useState<string | null>(null);
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -112,6 +114,33 @@ const FaceGenerator: React.FC = () => {
     const newFiles = faceFiles.filter((_, i) => i !== index);
     setFaceFiles(newFiles);
     setFacePreviews(newFiles.map((f) => URL.createObjectURL(f)));
+  };
+
+  const handleGalleryImport = async (selectedFiles: { url: string; name: string }[]) => {
+    setGalleryPickerOpen(false);
+    const remaining = MAX_FACE_PHOTOS - faceFiles.length;
+    const toImport = selectedFiles.slice(0, remaining);
+    if (toImport.length === 0) return;
+
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
+    for (const f of toImport) {
+      try {
+        const resp = await fetch(f.url);
+        const blob = await resp.blob();
+        const ext = f.name.split('.').pop() || 'jpg';
+        const file = new File([blob], f.name || `gallery_${Date.now()}.${ext}`, { type: blob.type });
+        newFiles.push(file);
+        newPreviews.push(URL.createObjectURL(file));
+      } catch (err) {
+        console.error('Failed to import gallery file:', err);
+      }
+    }
+    if (newFiles.length > 0) {
+      setFaceFiles(prev => [...prev, ...newFiles]);
+      setFacePreviews(prev => [...prev, ...newPreviews]);
+      toast.success(`${newFiles.length} foto(s) importada(s) da galeria`);
+    }
   };
 
   const handleStyleRefUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,12 +469,17 @@ const FaceGenerator: React.FC = () => {
                     </label>
                   )}
                 </div>
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between">
+                  <button onClick={() => setGalleryPickerOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/50 hover:text-white/80 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer">
+                    <FolderOpen className="w-3.5 h-3.5" /> Importar da Galeria
+                  </button>
                   <button onClick={() => setStep('style')} disabled={faceFiles.length === 0}
                     className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
                     Próximo <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
+                <GalleryPicker open={galleryPickerOpen} onClose={() => setGalleryPickerOpen(false)} onSelectFiles={handleGalleryImport} label="Importar fotos de rosto" />
               </motion.div>
             )}
 

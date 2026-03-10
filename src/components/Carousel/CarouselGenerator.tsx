@@ -2662,7 +2662,7 @@ FORBIDDEN:
           cardCount: carouselData.cards.length, // Use actual card count for proper context
           imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
-          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
           regenerateCardIndex: cardIndex, // hint to backend
           existingCardSummaries, // avoid repeating content from other cards
         },

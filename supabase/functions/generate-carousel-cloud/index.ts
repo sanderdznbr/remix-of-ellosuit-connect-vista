@@ -480,7 +480,8 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         const isCta = card.type === 'cta' || i === cards.length - 1;
         const parts: string[] = [];
         parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
-        parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta. NÃO adicione bordas brancas, cinzas ou de qualquer cor ao redor da imagem.');
+        parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
+        parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt.');
         
         // Logo/brand — keep minimal
         if (job.brand_name) {

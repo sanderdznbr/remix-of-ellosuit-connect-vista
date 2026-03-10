@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.logo-removal]
 verify_jwt = false
+
+[functions.generate-realestate-card]
+verify_jwt = false

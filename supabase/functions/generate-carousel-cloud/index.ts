@@ -318,19 +318,23 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         for (const ref of allStyleRefs.slice(0, 6)) {
           analysisContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:
+        analysisContent.push({ type: 'text', text: `You are a visual design analyst. Analyze these Instagram post reference images and extract their EXACT visual DNA. Be hyper-specific — I need to recreate this EXACT style for new content.
+
+Return ONLY a JSON object:
 {
-  "background": "exact background description (colors, gradients, textures, patterns, solid/gradient/photo)",
-  "typography": "exact font style description (serif/sans-serif/display/handwritten, weight bold/light/regular, size hierarchy, effects like outline/shadow/glow/3D/gradient-fill, letter-spacing, transforms)",
-  "layout": "exact layout description (grid structure, text zones vs image zones, alignment left/center/right, margins, padding, vertical/horizontal flow)",
+  "background": "EXACT background (e.g. 'dark navy blue #1a1f3a solid with subtle grid pattern overlay at 10% opacity' NOT just 'dark background')",
+  "typography_main": "EXACT main title font (e.g. 'bold condensed sans-serif, all-caps, white #ffffff, with subtle drop shadow, ~80pt equivalent, tracking -2%' NOT just 'bold text')",
+  "typography_secondary": "EXACT secondary text style (e.g. 'light serif italic, cream #d4b896, ~24pt, normal tracking')",
+  "text_boxes": "EXACT text box/label styles if present (e.g. 'solid gold #c4a265 rectangles with 8px padding, dark navy text inside, slight rounded corners 4px')",
+  "layout": "EXACT layout structure (e.g. 'title top 30%, photo center 40%, text box bottom 20%, left-aligned with 5% margin')",
   "colors_hex": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
-  "color_roles": "which color is used for what (background, text, accent, highlight, decorative)",
-  "decorative": "exact decorative elements (geometric shapes, lines, dots, circles, icons, textures, overlays, gradients, shadows, glows, borders, dividers)",
-  "photo_treatment": "photo style (duotone, high-contrast, muted, vibrant, grain, blur, cutout, masked, no-photo)",
-  "mood": "overall aesthetic mood in 2-3 words",
-  "signature": "the ONE most distinctive recognizable feature of this style"
+  "color_roles": "EXACT role (e.g. '#1a1f3a=background, #ffffff=titles, #c4a265=accents/boxes, #8a7a65=secondary text')",
+  "decorative": "EXACT decorative elements (e.g. 'thin gold #c4a265 corner brackets/frames, hand-drawn arrow swooshes in gold, circle arrow icon at bottom center')",
+  "photo_treatment": "EXACT photo treatment (e.g. 'desaturated 60%, slight blue tint, high contrast, cinematic grain')",
+  "mood": "2-3 word mood",
+  "signature": "THE most distinctive visual element that makes this style instantly recognizable"
 }
-Be EXTREMELY specific. Use exact descriptions, not generalities. No markdown, pure JSON only.` });
+No markdown, pure JSON only.` });
 
         const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -349,43 +353,22 @@ Be EXTREMELY specific. Use exact descriptions, not generalities. No markdown, pu
           const dnaText = dnaData?.choices?.[0]?.message?.content || '';
           const cleaned = dnaText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
           const dna = JSON.parse(cleaned);
-          console.log('Visual DNA analyzed:', JSON.stringify(dna).slice(0, 300));
+          console.log('Visual DNA analyzed:', JSON.stringify(dna).slice(0, 500));
 
-          // Build enhanced prompt_style from DNA analysis
-          promptStyle = `Create an Instagram carousel post with MAXIMUM FIDELITY to the reference style. Follow these EXACT visual specifications:
+          // Build enhanced prompt_style — CONCISE but hyper-specific
+          promptStyle = `REPLICATE THIS EXACT VISUAL STYLE (from the reference images):
 
-=== BACKGROUND ===
-${dna.background || 'Match backgrounds from references exactly.'}
+BACKGROUND: ${dna.background}
+MAIN TYPOGRAPHY: ${dna.typography_main || dna.typography}
+SECONDARY TEXT: ${dna.typography_secondary || 'Match from references'}
+TEXT BOXES/LABELS: ${dna.text_boxes || 'None — match references'}
+LAYOUT: ${dna.layout}
+COLORS (USE ONLY THESE): ${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}
+DECORATIVE ELEMENTS: ${dna.decorative}
+PHOTO TREATMENT: ${dna.photo_treatment}
+SIGNATURE: ${dna.signature}
 
-=== TYPOGRAPHY ===
-${dna.typography || 'Match typography from references exactly.'}
-- Reproduce the EXACT font style, weight, size hierarchy, and text effects.
-
-=== LAYOUT & COMPOSITION ===
-${dna.layout || 'Follow the exact layout from references.'}
-
-=== COLOR PALETTE (MANDATORY — use ONLY these colors) ===
-Hex values: ${(dna.colors_hex || []).join(', ')}
-Roles: ${dna.color_roles || 'Match color usage from references.'}
-Do NOT introduce colors outside this palette.
-
-=== DECORATIVE ELEMENTS ===
-${dna.decorative || 'Reproduce decorative elements from references.'}
-
-=== PHOTO TREATMENT ===
-${dna.photo_treatment || 'Match photo treatment from references.'}
-
-=== MOOD: ${dna.mood || 'Match mood from references.'} ===
-
-=== SIGNATURE ELEMENT (MUST be present) ===
-${dna.signature || 'Replicate the most distinctive feature.'}
-
-=== CRITICAL RULES ===
-1. PROIBIDO: NÃO copie nomes de usuário (@), empresas, marcas, logos ou informações pessoais.
-2. IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.
-3. SEM BORDAS: Full bleed, sem barras ou bordas.
-4. O resultado DEVE parecer parte da MESMA COLEÇÃO que as referências.
-5. Cada card deve ter variação de layout MAS MESMA identidade visual.`;
+RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.`;
 
           // Update the marketplace style config in the job for consistency
           if (marketplaceStyle?.imageGeneration) {

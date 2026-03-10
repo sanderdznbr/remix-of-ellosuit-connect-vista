@@ -415,7 +415,12 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
     const brandColors = (imageSettings.brandColors as string[] | undefined) || [];
 
     // Build all image generation tasks
+    // Extract facePersonsMeta once before the loop
+    const facePersonsMeta = imageSettings.facePersonsMetadata;
+    const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
+
     interface ImageTask { index: number; prompt: string; negPrompt: string; cardGetsFace: boolean; }
+    const imageTasks: ImageTask[] = [];
 
     for (let i = 0; i < cards.length; i++) {
       const card = cards[i];

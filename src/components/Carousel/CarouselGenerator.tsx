@@ -2119,7 +2119,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       }
 
       // ========== REAL ESTATE POST-PROCESSING: Blend real photo + AI overlay ==========
-      if (isRealEstateStyle && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
+      if (useRealEstateBlend && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
         setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
         console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
         

@@ -2067,6 +2067,7 @@ const CarouselGenerator: React.FC = () => {
     // Apply pending style if coming from "Estilo Diferente" flow
     if (pendingAddCardStyle) {
       setActiveMarketplaceStyle(pendingAddCardStyle);
+      activeMarketplaceStyleRef.current = pendingAddCardStyle; // Update ref immediately for async functions
       setIsLoadedFullBleed(!!pendingAddCardStyle?.imageGeneration?.prompt_style);
       setPendingAddCardStyle(null);
     }

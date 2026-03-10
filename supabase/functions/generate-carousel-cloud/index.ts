@@ -280,7 +280,10 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     const isFullBleed = !!promptStyle;
     const styleNeg = marketplaceStyle?.imageGeneration?.negative_prompt || '';
     const baseNeg = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
-    const antiFaceNeg = 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.';
+    const styleRecommendsNoFaces = !!marketplaceStyle?.recommended_no_faces;
+    const antiFaceNeg = styleRecommendsNoFaces
+      ? 'Do NOT include any human faces, people, portraits, selfies, headshots, or human figures. This style is purely typographic/graphic. Focus ONLY on typography, graphic elements, objects, and editorial compositions.'
+      : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.';
 
     const refImages = job.reference_images || [];
     const faceRefUrls = (job.face_ref_urls || []) as string[];

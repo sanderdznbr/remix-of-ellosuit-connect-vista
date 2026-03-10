@@ -3872,7 +3872,8 @@ FORBIDDEN:
                         famousList={famousList} setFamousList={setFamousList}
                         famousImages={famousImages} setFamousImages={setFamousImages}
                         faceGender={faceGender} setFaceGender={setFaceGender}
-                        wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses} />
+                        wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
+                        activeMarketplaceStyle={activeMarketplaceStyle} />
                     )}
                     {currentStepName === 'Visual' && (
                       <StepVisualStyle

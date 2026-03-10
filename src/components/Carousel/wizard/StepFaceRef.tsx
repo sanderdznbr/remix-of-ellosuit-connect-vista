@@ -197,8 +197,25 @@ const StepFaceRef: React.FC<Props> = ({
   const hasAnyFaces = totalFaces > 0;
   const multiPeople = facePersons.filter(p => p.photos.length > 0).length > 1;
 
+  const styleRecommendsNoFaces = activeMarketplaceStyle?.recommended_no_faces;
+  const styleRecommendationReason = activeMarketplaceStyle?.face_recommendation_reason;
+
   return (
     <div className="space-y-5" style={{ minHeight: '300px' }}>
+      {/* Warning: style recommends no faces */}
+      {styleRecommendsNoFaces && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5">
+          <span className="text-amber-400 text-lg shrink-0 mt-0.5">⚠️</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-300">Estilo recomendado sem rostos</p>
+            <p className="text-xs text-amber-300/70 mt-0.5">
+              {styleRecommendationReason || 'Este estilo é predominantemente tipográfico/gráfico e funciona melhor sem fotos de rostos.'}
+              {' '}Para máxima fidelidade ao estilo, recomendamos <strong>pular esta etapa</strong>.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Quem deve aparecer no post?</h2>
         <p className="text-sm text-white/40">Adicione até {MAX_PEOPLE} pessoas com fotos de referência para cada uma.</p>

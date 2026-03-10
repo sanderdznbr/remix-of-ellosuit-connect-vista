@@ -151,8 +151,12 @@ Deno.serve(async (req) => {
           for (const ref of allStyleRefs.slice(0, 4)) {
             analysisContent.push({ type: 'image_url', image_url: { url: ref } });
           }
-          analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:
-{"background":"exact bg description","typography":"exact font style","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature"}
+          analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Also COUNT the approximate number of characters used in titles and body text across the references.
+
+Return ONLY a JSON object:
+{"background":"exact bg description","typography":"exact font style","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature","text_limits":{"title_max_chars":50,"body_max_chars":120,"has_subtitle":true,"subtitle_max_chars":60}}
+
+For text_limits: count the AVERAGE number of visible characters in titles, body text, and subtitles across ALL reference images. This is critical for maintaining visual fidelity — too much text will break the layout.
 Be EXTREMELY specific. No markdown, pure JSON only.` });
 
           const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

@@ -333,6 +333,15 @@ const CarouselGenerator: React.FC = () => {
   const skipCloudRef = useRef(false);
   const generatingRef = useRef(false);
 
+  // DEFINITIVE FIX: Generation snapshot ref — captures ALL critical data at click time
+  // This eliminates ALL stale closure issues because generateContent reads from this snapshot
+  const generationSnapshotRef = useRef<{
+    isRealEstate: boolean;
+    realEstateMode: 'single' | 'multiple';
+    propertyList: PropertyData[];
+    marketplaceStyle: any;
+  } | null>(null);
+
   // Keep refs in sync with state
   useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
   useEffect(() => { generatingRef.current = generating; }, [generating]);

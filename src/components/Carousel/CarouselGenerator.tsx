@@ -1434,9 +1434,10 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
 
-          // STEP 1: Draw REAL PHOTO as full background (cover fit with focal point)
+          // STEP 1: Draw REAL PHOTO as full background (cover fit with cropOffsetY or focalPoint)
           const photoImg = await loadImg(propertyPhotoBase64[0]);
           const firstPropPhotos = snapshotPropertyList[0]?.photos || [];
+          const cropOffsetY = firstPropPhotos[0]?.cropOffsetY;
           const focalPoint = firstPropPhotos[0]?.focalPoint || 'center';
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
@@ -1445,11 +1446,14 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2;
           } else {
             sh = photoImg.width / cRatio;
-            // Apply focal point
             const maxSy = photoImg.height - sh;
-            if (focalPoint === 'top') sy = 0;
+            if (cropOffsetY !== undefined) {
+              // Use precise crop offset from drag-to-reposition
+              sy = cropOffsetY * maxSy;
+            } else if (focalPoint === 'top') sy = 0;
             else if (focalPoint === 'bottom') sy = maxSy;
             else sy = maxSy / 2;
+          }
           }
           ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
 

@@ -277,6 +277,7 @@ const CarouselGenerator: React.FC = () => {
    const [viewPromptCard, setViewPromptCard] = useState<number | null>(null);
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
+  const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card'>('toolbar');
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
@@ -4299,7 +4300,7 @@ FORBIDDEN:
                         </button>
                         <div className="h-px mx-2 my-1" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
                         <button
-                          onClick={() => { setShowAddCardMenu(false); setShowStylePanel(true); }}
+                          onClick={() => { setShowAddCardMenu(false); setStyleChangeSource('add-card'); setShowStylePanel(true); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
                           <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(52,211,153,0.15)' }}>
@@ -4554,10 +4555,15 @@ FORBIDDEN:
                         setActiveMarketplaceStyle(config);
                         setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                         setShowStylePanel(false);
-                        setTransitionToGenerate(true);
-                        setCurrentCarouselId(null);
-                        const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
-                        setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                        if (styleChangeSource === 'add-card') {
+                          setStyleChangeSource('toolbar');
+                          setTimeout(() => addOneMoreCard('composed'), 300);
+                        } else {
+                          setTransitionToGenerate(true);
+                          setCurrentCarouselId(null);
+                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                        }
                       }} />
                   </div>
                 </motion.div>
@@ -4612,10 +4618,15 @@ FORBIDDEN:
                           setActiveMarketplaceStyle(config);
                           setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                           setShowStylePanel(false);
-                          setTransitionToGenerate(true);
-                          setCurrentCarouselId(null);
-                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
-                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          if (styleChangeSource === 'add-card') {
+                            setStyleChangeSource('toolbar');
+                            setTimeout(() => addOneMoreCard('composed'), 300);
+                          } else {
+                            setTransitionToGenerate(true);
+                            setCurrentCarouselId(null);
+                            const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                            setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          }
                         }} />
                     </div>
                   </motion.div>
@@ -4803,7 +4814,7 @@ FORBIDDEN:
                     style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
                     <Plus className="h-3.5 w-3.5" /> Adicionar Card
                   </button>
-                  <button data-tour="btn-style" onClick={() => setShowStylePanel(!showStylePanel)} disabled={isGuest}
+                  <button data-tour="btn-style" onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(!showStylePanel); }} disabled={isGuest}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                     style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
                     <Palette className="h-3.5 w-3.5" /> Estilo
@@ -4856,7 +4867,7 @@ FORBIDDEN:
               )}
               {/* Recriar em outro estilo - always visible */}
               {!isGuest && (
-                <button onClick={() => setShowStylePanel(true)}
+                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
                   style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
                   <Palette className="h-3.5 w-3.5" /> Mudar Estilo

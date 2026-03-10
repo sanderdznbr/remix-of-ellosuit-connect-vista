@@ -2068,7 +2068,8 @@ const CarouselGenerator: React.FC = () => {
         if (localJobId) { setCloudJobId(null); }
         setGenerating(false);
         return;
-      }
+        } // close else (hasPhotos)
+      } // close if (isRealEstateNow)
       
       // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);

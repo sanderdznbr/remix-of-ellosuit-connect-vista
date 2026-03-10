@@ -4017,6 +4017,7 @@ FORBIDDEN:
                         properties={propertyList}
                         setProperties={setPropertyList}
                         realEstateMode={realEstateMode}
+                        cardCount={cardCount}
                       />
                     )}
                     {currentStepName === 'Produto' && (

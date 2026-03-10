@@ -39,6 +39,7 @@ interface StepPropertyProps {
   properties: PropertyData[];
   setProperties: React.Dispatch<React.SetStateAction<PropertyData[]>>;
   realEstateMode: 'single' | 'multiple';
+  cardCount?: number;
 }
 
 const TYPE_LABELS: Record<string, string> = {

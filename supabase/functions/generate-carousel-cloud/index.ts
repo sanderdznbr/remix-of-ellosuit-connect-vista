@@ -451,7 +451,12 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
       }
 
       const promptParts = [];
-      if (promptStyle) {
+      if (promptStyle && isFullBleed) {
+        // DON'T include promptStyle in prompt — it's sent separately as stylePrompt param
+        // to avoid duplication that confuses the model
+        if (marketplaceStyle?.imageGeneration?.prompt_prefix) promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
+        promptParts.push(imgPrompt);
+      } else if (promptStyle) {
         promptParts.push(promptStyle);
         if (marketplaceStyle?.imageGeneration?.prompt_prefix) promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
         promptParts.push(`CONTENT FOR THIS CARD: ${imgPrompt}`);

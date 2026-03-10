@@ -198,20 +198,8 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
     }
 
-    // Always add hardcoded negative instructions to prevent common AI mistakes
-    textPrompt += `\n\nPROIBIDO (NUNCA inclua na imagem):
-- NÃO escreva "Tema do Carrossel", "Tema:", "Carousel Theme" ou qualquer rótulo de tema
-- NÃO escreva "Card X de Y", "Card 1 de 20", "1/20", numeração de slides ou contadores
-- NÃO replique a composição exata da capa/cover em cards de conteúdo — cada card deve ter layout ÚNICO e DIFERENTE
-- NÃO copie textos, @handles, nomes de pessoas ou empresas das imagens de referência
-- NÃO copie os ROSTOS ou PESSOAS das imagens de referência de ESTILO. Se imagens de referência de ROSTO forem fornecidas separadamente, use APENAS esses rostos. Se não houver referência de rosto, use pessoas COMPLETAMENTE DIFERENTES das que aparecem nas referências de estilo.
-- NÃO adicione textos que não foram explicitamente solicitados. Se um "TEXTO EXATO" foi fornecido, use APENAS esse texto. Nenhum bullet point, lista, subtítulo ou texto adicional.
-- NÃO coloque texto fora dos limites da imagem. Todo texto DEVE estar completamente visível dentro dos limites 1080x1350, com margens de segurança.
-- NÃO use textos cortados ou parcialmente visíveis nas bordas.
-- NÃO escreva "ARRASTE PRO LADO", "ARRASTE PARA O LADO", "ARRASTE", "DESLIZE", "SWIPE", "Arraste para o lado" ou qualquer variação de instrução de swipe/arrastar. Essas instruções de navegação são PROIBIDAS na imagem.
-- NÃO adicione setas de navegação, indicadores de swipe, ou qualquer elemento que sugira "passar para o lado".
-- PROIBIDO BORDAS BRANCAS: A imagem DEVE ocupar 100% do canvas (full bleed). NÃO adicione bordas brancas, molduras, margens, padding ou qualquer espaço vazio ao redor do conteúdo. O conteúdo principal (texto, elementos gráficos, fotos) DEVE preencher TODO o quadro de ponta a ponta. NÃO renderize uma "imagem dentro de uma imagem" — o resultado deve ser uma composição única que ocupa todo o espaço disponível sem nenhum tipo de enquadramento ou borda.
-- PROIBIDO CONTEÚDO PEQUENO: O texto e elementos visuais DEVEM ser grandes, proeminentes e legíveis. NÃO gere texto minúsculo centralizado em um fundo vazio. A tipografia principal deve ocupar pelo menos 40-60% da largura da imagem. Preencha o espaço visual com elementos — não deixe grandes áreas vazias.`;
+    // Add concise negative instructions — keep SHORT to not drown style instructions
+    textPrompt += `\n\nPROIBIDO: Sem "Tema do Carrossel", sem "Card X de Y", sem @handles/nomes copiados das referências, sem "ARRASTE/SWIPE", sem setas de navegação, sem bordas brancas/molduras (full bleed obrigatório), sem texto minúsculo (tipografia grande e legível). NÃO copie rostos das referências de estilo. Cada card com layout DIFERENTE.`;
 
     if (negativePrompt) {
       textPrompt += `\n- ${negativePrompt}`;

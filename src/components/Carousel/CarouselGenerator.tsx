@@ -4608,13 +4608,46 @@ FORBIDDEN:
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => {
+                      <button onClick={async () => {
                           if (isGuest) {
                             // Guests always generate single post - set state AND call directly
                             setContentMode('single-post');
                             setCardCount(1);
                             setImageCardCount(1);
                             setTransitionToGenerate(true);
+                            // CRITICAL: Set snapshot before calling generateSinglePost (same as non-guest flow)
+                            const clickTimeIsRealEstate = !!activeMarketplaceStyle?.is_real_estate;
+                            const frozenPropertyList = propertyList.map(p => ({
+                              ...p,
+                              photos: p.photos.map(ph => ({ ...ph })),
+                            }));
+                            // Convert blob URLs to base64
+                            for (const prop of frozenPropertyList) {
+                              for (let pi = 0; pi < prop.photos.length; pi++) {
+                                const url = prop.photos[pi].url;
+                                if (url && !url.startsWith('data:')) {
+                                  try {
+                                    const resp = await fetch(url);
+                                    const blob = await resp.blob();
+                                    const b64 = await new Promise<string>((res, rej) => {
+                                      const r = new FileReader();
+                                      r.onloadend = () => res(r.result as string);
+                                      r.onerror = rej;
+                                      r.readAsDataURL(blob);
+                                    });
+                                    prop.photos[pi] = { ...prop.photos[pi], url: b64 };
+                                  } catch (e) { console.warn('[GUEST_SNAPSHOT] blob->b64 fail:', e); }
+                                }
+                              }
+                            }
+                            generationSnapshotRef.current = {
+                              isRealEstate: clickTimeIsRealEstate,
+                              realEstateMode: (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single',
+                              propertyList: JSON.parse(JSON.stringify(frozenPropertyList)),
+                              marketplaceStyle: activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null,
+                            };
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             // Call generateSinglePost directly to avoid state timing issues
                             setTimeout(() => generateSinglePost(), 1200);
                           } else {

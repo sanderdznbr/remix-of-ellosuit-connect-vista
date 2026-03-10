@@ -355,6 +355,8 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         }
         analysisContent.push({ type: 'text', text: `You are a visual design analyst. Analyze these Instagram post reference images and extract their EXACT visual DNA. Be hyper-specific — I need to recreate this EXACT style for new content.
 
+Also COUNT the approximate number of characters used in titles and body text across the references. This is critical for maintaining visual fidelity.
+
 Return ONLY a JSON object:
 {
   "background": "EXACT background (e.g. 'dark navy blue #1a1f3a solid with subtle grid pattern overlay at 10% opacity' NOT just 'dark background')",
@@ -367,8 +369,18 @@ Return ONLY a JSON object:
   "decorative": "EXACT decorative elements (e.g. 'thin gold #c4a265 corner brackets/frames, hand-drawn arrow swooshes in gold, circle arrow icon at bottom center')",
   "photo_treatment": "EXACT photo treatment (e.g. 'desaturated 60%, slight blue tint, high contrast, cinematic grain')",
   "mood": "2-3 word mood",
-  "signature": "THE most distinctive visual element that makes this style instantly recognizable"
+  "signature": "THE most distinctive visual element that makes this style instantly recognizable",
+  "text_limits": {
+    "cover_title_max_chars": 40,
+    "cover_subtitle_max_chars": 60,
+    "content_body_top_max_chars": 150,
+    "content_body_bottom_max_chars": 100,
+    "cta_title_max_chars": 30,
+    "cta_body_max_chars": 50
+  }
 }
+
+For text_limits: count the AVERAGE number of visible characters per text block across ALL reference images. Measure what actually fits in the layout at the font sizes used. If a block type doesn't exist in references, set to 0. This ensures generated text fits the visual layout perfectly.
 No markdown, pure JSON only.` });
 
         const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

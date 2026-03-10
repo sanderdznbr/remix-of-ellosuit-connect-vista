@@ -4452,6 +4452,22 @@ FORBIDDEN:
               style={{ width: 375, maxWidth: '95vw' }}
             >
               {!isGuest && carouselData.cards.length > 0 && (
+                <>
+                {/* Edit button - left side */}
+                <div className="absolute top-1/2 left-2 md:-left-14 -translate-y-1/2 z-40">
+                  <button
+                    onClick={() => {
+                      setEditingCard(activeCardIndex);
+                      setAiImagePrompt(carouselData.cards[activeCardIndex]?.imagePrompt || carouselData.cards[activeCardIndex]?.title || '');
+                    }}
+                    className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all hover:scale-110"
+                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: 'rgba(20,20,30,0.85)' }}
+                    aria-label="Editar card"
+                  >
+                    <Pencil className="h-4.5 w-4.5" />
+                  </button>
+                </div>
+                {/* Add button - right side */}
                 <div className="absolute top-1/2 right-2 md:-right-14 -translate-y-1/2 z-40">
                   <button
                     onClick={() => setShowAddCardMenu((prev) => !prev)}
@@ -4508,8 +4524,9 @@ FORBIDDEN:
                         </button>
                       </div>
                     </>
-                  )}
+                   )}
                 </div>
+                </>
               )}
               {/* Phone frame */}
               <div className="rounded-[3rem] overflow-hidden" style={{

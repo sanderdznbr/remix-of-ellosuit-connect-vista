@@ -120,36 +120,36 @@ const CoverTemplate: React.FC<TemplateProps> = ({ card, property, w, h, s, accen
       {specs.length > 0 && (
         <div style={{
           position: 'absolute',
-          bottom: 80 * s,
+          bottom: 60 * s,
           right: 24 * s,
-          width: 0.4 * w,
+          width: 0.44 * w,
           borderRadius: 25 * s,
-          backgroundColor: 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(12px)',
-          padding: `${18 * s}px ${22 * s}px ${22 * s}px`,
+          backgroundColor: 'rgba(255,255,255,0.94)',
+          backdropFilter: 'blur(16px)',
+          padding: `${22 * s}px ${26 * s}px ${26 * s}px`,
           zIndex: 10,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
         }}>
           {/* Header */}
           <p style={{
-            fontSize: 14 * s, fontWeight: 800, color: accentColor,
-            textAlign: 'center', marginBottom: 14 * s,
-            textTransform: 'uppercase', letterSpacing: 1.5 * s,
+            fontSize: 16 * s, fontWeight: 800, color: accentColor,
+            textAlign: 'center', marginBottom: 18 * s,
+            textTransform: 'uppercase', letterSpacing: 2 * s,
           }}>
             Informações
           </p>
           {/* Spec rows with icon squares */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 * s }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 * s }}>
             {specs.map((spec, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 * s }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14 * s }}>
                 <div style={{
-                  width: 36 * s, height: 36 * s, borderRadius: 8 * s,
+                  width: 44 * s, height: 44 * s, borderRadius: 10 * s,
                   backgroundColor: accentColor, display: 'flex',
                   alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
-                  <spec.icon style={{ width: 18 * s, height: 18 * s, color: ctxt }} />
+                  <spec.icon style={{ width: 22 * s, height: 22 * s, color: ctxt }} />
                 </div>
-                <span style={{ fontSize: 16 * s, fontWeight: 700, color: '#111', lineHeight: 1.2 }}>
+                <span style={{ fontSize: 20 * s, fontWeight: 700, color: '#111', lineHeight: 1.2 }}>
                   {spec.text}
                 </span>
               </div>
@@ -161,24 +161,24 @@ const CoverTemplate: React.FC<TemplateProps> = ({ card, property, w, h, s, accen
       {/* ─── Bottom-left: Price card (white rounded rect) ─── */}
       <div style={{
         position: 'absolute',
-        bottom: 80 * s,
+        bottom: 60 * s,
         left: 24 * s,
         borderRadius: 25 * s,
-        backgroundColor: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(12px)',
-        padding: `${16 * s}px ${28 * s}px`,
+        backgroundColor: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(16px)',
+        padding: `${20 * s}px ${32 * s}px`,
         zIndex: 10,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.3)',
       }}>
         <p style={{
-          fontSize: 11 * s, fontWeight: 600, color: '#555',
-          textTransform: 'uppercase', letterSpacing: 1 * s, marginBottom: 4 * s,
+          fontSize: 14 * s, fontWeight: 700, color: '#555',
+          textTransform: 'uppercase', letterSpacing: 1.5 * s, marginBottom: 6 * s,
           textAlign: 'center',
         }}>
           {property.mode === 'rent' ? 'Valor de aluguel' : 'Valor de venda'}
         </p>
         <p style={{
-          fontFamily, fontSize: 26 * s, fontWeight: 900, color: '#111', textAlign: 'center',
+          fontFamily, fontSize: 32 * s, fontWeight: 900, color: '#111', textAlign: 'center',
         }}>
           {formatPrice(property.price) || 'R$ 250.000,00'}
         </p>

@@ -1777,15 +1777,6 @@ const CarouselGenerator: React.FC = () => {
       }
 
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
-      // Use ref to avoid stale closure — isRealEstateStyle from render closure may be outdated
-      const isRealEstateNow = isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
-      const realEstateModeNow = (activeMarketplaceStyleRef.current?.real_estate_mode as 'single' | 'multiple') || realEstateMode || 'single';
-      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'isRealEstateNow (ref):', isRealEstateNow, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))), 'propertyListRef:', JSON.stringify(propertyListRef.current.map(p => ({ photos: p.photos.length, price: p.price }))));
-      if (isRealEstateNow) {
-        // Use ref to avoid stale closure — propertyList state may be outdated in async context
-        const currentPropertyList = propertyListRef.current;
-        const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
-        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
       // DEFINITIVE: Read from generation snapshot (captured at click time) — immune to stale closures
       const snapshot = generationSnapshotRef.current;
       const snapshotIsRealEstate = snapshot?.isRealEstate || isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;

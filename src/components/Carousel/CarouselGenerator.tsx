@@ -3597,6 +3597,23 @@ FORBIDDEN:
       );
     }
 
+    // CONTINUOUS PANORAMA MODE: image as full background, text overlaid
+    if (continuousMode && hasImage) {
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
+          <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.25) 100%)' }} />
+          {renderHeader()}
+          <div style={{ position: 'absolute', bottom: `${48 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, zIndex: 5, display: 'flex', flexDirection: 'column', gap: `${16 * s}px` }}>
+            <p style={{ fontFamily: serif, fontSize: `${42 * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: '#FFFFFF', wordBreak: 'break-word' }}>{renderAccentText(topText, accentColor, '#FFFFFF', 42 * fs, s)}</p>
+            {bottomText && <p style={{ fontFamily: serif, fontSize: `${28 * s * fs}px`, fontWeight: 400, lineHeight: 1.4, color: 'rgba(255,255,255,0.75)', wordBreak: 'break-word' }}>{bottomText}</p>}
+          </div>
+          {renderLogo()}
+        </div>
+      );
+    }
+
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>

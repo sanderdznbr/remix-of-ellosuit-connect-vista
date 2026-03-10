@@ -2307,33 +2307,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           ctx.fillRect(0, 0, W, H);
           
           // === STEP 3: Draw BOTTOM portion of AI image (text/specs area) ===
-          // The AI generates a full card - we take only the bottom ~50% where text elements are
+          // Overlay FULL AI image with screen blend (black = transparent, graphics show through)
           const aiImg = await loadImg(aiImageUrl);
           console.log('[BLEND] AI image loaded:', aiImg.width, 'x', aiImg.height);
-          const cutRatio = 0.45; // Take bottom 45% of AI image
-          const aiCutY = aiImg.height * (1 - cutRatio);
-          const canvasCutY = H * (1 - cutRatio);
-          
-          // Draw bottom portion with screen blend to preserve bright text on dark gradient
           ctx.globalCompositeOperation = 'screen';
-          ctx.drawImage(
-            aiImg, 
-            0, aiCutY, aiImg.width, aiImg.height * cutRatio,  // source: bottom 45% of AI
-            0, canvasCutY, W, H * cutRatio                     // dest: bottom 45% of canvas
-          );
+          ctx.drawImage(aiImg, 0, 0, aiImg.width, aiImg.height, 0, 0, W, H);
           ctx.globalCompositeOperation = 'source-over';
-          
-          // Also draw the TOP header elements (brand badge, title) from AI at reduced opacity
-          // Take top 20% of AI image for header elements
-          ctx.globalAlpha = 0.85;
-          ctx.globalCompositeOperation = 'screen';
-          ctx.drawImage(
-            aiImg,
-            0, 0, aiImg.width, aiImg.height * 0.22,  // source: top 22% of AI
-            0, 0, W, H * 0.22                         // dest: top 22% of canvas
-          );
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.globalAlpha = 1.0;
           
           // === STEP 4: Draw logo ===
           if (logoUrl) {

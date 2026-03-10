@@ -43,6 +43,12 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
     ));
   };
 
+  const setFocalPoint = (propId: string, photoIdx: number, fp: PhotoFocalPoint) => {
+    setProperties(prev => prev.map(p =>
+      p.id === propId ? { ...p, photos: p.photos.map((ph, i) => i === photoIdx ? { ...ph, focalPoint: fp } : ph) } : p
+    ));
+  };
+
   const addProperty = () => {
     if (properties.length >= 10) return;
     setProperties(prev => [...prev, createEmptyProperty()]);

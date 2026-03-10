@@ -163,27 +163,19 @@ Deno.serve(async (req) => {
         }
       }
     } else if (isVisualCloneMode) {
-      // === VISUAL CLONE MODE: Minimal text, maximum reliance on reference images ===
-      // The reference images ARE the primary instruction. Text should only specify:
-      // 1. What content/text to put in the image
-      // 2. Language requirement
-      // 3. Format
-      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência acima.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- A imagem deve preencher 100% do canvas (full bleed, sem bordas/molduras/margens brancas).\n- NÃO copie @handles, nomes de marcas ou rostos das referências — copie APENAS o estilo visual.\n- ${formatInstruction}`;
+      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas. É TERMINANTEMENTE PROIBIDO gerar bordas brancas, molduras, margens, frames ou qualquer espaço vazio nas laterais/topo/base. A arte vai de ponta a ponta.\n- NÃO copie @handles, nomes de marcas ou rostos das referências — copie APENAS o estilo visual.\n- ${formatInstruction}`;
     } else if (stylePrompt) {
       textPrompt = `${stylePrompt}\n\n${imagePrompt}`;
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post.\n\nDESCRIPTION: ${imagePrompt}\n\nSTYLE REQUIREMENTS:\n- High-end editorial/magazine aesthetic\n- Rich colors and professional color grading\n- Clean composition suitable for overlay text\n- Ultra high resolution, photorealistic quality`;
     }
 
-    // Only add format instruction if NOT already included (visual clone mode includes it)
     if (!isPanoramicMode && !isVisualCloneMode) {
       textPrompt += `\n\nFORMATO: ${formatInstruction}`;
     }
 
-    // Only add layout rules for NON-visual-clone modes (in clone mode, the refs define the layout)
-    if (!isVisualCloneMode) {
-      textPrompt += `\n\nLAYOUT: Full bleed, sem bordas/molduras. Composição editorial completa.`;
-    }
+    // Anti-border instruction for ALL modes
+    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem gerada DEVE preencher 100% do canvas sem NENHUMA borda branca, moldura, margem ou espaço vazio. A arte vai de ponta a ponta, cobrindo cada pixel do quadro.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity

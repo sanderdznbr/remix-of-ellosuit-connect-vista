@@ -5208,6 +5208,10 @@ FORBIDDEN:
                             setCurrentCarouselId(null);
                             const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
                             setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          }} />
+                      )}
+                    </div>
+                  </motion.div>
                 </>
               )}
             </AnimatePresence>

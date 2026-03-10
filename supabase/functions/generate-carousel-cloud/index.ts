@@ -486,9 +486,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       promptParts.push('CRITICAL: ZERO borders, ZERO frames, ZERO margins. Full bleed edge to edge.');
 
       // Face attributes
-      const facePersonsMeta = imageSettings.facePersonsMetadata;
-      const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
-      if (cardGetsFace && isMultiPerson) {
+      if (cardGetsFace && isMultiPerson && facePersonsMeta) {
         promptParts.push(`${facePersonsMeta.length} pessoas distintas com rostos diferentes.`);
       } else if (cardGetsFace) {
         const fg = imageSettings.faceGender;

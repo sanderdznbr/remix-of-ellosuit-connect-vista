@@ -24,6 +24,7 @@ interface Props {
   setFamousList: React.Dispatch<React.SetStateAction<any[]>>;
   famousImages: any[];
   setFamousImages: React.Dispatch<React.SetStateAction<any[]>>;
+  activeMarketplaceStyle?: any;
 }
 
 const Chip = ({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) => (

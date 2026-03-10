@@ -39,6 +39,7 @@ interface StepPropertyProps {
   properties: PropertyData[];
   setProperties: React.Dispatch<React.SetStateAction<PropertyData[]>>;
   realEstateMode: 'single' | 'multiple';
+  cardCount?: number;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -46,7 +47,7 @@ const TYPE_LABELS: Record<string, string> = {
   land: 'Terreno', studio: 'Studio', penthouse: 'Cobertura', farm: 'Chácara/Sítio',
 };
 
-const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, realEstateMode }) => {
+const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, realEstateMode, cardCount }) => {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const updateProperty = (id: string, updates: Partial<PropertyData>) => {
@@ -95,7 +96,19 @@ const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, 
 
       {/* Photos */}
       <div className="mb-3">
-        <label className="text-[10px] text-white/40 mb-1.5 block">Fotos do Imóvel</label>
+        <label className="text-[10px] text-white/40 mb-1.5 flex items-center justify-between">
+          <span>Fotos do Imóvel</span>
+          {realEstateMode === 'single' && cardCount && (
+            <span className={`text-[9px] font-medium ${prop.photos.length >= (cardCount || 1) ? 'text-green-400' : 'text-amber-400'}`}>
+              {prop.photos.length}/{cardCount} fotos (1 por card)
+            </span>
+          )}
+        </label>
+        {realEstateMode === 'single' && cardCount && prop.photos.length < cardCount && (
+          <p className="text-[9px] text-amber-400/70 mb-1.5">
+            ⚠️ Adicione {cardCount - prop.photos.length} foto(s) a mais para ter 1 foto por card
+          </p>
+        )}
         <div className="flex gap-1.5 flex-wrap">
           {prop.photos.map((photo, pi) => (
             <div key={pi} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">
@@ -219,8 +232,8 @@ const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, 
           </h3>
           <p className="text-[10px] text-white/30">
             {realEstateMode === 'single'
-              ? 'Preencha os detalhes e adicione fotos do imóvel'
-              : 'Cada card do carrossel apresentará um imóvel diferente'}
+              ? `Adicione ${cardCount || 'várias'} fotos (1 por card) e preencha os detalhes`
+              : 'Cada card do carrossel apresentará um imóvel diferente — adicione 1 foto por imóvel'}
           </p>
         </div>
       </div>
@@ -265,7 +278,8 @@ export const buildPropertyPromptContext = (properties: PropertyData[], realEstat
   return `\n\n=== IMÓVEL (${modeLabel}) ===
 Tipo: ${typeLabel}
 ${details.join(' | ')}
+FOTO REAL DO IMÓVEL: A foto de referência fornecida é a FOTO REAL deste imóvel. Use-a como imagem principal/destaque do card. NÃO gere uma imagem artificial — INCORPORE a foto real no layout editorial com sobreposições de texto, badges de informações e elementos decorativos.
 Inclua essas informações de forma visualmente atraente no post. Use tipografia de marketing imobiliário premium. O texto deve ser em PORTUGUÊS BRASILEIRO. Crie títulos impactantes como "Seu Novo Lar", "Oportunidade Única", "Viva com Estilo", "Realize Seu Sonho".
-${realEstateMode === 'single' ? `Este é o card ${cardIndex + 1} — mostre um ângulo/cômodo diferente do mesmo imóvel.` : `Este card destaca o imóvel ${(cardIndex % properties.length) + 1} de ${properties.length}.`}
+${realEstateMode === 'single' ? `Este é o card ${cardIndex + 1} — use a foto correspondente do imóvel para este card.` : `Este card destaca o imóvel ${(cardIndex % properties.length) + 1} de ${properties.length}.`}
 NÃO inclua rostos humanos. Foque na arquitetura, interiores e detalhes do imóvel.`;
 };

@@ -215,14 +215,16 @@ STYLE REQUIREMENTS:
       textPrompt += `\n- ${negativePrompt}`;
     }
 
-    if (fidelity === 'high') {
-      textPrompt += `\n\nCRITICAL: Follow reference images with MAXIMUM fidelity. Reproduce exact features, colors, textures, and composition.`;
-    } else if (fidelity === 'creative') {
+    // Force high fidelity when marketplace/style references are present
+    const effectiveFidelity = (validStyleRefs.length > 0 && fidelity !== 'creative') ? 'high' : fidelity;
+    if (effectiveFidelity === 'high') {
+      textPrompt += `\n\nCRITICAL FIDELITY INSTRUCTION: Follow reference images with MAXIMUM fidelity. Reproduce the EXACT same color palette (not similar — identical hex values), the EXACT same typography style/weight/effects, the EXACT same decorative elements (lines, shapes, textures), and the EXACT same layout composition. The output MUST look like it was designed by the SAME designer as the references — it should be indistinguishable from the same collection.`;
+    } else if (effectiveFidelity === 'creative') {
       textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
     }
 
-    // Brand colors from logo (only for non-style generations)
-    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0) {
+    // Brand colors from logo — NEVER inject when style refs exist (prevents palette contamination)
+    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0 && !stylePrompt) {
       textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
     }
 

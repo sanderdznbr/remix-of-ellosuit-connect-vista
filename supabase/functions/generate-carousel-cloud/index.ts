@@ -140,7 +140,8 @@ Deno.serve(async (req) => {
 
       // === STYLE DNA ANALYSIS for single post ===
       let singlePromptStyle = marketplaceStyle?.imageGeneration?.prompt_style || '';
-      const isSingleGeneric = singlePromptStyle.includes('EXACTLY replicates the visual style shown in the reference images') && !singlePromptStyle.includes('=== BACKGROUND ===');
+      const singleDetailedSections = (singlePromptStyle.match(/===\s+\w/g) || []).length;
+      const isSingleGeneric = allStyleRefs.length > 0 && (!singlePromptStyle || singlePromptStyle.length < 200 || singleDetailedSections < 4);
       if (isSingleGeneric && allStyleRefs.length > 0 && timeLeft() > 60_000) {
         console.log('Single-post: Detected generic prompt — running AI visual DNA analysis...');
         await updateJob(jobId, { progress_message: '🔍 Analisando DNA visual do estilo...' });
@@ -295,16 +296,23 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     }
     const allStyleRefs = [...new Set([...styleRefUrls, ...marketplaceRefUrls])];
 
-    // === STYLE DNA ANALYSIS: Detect generic prompts and enhance with AI vision ===
-    const isGenericPrompt = promptStyle.includes('EXACTLY replicates the visual style shown in the reference images') && !promptStyle.includes('=== BACKGROUND ===');
+    // === STYLE DNA ANALYSIS: Enhance prompts that lack detailed visual specifications ===
+    // Trigger DNA analysis if the prompt has fewer than 3 detailed sections OR is the old generic template
+    const detailedSectionCount = (promptStyle.match(/===\s+\w/g) || []).length;
+    const isGenericPrompt = allStyleRefs.length > 0 && (
+      !promptStyle || 
+      promptStyle.length < 200 ||
+      (promptStyle.includes('EXACTLY replicates') && detailedSectionCount < 3) ||
+      detailedSectionCount < 4
+    );
     if (isGenericPrompt && allStyleRefs.length > 0 && timeLeft() > 60_000) {
       console.log('Detected generic prompt_style — running AI visual DNA analysis...');
       await updateJob(jobId, { progress_message: '🔍 Analisando DNA visual do estilo...' });
       try {
         const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
         const analysisContent: any[] = [];
-        // Send up to 4 reference images for analysis
-        for (const ref of allStyleRefs.slice(0, 4)) {
+        // Send up to 6 reference images for thorough analysis
+        for (const ref of allStyleRefs.slice(0, 6)) {
           analysisContent.push({ type: 'image_url', image_url: { url: ref } });
         }
         analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:
@@ -467,7 +475,8 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
         else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
         if (imageSettings.wearsGlasses) promptParts.push('The person MUST be wearing glasses/eyeglasses.');
       }
-      if (brandColors.length > 0) {
+      // Only inject brand colors when NOT using a marketplace style (to avoid contaminating the style palette)
+      if (brandColors.length > 0 && !isFullBleed && !marketplaceStyle) {
         promptParts.push(`PALETA DE CORES DA MARCA: use predominantemente estas cores da marca do cliente: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`);
       }
 
@@ -509,7 +518,7 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
             styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
             imageModel: imageSettings.model || 'auto',
             negativePrompt: task.negPrompt,
-            fidelity: marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced',
+            fidelity: isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced'),
             facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
             ...(brandColors && brandColors.length > 0 ? { brandColors } : {}),

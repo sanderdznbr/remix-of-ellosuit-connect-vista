@@ -58,6 +58,13 @@ interface Props {
   referenceImageUrl: string | null;
   onUploadReferenceImage: (file: File) => void;
   onRemoveReferenceImage: () => void;
+  // Real estate props
+  isRealEstate?: boolean;
+  propertyData?: {
+    price: string; area: string; bedrooms: string; bathrooms: string;
+    parking: string; location: string; neighborhood: string; highlights: string; title: string;
+  };
+  onPropertyFieldChange?: (field: string, value: string) => void;
 }
 
 const CarouselEditorSidebar: React.FC<Props> = ({

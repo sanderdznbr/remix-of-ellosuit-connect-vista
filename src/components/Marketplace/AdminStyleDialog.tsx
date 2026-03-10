@@ -399,6 +399,52 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             </div>
           </div>
 
+          {/* Real Estate Toggle */}
+          <div className="p-3 rounded-xl border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-amber-400" />
+                <div>
+                  <span className="text-xs font-medium text-white">Modo Imobiliária</span>
+                  <p className="text-[9px] text-white/30">Ativa wizard especializado para imóveis</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setForm(f => ({ ...f, is_real_estate: !f.is_real_estate }))}
+                className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${form.is_real_estate ? 'bg-amber-500' : 'bg-white/10'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.is_real_estate ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {form.is_real_estate && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+                <label className="text-[10px] text-white/40 block">Tipo de divulgação</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setForm(f => ({ ...f, real_estate_mode: 'single' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border ${form.real_estate_mode === 'single' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06]'}`}
+                  >
+                    🏠 Imóvel Único
+                    <p className="text-[9px] mt-0.5 opacity-60">Vários cards do mesmo imóvel</p>
+                  </button>
+                  <button
+                    onClick={() => setForm(f => ({ ...f, real_estate_mode: 'multiple' }))}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border ${form.real_estate_mode === 'multiple' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06]'}`}
+                  >
+                    🏘️ Vários Imóveis
+                    <p className="text-[9px] mt-0.5 opacity-60">Cada card = 1 imóvel diferente</p>
+                  </button>
+                </div>
+                <p className="text-[9px] text-amber-300/50">
+                  {form.real_estate_mode === 'single'
+                    ? 'No wizard, o usuário preencherá dados de 1 imóvel (m², quartos, valor, fotos) e a IA gerará cards variados.'
+                    : 'No wizard, o usuário adicionará vários imóveis e cada card do carrossel destacará um imóvel diferente.'}
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Reference photos - Drag & Drop */}
           <div>
             <label className="text-[10px] text-white/40 mb-2 block">

@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Edit3, Upload, Search, Wand2, SlidersHorizontal, X, Loader2,
   Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp, Info, Paperclip,
+  Home, DollarSign, BedDouble, Bath, Car, Ruler, MapPin,
 } from 'lucide-react';
 import { FLOW_COLOR } from '../wizard/types';
 

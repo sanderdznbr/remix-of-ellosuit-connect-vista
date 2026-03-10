@@ -225,20 +225,26 @@ Deno.serve(async (req) => {
     }
 
     // === MESSAGE ASSEMBLY ===
-    // For visual clone mode: Images FIRST, minimal text, no redundant instructions
-    // For other modes: Standard assembly
+    // 2-STAGE APPROACH: When face refs exist (single person), Stage 1 generates WITHOUT face refs
+    // (placeholder face), then Stage 2 does a focused face swap for maximum fidelity.
+    // Multi-person mode still uses single-stage (too complex for 2-stage).
+    const isTwoStageMode = validFaceRefs.length > 0 && !isMultiPerson;
+
+    if (isTwoStageMode) {
+      console.log('🎭 2-STAGE MODE: Stage 1 will generate WITHOUT face refs, Stage 2 will swap face');
+    }
 
     if (isVisualCloneMode) {
-      // VISUAL CLONE: Face refs FIRST → Style refs → Prompt → Product refs
-      // Face identity MUST be established before style to prevent random faces
+      // VISUAL CLONE MODE
 
-      if (validFaceRefs.length > 0 && isMultiPerson) {
+      if (!isTwoStageMode && validFaceRefs.length > 0 && isMultiPerson) {
+        // Multi-person: send face refs inline (single-stage)
         let photoOffset = 0;
         for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
           const pm = facePersonsMetadata[pi];
           const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
           if (count <= 0) break;
-          messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) — Esta pessoa DEVE aparecer no resultado ⚠️` });
+          messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ⚠️` });
           for (let j = 0; j < count; j++) {
             if (photoOffset + j < validFaceRefs.length) {
               messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
@@ -246,30 +252,22 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
-      } else if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL — PRIORIDADE MÁXIMA ABSOLUTA 🚨\nAs ${validFaceRefs.length} fotos abaixo são a ÚNICA referência de identidade. A pessoa no resultado DEVE ser EXATAMENTE esta pessoa — mesma estrutura óssea, mesmos olhos, nariz, boca, tom de pele, cabelo. NÃO gere um rosto diferente, genérico ou apenas "inspirado". A fidelidade facial é MAIS IMPORTANTE que o estilo visual. Memorize CADA detalhe facial antes de prosseguir:` });
-        for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-        messageContent.push({ type: 'text', text: `✅ Referências faciais memorizadas. Agora aplique o ESTILO VISUAL das referências abaixo, mas MANTENHA o rosto 100% IDÊNTICO ao das fotos acima. Em caso de dúvida, PRIORIZE a fidelidade do rosto.` });
       }
+      // In 2-stage mode: NO face refs sent in Stage 1
 
-      // Style refs AFTER face refs — limit count when faces present to avoid overwhelming
-      const styleRefsToSend = validFaceRefs.length > 0 ? validStyleRefs.slice(0, 4) : validStyleRefs;
-      for (const ref of styleRefsToSend) {
+      // Style refs
+      for (const ref of validStyleRefs) {
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      messageContent.push({ type: 'text', text: `As ${styleRefsToSend.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie os rostos das referências de estilo. NÃO copie o nome/título do estilo que possa aparecer nas referências. Use APENAS o rosto das fotos de referência facial acima. Crie elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.` });
+      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências. Crie elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.` });
 
       messageContent.push({ type: 'text', text: textPrompt });
-
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-
-      if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL OBRIGATÓRIA: Antes de finalizar, compare PONTO A PONTO o rosto gerado com as fotos de referência do INÍCIO — mesma estrutura óssea, olhos, nariz, boca, sobrancelhas, tom de pele, formato do rosto. Se houver QUALQUER diferença significativa, regenere com maior fidelidade. Fidelidade facial > estilo visual > tudo.` });
-      }
     } else {
-      // STANDARD MODE: Face refs FIRST, then style refs
+      // STANDARD MODE
 
-      if (validFaceRefs.length > 0 && isMultiPerson) {
+      if (!isTwoStageMode && validFaceRefs.length > 0 && isMultiPerson) {
+        // Multi-person: send face refs inline (single-stage)
         let photoOffset = 0;
         for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
           const pm = facePersonsMetadata[pi];
@@ -283,10 +281,8 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
-      } else if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA (${validFaceRefs.length} fotos) — reproduza este EXATO rosto:` });
-        for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
+      // In 2-stage mode: NO face refs sent in Stage 1
 
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
@@ -294,14 +290,10 @@ Deno.serve(async (req) => {
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
-
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências.` });
-      }
-      if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL: O rosto gerado DEVE ser a MESMA PESSOA das fotos de referência. Mesma estrutura óssea, olhos, nariz, boca, tom de pele, cabelo.` });
       }
     }
 

@@ -1920,17 +1920,43 @@ const CarouselGenerator: React.FC = () => {
           }
           const capturedFaceRefs = cardFaceRefs && cardFaceRefs.length > 0 ? cardFaceRefs : undefined;
           const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
-          const capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
+          
+          // Real estate: get property photo for this card
+          let capturedProductRefs: string[] | undefined;
+          if (isRealEstateStyle && propertyPhotoDataUrls.length > 0) {
+            if (realEstateMode === 'multiple' && propertyList.length > 1) {
+              // Multiple properties: each card gets the corresponding property's photos
+              const propIdx = i % propertyList.length;
+              const propPhotos = propertyPhotoDataUrls[propIdx] || [];
+              if (propPhotos.length > 0) capturedProductRefs = propPhotos;
+            } else {
+              // Single property: distribute photos across cards (one per card, cycling)
+              const allSinglePhotos = propertyPhotoDataUrls[0] || [];
+              if (allSinglePhotos.length > 0) {
+                const photoIdx = i % allSinglePhotos.length;
+                capturedProductRefs = [allSinglePhotos[photoIdx]];
+              }
+            }
+          } else {
+            capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
+          }
+          
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
            const capturedNegative = isFullBleedMkt 
               ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;
           
+          // Real estate: add property photo instruction to prompt
+          let cardPrompt = capturedPrompt;
+          if (isRealEstateStyle && capturedProductRefs && capturedProductRefs.length > 0) {
+            cardPrompt += '\n\nFOTO DO IMÓVEL (OBRIGATÓRIO): A foto de referência do imóvel fornecida DEVE aparecer na imagem gerada. Use EXATAMENTE esta foto do imóvel como a imagem principal/destaque do card. A foto real do imóvel deve ser incorporada no layout editorial, NÃO gere uma imagem artificial do imóvel — use a FOTO REAL fornecida. Integre-a no design com sobreposições de texto, badges de informações e elementos decorativos ao redor da foto real.';
+          }
+
           imageFactories.push({
             index: i,
-            prompt: capturedPrompt,
+            prompt: cardPrompt,
             factory: () => generateImage({
-              prompt: capturedPrompt,
+              prompt: cardPrompt,
               faceReferenceUrls: capturedFaceRefs,
               styleReferenceUrls: capturedStyleRefs,
               referenceImageUrls: capturedProductRefs,

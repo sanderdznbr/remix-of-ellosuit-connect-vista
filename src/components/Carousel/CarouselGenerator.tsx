@@ -2338,17 +2338,18 @@ const CarouselGenerator: React.FC = () => {
               ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;
           
-          // Real estate: add property photo instruction to prompt
+          // Real estate: instruct AI to use BLACK background (we blend real photo later)
           let cardPrompt = capturedPrompt;
-          if (isRealEstateStyle && capturedProductRefs && capturedProductRefs.length > 0) {
-            cardPrompt += `\n\n🏠 INSTRUÇÃO CRÍTICA — FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA):
-A imagem de referência fornecida é uma FOTOGRAFIA REAL de um imóvel. Você DEVE:
-1. Usar esta foto EXATA como o FUNDO PRINCIPAL do card, ocupando 80-100% da área da imagem
-2. A foto do imóvel deve aparecer em TAMANHO CHEIO, sem ser reduzida, cortada excessivamente ou colocada em um frame/moldura pequena
-3. NÃO gere, invente ou substitua por uma casa/imóvel diferente — use SOMENTE a foto fornecida
-4. Aplique sobre a foto real: gradientes sutis para legibilidade, textos, badges, ícones e elementos gráficos do estilo editorial
-5. A foto real deve ser claramente reconhecível — é a mesma casa/imóvel que o cliente fotografou
-6. PROIBIDO: criar uma ilustração, renderização 3D ou foto diferente do imóvel. A foto fornecida É o imóvel real.`;
+          if (isRealEstateStyle && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
+            cardPrompt += `\n\n🏠 INSTRUÇÃO CRÍTICA — CARD IMOBILIÁRIO:
+Use um FUNDO SÓLIDO PRETO (#000000) puro como base da imagem. NÃO gere nenhuma foto de casa, prédio, imóvel ou cenário de fundo.
+O fundo DEVE ser completamente preto/escuro.
+Sobreponha no fundo preto: textos editorials, badges de preço, ícones de especificações (quartos, vagas, m²), 
+elementos gráficos decorativos do estilo visual, gradientes sutis e tipografia impactante.
+A composição final deve ser como um overlay/HUD elegante sobre fundo escuro.
+PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENAS fundo preto com overlay gráfico.`;
+            // Don't send property photos as reference - we blend them later
+            capturedProductRefs = undefined;
           }
 
           imageFactories.push({
@@ -2432,6 +2433,105 @@ A imagem de referência fornecida é uma FOTOGRAFIA REAL de um imóvel. Você DE
               const retryUrl = await target.factory();
               if (retryUrl) updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true, generatedPrompt: target.prompt };
             } catch { /* accept */ }
+          }
+        }
+      }
+
+      // ========== REAL ESTATE POST-PROCESSING: Blend real photo + AI overlay ==========
+      if (isRealEstateStyle && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
+        setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
+        console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
+        
+        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string): Promise<string> => {
+          const W = 1080, H = 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          
+          // Load both images
+          const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+            const img = document.createElement('img') as HTMLImageElement;
+            if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+          });
+          
+          // 1. Draw REAL PHOTO as background (cover fit)
+          const photoImg = await loadImg(photoDataUrl);
+          const pRatio = photoImg.width / photoImg.height;
+          const cRatio = W / H;
+          let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
+          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
+          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
+          
+          // 2. Slight darkening for contrast
+          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          ctx.fillRect(0, 0, W, H);
+          
+          // 3. Draw AI overlay on top using "lighten" blend mode
+          // Black areas of AI image become transparent, graphic elements stay visible
+          const aiImg = await loadImg(aiImageUrl);
+          ctx.globalCompositeOperation = 'lighten';
+          ctx.drawImage(aiImg, 0, 0, W, H);
+          ctx.globalCompositeOperation = 'source-over'; // reset
+          
+          // 4. Draw logo if available
+          if (logoUrl) {
+            try {
+              const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+                const r = await fetch(logoUrl); const b = await r.blob();
+                return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+              })();
+              const logoImg = await loadImg(logoB64);
+              const maxLW = 180, maxLH = 80;
+              const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+              const lw = logoImg.width * ls, lh = logoImg.height * ls;
+              const pad = 50;
+              let lx = pad, ly = pad;
+              const lp = logoPosition || 'top-left';
+              if (lp.includes('center')) lx = (W - lw) / 2;
+              if (lp.includes('right')) lx = W - lw - pad;
+              if (lp.includes('middle')) ly = (H - lh) / 2;
+              if (lp.includes('bottom')) ly = H - lh - pad;
+              ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10;
+              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+            } catch (e) { console.warn('[BLEND] Logo draw failed:', e); }
+          }
+          
+          return canvas.toDataURL('image/jpeg', 0.92);
+        };
+        
+        for (let i = 0; i < updatedCards.length; i++) {
+          const aiImageUrl = updatedCards[i]?.imageUrl;
+          if (!aiImageUrl) continue;
+          
+          // Get the corresponding property photo
+          let photoUrl = '';
+          if (realEstateMode === 'multiple' && propertyPhotoDataUrls.length > 1) {
+            const propIdx = i % propertyPhotoDataUrls.length;
+            const propPhotos = propertyPhotoDataUrls[propIdx] || [];
+            photoUrl = propPhotos[i % Math.max(propPhotos.length, 1)] || propPhotos[0] || '';
+          } else {
+            const allPhotos = propertyPhotoDataUrls[0] || [];
+            photoUrl = allPhotos[i % Math.max(allPhotos.length, 1)] || allPhotos[0] || '';
+          }
+          
+          if (!photoUrl) {
+            console.warn('[BLEND] No photo for card', i, '— skipping blend');
+            continue;
+          }
+          
+          try {
+            setImageGenProgress(`🏠 Mesclando foto ${i + 1}/${updatedCards.length}...`);
+            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl);
+            updatedCards[i] = { ...updatedCards[i], imageUrl: blended };
+            console.log('[BLEND] Card', i, 'blended successfully');
+          } catch (err) {
+            console.error('[BLEND] Failed for card', i, err);
+            // Keep the AI image as fallback
           }
         }
       }

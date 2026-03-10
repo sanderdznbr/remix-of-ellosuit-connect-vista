@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Edit3, Upload, Search, Wand2, SlidersHorizontal, X, Loader2,
   Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp, Info, Paperclip,
+  Home, DollarSign, BedDouble, Bath, Car, Ruler, MapPin,
 } from 'lucide-react';
 import { FLOW_COLOR } from '../wizard/types';
 
@@ -57,6 +58,13 @@ interface Props {
   referenceImageUrl: string | null;
   onUploadReferenceImage: (file: File) => void;
   onRemoveReferenceImage: () => void;
+  // Real estate props
+  isRealEstate?: boolean;
+  propertyData?: {
+    price: string; area: string; bedrooms: string; bathrooms: string;
+    parking: string; location: string; neighborhood: string; highlights: string; title: string;
+  };
+  onPropertyFieldChange?: (field: string, value: string) => void;
 }
 
 const CarouselEditorSidebar: React.FC<Props> = ({
@@ -67,6 +75,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   onChangeBgColor, onChangeAccentColor, onChangeTextColor,
   fontOptions, selectedFont, onChangeFont,
   referenceImageUrl, onUploadReferenceImage, onRemoveReferenceImage,
+  isRealEstate, propertyData, onPropertyFieldChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refImageInputRef = useRef<HTMLInputElement>(null);
@@ -298,7 +307,58 @@ const CarouselEditorSidebar: React.FC<Props> = ({
             )}
           </div>
 
-          {/* ===== LAYOUT ===== */}
+          {/* ===== REAL ESTATE PROPERTY FIELDS ===== */}
+          {isRealEstate && propertyData && onPropertyFieldChange && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Home className="h-4 w-4 text-white/40" />
+                <span className="text-xs font-semibold text-white uppercase tracking-wider">Dados do Imóvel</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><DollarSign className="h-3 w-3" /> Preço</label>
+                  <Input value={propertyData.price || ''} onChange={(e) => onPropertyFieldChange('price', e.target.value)}
+                    placeholder="250000" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><Ruler className="h-3 w-3" /> Área (m²)</label>
+                  <Input value={propertyData.area || ''} onChange={(e) => onPropertyFieldChange('area', e.target.value)}
+                    placeholder="120" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><BedDouble className="h-3 w-3" /> Quartos</label>
+                  <Input value={propertyData.bedrooms || ''} onChange={(e) => onPropertyFieldChange('bedrooms', e.target.value)}
+                    placeholder="3" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><Bath className="h-3 w-3" /> Banheiros</label>
+                  <Input value={propertyData.bathrooms || ''} onChange={(e) => onPropertyFieldChange('bathrooms', e.target.value)}
+                    placeholder="2" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><Car className="h-3 w-3" /> Vagas</label>
+                  <Input value={propertyData.parking || ''} onChange={(e) => onPropertyFieldChange('parking', e.target.value)}
+                    placeholder="2" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><MapPin className="h-3 w-3" /> Bairro</label>
+                  <Input value={propertyData.neighborhood || ''} onChange={(e) => onPropertyFieldChange('neighborhood', e.target.value)}
+                    placeholder="Centro" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-white/40 mb-0.5 flex items-center gap-1"><MapPin className="h-3 w-3" /> Localização</label>
+                <Input value={propertyData.location || ''} onChange={(e) => onPropertyFieldChange('location', e.target.value)}
+                  placeholder="São Paulo, SP" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-white/40 mb-0.5 block">Destaques</label>
+                <Input value={propertyData.highlights || ''} onChange={(e) => onPropertyFieldChange('highlights', e.target.value)}
+                  placeholder="Financiável, Aceita FGTS" className="rounded-xl text-xs h-8 !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-1">
               <Palette className="h-4 w-4 text-white/40" />

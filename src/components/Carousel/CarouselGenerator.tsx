@@ -4814,7 +4814,7 @@ FORBIDDEN:
                     style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
                     <Plus className="h-3.5 w-3.5" /> Adicionar Card
                   </button>
-                  <button data-tour="btn-style" onClick={() => setShowStylePanel(!showStylePanel)} disabled={isGuest}
+                  <button data-tour="btn-style" onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(!showStylePanel); }} disabled={isGuest}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                     style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
                     <Palette className="h-3.5 w-3.5" /> Estilo

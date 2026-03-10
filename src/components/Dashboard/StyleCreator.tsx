@@ -284,8 +284,9 @@ const StyleCreator: React.FC = () => {
         const hasFace = !isRealEstate && i < 5; // first 5 with face (not in real estate mode)
         const cardNumber = i + 1;
 
+        const isMultiProperty = propertyMode === 'multi' && properties.length > 1;
         const cardLabel = isRealEstate
-          ? `(imóvel ${(i % propertyUrls.length) + 1})`
+          ? isMultiProperty ? `(imóvel ${(i % properties.length) + 1})` : '(imóvel)'
           : hasFace ? '(com rosto)' : '(sem rosto)';
         setProgress({ current: i, total: 10, message: `Gerando post ${cardNumber}/10 ${cardLabel}...` });
 
@@ -302,13 +303,25 @@ const StyleCreator: React.FC = () => {
         }
 
         // Real estate: distribute property photos across cards
-        if (isRealEstate && propertyUrls.length > 0) {
-          // Each card gets 1-2 property photos, cycling through all of them
-          const primaryIdx = i % propertyUrls.length;
-          const secondaryIdx = (i + Math.floor(propertyUrls.length / 2)) % propertyUrls.length;
-          referenceImages.push({ type: 'image_url', image_url: { url: propertyUrls[primaryIdx] } });
-          if (propertyUrls.length > 2 && primaryIdx !== secondaryIdx) {
-            referenceImages.push({ type: 'image_url', image_url: { url: propertyUrls[secondaryIdx] } });
+        if (isRealEstate && propertyUrlsFlat.length > 0) {
+          if (isMultiProperty) {
+            // Multi-property: each card gets photos from one property (cycling)
+            const propIdx = i % properties.length;
+            const propPhotos = propertyUrls[propIdx] || [];
+            const photoIdx = Math.floor(i / properties.length) % Math.max(propPhotos.length, 1);
+            if (propPhotos[photoIdx]) referenceImages.push({ type: 'image_url', image_url: { url: propPhotos[photoIdx] } });
+            if (propPhotos.length > 1 && propPhotos[(photoIdx + 1) % propPhotos.length]) {
+              referenceImages.push({ type: 'image_url', image_url: { url: propPhotos[(photoIdx + 1) % propPhotos.length] } });
+            }
+          } else {
+            // Single property: cycle through all photos
+            const allPhotos = propertyUrls[0] || [];
+            const primaryIdx = i % allPhotos.length;
+            if (allPhotos[primaryIdx]) referenceImages.push({ type: 'image_url', image_url: { url: allPhotos[primaryIdx] } });
+            if (allPhotos.length > 2) {
+              const secondaryIdx = (primaryIdx + 1) % allPhotos.length;
+              referenceImages.push({ type: 'image_url', image_url: { url: allPhotos[secondaryIdx] } });
+            }
           }
         }
 
@@ -347,17 +360,60 @@ NOME DO ESTILO: "${styleName}"`;
           prompt += `\n\nMOCKUPS: Uma das imagens de referência contém fotos para serem usadas em mockups (${mockupDesc}). Integre essas fotos dentro de telas de dispositivos (notebook 3D, celular, tablet) de forma natural e profissional no design.`;
         }
 
-        // Real estate specific prompt
+        // Real estate specific prompt with detailed property info
         if (isRealEstate) {
-          const roomTypes = ['fachada', 'sala de estar', 'quarto', 'cozinha', 'banheiro', 'área externa', 'varanda', 'escritório', 'área gourmet', 'jardim'];
-          const roomHint = roomTypes[i % roomTypes.length];
-          prompt += `\n\nIMÓVEL: Este é um post IMOBILIÁRIO. As fotos do imóvel fornecidas devem ser integradas ao layout do estilo de forma elegante e profissional.
+          const propIdx = isMultiProperty ? (i % properties.length) : 0;
+          const prop = properties[propIdx];
+          const typeLabel = PROPERTY_TYPES.find(t => t.value === prop.type)?.label || prop.type;
+
+          const detailParts: string[] = [];
+          if (prop.title) detailParts.push(`Nome: "${prop.title}"`);
+          detailParts.push(`Tipo: ${typeLabel}`);
+          detailParts.push(`Modalidade: ${prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA'}`);
+          if (prop.price) detailParts.push(`Valor: R$ ${prop.price}`);
+          if (prop.area) detailParts.push(`Área: ${prop.area}m²`);
+          if (prop.bedrooms) detailParts.push(`Quartos: ${prop.bedrooms}`);
+          if (prop.suites) detailParts.push(`Suítes: ${prop.suites}`);
+          if (prop.bathrooms) detailParts.push(`Banheiros: ${prop.bathrooms}`);
+          if (prop.parkingSpots) detailParts.push(`Vagas: ${prop.parkingSpots}`);
+          if (prop.neighborhood) detailParts.push(`Bairro: ${prop.neighborhood}`);
+          if (prop.city) detailParts.push(`Cidade: ${prop.city}`);
+          if (prop.location) detailParts.push(`Endereço: ${prop.location}`);
+          if (prop.highlights) detailParts.push(`Diferenciais: ${prop.highlights}`);
+          if (prop.description) detailParts.push(`Descrição: ${prop.description}`);
+
+          const detailsBlock = detailParts.join('\n- ');
+
+          if (isMultiProperty) {
+            prompt += `\n\nIMÓVEL (CARROSSEL - Card ${cardNumber}, Imóvel ${propIdx + 1} de ${properties.length}):
+Este é um post de CARROSSEL IMOBILIÁRIO mostrando vários imóveis. Este card apresenta o imóvel ${propIdx + 1}.
+
+DADOS DO IMÓVEL:
+- ${detailsBlock}
+
+INSTRUÇÕES:
+- Use a(s) foto(s) deste imóvel como elemento principal
+- Destaque as informações-chave: ${prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA'}, valor R$ ${prop.price || '?'}, ${prop.area ? prop.area + 'm²' : ''} ${prop.bedrooms ? prop.bedrooms + ' quartos' : ''}
+- Texto em PORTUGUÊS BRASILEIRO com tom de marketing imobiliário premium
+- Layout editorial elegante — integre foto, dados e texto de forma harmoniosa
+- NÃO invente fotos: use EXATAMENTE as fotos fornecidas`;
+          } else {
+            const roomTypes = ['fachada', 'sala de estar', 'quarto master', 'cozinha gourmet', 'banheiro', 'área externa', 'varanda', 'vista', 'área social', 'jardim'];
+            const roomHint = roomTypes[i % roomTypes.length];
+
+            prompt += `\n\nIMÓVEL (ÚNICO - Card ${cardNumber}/10, foco: ${roomHint}):
+
+DADOS DO IMÓVEL:
+- ${detailsBlock}
+
+INSTRUÇÕES:
 - Use a(s) foto(s) do imóvel como elemento principal do design
-- Crie textos de marketing imobiliário em PORTUGUÊS BRASILEIRO (ex: "Seu novo lar", "Apartamento dos sonhos", "Conforto e elegância")
-- Destaque: ${roomHint}
-- Layout editorial premium para o mercado imobiliário
-- NÃO invente fotos de imóveis: use EXATAMENTE as fotos fornecidas, integrando-as no layout
-- Varie entre layouts com foto grande, mosaico, foto com overlay de texto, foto em moldura editorial`;
+- Neste card, destaque: ${roomHint}
+- Inclua informações-chave: ${prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA'}, R$ ${prop.price || '?'}, ${prop.area ? prop.area + 'm²' : ''}, ${prop.bedrooms ? prop.bedrooms + ' quartos' : ''}
+- Texto em PORTUGUÊS BRASILEIRO com tom premium de marketing imobiliário
+- Layout editorial elegante — varie entre foto grande, foto com overlay, mosaico editorial
+- NÃO invente fotos: use EXATAMENTE as fotos fornecidas`;
+          }
         } else if (hasFace && faceUrls.length > 0) {
           prompt += `\n\nROSTO: Este post DEVE incluir o rosto da pessoa fornecida nas referências. A pessoa deve aparecer de forma natural e integrada ao design, mantendo FIDELIDADE TOTAL aos traços faciais da referência.`;
         } else {

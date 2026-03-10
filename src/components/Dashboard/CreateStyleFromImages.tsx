@@ -47,6 +47,9 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
   "description": "Descrição curta do estilo visual (máx 100 chars)",
   "category": "editorial|minimalista|moderno|criativo|corporativo|lifestyle",
   "tags": ["tag1", "tag2", "tag3"],
+  "has_people": true/false,
+  "recommended_no_faces": true/false,
+  "face_recommendation_reason": "motivo curto se recommended_no_faces=true",
   "visual_dna": {
     "background": "descrição detalhada dos fundos (cores, gradientes, texturas, padrões)",
     "typography": "descrição detalhada da tipografia (fonte tipo serif/sans/display, peso, tamanho, hierarquia, efeitos como outline/shadow/glow)",
@@ -58,6 +61,12 @@ const CreateStyleFromImages: React.FC<CreateStyleFromImagesProps> = ({ open, onO
     "unique_features": "características únicas e diferenciadoras que tornam esse estilo reconhecível"
   }
 }
+
+Regras para has_people e recommended_no_faces:
+- has_people: true se as referências contêm rostos/figuras humanas como parte do estilo
+- recommended_no_faces: true se o estilo é PREDOMINANTEMENTE tipográfico, gráfico, abstrato, ou baseado em objetos/cenários — onde adicionar rostos humanos PREJUDICARIA a fidelidade ao estilo original. Exemplos: estilos com fundo sólido + tipografia, estilos 3D, estilos com padrões geométricos, estilos minimalistas sem pessoas.
+- recommended_no_faces: false se o estilo NATURALMENTE incorpora pessoas/rostos como parte do design.
+
 Não use markdown, apenas JSON puro. Seja EXTREMAMENTE detalhado e específico no visual_dna — descreva exatamente o que vê, não generalize.`,
             },
             {

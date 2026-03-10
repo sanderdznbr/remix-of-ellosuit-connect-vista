@@ -3876,14 +3876,17 @@ FORBIDDEN:
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
                         activeMarketplaceStyle={activeMarketplaceStyle} />
                     )}
+                    {currentStepName === 'Pessoas' && (
+                      <StepPeopleMode
+                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
+                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
+                        cardCount={cardCount} />
+                    )}
                     {currentStepName === 'Visual' && (
                       <StepVisualStyle
                         selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
-                        referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
-                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
-                        cardCount={cardCount} />
+                        referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
                     )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}

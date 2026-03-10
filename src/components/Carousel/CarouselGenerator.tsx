@@ -2274,7 +2274,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
         console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
         
-        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center'): Promise<string> => {
+        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center', cropOffsetY?: number): Promise<string> => {
           const W = 1080, H = 1350;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
@@ -2288,9 +2288,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
           
-          // === STEP 1: Draw REAL PHOTO as full background (cover fit with focal point) ===
+          // === STEP 1: Draw REAL PHOTO as full background (cover fit with cropOffsetY or focalPoint) ===
           const photoImg = await loadImg(photoDataUrl);
-          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height, 'focal:', focalPoint);
+          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height, 'focal:', focalPoint, 'cropOffsetY:', cropOffsetY);
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
           let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
@@ -2299,7 +2299,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           } else {
             sh = photoImg.width / cRatio;
             const maxSy = photoImg.height - sh;
-            if (focalPoint === 'top') sy = 0;
+            if (cropOffsetY !== undefined) {
+              sy = cropOffsetY * maxSy;
+            } else if (focalPoint === 'top') sy = 0;
             else if (focalPoint === 'bottom') sy = maxSy;
             else sy = maxSy / 2;
           }

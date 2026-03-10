@@ -349,9 +349,16 @@ Respond ONLY with the JSON object, no markdown or explanation.` },
         });
       }
 
+      // Extract text limits if available from style config
+      const outlineTextLimits = body.marketplaceStyleConfig?._textLimits || {};
+      const hasOutlineTextLimits = !!outlineTextLimits.cover_title_max_chars;
+      const textLimitInstructions = hasOutlineTextLimits
+        ? ` LIMITES DE CARACTERES OBRIGATÓRIOS: título da capa máx ${outlineTextLimits.cover_title_max_chars} chars, subtítulo máx ${outlineTextLimits.cover_subtitle_max_chars} chars, corpo dos cards máx ${outlineTextLimits.content_body_top_max_chars} chars, CTA título máx ${outlineTextLimits.cta_title_max_chars} chars. Respeite rigorosamente.`
+        : '';
+
       const outlinePrompt = mode === 'single-post'
-        ? `Gere um outline para 1 post único sobre: "${topic}". Retorne JSON: { "outline": [{ "title": "...", "body": "..." }] }`
-        : `Gere um outline para um carrossel de ${numCards} cards sobre: "${topic}". Card 1 é capa (título impactante + subtítulo), cards intermediários são conteúdo (título + corpo informativo), último card é CTA. Retorne JSON: { "outline": [{ "title": "...", "body": "..." }, ...] } com exatamente ${numCards} itens. Em português brasileiro.`;
+        ? `Gere um outline para 1 post único sobre: "${topic}".${hasOutlineTextLimits ? ` Título máx ${outlineTextLimits.cover_title_max_chars} chars, corpo máx ${outlineTextLimits.cover_subtitle_max_chars || 60} chars.` : ''} Retorne JSON: { "outline": [{ "title": "...", "body": "..." }] }`
+        : `Gere um outline para um carrossel de ${numCards} cards sobre: "${topic}". Card 1 é capa (título impactante + subtítulo), cards intermediários são conteúdo (título + corpo informativo), último card é CTA. Retorne JSON: { "outline": [{ "title": "...", "body": "..." }, ...] } com exatamente ${numCards} itens. Em português brasileiro.${textLimitInstructions}`;
 
       // Try multiple models in order
       const MODELS = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'];
@@ -474,6 +481,10 @@ REGRAS:
         medium: { bodyTop: '20-35 palavras', bodyBottom: '12-20 palavras' },
         long:   { bodyTop: '30-60 palavras', bodyBottom: '20-40 palavras' },
       }[textSizeHint] || { bodyTop: '10-20 palavras', bodyBottom: '8-12 palavras' };
+
+      // Extract text character limits from style DNA analysis (if available)
+      const styleTextLimits = body.marketplaceStyleConfig?._textLimits || {};
+      const hasTextLimits = !!styleTextLimits.cover_title_max_chars;
       const styleConfig = body.marketplaceStyleConfig;
       const hasMarketplaceStyle = styleConfig?.imageGeneration?.prompt_style;
 
@@ -517,14 +528,21 @@ PROIBIDO nos imagePrompts e no conteúdo dos cards:
 - NUNCA gere imagePrompts que descrevam grades, mosaicos, grids de posts, capturas de tela de feeds ou interfaces de redes sociais. Cada card deve ser UMA ÚNICA imagem editorial coesa
 
 REGRAS DE LAYOUT (siga EXATAMENTE):
-- Card 1 (cover): Título impactante em CAIXA ALTA (máx 10 palavras) + subtítulo curto descritivo
+- Card 1 (cover): Título impactante em CAIXA ALTA (máx ${hasTextLimits ? `${styleTextLimits.cover_title_max_chars} caracteres` : '10 palavras'}) + subtítulo curto descritivo${hasTextLimits ? ` (máx ${styleTextLimits.cover_subtitle_max_chars} caracteres)` : ''}
 - Cards 2 a ${numCards - 1} (content): Cada card tem DOIS blocos de texto:
-  - "bodyTop": Parágrafo principal (${textSizeConfig.bodyTop}), informativo e direto. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 8 palavras destacadas)
-  - "bodyBottom": Segundo parágrafo (${textSizeConfig.bodyBottom}), complementar e conciso
+  - "bodyTop": Parágrafo principal (${hasTextLimits ? `máx ${styleTextLimits.content_body_top_max_chars} caracteres` : textSizeConfig.bodyTop}), informativo e direto. Deve conter trechos-chave que serão destacados em cor accent (coloque entre **asteriscos duplos** os trechos mais importantes, máx 8 palavras destacadas)
+  - "bodyBottom": Segundo parágrafo (${hasTextLimits ? `máx ${styleTextLimits.content_body_bottom_max_chars} caracteres` : textSizeConfig.bodyBottom}), complementar e conciso
   - "imagePrompt": Descrição detalhada para gerar uma imagem de alta qualidade. ${hasMarketplaceStyle ? 'DEVE seguir o estilo visual definido abaixo.' : 'Se o tópico mencionar marcas, produtos ou PESSOAS REAIS, descreva visualmente o que deveria aparecer com detalhes'}
   - "searchTerms": Array de termos para buscar fotos de referência na web (ex: ["Toguro fitness", "Cimed logo", "suplemento proteico"]). Inclua nomes reais de pessoas e marcas mencionadas.
   - "needsImage": boolean - true se este card precisa de imagem baseado no conteúdo
-- Card ${numCards} (cta): CTA + mensagem motivacional. ${body.brandName ? `Use "${body.brandName}" como nome da marca/autor.` : body.userName ? `Use "${body.userName}" como nome do autor.` : 'NÃO inclua nome de autor.'} NUNCA use placeholders como "[Nome do Usuário]", "[Seu Nome]", "[Nome da Marca]" etc. Se não souber o nome, simplesmente OMITA a linha de autor.
+- Card ${numCards} (cta): CTA + mensagem motivacional (${hasTextLimits ? `título máx ${styleTextLimits.cta_title_max_chars} chars, corpo máx ${styleTextLimits.cta_body_max_chars} chars` : 'texto curto'}). ${body.brandName ? `Use "${body.brandName}" como nome da marca/autor.` : body.userName ? `Use "${body.userName}" como nome do autor.` : 'NÃO inclua nome de autor.'} NUNCA use placeholders como "[Nome do Usuário]", "[Seu Nome]", "[Nome da Marca]" etc. Se não souber o nome, simplesmente OMITA a linha de autor.
+${hasTextLimits ? `\n⚠️ LIMITES DE CARACTERES OBRIGATÓRIOS (extraídos da análise visual do estilo selecionado):
+- Título da capa: máx ${styleTextLimits.cover_title_max_chars} caracteres
+- Subtítulo da capa: máx ${styleTextLimits.cover_subtitle_max_chars} caracteres
+- bodyTop (conteúdo): máx ${styleTextLimits.content_body_top_max_chars} caracteres
+- bodyBottom (conteúdo): máx ${styleTextLimits.content_body_bottom_max_chars} caracteres
+- Título CTA: máx ${styleTextLimits.cta_title_max_chars} caracteres
+Respeite RIGOROSAMENTE estes limites para que o texto caiba perfeitamente no layout visual do estilo.` : ''}
 
 ${imageCardIndices.length > 0 ? `IMPORTANTE: Os cards nas posições ${imageCardIndices.join(', ')} DEVEM ter imagens (needsImage=true). Os demais podem ser somente texto.` : ''}
 

@@ -151,8 +151,12 @@ Deno.serve(async (req) => {
           for (const ref of allStyleRefs.slice(0, 4)) {
             analysisContent.push({ type: 'image_url', image_url: { url: ref } });
           }
-          analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:
-{"background":"exact bg description","typography":"exact font style","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature"}
+          analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Also COUNT the approximate number of characters used in titles and body text across the references.
+
+Return ONLY a JSON object:
+{"background":"exact bg description","typography":"exact font style","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature","text_limits":{"title_max_chars":50,"body_max_chars":120,"has_subtitle":true,"subtitle_max_chars":60}}
+
+For text_limits: count the AVERAGE number of visible characters in titles, body text, and subtitles across ALL reference images. This is critical for maintaining visual fidelity — too much text will break the layout.
 Be EXTREMELY specific. No markdown, pure JSON only.` });
 
           const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -165,7 +169,12 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
             const dnaText = dnaData?.choices?.[0]?.message?.content || '';
             const cleaned = dnaText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const dna = JSON.parse(cleaned);
-            singlePromptStyle = `Create an Instagram post with MAXIMUM FIDELITY to the reference style.\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.`;
+            // Extract text limits for single post
+            const singleTextLimits = dna.text_limits || {};
+            const textLimitHint = singleTextLimits.title_max_chars 
+              ? `\n\n=== TEXT LENGTH LIMITS (from style analysis) ===\nTitle: max ${singleTextLimits.title_max_chars} characters\nSubtitle: max ${singleTextLimits.subtitle_max_chars || 60} characters\nIMPORTANT: Keep ALL text within these limits to match the style's visual density.`
+              : '';
+            singlePromptStyle = `Create an Instagram post with MAXIMUM FIDELITY to the reference style.\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===${textLimitHint}\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.`;
           }
         } catch (dnaErr) { console.error('Single-post DNA analysis failed:', dnaErr); }
       }
@@ -351,6 +360,8 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         }
         analysisContent.push({ type: 'text', text: `You are a visual design analyst. Analyze these Instagram post reference images and extract their EXACT visual DNA. Be hyper-specific — I need to recreate this EXACT style for new content.
 
+Also COUNT the approximate number of characters used in titles and body text across the references. This is critical for maintaining visual fidelity.
+
 Return ONLY a JSON object:
 {
   "background": "EXACT background (e.g. 'dark navy blue #1a1f3a solid with subtle grid pattern overlay at 10% opacity' NOT just 'dark background')",
@@ -363,8 +374,18 @@ Return ONLY a JSON object:
   "decorative": "EXACT decorative elements (e.g. 'thin gold #c4a265 corner brackets/frames, hand-drawn arrow swooshes in gold, circle arrow icon at bottom center')",
   "photo_treatment": "EXACT photo treatment (e.g. 'desaturated 60%, slight blue tint, high contrast, cinematic grain')",
   "mood": "2-3 word mood",
-  "signature": "THE most distinctive visual element that makes this style instantly recognizable"
+  "signature": "THE most distinctive visual element that makes this style instantly recognizable",
+  "text_limits": {
+    "cover_title_max_chars": 40,
+    "cover_subtitle_max_chars": 60,
+    "content_body_top_max_chars": 150,
+    "content_body_bottom_max_chars": 100,
+    "cta_title_max_chars": 30,
+    "cta_body_max_chars": 50
+  }
 }
+
+For text_limits: count the AVERAGE number of visible characters per text block across ALL reference images. Measure what actually fits in the layout at the font sizes used. If a block type doesn't exist in references, set to 0. This ensures generated text fits the visual layout perfectly.
 No markdown, pure JSON only.` });
 
         const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -386,7 +407,27 @@ No markdown, pure JSON only.` });
           const dna = JSON.parse(cleaned);
           console.log('Visual DNA analyzed:', JSON.stringify(dna).slice(0, 500));
 
+          // Extract text character limits from DNA analysis
+          const dnaTextLimits = dna.text_limits || {};
+          if (dnaTextLimits.cover_title_max_chars) {
+            console.log('Text limits from DNA:', JSON.stringify(dnaTextLimits));
+            // Store in marketplace style config so it gets passed to text generation
+            if (marketplaceStyle) {
+              marketplaceStyle._textLimits = dnaTextLimits;
+            }
+          }
+
           // Build enhanced prompt_style — CONCISE but hyper-specific
+          const textLimitSection = dnaTextLimits.cover_title_max_chars
+            ? `\nTEXT LENGTH LIMITS (MANDATORY — from style reference analysis):
+- Cover title: max ${dnaTextLimits.cover_title_max_chars} chars
+- Cover subtitle: max ${dnaTextLimits.cover_subtitle_max_chars || 60} chars  
+- Content bodyTop: max ${dnaTextLimits.content_body_top_max_chars || 150} chars
+- Content bodyBottom: max ${dnaTextLimits.content_body_bottom_max_chars || 100} chars
+- CTA title: max ${dnaTextLimits.cta_title_max_chars || 30} chars
+Keep text within these limits to match the style's visual density.`
+            : '';
+
           promptStyle = `REPLICATE THIS EXACT VISUAL STYLE (from the reference images):
 
 BACKGROUND: ${dna.background}
@@ -397,7 +438,7 @@ LAYOUT: ${dna.layout}
 COLORS (USE ONLY THESE): ${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}
 DECORATIVE ELEMENTS: ${dna.decorative}
 PHOTO TREATMENT: ${dna.photo_treatment}
-SIGNATURE: ${dna.signature}
+SIGNATURE: ${dna.signature}${textLimitSection}
 
 RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.`;
 

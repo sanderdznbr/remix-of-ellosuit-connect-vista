@@ -47,7 +47,7 @@ const TYPE_LABELS: Record<string, string> = {
   land: 'Terreno', studio: 'Studio', penthouse: 'Cobertura', farm: 'Chácara/Sítio',
 };
 
-const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, realEstateMode }) => {
+const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, realEstateMode, cardCount }) => {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const updateProperty = (id: string, updates: Partial<PropertyData>) => {

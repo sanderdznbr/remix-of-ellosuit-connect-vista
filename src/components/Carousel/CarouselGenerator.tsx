@@ -333,6 +333,15 @@ const CarouselGenerator: React.FC = () => {
   const skipCloudRef = useRef(false);
   const generatingRef = useRef(false);
 
+  // DEFINITIVE FIX: Generation snapshot ref — captures ALL critical data at click time
+  // This eliminates ALL stale closure issues because generateContent reads from this snapshot
+  const generationSnapshotRef = useRef<{
+    isRealEstate: boolean;
+    realEstateMode: 'single' | 'multiple';
+    propertyList: PropertyData[];
+    marketplaceStyle: any;
+  } | null>(null);
+
   // Keep refs in sync with state
   useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
   useEffect(() => { generatingRef.current = generating; }, [generating]);
@@ -1768,19 +1777,27 @@ const CarouselGenerator: React.FC = () => {
       }
 
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
-      // Use ref to avoid stale closure — isRealEstateStyle from render closure may be outdated
-      const isRealEstateNow = isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
-      const realEstateModeNow = (activeMarketplaceStyleRef.current?.real_estate_mode as 'single' | 'multiple') || realEstateMode || 'single';
-      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'isRealEstateNow (ref):', isRealEstateNow, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))), 'propertyListRef:', JSON.stringify(propertyListRef.current.map(p => ({ photos: p.photos.length, price: p.price }))));
-      if (isRealEstateNow) {
-        // Use ref to avoid stale closure — propertyList state may be outdated in async context
-        const currentPropertyList = propertyListRef.current;
+      // DEFINITIVE: Read from generation snapshot (captured at click time) — immune to stale closures
+      const snapshot = generationSnapshotRef.current;
+      const snapshotIsRealEstate = snapshot?.isRealEstate || isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
+      const snapshotRealEstateMode = snapshot?.realEstateMode || realEstateMode || 'single';
+      const snapshotPropertyList = snapshot?.propertyList || propertyListRef.current;
+      
+      console.log('[REAL_ESTATE_DEBUG] snapshot:', JSON.stringify({
+        snapshotIsRealEstate,
+        snapshotRealEstateMode,
+        snapshotPropertyPhotos: snapshotPropertyList.map(p => p.photos.length),
+        hasSnapshot: !!snapshot,
+        isRealEstateStyle,
+        refIsRealEstate: !!activeMarketplaceStyleRef.current?.is_real_estate,
+      }));
+      
+      if (snapshotIsRealEstate) {
+        const currentPropertyList = snapshotPropertyList;
         const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
-        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
+        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'photos per property:', currentPropertyList.map(p => p.photos.length));
         if (!hasPhotos) {
           console.warn('[REAL_ESTATE_DEBUG] No property photos found! Falling through to AI generation.');
-          // DON'T enter Canvas path without photos — let normal AI generation handle it
-          // but log extensively to help debug
           toast({ title: '⚠️ Nenhuma foto do imóvel encontrada', description: 'Usando imagem gerada por IA como alternativa. Para usar suas fotos reais, adicione-as no passo "Fotos do Imóvel".', variant: 'default' });
         } else {
         setImageGenProgress('🏠 Gerando cards imobiliários...');
@@ -2012,7 +2029,7 @@ const CarouselGenerator: React.FC = () => {
         const totalToGen = updatedCards.length;
         
         for (let i = 0; i < updatedCards.length; i++) {
-          const propIdx = realEstateModeNow === 'multiple' ? (i % currentPropertyList.length) : 0;
+          const propIdx = snapshotRealEstateMode === 'multiple' ? (i % currentPropertyList.length) : 0;
           const prop = currentPropertyList[propIdx] || currentPropertyList[0];
           const photoIdx = i % Math.max(prop.photos.length, 1);
           const photo = prop.photos[photoIdx]?.url || '';
@@ -2069,7 +2086,7 @@ const CarouselGenerator: React.FC = () => {
         setGenerating(false);
         return;
         } // close else (hasPhotos)
-      } // close if (isRealEstateNow)
+      } // close if (snapshotIsRealEstate)
       
       // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
@@ -4588,7 +4605,19 @@ FORBIDDEN:
                             } else {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
-                            // Sync refs immediately to avoid stale closures in setTimeout
+                            // DEFINITIVE: Snapshot ALL critical data at click time — immune to stale closures
+                            const clickTimeIsRealEstate = !!activeMarketplaceStyle?.is_real_estate;
+                            generationSnapshotRef.current = {
+                              isRealEstate: clickTimeIsRealEstate,
+                              realEstateMode: (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single',
+                              propertyList: JSON.parse(JSON.stringify(propertyList)), // deep clone to freeze state
+                              marketplaceStyle: activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null,
+                            };
+                            console.log('[REAL_ESTATE_SNAPSHOT] Created at click time:', JSON.stringify({
+                              isRealEstate: clickTimeIsRealEstate,
+                              propertyPhotos: propertyList.map(p => p.photos.length),
+                              styleName: activeMarketplaceStyle?.name || activeMarketplaceStyle?._styleName,
+                            }));
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
@@ -5092,6 +5121,12 @@ FORBIDDEN:
                           setShowStylePanel(false);
                           propertyListRef.current = propertyList;
                           activeMarketplaceStyleRef.current = config;
+                          generationSnapshotRef.current = {
+                            isRealEstate: !!config?.is_real_estate,
+                            realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                            propertyList: JSON.parse(JSON.stringify(propertyList)),
+                            marketplaceStyle: config ? { ...config } : null,
+                          };
                           setTransitionToGenerate(true);
                           setCurrentCarouselId(null);
                           const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
@@ -5163,6 +5198,12 @@ FORBIDDEN:
                             setShowStylePanel(false);
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = config;
+                            generationSnapshotRef.current = {
+                              isRealEstate: !!config?.is_real_estate,
+                              realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                              propertyList: JSON.parse(JSON.stringify(propertyList)),
+                              marketplaceStyle: config ? { ...config } : null,
+                            };
                             setTransitionToGenerate(true);
                             setCurrentCarouselId(null);
                             const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);

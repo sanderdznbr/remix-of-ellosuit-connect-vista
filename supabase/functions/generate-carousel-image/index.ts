@@ -428,12 +428,10 @@ Deno.serve(async (req) => {
     // Attempt 3: pro model, minimal refs
     if (!generatedImage && usePremium) {
       const textOnlyContent: any[] = [];
-      if (!isTwoStageMode) {
-        const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
-        if (safeFaceRefs.length > 0) {
-          textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
-          for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
-        }
+      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 3);
+      if (safeFaceRefs.length > 0) {
+        textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+        for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
@@ -450,12 +448,10 @@ Deno.serve(async (req) => {
     // Attempt 4: flash fallback
     if (!generatedImage) {
       const fallbackContent: any[] = [];
-      if (!isTwoStageMode) {
-        const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
-        if (safeFaceRefs.length > 0) {
-          fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
-          for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
-        }
+      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      if (safeFaceRefs.length > 0) {
+        fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+        for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       if (stylePrompt) {
         fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });

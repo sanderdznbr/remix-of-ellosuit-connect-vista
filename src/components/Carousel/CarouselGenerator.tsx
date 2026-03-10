@@ -2771,7 +2771,7 @@ FORBIDDEN:
           parts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
         }
         imgPrompt = parts.join('\n');
-        negPrompt = [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
+        negPrompt = [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
       } else {
         // For standard styles, build a richer prompt that maintains consistency
         const cardType = card.type === 'cover' ? 'capa editorial' : card.type === 'cta' ? 'card final de chamada para ação' : 'slide de conteúdo informativo';

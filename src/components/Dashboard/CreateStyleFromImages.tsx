@@ -306,6 +306,13 @@ ${dna.unique_features || 'Replicate the unique visual signatures from references
               </div>
             )}
 
+            {/* Face recommendation indicator */}
+            {recommendedNoFaces && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <span className="text-[10px] text-amber-300 font-medium">⚠ Recomendado SEM rostos — {faceRecommendationReason || 'estilo tipográfico/gráfico funciona melhor sem pessoas'}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-white/40 mb-1 block">Categoria</label>

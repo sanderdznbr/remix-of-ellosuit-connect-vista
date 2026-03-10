@@ -4107,7 +4107,7 @@ FORBIDDEN:
                               while (next < WIZARD_STEPS.length && (WIZARD_STEPS[next] === 'Cores' || WIZARD_STEPS[next] === 'Fontes')) next++;
                             }
                             setWizardStep(next);
-                          }} disabled={!canProceed || searchingWeb || generatingRoteiro}
+                          }} disabled={!canProceed || searchingWeb || generatingRoteiro || !!webSearchSuggestion}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
                           style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                           {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}

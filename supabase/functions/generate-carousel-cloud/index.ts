@@ -423,6 +423,9 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       const shouldGenImage = isFullBleed || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i);
       if (!shouldGenImage) continue;
 
+      // Determine if this card should have the user's face
+      const cardGetsFace = hasFaceRefsForCarousel && faceCardIndices.has(i);
+
       let imgPrompt: string;
       if (isFullBleed) {
         // === SIMPLIFIED FULLBLEED PROMPT ===
@@ -432,6 +435,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         const isCta = card.type === 'cta' || i === cards.length - 1;
         const parts: string[] = [];
         parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
+        parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta. NÃO adicione bordas brancas, cinzas ou de qualquer cor ao redor da imagem.');
         
         // Logo/brand — keep minimal
         if (job.brand_name) {
@@ -443,6 +447,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         if (isCover) {
           parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);
           if (card.subtitle) parts.push(`Subtítulo: "${card.subtitle}".`);
+          if (cardGetsFace) parts.push('INCLUA a pessoa das fotos de referência facial neste card.');
         } else if (isCta) {
           parts.push(`CTA FINAL (card ${i + 1}/${cards.length}).`);
           if (card.title) parts.push(`Título: "${card.title}".`);
@@ -452,6 +457,11 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
           const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
           if (bodyText) parts.push(`Texto: "${bodyText}".`);
           if (card.bodyBottom) parts.push(`Secundário: "${card.bodyBottom}".`);
+          if (cardGetsFace) parts.push('INCLUA a pessoa das fotos de referência facial neste card.');
+        }
+        // Cards without face: add topic-relevant image instruction
+        if (!cardGetsFace && hasFaceRefsForCarousel) {
+          parts.push('NÃO inclua pessoas humanas neste card. Use elementos visuais, objetos, ícones ou cenários relacionados ao tema.');
         }
         imgPrompt = parts.join(' ');
       } else {
@@ -461,9 +471,6 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       // Build final prompt — keep it simple for fullbleed
       const promptParts = [];
       if (isFullBleed) {
-        // For fullbleed: DON'T include stylePrompt in the prompt text.
-        // It will be sent as stylePrompt param to generate-carousel-image,
-        // which handles it in "visual clone mode" (images-first, minimal text).
         promptParts.push(imgPrompt);
       } else if (promptStyle) {
         promptParts.push(promptStyle);
@@ -477,17 +484,22 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         promptParts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
         promptParts.push('Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
       }
+      promptParts.push('CRITICAL: ZERO borders, ZERO frames, ZERO margins. Full bleed edge to edge.');
 
       // Face attributes
       const facePersonsMeta = imageSettings.facePersonsMetadata;
       const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
-      if (faceRefUrls.length > 0 && isMultiPerson) {
+      if (cardGetsFace && isMultiPerson) {
         promptParts.push(`${facePersonsMeta.length} pessoas distintas com rostos diferentes.`);
-      } else if (faceRefUrls.length > 0) {
+      } else if (cardGetsFace) {
         const fg = imageSettings.faceGender;
         if (fg === 'male') promptParts.push('Pessoa MASCULINA.');
         else if (fg === 'female') promptParts.push('Pessoa FEMININA.');
         if (imageSettings.wearsGlasses) promptParts.push('Usando óculos.');
+      }
+      // Cards that should NOT have faces
+      if (!cardGetsFace && hasFaceRefsForCarousel && !styleRecommendsNoFaces) {
+        promptParts.push('NO HUMANS, NO PEOPLE, NO PORTRAITS, NO FACES in this card. Use objects, icons, abstract elements, or scenery related to the topic instead.');
       }
       // Brand colors only when NOT using marketplace style
       if (brandColors.length > 0 && !isFullBleed && !marketplaceStyle) {
@@ -496,9 +508,11 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
 
       const finalPrompt = promptParts.filter(Boolean).join(' ');
       // For fullbleed, minimal negative prompt — let the refs guide
-      const negPrompt = isFullBleed ? antiFaceNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
+      const negPrompt = isFullBleed 
+        ? [antiFaceNeg, 'no borders, no frames, no margins, no white border, no picture frame'].filter(Boolean).join(', ')
+        : [baseNeg, job.negative_prompt, 'no borders, no frames, no margins'].filter(Boolean).join(', ');
 
-      imageTasks.push({ index: i, prompt: finalPrompt, negPrompt });
+      imageTasks.push({ index: i, prompt: finalPrompt, negPrompt, cardGetsFace });
     }
 
     // === DIAGNOSTIC LOG ===

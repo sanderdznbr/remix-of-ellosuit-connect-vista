@@ -396,22 +396,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 2: retry with pro model, simplified content — FACE REFS FIRST
+    // Attempt 2: retry with pro model, simplified content
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
-      // Face refs FIRST (identity priority)
-      const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
-      if (activeFaceRefs.length > 0) {
-        retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
-        for (const ref of activeFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      // In 2-stage mode: NO face refs in retries either (Stage 2 handles it)
+      if (!isTwoStageMode) {
+        const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+        if (activeFaceRefs.length > 0) {
+          retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
+          for (const ref of activeFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
       }
-      // Style refs AFTER face refs (reduced when faces present)
-      const maxStyleRefs = activeFaceRefs.length > 0 ? 3 : 4;
-      const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, maxStyleRefs);
+      const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       if (isVisualCloneMode) {
-        const faceReminder = activeFaceRefs.length > 0 ? ' A pessoa DEVE ter o rosto EXATO das fotos de referência facial.' : '';
-        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências de estilo. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction}${faceReminder}` });
+        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências de estilo. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction}` });
       } else if (stylePrompt) {
         retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
       } else {
@@ -424,15 +423,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 3: pro model, safe URLs (keep ALL face refs — they're critical)
+    // Attempt 3: pro model, minimal refs
     if (!generatedImage && usePremium) {
       const textOnlyContent: any[] = [];
-      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
-      const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
-      if (safeFaceRefs.length > 0) {
-        textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
-        for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (!isTwoStageMode) {
+        const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+        if (safeFaceRefs.length > 0) {
+          textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+          for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
       }
+      const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
         textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
@@ -444,13 +445,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 4: flash fallback — keep face refs
+    // Attempt 4: flash fallback
     if (!generatedImage) {
       const fallbackContent: any[] = [];
-      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
-      if (safeFaceRefs.length > 0) {
-        fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
-        for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (!isTwoStageMode) {
+        const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+        if (safeFaceRefs.length > 0) {
+          fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+          for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
       }
       if (stylePrompt) {
         fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });

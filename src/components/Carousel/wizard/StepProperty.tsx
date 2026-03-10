@@ -1,9 +1,17 @@
 import React, { useRef } from 'react';
 import { Building2, Plus, X, Upload, Home, DollarSign, MapPin, Ruler, BedDouble, Bath, Car } from 'lucide-react';
 
+export type PhotoFocalPoint = 'top' | 'center' | 'bottom';
+
+export interface PropertyPhoto {
+  url: string;
+  file?: File;
+  focalPoint?: PhotoFocalPoint;
+}
+
 export interface PropertyData {
   id: string;
-  photos: { url: string; file?: File }[];
+  photos: PropertyPhoto[];
   title: string;
   type: 'apartment' | 'house' | 'commercial' | 'land' | 'studio' | 'penthouse' | 'farm';
   mode: 'sale' | 'rent';

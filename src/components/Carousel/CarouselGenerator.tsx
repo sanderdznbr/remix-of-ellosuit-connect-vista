@@ -1431,13 +1431,23 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
 
-          // STEP 1: Draw REAL PHOTO as full background (cover fit)
+          // STEP 1: Draw REAL PHOTO as full background (cover fit with focal point)
           const photoImg = await loadImg(propertyPhotoBase64[0]);
+          const firstPropPhotos = snapshotPropertyList[0]?.photos || [];
+          const focalPoint = firstPropPhotos[0]?.focalPoint || 'center';
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
           let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
-          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
-          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          if (pRatio > cRatio) {
+            sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2;
+          } else {
+            sh = photoImg.width / cRatio;
+            // Apply focal point
+            const maxSy = photoImg.height - sh;
+            if (focalPoint === 'top') sy = 0;
+            else if (focalPoint === 'bottom') sy = maxSy;
+            else sy = maxSy / 2;
+          }
           ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
 
           // STEP 2: Dark gradient for text readability
@@ -2258,7 +2268,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
         console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
         
-        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string): Promise<string> => {
+        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center'): Promise<string> => {
           const W = 1080, H = 1350;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
@@ -2272,14 +2282,21 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
           
-          // === STEP 1: Draw REAL PHOTO as full background (cover fit) ===
+          // === STEP 1: Draw REAL PHOTO as full background (cover fit with focal point) ===
           const photoImg = await loadImg(photoDataUrl);
-          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height);
+          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height, 'focal:', focalPoint);
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
           let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
-          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
-          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          if (pRatio > cRatio) {
+            sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2;
+          } else {
+            sh = photoImg.width / cRatio;
+            const maxSy = photoImg.height - sh;
+            if (focalPoint === 'top') sy = 0;
+            else if (focalPoint === 'bottom') sy = maxSy;
+            else sy = maxSy / 2;
+          }
           ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
           
           // === STEP 2: Add gradient overlay (transparent top → dark bottom) for text readability ===
@@ -2352,15 +2369,22 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const aiImageUrl = updatedCards[i]?.imageUrl;
           if (!aiImageUrl) continue;
           
-          // Get the corresponding property photo
+          // Get the corresponding property photo + focal point
           let photoUrl = '';
+          let focalPoint = 'center';
           if (realEstateMode === 'multiple' && propertyPhotoDataUrls.length > 1) {
             const propIdx = i % propertyPhotoDataUrls.length;
             const propPhotos = propertyPhotoDataUrls[propIdx] || [];
             photoUrl = propPhotos[i % Math.max(propPhotos.length, 1)] || propPhotos[0] || '';
+            const propData = snapshotPropertyList[propIdx];
+            const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
+            focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
           } else {
             const allPhotos = propertyPhotoDataUrls[0] || [];
             photoUrl = allPhotos[i % Math.max(allPhotos.length, 1)] || allPhotos[0] || '';
+            const propData = snapshotPropertyList[0];
+            const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
+            focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
           }
           
           if (!photoUrl) {
@@ -2370,7 +2394,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           try {
             setImageGenProgress(`🏠 Mesclando foto ${i + 1}/${updatedCards.length}...`);
-            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl);
+            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl, focalPoint);
             updatedCards[i] = { ...updatedCards[i], imageUrl: blended };
             console.log('[BLEND] Card', i, 'blended successfully');
           } catch (err) {

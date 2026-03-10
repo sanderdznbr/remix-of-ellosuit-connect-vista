@@ -19,13 +19,13 @@ const StepPropertyInfo: React.FC<StepPropertyInfoProps> = ({ properties, setProp
   };
 
   const renderPropertyInfo = (prop: PropertyData, index: number) => (
-    <div key={prop.id} className="p-4 rounded-xl border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+    <div key={prop.id} className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.03]">
       {realEstateMode === 'multiple' && (
         <div className="flex items-center gap-2 mb-3">
           {prop.photos[0] && (
             <img src={prop.photos[0].url} alt="" className="w-8 h-8 rounded-md object-cover" />
           )}
-          <span className="text-xs font-medium text-amber-300">Imóvel {index + 1}</span>
+          <span className="text-xs font-medium text-white/60">Imóvel {index + 1}</span>
         </div>
       )}
 
@@ -121,7 +121,7 @@ const StepPropertyInfo: React.FC<StepPropertyInfoProps> = ({ properties, setProp
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-1">
-        <Building2 className="w-5 h-5 text-amber-400" />
+        <Building2 className="w-5 h-5 text-white/50" />
         <div>
           <h3 className="text-sm font-semibold text-white">Informações do Imóvel</h3>
           <p className="text-[10px] text-white/30">

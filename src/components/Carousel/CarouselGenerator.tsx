@@ -453,6 +453,11 @@ const CarouselGenerator: React.FC = () => {
     setTransitionToGenerate(false);
     setGeneratingAllImages(false);
     setImageGenProgress('');
+    setPropertyList([createEmptyProperty()]);
+    setFacePersons([]);
+    setFaceGender('auto');
+    setWearsGlasses(false);
+    setAllPeopleOnCover(true);
   }, []);
 
   const currentFont = FONT_OPTIONS[selectedFont];

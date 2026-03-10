@@ -349,9 +349,16 @@ Respond ONLY with the JSON object, no markdown or explanation.` },
         });
       }
 
+      // Extract text limits if available from style config
+      const outlineTextLimits = body.marketplaceStyleConfig?._textLimits || {};
+      const hasOutlineTextLimits = !!outlineTextLimits.cover_title_max_chars;
+      const textLimitInstructions = hasOutlineTextLimits
+        ? ` LIMITES DE CARACTERES OBRIGATÓRIOS: título da capa máx ${outlineTextLimits.cover_title_max_chars} chars, subtítulo máx ${outlineTextLimits.cover_subtitle_max_chars} chars, corpo dos cards máx ${outlineTextLimits.content_body_top_max_chars} chars, CTA título máx ${outlineTextLimits.cta_title_max_chars} chars. Respeite rigorosamente.`
+        : '';
+
       const outlinePrompt = mode === 'single-post'
-        ? `Gere um outline para 1 post único sobre: "${topic}". Retorne JSON: { "outline": [{ "title": "...", "body": "..." }] }`
-        : `Gere um outline para um carrossel de ${numCards} cards sobre: "${topic}". Card 1 é capa (título impactante + subtítulo), cards intermediários são conteúdo (título + corpo informativo), último card é CTA. Retorne JSON: { "outline": [{ "title": "...", "body": "..." }, ...] } com exatamente ${numCards} itens. Em português brasileiro.`;
+        ? `Gere um outline para 1 post único sobre: "${topic}".${hasOutlineTextLimits ? ` Título máx ${outlineTextLimits.cover_title_max_chars} chars, corpo máx ${outlineTextLimits.cover_subtitle_max_chars || 60} chars.` : ''} Retorne JSON: { "outline": [{ "title": "...", "body": "..." }] }`
+        : `Gere um outline para um carrossel de ${numCards} cards sobre: "${topic}". Card 1 é capa (título impactante + subtítulo), cards intermediários são conteúdo (título + corpo informativo), último card é CTA. Retorne JSON: { "outline": [{ "title": "...", "body": "..." }, ...] } com exatamente ${numCards} itens. Em português brasileiro.${textLimitInstructions}`;
 
       // Try multiple models in order
       const MODELS = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite'];

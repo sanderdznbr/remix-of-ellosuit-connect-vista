@@ -315,6 +315,7 @@ const CarouselGenerator: React.FC = () => {
   useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
   useEffect(() => { generatingRef.current = generating; }, [generating]);
   useEffect(() => { carouselDataRef.current = carouselData; }, [carouselData]);
+  useEffect(() => { activeMarketplaceStyleRef.current = activeMarketplaceStyle; }, [activeMarketplaceStyle]);
 
   // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
   useEffect(() => {

@@ -72,7 +72,7 @@ import StepPropertyPhotos from './wizard/StepPropertyPhotos';
 import StepPropertyInfo from './wizard/StepPropertyInfo';
 import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
-import { renderRealEstateCard, PropertyCardData } from './RealEstateCardTemplates';
+import { PropertyCardData } from './RealEstateCardTemplates';
 import SocialPublishDialog from './SocialPublishDialog';
 // CarouselTour removed
 import GeneratingAnimation from './GeneratingAnimation';

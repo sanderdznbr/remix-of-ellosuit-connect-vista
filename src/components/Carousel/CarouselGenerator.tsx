@@ -1828,8 +1828,12 @@ const CarouselGenerator: React.FC = () => {
       // === REAL ESTATE: Convert property photos from blob URLs to base64 data URLs ===
       const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
       let propertyPhotoDataUrls: string[][] = [];
+      console.log('[BLEND_DETECT] useRealEstateBlend:', useRealEstateBlend, 
+        'snapshotIsRealEstate:', snapshotIsRealEstate,
+        'propertyCount:', snapshotPropertyList.length,
+        'photosPerProp:', snapshotPropertyList.map(p => p.photos?.length || 0));
       if (useRealEstateBlend) {
-        console.log('[BLEND] ✅ Real estate blend mode ACTIVE — will generate AI on black bg then blend with real photos');
+        console.log('[BLEND] ✅ Real estate blend mode ACTIVE — photos will be composited after AI generation');
         setImageGenProgress('📸 Processando fotos dos imóveis...');
         propertyPhotoDataUrls = await Promise.all(
           snapshotPropertyList.map(async (prop) => {
@@ -2129,17 +2133,17 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;
           
-          // Load both images
           const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
             const img = document.createElement('img') as HTMLImageElement;
             if (src.startsWith('http')) img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
-            img.onerror = reject;
+            img.onerror = (e) => { console.error('[BLEND] Image load error:', src.substring(0, 80), e); reject(e); };
             img.src = src;
           });
           
-          // 1. Draw REAL PHOTO as background (cover fit)
+          // === STEP 1: Draw REAL PHOTO as full background (cover fit) ===
           const photoImg = await loadImg(photoDataUrl);
+          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height);
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
           let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
@@ -2147,18 +2151,45 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
           ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
           
-          // 2. Slight darkening for contrast
-          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          // === STEP 2: Add gradient overlay (transparent top → dark bottom) for text readability ===
+          const gradient = ctx.createLinearGradient(0, H * 0.35, 0, H);
+          gradient.addColorStop(0, 'rgba(0,0,0,0)');
+          gradient.addColorStop(0.4, 'rgba(0,0,0,0.3)');
+          gradient.addColorStop(0.7, 'rgba(0,0,0,0.65)');
+          gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+          ctx.fillStyle = gradient;
           ctx.fillRect(0, 0, W, H);
           
-          // 3. Draw AI overlay on top using "lighten" blend mode
-          // Black areas of AI image become transparent, graphic elements stay visible
+          // === STEP 3: Draw BOTTOM portion of AI image (text/specs area) ===
+          // The AI generates a full card - we take only the bottom ~50% where text elements are
           const aiImg = await loadImg(aiImageUrl);
-          ctx.globalCompositeOperation = 'lighten';
-          ctx.drawImage(aiImg, 0, 0, W, H);
-          ctx.globalCompositeOperation = 'source-over'; // reset
+          console.log('[BLEND] AI image loaded:', aiImg.width, 'x', aiImg.height);
+          const cutRatio = 0.45; // Take bottom 45% of AI image
+          const aiCutY = aiImg.height * (1 - cutRatio);
+          const canvasCutY = H * (1 - cutRatio);
           
-          // 4. Draw logo if available
+          // Draw bottom portion with screen blend to preserve bright text on dark gradient
+          ctx.globalCompositeOperation = 'screen';
+          ctx.drawImage(
+            aiImg, 
+            0, aiCutY, aiImg.width, aiImg.height * cutRatio,  // source: bottom 45% of AI
+            0, canvasCutY, W, H * cutRatio                     // dest: bottom 45% of canvas
+          );
+          ctx.globalCompositeOperation = 'source-over';
+          
+          // Also draw the TOP header elements (brand badge, title) from AI at reduced opacity
+          // Take top 20% of AI image for header elements
+          ctx.globalAlpha = 0.85;
+          ctx.globalCompositeOperation = 'screen';
+          ctx.drawImage(
+            aiImg,
+            0, 0, aiImg.width, aiImg.height * 0.22,  // source: top 22% of AI
+            0, 0, W, H * 0.22                         // dest: top 22% of canvas
+          );
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 1.0;
+          
+          // === STEP 4: Draw logo ===
           if (logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
@@ -2176,12 +2207,13 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('middle')) ly = (H - lh) / 2;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10;
+              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
               ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             } catch (e) { console.warn('[BLEND] Logo draw failed:', e); }
           }
           
+          console.log('[BLEND] Composite complete');
           return canvas.toDataURL('image/jpeg', 0.92);
         };
         

@@ -261,13 +261,13 @@ Deno.serve(async (req) => {
         for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos das referências de estilo. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial.` });
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
       } else {
         // No face refs — send all style refs
         for (const ref of validStyleRefs) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências.` });
+        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie textos, títulos, nomes, @handles ou qualquer texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no prompt do usuário.` });
       }
 
       messageContent.push({ type: 'text', text: textPrompt });

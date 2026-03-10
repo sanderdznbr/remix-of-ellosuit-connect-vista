@@ -1768,8 +1768,10 @@ const CarouselGenerator: React.FC = () => {
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
       console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))));
       if (isRealEstateStyle) {
-        const hasPhotos = propertyList.some(p => p.photos.length > 0);
-        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'entering Canvas path regardless');
+        // Use ref to avoid stale closure — propertyList state may be outdated in async context
+        const currentPropertyList = propertyListRef.current;
+        const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
+        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
         if (!hasPhotos) {
           console.warn('[REAL_ESTATE_DEBUG] No property photos found! Cards will use AI generation as fallback.');
         }

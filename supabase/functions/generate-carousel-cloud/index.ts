@@ -310,8 +310,8 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
       try {
         const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
         const analysisContent: any[] = [];
-        // Send up to 4 reference images for analysis
-        for (const ref of allStyleRefs.slice(0, 4)) {
+        // Send up to 6 reference images for thorough analysis
+        for (const ref of allStyleRefs.slice(0, 6)) {
           analysisContent.push({ type: 'image_url', image_url: { url: ref } });
         }
         analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Return ONLY a JSON object:

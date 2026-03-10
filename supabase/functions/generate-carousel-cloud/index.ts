@@ -474,7 +474,8 @@ ${dna.signature || 'Replicate the most distinctive feature.'}
         else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
         if (imageSettings.wearsGlasses) promptParts.push('The person MUST be wearing glasses/eyeglasses.');
       }
-      if (brandColors.length > 0) {
+      // Only inject brand colors when NOT using a marketplace style (to avoid contaminating the style palette)
+      if (brandColors.length > 0 && !isFullBleed && !marketplaceStyle) {
         promptParts.push(`PALETA DE CORES DA MARCA: use predominantemente estas cores da marca do cliente: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`);
       }
 

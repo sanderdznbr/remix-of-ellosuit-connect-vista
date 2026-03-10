@@ -53,8 +53,8 @@ serve(async (req) => {
       });
     }
 
-    const body = await req.json();
     const { mode } = body;
+    const variationIndex = body.variationIndex || 0;
 
     // ─── INPAINT MODE ──────────────────────────────
     if (mode === 'inpaint') {
@@ -238,7 +238,7 @@ ${styleInstructions}`;
         model: "google/gemini-3-pro-image-preview",
         messages,
         modalities: ["image", "text"],
-        temperature: 0.1,
+        temperature: variationIndex > 0 ? 0.3 : 0.1, // slightly higher temp for variations
       }),
     });
 

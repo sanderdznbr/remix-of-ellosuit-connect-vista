@@ -229,11 +229,39 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     await updateJob(jobId, { status: 'generating_text', progress_message: 'Gerando conteúdo do carrossel...' });
 
     const cardCount = job.card_count || 10;
-    const imageCardIndices: number[] = [0];
+    const faceRefUrls_pre = (job.face_ref_urls || []) as string[];
+    const hasFaceRefs = faceRefUrls_pre.length > 0;
+    
+    // Use imageCardCount from job if available, otherwise default logic
+    const jobImageCardCount = job.image_card_count;
+    const effectiveImageCardCount = hasFaceRefs ? cardCount : (jobImageCardCount ?? Math.ceil(cardCount * 0.6));
+    
+    const imageCardIndices: number[] = [0]; // cover always gets image
     const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);
     const shuffled = contentIndices.sort(() => Math.random() - 0.5);
-    for (let i = 0; i < Math.min(Math.ceil(cardCount * 0.6), shuffled.length); i++) {
+    for (let i = 0; i < Math.min(effectiveImageCardCount - 1, shuffled.length); i++) {
       imageCardIndices.push(shuffled[i]);
+    }
+    
+    // Face distribution: which cards get the user's face
+    const jobFaceCardCount = job.face_card_count;
+    const faceCardIndices = new Set<number>();
+    if (hasFaceRefs) {
+      const defaultFaceCount = jobFaceCardCount != null ? jobFaceCardCount : Math.max(1, Math.round(cardCount * 0.25));
+      const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
+      faceCardIndices.add(0); // cover always gets face
+      if (effectiveFaceCount >= cardCount) {
+        for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
+      } else {
+        const remaining = effectiveFaceCount - 1;
+        if (remaining > 0) {
+          const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+          const step = middleIndices.length / remaining;
+          for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+            faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+          }
+        }
+      }
     }
 
     let textData: any;
@@ -387,13 +415,20 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
     const brandColors = (imageSettings.brandColors as string[] | undefined) || [];
 
     // Build all image generation tasks
-    interface ImageTask { index: number; prompt: string; negPrompt: string; }
+    // Extract facePersonsMeta once before the loop
+    const facePersonsMeta = imageSettings.facePersonsMetadata;
+    const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
+
+    interface ImageTask { index: number; prompt: string; negPrompt: string; cardGetsFace: boolean; }
     const imageTasks: ImageTask[] = [];
 
     for (let i = 0; i < cards.length; i++) {
       const card = cards[i];
       const shouldGenImage = isFullBleed || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i);
       if (!shouldGenImage) continue;
+
+      // Determine if this card should have the user's face
+      const cardGetsFace = hasFaceRefsForCarousel && faceCardIndices.has(i);
 
       let imgPrompt: string;
       if (isFullBleed) {
@@ -404,6 +439,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         const isCta = card.type === 'cta' || i === cards.length - 1;
         const parts: string[] = [];
         parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
+        parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta. NÃO adicione bordas brancas, cinzas ou de qualquer cor ao redor da imagem.');
         
         // Logo/brand — keep minimal
         if (job.brand_name) {
@@ -415,6 +451,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         if (isCover) {
           parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);
           if (card.subtitle) parts.push(`Subtítulo: "${card.subtitle}".`);
+          if (cardGetsFace) parts.push('INCLUA a pessoa das fotos de referência facial neste card.');
         } else if (isCta) {
           parts.push(`CTA FINAL (card ${i + 1}/${cards.length}).`);
           if (card.title) parts.push(`Título: "${card.title}".`);
@@ -424,6 +461,11 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
           const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
           if (bodyText) parts.push(`Texto: "${bodyText}".`);
           if (card.bodyBottom) parts.push(`Secundário: "${card.bodyBottom}".`);
+          if (cardGetsFace) parts.push('INCLUA a pessoa das fotos de referência facial neste card.');
+        }
+        // Cards without face: add topic-relevant image instruction
+        if (!cardGetsFace && hasFaceRefsForCarousel) {
+          parts.push('NÃO inclua pessoas humanas neste card. Use elementos visuais, objetos, ícones ou cenários relacionados ao tema.');
         }
         imgPrompt = parts.join(' ');
       } else {
@@ -433,9 +475,6 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       // Build final prompt — keep it simple for fullbleed
       const promptParts = [];
       if (isFullBleed) {
-        // For fullbleed: DON'T include stylePrompt in the prompt text.
-        // It will be sent as stylePrompt param to generate-carousel-image,
-        // which handles it in "visual clone mode" (images-first, minimal text).
         promptParts.push(imgPrompt);
       } else if (promptStyle) {
         promptParts.push(promptStyle);
@@ -449,17 +488,20 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         promptParts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
         promptParts.push('Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
       }
+      promptParts.push('CRITICAL: ZERO borders, ZERO frames, ZERO margins. Full bleed edge to edge.');
 
       // Face attributes
-      const facePersonsMeta = imageSettings.facePersonsMetadata;
-      const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
-      if (faceRefUrls.length > 0 && isMultiPerson) {
+      if (cardGetsFace && isMultiPerson && facePersonsMeta) {
         promptParts.push(`${facePersonsMeta.length} pessoas distintas com rostos diferentes.`);
-      } else if (faceRefUrls.length > 0) {
+      } else if (cardGetsFace) {
         const fg = imageSettings.faceGender;
         if (fg === 'male') promptParts.push('Pessoa MASCULINA.');
         else if (fg === 'female') promptParts.push('Pessoa FEMININA.');
         if (imageSettings.wearsGlasses) promptParts.push('Usando óculos.');
+      }
+      // Cards that should NOT have faces
+      if (!cardGetsFace && hasFaceRefsForCarousel && !styleRecommendsNoFaces) {
+        promptParts.push('NO HUMANS, NO PEOPLE, NO PORTRAITS, NO FACES in this card. Use objects, icons, abstract elements, or scenery related to the topic instead.');
       }
       // Brand colors only when NOT using marketplace style
       if (brandColors.length > 0 && !isFullBleed && !marketplaceStyle) {
@@ -468,9 +510,11 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
 
       const finalPrompt = promptParts.filter(Boolean).join(' ');
       // For fullbleed, minimal negative prompt — let the refs guide
-      const negPrompt = isFullBleed ? antiFaceNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
+      const negPrompt = isFullBleed 
+        ? [antiFaceNeg, 'no borders, no frames, no margins, no white border, no picture frame'].filter(Boolean).join(', ')
+        : [baseNeg, job.negative_prompt, 'no borders, no frames, no margins'].filter(Boolean).join(', ');
 
-      imageTasks.push({ index: i, prompt: finalPrompt, negPrompt });
+      imageTasks.push({ index: i, prompt: finalPrompt, negPrompt, cardGetsFace });
     }
 
     // === DIAGNOSTIC LOG ===
@@ -510,12 +554,13 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
           const url = await generateOneImage({
             prompt: task.prompt,
             topic: task.prompt.slice(0, 200),
-            faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+            // Only send face refs to cards that should have the user's face
+            faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
             styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
             imageModel: imageSettings.model || 'auto',
             negativePrompt: task.negPrompt,
-            fidelity: isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced'),
-            facePersonsMetadata: isMultiPerson ? facePersonsMeta : undefined,
+            fidelity: task.cardGetsFace ? 'high' : (isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced')),
+            facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
             // Only send brandColors when NOT in fullbleed marketplace mode
             ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),

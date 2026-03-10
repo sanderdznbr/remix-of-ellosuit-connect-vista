@@ -37,14 +37,18 @@ const FaceGenerator: React.FC = () => {
   const [selectedMarketplaceStyle, setSelectedMarketplaceStyle] = useState<string | null>(null);
   const [marketplaceStyles, setMarketplaceStyles] = useState<MarketplaceStyle[]>([]);
   const [prompt, setPrompt] = useState('');
+  const [photoCount, setPhotoCount] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [gallery, setGallery] = useState<GeneratedPortrait[]>([]);
   const [showGallery, setShowGallery] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
+  const [lastGeneratedUrls, setLastGeneratedUrls] = useState<string[]>([]);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [inpaintUrl, setInpaintUrl] = useState<string | null>(null);
   const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  const [cloudJobIds, setCloudJobIds] = useState<string[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -173,8 +177,11 @@ const FaceGenerator: React.FC = () => {
 
     setStep('generating');
     setIsGenerating(true);
+    setGenerationProgress({ current: 0, total: photoCount });
+    setLastGeneratedUrls([]);
 
     try {
+      // Upload face refs
       const faceUrls: string[] = [];
       for (let i = 0; i < faceFiles.length; i++) {
         const path = `portraits/${companyId}/refs/face_${Date.now()}_${i}.${faceFiles[i].name.split('.').pop()}`;
@@ -182,6 +189,7 @@ const FaceGenerator: React.FC = () => {
         if (url) faceUrls.push(url);
       }
 
+      // Upload style refs
       const styleUrls: string[] = [];
       for (let i = 0; i < styleRefFiles.length; i++) {
         const path = `portraits/${companyId}/refs/style_${Date.now()}_${i}.${styleRefFiles[i].name.split('.').pop()}`;
@@ -189,46 +197,80 @@ const FaceGenerator: React.FC = () => {
         if (url) styleUrls.push(url);
       }
 
-      const { data: portrait, error: insertError } = await supabase.from('generated_portraits').insert({
-        user_id: user.id, company_id: companyId,
-        title: prompt.slice(0, 80), prompt,
-        face_ref_urls: faceUrls, style_ref_urls: styleUrls,
-        marketplace_style_id: selectedMarketplaceStyle, status: 'generating',
-      }).select('id').single();
-
-      if (insertError || !portrait) throw insertError || new Error('Failed to create record');
-
+      const batchId = `batch_${Date.now()}`;
+      const generatedUrls: string[] = [];
       const { data: session } = await supabase.auth.getSession();
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.session?.access_token}` },
-          body: JSON.stringify({ portraitId: portrait.id, prompt, faceRefUrls: faceUrls, styleRefUrls: styleUrls, marketplaceStyleId: selectedMarketplaceStyle }),
+
+      // Generate photos sequentially (to avoid rate limits)
+      for (let p = 0; p < photoCount; p++) {
+        setGenerationProgress({ current: p, total: photoCount });
+
+        // Create record
+        const { data: portrait, error: insertError } = await supabase.from('generated_portraits').insert({
+          user_id: user.id, company_id: companyId,
+          title: photoCount > 1 ? `${prompt.slice(0, 70)} (${p + 1}/${photoCount})` : prompt.slice(0, 80),
+          prompt,
+          face_ref_urls: faceUrls, style_ref_urls: styleUrls,
+          marketplace_style_id: selectedMarketplaceStyle, status: 'generating',
+          metadata: { photo_count: photoCount, batch_id: batchId, batch_index: p },
+        } as any).select('id').single();
+
+        if (insertError || !portrait) {
+          console.error('Insert error:', insertError);
+          continue;
         }
-      );
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Error ${response.status}`);
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.session?.access_token}` },
+              body: JSON.stringify({
+                portraitId: portrait.id, prompt, faceRefUrls: faceUrls, styleRefUrls: styleUrls,
+                marketplaceStyleId: selectedMarketplaceStyle,
+                variationIndex: p, // hint for slight variation
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            console.error(`Photo ${p + 1} error:`, err);
+            continue;
+          }
+
+          const result = await response.json();
+          if (result.imageUrl) {
+            generatedUrls.push(result.imageUrl);
+            await saveToGalleryFolder(result.imageUrl, photoCount > 1 ? `${prompt.slice(0, 60)} (${p + 1})` : prompt.slice(0, 80));
+          }
+        } catch (err) {
+          console.error(`Photo ${p + 1} generation failed:`, err);
+        }
+
+        // Small delay between generations to avoid rate limits
+        if (p < photoCount - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
       }
 
-      const result = await response.json();
-      const imageUrl = result.imageUrl;
-
-      // Save to brand gallery folder
-      if (imageUrl) {
-        await saveToGalleryFolder(imageUrl, prompt.slice(0, 80));
-      }
+      setGenerationProgress({ current: photoCount, total: photoCount });
 
       // Refresh gallery
       const { data: updated } = await supabase.from('generated_portraits')
         .select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50);
       setGallery((updated as GeneratedPortrait[]) || []);
 
-      setLastGeneratedUrl(imageUrl);
-      setStep('result');
-      toast.success('Retrato gerado com sucesso!');
+      if (generatedUrls.length > 0) {
+        setLastGeneratedUrls(generatedUrls);
+        setLastGeneratedUrl(generatedUrls[0]);
+        setStep('result');
+        toast.success(`${generatedUrls.length} retrato(s) gerado(s) com sucesso!`);
+      } else {
+        toast.error('Nenhuma foto foi gerada com sucesso');
+        setStep('prompt');
+      }
     } catch (error: any) {
       console.error('Generation error:', error);
       toast.error(error.message || 'Erro ao gerar retrato');
@@ -252,8 +294,11 @@ const FaceGenerator: React.FC = () => {
     setStyleRefPreviews([]);
     setSelectedMarketplaceStyle(null);
     setPrompt('');
+    setPhotoCount(1);
     setShowGallery(false);
     setLastGeneratedUrl(null);
+    setLastGeneratedUrls([]);
+    setCloudJobIds([]);
   };
 
   // ─── Inpainting handler ──────────────────────────────
@@ -544,10 +589,32 @@ const FaceGenerator: React.FC = () => {
                   placeholder="Ex: Retrato profissional corporativo, fundo cinza neutro, iluminação de estúdio, terno azul marinho, expressão confiante..."
                   className="w-full h-40 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 resize-none outline-none focus:border-purple-500/40 transition-colors"
                 />
-                <div className="mt-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+
+                {/* Photo count selector */}
+                <div className="mt-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <p className="text-xs text-white/50 mb-3">Quantidade de fotos a gerar</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <button key={n} onClick={() => setPhotoCount(n)}
+                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                          photoCount === n
+                            ? 'bg-purple-600 text-white border border-purple-500'
+                            : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/60'
+                        }`}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  {photoCount > 1 && (
+                    <p className="text-[10px] text-amber-400/60 mt-2">⚡ {photoCount} variações serão geradas com o mesmo prompt. Cada uma pode levar ~60s.</p>
+                  )}
+                </div>
+
+                <div className="mt-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <p className="text-xs text-white/30 mb-2">Resumo</p>
                   <div className="flex items-center gap-3 text-xs text-white/50">
                     <span>🧑 {faceFiles.length} rosto(s)</span>
+                    <span>📸 {photoCount} foto(s)</span>
                     {selectedMarketplaceStyle && <span>🎨 Estilo selecionado</span>}
                     {styleRefFiles.length > 0 && <span>🖼️ {styleRefFiles.length} ref(s)</span>}
                   </div>
@@ -558,7 +625,7 @@ const FaceGenerator: React.FC = () => {
                   </button>
                   <button onClick={handleGenerate} disabled={!prompt.trim() || isGenerating}
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
-                    <Sparkles className="w-4 h-4" /> Gerar Retrato
+                    <Sparkles className="w-4 h-4" /> Gerar {photoCount > 1 ? `${photoCount} Retratos` : 'Retrato'}
                   </button>
                 </div>
               </motion.div>
@@ -568,28 +635,57 @@ const FaceGenerator: React.FC = () => {
             {step === 'generating' && (
               <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="w-10 h-10 text-purple-400 animate-spin mb-4" />
-                <p className="text-white/60 text-sm">Gerando seu retrato profissional...</p>
-                <p className="text-white/25 text-xs mt-2">Isso pode levar até 60 segundos</p>
+                <p className="text-white/60 text-sm">
+                  {photoCount > 1
+                    ? `Gerando retrato ${generationProgress.current + 1} de ${generationProgress.total}...`
+                    : 'Gerando seu retrato profissional...'}
+                </p>
+                <p className="text-white/25 text-xs mt-2">
+                  {photoCount > 1
+                    ? `Aproximadamente ${photoCount * 60} segundos no total`
+                    : 'Isso pode levar até 60 segundos'}
+                </p>
+                {photoCount > 1 && (
+                  <div className="w-48 mt-4 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(5, (generationProgress.current / generationProgress.total) * 100)}%` }} />
+                  </div>
+                )}
               </motion.div>
             )}
 
             {/* Result */}
-            {step === 'result' && lastGeneratedUrl && (
+            {step === 'result' && lastGeneratedUrls.length > 0 && (
               <motion.div key="result" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center">
-                <h2 className="text-white/80 text-sm font-medium mb-4">✅ Retrato gerado!</h2>
-                <div className="relative group rounded-2xl overflow-hidden border border-white/[0.08] mb-6 max-w-md w-full cursor-pointer"
-                  onClick={() => setLightboxUrl(lastGeneratedUrl)}>
-                  <img src={lastGeneratedUrl} alt="Retrato gerado" className="w-full object-contain" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Maximize2 className="w-8 h-8 text-white" />
+                <h2 className="text-white/80 text-sm font-medium mb-4">
+                  ✅ {lastGeneratedUrls.length > 1 ? `${lastGeneratedUrls.length} retratos gerados!` : 'Retrato gerado!'}
+                </h2>
+                {lastGeneratedUrls.length === 1 ? (
+                  <div className="relative group rounded-2xl overflow-hidden border border-white/[0.08] mb-6 max-w-md w-full cursor-pointer"
+                    onClick={() => setLightboxUrl(lastGeneratedUrls[0])}>
+                    <img src={lastGeneratedUrls[0]} alt="Retrato gerado" className="w-full object-contain" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Maximize2 className="w-8 h-8 text-white" />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 w-full">
+                    {lastGeneratedUrls.map((url, i) => (
+                      <div key={i} className="relative group rounded-xl overflow-hidden border border-white/[0.08] cursor-pointer"
+                        onClick={() => setLightboxUrl(url)}>
+                        <img src={url} alt={`Retrato ${i + 1}`} className="w-full aspect-[3/4] object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Maximize2 className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-medium text-white/80 bg-black/50">
+                          {i + 1}/{lastGeneratedUrls.length}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-white/30 mb-4">Salvo automaticamente na pasta "Imagens Geradas" da Galeria de Marca</p>
                 <div className="flex gap-3">
-                  <a href={lastGeneratedUrl} download target="_blank" rel="noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-white/[0.08] hover:bg-white/[0.12] transition-colors">
-                    <Download className="w-4 h-4" /> Baixar
-                  </a>
                   <button onClick={resetWizard}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 transition-colors cursor-pointer">
                     <Sparkles className="w-4 h-4" /> Gerar outro

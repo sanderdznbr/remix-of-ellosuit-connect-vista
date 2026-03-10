@@ -1162,6 +1162,8 @@ const CarouselGenerator: React.FC = () => {
         topic: topic.trim(),
         keywords: keywords,
         card_count: mode === 'single-post' ? 1 : cardCount,
+        image_card_count: imageCardCount,
+        face_card_count: faceCardCount,
         style_config: styleConfig as any,
         marketplace_style_id: activeMarketplaceStyle?.id || null,
         marketplace_style_config: marketplaceConfig as any,

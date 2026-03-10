@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
       if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL: Compare o rosto gerado com as fotos de referência do INÍCIO. A pessoa DEVE ser RECONHECÍVEL como a MESMA pessoa. Fidelidade facial > tudo.` });
+        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL OBRIGATÓRIA: Antes de finalizar, compare PONTO A PONTO o rosto gerado com as fotos de referência do INÍCIO — mesma estrutura óssea, olhos, nariz, boca, sobrancelhas, tom de pele, formato do rosto. Se houver QUALQUER diferença significativa, regenere com maior fidelidade. Fidelidade facial > estilo visual > tudo.` });
       }
     } else {
       // STANDARD MODE: Face refs FIRST, then style refs

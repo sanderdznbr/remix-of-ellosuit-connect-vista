@@ -2321,7 +2321,7 @@ const CarouselGenerator: React.FC = () => {
         const variation = variationHints[(i - 1) % variationHints.length];
         // Alternate: some cards show the person, others are text-focused without people
         const showPerson = faceRefUrls.length > 0 && (i % 3 !== 0); // Every 3rd content card: no person, text-only
-        let imgPrompt = `${cleanTopic}: ${cardDesc}. Composition: ${variation}.`;
+        let imgPrompt = `${cleanTopic}: ${cardDesc}. Composition: ${variation}. MANDATORY: This card MUST look like it belongs to the EXACT SAME visual series as the cover image — same color palette, same typography style, same layout approach, same mood.`;
         if (!showPerson && faceRefUrls.length > 0) {
           imgPrompt += ' This card should be TEXT-FOCUSED with abstract/editorial background — do NOT include any person or face.';
         }

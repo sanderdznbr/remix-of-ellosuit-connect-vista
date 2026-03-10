@@ -5155,6 +5155,8 @@ FORBIDDEN:
                             setActiveMarketplaceStyle(config);
                             setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                             setShowStylePanel(false);
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = config;
                             setTransitionToGenerate(true);
                             setCurrentCarouselId(null);
                             const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);

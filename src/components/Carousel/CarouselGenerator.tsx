@@ -1763,11 +1763,10 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // ========== REAL ESTATE: AI overlay + Canvas compositing ==========
+      // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
       if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
-        setImageGenProgress('🏠 Gerando cards imobiliários por IA...');
+        setImageGenProgress('🏠 Gerando cards imobiliários...');
         
-        // Convert blob/object URL to base64
         const convertToBase64 = async (url: string): Promise<string> => {
           try {
             const response = await fetch(url);
@@ -1780,157 +1779,234 @@ const CarouselGenerator: React.FC = () => {
             });
           } catch { return url; }
         };
-        
-        // Canvas composite: overlay (on black bg) + real photo using "screen" blend mode
-        const compositeOnCanvas = async (photoUrl: string, overlayDataUrl: string): Promise<string> => {
+
+        const loadImage = (src: string): Promise<HTMLImageElement> => {
           return new Promise((resolve, reject) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1080;
-            canvas.height = 1350;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) { reject('No canvas context'); return; }
-            
-            const photoImg = document.createElement('img') as HTMLImageElement;
-            photoImg.crossOrigin = 'anonymous';
-            
-            photoImg.onload = () => {
-              // Step 1: Draw real photo as base (cover fit)
-              const pRatio = photoImg.width / photoImg.height;
-              const cRatio = 1080 / 1350;
-              let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
-              if (pRatio > cRatio) {
-                sw = photoImg.height * cRatio;
-                sx = (photoImg.width - sw) / 2;
-              } else {
-                sh = photoImg.width / cRatio;
-                sy = (photoImg.height - sh) / 2;
-              }
-              ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, 1080, 1350);
-              
-              // Step 2: Add subtle gradient for text readability
-              const grad = ctx.createLinearGradient(0, 1350 * 0.5, 0, 1350);
-              grad.addColorStop(0, 'rgba(0,0,0,0)');
-              grad.addColorStop(0.5, 'rgba(0,0,0,0.3)');
-              grad.addColorStop(1, 'rgba(0,0,0,0.7)');
-              ctx.fillStyle = grad;
-              ctx.fillRect(0, 0, 1080, 1350);
-              
-              // Step 3: Draw AI overlay with "screen" blend mode (black → transparent)
-              const overlayImg = document.createElement('img') as HTMLImageElement;
-              overlayImg.onload = () => {
-                ctx.globalCompositeOperation = 'screen';
-                ctx.drawImage(overlayImg, 0, 0, 1080, 1350);
-                ctx.globalCompositeOperation = 'source-over';
-                
-                try {
-                  resolve(canvas.toDataURL('image/jpeg', 0.92));
-                } catch (e) {
-                  reject(e);
-                }
-              };
-              overlayImg.onerror = () => {
-                // If overlay fails to load, return photo with gradient only
-                try { resolve(canvas.toDataURL('image/jpeg', 0.92)); } catch (e) { reject(e); }
-              };
-              overlayImg.src = overlayDataUrl;
-            };
-            
-            photoImg.onerror = () => reject('Failed to load photo');
-            
-            // Load photo - if it's base64, use directly; if URL, may need conversion
-            if (photoUrl.startsWith('data:')) {
-              photoImg.src = photoUrl;
-            } else {
-              // Try direct load first (works for same-origin/CORS-enabled URLs)
-              photoImg.src = photoUrl;
-            }
+            const img = document.createElement('img') as HTMLImageElement;
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('Image load failed'));
+            img.src = src;
           });
+        };
+
+        // Pure Canvas: draw real photo + text/specs overlay directly
+        const renderCardOnCanvas = async (
+          photoUrl: string,
+          prop: PropertyData,
+          cardType: string,
+          cardIdx: number,
+          total: number,
+          accent: string
+        ): Promise<string> => {
+          const W = 1080, H = 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('No canvas context');
+
+          // 1. Draw real photo (cover fit)
+          const photoBase64 = await convertToBase64(photoUrl);
+          const photoImg = await loadImage(photoBase64);
+          const pRatio = photoImg.width / photoImg.height;
+          const cRatio = W / H;
+          let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
+          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
+          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
+
+          // 2. Gradient overlays for text readability
+          // Top gradient
+          const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.35);
+          topGrad.addColorStop(0, 'rgba(0,0,0,0.65)');
+          topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = topGrad;
+          ctx.fillRect(0, 0, W, H * 0.35);
+
+          // Bottom gradient
+          const botGrad = ctx.createLinearGradient(0, H * 0.55, 0, H);
+          botGrad.addColorStop(0, 'rgba(0,0,0,0)');
+          botGrad.addColorStop(0.4, 'rgba(0,0,0,0.5)');
+          botGrad.addColorStop(1, 'rgba(0,0,0,0.85)');
+          ctx.fillStyle = botGrad;
+          ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+          // Helper: draw text with shadow
+          const drawText = (text: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left', maxW?: number) => {
+            ctx.save();
+            ctx.font = font;
+            ctx.fillStyle = color;
+            ctx.textAlign = align;
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            if (maxW) ctx.fillText(text, x, y, maxW);
+            else ctx.fillText(text, x, y);
+            ctx.restore();
+          };
+
+          // Helper: draw rounded rect
+          const drawRoundedRect = (x: number, y: number, w: number, h: number, r: number, fill: string) => {
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, r);
+            ctx.fillStyle = fill;
+            ctx.fill();
+          };
+
+          // Helper: format price
+          const formatPrice = (price: string) => {
+            if (!price) return '';
+            const num = parseFloat(price.replace(/[^\d.,]/g, '').replace(',', '.'));
+            if (isNaN(num)) return price;
+            return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
+          };
+
+          const modeLabel = prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA';
+          const priceStr = formatPrice(prop.price || '');
+          const locationText = [prop.neighborhood, prop.location].filter(Boolean).join(' · ');
+
+          // Build specs array
+          const specs: string[] = [];
+          if (prop.area) specs.push(`${prop.area}m²`);
+          if (prop.bedrooms) specs.push(`${prop.bedrooms} Quartos`);
+          if (prop.suites) specs.push(`${prop.suites} Suítes`);
+          if (prop.bathrooms) specs.push(`${prop.bathrooms} Banh.`);
+          if (prop.parking) specs.push(`${prop.parking} Vagas`);
+
+          if (cardType === 'cover') {
+            // === COVER CARD ===
+            // Mode badge (top-left)
+            const badgeW = ctx.measureText ? 180 : 180;
+            drawRoundedRect(60, 60, badgeW, 50, 25, accent);
+            drawText(modeLabel, 60 + badgeW / 2, 93, 'bold 24px sans-serif', '#FFFFFF', 'center');
+
+            // Title
+            const title = prop.title || (prop.mode === 'rent' ? 'Alugue Seu Novo Lar' : 'Seu Novo Lar');
+            drawText(title, 60, H * 0.72, 'bold 72px sans-serif', '#FFFFFF', 'left', W - 120);
+
+            // Price
+            if (priceStr) {
+              drawText(priceStr, 60, H * 0.80, 'bold 64px sans-serif', accent, 'left', W - 120);
+              if (prop.mode === 'rent') {
+                drawText('/mês', 60 + ctx.measureText(priceStr).width + 10, H * 0.80, '36px sans-serif', 'rgba(255,255,255,0.7)');
+              }
+            }
+
+            // Location
+            if (locationText) {
+              drawText(`📍 ${locationText}`, 60, H * 0.86, '32px sans-serif', 'rgba(255,255,255,0.9)', 'left', W - 120);
+            }
+
+            // Specs bar at bottom
+            if (specs.length > 0) {
+              const specBarY = H - 100;
+              drawRoundedRect(40, specBarY - 10, W - 80, 60, 12, 'rgba(0,0,0,0.6)');
+              const specText = specs.join('  •  ');
+              drawText(specText, W / 2, specBarY + 30, '28px sans-serif', '#FFFFFF', 'center', W - 100);
+            }
+
+            // Brand
+            if (brandName) {
+              drawText(brandName, W - 60, 90, 'bold 28px sans-serif', 'rgba(255,255,255,0.8)', 'right');
+            }
+
+          } else if (cardType === 'cta') {
+            // === CTA CARD ===
+            drawText('Agende sua', W / 2, H * 0.38, 'bold 68px sans-serif', '#FFFFFF', 'center');
+            drawText('Visita', W / 2, H * 0.45, 'bold 72px sans-serif', accent, 'center');
+
+            // CTA button
+            const btnW = 420, btnH = 70, btnX = (W - btnW) / 2, btnY = H * 0.55;
+            drawRoundedRect(btnX, btnY, btnW, btnH, 35, accent);
+            drawText('Fale Conosco', W / 2, btnY + 48, 'bold 32px sans-serif', '#FFFFFF', 'center');
+
+            if (priceStr) {
+              drawText(priceStr, W / 2, H * 0.70, 'bold 52px sans-serif', '#FFFFFF', 'center');
+            }
+            if (brandName) {
+              drawText(brandName, W / 2, H * 0.82, 'bold 36px sans-serif', 'rgba(255,255,255,0.8)', 'center');
+            }
+            if (userName) {
+              drawText(`@${userName}`, W / 2, H * 0.87, '28px sans-serif', 'rgba(255,255,255,0.6)', 'center');
+            }
+
+          } else {
+            // === CONTENT CARD ===
+            // Mode badge
+            drawRoundedRect(60, 60, 180, 50, 25, accent);
+            drawText(modeLabel, 150, 93, 'bold 24px sans-serif', '#FFFFFF', 'center');
+
+            // Card number badge
+            drawText(`${cardIdx + 1}/${total}`, W - 60, 90, '24px sans-serif', 'rgba(255,255,255,0.6)', 'right');
+
+            // Title
+            const title = prop.title || 'Detalhes do Imóvel';
+            drawText(title, 60, H * 0.72, 'bold 56px sans-serif', '#FFFFFF', 'left', W - 120);
+
+            // Price
+            if (priceStr) {
+              drawText(priceStr, 60, H * 0.80, 'bold 56px sans-serif', accent, 'left', W - 120);
+            }
+
+            // Location
+            if (locationText) {
+              drawText(`📍 ${locationText}`, 60, H * 0.86, '30px sans-serif', 'rgba(255,255,255,0.9)', 'left', W - 120);
+            }
+
+            // Specs
+            if (specs.length > 0) {
+              const specBarY = H - 100;
+              drawRoundedRect(40, specBarY - 10, W - 80, 60, 12, 'rgba(0,0,0,0.6)');
+              const specText = specs.join('  •  ');
+              drawText(specText, W / 2, specBarY + 30, '26px sans-serif', '#FFFFFF', 'center', W - 100);
+            }
+
+            // Highlights
+            if (prop.highlights) {
+              const highlight = prop.highlights.split(',')[0]?.trim();
+              if (highlight) {
+                drawRoundedRect(60, H * 0.62 - 10, ctx.measureText(highlight).width + 40, 42, 8, 'rgba(0,0,0,0.5)');
+                drawText(`✨ ${highlight}`, 80, H * 0.62 + 20, '26px sans-serif', accent);
+              }
+            }
+          }
+
+          return canvas.toDataURL('image/jpeg', 0.92);
         };
         
         let completed = 0;
         const totalToGen = updatedCards.length;
         
-        // Process cards in batches of 2 to avoid rate limits
-        for (let batchStart = 0; batchStart < updatedCards.length; batchStart += 2) {
-          if (batchStart > 0) await new Promise(r => setTimeout(r, 2000));
+        for (let i = 0; i < updatedCards.length; i++) {
+          const propIdx = realEstateMode === 'multiple' ? (i % propertyList.length) : 0;
+          const prop = propertyList[propIdx] || propertyList[0];
+          const photoIdx = i % Math.max(prop.photos.length, 1);
+          const photo = prop.photos[photoIdx]?.url || '';
           
-          const batchEnd = Math.min(batchStart + 2, updatedCards.length);
-          const batchPromises = [];
-          
-          for (let i = batchStart; i < batchEnd; i++) {
-            const card = updatedCards[i];
-            const propIdx = realEstateMode === 'multiple' ? (i % propertyList.length) : 0;
-            const prop = propertyList[propIdx] || propertyList[0];
-            const photoIdx = i % Math.max(prop.photos.length, 1);
-            const photo = prop.photos[photoIdx]?.url || '';
-            
-            if (!photo) {
-              completed++;
-              setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
-              continue;
-            }
-            
-            const cardType = card.type === 'cover' ? 'cover' : card.type === 'cta' ? 'cta' : 'content';
-            
-            batchPromises.push((async () => {
-              try {
-                // Step 1: Generate overlay on black background via edge function
-                setImageGenProgress(`🏠 ${completed}/${totalToGen} — Gerando overlay...`);
-                
-                const { data: fnData, error: fnError } = await supabase.functions.invoke('generate-realestate-card', {
-                  body: {
-                    propertyPhoto: 'placeholder', // Not needed for step 1
-                    propertyData: {
-                      price: prop.price, area: prop.area, bedrooms: prop.bedrooms,
-                      suites: prop.suites, bathrooms: prop.bathrooms, parking: prop.parking,
-                      location: prop.location, neighborhood: prop.neighborhood,
-                      title: prop.title, type: prop.type, mode: prop.mode,
-                      highlights: prop.highlights,
-                    },
-                    cardType,
-                    cardIndex: i,
-                    totalCards: totalToGen,
-                    accentColor,
-                    brandName,
-                    userName,
-                    logoPosition,
-                    step: 1, // Only generate overlay
-                  },
-                });
-                
-                if (fnError || !fnData?.overlayImage) {
-                  console.error('Overlay gen error:', fnError);
-                  // Fallback: use property photo directly
-                  const photoBase64 = await convertToBase64(photo);
-                  updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };
-                  completed++;
-                  setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
-                  return;
-                }
-                
-                // Step 2: Composite overlay onto real photo using Canvas
-                setImageGenProgress(`🏠 ${completed}/${totalToGen} — Compondo sobre foto real...`);
-                const photoBase64 = await convertToBase64(photo);
-                const finalImage = await compositeOnCanvas(photoBase64, fnData.overlayImage);
-                
-                updatedCards[i] = { ...updatedCards[i], imageUrl: finalImage, isAiImage: true };
-                completed++;
-                setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
-              } catch (err) {
-                console.error('Real estate card gen error for card', i, err);
-                try {
-                  const photoBase64 = await convertToBase64(photo);
-                  updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };
-                } catch {
-                  updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
-                }
-                completed++;
-                setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
-              }
-            })());
+          if (!photo) {
+            completed++;
+            setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
+            continue;
           }
           
-          await Promise.all(batchPromises);
+          const cardType = updatedCards[i].type === 'cover' ? 'cover' : updatedCards[i].type === 'cta' ? 'cta' : 'content';
+          
+          try {
+            setImageGenProgress(`🏠 ${completed + 1}/${totalToGen} — Renderizando card...`);
+            const finalImage = await renderCardOnCanvas(photo, prop, cardType, i, totalToGen, accentColor);
+            updatedCards[i] = { ...updatedCards[i], imageUrl: finalImage, isAiImage: true };
+          } catch (err) {
+            console.error('Real estate card render error for card', i, err);
+            try {
+              const photoBase64 = await convertToBase64(photo);
+              updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };
+            } catch {
+              updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+            }
+          }
+          completed++;
+          setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
         }
         
         const finalData = { ...data.data, cards: updatedCards };

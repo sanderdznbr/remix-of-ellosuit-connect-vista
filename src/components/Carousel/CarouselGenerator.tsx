@@ -63,6 +63,7 @@ import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepSpeed from './wizard/StepSpeed';
 import StepVisualStyle, { VisualCategory, PeopleMode } from './wizard/StepVisualStyle';
+import StepPeopleMode from './wizard/StepPeopleMode';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
@@ -207,8 +208,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
-  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Visual']), 'Logo', 'Velocidade'];
-  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const SIMPLE_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
 
   // Step 3: Image settings
@@ -3875,14 +3876,17 @@ FORBIDDEN:
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
                         activeMarketplaceStyle={activeMarketplaceStyle} />
                     )}
+                    {currentStepName === 'Pessoas' && (
+                      <StepPeopleMode
+                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
+                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
+                        cardCount={cardCount} />
+                    )}
                     {currentStepName === 'Visual' && (
                       <StepVisualStyle
                         selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
-                        referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
-                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
-                        cardCount={cardCount} />
+                        referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
                     )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
@@ -3974,7 +3978,7 @@ FORBIDDEN:
                     {wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Rosto' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
+                        {(currentStepName === 'Rosto' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

@@ -2078,7 +2078,7 @@ const CarouselGenerator: React.FC = () => {
     const newIndex = currentData.cards.length;
     const isTextOnlyCard = mode === 'solid';
 
-    const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
+    const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
     const requiresImage = mode === 'composed' || isFullBleedMarketplace;
 
     setCarouselData((prev) => {

@@ -1786,10 +1786,27 @@ const CarouselGenerator: React.FC = () => {
         const currentPropertyList = propertyListRef.current;
         const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
         console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
+      // DEFINITIVE: Read from generation snapshot (captured at click time) — immune to stale closures
+      const snapshot = generationSnapshotRef.current;
+      const snapshotIsRealEstate = snapshot?.isRealEstate || isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
+      const snapshotRealEstateMode = snapshot?.realEstateMode || realEstateMode || 'single';
+      const snapshotPropertyList = snapshot?.propertyList || propertyListRef.current;
+      
+      console.log('[REAL_ESTATE_DEBUG] snapshot:', JSON.stringify({
+        snapshotIsRealEstate,
+        snapshotRealEstateMode,
+        snapshotPropertyPhotos: snapshotPropertyList.map(p => p.photos.length),
+        hasSnapshot: !!snapshot,
+        isRealEstateStyle,
+        refIsRealEstate: !!activeMarketplaceStyleRef.current?.is_real_estate,
+      }));
+      
+      if (snapshotIsRealEstate) {
+        const currentPropertyList = snapshotPropertyList;
+        const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
+        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'photos per property:', currentPropertyList.map(p => p.photos.length));
         if (!hasPhotos) {
           console.warn('[REAL_ESTATE_DEBUG] No property photos found! Falling through to AI generation.');
-          // DON'T enter Canvas path without photos — let normal AI generation handle it
-          // but log extensively to help debug
           toast({ title: '⚠️ Nenhuma foto do imóvel encontrada', description: 'Usando imagem gerada por IA como alternativa. Para usar suas fotos reais, adicione-as no passo "Fotos do Imóvel".', variant: 'default' });
         } else {
         setImageGenProgress('🏠 Gerando cards imobiliários...');

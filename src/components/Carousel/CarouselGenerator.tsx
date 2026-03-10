@@ -1763,16 +1763,103 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // ========== REAL ESTATE: Skip AI image gen, use property photos directly ==========
-      if (isRealEstateStyle) {
-        for (let i = 0; i < updatedCards.length; i++) {
-          const propIdx = realEstateMode === 'multiple' ? (i % propertyList.length) : 0;
-          const prop = propertyList[propIdx] || propertyList[0];
-          if (prop && prop.photos.length > 0) {
-            const photoIdx = i % prop.photos.length;
-            updatedCards[i] = { ...updatedCards[i], imageUrl: prop.photos[photoIdx]?.url || '' };
+      // ========== REAL ESTATE: AI 3-step pipeline (overlay → composite) ==========
+      if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
+        setImageGenProgress('🏠 Gerando cards imobiliários por IA...');
+        
+        // Convert property photos to base64
+        const convertToBase64 = async (url: string): Promise<string> => {
+          try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          } catch {
+            return url; // fallback to original URL
           }
+        };
+        
+        let completed = 0;
+        const totalToGen = updatedCards.length;
+        
+        // Process cards in batches of 2 to avoid rate limits
+        for (let batchStart = 0; batchStart < updatedCards.length; batchStart += 2) {
+          if (batchStart > 0) await new Promise(r => setTimeout(r, 2000));
+          
+          const batchEnd = Math.min(batchStart + 2, updatedCards.length);
+          const batchPromises = [];
+          
+          for (let i = batchStart; i < batchEnd; i++) {
+            const card = updatedCards[i];
+            const propIdx = realEstateMode === 'multiple' ? (i % propertyList.length) : 0;
+            const prop = propertyList[propIdx] || propertyList[0];
+            const photoIdx = i % Math.max(prop.photos.length, 1);
+            const photo = prop.photos[photoIdx]?.url || '';
+            
+            if (!photo) {
+              completed++;
+              setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
+              continue;
+            }
+            
+            const cardType = card.type === 'cover' ? 'cover' : card.type === 'cta' ? 'cta' : 'content';
+            
+            batchPromises.push((async () => {
+              try {
+                const photoBase64 = await convertToBase64(photo);
+                
+                const { data: fnData, error: fnError } = await supabase.functions.invoke('generate-realestate-card', {
+                  body: {
+                    propertyPhoto: photoBase64,
+                    propertyData: {
+                      price: prop.price, area: prop.area, bedrooms: prop.bedrooms,
+                      suites: prop.suites, bathrooms: prop.bathrooms, parking: prop.parking,
+                      location: prop.location, neighborhood: prop.neighborhood,
+                      title: prop.title, type: prop.type, mode: prop.mode,
+                      highlights: prop.highlights,
+                    },
+                    cardType,
+                    cardIndex: i,
+                    totalCards: totalToGen,
+                    accentColor,
+                    brandName,
+                    userName,
+                    logoPosition,
+                  },
+                });
+                
+                completed++;
+                setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
+                
+                if (fnError) {
+                  console.error('Real estate card gen error:', fnError);
+                  // Fallback: use property photo directly
+                  updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+                  return;
+                }
+                
+                if (fnData?.imageUrl) {
+                  updatedCards[i] = { ...updatedCards[i], imageUrl: fnData.imageUrl, isAiImage: true };
+                } else {
+                  // Fallback
+                  updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+                }
+              } catch (err) {
+                console.error('Real estate card gen error for card', i, err);
+                completed++;
+                setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
+                updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+              }
+            })());
+          }
+          
+          await Promise.all(batchPromises);
         }
+        
         const finalData = { ...data.data, cards: updatedCards };
         setCarouselData(finalData);
         setGeneratingAllImages(false);

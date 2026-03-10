@@ -69,6 +69,7 @@ import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
+import StepPropertyCrop from './wizard/StepPropertyCrop';
 import StepPropertyInfo from './wizard/StepPropertyInfo';
 import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
@@ -307,10 +308,10 @@ const CarouselGenerator: React.FC = () => {
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -1433,9 +1434,10 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
 
-          // STEP 1: Draw REAL PHOTO as full background (cover fit with focal point)
+          // STEP 1: Draw REAL PHOTO as full background (cover fit with cropOffsetY or focalPoint)
           const photoImg = await loadImg(propertyPhotoBase64[0]);
           const firstPropPhotos = snapshotPropertyList[0]?.photos || [];
+          const cropOffsetY = firstPropPhotos[0]?.cropOffsetY;
           const focalPoint = firstPropPhotos[0]?.focalPoint || 'center';
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
@@ -1444,9 +1446,11 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2;
           } else {
             sh = photoImg.width / cRatio;
-            // Apply focal point
             const maxSy = photoImg.height - sh;
-            if (focalPoint === 'top') sy = 0;
+            if (cropOffsetY !== undefined) {
+              // Use precise crop offset from drag-to-reposition
+              sy = cropOffsetY * maxSy;
+            } else if (focalPoint === 'top') sy = 0;
             else if (focalPoint === 'bottom') sy = maxSy;
             else sy = maxSy / 2;
           }
@@ -2270,7 +2274,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
         console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
         
-        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center'): Promise<string> => {
+        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center', cropOffsetY?: number): Promise<string> => {
           const W = 1080, H = 1350;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
@@ -2284,9 +2288,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
           
-          // === STEP 1: Draw REAL PHOTO as full background (cover fit with focal point) ===
+          // === STEP 1: Draw REAL PHOTO as full background (cover fit with cropOffsetY or focalPoint) ===
           const photoImg = await loadImg(photoDataUrl);
-          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height, 'focal:', focalPoint);
+          console.log('[BLEND] Photo loaded:', photoImg.width, 'x', photoImg.height, 'focal:', focalPoint, 'cropOffsetY:', cropOffsetY);
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
           let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
@@ -2295,7 +2299,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           } else {
             sh = photoImg.width / cRatio;
             const maxSy = photoImg.height - sh;
-            if (focalPoint === 'top') sy = 0;
+            if (cropOffsetY !== undefined) {
+              sy = cropOffsetY * maxSy;
+            } else if (focalPoint === 'top') sy = 0;
             else if (focalPoint === 'bottom') sy = maxSy;
             else sy = maxSy / 2;
           }
@@ -2374,6 +2380,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           // Get the corresponding property photo + focal point
           let photoUrl = '';
           let focalPoint = 'center';
+          let cropOffset: number | undefined;
           if (realEstateMode === 'multiple' && propertyPhotoDataUrls.length > 1) {
             const propIdx = i % propertyPhotoDataUrls.length;
             const propPhotos = propertyPhotoDataUrls[propIdx] || [];
@@ -2381,12 +2388,14 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             const propData = snapshotPropertyList[propIdx];
             const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
             focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
+            cropOffset = propData?.photos?.[photoIdx]?.cropOffsetY;
           } else {
             const allPhotos = propertyPhotoDataUrls[0] || [];
             photoUrl = allPhotos[i % Math.max(allPhotos.length, 1)] || allPhotos[0] || '';
             const propData = snapshotPropertyList[0];
             const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
             focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
+            cropOffset = propData?.photos?.[photoIdx]?.cropOffsetY;
           }
           
           if (!photoUrl) {
@@ -2396,7 +2405,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           try {
             setImageGenProgress(`🏠 Mesclando foto ${i + 1}/${updatedCards.length}...`);
-            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl, focalPoint);
+            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl, focalPoint, cropOffset);
             updatedCards[i] = { ...updatedCards[i], imageUrl: blended };
             console.log('[BLEND] Card', i, 'blended successfully');
           } catch (err) {
@@ -4392,6 +4401,12 @@ FORBIDDEN:
                         setProperties={setPropertyList}
                         realEstateMode={realEstateMode}
                         cardCount={cardCount}
+                      />
+                    )}
+                    {currentStepName === 'Crop Imóvel' && (
+                      <StepPropertyCrop
+                        properties={propertyList}
+                        setProperties={setPropertyList}
                       />
                     )}
                     {currentStepName === 'Info Imóvel' && (

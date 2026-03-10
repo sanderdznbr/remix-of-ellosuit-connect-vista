@@ -7,6 +7,7 @@ export interface PropertyPhoto {
   url: string;
   file?: File;
   focalPoint?: PhotoFocalPoint;
+  cropOffsetY?: number; // 0-1, vertical pan offset for 1080x1350 crop
 }
 
 export interface PropertyData {

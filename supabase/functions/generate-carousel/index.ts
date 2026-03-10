@@ -474,6 +474,10 @@ REGRAS:
         medium: { bodyTop: '20-35 palavras', bodyBottom: '12-20 palavras' },
         long:   { bodyTop: '30-60 palavras', bodyBottom: '20-40 palavras' },
       }[textSizeHint] || { bodyTop: '10-20 palavras', bodyBottom: '8-12 palavras' };
+
+      // Extract text character limits from style DNA analysis (if available)
+      const styleTextLimits = body.marketplaceStyleConfig?._textLimits || {};
+      const hasTextLimits = !!styleTextLimits.cover_title_max_chars;
       const styleConfig = body.marketplaceStyleConfig;
       const hasMarketplaceStyle = styleConfig?.imageGeneration?.prompt_style;
 

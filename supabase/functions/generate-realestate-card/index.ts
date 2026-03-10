@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       overlayImage,  // optional: for step 3 only, the overlay from step 1-2
     } = body;
 
-    if (!propertyPhoto && step !== 2) {
+    if (!propertyPhoto && step !== 1 && step !== 2) {
       return new Response(JSON.stringify({ error: 'propertyPhoto is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

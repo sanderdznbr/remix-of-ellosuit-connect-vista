@@ -116,6 +116,33 @@ const FaceGenerator: React.FC = () => {
     setFacePreviews(newFiles.map((f) => URL.createObjectURL(f)));
   };
 
+  const handleGalleryImport = async (selectedFiles: { url: string; name: string }[]) => {
+    setGalleryPickerOpen(false);
+    const remaining = MAX_FACE_PHOTOS - faceFiles.length;
+    const toImport = selectedFiles.slice(0, remaining);
+    if (toImport.length === 0) return;
+
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
+    for (const f of toImport) {
+      try {
+        const resp = await fetch(f.url);
+        const blob = await resp.blob();
+        const ext = f.name.split('.').pop() || 'jpg';
+        const file = new File([blob], f.name || `gallery_${Date.now()}.${ext}`, { type: blob.type });
+        newFiles.push(file);
+        newPreviews.push(URL.createObjectURL(file));
+      } catch (err) {
+        console.error('Failed to import gallery file:', err);
+      }
+    }
+    if (newFiles.length > 0) {
+      setFaceFiles(prev => [...prev, ...newFiles]);
+      setFacePreviews(prev => [...prev, ...newPreviews]);
+      toast.success(`${newFiles.length} foto(s) importada(s) da galeria`);
+    }
+  };
+
   const handleStyleRefUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (styleRefFiles.length + files.length > 4) {

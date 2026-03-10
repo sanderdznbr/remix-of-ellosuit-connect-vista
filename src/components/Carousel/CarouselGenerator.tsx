@@ -1857,9 +1857,9 @@ const CarouselGenerator: React.FC = () => {
           const capturedFaceRefs = cardFaceRefs && cardFaceRefs.length > 0 ? cardFaceRefs : undefined;
           const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
           const capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
-           const isFullBleedMkt = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+           const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
            const capturedNegative = isFullBleedMkt 
-              ? [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
+              ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;
           
           imageFactories.push({

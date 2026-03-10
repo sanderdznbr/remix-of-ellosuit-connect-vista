@@ -21,17 +21,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount } = body;
-    // facePersonsMetadata: optional array of { label, gender, wearsGlasses, photoCount } to map grouped face refs
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
       console.log('Face regeneration mode: editing existing image');
       
-      // Build content with face references FIRST, then source image, then instructions
-      // This ordering ensures the model treats face refs as the identity to use
       const editContent: any[] = [];
       
-      // 1. Add face reference photos FIRST so model sees them as the "target face"
       const validFaceRefs: string[] = [];
       if (faceReferenceUrls?.length) {
         for (const ref of faceReferenceUrls.slice(0, 5)) {
@@ -42,16 +38,13 @@ Deno.serve(async (req) => {
         }
       }
       
-      // 2. Label the face references
       if (validFaceRefs.length > 0) {
         editContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS of the person whose face must appear in the final result. Study these faces carefully — memorize every facial feature.` });
       }
       
-      // 3. Now add the source image to edit
       editContent.push({ type: 'text', text: 'The image below is the SOURCE IMAGE that needs face replacement. Keep its EXACT composition, background, clothing, text, colors, and layout:' });
       editContent.push({ type: 'image_url', image_url: { url: editSourceImage } });
       
-      // 4. Final instruction with explicit aspect ratio if requested
       const aspectInstruction = imageSize === '9:16' 
         ? '\n\nOUTPUT FORMAT MANDATORY: You MUST generate an image in PORTRAIT 9:16 aspect ratio (width=1080, height=1920). The image must be TALL and VERTICAL like a phone screen. Do NOT generate a square image. The height must be approximately 1.78x the width. Fill the ENTIRE vertical canvas — NO black bars, NO letterboxing, NO empty space at top or bottom. Generatively EXPAND the scene/background upward and downward to naturally fill the tall vertical frame. The subject should be centered vertically with expanded background above and below.'
         : '';
@@ -109,23 +102,19 @@ Deno.serve(async (req) => {
         const totalWidth = panoramicSections * 1080;
         return `CRITICAL PANORAMIC IMAGE: Generate ONE SINGLE ultra-wide panoramic image. Exact dimensions: ${totalWidth}x1350 pixels (aspect ratio ${outputAspectRatio}). The image MUST be MUCH WIDER than it is tall — approximately ${panoramicSections}x wider. This is a HORIZONTAL LANDSCAPE panorama, NOT a portrait. The entire scene must flow continuously from left edge to right edge as ONE unified composition — no divisions, no panels, no separators. Visual elements (backgrounds, scenery, objects, people, gradients) must span seamlessly across the full width. This panorama will be sliced into ${panoramicSections} equal vertical strips, so ensure visual continuity at every potential cut point.`;
       }
-
       if (outputAspectRatio === '9:16') {
-        return 'Gere em formato retrato 9:16 (1080x1920), imagem alta vertical, sem barras pretas e preenchendo todo o quadro.';
+        return 'Formato retrato 9:16 (1080x1920), imagem alta vertical, preenchendo todo o quadro.';
       }
-
       if (outputAspectRatio === '21:9' || outputAspectRatio === '16:9') {
-        return `Gere em formato horizontal ${outputAspectRatio}, ocupando todo o quadro sem letterbox ou barras.`;
+        return `Formato horizontal ${outputAspectRatio}, ocupando todo o quadro.`;
       }
-
       if (outputAspectRatio === '3:4') {
-        return 'Gere em formato retrato 3:4 (1080x1440), composição vertical completa.';
+        return 'Formato retrato 3:4 (1080x1440).';
       }
-
-      return `Gere no formato ${outputAspectRatio}, preenchendo 100% da imagem sem barras ou margens vazias.`;
+      return `Formato ${outputAspectRatio}, preenchendo 100% da imagem.`;
     })();
 
-    // Filter out URLs from domains that block hotlinking (Gemini can't fetch them)
+    // Filter out URLs from domains that block hotlinking
     const BLOCKED_DOMAINS = ['shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'alamy.com', 'depositphotos.com', 'dreamstime.com', '123rf.com', 'stock.adobe.com'];
     const isUrlAccessible = (url: string) => {
       if (!url) return false;
@@ -137,110 +126,81 @@ Deno.serve(async (req) => {
       } catch { return false; }
     };
 
-    const validFaceRefs = hasFaceRefs 
-      ? faceReferenceUrls.slice(0, 12).filter(isUrlAccessible)
-      : [];
-    const validStyleRefs = hasStyleRefs 
-      ? styleReferenceUrls.slice(0, 8).filter(isUrlAccessible)
-      : [];
-    const validGeneralRefs = hasGeneralRefs
-      ? referenceImageUrls.slice(0, 2).filter(isUrlAccessible)
-      : [];
+    const validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, 12).filter(isUrlAccessible) : [];
+    const validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, 8).filter(isUrlAccessible) : [];
+    const validGeneralRefs = hasGeneralRefs ? referenceImageUrls.slice(0, 2).filter(isUrlAccessible) : [];
     
-    // Log filtered URLs for debugging
     const filteredCount = (faceReferenceUrls?.length || 0) + (styleReferenceUrls?.length || 0) + (referenceImageUrls?.length || 0) - validFaceRefs.length - validStyleRefs.length - validGeneralRefs.length;
     if (filteredCount > 0) console.log(`Filtered out ${filteredCount} blocked/inaccessible URLs`);
 
-    console.log('Image refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length, hasStylePrompt: !!stylePrompt });
+    // === DIAGNOSTIC LOGGING ===
+    console.log('=== IMAGE GEN REQUEST ===');
+    console.log('Refs:', { faces: validFaceRefs.length, styles: validStyleRefs.length, general: validGeneralRefs.length });
+    console.log('Has stylePrompt:', !!stylePrompt, 'length:', (stylePrompt || '').length);
+    console.log('Prompt length:', imagePrompt.length);
+    console.log('Fidelity:', fidelity, 'Model:', imageModel);
+
+    // Determine if this is a marketplace/fullbleed style (stylePrompt + style refs = visual clone mode)
+    const isVisualCloneMode = !!stylePrompt && validStyleRefs.length > 0;
 
     // Build message content
     const messageContent: any[] = [];
-
-    // If a marketplace style prompt is provided, use it as the main instruction
     let textPrompt: string;
-    if (isPanoramicMode) {
-      // === PANORAMIC MODE ===
-      // Format instruction MUST come FIRST and dominate over any style prompt
-      // This prevents marketplace style prompts (which specify portrait 1080x1350) from overriding panoramic
-      textPrompt = `${formatInstruction}\n\n${imagePrompt}`;
 
+    if (isPanoramicMode) {
+      textPrompt = `${formatInstruction}\n\n${imagePrompt}`;
       if (stylePrompt) {
-        // Sanitize stylePrompt: strip portrait/vertical dimension instructions that conflict with panoramic
         const sanitizedStyle = stylePrompt
-          .replace(/\d{3,4}\s*x\s*\d{3,4}(?:\s*pixels?)?/gi, '') // Remove pixel dimensions like 1080x1350
-          .replace(/(?:formato?\s+)?(?:retrat[oa]|portrait)(?:\s+format[oa]?)?/gi, '') // Remove portrait/retrato
-          .replace(/(?:vertical)\s+(?:format[oa]?|orientation)/gi, '') // Remove vertical format/orientation
-          .replace(/aspect\s+ratio\s+(?:3:4|4:5)/gi, '') // Remove portrait aspect ratios
-          .replace(/proporção\s+(?:3:4|4:5)/gi, '') // Remove Portuguese portrait proportions
-          .replace(/\s{2,}/g, ' ') // Clean extra spaces
+          .replace(/\d{3,4}\s*x\s*\d{3,4}(?:\s*pixels?)?/gi, '')
+          .replace(/(?:formato?\s+)?(?:retrat[oa]|portrait)(?:\s+format[oa]?)?/gi, '')
+          .replace(/(?:vertical)\s+(?:format[oa]?|orientation)/gi, '')
+          .replace(/aspect\s+ratio\s+(?:3:4|4:5)/gi, '')
+          .replace(/proporção\s+(?:3:4|4:5)/gi, '')
+          .replace(/\s{2,}/g, ' ')
           .trim();
         if (sanitizedStyle) {
-          textPrompt += `\n\nESTILO VISUAL A INTEGRAR NA COMPOSIÇÃO PANORÂMICA:\n${sanitizedStyle}`;
+          textPrompt += `\n\nESTILO VISUAL:\n${sanitizedStyle}`;
         }
       }
+    } else if (isVisualCloneMode) {
+      // === VISUAL CLONE MODE: Minimal text, maximum reliance on reference images ===
+      // The reference images ARE the primary instruction. Text should only specify:
+      // 1. What content/text to put in the image
+      // 2. Language requirement
+      // 3. Format
+      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência acima.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- A imagem deve preencher 100% do canvas (full bleed, sem bordas/molduras/margens brancas).\n- NÃO copie @handles, nomes de marcas ou rostos das referências — copie APENAS o estilo visual.\n- ${formatInstruction}`;
     } else if (stylePrompt) {
-      textPrompt = `${stylePrompt}
-
-${imagePrompt}`;
+      textPrompt = `${stylePrompt}\n\n${imagePrompt}`;
     } else {
-      textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post.
-
-DESCRIPTION: ${imagePrompt}
-
-STYLE REQUIREMENTS:
-- High-end editorial/magazine aesthetic
-- Rich colors and professional color grading
-- Clean composition suitable for overlay text
-- Ultra high resolution, photorealistic quality`;
+      textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post.\n\nDESCRIPTION: ${imagePrompt}\n\nSTYLE REQUIREMENTS:\n- High-end editorial/magazine aesthetic\n- Rich colors and professional color grading\n- Clean composition suitable for overlay text\n- Ultra high resolution, photorealistic quality`;
     }
 
-    if (!isPanoramicMode) {
-      textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
+    // Only add format instruction if NOT already included (visual clone mode includes it)
+    if (!isPanoramicMode && !isVisualCloneMode) {
+      textPrompt += `\n\nFORMATO: ${formatInstruction}`;
     }
 
-    // POSITIVE layout requirements (positive framing works better than negatives for AI image gen)
-    textPrompt += `\n\nLAYOUT OBRIGATÓRIO:
-- A imagem DEVE preencher 100% do canvas de ponta a ponta (full bleed). O conteúdo vai até as bordas — sem margem, sem padding, sem moldura, sem enquadramento.
-- A tipografia principal DEVE ser grande e proeminente, ocupando 40-60% da largura da imagem.
-- A composição deve ser uma ÚNICA arte editorial que ocupa todo o espaço disponível.
-- Cada card deve ter um layout DIFERENTE dos outros, mantendo a mesma identidade visual.
-- NÃO copie @handles, nomes ou rostos das referências de estilo.`;
-
-    if (negativePrompt) {
-      textPrompt += `\n${negativePrompt}`;
+    // Only add layout rules for NON-visual-clone modes (in clone mode, the refs define the layout)
+    if (!isVisualCloneMode) {
+      textPrompt += `\n\nLAYOUT: Full bleed, sem bordas/molduras. Composição editorial completa.`;
     }
 
-    // Force high fidelity when marketplace/style references are present
-    const effectiveFidelity = (validStyleRefs.length > 0 && fidelity !== 'creative') ? 'high' : fidelity;
-    if (effectiveFidelity === 'high') {
-      textPrompt += `\n\nCRITICAL FIDELITY INSTRUCTION: Follow reference images with MAXIMUM fidelity. Reproduce the EXACT same color palette (not similar — identical hex values), the EXACT same typography style/weight/effects, the EXACT same decorative elements (lines, shapes, textures), and the EXACT same layout composition. The output MUST look like it was designed by the SAME designer as the references — it should be indistinguishable from the same collection.`;
-    } else if (effectiveFidelity === 'creative') {
-      textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
-    }
-
-    // Brand colors from logo — NEVER inject when style refs exist (prevents palette contamination)
-    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0 && !stylePrompt) {
-      textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
-    }
-
-    // Determine if we have multi-person metadata
+    // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
+    // For visual clone mode, negative prompts can actively hurt fidelity
+    
+    // Face/person instructions (these are important and specific)
     const isMultiPerson = facePersonsMetadata && Array.isArray(facePersonsMetadata) && facePersonsMetadata.length > 1;
-
-    // Build per-person gender directives
     const buildGenderDirective = (gender: string) => 
       gender === 'male' ? 'MALE with masculine build, masculine hands (short nails, broader fingers).'
       : gender === 'female' ? 'FEMALE with feminine build and features.'
       : '';
-
-    // Single-person fallback gender directive
     const singleGender = faceGender === 'male' 
-      ? 'The user has CONFIRMED this person is MALE. Generate a MALE body with masculine build, masculine hands, masculine features. DO NOT generate feminine hands, nails, or body features.' 
+      ? 'The user has CONFIRMED this person is MALE. Generate a MALE body.' 
       : faceGender === 'female' 
-      ? 'The user has CONFIRMED this person is FEMALE. Generate a FEMALE body with feminine build and features.' 
+      ? 'The user has CONFIRMED this person is FEMALE. Generate a FEMALE body.' 
       : '';
 
     if (validFaceRefs.length > 0 && isMultiPerson) {
-      // === MULTI-PERSON MODE ===
       const personCount = facePersonsMetadata.length;
       let personDescriptions = '';
       let photoOffset = 0;
@@ -250,103 +210,109 @@ STYLE REQUIREMENTS:
         const startIdx = photoOffset + 1;
         const endIdx = photoOffset + count;
         const genderDesc = buildGenderDirective(pm.gender || 'auto');
-        const glassesDesc = pm.wearsGlasses ? ' MUST wear glasses/eyeglasses.' : '';
-        personDescriptions += `\n- ${pm.label || `Person ${pi + 1}`} (face reference images #${startIdx}${count > 1 ? `-#${endIdx}` : ''}): ${genderDesc}${glassesDesc} Reproduce this person's EXACT facial features, face shape, skin tone, hair style.`;
+        const glassesDesc = pm.wearsGlasses ? ' MUST wear glasses.' : '';
+        personDescriptions += `\n- ${pm.label || `Person ${pi + 1}`} (face refs #${startIdx}${count > 1 ? `-#${endIdx}` : ''}): ${genderDesc}${glassesDesc}`;
         photoOffset += count;
       }
-
-      if (validGeneralRefs.length > 0) {
-        textPrompt += `\n\nCRITICAL - MULTIPLE PEOPLE + PRODUCT: This image MUST contain EXACTLY ${personCount} DISTINCT people AND a product. Each person MUST match their respective face reference photos EXACTLY.${personDescriptions}
-\nThe face reference images are provided in order — the first ${facePersonsMetadata[0]?.photoCount || 1} image(s) belong to ${facePersonsMetadata[0]?.label || 'Person 1'}, the next belong to ${facePersonsMetadata[1]?.label || 'Person 2'}, etc.
-\nEach person MUST be clearly distinguishable with DIFFERENT faces. NEVER give two people the same face. This is the #1 priority.
-\nThe product from the product reference MUST also appear in the scene. Create a natural, editorial scene where ALL people and the product interact organically.
-\nGENDER MATCHING IS MANDATORY for each person — mismatching gender is a CRITICAL ERROR.`;
-      } else {
-        textPrompt += `\n\nCRITICAL - MULTIPLE PEOPLE: This image MUST contain EXACTLY ${personCount} DISTINCT people. Each person MUST match their respective face reference photos EXACTLY.${personDescriptions}
-\nThe face reference images are provided in order — the first ${facePersonsMetadata[0]?.photoCount || 1} image(s) belong to ${facePersonsMetadata[0]?.label || 'Person 1'}, the next belong to ${facePersonsMetadata[1]?.label || 'Person 2'}, etc.
-\nEach person MUST be clearly distinguishable with DIFFERENT faces. NEVER give two people the same face. NEVER merge or average faces together. Each person's identity must be preserved independently. This is the #1 priority.
-\nGENDER MATCHING IS MANDATORY for each person — mismatching gender is a CRITICAL ERROR.`;
-      }
+      textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      textPrompt += `\n\nCRITICAL - FACE + PRODUCT COMBINED: I am attaching BOTH a person reference AND a product reference. You MUST:
-${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. The person from the face reference MUST appear in the image — reproduce their EXACT facial features, face shape, skin tone, hair style and color with maximum fidelity
-2. The BODY, HANDS, and all physical features must match the specified gender — masculine hands for males (short nails, broader fingers), feminine hands for females
-3. The product from the product reference MUST also appear — the person should be WEARING the product (if clothing/accessory) or HOLDING/USING the product (if object)
-4. The person must be clearly recognizable as the same individual from the face reference — this is the #1 priority
-5. The product must be clearly visible and recognizable — this is the #2 priority
-6. Create a natural, editorial scene where the person and product interact organically
-7. NEVER ignore the face reference. NEVER generate a generic person. The face MUST match the reference exactly.
-8. GENDER MATCHING IS MANDATORY — mismatching the gender (e.g. putting a man's face on a woman's body, or giving a man feminine painted nails) is a CRITICAL ERROR.`;
+      textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. ${singleGender}`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nCRITICAL - FACE/PERSON REFERENCE: I am attaching reference photo(s) of the person who MUST appear in this image. You MUST:
-${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual analysis. DO NOT guess gender from the photo — the user has explicitly set it.\n` : ''}1. Reproduce their EXACT facial features, face shape, skin tone, hair style and color
-2. The BODY, HANDS, and all physical features must match the specified gender — masculine hands for males (short nails, broader fingers), feminine hands for females
-3. The person must be clearly recognizable as the same individual in the reference photos
-4. Maintain their likeness with high fidelity - this is the #1 priority
-5. Place this person naturally in the scene described above
-6. NEVER ignore this reference. NEVER generate a generic person.
-7. GENDER MATCHING IS MANDATORY — mismatching the gender is a CRITICAL ERROR.`;
+      textPrompt += `\n\nPESSOA: Reproduza o rosto EXATO das fotos de referência. ${singleGender}`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
-      textPrompt += `\n\nPRODUCT REFERENCE: I am attaching ${validGeneralRefs.length} product reference image(s). Reproduce the product faithfully in the scene.`;
+      textPrompt += `\n\nPRODUTO: Reproduza o produto das referências fielmente.`;
     }
 
-    if (validStyleRefs.length > 0) {
-      textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). You MUST replicate these references with MAXIMUM FIDELITY:
-1. Match the EXACT visual style: same color palette, same typography weight/style/hierarchy, same decorative elements (lines, shapes, textures, overlays)
-2. Match the EXACT layout composition: same grid structure, same text placement zones, same image-to-text ratio
-3. Match the EXACT aesthetic treatment: same photo filters, same contrast levels, same grain/texture effects
-4. The result MUST look like it belongs to the SAME SERIES as the reference images
-5. DO NOT copy text content, usernames, @handles, brand names, or personal info from references — STYLE ONLY
-6. Each card should have UNIQUE layout variation within the same style system
-7. DO NOT copy faces/people from style references — generate DIFFERENT people`;
+    // Brand colors — ONLY when no style refs (prevents palette contamination)
+    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0 && !stylePrompt) {
+      textPrompt += `\n\nCORES DA MARCA: ${brandColors.join(', ')}`;
     }
 
-    // === MESSAGE ASSEMBLY — ORDER IS CRITICAL FOR FIDELITY ===
-    // Sandwich technique: Style refs FIRST → Face refs → Prompt → Style reminder LAST
+    // === MESSAGE ASSEMBLY ===
+    // For visual clone mode: Images FIRST, minimal text, no redundant instructions
+    // For other modes: Standard assembly
 
-    // 1. STYLE REFERENCES FIRST (visual anchoring — model sees these as primary context)
-    if (validStyleRefs.length > 0) {
-      messageContent.push({ type: 'text', text: `YOUR #1 PRIORITY: Replicate the EXACT visual style of these ${validStyleRefs.length} reference images. Same colors, same typography, same layout, same decorative elements. The output MUST look like part of the SAME collection.` });
-      for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-    }
+    if (isVisualCloneMode) {
+      // VISUAL CLONE: Style refs → Face refs → Simple prompt → Product refs
+      // NO extra "priority" text blocks — the images speak for themselves
+      for (const ref of validStyleRefs) {
+        messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
+      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE.` });
 
-    // 2. FACE REFERENCES (identity)
-    if (validFaceRefs.length > 0 && isMultiPerson) {
-      let photoOffset = 0;
-      for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
-        const pm = facePersonsMetadata[pi];
-        const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
-        if (count <= 0) break;
-        messageContent.push({ type: 'text', text: `=== FACE REFERENCES FOR ${(pm.label || `Person ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ===` });
-        for (let j = 0; j < count; j++) {
-          if (photoOffset + j < validFaceRefs.length) {
-            messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
+      // Face refs
+      if (validFaceRefs.length > 0 && isMultiPerson) {
+        let photoOffset = 0;
+        for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
+          const pm = facePersonsMetadata[pi];
+          const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
+          if (count <= 0) break;
+          messageContent.push({ type: 'text', text: `=== ROSTO: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ===` });
+          for (let j = 0; j < count; j++) {
+            if (photoOffset + j < validFaceRefs.length) {
+              messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
+            }
           }
+          photoOffset += count;
         }
-        photoOffset += count;
+      } else {
+        for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      messageContent.push({ type: 'text', text: `The images above show ${facePersonsMetadata.length} DIFFERENT people. Each person MUST match their respective face reference EXACTLY.` });
+
+      // Main prompt (already minimal)
+      messageContent.push({ type: 'text', text: textPrompt });
+
+      // Product refs
+      for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+
     } else {
-      for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-      if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `FACE REFERENCE: The person MUST have the EXACT same face as shown above.` });
+      // STANDARD MODE: More detailed instructions needed
+
+      // Style refs with brief instruction
+      if (validStyleRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
+        for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
+
+      // Face refs
+      if (validFaceRefs.length > 0 && isMultiPerson) {
+        let photoOffset = 0;
+        for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
+          const pm = facePersonsMetadata[pi];
+          const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
+          if (count <= 0) break;
+          messageContent.push({ type: 'text', text: `=== ROSTO: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ===` });
+          for (let j = 0; j < count; j++) {
+            if (photoOffset + j < validFaceRefs.length) {
+              messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
+            }
+          }
+          photoOffset += count;
+        }
+      } else {
+        for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
+
+      // Main prompt
+      messageContent.push({ type: 'text', text: textPrompt });
+
+      // Product refs
+      for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+
+      // Style reminder (only for non-clone mode with style refs)
+      if (validStyleRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências acima.` });
       }
     }
 
-    // 3. MAIN PROMPT (content instructions)
-    messageContent.push({ type: 'text', text: textPrompt });
+    // === DIAGNOSTIC: Log total message size ===
+    const totalTextChars = messageContent.filter(p => p.type === 'text').reduce((sum, p) => sum + p.text.length, 0);
+    const totalImages = messageContent.filter(p => p.type === 'image_url').length;
+    console.log(`Message assembly: ${totalImages} images, ${totalTextChars} text chars, ${messageContent.length} parts, mode=${isVisualCloneMode ? 'VISUAL_CLONE' : 'STANDARD'}`);
 
-    // 4. PRODUCT REFERENCES
-    for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-
-    // 5. STYLE REMINDER AT END (sandwich close — reinforces visual fidelity as last instruction)
-    if (validStyleRefs.length > 0) {
-      messageContent.push({ type: 'text', text: `FINAL REMINDER: The generated image MUST be visually IDENTICAL in style to the reference images shown at the top. Same exact color palette, same typography style, same decorative elements, same composition approach. It should be INDISTINGUISHABLE from the same design collection. This is NON-NEGOTIABLE.` });
-    }
-
-    // Model selection — treat "elloia" as the premium model (backward compatible with "nano-banana")
+    // Model selection
     const requestedModel = (imageModel || 'auto').toString().toLowerCase();
     const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana';
     const resolvedModel = requestedModel === 'auto'
@@ -356,10 +322,10 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
     const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
     const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
     const fallbackModel = 'google/gemini-2.5-flash-image';
-    console.log('Image gen model:', primaryModel, 'parts:', messageContent.length, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
+    console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 
     async function tryGenerate(model: string, content: any[], attempt: number): Promise<string | null> {
-      console.log(`Attempt ${attempt} model=${model}`);
+      console.log(`Attempt ${attempt} model=${model} parts=${content.length}`);
       const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -370,7 +336,8 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
           model,
           messages: [{ role: 'user', content }],
           modalities: ['image', 'text'],
-          ...(validStyleRefs.length > 0 ? { temperature: 0.2 } : {}),
+          // Lower temperature = higher fidelity to references
+          ...(validStyleRefs.length > 0 ? { temperature: 0.15 } : {}),
         }),
       });
 
@@ -378,31 +345,26 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
         const errText = await res.text();
         console.error(`Attempt ${attempt} error:`, res.status, errText.slice(0, 500));
         if (res.status === 429 || res.status === 402) throw { status: res.status };
-        // Detect safety/NSFW blocks from the API error response
         const lowerErr = errText.toLowerCase();
         if (lowerErr.includes('safety') || lowerErr.includes('block') || lowerErr.includes('prohibited') || lowerErr.includes('harmful') || lowerErr.includes('sexual') || lowerErr.includes('nsfw') || lowerErr.includes('policy')) {
           throw { status: 451, reason: 'nsfw' };
         }
-        // Detect 403 fetching errors — extract the blocked URL so caller can remove it
-        const fetchErrorMatch = errText.match(/Received 403 status code when fetching image from URL:\s*(https?:\/\/[^\s"]+)/);
+        const fetchErrorMatch = errText.match(/Received 403 status code when fetching image from URL:\s*(https?:\/\/[^\s\"]+)/);
         if (fetchErrorMatch) {
           throw { status: 400, reason: 'blocked_url', blockedUrl: fetchErrorMatch[1] };
         }
         return null;
       }
 
-      // Stream response as text and extract base64 image URL via string search
       const raw = await res.text();
-      
-      // Check for safety blocks in a successful response (Gemini sometimes returns 200 with block info)
       const lowerRaw = raw.toLowerCase();
       if (lowerRaw.includes('"blockreason"') || lowerRaw.includes('"safety"') && (lowerRaw.includes('"blocked"') || lowerRaw.includes('"block_reason"'))) {
         console.log(`Attempt ${attempt}: content blocked by safety filters`);
         throw { status: 451, reason: 'nsfw' };
       }
       
-      const patterns = ['"url":"data:image/', '"url": "data:image/'];
-      for (const pattern of patterns) {
+      const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+      for (const pattern of extractPatterns) {
         const idx = raw.indexOf(pattern);
         if (idx === -1) continue;
         const urlStart = raw.indexOf('"', idx + 5) + 1;
@@ -416,16 +378,7 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       return null;
     }
 
-    // Helper: remove blocked URLs from content array
     const blockedUrls = new Set<string>();
-    function filterContent(content: any[]): any[] {
-      return content.filter(part => {
-        if (part.type === 'image_url' && part.image_url?.url) {
-          return !blockedUrls.has(part.image_url.url);
-        }
-        return true;
-      });
-    }
 
     // Attempt 1: full prompt
     let generatedImage: string | null = null;
@@ -453,61 +406,60 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       }
     }
 
-    // Attempt 2: retry with same pro model, removing any blocked URLs
+    // Attempt 2: retry with pro model, simplified content
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
-      for (const ref of validFaceRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
-      const activeFaceCount = validFaceRefs.filter(r => !blockedUrls.has(r)).length;
-      if (activeFaceCount > 0) {
-        retryContent.push({ type: 'text', text: `The ${activeFaceCount} image(s) above are FACE REFERENCE PHOTOS. The person MUST have the EXACT same face. This is the #1 priority.` });
-      }
+      // Style refs (reduced to 4 max for retry)
       const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      if (stylePrompt) {
-        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nFORMATO OBRIGATÓRIO: ${formatInstruction}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. NÃO use espanhol ou inglês. SEM bordas.` });
+      // Face refs
+      for (const ref of validFaceRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
+      // Simplified prompt
+      if (isVisualCloneMode) {
+        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências acima. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction}` });
+      } else if (stylePrompt) {
+        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
       } else {
-        retryContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality. FORMAT MANDATORY: ${formatInstruction}.${activeFaceCount > 0 ? ' The person in the attached reference MUST appear with exact facial likeness.' : ''}` });
+        retryContent.push({ type: 'text', text: `Professional editorial photograph: ${imagePrompt}. ${formatInstruction}.` });
       }
       for (const ref of validGeneralRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
       try { generatedImage = await tryGenerate(primaryModel, retryContent, 2); } catch (e2: any) {
         if (e2?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
-        if (e2?.reason === 'blocked_url' && e2?.blockedUrl) { blockedUrls.add(e2.blockedUrl); console.log('Blocked URL detected and removed:', e2.blockedUrl); }
+        if (e2?.reason === 'blocked_url' && e2?.blockedUrl) { blockedUrls.add(e2.blockedUrl); }
       }
     }
 
-    // Attempt 3: pro model text-only (no image refs that could be blocked)
+    // Attempt 3: pro model, only safe (base64) URLs
     if (!generatedImage && usePremium) {
       const textOnlyContent: any[] = [];
-      // Only include data: URLs (base64) which are always accessible
       const safeStyleRefs = validStyleRefs.filter(r => r.startsWith('data:'));
       const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
       for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nFORMATO OBRIGATÓRIO: ${formatInstruction}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
+        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
       } else {
-        textOnlyContent.push({ type: 'text', text: `Create a stunning professional editorial photograph. Scene: ${imagePrompt}. Style: cinematic lighting, magazine quality. FORMAT MANDATORY: ${formatInstruction}.` });
+        textOnlyContent.push({ type: 'text', text: `Professional editorial photograph: ${imagePrompt}. ${formatInstruction}.` });
       }
       try { generatedImage = await tryGenerate(primaryModel, textOnlyContent, 3); } catch (e3: any) {
         if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
       }
     }
 
-    // Attempt 4: flash fallback text-only (last resort, still not nano-banana)
+    // Attempt 4: flash fallback
     if (!generatedImage) {
       const fallbackContent: any[] = [];
       const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
       for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\nFORMATO OBRIGATÓRIO: ${formatInstruction}\n\nGere a imagem completa do post com tipografia integrada. Todo texto DEVE ser em PORTUGUÊS BRASILEIRO. SEM bordas.` });
+        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
       } else {
-        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. FORMAT MANDATORY: ${formatInstruction}.` });
+        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. ${formatInstruction}.` });
       }
       try { generatedImage = await tryGenerate('google/gemini-2.5-flash-image', fallbackContent, 4); } catch (e4: any) {
         if (e4?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
       }
     }
-
 
     if (!generatedImage) {
       return new Response(JSON.stringify({ error: 'Não foi possível gerar a imagem.' }), {

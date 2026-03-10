@@ -96,7 +96,19 @@ const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, 
 
       {/* Photos */}
       <div className="mb-3">
-        <label className="text-[10px] text-white/40 mb-1.5 block">Fotos do Imóvel</label>
+        <label className="text-[10px] text-white/40 mb-1.5 flex items-center justify-between">
+          <span>Fotos do Imóvel</span>
+          {realEstateMode === 'single' && cardCount && (
+            <span className={`text-[9px] font-medium ${prop.photos.length >= (cardCount || 1) ? 'text-green-400' : 'text-amber-400'}`}>
+              {prop.photos.length}/{cardCount} fotos (1 por card)
+            </span>
+          )}
+        </label>
+        {realEstateMode === 'single' && cardCount && prop.photos.length < cardCount && (
+          <p className="text-[9px] text-amber-400/70 mb-1.5">
+            ⚠️ Adicione {cardCount - prop.photos.length} foto(s) a mais para ter 1 foto por card
+          </p>
+        )}
         <div className="flex gap-1.5 flex-wrap">
           {prop.photos.map((photo, pi) => (
             <div key={pi} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/10 group">

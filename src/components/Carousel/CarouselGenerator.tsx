@@ -2437,6 +2437,105 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         }
       }
 
+      // ========== REAL ESTATE POST-PROCESSING: Blend real photo + AI overlay ==========
+      if (isRealEstateStyle && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
+        setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
+        console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
+        
+        const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string): Promise<string> => {
+          const W = 1080, H = 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          
+          // Load both images
+          const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+            const img = new Image();
+            if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+          });
+          
+          // 1. Draw REAL PHOTO as background (cover fit)
+          const photoImg = await loadImg(photoDataUrl);
+          const pRatio = photoImg.width / photoImg.height;
+          const cRatio = W / H;
+          let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
+          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
+          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
+          
+          // 2. Slight darkening for contrast
+          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          ctx.fillRect(0, 0, W, H);
+          
+          // 3. Draw AI overlay on top using "lighten" blend mode
+          // Black areas of AI image become transparent, graphic elements stay visible
+          const aiImg = await loadImg(aiImageUrl);
+          ctx.globalCompositeOperation = 'lighten';
+          ctx.drawImage(aiImg, 0, 0, W, H);
+          ctx.globalCompositeOperation = 'source-over'; // reset
+          
+          // 4. Draw logo if available
+          if (logoUrl) {
+            try {
+              const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+                const r = await fetch(logoUrl); const b = await r.blob();
+                return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+              })();
+              const logoImg = await loadImg(logoB64);
+              const maxLW = 180, maxLH = 80;
+              const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+              const lw = logoImg.width * ls, lh = logoImg.height * ls;
+              const pad = 50;
+              let lx = pad, ly = pad;
+              const lp = logoPosition || 'top-left';
+              if (lp.includes('center')) lx = (W - lw) / 2;
+              if (lp.includes('right')) lx = W - lw - pad;
+              if (lp.includes('middle')) ly = (H - lh) / 2;
+              if (lp.includes('bottom')) ly = H - lh - pad;
+              ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 10;
+              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+            } catch (e) { console.warn('[BLEND] Logo draw failed:', e); }
+          }
+          
+          return canvas.toDataURL('image/jpeg', 0.92);
+        };
+        
+        for (let i = 0; i < updatedCards.length; i++) {
+          const aiImageUrl = updatedCards[i]?.imageUrl;
+          if (!aiImageUrl) continue;
+          
+          // Get the corresponding property photo
+          let photoUrl = '';
+          if (realEstateMode === 'multiple' && propertyPhotoDataUrls.length > 1) {
+            const propIdx = i % propertyPhotoDataUrls.length;
+            const propPhotos = propertyPhotoDataUrls[propIdx] || [];
+            photoUrl = propPhotos[i % Math.max(propPhotos.length, 1)] || propPhotos[0] || '';
+          } else {
+            const allPhotos = propertyPhotoDataUrls[0] || [];
+            photoUrl = allPhotos[i % Math.max(allPhotos.length, 1)] || allPhotos[0] || '';
+          }
+          
+          if (!photoUrl) {
+            console.warn('[BLEND] No photo for card', i, '— skipping blend');
+            continue;
+          }
+          
+          try {
+            setImageGenProgress(`🏠 Mesclando foto ${i + 1}/${updatedCards.length}...`);
+            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl);
+            updatedCards[i] = { ...updatedCards[i], imageUrl: blended };
+            console.log('[BLEND] Card', i, 'blended successfully');
+          } catch (err) {
+            console.error('[BLEND] Failed for card', i, err);
+            // Keep the AI image as fallback
+          }
+        }
+      }
+
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
       setGeneratingAllImages(false);

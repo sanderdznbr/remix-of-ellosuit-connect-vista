@@ -236,10 +236,18 @@ const StyleCreator: React.FC = () => {
         faceUrls.push(url);
       }
 
-      const propertyUrls: string[] = [];
-      for (let i = 0; i < propertyFiles.length; i++) {
-        const url = await uploadFile(propertyFiles[i], `style-creator/${slug}/property-${i}-${timestamp}.${propertyFiles[i].name.split('.').pop()}`);
-        propertyUrls.push(url);
+      // Upload property photos (new detailed system)
+      const propertyUrls: string[][] = []; // array of arrays per property
+      const propertyUrlsFlat: string[] = [];
+      for (let pi = 0; pi < properties.length; pi++) {
+        const prop = properties[pi];
+        const urls: string[] = [];
+        for (let fi = 0; fi < prop.photos.length; fi++) {
+          const url = await uploadFile(prop.photos[fi], `style-creator/${slug}/property-${pi}-${fi}-${timestamp}.${prop.photos[fi].name.split('.').pop()}`);
+          urls.push(url);
+          propertyUrlsFlat.push(url);
+        }
+        propertyUrls.push(urls);
       }
 
       // AI identifica o DNA do estilo a partir das referências

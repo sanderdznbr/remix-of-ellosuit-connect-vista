@@ -1232,9 +1232,9 @@ const CarouselGenerator: React.FC = () => {
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.map(p => p.url);
       const marketplaceRefUrls: string[] = [];
-      if (activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyleRef.current?._previewImages?.length) {
         const origin = window.location.origin;
-        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+        const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
         // Limit to 8 style refs to maintain quality
         marketplaceRefUrls.push(...allPreviews.slice(0, 8));

@@ -44,6 +44,7 @@ const FaceGenerator: React.FC = () => {
   const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [inpaintUrl, setInpaintUrl] = useState<string | null>(null);
+  const [galleryPickerOpen, setGalleryPickerOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {

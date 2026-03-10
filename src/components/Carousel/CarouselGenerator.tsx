@@ -1754,6 +1754,33 @@ const CarouselGenerator: React.FC = () => {
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
 
+      // === REAL ESTATE: Convert property photos from blob URLs to base64 data URLs ===
+      let propertyPhotoDataUrls: string[][] = [];
+      if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
+        setImageGenProgress('📸 Processando fotos dos imóveis...');
+        propertyPhotoDataUrls = await Promise.all(
+          propertyList.map(async (prop) => {
+            const dataUrls: string[] = [];
+            for (const photo of prop.photos) {
+              try {
+                const response = await fetch(photo.url);
+                const blob = await response.blob();
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(blob);
+                });
+                dataUrls.push(dataUrl);
+              } catch (err) {
+                console.warn('Failed to convert property photo to base64:', err);
+              }
+            }
+            return dataUrls;
+          })
+        );
+      }
+
       let webImageIndex = 0;
       const imageFactories: { index: number; factory: () => Promise<string | null>; prompt: string }[] = [];
       let totalImages = 0;

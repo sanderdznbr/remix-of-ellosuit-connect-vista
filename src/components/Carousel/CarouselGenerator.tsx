@@ -1757,44 +1757,7 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // ========== REAL ESTATE: Skip AI image gen, use property photos directly ==========
-      if (isRealEstateStyle) {
-        // For real estate, cards use property photos directly via the template renderer
-        // Just set imageUrl on each card from property photos so the template has them
-        for (let i = 0; i < updatedCards.length; i++) {
-          const propIdx = realEstateMode === 'multiple' ? (i % propertyList.length) : 0;
-          const prop = propertyList[propIdx] || propertyList[0];
-          if (prop && prop.photos.length > 0) {
-            const photoIdx = i % prop.photos.length;
-            updatedCards[i] = { ...updatedCards[i], imageUrl: prop.photos[photoIdx]?.url || '' };
-          }
-        }
-        // Skip all AI image generation — go straight to finalizing
-        const finalData = { ...data.data, cards: updatedCards };
-        setCarouselData(finalData);
-        setGeneratingAllImages(false);
-        setImageGenProgress('');
-        
-        // Auto-save
-        try {
-          const { data: userData } = await supabase.auth.getUser();
-          if (userData.user) {
-            const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
-            if (companyData) {
-              const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isRealEstate: true, propertyList };
-              const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
-              if (inserted) {
-                setCurrentCarouselId(inserted.id);
-                setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
-                if (localJobId) completeCloudJob(localJobId, inserted.id);
-              }
-            }
-          }
-        } catch (saveErr) { console.error('Auto-save error:', saveErr); }
-        if (localJobId) { setCloudJobId(null); }
-        setGenerating(false);
-        return;
-      }
+      // Real estate uses normal AI generation flow with property photos as mandatory references
       
       // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);

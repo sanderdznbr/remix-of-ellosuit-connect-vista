@@ -42,10 +42,10 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
   const requiredPhotos = realEstateMode === 'single' ? (cardCount || 5) : properties.length;
 
   const renderPropertyPhotos = (prop: PropertyData, index: number) => (
-    <div key={prop.id} className="p-4 rounded-xl border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+    <div key={prop.id} className="p-4 rounded-xl border border-white/[0.08] bg-white/[0.03]">
       {realEstateMode === 'multiple' && (
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-amber-300">Imóvel {index + 1}</span>
+          <span className="text-xs font-medium text-white/60">Imóvel {index + 1}</span>
           {properties.length > 1 && (
             <button onClick={() => removeProperty(prop.id)}
               className="p-1 rounded hover:bg-red-500/20 text-white/20 hover:text-red-400 cursor-pointer">
@@ -55,25 +55,25 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
         </div>
       )}
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-3 flex-wrap">
         {prop.photos.map((photo, pi) => (
-          <div key={pi} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
+          <div key={pi} className="relative w-28 h-28 rounded-xl overflow-hidden border border-white/10 group">
             <img src={photo.url} alt="" className="w-full h-full object-cover" />
             <button onClick={() => removePhoto(prop.id, pi)}
-              className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer">
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
               <X className="w-3 h-3" />
             </button>
             {realEstateMode === 'single' && (
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center">
-                <span className="text-[8px] text-white/70">Card {pi + 1}</span>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-center py-0.5">
+                <span className="text-[9px] text-white/70">Card {pi + 1}</span>
               </div>
             )}
           </div>
         ))}
-        <label className="flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-amber-500/30 transition-colors">
+        <label className="flex items-center justify-center w-28 h-28 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-white/25 transition-colors">
           <div className="text-center">
-            <Upload className="w-4 h-4 text-white/20 mx-auto mb-1" />
-            <span className="text-[9px] text-white/20">Adicionar</span>
+            <Upload className="w-5 h-5 text-white/25 mx-auto mb-1" />
+            <span className="text-[10px] text-white/25">Adicionar</span>
           </div>
           <input
             type="file" accept="image/*" multiple className="hidden"
@@ -88,25 +88,25 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-1">
-        <Camera className="w-5 h-5 text-amber-400" />
+        <Camera className="w-5 h-5 text-white/50" />
         <div>
           <h3 className="text-sm font-semibold text-white">
             {realEstateMode === 'single' ? 'Fotos do Imóvel' : 'Fotos dos Imóveis'}
           </h3>
           <p className="text-[10px] text-white/30">
             {realEstateMode === 'single'
-              ? `Adicione ${cardCount || 'várias'} fotos do imóvel — cada foto será usada em 1 card`
-              : 'Adicione pelo menos 1 foto para cada imóvel do carrossel'}
+              ? `Adicione ${cardCount || 'várias'} fotos — cada foto será usada em 1 card`
+              : 'Adicione pelo menos 1 foto para cada imóvel'}
           </p>
         </div>
       </div>
 
       {/* Progress indicator */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.06]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/[0.06] bg-white/[0.02]">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] text-white/40">Progresso</span>
-            <span className={`text-[10px] font-medium ${totalPhotos >= requiredPhotos ? 'text-green-400' : 'text-amber-400'}`}>
+            <span className={`text-[10px] font-medium ${totalPhotos >= requiredPhotos ? 'text-green-400' : 'text-white/50'}`}>
               {totalPhotos}/{requiredPhotos} fotos
             </span>
           </div>
@@ -115,7 +115,7 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
               className="h-full rounded-full transition-all duration-300"
               style={{
                 width: `${Math.min(100, (totalPhotos / requiredPhotos) * 100)}%`,
-                backgroundColor: totalPhotos >= requiredPhotos ? '#4ade80' : '#f59e0b',
+                backgroundColor: totalPhotos >= requiredPhotos ? '#4ade80' : 'rgba(255,255,255,0.3)',
               }}
             />
           </div>
@@ -128,7 +128,7 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
 
       {realEstateMode === 'multiple' && properties.length < 10 && (
         <button onClick={addProperty}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-white/10 text-xs text-white/30 hover:border-amber-500/30 hover:text-amber-300 cursor-pointer transition-colors">
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed border-white/10 text-xs text-white/30 hover:border-white/20 hover:text-white/50 cursor-pointer transition-colors">
           <Plus className="w-3.5 h-3.5" /> Adicionar Imóvel ({properties.length}/10)
         </button>
       )}

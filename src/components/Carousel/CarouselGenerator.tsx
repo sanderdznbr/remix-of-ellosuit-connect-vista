@@ -4582,6 +4582,9 @@ FORBIDDEN:
                             } else {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
+                            // Sync refs immediately to avoid stale closures in setTimeout
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
                             setTimeout(() => generateContent(), 1200);
                           }

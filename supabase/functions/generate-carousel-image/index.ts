@@ -208,9 +208,11 @@ Deno.serve(async (req) => {
       }
       textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. Reproduza o rosto EXATO — mesma estrutura óssea, formato dos olhos, nariz, boca, sobrancelhas, tom de pele e textura do cabelo. ${singleGender}`;
+      // 2-STAGE MODE: Stage 1 generates with a person silhouette/placeholder, Stage 2 swaps face
+      textPrompt += `\n\nPESSOA + PRODUTO: Gere uma pessoa ${singleGender || 'profissional'} usando/segurando o produto. A pessoa DEVE ter um rosto GENÉRICO neutro e atraente (será substituído na pós-produção). Foque na composição, pose, iluminação e integração com o produto. O rosto NÃO precisa ser fiel a ninguém — apenas gere um rosto limpo e bem iluminado de frente ou 3/4.`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA (PRIORIDADE #1 — ACIMA DE TUDO): Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. A pessoa na imagem final DEVE ser instantaneamente RECONHECÍVEL como a MESMA pessoa das referências — NÃO gere um rosto diferente, genérico ou inspirado. Se houver conflito entre fidelidade facial e estilo visual, PRIORIZE o rosto. ${singleGender}`;
+      // 2-STAGE MODE: Stage 1 generates with placeholder face, Stage 2 swaps
+      textPrompt += `\n\nPESSOA NA CENA: Gere uma pessoa ${singleGender || 'profissional atraente'} que se encaixe perfeitamente na composição. A pessoa DEVE ter rosto GENÉRICO neutro e bem iluminado (será substituído na pós-produção). Foque em: pose natural, iluminação consistente, enquadramento editorial. Rosto visível de frente ou 3/4, sem obstruções. O rosto NÃO precisa ser fiel a nenhuma referência — apenas limpo e claro.`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

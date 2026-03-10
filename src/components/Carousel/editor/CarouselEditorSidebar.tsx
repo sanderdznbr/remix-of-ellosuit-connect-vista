@@ -75,6 +75,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   onChangeBgColor, onChangeAccentColor, onChangeTextColor,
   fontOptions, selectedFont, onChangeFont,
   referenceImageUrl, onUploadReferenceImage, onRemoveReferenceImage,
+  isRealEstate, propertyData, onPropertyFieldChange,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refImageInputRef = useRef<HTMLInputElement>(null);

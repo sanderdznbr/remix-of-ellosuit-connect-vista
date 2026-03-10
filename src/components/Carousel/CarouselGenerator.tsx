@@ -213,6 +213,8 @@ const CarouselGenerator: React.FC = () => {
 
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
+  const propertyListRef = useRef<PropertyData[]>(propertyList);
+  useEffect(() => { propertyListRef.current = propertyList; }, [propertyList]);
 
   // NOTE: isRealEstateStyle, realEstateMode, and WIZARD_STEPS are computed after activeMarketplaceStyle is declared (see below)
 
@@ -1001,8 +1003,8 @@ const CarouselGenerator: React.FC = () => {
       
       // For real estate styles, use the property photo as cover (matches rendered template)
       let firstCardImage = dataSource?.cards?.[0]?.imageUrl;
-      if (isRealEstateStyle && propertyList.length > 0 && propertyList[0]?.photos?.[0]?.url) {
-        firstCardImage = propertyList[0].photos[0].url;
+      if (isRealEstateStyle && propertyListRef.current.length > 0 && propertyListRef.current[0]?.photos?.[0]?.url) {
+        firstCardImage = propertyListRef.current[0].photos[0].url;
       }
       
       if (!firstCardImage) {
@@ -1766,8 +1768,10 @@ const CarouselGenerator: React.FC = () => {
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
       console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))));
       if (isRealEstateStyle) {
-        const hasPhotos = propertyList.some(p => p.photos.length > 0);
-        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'entering Canvas path regardless');
+        // Use ref to avoid stale closure — propertyList state may be outdated in async context
+        const currentPropertyList = propertyListRef.current;
+        const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
+        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
         if (!hasPhotos) {
           console.warn('[REAL_ESTATE_DEBUG] No property photos found! Cards will use AI generation as fallback.');
         }
@@ -2000,8 +2004,8 @@ const CarouselGenerator: React.FC = () => {
         const totalToGen = updatedCards.length;
         
         for (let i = 0; i < updatedCards.length; i++) {
-          const propIdx = realEstateMode === 'multiple' ? (i % propertyList.length) : 0;
-          const prop = propertyList[propIdx] || propertyList[0];
+          const propIdx = realEstateMode === 'multiple' ? (i % currentPropertyList.length) : 0;
+          const prop = currentPropertyList[propIdx] || currentPropertyList[0];
           const photoIdx = i % Math.max(prop.photos.length, 1);
           const photo = prop.photos[photoIdx]?.url || '';
           
@@ -2043,7 +2047,7 @@ const CarouselGenerator: React.FC = () => {
           if (userData.user) {
             const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
             if (companyData) {
-              const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isRealEstate: true, propertyList };
+              const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isRealEstate: true, propertyList: currentPropertyList };
               const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
               if (inserted) {
                 setCurrentCarouselId(inserted.id);

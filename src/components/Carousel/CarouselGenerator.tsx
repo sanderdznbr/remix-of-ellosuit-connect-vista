@@ -5121,6 +5121,12 @@ FORBIDDEN:
                           setShowStylePanel(false);
                           propertyListRef.current = propertyList;
                           activeMarketplaceStyleRef.current = config;
+                          generationSnapshotRef.current = {
+                            isRealEstate: !!config?.is_real_estate,
+                            realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                            propertyList: JSON.parse(JSON.stringify(propertyList)),
+                            marketplaceStyle: config ? { ...config } : null,
+                          };
                           setTransitionToGenerate(true);
                           setCurrentCarouselId(null);
                           const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);

@@ -394,49 +394,45 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
 
       let imgPrompt: string;
       if (isFullBleed) {
+        // === SIMPLIFIED FULLBLEED PROMPT ===
+        // Keep it SHORT — the reference images are the primary instruction.
+        // Only include: card type, text content, brand, language.
         const isCover = card.type === 'cover' || i === 0;
         const isCta = card.type === 'cta' || i === cards.length - 1;
         const parts: string[] = [];
-        parts.push(`IDIOMA: Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.`);
-        parts.push(`TEMA: "${cleanTopic}"`);
-        parts.push(`LAYOUT: A imagem DEVE preencher 100% do canvas de ponta a ponta (full bleed). Conteúdo vai até as bordas. Tipografia grande e proeminente (40-60% da largura). UMA ÚNICA composição editorial que ocupa TODO o espaço.`);
-        parts.push(`FIDELIDADE AO ESTILO: As imagens de referência definem a IDENTIDADE VISUAL OBRIGATÓRIA. Replique EXATAMENTE: paleta de cores, estilo tipográfico, elementos decorativos, composição de layout, tratamento fotográfico. O resultado DEVE parecer parte da MESMA SÉRIE das referências.`);
-        // Logo/brand overlay
-        if (job.logo_url && job.brand_name) {
+        parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
+        
+        // Logo/brand — keep minimal
+        if (job.brand_name) {
           const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
           const posLabel = posMap[job.logo_position || 'top-left'] || 'canto superior esquerdo';
-          parts.push(`LOGOMARCA: Inclua "${job.brand_name}" no ${posLabel} da imagem, sobrepondo o conteúdo de forma sutil e elegante.`);
-        } else if (job.brand_name) {
-          const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
-          const posLabel = posMap[job.logo_position || 'top-left'] || 'canto superior esquerdo';
-          parts.push(`MARCA: Inclua "${job.brand_name}" como texto pequeno no ${posLabel} da imagem.`);
+          parts.push(`Marca "${job.brand_name}" no ${posLabel}.`);
         }
+
         if (isCover) {
-          parts.push(`CARD DE CAPA (1 de ${cards.length}).`);
-          parts.push(`TÍTULO: "${card.title || cleanTopic}"`);
-          if (card.subtitle) parts.push(`SUBTÍTULO: "${card.subtitle}"`);
-          parts.push(`Estilo capa de revista, tipografia grande e impactante. SIGA FIELMENTE o estilo visual das referências.`);
+          parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);
+          if (card.subtitle) parts.push(`Subtítulo: "${card.subtitle}".`);
         } else if (isCta) {
-          parts.push(`CARD FINAL DE CTA (${i + 1} de ${cards.length}).`);
-          if (card.title) parts.push(`TÍTULO: "${card.title}"`);
-          if (card.body) parts.push(`TEXTO: "${card.body}"`);
+          parts.push(`CTA FINAL (card ${i + 1}/${cards.length}).`);
+          if (card.title) parts.push(`Título: "${card.title}".`);
+          if (card.body) parts.push(`Texto: "${card.body}".`);
         } else {
-          parts.push(`CARD DE CONTEÚDO ${i + 1} de ${cards.length}.`);
+          parts.push(`Conteúdo (card ${i + 1}/${cards.length}).`);
           const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
-          if (bodyText) parts.push(`TEXTO PRINCIPAL: "${bodyText}"`);
-          if (card.bodyBottom) parts.push(`TEXTO SECUNDÁRIO: "${card.bodyBottom}"`);
-          parts.push(`Layout editorial variado dentro do MESMO SISTEMA VISUAL das referências — NÃO estilo capa/hero. Cada card deve ter variação de layout mas MESMA identidade visual.`);
+          if (bodyText) parts.push(`Texto: "${bodyText}".`);
+          if (card.bodyBottom) parts.push(`Secundário: "${card.bodyBottom}".`);
         }
-        imgPrompt = parts.join('\n');
+        imgPrompt = parts.join(' ');
       } else {
         imgPrompt = `${cleanTopic}: ${card.imagePrompt || card.title || card.bodyTop || ''}`;
       }
 
+      // Build final prompt — keep it simple for fullbleed
       const promptParts = [];
-      if (promptStyle && isFullBleed) {
-        // DON'T include promptStyle in prompt — it's sent separately as stylePrompt param
-        // to avoid duplication that confuses the model
-        if (marketplaceStyle?.imageGeneration?.prompt_prefix) promptParts.push(marketplaceStyle.imageGeneration.prompt_prefix);
+      if (isFullBleed) {
+        // For fullbleed: DON'T include stylePrompt in the prompt text.
+        // It will be sent as stylePrompt param to generate-carousel-image,
+        // which handles it in "visual clone mode" (images-first, minimal text).
         promptParts.push(imgPrompt);
       } else if (promptStyle) {
         promptParts.push(promptStyle);
@@ -446,32 +442,30 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         promptParts.push('Professional photograph');
         promptParts.push(imgPrompt);
       }
-      promptParts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
-      if (!isFullBleed) promptParts.push('Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+      if (!isFullBleed) {
+        promptParts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
+        promptParts.push('Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+      }
 
-      // Face attributes from image settings
+      // Face attributes
       const facePersonsMeta = imageSettings.facePersonsMetadata;
       const isMultiPerson = facePersonsMeta && Array.isArray(facePersonsMeta) && facePersonsMeta.length > 1;
       if (faceRefUrls.length > 0 && isMultiPerson) {
-        promptParts.push(`MULTIPLE PEOPLE (CRITICAL): This image MUST contain exactly ${facePersonsMeta.length} DISTINCT people with DIFFERENT faces.`);
-        facePersonsMeta.forEach((pm: any, idx: number) => {
-          const genderDesc = pm.gender === 'male' ? 'MALE with masculine build.' : pm.gender === 'female' ? 'FEMALE with feminine build.' : '';
-          const glassesDesc = pm.wearsGlasses ? ' MUST wear glasses.' : '';
-          promptParts.push(`${pm.label || `Person ${idx + 1}`}: ${genderDesc}${glassesDesc}`);
-        });
+        promptParts.push(`${facePersonsMeta.length} pessoas distintas com rostos diferentes.`);
       } else if (faceRefUrls.length > 0) {
         const fg = imageSettings.faceGender;
-        if (fg === 'male') promptParts.push('The person MUST be MALE with a masculine body.');
-        else if (fg === 'female') promptParts.push('The person MUST be FEMALE with a feminine body.');
-        if (imageSettings.wearsGlasses) promptParts.push('The person MUST be wearing glasses/eyeglasses.');
+        if (fg === 'male') promptParts.push('Pessoa MASCULINA.');
+        else if (fg === 'female') promptParts.push('Pessoa FEMININA.');
+        if (imageSettings.wearsGlasses) promptParts.push('Usando óculos.');
       }
-      // Only inject brand colors when NOT using a marketplace style (to avoid contaminating the style palette)
+      // Brand colors only when NOT using marketplace style
       if (brandColors.length > 0 && !isFullBleed && !marketplaceStyle) {
-        promptParts.push(`PALETA DE CORES DA MARCA: use predominantemente estas cores da marca do cliente: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`);
+        promptParts.push(`Cores da marca: ${brandColors.join(', ')}.`);
       }
 
-      const finalPrompt = promptParts.filter(Boolean).join('. ');
-      const negPrompt = isFullBleed ? [styleNeg, antiFaceNeg].filter(Boolean).join(', ') : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
+      const finalPrompt = promptParts.filter(Boolean).join(' ');
+      // For fullbleed, minimal negative prompt — let the refs guide
+      const negPrompt = isFullBleed ? antiFaceNeg : [baseNeg, job.negative_prompt].filter(Boolean).join(', ');
 
       imageTasks.push({ index: i, prompt: finalPrompt, negPrompt });
     }

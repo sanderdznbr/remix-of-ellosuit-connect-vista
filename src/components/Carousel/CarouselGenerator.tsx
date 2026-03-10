@@ -4614,7 +4614,8 @@ FORBIDDEN:
                           setShowStylePanel(false);
                           setTransitionToGenerate(true);
                           setCurrentCarouselId(null);
-                          setTimeout(() => generateContent(), 1200);
+                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
                         }} />
                     </div>
                   </motion.div>

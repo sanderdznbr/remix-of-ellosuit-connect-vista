@@ -2369,15 +2369,22 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const aiImageUrl = updatedCards[i]?.imageUrl;
           if (!aiImageUrl) continue;
           
-          // Get the corresponding property photo
+          // Get the corresponding property photo + focal point
           let photoUrl = '';
+          let focalPoint = 'center';
           if (realEstateMode === 'multiple' && propertyPhotoDataUrls.length > 1) {
             const propIdx = i % propertyPhotoDataUrls.length;
             const propPhotos = propertyPhotoDataUrls[propIdx] || [];
             photoUrl = propPhotos[i % Math.max(propPhotos.length, 1)] || propPhotos[0] || '';
+            const propData = snapshotPropertyList[propIdx];
+            const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
+            focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
           } else {
             const allPhotos = propertyPhotoDataUrls[0] || [];
             photoUrl = allPhotos[i % Math.max(allPhotos.length, 1)] || allPhotos[0] || '';
+            const propData = snapshotPropertyList[0];
+            const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
+            focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
           }
           
           if (!photoUrl) {
@@ -2387,7 +2394,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           try {
             setImageGenProgress(`🏠 Mesclando foto ${i + 1}/${updatedCards.length}...`);
-            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl);
+            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl, focalPoint);
             updatedCards[i] = { ...updatedCards[i], imageUrl: blended };
             console.log('[BLEND] Card', i, 'blended successfully');
           } catch (err) {

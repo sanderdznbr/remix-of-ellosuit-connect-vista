@@ -215,9 +215,11 @@ STYLE REQUIREMENTS:
       textPrompt += `\n- ${negativePrompt}`;
     }
 
-    if (fidelity === 'high') {
-      textPrompt += `\n\nCRITICAL: Follow reference images with MAXIMUM fidelity. Reproduce exact features, colors, textures, and composition.`;
-    } else if (fidelity === 'creative') {
+    // Force high fidelity when marketplace/style references are present
+    const effectiveFidelity = (validStyleRefs.length > 0 && fidelity !== 'creative') ? 'high' : fidelity;
+    if (effectiveFidelity === 'high') {
+      textPrompt += `\n\nCRITICAL FIDELITY INSTRUCTION: Follow reference images with MAXIMUM fidelity. Reproduce the EXACT same color palette (not similar — identical hex values), the EXACT same typography style/weight/effects, the EXACT same decorative elements (lines, shapes, textures), and the EXACT same layout composition. The output MUST look like it was designed by the SAME designer as the references — it should be indistinguishable from the same collection.`;
+    } else if (effectiveFidelity === 'creative') {
       textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
     }
 

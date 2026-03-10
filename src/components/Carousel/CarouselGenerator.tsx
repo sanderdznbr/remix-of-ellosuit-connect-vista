@@ -863,6 +863,12 @@ const CarouselGenerator: React.FC = () => {
       parts.push('ultra high resolution');
     }
 
+    // Real estate property context
+    if (isRealEstateStyle && propertyList.length > 0 && propertyList.some(p => p.price || p.area || p.photos.length > 0)) {
+      const propContext = buildPropertyPromptContext(propertyList, realEstateMode, cardIndex ?? 0);
+      if (propContext) parts.push(propContext);
+    }
+
     return parts.filter(Boolean).join('. ');
   };
 

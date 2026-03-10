@@ -1329,7 +1329,7 @@ const CarouselGenerator: React.FC = () => {
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
-            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+            const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
             if (insertErr) {
               console.error('Single post save failed:', insertErr);
             }

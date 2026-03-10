@@ -93,11 +93,20 @@ Não use markdown, apenas JSON puro. Seja EXTREMAMENTE detalhado e específico n
       if (parsed.category) setCategory(parsed.category);
       if (parsed.tags) setTags(Array.isArray(parsed.tags) ? parsed.tags.join(', ') : parsed.tags);
 
+      // Face recommendation
+      if (parsed.recommended_no_faces !== undefined) setRecommendedNoFaces(!!parsed.recommended_no_faces);
+      if (parsed.face_recommendation_reason) setFaceRecommendationReason(parsed.face_recommendation_reason);
+
       // Build a detailed prompt_style from visual_dna
       if (parsed.visual_dna) {
         const dna = parsed.visual_dna;
         const detailedPrompt = buildDetailedPromptStyle(parsed.name || 'Custom Style', dna);
         setDetailedPromptStyle(detailedPrompt);
+
+        // If recommended_no_faces, add anti-face instructions to prompt
+        if (parsed.recommended_no_faces) {
+          setDetailedPromptStyle(prev => prev + '\n\n=== PEOPLE/FACES ===\nThis style does NOT use human faces or people. Do NOT include any people, faces, portraits, or human figures. Focus exclusively on typography, graphic elements, objects, and abstract/editorial compositions.');
+        }
       }
     } catch (err) {
       console.error('Auto-generate error:', err);

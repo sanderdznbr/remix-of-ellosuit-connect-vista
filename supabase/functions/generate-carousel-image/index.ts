@@ -257,7 +257,8 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
-      } else {
+      } else if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS FACIAIS OBRIGATÓRIAS (${validFaceRefs.length} fotos). Estude CADA foto e reproduza esta EXATA pessoa com fidelidade absoluta — mesma estrutura óssea, olhos, nariz, boca, tom de pele, cabelo:` });
         for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 

@@ -1996,10 +1996,10 @@ const CarouselGenerator: React.FC = () => {
           
           // Real estate: get property photo for this card
           let capturedProductRefs: string[] | undefined;
-          if (isRealEstateStyle && propertyPhotoDataUrls.length > 0) {
-            if (realEstateMode === 'multiple' && propertyList.length > 1) {
+          if (useRealEstateBlend && propertyPhotoDataUrls.length > 0) {
+            if (realEstateMode === 'multiple' && snapshotPropertyList.length > 1) {
               // Multiple properties: each card gets the corresponding property's photos
-              const propIdx = i % propertyList.length;
+              const propIdx = i % snapshotPropertyList.length;
               const propPhotos = propertyPhotoDataUrls[propIdx] || [];
               if (propPhotos.length > 0) capturedProductRefs = propPhotos;
             } else {

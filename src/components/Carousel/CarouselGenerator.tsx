@@ -2380,6 +2380,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           // Get the corresponding property photo + focal point
           let photoUrl = '';
           let focalPoint = 'center';
+          let cropOffset: number | undefined;
           if (realEstateMode === 'multiple' && propertyPhotoDataUrls.length > 1) {
             const propIdx = i % propertyPhotoDataUrls.length;
             const propPhotos = propertyPhotoDataUrls[propIdx] || [];
@@ -2387,6 +2388,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             const propData = snapshotPropertyList[propIdx];
             const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
             focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
+            cropOffset = propData?.photos?.[photoIdx]?.cropOffsetY;
           } else {
             const allPhotos = propertyPhotoDataUrls[0] || [];
             photoUrl = allPhotos[i % Math.max(allPhotos.length, 1)] || allPhotos[0] || '';

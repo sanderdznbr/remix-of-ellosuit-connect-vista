@@ -469,12 +469,17 @@ const FaceGenerator: React.FC = () => {
                     </label>
                   )}
                 </div>
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between">
+                  <button onClick={() => setGalleryPickerOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/50 hover:text-white/80 border border-white/[0.08] hover:bg-white/[0.04] transition-colors cursor-pointer">
+                    <FolderOpen className="w-3.5 h-3.5" /> Importar da Galeria
+                  </button>
                   <button onClick={() => setStep('style')} disabled={faceFiles.length === 0}
                     className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
                     Próximo <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
+                <GalleryPicker open={galleryPickerOpen} onClose={() => setGalleryPickerOpen(false)} onSelectFiles={handleGalleryImport} label="Importar fotos de rosto" />
               </motion.div>
             )}
 

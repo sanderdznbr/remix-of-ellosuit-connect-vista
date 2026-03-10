@@ -214,7 +214,8 @@ const CarouselGenerator: React.FC = () => {
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
   const propertyListRef = useRef<PropertyData[]>(propertyList);
-  useEffect(() => { propertyListRef.current = propertyList; }, [propertyList]);
+  // CRITICAL: Sync ref inline at render time (NOT in useEffect which is async/deferred)
+  propertyListRef.current = propertyList;
 
   // NOTE: isRealEstateStyle, realEstateMode, and WIZARD_STEPS are computed after activeMarketplaceStyle is declared (see below)
 

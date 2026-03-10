@@ -198,20 +198,8 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
     }
 
-    // Always add hardcoded negative instructions to prevent common AI mistakes
-    textPrompt += `\n\nPROIBIDO (NUNCA inclua na imagem):
-- NÃO escreva "Tema do Carrossel", "Tema:", "Carousel Theme" ou qualquer rótulo de tema
-- NÃO escreva "Card X de Y", "Card 1 de 20", "1/20", numeração de slides ou contadores
-- NÃO replique a composição exata da capa/cover em cards de conteúdo — cada card deve ter layout ÚNICO e DIFERENTE
-- NÃO copie textos, @handles, nomes de pessoas ou empresas das imagens de referência
-- NÃO copie os ROSTOS ou PESSOAS das imagens de referência de ESTILO. Se imagens de referência de ROSTO forem fornecidas separadamente, use APENAS esses rostos. Se não houver referência de rosto, use pessoas COMPLETAMENTE DIFERENTES das que aparecem nas referências de estilo.
-- NÃO adicione textos que não foram explicitamente solicitados. Se um "TEXTO EXATO" foi fornecido, use APENAS esse texto. Nenhum bullet point, lista, subtítulo ou texto adicional.
-- NÃO coloque texto fora dos limites da imagem. Todo texto DEVE estar completamente visível dentro dos limites 1080x1350, com margens de segurança.
-- NÃO use textos cortados ou parcialmente visíveis nas bordas.
-- NÃO escreva "ARRASTE PRO LADO", "ARRASTE PARA O LADO", "ARRASTE", "DESLIZE", "SWIPE", "Arraste para o lado" ou qualquer variação de instrução de swipe/arrastar. Essas instruções de navegação são PROIBIDAS na imagem.
-- NÃO adicione setas de navegação, indicadores de swipe, ou qualquer elemento que sugira "passar para o lado".
-- PROIBIDO BORDAS BRANCAS: A imagem DEVE ocupar 100% do canvas (full bleed). NÃO adicione bordas brancas, molduras, margens, padding ou qualquer espaço vazio ao redor do conteúdo. O conteúdo principal (texto, elementos gráficos, fotos) DEVE preencher TODO o quadro de ponta a ponta. NÃO renderize uma "imagem dentro de uma imagem" — o resultado deve ser uma composição única que ocupa todo o espaço disponível sem nenhum tipo de enquadramento ou borda.
-- PROIBIDO CONTEÚDO PEQUENO: O texto e elementos visuais DEVEM ser grandes, proeminentes e legíveis. NÃO gere texto minúsculo centralizado em um fundo vazio. A tipografia principal deve ocupar pelo menos 40-60% da largura da imagem. Preencha o espaço visual com elementos — não deixe grandes áreas vazias.`;
+    // Add concise negative instructions — keep SHORT to not drown style instructions
+    textPrompt += `\n\nPROIBIDO: Sem "Tema do Carrossel", sem "Card X de Y", sem @handles/nomes copiados das referências, sem "ARRASTE/SWIPE", sem setas de navegação, sem bordas brancas/molduras (full bleed obrigatório), sem texto minúsculo (tipografia grande e legível). NÃO copie rostos das referências de estilo. Cada card com layout DIFERENTE.`;
 
     if (negativePrompt) {
       textPrompt += `\n- ${negativePrompt}`;
@@ -303,25 +291,24 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
       textPrompt += `\n\nBRAND/STYLE REFERENCE: I am attaching ${validStyleRefs.length} brand/style reference image(s). You MUST replicate these references with MAXIMUM FIDELITY:
 1. Match the EXACT visual style: same color palette, same typography weight/style/hierarchy, same decorative elements (lines, shapes, textures, overlays)
 2. Match the EXACT layout composition: same grid structure, same text placement zones, same image-to-text ratio
-3. Match the EXACT aesthetic treatment: same photo filters, same contrast levels, same grain/texture effects, same border treatments
-4. The result should look like it belongs to the SAME SERIES as the reference images — a viewer should immediately recognize it as the same brand/style
-5. CRITICAL: Extract ONLY the visual style. DO NOT copy any text content, usernames, @ handles, brand names, company names, personal names, credits, watermarks, or personal information from the reference images. ALL text in the generated image must come EXCLUSIVELY from the user's input above. If you see text like "marketing for X by Y", "por Fulano", "@ someone", credits, or any attribution text in the references — IGNORE IT COMPLETELY and DO NOT reproduce it.
-6. Each card should have a UNIQUE layout variation within the same style system — do NOT make every card identical to the first reference.
-7. **ABSOLUTELY DO NOT** copy, replicate, or use the FACES or PEOPLE from these style reference images. The people in the style references are NOT the subject — they are part of the reference aesthetic ONLY. If face reference photos are provided separately, use ONLY those faces. If no face references are provided, generate COMPLETELY DIFFERENT people with different features, ethnicity, and appearance from the style references.
-8. **ABSOLUTELY DO NOT** reproduce ANY text, names, brands, credits, attributions, or watermarks visible in the style reference images. The references are for VISUAL STYLE ONLY (colors, typography style, layout, decorative elements). All actual text content must come from the user prompt above.`;
+3. Match the EXACT aesthetic treatment: same photo filters, same contrast levels, same grain/texture effects
+4. The result MUST look like it belongs to the SAME SERIES as the reference images
+5. DO NOT copy text content, usernames, @handles, brand names, or personal info from references — STYLE ONLY
+6. Each card should have UNIQUE layout variation within the same style system
+7. DO NOT copy faces/people from style references — generate DIFFERENT people`;
     }
 
-    // CRITICAL: when style refs exist, place them before instructions to improve visual anchoring
+    // === MESSAGE ASSEMBLY — ORDER IS CRITICAL FOR FIDELITY ===
+    // Sandwich technique: Style refs FIRST → Face refs → Prompt → Style reminder LAST
+
+    // 1. STYLE REFERENCES FIRST (visual anchoring — model sees these as primary context)
     if (validStyleRefs.length > 0) {
-      messageContent.push({ type: 'text', text: `=== MANDATORY STYLE REFERENCES (${validStyleRefs.length}) ===` });
+      messageContent.push({ type: 'text', text: `YOUR #1 PRIORITY: Replicate the EXACT visual style of these ${validStyleRefs.length} reference images. Same colors, same typography, same layout, same decorative elements. The output MUST look like part of the SAME collection.` });
       for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-      messageContent.push({ type: 'text', text: 'The images above define the REQUIRED visual DNA. Follow them strictly for colors, typography style, composition, spacing, and decorative motifs.' });
     }
 
-    // CRITICAL: Face references MUST come before the prompt when provided
-    // so the model treats them as highest priority identity references
+    // 2. FACE REFERENCES (identity)
     if (validFaceRefs.length > 0 && isMultiPerson) {
-      // Group face refs by person with clear labels
       let photoOffset = 0;
       for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
         const pm = facePersonsMetadata[pi];
@@ -335,15 +322,24 @@ ${singleGender ? `0. MANDATORY GENDER: ${singleGender} This overrides ANY visual
         }
         photoOffset += count;
       }
-      messageContent.push({ type: 'text', text: `The images above show ${facePersonsMetadata.length} DIFFERENT people. Each group is labeled. The generated image MUST contain ALL ${facePersonsMetadata.length} people with their EXACT faces from their respective reference groups. Each person MUST look DIFFERENT from the others.` });
+      messageContent.push({ type: 'text', text: `The images above show ${facePersonsMetadata.length} DIFFERENT people. Each person MUST match their respective face reference EXACTLY.` });
     } else {
       for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `The ${validFaceRefs.length} image(s) above are FACE REFERENCE PHOTOS. The person in the generated image MUST have the EXACT same face as shown above. This is the #1 priority.` });
+        messageContent.push({ type: 'text', text: `FACE REFERENCE: The person MUST have the EXACT same face as shown above.` });
       }
     }
+
+    // 3. MAIN PROMPT (content instructions)
     messageContent.push({ type: 'text', text: textPrompt });
+
+    // 4. PRODUCT REFERENCES
     for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+
+    // 5. STYLE REMINDER AT END (sandwich close — reinforces visual fidelity as last instruction)
+    if (validStyleRefs.length > 0) {
+      messageContent.push({ type: 'text', text: `FINAL REMINDER: The generated image MUST be visually IDENTICAL in style to the reference images shown at the top. Same exact color palette, same typography style, same decorative elements, same composition approach. It should be INDISTINGUISHABLE from the same design collection. This is NON-NEGOTIABLE.` });
+    }
 
     // Model selection — treat "elloia" as the premium model (backward compatible with "nano-banana")
     const requestedModel = (imageModel || 'auto').toString().toLowerCase();

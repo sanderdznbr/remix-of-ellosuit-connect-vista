@@ -1465,21 +1465,11 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           ctx.fillStyle = gradient;
           ctx.fillRect(0, 0, W, H);
 
-          // STEP 3: Overlay AI image using screen blend (bottom 45% + top 22%)
+          // STEP 3: Overlay FULL AI image using screen blend (black = transparent)
           const aiImg = await loadImg(imageUrl);
-          const cutRatio = 0.45;
-          const aiCutY = aiImg.height * (1 - cutRatio);
-          const canvasCutY = H * (1 - cutRatio);
-
           ctx.globalCompositeOperation = 'screen';
-          ctx.drawImage(aiImg, 0, aiCutY, aiImg.width, aiImg.height * cutRatio, 0, canvasCutY, W, H * cutRatio);
+          ctx.drawImage(aiImg, 0, 0, aiImg.width, aiImg.height, 0, 0, W, H);
           ctx.globalCompositeOperation = 'source-over';
-
-          ctx.globalAlpha = 0.85;
-          ctx.globalCompositeOperation = 'screen';
-          ctx.drawImage(aiImg, 0, 0, aiImg.width, aiImg.height * 0.22, 0, 0, W, H * 0.22);
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.globalAlpha = 1.0;
 
           // STEP 4: Draw logo
           if (logoUrl) {

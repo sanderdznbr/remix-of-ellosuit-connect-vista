@@ -1756,7 +1756,7 @@ const CarouselGenerator: React.FC = () => {
           const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
           let imgPrompt = `${cleanTopic}: ${cardDesc}`;
           
-          const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+          const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
           if (isFullBleedMarketplace) {
             const isCover = card.type === 'cover' || i === 0;
             const isCta = card.type === 'cta' || i === updatedCards.length - 1;

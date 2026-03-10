@@ -6,7 +6,7 @@ import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import {
   ArrowLeft, ArrowRight, Upload, X, Loader2, Palette, Sparkles,
   Image as ImageIcon, User, Monitor, Wand2, Check, Plus, Eye, Download,
-  Building2,
+  Building2, Home, MapPin, BedDouble, Bath, Ruler, DollarSign, Trash2,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
@@ -18,6 +18,55 @@ interface GeneratedPost {
   cardIndex: number;
 }
 
+interface PropertyDetails {
+  id: string;
+  photos: File[];
+  photoPreviews: string[];
+  title: string;
+  type: 'apartment' | 'house' | 'commercial' | 'land' | 'studio' | 'penthouse';
+  mode: 'sale' | 'rent';
+  price: string;
+  area: string; // m²
+  bedrooms: string;
+  bathrooms: string;
+  parkingSpots: string;
+  suites: string;
+  location: string;
+  neighborhood: string;
+  city: string;
+  highlights: string; // "piscina, churrasqueira, vista mar"
+  description: string;
+}
+
+const createEmptyProperty = (): PropertyDetails => ({
+  id: crypto.randomUUID(),
+  photos: [],
+  photoPreviews: [],
+  title: '',
+  type: 'apartment',
+  mode: 'sale',
+  price: '',
+  area: '',
+  bedrooms: '',
+  bathrooms: '',
+  parkingSpots: '',
+  suites: '',
+  location: '',
+  neighborhood: '',
+  city: '',
+  highlights: '',
+  description: '',
+});
+
+const PROPERTY_TYPES: { value: PropertyDetails['type']; label: string }[] = [
+  { value: 'apartment', label: 'Apartamento' },
+  { value: 'house', label: 'Casa' },
+  { value: 'commercial', label: 'Comercial' },
+  { value: 'land', label: 'Terreno' },
+  { value: 'studio', label: 'Studio' },
+  { value: 'penthouse', label: 'Cobertura' },
+];
+
 const BASE_STEPS = [
   { key: 'references', label: 'Referências de Estilo', icon: ImageIcon },
   { key: 'brand', label: 'Elementos da Marca', icon: Palette },
@@ -27,20 +76,20 @@ const BASE_STEPS = [
   { key: 'generate', label: 'Gerar Posts', icon: Wand2 },
 ];
 
-const PROPERTY_STEP = { key: 'property', label: 'Fotos do Imóvel', icon: Building2 };
+const PROPERTY_STEP = { key: 'property', label: 'Imóveis', icon: Building2 };
 
 const StyleCreator: React.FC = () => {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [isRealEstate, setIsRealEstate] = useState(false);
+  const [propertyMode, setPropertyMode] = useState<'single' | 'multi'>('single');
 
   // Dynamic steps based on real estate toggle
   const STEPS = React.useMemo(() => {
     if (isRealEstate) {
-      // Insert property step after references (index 1), remove face step
       return [
         BASE_STEPS[0], // references
-        PROPERTY_STEP,  // property photos
+        PROPERTY_STEP,  // property details
         BASE_STEPS[1], // brand
         BASE_STEPS[2], // mockups
         BASE_STEPS[3], // logo
@@ -69,8 +118,13 @@ const StyleCreator: React.FC = () => {
   const [faceFiles, setFaceFiles] = useState<File[]>([]);
   const [facePreviews, setFacePreviews] = useState<string[]>([]);
 
+  // Legacy property files (kept for backwards compat)
   const [propertyFiles, setPropertyFiles] = useState<File[]>([]);
   const [propertyPreviews, setPropertyPreviews] = useState<string[]>([]);
+
+  // New: detailed properties
+  const [properties, setProperties] = useState<PropertyDetails[]>([createEmptyProperty()]);
+  const [activePropertyIdx, setActivePropertyIdx] = useState(0);
 
   const [styleName, setStyleName] = useState('');
   const [generating, setGenerating] = useState(false);

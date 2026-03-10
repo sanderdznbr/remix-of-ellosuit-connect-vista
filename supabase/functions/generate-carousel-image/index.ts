@@ -276,7 +276,13 @@ Deno.serve(async (req) => {
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
+      if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
+        messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
+      }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
+      if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
+        messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. Ela DEVE ser a imagem principal/de fundo do post. Integre textos e elementos gráficos do estilo POR CIMA desta foto real.` });
+      }
     } else {
       // STANDARD MODE
 

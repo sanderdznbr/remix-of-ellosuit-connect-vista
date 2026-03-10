@@ -1350,7 +1350,7 @@ const CarouselGenerator: React.FC = () => {
 
       // === REAL ESTATE BLEND DETECTION (same triple-source as generateContent) ===
       const snapshot = generationSnapshotRef.current;
-      const snapshotIsRealEstate = snapshot?.isRealEstate ?? isRealEstate;
+      const snapshotIsRealEstate = snapshot?.isRealEstate ?? isRealEstateStyle;
       const snapshotPropertyList: PropertyData[] = snapshot?.propertyList ?? propertyList;
       const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
       

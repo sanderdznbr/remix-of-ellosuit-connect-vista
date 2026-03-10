@@ -177,8 +177,11 @@ const FaceGenerator: React.FC = () => {
 
     setStep('generating');
     setIsGenerating(true);
+    setGenerationProgress({ current: 0, total: photoCount });
+    setLastGeneratedUrls([]);
 
     try {
+      // Upload face refs
       const faceUrls: string[] = [];
       for (let i = 0; i < faceFiles.length; i++) {
         const path = `portraits/${companyId}/refs/face_${Date.now()}_${i}.${faceFiles[i].name.split('.').pop()}`;
@@ -186,6 +189,7 @@ const FaceGenerator: React.FC = () => {
         if (url) faceUrls.push(url);
       }
 
+      // Upload style refs
       const styleUrls: string[] = [];
       for (let i = 0; i < styleRefFiles.length; i++) {
         const path = `portraits/${companyId}/refs/style_${Date.now()}_${i}.${styleRefFiles[i].name.split('.').pop()}`;
@@ -193,46 +197,80 @@ const FaceGenerator: React.FC = () => {
         if (url) styleUrls.push(url);
       }
 
-      const { data: portrait, error: insertError } = await supabase.from('generated_portraits').insert({
-        user_id: user.id, company_id: companyId,
-        title: prompt.slice(0, 80), prompt,
-        face_ref_urls: faceUrls, style_ref_urls: styleUrls,
-        marketplace_style_id: selectedMarketplaceStyle, status: 'generating',
-      }).select('id').single();
-
-      if (insertError || !portrait) throw insertError || new Error('Failed to create record');
-
+      const batchId = `batch_${Date.now()}`;
+      const generatedUrls: string[] = [];
       const { data: session } = await supabase.auth.getSession();
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.session?.access_token}` },
-          body: JSON.stringify({ portraitId: portrait.id, prompt, faceRefUrls: faceUrls, styleRefUrls: styleUrls, marketplaceStyleId: selectedMarketplaceStyle }),
+
+      // Generate photos sequentially (to avoid rate limits)
+      for (let p = 0; p < photoCount; p++) {
+        setGenerationProgress({ current: p, total: photoCount });
+
+        // Create record
+        const { data: portrait, error: insertError } = await supabase.from('generated_portraits').insert({
+          user_id: user.id, company_id: companyId,
+          title: photoCount > 1 ? `${prompt.slice(0, 70)} (${p + 1}/${photoCount})` : prompt.slice(0, 80),
+          prompt,
+          face_ref_urls: faceUrls, style_ref_urls: styleUrls,
+          marketplace_style_id: selectedMarketplaceStyle, status: 'generating',
+          metadata: { photo_count: photoCount, batch_id: batchId, batch_index: p },
+        } as any).select('id').single();
+
+        if (insertError || !portrait) {
+          console.error('Insert error:', insertError);
+          continue;
         }
-      );
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Error ${response.status}`);
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-portrait`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.session?.access_token}` },
+              body: JSON.stringify({
+                portraitId: portrait.id, prompt, faceRefUrls: faceUrls, styleRefUrls: styleUrls,
+                marketplaceStyleId: selectedMarketplaceStyle,
+                variationIndex: p, // hint for slight variation
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            console.error(`Photo ${p + 1} error:`, err);
+            continue;
+          }
+
+          const result = await response.json();
+          if (result.imageUrl) {
+            generatedUrls.push(result.imageUrl);
+            await saveToGalleryFolder(result.imageUrl, photoCount > 1 ? `${prompt.slice(0, 60)} (${p + 1})` : prompt.slice(0, 80));
+          }
+        } catch (err) {
+          console.error(`Photo ${p + 1} generation failed:`, err);
+        }
+
+        // Small delay between generations to avoid rate limits
+        if (p < photoCount - 1) {
+          await new Promise(r => setTimeout(r, 2000));
+        }
       }
 
-      const result = await response.json();
-      const imageUrl = result.imageUrl;
-
-      // Save to brand gallery folder
-      if (imageUrl) {
-        await saveToGalleryFolder(imageUrl, prompt.slice(0, 80));
-      }
+      setGenerationProgress({ current: photoCount, total: photoCount });
 
       // Refresh gallery
       const { data: updated } = await supabase.from('generated_portraits')
         .select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50);
       setGallery((updated as GeneratedPortrait[]) || []);
 
-      setLastGeneratedUrl(imageUrl);
-      setStep('result');
-      toast.success('Retrato gerado com sucesso!');
+      if (generatedUrls.length > 0) {
+        setLastGeneratedUrls(generatedUrls);
+        setLastGeneratedUrl(generatedUrls[0]);
+        setStep('result');
+        toast.success(`${generatedUrls.length} retrato(s) gerado(s) com sucesso!`);
+      } else {
+        toast.error('Nenhuma foto foi gerada com sucesso');
+        setStep('prompt');
+      }
     } catch (error: any) {
       console.error('Generation error:', error);
       toast.error(error.message || 'Erro ao gerar retrato');

@@ -401,17 +401,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 2: retry with pro model, simplified content
+    // Attempt 2: retry with pro model, simplified content — FACE REFS FIRST
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
-      // Style refs (reduced to 4 max for retry)
-      const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      // Face refs FIRST (identity priority)
+      const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+      if (activeFaceRefs.length > 0) {
+        retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
+        for (const ref of activeFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
+      // Style refs AFTER face refs (reduced when faces present)
+      const maxStyleRefs = activeFaceRefs.length > 0 ? 3 : 4;
+      const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, maxStyleRefs);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-      // Face refs
-      for (const ref of validFaceRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
-      // Simplified prompt
       if (isVisualCloneMode) {
-        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências acima. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction}` });
+        const faceReminder = activeFaceRefs.length > 0 ? ' A pessoa DEVE ter o rosto EXATO das fotos de referência facial.' : '';
+        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências de estilo. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction}${faceReminder}` });
       } else if (stylePrompt) {
         retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
       } else {
@@ -424,12 +429,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 3: pro model, only safe (base64) URLs
+    // Attempt 3: pro model, safe URLs (keep ALL face refs — they're critical)
     if (!generatedImage && usePremium) {
       const textOnlyContent: any[] = [];
-      const safeStyleRefs = validStyleRefs.filter(r => r.startsWith('data:'));
-      const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
-      for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
+      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+      const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
+      if (safeFaceRefs.length > 0) {
+        textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+        for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
         textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
@@ -441,11 +449,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 4: flash fallback
+    // Attempt 4: flash fallback — keep face refs
     if (!generatedImage) {
       const fallbackContent: any[] = [];
-      const safeFaceRefs = validFaceRefs.filter(r => r.startsWith('data:'));
-      for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
+      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      if (safeFaceRefs.length > 0) {
+        fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+        for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
       if (stylePrompt) {
         fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
       } else {

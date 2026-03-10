@@ -278,7 +278,8 @@ export const buildPropertyPromptContext = (properties: PropertyData[], realEstat
   return `\n\n=== IMÓVEL (${modeLabel}) ===
 Tipo: ${typeLabel}
 ${details.join(' | ')}
+FOTO REAL DO IMÓVEL: A foto de referência fornecida é a FOTO REAL deste imóvel. Use-a como imagem principal/destaque do card. NÃO gere uma imagem artificial — INCORPORE a foto real no layout editorial com sobreposições de texto, badges de informações e elementos decorativos.
 Inclua essas informações de forma visualmente atraente no post. Use tipografia de marketing imobiliário premium. O texto deve ser em PORTUGUÊS BRASILEIRO. Crie títulos impactantes como "Seu Novo Lar", "Oportunidade Única", "Viva com Estilo", "Realize Seu Sonho".
-${realEstateMode === 'single' ? `Este é o card ${cardIndex + 1} — mostre um ângulo/cômodo diferente do mesmo imóvel.` : `Este card destaca o imóvel ${(cardIndex % properties.length) + 1} de ${properties.length}.`}
+${realEstateMode === 'single' ? `Este é o card ${cardIndex + 1} — use a foto correspondente do imóvel para este card.` : `Este card destaca o imóvel ${(cardIndex % properties.length) + 1} de ${properties.length}.`}
 NÃO inclua rostos humanos. Foque na arquitetura, interiores e detalhes do imóvel.`;
 };

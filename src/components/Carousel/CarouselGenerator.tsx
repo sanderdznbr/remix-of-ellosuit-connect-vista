@@ -5318,7 +5318,7 @@ FORBIDDEN:
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={() => setAddCardModal(prev => ({ ...prev, open: false }))}>
+            onClick={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}>
             <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}

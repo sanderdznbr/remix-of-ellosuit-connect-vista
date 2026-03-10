@@ -78,7 +78,7 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
 
       <div className="flex gap-3 flex-wrap">
         {prop.photos.map((photo, pi) => (
-          <div key={pi} className="relative w-28 h-28 rounded-xl overflow-hidden border border-white/10 group">
+          <div key={pi} className="relative w-36 h-44 rounded-xl overflow-hidden border border-white/10 group">
             <img src={photo.url} alt="" className="w-full h-full object-cover"
               style={{ objectPosition: photo.focalPoint === 'top' ? 'center top' : photo.focalPoint === 'bottom' ? 'center bottom' : 'center center' }} />
             <button onClick={() => removePhoto(prop.id, pi)}
@@ -86,23 +86,26 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
               <X className="w-3 h-3" />
             </button>
             {/* Focal point picker - always visible */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/70 flex items-center justify-center gap-1 py-1">
-              {(['top', 'center', 'bottom'] as PhotoFocalPoint[]).map(fp => (
-                <button key={fp} onClick={() => setFocalPoint(prop.id, pi, fp)}
-                  className={`w-6 h-6 rounded flex items-center justify-center cursor-pointer transition-colors ${(photo.focalPoint || 'center') === fp ? 'bg-white/30 text-white' : 'text-white/40 hover:text-white/70'}`}
-                  title={fp === 'top' ? 'Foco no topo' : fp === 'bottom' ? 'Foco na base' : 'Foco no centro'}>
-                  {fp === 'top' ? <ArrowUp className="w-3 h-3" /> : fp === 'bottom' ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                </button>
-              ))}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/80 flex flex-col items-center gap-0.5 py-1.5">
+              <span className="text-[8px] text-white/50 uppercase tracking-wider">Ponto focal</span>
+              <div className="flex items-center gap-1">
+                {(['top', 'center', 'bottom'] as PhotoFocalPoint[]).map(fp => (
+                  <button key={fp} onClick={() => setFocalPoint(prop.id, pi, fp)}
+                    className={`w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all ${(photo.focalPoint || 'center') === fp ? 'bg-purple-500/60 text-white ring-1 ring-purple-400/50' : 'text-white/40 hover:text-white/70 hover:bg-white/10'}`}
+                    title={fp === 'top' ? 'Foco no topo' : fp === 'bottom' ? 'Foco na base' : 'Foco no centro'}>
+                    {fp === 'top' ? <ArrowUp className="w-3.5 h-3.5" /> : fp === 'bottom' ? <ArrowDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                  </button>
+                ))}
+              </div>
             </div>
             {realEstateMode === 'single' && (
-              <div className={`absolute top-0 left-0 right-0 bg-black/60 text-center py-0.5 ${(photo.focalPoint || 'center') !== 'center' ? '' : 'opacity-0 group-hover:opacity-0'}`}>
+              <div className="absolute top-0 left-0 right-0 bg-black/60 text-center py-0.5">
                 <span className="text-[9px] text-white/70">Card {pi + 1}</span>
               </div>
             )}
           </div>
         ))}
-        <label className="flex items-center justify-center w-28 h-28 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-white/25 transition-colors">
+        <label className="flex items-center justify-center w-36 h-44 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-white/25 transition-colors">
           <div className="text-center">
             <Upload className="w-5 h-5 text-white/25 mx-auto mb-1" />
             <span className="text-[10px] text-white/25">Adicionar</span>

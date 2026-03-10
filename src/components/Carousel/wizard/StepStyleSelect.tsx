@@ -64,17 +64,22 @@ const StepStyleSelect: React.FC<Props> = ({
         setLoading(false);
         return;
       }
-      // Auth users: show purchased styles
-      const { data: purchased } = await supabase
-        .from('purchased_styles')
-        .select('style_id')
-        .eq('user_id', user.id);
-      if (!purchased?.length) { setLoading(false); return; }
-      const styleIds = (purchased as any[]).map(p => p.style_id);
+      // Auth users: show purchased styles + free styles
+      const [{ data: purchased }, { data: freeStyles }] = await Promise.all([
+        supabase.from('purchased_styles').select('style_id').eq('user_id', user.id),
+        supabase.from('marketplace_styles')
+          .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
+          .eq('is_active', true)
+          .eq('is_free', true),
+      ]);
+      const purchasedIds = (purchased as any[] || []).map(p => p.style_id);
+      const freeIds = (freeStyles as any[] || []).map(s => s.id);
+      const allIds = Array.from(new Set([...purchasedIds, ...freeIds]));
+      if (!allIds.length) { setLoading(false); return; }
       const { data: styles } = await supabase
         .from('marketplace_styles')
-        .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions')
-        .in('id', styleIds)
+        .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
+        .in('id', allIds)
         .eq('is_active', true);
       setPurchasedStyles((styles as any[]) || []);
     } catch (err) {

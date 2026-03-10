@@ -149,16 +149,18 @@ const StepStyle: React.FC<Props> = ({
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
-        const { data: purchased } = await supabase
-          .from('purchased_styles')
-          .select('style_id')
-          .eq('user_id', userData.user.id);
-        if (!purchased?.length) return;
-        const styleIds = (purchased as any[]).map(p => p.style_id);
+        const [{ data: purchased }, { data: freeStyles }] = await Promise.all([
+          supabase.from('purchased_styles').select('style_id').eq('user_id', userData.user.id),
+          supabase.from('marketplace_styles').select('id').eq('is_active', true).eq('is_free', true),
+        ]);
+        const purchasedIds = (purchased as any[] || []).map(p => p.style_id);
+        const freeIds = (freeStyles as any[] || []).map(s => s.id);
+        const allIds = Array.from(new Set([...purchasedIds, ...freeIds]));
+        if (!allIds.length) return;
         const { data: styles } = await supabase
           .from('marketplace_styles')
           .select('id, name, preview_images, style_config')
-          .in('id', styleIds)
+          .in('id', allIds)
           .eq('is_active', true);
         setMarketplaceStyles((styles as any[]) || []);
       } catch (err) {

@@ -226,7 +226,12 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: A pessoa na imagem DEVE ser EXATAMENTE a pessoa das fotos de referência. ${singleGender} Copie com precisão cirúrgica: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo, formato do rosto. Rosto visível de frente ou 3/4, bem iluminado, sem obstruções. Esta é a prioridade #1 da geração — fidelidade facial absoluta.`;
     }
 
-    if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
+    // Detect real estate mode from prompt content
+    const isRealEstatePrompt = /FOTO DO IMÓVEL|FOTO REAL|imóvel|imovel|propriedade|property photo/i.test(imagePrompt);
+
+    if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
+      textPrompt += `\n\n📸 FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA): A imagem de referência fornecida é uma FOTOGRAFIA REAL do imóvel. Você DEVE usar esta foto como a imagem principal/de fundo do card. NÃO gere uma casa ou imóvel artificial — INCORPORE a foto real no design. A foto real deve ocupar pelo menos 60-80% da área visual do card. Aplique o estilo editorial (textos, badges, overlays, elementos gráficos) POR CIMA da foto real. Trate a foto como se fosse uma imagem de fundo editorializada.`;
+    } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
       textPrompt += `\n\nPRODUTO: Reproduza o produto das referências fielmente.`;
     }
 

@@ -468,6 +468,97 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === STAGE 2: FACE SWAP ===
+    // If 2-stage mode, take the generated image and swap the placeholder face with the real face
+    if (isTwoStageMode && generatedImage) {
+      console.log('🎭 Stage 2: Face swap starting...');
+      
+      const faceSwapContent: any[] = [];
+      
+      // Send face references FIRST — this is the identity to apply
+      faceSwapContent.push({ type: 'text', text: `🚨 FACE IDENTITY REFERENCES — Study these ${validFaceRefs.length} photos carefully. This is the EXACT person whose face must appear in the final image:` });
+      for (const ref of validFaceRefs.slice(0, 6)) {
+        faceSwapContent.push({ type: 'image_url', image_url: { url: ref } });
+      }
+      
+      // Then send the generated image
+      faceSwapContent.push({ type: 'text', text: `Below is the SOURCE IMAGE. Replace ONLY the face/head of the person in this image with the EXACT face from the references above.` });
+      faceSwapContent.push({ type: 'image_url', image_url: { url: generatedImage } });
+      
+      const aspectInstruction = outputAspectRatio === '9:16' 
+        ? 'Output MUST be PORTRAIT 9:16 (1080x1920). Fill the entire vertical canvas.'
+        : `Output aspect ratio: ${outputAspectRatio}. Fill the entire canvas.`;
+      
+      faceSwapContent.push({ type: 'text', text: `CRITICAL FACE SWAP RULES:
+1. KEEP EVERYTHING IDENTICAL: background, clothing, body pose, text overlays, logos, colors, layout, composition, ALL graphic elements — change NOTHING except the face.
+2. The face MUST be the EXACT person from the reference photos — same bone structure, eyes, nose, lips, eyebrows, jawline, skin tone, hair color/texture.
+3. Match the lighting and angle of the original face position naturally.
+4. ${aspectInstruction}
+5. The output must fill 100% of the canvas — NO borders, NO cropping, NO black bars.
+6. Do NOT alter, move, or remove any text, logos, or design elements.
+7. ${singleGender}` });
+
+      // Try face swap with premium model first, then flash
+      const faceSwapModels = ['google/gemini-3-pro-image-preview', 'google/gemini-2.5-flash-image'];
+      let swappedImage: string | null = null;
+      
+      for (const swapModel of faceSwapModels) {
+        try {
+          console.log(`🎭 Face swap attempt with ${swapModel}...`);
+          const swapRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: swapModel,
+              messages: [{ role: 'user', content: faceSwapContent }],
+              modalities: ['image', 'text'],
+              temperature: 0.05, // Ultra-low temp for maximum face fidelity
+            }),
+          });
+          
+          if (!swapRes.ok) {
+            const errText = await swapRes.text();
+            console.error(`Face swap error with ${swapModel}:`, swapRes.status, errText.slice(0, 300));
+            if (swapRes.status === 429 || swapRes.status === 402) {
+              // Rate limited — return Stage 1 image rather than failing completely
+              console.log('Rate limited on face swap, returning Stage 1 image');
+              break;
+            }
+            continue;
+          }
+          
+          const raw = await swapRes.text();
+          const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+          for (const pattern of extractPatterns) {
+            const idx = raw.indexOf(pattern);
+            if (idx === -1) continue;
+            const urlStart = raw.indexOf('"', idx + 5) + 1;
+            const urlEnd = raw.indexOf('"', urlStart);
+            if (urlEnd === -1) continue;
+            swappedImage = raw.slice(urlStart, urlEnd);
+            break;
+          }
+          
+          if (swappedImage) {
+            console.log(`🎭 Face swap SUCCESS with ${swapModel} (${swappedImage.length} chars)`);
+            generatedImage = swappedImage;
+            break;
+          }
+          console.log(`Face swap: no image in response from ${swapModel}`);
+        } catch (swapErr: any) {
+          console.error(`Face swap error with ${swapModel}:`, swapErr);
+        }
+      }
+      
+      if (!swappedImage) {
+        console.log('⚠️ Face swap failed on all models, returning Stage 1 image (placeholder face)');
+        // Still return Stage 1 — better than nothing
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, imageUrl: generatedImage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

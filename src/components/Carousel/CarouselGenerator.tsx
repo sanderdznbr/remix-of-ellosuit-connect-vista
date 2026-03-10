@@ -1727,9 +1727,9 @@ const CarouselGenerator: React.FC = () => {
       let aiImagesQueued = 0;
       const usedImageUrls = new Set<string>();
 
-      const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+      const styleNeg = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '';
       const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
-      const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+      const isFullBleedStyle = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];

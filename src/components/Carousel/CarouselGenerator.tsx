@@ -1764,7 +1764,13 @@ const CarouselGenerator: React.FC = () => {
       }
 
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
-      if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
+      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))));
+      if (isRealEstateStyle) {
+        const hasPhotos = propertyList.some(p => p.photos.length > 0);
+        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'entering Canvas path regardless');
+        if (!hasPhotos) {
+          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Cards will use AI generation as fallback.');
+        }
         setImageGenProgress('🏠 Gerando cards imobiliários...');
         
         const convertToBase64 = async (url: string): Promise<string> => {
@@ -1985,19 +1991,22 @@ const CarouselGenerator: React.FC = () => {
           const photo = prop.photos[photoIdx]?.url || '';
           
           if (!photo) {
+            console.warn('[REAL_ESTATE_DEBUG] Card', i, 'has no photo, skipping');
             completed++;
             setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
             continue;
           }
           
+          console.log('[REAL_ESTATE_DEBUG] Card', i, 'rendering with photo:', photo.substring(0, 80));
           const cardType = updatedCards[i].type === 'cover' ? 'cover' : updatedCards[i].type === 'cta' ? 'cta' : 'content';
           
           try {
             setImageGenProgress(`🏠 ${completed + 1}/${totalToGen} — Renderizando card...`);
             const finalImage = await renderCardOnCanvas(photo, prop, cardType, i, totalToGen, accentColor);
+            console.log('[REAL_ESTATE_DEBUG] Card', i, 'Canvas render SUCCESS, dataUrl length:', finalImage.length);
             updatedCards[i] = { ...updatedCards[i], imageUrl: finalImage, isAiImage: true };
           } catch (err) {
-            console.error('Real estate card render error for card', i, err);
+            console.error('[REAL_ESTATE_DEBUG] Canvas render FAILED for card', i, err);
             try {
               const photoBase64 = await convertToBase64(photo);
               updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };

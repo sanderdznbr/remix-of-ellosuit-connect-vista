@@ -214,7 +214,8 @@ const CarouselGenerator: React.FC = () => {
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
   const propertyListRef = useRef<PropertyData[]>(propertyList);
-  useEffect(() => { propertyListRef.current = propertyList; }, [propertyList]);
+  // CRITICAL: Sync ref inline at render time (NOT in useEffect which is async/deferred)
+  propertyListRef.current = propertyList;
 
   // NOTE: isRealEstateStyle, realEstateMode, and WIZARD_STEPS are computed after activeMarketplaceStyle is declared (see below)
 
@@ -336,7 +337,8 @@ const CarouselGenerator: React.FC = () => {
   useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
   useEffect(() => { generatingRef.current = generating; }, [generating]);
   useEffect(() => { carouselDataRef.current = carouselData; }, [carouselData]);
-  useEffect(() => { activeMarketplaceStyleRef.current = activeMarketplaceStyle; }, [activeMarketplaceStyle]);
+  // CRITICAL: Sync marketplace style ref inline at render time (NOT in useEffect)
+  activeMarketplaceStyleRef.current = activeMarketplaceStyle;
 
   // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
   useEffect(() => {
@@ -1776,8 +1778,11 @@ const CarouselGenerator: React.FC = () => {
         const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
         console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
         if (!hasPhotos) {
-          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Cards will use AI generation as fallback.');
-        }
+          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Falling through to AI generation.');
+          // DON'T enter Canvas path without photos — let normal AI generation handle it
+          // but log extensively to help debug
+          toast({ title: '⚠️ Nenhuma foto do imóvel encontrada', description: 'Usando imagem gerada por IA como alternativa. Para usar suas fotos reais, adicione-as no passo "Fotos do Imóvel".', variant: 'default' });
+        } else {
         setImageGenProgress('🏠 Gerando cards imobiliários...');
         
         const convertToBase64 = async (url: string): Promise<string> => {
@@ -2063,7 +2068,8 @@ const CarouselGenerator: React.FC = () => {
         if (localJobId) { setCloudJobId(null); }
         setGenerating(false);
         return;
-      }
+        } // close else (hasPhotos)
+      } // close if (isRealEstateNow)
       
       // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);

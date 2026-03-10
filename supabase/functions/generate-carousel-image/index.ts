@@ -307,6 +307,10 @@ Deno.serve(async (req) => {
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências acima.` });
       }
+      // Face fidelity reminder at the end (sandwich technique)
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL DE FIDELIDADE FACIAL: A pessoa gerada DEVE ser a MESMA PESSOA das fotos de referência facial acima. NÃO gere uma pessoa diferente. Verifique: mesma estrutura óssea, mesmos olhos, mesmo nariz, mesma boca, mesmo tom de pele, mesmo cabelo.` });
+      }
     }
 
     // === DIAGNOSTIC: Log total message size ===

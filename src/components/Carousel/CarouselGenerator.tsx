@@ -1826,8 +1826,11 @@ const CarouselGenerator: React.FC = () => {
       const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
 
       // === REAL ESTATE: Convert property photos from blob URLs to base64 data URLs ===
-      let propertyPhotoDataUrls: string[][] = [];
-      if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
+      const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
+      if (useRealEstateBlend) {
+        console.log('[BLEND] ✅ Real estate blend mode ACTIVE — will generate AI on black bg then blend with real photos');
+      }
+      if (useRealEstateBlend) {
         setImageGenProgress('📸 Processando fotos dos imóveis...');
         propertyPhotoDataUrls = await Promise.all(
           propertyList.map(async (prop) => {

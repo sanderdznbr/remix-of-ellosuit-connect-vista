@@ -2046,6 +2046,33 @@ const CarouselGenerator: React.FC = () => {
             }
           }
 
+          // ===== DRAW LOGO IMAGE on canvas at selected position =====
+          if (logoUrl) {
+            try {
+              const logoBase64 = await convertToBase64(logoUrl);
+              const logoImg = await loadImage(logoBase64);
+              const maxLogoW = 180, maxLogoH = 80;
+              const logoScale = Math.min(maxLogoW / logoImg.width, maxLogoH / logoImg.height, 1);
+              const lw = logoImg.width * logoScale;
+              const lh = logoImg.height * logoScale;
+              const pad = 50;
+              let lx = pad, ly = pad; // default top-left
+              const lp = logoPosition || 'top-left';
+              if (lp.includes('center')) lx = (W - lw) / 2;
+              if (lp.includes('right')) lx = W - lw - pad;
+              if (lp.includes('middle')) ly = (H - lh) / 2;
+              if (lp.includes('bottom')) ly = H - lh - pad;
+              ctx.shadowColor = 'rgba(0,0,0,0.5)';
+              ctx.shadowBlur = 10;
+              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
+              console.log('[REAL_ESTATE_DEBUG] Logo drawn at', lp, 'coords:', lx, ly, 'size:', lw, lh);
+            } catch (logoErr) {
+              console.warn('[REAL_ESTATE_DEBUG] Failed to draw logo:', logoErr);
+            }
+          }
+
           return canvas.toDataURL('image/jpeg', 0.92);
         };
         
@@ -4631,17 +4658,46 @@ FORBIDDEN:
                             }
                             // DEFINITIVE: Snapshot ALL critical data at click time — immune to stale closures
                             const clickTimeIsRealEstate = !!activeMarketplaceStyle?.is_real_estate;
-                            generationSnapshotRef.current = {
-                              isRealEstate: clickTimeIsRealEstate,
-                              realEstateMode: (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single',
-                              propertyList: JSON.parse(JSON.stringify(propertyList)), // deep clone to freeze state
-                              marketplaceStyle: activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null,
-                            };
-                            console.log('[REAL_ESTATE_SNAPSHOT] Created at click time:', JSON.stringify({
-                              isRealEstate: clickTimeIsRealEstate,
-                              propertyPhotos: propertyList.map(p => p.photos.length),
-                              styleName: activeMarketplaceStyle?.name || activeMarketplaceStyle?._styleName,
+                            // Force-convert any blob: URLs to base64 before snapshot
+                            const frozenPropertyList = propertyList.map(p => ({
+                              ...p,
+                              photos: p.photos.map(ph => ({ ...ph })), // shallow copy photos
                             }));
+                            // Async: convert all blob URLs to base64 right now
+                            const convertAllPhotos = async () => {
+                              for (const prop of frozenPropertyList) {
+                                for (let pi = 0; pi < prop.photos.length; pi++) {
+                                  const url = prop.photos[pi].url;
+                                  if (url && !url.startsWith('data:')) {
+                                    try {
+                                      const resp = await fetch(url);
+                                      const blob = await resp.blob();
+                                      const b64 = await new Promise<string>((res, rej) => {
+                                        const r = new FileReader();
+                                        r.onloadend = () => res(r.result as string);
+                                        r.onerror = rej;
+                                        r.readAsDataURL(blob);
+                                      });
+                                      prop.photos[pi] = { ...prop.photos[pi], url: b64 };
+                                    } catch (e) { console.warn('[SNAPSHOT] blob->b64 fail:', e); }
+                                  }
+                                }
+                              }
+                            };
+                            convertAllPhotos().then(() => {
+                              generationSnapshotRef.current = {
+                                isRealEstate: clickTimeIsRealEstate,
+                                realEstateMode: (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single',
+                                propertyList: JSON.parse(JSON.stringify(frozenPropertyList)),
+                                marketplaceStyle: activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null,
+                              };
+                              console.log('[REAL_ESTATE_SNAPSHOT] Created at click time:', JSON.stringify({
+                                isRealEstate: clickTimeIsRealEstate,
+                                propertyPhotos: frozenPropertyList.map(p => p.photos.length),
+                                firstPhotoPrefix: frozenPropertyList[0]?.photos?.[0]?.url?.substring(0, 30) || 'NONE',
+                                styleName: activeMarketplaceStyle?.name || activeMarketplaceStyle?._styleName,
+                              }));
+                            });
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);

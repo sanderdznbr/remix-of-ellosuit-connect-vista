@@ -1348,27 +1348,158 @@ const CarouselGenerator: React.FC = () => {
         promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
       }
 
+      // === REAL ESTATE BLEND DETECTION (same triple-source as generateContent) ===
+      const snapshot = generationSnapshotRef.current;
+      const snapshotIsRealEstate = snapshot?.isRealEstate ?? isRealEstateStyle;
+      const snapshotPropertyList: PropertyData[] = snapshot?.propertyList ?? propertyList;
+      const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
+      
+      console.log('[SINGLE_BLEND_DETECT] useRealEstateBlend:', useRealEstateBlend,
+        'snapshotIsRealEstate:', snapshotIsRealEstate,
+        'propertyCount:', snapshotPropertyList.length,
+        'photosPerProp:', snapshotPropertyList.map(p => p.photos?.length || 0));
+
+      // === Convert property photos to base64 ===
+      let propertyPhotoBase64: string[] = [];
+      if (useRealEstateBlend) {
+        setImageGenProgress('📸 Processando foto do imóvel...');
+        const firstProp = snapshotPropertyList[0];
+        for (const photo of (firstProp?.photos || [])) {
+          try {
+            if (photo.url.startsWith('data:')) {
+              propertyPhotoBase64.push(photo.url);
+            } else {
+              const response = await fetch(photo.url);
+              const blob = await response.blob();
+              const dataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              propertyPhotoBase64.push(dataUrl);
+            }
+          } catch (e) { console.warn('[SINGLE_BLEND] Photo convert failed:', e); }
+        }
+        console.log('[SINGLE_BLEND] Converted', propertyPhotoBase64.length, 'photos to base64');
+      }
+
+      // === If real estate: modify prompt for black BG ===
+      if (useRealEstateBlend && propertyPhotoBase64.length > 0) {
+        promptParts.push(`\n\n🏠 INSTRUÇÃO CRÍTICA — CARD IMOBILIÁRIO:
+Use um FUNDO SÓLIDO PRETO (#000000) puro como base da imagem. NÃO gere nenhuma foto de casa, prédio, imóvel ou cenário de fundo.
+O fundo DEVE ser completamente preto/escuro.
+Sobreponha no fundo preto: textos editorials, badges de preço, ícones de especificações (quartos, vagas, m²), 
+elementos gráficos decorativos do estilo visual, gradientes sutis e tipografia impactante.
+A composição final deve ser como um overlay/HUD elegante sobre fundo escuro.
+PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENAS fundo preto com overlay gráfico.`);
+      }
+
       const finalPrompt = buildImagePrompt(promptParts.join('\n'));
       const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
-      // Pass product images as referenceImageUrls (general refs) so the edge function
-      // triggers the face+product combined logic, and style refs stay separate
+      // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
+      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (productRefUrls.length > 0 ? productRefUrls : undefined);
+
       const imageUrl = await generateImage({
         prompt: finalPrompt,
         faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
         styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
-        referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
+        referenceImageUrls: effectiveProductRefs,
         negativePrompt: negPrompt,
         facePersonsMetadata: singlePostFaceMeta,
       });
 
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem do post');
 
+      // === REAL ESTATE: Canvas blend (real photo + AI overlay) ===
+      let finalImageUrl = imageUrl;
+      if (useRealEstateBlend && propertyPhotoBase64.length > 0) {
+        setImageGenProgress('🏠 Mesclando foto real com overlay IA...');
+        console.log('[SINGLE_BLEND] Starting canvas blend...');
+        try {
+          const W = 1080, H = 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+
+          const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+            const img = document.createElement('img') as HTMLImageElement;
+            if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = (e) => { console.error('[SINGLE_BLEND] Image load error:', src.substring(0, 80), e); reject(e); };
+            img.src = src;
+          });
+
+          // STEP 1: Draw REAL PHOTO as full background (cover fit)
+          const photoImg = await loadImg(propertyPhotoBase64[0]);
+          const pRatio = photoImg.width / photoImg.height;
+          const cRatio = W / H;
+          let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
+          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
+          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
+
+          // STEP 2: Dark gradient for text readability
+          const gradient = ctx.createLinearGradient(0, H * 0.35, 0, H);
+          gradient.addColorStop(0, 'rgba(0,0,0,0)');
+          gradient.addColorStop(0.4, 'rgba(0,0,0,0.3)');
+          gradient.addColorStop(0.7, 'rgba(0,0,0,0.65)');
+          gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, W, H);
+
+          // STEP 3: Overlay AI image using screen blend (bottom 45% + top 22%)
+          const aiImg = await loadImg(imageUrl);
+          const cutRatio = 0.45;
+          const aiCutY = aiImg.height * (1 - cutRatio);
+          const canvasCutY = H * (1 - cutRatio);
+
+          ctx.globalCompositeOperation = 'screen';
+          ctx.drawImage(aiImg, 0, aiCutY, aiImg.width, aiImg.height * cutRatio, 0, canvasCutY, W, H * cutRatio);
+          ctx.globalCompositeOperation = 'source-over';
+
+          ctx.globalAlpha = 0.85;
+          ctx.globalCompositeOperation = 'screen';
+          ctx.drawImage(aiImg, 0, 0, aiImg.width, aiImg.height * 0.22, 0, 0, W, H * 0.22);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 1.0;
+
+          // STEP 4: Draw logo
+          if (logoUrl) {
+            try {
+              const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+                const r = await fetch(logoUrl); const b = await r.blob();
+                return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+              })();
+              const logoImg = await loadImg(logoB64);
+              const maxLW = 180, maxLH = 80;
+              const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+              const lw = logoImg.width * ls, lh = logoImg.height * ls;
+              const pad = 50;
+              let lx = pad, ly = pad;
+              const lp = logoPosition || 'top-left';
+              if (lp.includes('center')) lx = (W - lw) / 2;
+              if (lp.includes('right')) lx = W - lw - pad;
+              if (lp.includes('bottom')) ly = H - lh - pad;
+              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
+              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+            } catch (e) { console.warn('[SINGLE_BLEND] Logo draw failed:', e); }
+          }
+
+          finalImageUrl = canvas.toDataURL('image/jpeg', 0.92);
+          console.log('[SINGLE_BLEND] ✅ Blend complete!');
+        } catch (blendErr) {
+          console.error('[SINGLE_BLEND] Blend failed, using AI image as fallback:', blendErr);
+        }
+      }
+
       const singleCard: CarouselCard = {
         type: 'cover',
         title: topic.trim(),
         subtitle: manualPostText.trim() || undefined,
-        imageUrl,
+        imageUrl: finalImageUrl,
         isAiImage: true,
         layout: 'dark',
       };

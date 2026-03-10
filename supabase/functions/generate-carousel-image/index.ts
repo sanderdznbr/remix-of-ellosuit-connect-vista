@@ -472,66 +472,55 @@ Deno.serve(async (req) => {
     // === STAGE 2: FACE SWAP ===
     // If 2-stage mode, take the generated image and swap the placeholder face with the real face
     if (isTwoStageMode && generatedImage) {
-      console.log('🎭 Stage 2: Face swap starting...');
+      console.log('🎭 Stage 2: Face refinement starting...');
       
-      const faceSwapContent: any[] = [];
+      const refineContent: any[] = [];
       
-      // Send face references FIRST — this is the identity to apply
-      faceSwapContent.push({ type: 'text', text: `🚨 FACE IDENTITY REFERENCES — Study these ${validFaceRefs.length} photos carefully. This is the EXACT person whose face must appear in the final image:` });
+      // Send face references FIRST
+      refineContent.push({ type: 'text', text: `🚨 REFERÊNCIAS FACIAIS — Estas ${validFaceRefs.length} fotos mostram a pessoa EXATA cujo rosto deve aparecer na imagem final. Memorize cada detalhe facial:` });
       for (const ref of validFaceRefs.slice(0, 6)) {
-        faceSwapContent.push({ type: 'image_url', image_url: { url: ref } });
+        refineContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       
       // Then send the generated image
-      faceSwapContent.push({ type: 'text', text: `Below is the SOURCE IMAGE. Replace ONLY the face/head of the person in this image with the EXACT face from the references above.` });
-      faceSwapContent.push({ type: 'image_url', image_url: { url: generatedImage } });
+      refineContent.push({ type: 'text', text: `A imagem abaixo é o RESULTADO ATUAL. Refine o rosto da pessoa para que fique MAIS PARECIDO com as fotos de referência acima:` });
+      refineContent.push({ type: 'image_url', image_url: { url: generatedImage } });
       
-      const aspectInstruction = outputAspectRatio === '9:16' 
+      const aspectInstr = outputAspectRatio === '9:16' 
         ? 'Output MUST be PORTRAIT 9:16 (1080x1920). Fill the entire vertical canvas.'
         : `Output aspect ratio: ${outputAspectRatio}. Fill the entire canvas.`;
       
-      faceSwapContent.push({ type: 'text', text: `CRITICAL FACE SWAP RULES:
-1. KEEP EVERYTHING IDENTICAL: background, clothing, body pose, text overlays, logos, colors, layout, composition, ALL graphic elements — change NOTHING except the face.
-2. The face MUST be the EXACT person from the reference photos — same bone structure, eyes, nose, lips, eyebrows, jawline, skin tone, hair color/texture.
-3. Match the lighting and angle of the original face position naturally.
-4. ${aspectInstruction}
-5. The output must fill 100% of the canvas — NO borders, NO cropping, NO black bars.
-6. Do NOT alter, move, or remove any text, logos, or design elements.
-7. ${singleGender}` });
+      refineContent.push({ type: 'text', text: `REGRAS DE REFINAMENTO FACIAL:
+1. MANTENHA TUDO IDÊNTICO: fundo, roupas, pose corporal, textos, logos, cores, layout, composição, TODOS os elementos gráficos — mude APENAS o rosto para ficar mais fiel às referências.
+2. O rosto DEVE reproduzir EXATAMENTE: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo da pessoa nas referências.
+3. Mantenha a iluminação e ângulo naturais da posição original do rosto.
+4. ${aspectInstr}
+5. O output deve preencher 100% do canvas — SEM bordas, SEM cortes, SEM barras pretas.
+6. NÃO altere, mova ou remova nenhum texto, logo ou elemento de design.
+7. ${singleGender}
+8. Se o rosto já está muito parecido com as referências, faça ajustes SUTIS para máxima fidelidade — não recrie a imagem do zero.` });
 
-      // Try face swap with premium model first, then flash
-      const faceSwapModels = ['google/gemini-3-pro-image-preview', 'google/gemini-2.5-flash-image'];
-      let swappedImage: string | null = null;
+      // Try refinement with premium model only (flash is too imprecise for this)
+      let refinedImage: string | null = null;
       
-      for (const swapModel of faceSwapModels) {
-        try {
-          console.log(`🎭 Face swap attempt with ${swapModel}...`);
-          const swapRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: swapModel,
-              messages: [{ role: 'user', content: faceSwapContent }],
-              modalities: ['image', 'text'],
-              temperature: 0.05, // Ultra-low temp for maximum face fidelity
-            }),
-          });
-          
-          if (!swapRes.ok) {
-            const errText = await swapRes.text();
-            console.error(`Face swap error with ${swapModel}:`, swapRes.status, errText.slice(0, 300));
-            if (swapRes.status === 429 || swapRes.status === 402) {
-              // Rate limited — return Stage 1 image rather than failing completely
-              console.log('Rate limited on face swap, returning Stage 1 image');
-              break;
-            }
-            continue;
-          }
-          
-          const raw = await swapRes.text();
+      try {
+        console.log('🎭 Face refinement with gemini-3-pro...');
+        const refineRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-pro-image-preview',
+            messages: [{ role: 'user', content: refineContent }],
+            modalities: ['image', 'text'],
+            temperature: 0.05,
+          }),
+        });
+        
+        if (refineRes.ok) {
+          const raw = await refineRes.text();
           const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
           for (const pattern of extractPatterns) {
             const idx = raw.indexOf(pattern);
@@ -539,24 +528,25 @@ Deno.serve(async (req) => {
             const urlStart = raw.indexOf('"', idx + 5) + 1;
             const urlEnd = raw.indexOf('"', urlStart);
             if (urlEnd === -1) continue;
-            swappedImage = raw.slice(urlStart, urlEnd);
+            refinedImage = raw.slice(urlStart, urlEnd);
             break;
           }
-          
-          if (swappedImage) {
-            console.log(`🎭 Face swap SUCCESS with ${swapModel} (${swappedImage.length} chars)`);
-            generatedImage = swappedImage;
-            break;
+          if (refinedImage) {
+            console.log(`🎭 Face refinement SUCCESS (${refinedImage.length} chars)`);
+            generatedImage = refinedImage;
+          } else {
+            console.log('Face refinement: no image in response');
           }
-          console.log(`Face swap: no image in response from ${swapModel}`);
-        } catch (swapErr: any) {
-          console.error(`Face swap error with ${swapModel}:`, swapErr);
+        } else {
+          const errText = await refineRes.text();
+          console.error('Face refinement error:', refineRes.status, errText.slice(0, 300));
         }
+      } catch (refineErr: any) {
+        console.error('Face refinement error:', refineErr);
       }
       
-      if (!swappedImage) {
-        console.log('⚠️ Face swap failed on all models, returning Stage 1 image (placeholder face)');
-        // Still return Stage 1 — better than nothing
+      if (!refinedImage) {
+        console.log('⚠️ Face refinement failed, returning Stage 1 image');
       }
     }
 

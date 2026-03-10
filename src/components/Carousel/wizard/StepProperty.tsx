@@ -232,8 +232,8 @@ const StepProperty: React.FC<StepPropertyProps> = ({ properties, setProperties, 
           </h3>
           <p className="text-[10px] text-white/30">
             {realEstateMode === 'single'
-              ? 'Preencha os detalhes e adicione fotos do imóvel'
-              : 'Cada card do carrossel apresentará um imóvel diferente'}
+              ? `Adicione ${cardCount || 'várias'} fotos (1 por card) e preencha os detalhes`
+              : 'Cada card do carrossel apresentará um imóvel diferente — adicione 1 foto por imóvel'}
           </p>
         </div>
       </div>

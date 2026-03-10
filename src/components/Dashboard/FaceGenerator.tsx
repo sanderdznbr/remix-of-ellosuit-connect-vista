@@ -294,8 +294,11 @@ const FaceGenerator: React.FC = () => {
     setStyleRefPreviews([]);
     setSelectedMarketplaceStyle(null);
     setPrompt('');
+    setPhotoCount(1);
     setShowGallery(false);
     setLastGeneratedUrl(null);
+    setLastGeneratedUrls([]);
+    setCloudJobIds([]);
   };
 
   // ─── Inpainting handler ──────────────────────────────

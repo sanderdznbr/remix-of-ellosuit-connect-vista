@@ -1423,6 +1423,15 @@ const CarouselGenerator: React.FC = () => {
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1');
 
   const generateContent = async () => {
+    console.log('[GENERATE_FLOW] generateContent() called');
+    console.log('[GENERATE_FLOW] snapshot ref:', JSON.stringify({
+      exists: !!generationSnapshotRef.current,
+      isRealEstate: generationSnapshotRef.current?.isRealEstate,
+      propertyCount: generationSnapshotRef.current?.propertyList?.length,
+      photoCounts: generationSnapshotRef.current?.propertyList?.map(p => p.photos?.length),
+    }));
+    console.log('[GENERATE_FLOW] direct state: isRealEstateStyle:', isRealEstateStyle, 'propertyList photos:', propertyList.map(p => p.photos.length));
+    console.log('[GENERATE_FLOW] refs: activeMarketplaceStyleRef.is_real_estate:', !!activeMarketplaceStyleRef.current?.is_real_estate, 'propertyListRef photos:', propertyListRef.current.map(p => p.photos.length));
     if (!topic.trim()) { sonnerToast.error('Insira um tópico para gerar'); setTransitionToGenerate(false); return; }
 
     // === SINGLE POST MODE ===

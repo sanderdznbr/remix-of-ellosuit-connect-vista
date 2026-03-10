@@ -4605,7 +4605,19 @@ FORBIDDEN:
                             } else {
                               setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                             }
-                            // Sync refs immediately to avoid stale closures in setTimeout
+                            // DEFINITIVE: Snapshot ALL critical data at click time — immune to stale closures
+                            const clickTimeIsRealEstate = !!activeMarketplaceStyle?.is_real_estate;
+                            generationSnapshotRef.current = {
+                              isRealEstate: clickTimeIsRealEstate,
+                              realEstateMode: (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single',
+                              propertyList: JSON.parse(JSON.stringify(propertyList)), // deep clone to freeze state
+                              marketplaceStyle: activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null,
+                            };
+                            console.log('[REAL_ESTATE_SNAPSHOT] Created at click time:', JSON.stringify({
+                              isRealEstate: clickTimeIsRealEstate,
+                              propertyPhotos: propertyList.map(p => p.photos.length),
+                              styleName: activeMarketplaceStyle?.name || activeMarketplaceStyle?._styleName,
+                            }));
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);

@@ -253,7 +253,15 @@ serve(async (req) => {
         continue;
       }
 
-      const data = await response.json();
+      let data: any;
+      const rawText = await response.text();
+      try {
+        data = JSON.parse(rawText);
+      } catch (_parseErr) {
+        console.error(`JSON parse failed on ${label}, body length: ${rawText.length}, start: ${rawText.slice(0, 200)}`);
+        lastErrorSummary = `invalid JSON from ${label} (length ${rawText.length})`;
+        continue;
+      }
       const extracted = extractBase64Image(data);
 
       if (extracted) {

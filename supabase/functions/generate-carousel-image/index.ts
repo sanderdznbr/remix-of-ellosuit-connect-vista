@@ -223,8 +223,8 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nTake creative artistic liberties. Use references as loose inspiration, not strict guides.`;
     }
 
-    // Brand colors from logo (only for non-style generations)
-    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0) {
+    // Brand colors from logo — NEVER inject when style refs exist (prevents palette contamination)
+    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0 && !stylePrompt) {
       textPrompt += `\n\nPALETA DE CORES DA MARCA: use predominantemente estas cores da marca: ${brandColors.join(', ')}. Integre essas cores na composição, tipografia e elementos decorativos.`;
     }
 

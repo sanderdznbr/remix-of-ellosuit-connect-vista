@@ -140,7 +140,8 @@ Deno.serve(async (req) => {
 
       // === STYLE DNA ANALYSIS for single post ===
       let singlePromptStyle = marketplaceStyle?.imageGeneration?.prompt_style || '';
-      const isSingleGeneric = singlePromptStyle.includes('EXACTLY replicates the visual style shown in the reference images') && !singlePromptStyle.includes('=== BACKGROUND ===');
+      const singleDetailedSections = (singlePromptStyle.match(/===\s+\w/g) || []).length;
+      const isSingleGeneric = allStyleRefs.length > 0 && (!singlePromptStyle || singlePromptStyle.length < 200 || singleDetailedSections < 4);
       if (isSingleGeneric && allStyleRefs.length > 0 && timeLeft() > 60_000) {
         console.log('Single-post: Detected generic prompt — running AI visual DNA analysis...');
         await updateJob(jobId, { progress_message: '🔍 Analisando DNA visual do estilo...' });

@@ -2789,9 +2789,9 @@ FORBIDDEN:
       
       // Build marketplace style references
       const marketplaceRefUrls: string[] = [];
-      if (activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyleRef.current?._previewImages?.length) {
         const origin = window.location.origin;
-        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+        const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
         marketplaceRefUrls.push(...allPreviews);
       }

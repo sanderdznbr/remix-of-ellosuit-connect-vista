@@ -1816,7 +1816,7 @@ const CarouselGenerator: React.FC = () => {
               ctx.fillRect(0, 0, 1080, 1350);
               
               // Step 3: Draw AI overlay with "screen" blend mode (black → transparent)
-              const overlayImg = new Image();
+              const overlayImg = document.createElement('img') as HTMLImageElement;
               overlayImg.onload = () => {
                 ctx.globalCompositeOperation = 'screen';
                 ctx.drawImage(overlayImg, 0, 0, 1080, 1350);

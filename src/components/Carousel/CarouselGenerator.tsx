@@ -4300,7 +4300,7 @@ FORBIDDEN:
                         </button>
                         <div className="h-px mx-2 my-1" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
                         <button
-                          onClick={() => { setShowAddCardMenu(false); setShowStylePanel(true); }}
+                          onClick={() => { setShowAddCardMenu(false); setStyleChangeSource('add-card'); setShowStylePanel(true); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
                           <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(52,211,153,0.15)' }}>

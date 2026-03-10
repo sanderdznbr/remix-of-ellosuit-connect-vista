@@ -331,8 +331,8 @@ Deno.serve(async (req) => {
           model,
           messages: [{ role: 'user', content }],
           modalities: ['image', 'text'],
-          // Lower temperature = higher fidelity to references
-          ...(validStyleRefs.length > 0 ? { temperature: 0.15 } : {}),
+          // Lower temperature = higher fidelity to references (even lower for faces)
+          ...(validFaceRefs.length > 0 ? { temperature: 0.1 } : validStyleRefs.length > 0 ? { temperature: 0.15 } : {}),
         }),
       });
 

@@ -220,7 +220,7 @@ ${styleInstructions}`;
     // Add the user prompt
     userContent.push({
       type: "text",
-      text: `Generate this portrait: ${prompt}`,
+      text: `Generate this portrait: ${prompt}\n\nFINAL REMINDER: The face in the output MUST be the EXACT same person from the reference photos. Do NOT generate a generic or different face. This is the #1 priority above all else.`,
     });
 
     messages.push({ role: "user", content: userContent });

@@ -216,9 +216,9 @@ Deno.serve(async (req) => {
       }
       textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. ${singleGender}`;
+      textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. Reproduza o rosto EXATO — mesma estrutura óssea, formato dos olhos, nariz, boca, sobrancelhas, tom de pele e textura do cabelo. ${singleGender}`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nPESSOA: Reproduza o rosto EXATO das fotos de referência. ${singleGender}`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. NÃO gere um rosto diferente ou genérico — a pessoa na imagem final DEVE ser RECONHECÍVEL como a MESMA pessoa das referências. ${singleGender}`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

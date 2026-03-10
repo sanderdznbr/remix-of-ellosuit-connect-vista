@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
       for (const ref of styleRefsToSend) {
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      messageContent.push({ type: 'text', text: `As ${styleRefsToSend.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE — mas NÃO copie os rostos das referências de estilo. Use APENAS o rosto das fotos de referência facial acima.` });
+      messageContent.push({ type: 'text', text: `As ${styleRefsToSend.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie os rostos das referências de estilo. NÃO copie o nome/título do estilo que possa aparecer nas referências. Use APENAS o rosto das fotos de referência facial acima. Crie elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.` });
 
       messageContent.push({ type: 'text', text: textPrompt });
 

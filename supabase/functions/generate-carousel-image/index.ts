@@ -268,6 +268,10 @@ Deno.serve(async (req) => {
       // Product refs
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
+      // Face fidelity reminder (sandwich technique for visual clone)
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A pessoa gerada DEVE ser a MESMA PESSOA das fotos de referência facial. NÃO gere uma pessoa diferente. Fidelidade facial é PRIORIDADE ABSOLUTA.` });
+      }
     } else {
       // STANDARD MODE: More detailed instructions needed
 

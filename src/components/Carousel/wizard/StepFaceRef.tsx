@@ -54,6 +54,7 @@ const StepFaceRef: React.FC<Props> = ({
   allPeopleOnCover, setAllPeopleOnCover,
   faceGender, setFaceGender,
   wearsGlasses, setWearsGlasses,
+  activeMarketplaceStyle,
 }) => {
   const { user } = useAuth();
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);

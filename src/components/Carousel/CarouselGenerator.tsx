@@ -708,7 +708,7 @@ const CarouselGenerator: React.FC = () => {
     const parts: string[] = [];
 
     // If marketplace style has imageGeneration config, use its prompt_style as the foundation
-    const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+    const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
     if (styleImageGen?.prompt_style) {
       parts.push(styleImageGen.prompt_style);
       if (styleImageGen.prompt_prefix) {

@@ -287,6 +287,7 @@ const CarouselGenerator: React.FC = () => {
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
+  const activeMarketplaceStyleRef = useRef<any>(null);
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
   const [loadedMarketplaceStyleId, setLoadedMarketplaceStyleId] = useState<string | null>(null);
   const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
@@ -314,6 +315,7 @@ const CarouselGenerator: React.FC = () => {
   useEffect(() => { cloudJobIdRef.current = cloudJobId; }, [cloudJobId]);
   useEffect(() => { generatingRef.current = generating; }, [generating]);
   useEffect(() => { carouselDataRef.current = carouselData; }, [carouselData]);
+  useEffect(() => { activeMarketplaceStyleRef.current = activeMarketplaceStyle; }, [activeMarketplaceStyle]);
 
   // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
   useEffect(() => {
@@ -706,7 +708,7 @@ const CarouselGenerator: React.FC = () => {
     const parts: string[] = [];
 
     // If marketplace style has imageGeneration config, use its prompt_style as the foundation
-    const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+    const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
     if (styleImageGen?.prompt_style) {
       parts.push(styleImageGen.prompt_style);
       if (styleImageGen.prompt_prefix) {
@@ -826,7 +828,7 @@ const CarouselGenerator: React.FC = () => {
 
     // Brand colors — inject when NO marketplace style is active, OR when admin user has brand override
     const isAdminBrandOverride = user?.email === 'admin@gmail.com';
-    if (logoBrandColors.length > 0 && (!activeMarketplaceStyle?.imageGeneration?.prompt_style || isAdminBrandOverride)) {
+    if (logoBrandColors.length > 0 && (!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || isAdminBrandOverride)) {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca.`);
     }
 
@@ -873,7 +875,7 @@ const CarouselGenerator: React.FC = () => {
     }
 
     // === GEMINI / NANO BANANA PATH ===
-    const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+    const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
     
     // Add timeout to prevent infinite loading (90s max per image)
     const timeoutPromise = new Promise<never>((_, reject) => 
@@ -893,7 +895,7 @@ const CarouselGenerator: React.FC = () => {
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
-        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyle?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyle._strictInstructions}` : '') } : {}),
+        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(logoBrandColors.length > 0 && (!isFullBleedMarketplace || user?.email === 'admin@gmail.com') ? { brandColors: logoBrandColors } : {}),
       },
     });
@@ -1472,7 +1474,7 @@ const CarouselGenerator: React.FC = () => {
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(productContext ? { productContext } : {}),
-          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
         },
       });
       if (error) throw error;
@@ -1565,13 +1567,13 @@ const CarouselGenerator: React.FC = () => {
 
         const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
         const marketplaceRefUrls: string[] = [];
-        if (activeMarketplaceStyle?._previewImages?.length) {
+        if (activeMarketplaceStyleRef.current?._previewImages?.length) {
           const origin = window.location.origin;
-          marketplaceRefUrls.push(...(activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`));
+          marketplaceRefUrls.push(...(activeMarketplaceStyleRef.current._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`));
         }
         const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
         const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
-        const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+        const styleNeg = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '';
 
         // Use exact aspect ratio: 12:5 for 3 cards (3 * 4:5), 8:5 for 2 cards
         const panoramaAspectRatio = panelCount === 2 ? '8:5' : '12:5';
@@ -1580,7 +1582,7 @@ const CarouselGenerator: React.FC = () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             setImageGenProgress(`🌄 Gerando panorama contínuo... (tentativa ${attempt + 1})`);
-            const styleImageGen = activeMarketplaceStyle?.imageGeneration;
+            const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
             const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
@@ -1696,7 +1698,7 @@ const CarouselGenerator: React.FC = () => {
                   });
                 } catch { /* ignore */ }
                 const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, continuousMode: true };
-                const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
                   setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
@@ -1725,9 +1727,9 @@ const CarouselGenerator: React.FC = () => {
       let aiImagesQueued = 0;
       const usedImageUrls = new Set<string>();
 
-      const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+      const styleNeg = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '';
       const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
-      const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+      const isFullBleedStyle = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
 
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
@@ -1754,7 +1756,7 @@ const CarouselGenerator: React.FC = () => {
           const cardDesc = card.imagePrompt || card.title || card.bodyTop || '';
           let imgPrompt = `${cleanTopic}: ${cardDesc}`;
           
-          const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+          const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
           if (isFullBleedMarketplace) {
             const isCover = card.type === 'cover' || i === 0;
             const isCta = card.type === 'cta' || i === updatedCards.length - 1;
@@ -1814,9 +1816,9 @@ const CarouselGenerator: React.FC = () => {
           const allStyleRefs = [...styleRefUrls];
           
           const marketplaceRefUrls: string[] = [];
-          if (activeMarketplaceStyle?._previewImages?.length) {
+          if (activeMarketplaceStyleRef.current?._previewImages?.length) {
             const origin = window.location.origin;
-            const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+            const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
               .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
             marketplaceRefUrls.push(...allPreviews);
           }
@@ -1855,9 +1857,9 @@ const CarouselGenerator: React.FC = () => {
           const capturedFaceRefs = cardFaceRefs && cardFaceRefs.length > 0 ? cardFaceRefs : undefined;
           const capturedStyleRefs = [...allStyleRefs, ...marketplaceRefUrls].length > 0 ? [...allStyleRefs, ...marketplaceRefUrls] : undefined;
           const capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
-           const isFullBleedMkt = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+           const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
            const capturedNegative = isFullBleedMkt 
-              ? [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
+              ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;
           
           imageFactories.push({
@@ -1967,7 +1969,7 @@ const CarouselGenerator: React.FC = () => {
             } catch { /* ignore */ }
 
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+            const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
             if (inserted) {
               setCurrentCarouselId(inserted.id);
               setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
@@ -4293,6 +4295,19 @@ FORBIDDEN:
                           <div>
                             <p className="text-xs font-medium text-white/90">Sólido</p>
                             <p className="text-[10px] text-white/40">Somente texto</p>
+                          </div>
+                        </button>
+                        <div className="h-px mx-2 my-1" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                        <button
+                          onClick={() => { setShowAddCardMenu(false); setShowStylePanel(true); }}
+                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
+                        >
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(52,211,153,0.15)' }}>
+                            <Palette className="h-3.5 w-3.5 text-emerald-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/90">Mudar Estilo</p>
+                            <p className="text-[10px] text-white/40">Recriar em outro estilo</p>
                           </div>
                         </button>
                       </div>

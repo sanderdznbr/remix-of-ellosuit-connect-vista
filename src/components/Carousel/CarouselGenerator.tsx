@@ -2450,7 +2450,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           // Load both images
           const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
-            const img = new Image();
+            const img = document.createElement('img') as HTMLImageElement;
             if (src.startsWith('http')) img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
             img.onerror = reject;

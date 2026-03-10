@@ -1000,8 +1000,8 @@ const CarouselGenerator: React.FC = () => {
       
       // For real estate styles, use the property photo as cover (matches rendered template)
       let firstCardImage = dataSource?.cards?.[0]?.imageUrl;
-      if (isRealEstateStyle && propertyList.length > 0 && propertyList[0]?.photo) {
-        firstCardImage = propertyList[0].photo;
+      if (isRealEstateStyle && propertyList.length > 0 && propertyList[0]?.photos?.[0]) {
+        firstCardImage = propertyList[0].photos[0];
       }
       
       if (!firstCardImage) {

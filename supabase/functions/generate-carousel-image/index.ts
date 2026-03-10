@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
         }
       }
     } else if (isVisualCloneMode) {
-      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas. É TERMINANTEMENTE PROIBIDO gerar bordas brancas, molduras, margens, frames ou qualquer espaço vazio nas laterais/topo/base. A arte vai de ponta a ponta.\n- NÃO copie @handles, nomes de marcas ou rostos das referências — copie APENAS o estilo visual.\n- ${formatInstruction}`;
+      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas. É TERMINANTEMENTE PROIBIDO gerar bordas brancas, molduras, margens, frames ou qualquer espaço vazio nas laterais/topo/base. A arte vai de ponta a ponta.\n- NÃO copie @handles, nomes de marcas ou rostos das referências — copie APENAS o estilo visual.\n- NUNCA renderize o nome do estilo/template como texto na imagem. Se as referências contêm um título/nome do estilo, NÃO o copie — use SOMENTE os textos fornecidos pelo usuário.\n- Gere elementos visuais CRIATIVOS e RELEVANTES ao assunto do post — ilustrações, ícones, cenários contextuais. Cada card deve ter composição ÚNICA.\n- ${formatInstruction}`;
     } else if (stylePrompt) {
       textPrompt = `${stylePrompt}\n\n${imagePrompt}`;
     } else {
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
       textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. Reproduza o rosto EXATO — mesma estrutura óssea, formato dos olhos, nariz, boca, sobrancelhas, tom de pele e textura do cabelo. ${singleGender}`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. NÃO gere um rosto diferente ou genérico — a pessoa na imagem final DEVE ser RECONHECÍVEL como a MESMA pessoa das referências. ${singleGender}`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA (PRIORIDADE #1 — ACIMA DE TUDO): Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. A pessoa na imagem final DEVE ser instantaneamente RECONHECÍVEL como a MESMA pessoa das referências — NÃO gere um rosto diferente, genérico ou inspirado. Se houver conflito entre fidelidade facial e estilo visual, PRIORIZE o rosto. ${singleGender}`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
@@ -245,9 +245,9 @@ Deno.serve(async (req) => {
           photoOffset += count;
         }
       } else if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL — PRIORIDADE MÁXIMA ⚠️\nAs ${validFaceRefs.length} fotos abaixo são a ÚNICA referência de identidade. A pessoa no resultado DEVE ser EXATAMENTE esta pessoa — mesma estrutura óssea, mesmos olhos, nariz, boca, tom de pele, cabelo. NÃO gere um rosto diferente ou genérico:` });
+        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL — PRIORIDADE MÁXIMA ABSOLUTA 🚨\nAs ${validFaceRefs.length} fotos abaixo são a ÚNICA referência de identidade. A pessoa no resultado DEVE ser EXATAMENTE esta pessoa — mesma estrutura óssea, mesmos olhos, nariz, boca, tom de pele, cabelo. NÃO gere um rosto diferente, genérico ou apenas "inspirado". A fidelidade facial é MAIS IMPORTANTE que o estilo visual. Memorize CADA detalhe facial antes de prosseguir:` });
         for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-        messageContent.push({ type: 'text', text: `Acima: fotos de referência facial. Agora aplique o ESTILO VISUAL das referências abaixo, mantendo o rosto IDÊNTICO.` });
+        messageContent.push({ type: 'text', text: `✅ Referências faciais memorizadas. Agora aplique o ESTILO VISUAL das referências abaixo, mas MANTENHA o rosto 100% IDÊNTICO ao das fotos acima. Em caso de dúvida, PRIORIZE a fidelidade do rosto.` });
       }
 
       // Style refs AFTER face refs — limit count when faces present to avoid overwhelming
@@ -255,14 +255,14 @@ Deno.serve(async (req) => {
       for (const ref of styleRefsToSend) {
         messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      messageContent.push({ type: 'text', text: `As ${styleRefsToSend.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual EXATAMENTE — mas NÃO copie os rostos das referências de estilo. Use APENAS o rosto das fotos de referência facial acima.` });
+      messageContent.push({ type: 'text', text: `As ${styleRefsToSend.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie os rostos das referências de estilo. NÃO copie o nome/título do estilo que possa aparecer nas referências. Use APENAS o rosto das fotos de referência facial acima. Crie elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.` });
 
       messageContent.push({ type: 'text', text: textPrompt });
 
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
       if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL: Compare o rosto gerado com as fotos de referência do INÍCIO. A pessoa DEVE ser RECONHECÍVEL como a MESMA pessoa. Fidelidade facial > tudo.` });
+        messageContent.push({ type: 'text', text: `🔒 VERIFICAÇÃO FINAL OBRIGATÓRIA: Antes de finalizar, compare PONTO A PONTO o rosto gerado com as fotos de referência do INÍCIO — mesma estrutura óssea, olhos, nariz, boca, sobrancelhas, tom de pele, formato do rosto. Se houver QUALQUER diferença significativa, regenere com maior fidelidade. Fidelidade facial > estilo visual > tudo.` });
       }
     } else {
       // STANDARD MODE: Face refs FIRST, then style refs

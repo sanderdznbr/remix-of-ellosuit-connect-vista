@@ -222,42 +222,40 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nCORES DA MARCA: ${brandColors.join(', ')}`;
     }
 
-    // === MESSAGE ASSEMBLY ===
-    // 2-STAGE APPROACH: When face refs exist (single person), Stage 1 generates WITHOUT face refs
-    // (placeholder face), then Stage 2 does a focused face swap for maximum fidelity.
-    // Multi-person mode still uses single-stage (too complex for 2-stage).
+    // === 2-STAGE APPROACH: Stage 1 generates WITH face refs (best effort),
+    // Stage 2 REFINES facial fidelity using the generated image + face refs again.
+    // This is better than generating a generic face and trying to swap.
     const isTwoStageMode = validFaceRefs.length > 0 && !isMultiPerson;
 
     if (isTwoStageMode) {
-      console.log('🎭 2-STAGE MODE: Stage 1 will generate WITHOUT face refs, Stage 2 will swap face');
+      console.log('🎭 2-STAGE MODE: Stage 1 generates WITH face refs, Stage 2 refines fidelity');
     }
 
     if (isVisualCloneMode) {
-      // VISUAL CLONE MODE
+      // VISUAL CLONE MODE — always send face refs in Stage 1
 
-      if (!isTwoStageMode && validFaceRefs.length > 0 && isMultiPerson) {
-        // Multi-person: send face refs inline (single-stage)
-        let photoOffset = 0;
-        for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
-          const pm = facePersonsMetadata[pi];
-          const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
-          if (count <= 0) break;
-          messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ⚠️` });
-          for (let j = 0; j < count; j++) {
-            if (photoOffset + j < validFaceRefs.length) {
-              messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
-            }
-          }
-          photoOffset += count;
+      if (validFaceRefs.length > 0) {
+        // Limit style refs when face refs present to avoid visual competition
+        const maxStyleRefs = validFaceRefs.length > 0 ? Math.min(validStyleRefs.length, 3) : validStyleRefs.length;
+        
+        // Face refs FIRST — highest priority
+        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL OBRIGATÓRIA — Esta é a pessoa que DEVE aparecer na imagem. Copie EXATAMENTE este rosto:` });
+        for (const ref of validFaceRefs.slice(0, 6)) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-      }
-      // In 2-stage mode: NO face refs sent in Stage 1
 
-      // Style refs
-      for (const ref of validStyleRefs) {
-        messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        // Style refs AFTER face refs
+        for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos das referências de estilo. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial.` });
+      } else {
+        // No face refs — send all style refs
+        for (const ref of validStyleRefs) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
+        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências.` });
       }
-      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências. Crie elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.` });
 
       messageContent.push({ type: 'text', text: textPrompt });
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });

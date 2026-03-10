@@ -229,11 +229,39 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     await updateJob(jobId, { status: 'generating_text', progress_message: 'Gerando conteúdo do carrossel...' });
 
     const cardCount = job.card_count || 10;
-    const imageCardIndices: number[] = [0];
+    const faceRefUrls_pre = (job.face_ref_urls || []) as string[];
+    const hasFaceRefs = faceRefUrls_pre.length > 0;
+    
+    // Use imageCardCount from job if available, otherwise default logic
+    const jobImageCardCount = job.image_card_count;
+    const effectiveImageCardCount = hasFaceRefs ? cardCount : (jobImageCardCount ?? Math.ceil(cardCount * 0.6));
+    
+    const imageCardIndices: number[] = [0]; // cover always gets image
     const contentIndices = Array.from({ length: cardCount - 2 }, (_, i) => i + 1);
     const shuffled = contentIndices.sort(() => Math.random() - 0.5);
-    for (let i = 0; i < Math.min(Math.ceil(cardCount * 0.6), shuffled.length); i++) {
+    for (let i = 0; i < Math.min(effectiveImageCardCount - 1, shuffled.length); i++) {
       imageCardIndices.push(shuffled[i]);
+    }
+    
+    // Face distribution: which cards get the user's face
+    const jobFaceCardCount = job.face_card_count;
+    const faceCardIndices = new Set<number>();
+    if (hasFaceRefs) {
+      const defaultFaceCount = jobFaceCardCount != null ? jobFaceCardCount : Math.max(1, Math.round(cardCount * 0.25));
+      const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
+      faceCardIndices.add(0); // cover always gets face
+      if (effectiveFaceCount >= cardCount) {
+        for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
+      } else {
+        const remaining = effectiveFaceCount - 1;
+        if (remaining > 0) {
+          const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+          const step = middleIndices.length / remaining;
+          for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+            faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+          }
+        }
+      }
     }
 
     let textData: any;

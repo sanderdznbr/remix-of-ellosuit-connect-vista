@@ -193,7 +193,8 @@ const StyleCreator: React.FC = () => {
   const handleGenerate = async () => {
     if (!styleName.trim()) { toast.error('Dê um nome ao estilo'); return; }
     if (refFiles.length === 0) { toast.error('Adicione pelo menos 1 referência de estilo'); return; }
-    if (isRealEstate && propertyFiles.length < 3) { toast.error('Adicione pelo menos 3 fotos do imóvel'); return; }
+    if (isRealEstate && properties.every(p => p.photos.length < 1)) { toast.error('Adicione pelo menos 1 foto por imóvel'); return; }
+    if (isRealEstate && properties.some(p => !p.price && !p.area)) { toast.error('Preencha preço ou área de cada imóvel'); return; }
 
     setGenerating(true);
     setGeneratedPosts([]);

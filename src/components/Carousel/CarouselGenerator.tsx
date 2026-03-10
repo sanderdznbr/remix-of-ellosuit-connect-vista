@@ -1431,13 +1431,23 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             img.src = src;
           });
 
-          // STEP 1: Draw REAL PHOTO as full background (cover fit)
+          // STEP 1: Draw REAL PHOTO as full background (cover fit with focal point)
           const photoImg = await loadImg(propertyPhotoBase64[0]);
+          const firstPropPhotos = snapshotPropertyList[0]?.photos || [];
+          const focalPoint = firstPropPhotos[0]?.focalPoint || 'center';
           const pRatio = photoImg.width / photoImg.height;
           const cRatio = W / H;
           let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
-          if (pRatio > cRatio) { sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2; }
-          else { sh = photoImg.width / cRatio; sy = (photoImg.height - sh) / 2; }
+          if (pRatio > cRatio) {
+            sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2;
+          } else {
+            sh = photoImg.width / cRatio;
+            // Apply focal point
+            const maxSy = photoImg.height - sh;
+            if (focalPoint === 'top') sy = 0;
+            else if (focalPoint === 'bottom') sy = maxSy;
+            else sy = maxSy / 2;
+          }
           ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
 
           // STEP 2: Dark gradient for text readability

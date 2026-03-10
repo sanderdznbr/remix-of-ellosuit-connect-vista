@@ -198,11 +198,16 @@ STYLE REQUIREMENTS:
       textPrompt += `\n\nFORMATO DE SAÍDA OBRIGATÓRIO:\n- ${formatInstruction}`;
     }
 
-    // Add concise negative instructions — keep SHORT to not drown style instructions
-    textPrompt += `\n\nPROIBIDO: Sem "Tema do Carrossel", sem "Card X de Y", sem @handles/nomes copiados das referências, sem "ARRASTE/SWIPE", sem setas de navegação, sem bordas brancas/molduras (full bleed obrigatório), sem texto minúsculo (tipografia grande e legível). NÃO copie rostos das referências de estilo. Cada card com layout DIFERENTE.`;
+    // POSITIVE layout requirements (positive framing works better than negatives for AI image gen)
+    textPrompt += `\n\nLAYOUT OBRIGATÓRIO:
+- A imagem DEVE preencher 100% do canvas de ponta a ponta (full bleed). O conteúdo vai até as bordas — sem margem, sem padding, sem moldura, sem enquadramento.
+- A tipografia principal DEVE ser grande e proeminente, ocupando 40-60% da largura da imagem.
+- A composição deve ser uma ÚNICA arte editorial que ocupa todo o espaço disponível.
+- Cada card deve ter um layout DIFERENTE dos outros, mantendo a mesma identidade visual.
+- NÃO copie @handles, nomes ou rostos das referências de estilo.`;
 
     if (negativePrompt) {
-      textPrompt += `\n- ${negativePrompt}`;
+      textPrompt += `\n${negativePrompt}`;
     }
 
     // Force high fidelity when marketplace/style references are present

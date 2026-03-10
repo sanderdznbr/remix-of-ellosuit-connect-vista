@@ -4867,7 +4867,7 @@ FORBIDDEN:
               )}
               {/* Recriar em outro estilo - always visible */}
               {!isGuest && (
-                <button onClick={() => setShowStylePanel(true)}
+                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
                   style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
                   <Palette className="h-3.5 w-3.5" /> Mudar Estilo

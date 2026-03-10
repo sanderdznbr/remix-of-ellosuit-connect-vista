@@ -193,7 +193,7 @@ ${styleInstructions}`;
     if (faceRefUrls && faceRefUrls.length > 0) {
       userContent.push({
         type: "text",
-        text: `FACE REFERENCE PHOTOS (${faceRefUrls.length} photos provided — study EVERY photo to build a complete 3D understanding of this person's face. Reproduce this EXACT face with ABSOLUTE fidelity. Do NOT average or blend features — match them precisely):`,
+        text: `FACE REFERENCE PHOTOS (${faceRefUrls.length} photos provided). CRITICAL: This is the REAL person. You MUST reproduce this EXACT face — same bone structure, same eyes, same nose, same mouth, same skin tone, same jawline, same eyebrows. Study EVERY photo from EVERY angle. The output face must be INDISTINGUISHABLE from the reference photos. If someone who knows this person saw the output, they must immediately recognize them. Do NOT create a "similar looking" person — create THIS EXACT person:`,
       });
       for (const url of faceRefUrls) {
         userContent.push({

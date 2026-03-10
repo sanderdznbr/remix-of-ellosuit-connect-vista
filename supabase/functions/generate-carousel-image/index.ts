@@ -216,9 +216,9 @@ Deno.serve(async (req) => {
       }
       textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. ${singleGender}`;
+      textPrompt += `\n\nPESSOA + PRODUTO: A pessoa das fotos de referência DEVE aparecer usando/segurando o produto. Reproduza o rosto EXATO — mesma estrutura óssea, formato dos olhos, nariz, boca, sobrancelhas, tom de pele e textura do cabelo. ${singleGender}`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nPESSOA: Reproduza o rosto EXATO das fotos de referência. ${singleGender}`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: Estude CADA foto de referência para construir uma compreensão 3D completa deste rosto. Reproduza com FIDELIDADE ABSOLUTA: mesma estrutura óssea, formato exato dos olhos, nariz, lábios, sobrancelhas, queixo, maçãs do rosto, tom de pele, textura e cor do cabelo. NÃO gere um rosto diferente ou genérico — a pessoa na imagem final DEVE ser RECONHECÍVEL como a MESMA pessoa das referências. ${singleGender}`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
@@ -257,7 +257,8 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
-      } else {
+      } else if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS FACIAIS OBRIGATÓRIAS (${validFaceRefs.length} fotos). Estude CADA foto e reproduza esta EXATA pessoa com fidelidade absoluta — mesma estrutura óssea, olhos, nariz, boca, tom de pele, cabelo:` });
         for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
@@ -267,6 +268,10 @@ Deno.serve(async (req) => {
       // Product refs
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
+      // Face fidelity reminder (sandwich technique for visual clone)
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A pessoa gerada DEVE ser a MESMA PESSOA das fotos de referência facial. NÃO gere uma pessoa diferente. Fidelidade facial é PRIORIDADE ABSOLUTA.` });
+      }
     } else {
       // STANDARD MODE: More detailed instructions needed
 
@@ -291,7 +296,8 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
-      } else {
+      } else if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS FACIAIS OBRIGATÓRIAS (${validFaceRefs.length} fotos) — reproduza este EXATO rosto com fidelidade absoluta:` });
         for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
@@ -304,6 +310,10 @@ Deno.serve(async (req) => {
       // Style reminder (only for non-clone mode with style refs)
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências acima.` });
+      }
+      // Face fidelity reminder at the end (sandwich technique)
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL DE FIDELIDADE FACIAL: A pessoa gerada DEVE ser a MESMA PESSOA das fotos de referência facial acima. NÃO gere uma pessoa diferente. Verifique: mesma estrutura óssea, mesmos olhos, mesmo nariz, mesma boca, mesmo tom de pele, mesmo cabelo.` });
       }
     }
 

@@ -1414,19 +1414,23 @@ const CarouselGenerator: React.FC = () => {
       const shuffled = contentIndices.sort(() => Math.random() - 0.5);
       for (let i = 0; i < Math.min(effectiveImageCardCount - 1, shuffled.length); i++) imageCardIndices.push(shuffled[i]);
       // Determine which cards get face refs (faceCardCount controls this)
+      // DEFAULT: ~25% of cards get faces (cover + ~25% of remaining), user can override
       const faceCardIndices = new Set<number>();
       if (hasFaceRefsForGen) {
-        const effectiveFaceCount = faceCardCount != null ? Math.min(faceCardCount, cardCount) : cardCount;
+        const defaultFaceCount = faceCardCount != null ? faceCardCount : Math.max(1, Math.round(cardCount * 0.25));
+        const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
         // Always include cover (0) and distribute face cards evenly
         faceCardIndices.add(0);
         if (effectiveFaceCount >= cardCount) {
           for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
         } else {
           const remaining = effectiveFaceCount - 1;
-          const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
-          const step = middleIndices.length / remaining;
-          for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
-            faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+          if (remaining > 0) {
+            const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+            const step = middleIndices.length / remaining;
+            for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+              faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+            }
           }
         }
       }
@@ -1826,6 +1830,9 @@ const CarouselGenerator: React.FC = () => {
             }
           } else if (!hasFaceRefsForGen && peopleMode === 'none') {
             capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
+          } else if (hasFaceRefsForGen && !faceCardIndices.has(i)) {
+            // Card has face refs available but this specific card should NOT show a face
+            capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS. Focus on the topic, objects, scenery, or editorial design elements only.';
           }
           let cardFaceRefs: string[] | undefined;
           let cardFacePersonsMeta: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[] | undefined;
@@ -1850,8 +1857,8 @@ const CarouselGenerator: React.FC = () => {
           const capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
            const isFullBleedMkt = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
            const capturedNegative = isFullBleedMkt 
-             ? [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
-             : finalNegative;
+              ? [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
+              : finalNegative;
           
           imageFactories.push({
             index: i,

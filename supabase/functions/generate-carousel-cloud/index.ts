@@ -295,8 +295,15 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     }
     const allStyleRefs = [...new Set([...styleRefUrls, ...marketplaceRefUrls])];
 
-    // === STYLE DNA ANALYSIS: Detect generic prompts and enhance with AI vision ===
-    const isGenericPrompt = promptStyle.includes('EXACTLY replicates the visual style shown in the reference images') && !promptStyle.includes('=== BACKGROUND ===');
+    // === STYLE DNA ANALYSIS: Enhance prompts that lack detailed visual specifications ===
+    // Trigger DNA analysis if the prompt has fewer than 3 detailed sections OR is the old generic template
+    const detailedSectionCount = (promptStyle.match(/===\s+\w/g) || []).length;
+    const isGenericPrompt = allStyleRefs.length > 0 && (
+      !promptStyle || 
+      promptStyle.length < 200 ||
+      (promptStyle.includes('EXACTLY replicates') && detailedSectionCount < 3) ||
+      detailedSectionCount < 4
+    );
     if (isGenericPrompt && allStyleRefs.length > 0 && timeLeft() > 60_000) {
       console.log('Detected generic prompt_style — running AI visual DNA analysis...');
       await updateJob(jobId, { progress_message: '🔍 Analisando DNA visual do estilo...' });

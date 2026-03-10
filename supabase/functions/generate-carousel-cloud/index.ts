@@ -169,7 +169,12 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
             const dnaText = dnaData?.choices?.[0]?.message?.content || '';
             const cleaned = dnaText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const dna = JSON.parse(cleaned);
-            singlePromptStyle = `Create an Instagram post with MAXIMUM FIDELITY to the reference style.\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.`;
+            // Extract text limits for single post
+            const singleTextLimits = dna.text_limits || {};
+            const textLimitHint = singleTextLimits.title_max_chars 
+              ? `\n\n=== TEXT LENGTH LIMITS (from style analysis) ===\nTitle: max ${singleTextLimits.title_max_chars} characters\nSubtitle: max ${singleTextLimits.subtitle_max_chars || 60} characters\nIMPORTANT: Keep ALL text within these limits to match the style's visual density.`
+              : '';
+            singlePromptStyle = `Create an Instagram post with MAXIMUM FIDELITY to the reference style.\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===${textLimitHint}\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.`;
           }
         } catch (dnaErr) { console.error('Single-post DNA analysis failed:', dnaErr); }
       }

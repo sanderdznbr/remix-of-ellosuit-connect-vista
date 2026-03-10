@@ -1567,13 +1567,13 @@ const CarouselGenerator: React.FC = () => {
 
         const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
         const marketplaceRefUrls: string[] = [];
-        if (activeMarketplaceStyle?._previewImages?.length) {
+        if (activeMarketplaceStyleRef.current?._previewImages?.length) {
           const origin = window.location.origin;
-          marketplaceRefUrls.push(...(activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`));
+          marketplaceRefUrls.push(...(activeMarketplaceStyleRef.current._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`));
         }
         const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
         const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
-        const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
+        const styleNeg = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '';
 
         // Use exact aspect ratio: 12:5 for 3 cards (3 * 4:5), 8:5 for 2 cards
         const panoramaAspectRatio = panelCount === 2 ? '8:5' : '12:5';

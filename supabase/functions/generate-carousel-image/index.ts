@@ -245,9 +245,9 @@ Deno.serve(async (req) => {
           photoOffset += count;
         }
       } else if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL — PRIORIDADE MÁXIMA ⚠️\nAs ${validFaceRefs.length} fotos abaixo são a ÚNICA referência de identidade. A pessoa no resultado DEVE ser EXATAMENTE esta pessoa — mesma estrutura óssea, mesmos olhos, nariz, boca, tom de pele, cabelo. NÃO gere um rosto diferente ou genérico:` });
+        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL — PRIORIDADE MÁXIMA ABSOLUTA 🚨\nAs ${validFaceRefs.length} fotos abaixo são a ÚNICA referência de identidade. A pessoa no resultado DEVE ser EXATAMENTE esta pessoa — mesma estrutura óssea, mesmos olhos, nariz, boca, tom de pele, cabelo. NÃO gere um rosto diferente, genérico ou apenas "inspirado". A fidelidade facial é MAIS IMPORTANTE que o estilo visual. Memorize CADA detalhe facial antes de prosseguir:` });
         for (const ref of validFaceRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
-        messageContent.push({ type: 'text', text: `Acima: fotos de referência facial. Agora aplique o ESTILO VISUAL das referências abaixo, mantendo o rosto IDÊNTICO.` });
+        messageContent.push({ type: 'text', text: `✅ Referências faciais memorizadas. Agora aplique o ESTILO VISUAL das referências abaixo, mas MANTENHA o rosto 100% IDÊNTICO ao das fotos acima. Em caso de dúvida, PRIORIZE a fidelidade do rosto.` });
       }
 
       // Style refs AFTER face refs — limit count when faces present to avoid overwhelming

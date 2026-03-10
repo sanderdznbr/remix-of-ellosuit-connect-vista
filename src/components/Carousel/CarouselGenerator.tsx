@@ -997,7 +997,12 @@ const CarouselGenerator: React.FC = () => {
     try {
       // Use explicit data (passed directly) or fall back to state
       const dataSource = explicitData || carouselData;
-      const firstCardImage = dataSource?.cards?.[0]?.imageUrl;
+      
+      // For real estate styles, use the property photo as cover (matches rendered template)
+      let firstCardImage = dataSource?.cards?.[0]?.imageUrl;
+      if (isRealEstateStyle && propertyList.length > 0 && propertyList[0]?.photo) {
+        firstCardImage = propertyList[0].photo;
+      }
       
       if (!firstCardImage) {
         console.warn('Cover: no AI image on first card, using server fallback');

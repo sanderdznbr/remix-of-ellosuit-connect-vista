@@ -3638,6 +3638,17 @@ FORBIDDEN:
         location: prop.location, neighborhood: prop.neighborhood, highlights: prop.highlights,
       };
       
+      const handlePropertyFieldChange = (field: keyof PropertyCardData, value: string) => {
+        const propIdx2 = realEstateMode === 'multiple' ? (index % propertyList.length) : 0;
+        setPropertyList(prev => {
+          const updated = [...prev];
+          const p = { ...updated[propIdx2] };
+          (p as any)[field] = value;
+          updated[propIdx2] = p;
+          return updated;
+        });
+      };
+
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}>
           {renderRealEstateCard({
@@ -3647,6 +3658,7 @@ FORBIDDEN:
             logoUrl: logoUrl || undefined, logoPosition,
             brandName, userName, isExport,
             cardIndex: index, totalCards: carouselData?.cards.length || 1,
+            onPropertyChange: isExport ? undefined : handlePropertyFieldChange,
           })}
         </div>
       );

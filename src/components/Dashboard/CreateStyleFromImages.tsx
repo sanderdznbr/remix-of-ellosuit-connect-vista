@@ -173,11 +173,13 @@ ${dna.unique_features || 'Replicate the unique visual signatures from references
 
       const styleConfig = {
         description: description || 'Estilo customizado baseado em referências visuais.',
+        recommended_no_faces: recommendedNoFaces,
+        face_recommendation_reason: faceRecommendationReason,
         colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
         imageGeneration: {
           prompt_style: promptStyle,
           prompt_prefix: 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
-          negative_prompt: 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
+          negative_prompt: `cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design${recommendedNoFaces ? ', human faces, people, person, portrait, selfie, headshot' : ''}`,
           imageType: 'photo', lightingStyle: 'cinematic', cameraAngle: 'front', fidelity: 'high',
         },
         cardVariations: [

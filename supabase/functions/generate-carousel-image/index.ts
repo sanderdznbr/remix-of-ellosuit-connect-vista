@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, tipografia, layout). NÃO copie textos visíveis nas referências:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
@@ -307,10 +307,10 @@ Deno.serve(async (req) => {
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, tipografia, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. Renderize APENAS os textos fornecidos no prompt.` });
       }
       if (validFaceRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência — mesma estrutura óssea, olhos, nariz, lábios, maxilar, tom de pele.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência.` });
       }
     }
 

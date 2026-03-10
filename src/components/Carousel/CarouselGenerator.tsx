@@ -4617,11 +4617,10 @@ FORBIDDEN:
                     <div className="overflow-y-auto flex-1 px-4 pb-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
                       {styleChangeSource === 'add-card' ? (
                         <AddCardStylePicker onSelectStyle={(config) => {
-                          setActiveMarketplaceStyle(config);
-                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                          setPendingAddCardStyle(config);
                           setShowStylePanel(false);
                           setStyleChangeSource('toolbar');
-                          setTimeout(() => addOneMoreCard('composed'), 300);
+                          setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                         }} />
                       ) : (
                         <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}

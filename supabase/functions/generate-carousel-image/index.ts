@@ -209,7 +209,9 @@ STYLE REQUIREMENTS:
 - NÃO coloque texto fora dos limites da imagem. Todo texto DEVE estar completamente visível dentro dos limites 1080x1350, com margens de segurança.
 - NÃO use textos cortados ou parcialmente visíveis nas bordas.
 - NÃO escreva "ARRASTE PRO LADO", "ARRASTE PARA O LADO", "ARRASTE", "DESLIZE", "SWIPE", "Arraste para o lado" ou qualquer variação de instrução de swipe/arrastar. Essas instruções de navegação são PROIBIDAS na imagem.
-- NÃO adicione setas de navegação, indicadores de swipe, ou qualquer elemento que sugira "passar para o lado".`;
+- NÃO adicione setas de navegação, indicadores de swipe, ou qualquer elemento que sugira "passar para o lado".
+- PROIBIDO BORDAS BRANCAS: A imagem DEVE ocupar 100% do canvas (full bleed). NÃO adicione bordas brancas, molduras, margens, padding ou qualquer espaço vazio ao redor do conteúdo. O conteúdo principal (texto, elementos gráficos, fotos) DEVE preencher TODO o quadro de ponta a ponta. NÃO renderize uma "imagem dentro de uma imagem" — o resultado deve ser uma composição única que ocupa todo o espaço disponível sem nenhum tipo de enquadramento ou borda.
+- PROIBIDO CONTEÚDO PEQUENO: O texto e elementos visuais DEVEM ser grandes, proeminentes e legíveis. NÃO gere texto minúsculo centralizado em um fundo vazio. A tipografia principal deve ocupar pelo menos 40-60% da largura da imagem. Preencha o espaço visual com elementos — não deixe grandes áreas vazias.`;
 
     if (negativePrompt) {
       textPrompt += `\n- ${negativePrompt}`;

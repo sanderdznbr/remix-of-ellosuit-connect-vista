@@ -2321,7 +2321,7 @@ const CarouselGenerator: React.FC = () => {
         const variation = variationHints[(i - 1) % variationHints.length];
         // Alternate: some cards show the person, others are text-focused without people
         const showPerson = faceRefUrls.length > 0 && (i % 3 !== 0); // Every 3rd content card: no person, text-only
-        let imgPrompt = `${cleanTopic}: ${cardDesc}. Composition: ${variation}.`;
+        let imgPrompt = `${cleanTopic}: ${cardDesc}. Composition: ${variation}. MANDATORY: This card MUST look like it belongs to the EXACT SAME visual series as the cover image — same color palette, same typography style, same layout approach, same mood.`;
         if (!showPerson && faceRefUrls.length > 0) {
           imgPrompt += ' This card should be TEXT-FOCUSED with abstract/editorial background — do NOT include any person or face.';
         }
@@ -2359,10 +2359,10 @@ const CarouselGenerator: React.FC = () => {
           marketplaceRefUrls.push(...allPreviews.slice(0, 8));
         }
 
-        // Use the cover image as style reference ONLY if it's a URL (not base64) to avoid huge payloads
+        // Use the cover image as PRIORITY style reference — it defines the visual series
         const coverStyleRef = coverCard.imageUrl && !coverCard.imageUrl.startsWith('data:') ? [coverCard.imageUrl] : [];
-        // Cap total style refs to 8 max to maintain quality
-        const allStyleCandidates = [...styleRefUrls, ...marketplaceRefUrls, ...coverStyleRef];
+        // Cap total style refs to 8 max — cover image FIRST for highest priority
+        const allStyleCandidates = [...coverStyleRef, ...styleRefUrls, ...marketplaceRefUrls];
         const capturedStyleRefs = allStyleCandidates.length > 0 ? allStyleCandidates.slice(0, 8) : undefined;
 
         // For text-only cards, don't send face references

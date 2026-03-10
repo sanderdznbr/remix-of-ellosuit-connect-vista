@@ -567,6 +567,36 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       console.log('Sample prompt (card 0):', imageTasks[0].prompt.slice(0, 300));
     }
 
+    // === AI QUALITY GATE: Validate generated image for defects ===
+    async function validateImage(imageUrl: string, hasFace: boolean): Promise<{ pass: boolean; issues: string }> {
+      if (timeLeft() < 25_000) return { pass: true, issues: '' }; // skip if low on time
+      try {
+        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+        const checkContent: any[] = [
+          { type: 'image_url', image_url: { url: imageUrl } },
+          { type: 'text', text: `Analyze this Instagram carousel card image for quality defects. Check for:
+1. BORDERS/FRAMES: Does the image have visible borders, white edges, picture frames, or margins around it? (should be full bleed)
+2. UNWANTED TEXT: Does it contain "Arraste para o lado", "Swipe", navigation instructions, or metadata text that shouldn't be there?
+3. LAYOUT: Is there a "picture within a picture" effect where the actual content is framed inside a larger canvas?
+
+Return ONLY a JSON: {"pass": true} if the image is clean, or {"pass": false, "issues": "brief description"} if defects found.
+Be strict about borders — even thin white/gray edges count as a fail. JSON only, no markdown.` }
+        ];
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'google/gemini-2.5-flash-lite', messages: [{ role: 'user', content: checkContent }] }),
+        });
+        if (!res.ok) return { pass: true, issues: '' };
+        const data = await res.json();
+        const text = (data?.choices?.[0]?.message?.content || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const result = JSON.parse(text);
+        return { pass: !!result.pass, issues: result.issues || '' };
+      } catch {
+        return { pass: true, issues: '' }; // on error, assume pass
+      }
+    }
+
     // Process images in parallel batches of 3
     const BATCH_SIZE = 3;
     let timedOut = false;
@@ -595,7 +625,6 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
           const url = await generateOneImage({
             prompt: task.prompt,
             topic: task.prompt.slice(0, 200),
-            // Only send face refs to cards that should have the user's face
             faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
             styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
             imageModel: imageSettings.model || 'auto',
@@ -603,10 +632,33 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
             fidelity: task.cardGetsFace ? 'high' : (isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced')),
             facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
             ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
-            // Only send brandColors when NOT in fullbleed marketplace mode
             ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
           });
-          if (url) return { index: task.index, url };
+          if (url) {
+            // === QUALITY GATE: Validate before accepting ===
+            if (isFullBleed && timeLeft() > 30_000) {
+              const validation = await validateImage(url, task.cardGetsFace);
+              if (!validation.pass) {
+                console.warn(`⚠️ Quality gate FAILED card ${task.index}: ${validation.issues} — regenerating...`);
+                // Retry with stronger anti-defect prompt
+                const fixedPrompt = task.prompt + '\n\nCRITICAL FIX: The previous generation had defects: ' + validation.issues + '. You MUST fix these. ABSOLUTELY ZERO borders, frames, margins, or picture-in-picture effects. The image must be PURE FULL BLEED filling every pixel edge to edge.';
+                const retryUrl = await generateOneImage({
+                  prompt: fixedPrompt,
+                  topic: task.prompt.slice(0, 200),
+                  faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
+                  styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+                  imageModel: imageSettings.model || 'auto',
+                  negativePrompt: task.negPrompt + ', no borders, no frames, no white edges, no picture frame',
+                  fidelity: task.cardGetsFace ? 'high' : 'high',
+                  facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
+                  ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
+                });
+                if (retryUrl) return { index: task.index, url: retryUrl };
+                // If retry also fails, use original
+              }
+            }
+            return { index: task.index, url };
+          }
         }
         return { index: task.index, url: null };
       }));

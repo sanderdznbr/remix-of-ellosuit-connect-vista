@@ -1286,7 +1286,7 @@ const CarouselGenerator: React.FC = () => {
       }
 
       const finalPrompt = buildImagePrompt(promptParts.join('\n'));
-      const negPrompt = activeMarketplaceStyle?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
+      const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
       // Pass product images as referenceImageUrls (general refs) so the edge function
       // triggers the face+product combined logic, and style refs stay separate

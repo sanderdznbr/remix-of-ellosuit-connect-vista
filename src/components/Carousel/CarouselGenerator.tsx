@@ -272,6 +272,7 @@ const CarouselGenerator: React.FC = () => {
   const [generatingAiImage, setGeneratingAiImage] = useState(false);
   const [aiImagePrompt, setAiImagePrompt] = useState('');
   const [editingCard, setEditingCard] = useState<number | null>(null);
+  const [showInlineEditor, setShowInlineEditor] = useState(false);
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
   const [regeneratingAll, setRegeneratingAll] = useState(false);

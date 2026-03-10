@@ -1763,11 +1763,11 @@ const CarouselGenerator: React.FC = () => {
         }
       }
 
-      // ========== REAL ESTATE: AI 3-step pipeline (overlay → composite) ==========
+      // ========== REAL ESTATE: AI overlay + Canvas compositing ==========
       if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
         setImageGenProgress('🏠 Gerando cards imobiliários por IA...');
         
-        // Convert property photos to base64
+        // Convert blob/object URL to base64
         const convertToBase64 = async (url: string): Promise<string> => {
           try {
             const response = await fetch(url);
@@ -1778,9 +1778,73 @@ const CarouselGenerator: React.FC = () => {
               reader.onerror = reject;
               reader.readAsDataURL(blob);
             });
-          } catch {
-            return url; // fallback to original URL
-          }
+          } catch { return url; }
+        };
+        
+        // Canvas composite: overlay (on black bg) + real photo using "screen" blend mode
+        const compositeOnCanvas = async (photoUrl: string, overlayDataUrl: string): Promise<string> => {
+          return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;
+            canvas.height = 1350;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject('No canvas context'); return; }
+            
+            const photoImg = new Image();
+            photoImg.crossOrigin = 'anonymous';
+            
+            photoImg.onload = () => {
+              // Step 1: Draw real photo as base (cover fit)
+              const pRatio = photoImg.width / photoImg.height;
+              const cRatio = 1080 / 1350;
+              let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
+              if (pRatio > cRatio) {
+                sw = photoImg.height * cRatio;
+                sx = (photoImg.width - sw) / 2;
+              } else {
+                sh = photoImg.width / cRatio;
+                sy = (photoImg.height - sh) / 2;
+              }
+              ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, 1080, 1350);
+              
+              // Step 2: Add subtle gradient for text readability
+              const grad = ctx.createLinearGradient(0, 1350 * 0.5, 0, 1350);
+              grad.addColorStop(0, 'rgba(0,0,0,0)');
+              grad.addColorStop(0.5, 'rgba(0,0,0,0.3)');
+              grad.addColorStop(1, 'rgba(0,0,0,0.7)');
+              ctx.fillStyle = grad;
+              ctx.fillRect(0, 0, 1080, 1350);
+              
+              // Step 3: Draw AI overlay with "screen" blend mode (black → transparent)
+              const overlayImg = new Image();
+              overlayImg.onload = () => {
+                ctx.globalCompositeOperation = 'screen';
+                ctx.drawImage(overlayImg, 0, 0, 1080, 1350);
+                ctx.globalCompositeOperation = 'source-over';
+                
+                try {
+                  resolve(canvas.toDataURL('image/jpeg', 0.92));
+                } catch (e) {
+                  reject(e);
+                }
+              };
+              overlayImg.onerror = () => {
+                // If overlay fails to load, return photo with gradient only
+                try { resolve(canvas.toDataURL('image/jpeg', 0.92)); } catch (e) { reject(e); }
+              };
+              overlayImg.src = overlayDataUrl;
+            };
+            
+            photoImg.onerror = () => reject('Failed to load photo');
+            
+            // Load photo - if it's base64, use directly; if URL, may need conversion
+            if (photoUrl.startsWith('data:')) {
+              photoImg.src = photoUrl;
+            } else {
+              // Try direct load first (works for same-origin/CORS-enabled URLs)
+              photoImg.src = photoUrl;
+            }
+          });
         };
         
         let completed = 0;
@@ -1810,11 +1874,12 @@ const CarouselGenerator: React.FC = () => {
             
             batchPromises.push((async () => {
               try {
-                const photoBase64 = await convertToBase64(photo);
+                // Step 1: Generate overlay on black background via edge function
+                setImageGenProgress(`🏠 ${completed}/${totalToGen} — Gerando overlay...`);
                 
                 const { data: fnData, error: fnError } = await supabase.functions.invoke('generate-realestate-card', {
                   body: {
-                    propertyPhoto: photoBase64,
+                    propertyPhoto: 'placeholder', // Not needed for step 1
                     propertyData: {
                       price: prop.price, area: prop.area, bedrooms: prop.bedrooms,
                       suites: prop.suites, bathrooms: prop.bathrooms, parking: prop.parking,
@@ -1829,30 +1894,38 @@ const CarouselGenerator: React.FC = () => {
                     brandName,
                     userName,
                     logoPosition,
+                    step: 1, // Only generate overlay
                   },
                 });
                 
-                completed++;
-                setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
-                
-                if (fnError) {
-                  console.error('Real estate card gen error:', fnError);
+                if (fnError || !fnData?.overlayImage) {
+                  console.error('Overlay gen error:', fnError);
                   // Fallback: use property photo directly
-                  updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+                  const photoBase64 = await convertToBase64(photo);
+                  updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };
+                  completed++;
+                  setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
                   return;
                 }
                 
-                if (fnData?.imageUrl) {
-                  updatedCards[i] = { ...updatedCards[i], imageUrl: fnData.imageUrl, isAiImage: true };
-                } else {
-                  // Fallback
-                  updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
-                }
-              } catch (err) {
-                console.error('Real estate card gen error for card', i, err);
+                // Step 2: Composite overlay onto real photo using Canvas
+                setImageGenProgress(`🏠 ${completed}/${totalToGen} — Compondo sobre foto real...`);
+                const photoBase64 = await convertToBase64(photo);
+                const finalImage = await compositeOnCanvas(photoBase64, fnData.overlayImage);
+                
+                updatedCards[i] = { ...updatedCards[i], imageUrl: finalImage, isAiImage: true };
                 completed++;
                 setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
-                updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+              } catch (err) {
+                console.error('Real estate card gen error for card', i, err);
+                try {
+                  const photoBase64 = await convertToBase64(photo);
+                  updatedCards[i] = { ...updatedCards[i], imageUrl: photoBase64, isAiImage: false };
+                } catch {
+                  updatedCards[i] = { ...updatedCards[i], imageUrl: photo, isAiImage: false };
+                }
+                completed++;
+                setImageGenProgress(`🏠 ${completed}/${totalToGen} cards gerados...`);
               }
             })());
           }

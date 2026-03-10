@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
     } else {
       // STANDARD MODE
 
-      if (!isTwoStageMode && validFaceRefs.length > 0 && isMultiPerson) {
+      if (validFaceRefs.length > 0 && isMultiPerson) {
         // Multi-person: send face refs inline (single-stage)
         let photoOffset = 0;
         for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
@@ -277,8 +277,13 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
+      } else if (validFaceRefs.length > 0) {
+        // Single person: send face refs with strong identity instructions
+        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL OBRIGATÓRIA — Esta é a pessoa que DEVE aparecer na imagem. Copie EXATAMENTE este rosto:` });
+        for (const ref of validFaceRefs.slice(0, 6)) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
       }
-      // In 2-stage mode: NO face refs sent in Stage 1
 
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
@@ -290,6 +295,9 @@ Deno.serve(async (req) => {
 
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências.` });
+      }
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência — mesma estrutura óssea, olhos, nariz, lábios, maxilar, tom de pele.` });
       }
     }
 

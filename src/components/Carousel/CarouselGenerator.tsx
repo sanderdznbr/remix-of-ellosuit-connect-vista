@@ -63,6 +63,7 @@ import StepStyleSelect from './wizard/StepStyleSelect';
 import StepBranding from './wizard/StepBranding';
 import StepSpeed from './wizard/StepSpeed';
 import StepVisualStyle, { VisualCategory, PeopleMode } from './wizard/StepVisualStyle';
+import StepPeopleMode from './wizard/StepPeopleMode';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';

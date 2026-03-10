@@ -828,7 +828,7 @@ const CarouselGenerator: React.FC = () => {
 
     // Brand colors — inject when NO marketplace style is active, OR when admin user has brand override
     const isAdminBrandOverride = user?.email === 'admin@gmail.com';
-    if (logoBrandColors.length > 0 && (!activeMarketplaceStyle?.imageGeneration?.prompt_style || isAdminBrandOverride)) {
+    if (logoBrandColors.length > 0 && (!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || isAdminBrandOverride)) {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca.`);
     }
 

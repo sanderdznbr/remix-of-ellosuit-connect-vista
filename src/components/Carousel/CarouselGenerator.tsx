@@ -3948,6 +3948,13 @@ FORBIDDEN:
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages} />
                     )}
+                    {currentStepName === 'Imóvel' && (
+                      <StepProperty
+                        properties={propertyList}
+                        setProperties={setPropertyList}
+                        realEstateMode={realEstateMode}
+                      />
+                    )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
                         productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}

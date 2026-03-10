@@ -2393,6 +2393,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             const propData = snapshotPropertyList[0];
             const photoIdx = i % Math.max(propData?.photos?.length || 1, 1);
             focalPoint = propData?.photos?.[photoIdx]?.focalPoint || 'center';
+            cropOffset = propData?.photos?.[photoIdx]?.cropOffsetY;
           }
           
           if (!photoUrl) {
@@ -2402,7 +2403,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           try {
             setImageGenProgress(`🏠 Mesclando foto ${i + 1}/${updatedCards.length}...`);
-            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl, focalPoint);
+            const blended = await blendPhotoWithOverlay(photoUrl, aiImageUrl, focalPoint, cropOffset);
             updatedCards[i] = { ...updatedCards[i], imageUrl: blended };
             console.log('[BLEND] Card', i, 'blended successfully');
           } catch (err) {

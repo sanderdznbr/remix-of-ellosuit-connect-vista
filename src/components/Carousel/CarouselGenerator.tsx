@@ -2067,6 +2067,7 @@ const CarouselGenerator: React.FC = () => {
     // Apply pending style if coming from "Estilo Diferente" flow
     if (pendingAddCardStyle) {
       setActiveMarketplaceStyle(pendingAddCardStyle);
+      activeMarketplaceStyleRef.current = pendingAddCardStyle; // Update ref immediately for async functions
       setIsLoadedFullBleed(!!pendingAddCardStyle?.imageGeneration?.prompt_style);
       setPendingAddCardStyle(null);
     }
@@ -2077,7 +2078,7 @@ const CarouselGenerator: React.FC = () => {
     const newIndex = currentData.cards.length;
     const isTextOnlyCard = mode === 'solid';
 
-    const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
+    const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
     const requiresImage = mode === 'composed' || isFullBleedMarketplace;
 
     setCarouselData((prev) => {
@@ -2661,7 +2662,7 @@ FORBIDDEN:
           cardCount: carouselData.cards.length, // Use actual card count for proper context
           imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
-          ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
           regenerateCardIndex: cardIndex, // hint to backend
           existingCardSummaries, // avoid repeating content from other cards
         },
@@ -2716,7 +2717,7 @@ FORBIDDEN:
         : [];
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-      const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
+      const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
       
       let imgPrompt: string;
       let negPrompt: string;
@@ -2770,7 +2771,7 @@ FORBIDDEN:
           parts.push(`Deve parecer um slide de conteúdo interno com layout editorial variado — NÃO estilo capa/hero.`);
         }
         imgPrompt = parts.join('\n');
-        negPrompt = [activeMarketplaceStyle?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
+        negPrompt = [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
       } else {
         // For standard styles, build a richer prompt that maintains consistency
         const cardType = card.type === 'cover' ? 'capa editorial' : card.type === 'cta' ? 'card final de chamada para ação' : 'slide de conteúdo informativo';
@@ -2788,9 +2789,9 @@ FORBIDDEN:
       
       // Build marketplace style references
       const marketplaceRefUrls: string[] = [];
-      if (activeMarketplaceStyle?._previewImages?.length) {
+      if (activeMarketplaceStyleRef.current?._previewImages?.length) {
         const origin = window.location.origin;
-        const allPreviews = (activeMarketplaceStyle._previewImages as string[])
+        const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
         marketplaceRefUrls.push(...allPreviews);
       }

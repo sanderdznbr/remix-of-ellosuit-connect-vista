@@ -1764,7 +1764,13 @@ const CarouselGenerator: React.FC = () => {
       }
 
       // ========== REAL ESTATE: Pure Canvas compositing (no AI overlay) ==========
-      if (isRealEstateStyle && propertyList.some(p => p.photos.length > 0)) {
+      console.log('[REAL_ESTATE_DEBUG] isRealEstateStyle:', isRealEstateStyle, 'propertyList:', JSON.stringify(propertyList.map(p => ({ photos: p.photos.length, price: p.price, title: p.title }))));
+      if (isRealEstateStyle) {
+        const hasPhotos = propertyList.some(p => p.photos.length > 0);
+        console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'entering Canvas path regardless');
+        if (!hasPhotos) {
+          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Cards will use AI generation as fallback.');
+        }
         setImageGenProgress('🏠 Gerando cards imobiliários...');
         
         const convertToBase64 = async (url: string): Promise<string> => {

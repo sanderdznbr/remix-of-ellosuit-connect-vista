@@ -1160,8 +1160,10 @@ export type Database = {
           created_at: string
           date_label: string | null
           error_message: string | null
+          face_card_count: number | null
           face_ref_urls: Json | null
           id: string
+          image_card_count: number | null
           image_settings: Json | null
           keywords: string | null
           logo_position: string | null
@@ -1194,8 +1196,10 @@ export type Database = {
           created_at?: string
           date_label?: string | null
           error_message?: string | null
+          face_card_count?: number | null
           face_ref_urls?: Json | null
           id?: string
+          image_card_count?: number | null
           image_settings?: Json | null
           keywords?: string | null
           logo_position?: string | null
@@ -1228,8 +1232,10 @@ export type Database = {
           created_at?: string
           date_label?: string | null
           error_message?: string | null
+          face_card_count?: number | null
           face_ref_urls?: Json | null
           id?: string
+          image_card_count?: number | null
           image_settings?: Json | null
           keywords?: string | null
           logo_position?: string | null
@@ -3054,6 +3060,7 @@ export type Database = {
       }
       generated_portraits: {
         Row: {
+          batch_id: string | null
           company_id: string
           created_at: string
           error_message: string | null
@@ -3061,6 +3068,7 @@ export type Database = {
           id: string
           marketplace_style_id: string | null
           metadata: Json | null
+          photo_count: number | null
           prompt: string
           result_image_url: string | null
           status: string
@@ -3070,6 +3078,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          batch_id?: string | null
           company_id: string
           created_at?: string
           error_message?: string | null
@@ -3077,6 +3086,7 @@ export type Database = {
           id?: string
           marketplace_style_id?: string | null
           metadata?: Json | null
+          photo_count?: number | null
           prompt: string
           result_image_url?: string | null
           status?: string
@@ -3086,6 +3096,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          batch_id?: string | null
           company_id?: string
           created_at?: string
           error_message?: string | null
@@ -3093,6 +3104,7 @@ export type Database = {
           id?: string
           marketplace_style_id?: string | null
           metadata?: Json | null
+          photo_count?: number | null
           prompt?: string
           result_image_url?: string | null
           status?: string

@@ -6,7 +6,7 @@ import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import {
   ArrowLeft, ArrowRight, Upload, X, Loader2, Palette, Sparkles,
   Image as ImageIcon, User, Monitor, Wand2, Check, Plus, Eye, Download,
-  Building2,
+  Building2, Home, MapPin, BedDouble, Bath, Ruler, DollarSign, Trash2,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
@@ -18,6 +18,55 @@ interface GeneratedPost {
   cardIndex: number;
 }
 
+interface PropertyDetails {
+  id: string;
+  photos: File[];
+  photoPreviews: string[];
+  title: string;
+  type: 'apartment' | 'house' | 'commercial' | 'land' | 'studio' | 'penthouse';
+  mode: 'sale' | 'rent';
+  price: string;
+  area: string; // m²
+  bedrooms: string;
+  bathrooms: string;
+  parkingSpots: string;
+  suites: string;
+  location: string;
+  neighborhood: string;
+  city: string;
+  highlights: string; // "piscina, churrasqueira, vista mar"
+  description: string;
+}
+
+const createEmptyProperty = (): PropertyDetails => ({
+  id: crypto.randomUUID(),
+  photos: [],
+  photoPreviews: [],
+  title: '',
+  type: 'apartment',
+  mode: 'sale',
+  price: '',
+  area: '',
+  bedrooms: '',
+  bathrooms: '',
+  parkingSpots: '',
+  suites: '',
+  location: '',
+  neighborhood: '',
+  city: '',
+  highlights: '',
+  description: '',
+});
+
+const PROPERTY_TYPES: { value: PropertyDetails['type']; label: string }[] = [
+  { value: 'apartment', label: 'Apartamento' },
+  { value: 'house', label: 'Casa' },
+  { value: 'commercial', label: 'Comercial' },
+  { value: 'land', label: 'Terreno' },
+  { value: 'studio', label: 'Studio' },
+  { value: 'penthouse', label: 'Cobertura' },
+];
+
 const BASE_STEPS = [
   { key: 'references', label: 'Referências de Estilo', icon: ImageIcon },
   { key: 'brand', label: 'Elementos da Marca', icon: Palette },
@@ -27,20 +76,20 @@ const BASE_STEPS = [
   { key: 'generate', label: 'Gerar Posts', icon: Wand2 },
 ];
 
-const PROPERTY_STEP = { key: 'property', label: 'Fotos do Imóvel', icon: Building2 };
+const PROPERTY_STEP = { key: 'property', label: 'Imóveis', icon: Building2 };
 
 const StyleCreator: React.FC = () => {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [isRealEstate, setIsRealEstate] = useState(false);
+  const [propertyMode, setPropertyMode] = useState<'single' | 'multi'>('single');
 
   // Dynamic steps based on real estate toggle
   const STEPS = React.useMemo(() => {
     if (isRealEstate) {
-      // Insert property step after references (index 1), remove face step
       return [
         BASE_STEPS[0], // references
-        PROPERTY_STEP,  // property photos
+        PROPERTY_STEP,  // property details
         BASE_STEPS[1], // brand
         BASE_STEPS[2], // mockups
         BASE_STEPS[3], // logo
@@ -69,8 +118,13 @@ const StyleCreator: React.FC = () => {
   const [faceFiles, setFaceFiles] = useState<File[]>([]);
   const [facePreviews, setFacePreviews] = useState<string[]>([]);
 
+  // Legacy property files (kept for backwards compat)
   const [propertyFiles, setPropertyFiles] = useState<File[]>([]);
   const [propertyPreviews, setPropertyPreviews] = useState<string[]>([]);
+
+  // New: detailed properties
+  const [properties, setProperties] = useState<PropertyDetails[]>([createEmptyProperty()]);
+  const [activePropertyIdx, setActivePropertyIdx] = useState(0);
 
   const [styleName, setStyleName] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -139,7 +193,8 @@ const StyleCreator: React.FC = () => {
   const handleGenerate = async () => {
     if (!styleName.trim()) { toast.error('Dê um nome ao estilo'); return; }
     if (refFiles.length === 0) { toast.error('Adicione pelo menos 1 referência de estilo'); return; }
-    if (isRealEstate && propertyFiles.length < 3) { toast.error('Adicione pelo menos 3 fotos do imóvel'); return; }
+    if (isRealEstate && properties.every(p => p.photos.length < 1)) { toast.error('Adicione pelo menos 1 foto por imóvel'); return; }
+    if (isRealEstate && properties.some(p => !p.price && !p.area)) { toast.error('Preencha preço ou área de cada imóvel'); return; }
 
     setGenerating(true);
     setGeneratedPosts([]);
@@ -181,10 +236,18 @@ const StyleCreator: React.FC = () => {
         faceUrls.push(url);
       }
 
-      const propertyUrls: string[] = [];
-      for (let i = 0; i < propertyFiles.length; i++) {
-        const url = await uploadFile(propertyFiles[i], `style-creator/${slug}/property-${i}-${timestamp}.${propertyFiles[i].name.split('.').pop()}`);
-        propertyUrls.push(url);
+      // Upload property photos (new detailed system)
+      const propertyUrls: string[][] = []; // array of arrays per property
+      const propertyUrlsFlat: string[] = [];
+      for (let pi = 0; pi < properties.length; pi++) {
+        const prop = properties[pi];
+        const urls: string[] = [];
+        for (let fi = 0; fi < prop.photos.length; fi++) {
+          const url = await uploadFile(prop.photos[fi], `style-creator/${slug}/property-${pi}-${fi}-${timestamp}.${prop.photos[fi].name.split('.').pop()}`);
+          urls.push(url);
+          propertyUrlsFlat.push(url);
+        }
+        propertyUrls.push(urls);
       }
 
       // AI identifica o DNA do estilo a partir das referências
@@ -221,8 +284,9 @@ const StyleCreator: React.FC = () => {
         const hasFace = !isRealEstate && i < 5; // first 5 with face (not in real estate mode)
         const cardNumber = i + 1;
 
+        const isMultiProperty = propertyMode === 'multi' && properties.length > 1;
         const cardLabel = isRealEstate
-          ? `(imóvel ${(i % propertyUrls.length) + 1})`
+          ? isMultiProperty ? `(imóvel ${(i % properties.length) + 1})` : '(imóvel)'
           : hasFace ? '(com rosto)' : '(sem rosto)';
         setProgress({ current: i, total: 10, message: `Gerando post ${cardNumber}/10 ${cardLabel}...` });
 
@@ -239,13 +303,25 @@ const StyleCreator: React.FC = () => {
         }
 
         // Real estate: distribute property photos across cards
-        if (isRealEstate && propertyUrls.length > 0) {
-          // Each card gets 1-2 property photos, cycling through all of them
-          const primaryIdx = i % propertyUrls.length;
-          const secondaryIdx = (i + Math.floor(propertyUrls.length / 2)) % propertyUrls.length;
-          referenceImages.push({ type: 'image_url', image_url: { url: propertyUrls[primaryIdx] } });
-          if (propertyUrls.length > 2 && primaryIdx !== secondaryIdx) {
-            referenceImages.push({ type: 'image_url', image_url: { url: propertyUrls[secondaryIdx] } });
+        if (isRealEstate && propertyUrlsFlat.length > 0) {
+          if (isMultiProperty) {
+            // Multi-property: each card gets photos from one property (cycling)
+            const propIdx = i % properties.length;
+            const propPhotos = propertyUrls[propIdx] || [];
+            const photoIdx = Math.floor(i / properties.length) % Math.max(propPhotos.length, 1);
+            if (propPhotos[photoIdx]) referenceImages.push({ type: 'image_url', image_url: { url: propPhotos[photoIdx] } });
+            if (propPhotos.length > 1 && propPhotos[(photoIdx + 1) % propPhotos.length]) {
+              referenceImages.push({ type: 'image_url', image_url: { url: propPhotos[(photoIdx + 1) % propPhotos.length] } });
+            }
+          } else {
+            // Single property: cycle through all photos
+            const allPhotos = propertyUrls[0] || [];
+            const primaryIdx = i % allPhotos.length;
+            if (allPhotos[primaryIdx]) referenceImages.push({ type: 'image_url', image_url: { url: allPhotos[primaryIdx] } });
+            if (allPhotos.length > 2) {
+              const secondaryIdx = (primaryIdx + 1) % allPhotos.length;
+              referenceImages.push({ type: 'image_url', image_url: { url: allPhotos[secondaryIdx] } });
+            }
           }
         }
 
@@ -284,17 +360,60 @@ NOME DO ESTILO: "${styleName}"`;
           prompt += `\n\nMOCKUPS: Uma das imagens de referência contém fotos para serem usadas em mockups (${mockupDesc}). Integre essas fotos dentro de telas de dispositivos (notebook 3D, celular, tablet) de forma natural e profissional no design.`;
         }
 
-        // Real estate specific prompt
+        // Real estate specific prompt with detailed property info
         if (isRealEstate) {
-          const roomTypes = ['fachada', 'sala de estar', 'quarto', 'cozinha', 'banheiro', 'área externa', 'varanda', 'escritório', 'área gourmet', 'jardim'];
-          const roomHint = roomTypes[i % roomTypes.length];
-          prompt += `\n\nIMÓVEL: Este é um post IMOBILIÁRIO. As fotos do imóvel fornecidas devem ser integradas ao layout do estilo de forma elegante e profissional.
+          const propIdx = isMultiProperty ? (i % properties.length) : 0;
+          const prop = properties[propIdx];
+          const typeLabel = PROPERTY_TYPES.find(t => t.value === prop.type)?.label || prop.type;
+
+          const detailParts: string[] = [];
+          if (prop.title) detailParts.push(`Nome: "${prop.title}"`);
+          detailParts.push(`Tipo: ${typeLabel}`);
+          detailParts.push(`Modalidade: ${prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA'}`);
+          if (prop.price) detailParts.push(`Valor: R$ ${prop.price}`);
+          if (prop.area) detailParts.push(`Área: ${prop.area}m²`);
+          if (prop.bedrooms) detailParts.push(`Quartos: ${prop.bedrooms}`);
+          if (prop.suites) detailParts.push(`Suítes: ${prop.suites}`);
+          if (prop.bathrooms) detailParts.push(`Banheiros: ${prop.bathrooms}`);
+          if (prop.parkingSpots) detailParts.push(`Vagas: ${prop.parkingSpots}`);
+          if (prop.neighborhood) detailParts.push(`Bairro: ${prop.neighborhood}`);
+          if (prop.city) detailParts.push(`Cidade: ${prop.city}`);
+          if (prop.location) detailParts.push(`Endereço: ${prop.location}`);
+          if (prop.highlights) detailParts.push(`Diferenciais: ${prop.highlights}`);
+          if (prop.description) detailParts.push(`Descrição: ${prop.description}`);
+
+          const detailsBlock = detailParts.join('\n- ');
+
+          if (isMultiProperty) {
+            prompt += `\n\nIMÓVEL (CARROSSEL - Card ${cardNumber}, Imóvel ${propIdx + 1} de ${properties.length}):
+Este é um post de CARROSSEL IMOBILIÁRIO mostrando vários imóveis. Este card apresenta o imóvel ${propIdx + 1}.
+
+DADOS DO IMÓVEL:
+- ${detailsBlock}
+
+INSTRUÇÕES:
+- Use a(s) foto(s) deste imóvel como elemento principal
+- Destaque as informações-chave: ${prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA'}, valor R$ ${prop.price || '?'}, ${prop.area ? prop.area + 'm²' : ''} ${prop.bedrooms ? prop.bedrooms + ' quartos' : ''}
+- Texto em PORTUGUÊS BRASILEIRO com tom de marketing imobiliário premium
+- Layout editorial elegante — integre foto, dados e texto de forma harmoniosa
+- NÃO invente fotos: use EXATAMENTE as fotos fornecidas`;
+          } else {
+            const roomTypes = ['fachada', 'sala de estar', 'quarto master', 'cozinha gourmet', 'banheiro', 'área externa', 'varanda', 'vista', 'área social', 'jardim'];
+            const roomHint = roomTypes[i % roomTypes.length];
+
+            prompt += `\n\nIMÓVEL (ÚNICO - Card ${cardNumber}/10, foco: ${roomHint}):
+
+DADOS DO IMÓVEL:
+- ${detailsBlock}
+
+INSTRUÇÕES:
 - Use a(s) foto(s) do imóvel como elemento principal do design
-- Crie textos de marketing imobiliário em PORTUGUÊS BRASILEIRO (ex: "Seu novo lar", "Apartamento dos sonhos", "Conforto e elegância")
-- Destaque: ${roomHint}
-- Layout editorial premium para o mercado imobiliário
-- NÃO invente fotos de imóveis: use EXATAMENTE as fotos fornecidas, integrando-as no layout
-- Varie entre layouts com foto grande, mosaico, foto com overlay de texto, foto em moldura editorial`;
+- Neste card, destaque: ${roomHint}
+- Inclua informações-chave: ${prop.mode === 'rent' ? 'ALUGUEL' : 'VENDA'}, R$ ${prop.price || '?'}, ${prop.area ? prop.area + 'm²' : ''}, ${prop.bedrooms ? prop.bedrooms + ' quartos' : ''}
+- Texto em PORTUGUÊS BRASILEIRO com tom premium de marketing imobiliário
+- Layout editorial elegante — varie entre foto grande, foto com overlay, mosaico editorial
+- NÃO invente fotos: use EXATAMENTE as fotos fornecidas`;
+          }
         } else if (hasFace && faceUrls.length > 0) {
           prompt += `\n\nROSTO: Este post DEVE incluir o rosto da pessoa fornecida nas referências. A pessoa deve aparecer de forma natural e integrada ao design, mantendo FIDELIDADE TOTAL aos traços faciais da referência.`;
         } else {
@@ -392,10 +511,44 @@ NOME DO ESTILO: "${styleName}"`;
     const currentKey = STEPS[step]?.key;
     switch (currentKey) {
       case 'references': return refFiles.length > 0;
-      case 'property': return propertyFiles.length >= 3;
+      case 'property': return properties.some(p => p.photos.length >= 1);
       case 'generate': return styleName.trim().length > 0;
       default: return true;
     }
+  };
+
+  // Property helpers
+  const updateProperty = (idx: number, updates: Partial<PropertyDetails>) => {
+    setProperties(prev => prev.map((p, i) => i === idx ? { ...p, ...updates } : p));
+  };
+
+  const addPropertyPhoto = (propIdx: number, files: FileList | null) => {
+    if (!files) return;
+    const arr = Array.from(files);
+    setProperties(prev => prev.map((p, i) => {
+      if (i !== propIdx) return p;
+      const newPhotos = [...p.photos, ...arr];
+      const newPreviews = [...p.photoPreviews];
+      arr.forEach(f => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          setProperties(pr => pr.map((pp, ii) => ii !== propIdx ? pp : { ...pp, photoPreviews: [...pp.photoPreviews, e.target?.result as string] }));
+        };
+        reader.readAsDataURL(f);
+      });
+      return { ...p, photos: newPhotos };
+    }));
+  };
+
+  const removePropertyPhoto = (propIdx: number, photoIdx: number) => {
+    setProperties(prev => prev.map((p, i) => {
+      if (i !== propIdx) return p;
+      return {
+        ...p,
+        photos: p.photos.filter((_, j) => j !== photoIdx),
+        photoPreviews: p.photoPreviews.filter((_, j) => j !== photoIdx),
+      };
+    }));
   };
 
   const currentStepKey = STEPS[step]?.key;
@@ -453,37 +606,191 @@ NOME DO ESTILO: "${styleName}"`;
           </div>
         );
 
-      case 'property': // Property photos (real estate)
+      case 'property': // Property details (real estate)
         return (
-          <div>
-            <p className="text-sm text-white/60 mb-3">
-              Adicione fotos do imóvel (mínimo 3). A IA distribuirá automaticamente entre os 10 cards, variando ambientes e ângulos no layout do estilo.
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              {propertyPreviews.map((url, i) => (
-                <div key={i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-white/10 group">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removeFile(i, setPropertyFiles, setPropertyPreviews)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <X className="w-3 h-3" />
+          <div className="space-y-5">
+            {/* Single vs Multi toggle */}
+            <div className="flex gap-2">
+              <button onClick={() => { setPropertyMode('single'); setProperties([properties[0] || createEmptyProperty()]); setActivePropertyIdx(0); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${propertyMode === 'single' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 border border-white/[0.06]'}`}>
+                <Home className="w-3.5 h-3.5" /> Imóvel Único
+              </button>
+              <button onClick={() => { setPropertyMode('multi'); if (properties.length < 2) setProperties([...properties, createEmptyProperty()]); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${propertyMode === 'multi' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 border border-white/[0.06]'}`}>
+                <Building2 className="w-3.5 h-3.5" /> Vários Imóveis
+              </button>
+            </div>
+
+            {propertyMode === 'single' ? (
+              <p className="text-xs text-white/40">Preencha os dados do imóvel. A IA gerará 10 posts variando ângulos e ambientes no estilo selecionado.</p>
+            ) : (
+              <p className="text-xs text-white/40">Adicione até 10 imóveis. A IA criará um carrossel onde cada card apresenta um imóvel diferente.</p>
+            )}
+
+            {/* Property tabs (multi mode) */}
+            {propertyMode === 'multi' && (
+              <div className="flex gap-1.5 flex-wrap items-center">
+                {properties.map((prop, idx) => (
+                  <button key={prop.id} onClick={() => setActivePropertyIdx(idx)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${activePropertyIdx === idx ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-white/[0.04] text-white/35 border border-white/[0.06]'}`}>
+                    <Home className="w-3 h-3" />
+                    {prop.title || `Imóvel ${idx + 1}`}
+                    {properties.length > 1 && (
+                      <X className="w-3 h-3 ml-1 opacity-50 hover:opacity-100" onClick={(e) => {
+                        e.stopPropagation();
+                        setProperties(prev => prev.filter((_, i) => i !== idx));
+                        setActivePropertyIdx(Math.min(activePropertyIdx, properties.length - 2));
+                      }} />
+                    )}
                   </button>
-                  <div className="absolute bottom-0 inset-x-0 bg-black/60 px-1 py-0.5">
-                    <span className="text-[9px] text-white/60">Foto {i + 1}</span>
+                ))}
+                {properties.length < 10 && (
+                  <button onClick={() => { setProperties(prev => [...prev, createEmptyProperty()]); setActivePropertyIdx(properties.length); }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.03] text-white/25 border border-dashed border-white/10 hover:border-amber-500/30 transition-all cursor-pointer">
+                    <Plus className="w-3 h-3" /> Adicionar
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Active property form */}
+            {(() => {
+              const prop = properties[activePropertyIdx] || properties[0];
+              const idx = activePropertyIdx;
+              if (!prop) return null;
+              const inputCls = "w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 outline-none focus:border-amber-500/40";
+              const labelCls = "text-[11px] text-white/40 font-medium mb-1 block";
+              return (
+                <div className="space-y-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  {/* Photos */}
+                  <div>
+                    <span className={labelCls}>Fotos do Imóvel *</span>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {prop.photoPreviews.map((url, pi) => (
+                        <div key={pi} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10 group">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => removePropertyPhoto(idx, pi)}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <label className="flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-amber-500/30 transition-colors">
+                        <div className="text-center">
+                          <Plus className="w-4 h-4 text-white/20 mx-auto" />
+                          <span className="text-[9px] text-white/20">Foto</span>
+                        </div>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => addPropertyPhoto(idx, e.target.files)} />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <span className={labelCls}>Título / Nome do empreendimento</span>
+                    <input value={prop.title} onChange={e => updateProperty(idx, { title: e.target.value })}
+                      placeholder="Ex: Residencial Vista Mar" className={inputCls} />
+                  </div>
+
+                  {/* Type + Mode row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className={labelCls}>Tipo</span>
+                      <select value={prop.type} onChange={e => updateProperty(idx, { type: e.target.value as PropertyDetails['type'] })}
+                        className={inputCls}>
+                        {PROPERTY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <span className={labelCls}>Modalidade</span>
+                      <div className="flex gap-2 mt-1">
+                        <button onClick={() => updateProperty(idx, { mode: 'sale' })}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${prop.mode === 'sale' ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-white/[0.04] text-white/35 border border-white/[0.06]'}`}>
+                          Venda
+                        </button>
+                        <button onClick={() => updateProperty(idx, { mode: 'rent' })}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${prop.mode === 'rent' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.04] text-white/35 border border-white/[0.06]'}`}>
+                          Aluguel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price + Area */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className={labelCls}><DollarSign className="w-3 h-3 inline" /> Valor (R$)</span>
+                      <input value={prop.price} onChange={e => updateProperty(idx, { price: e.target.value })}
+                        placeholder="450.000" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}><Ruler className="w-3 h-3 inline" /> Área (m²)</span>
+                      <input value={prop.area} onChange={e => updateProperty(idx, { area: e.target.value })}
+                        placeholder="120" className={inputCls} />
+                    </div>
+                  </div>
+
+                  {/* Rooms row */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <span className={labelCls}><BedDouble className="w-3 h-3 inline" /> Quartos</span>
+                      <input value={prop.bedrooms} onChange={e => updateProperty(idx, { bedrooms: e.target.value })}
+                        placeholder="3" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}>Suítes</span>
+                      <input value={prop.suites} onChange={e => updateProperty(idx, { suites: e.target.value })}
+                        placeholder="1" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}><Bath className="w-3 h-3 inline" /> Banheiros</span>
+                      <input value={prop.bathrooms} onChange={e => updateProperty(idx, { bathrooms: e.target.value })}
+                        placeholder="2" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}>Vagas</span>
+                      <input value={prop.parkingSpots} onChange={e => updateProperty(idx, { parkingSpots: e.target.value })}
+                        placeholder="2" className={inputCls} />
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className={labelCls}><MapPin className="w-3 h-3 inline" /> Bairro</span>
+                      <input value={prop.neighborhood} onChange={e => updateProperty(idx, { neighborhood: e.target.value })}
+                        placeholder="Copacabana" className={inputCls} />
+                    </div>
+                    <div>
+                      <span className={labelCls}>Cidade</span>
+                      <input value={prop.city} onChange={e => updateProperty(idx, { city: e.target.value })}
+                        placeholder="Rio de Janeiro" className={inputCls} />
+                    </div>
+                  </div>
+                  <div>
+                    <span className={labelCls}>Endereço (opcional)</span>
+                    <input value={prop.location} onChange={e => updateProperty(idx, { location: e.target.value })}
+                      placeholder="Av. Atlântica, 1500" className={inputCls} />
+                  </div>
+
+                  {/* Highlights */}
+                  <div>
+                    <span className={labelCls}>Diferenciais</span>
+                    <input value={prop.highlights} onChange={e => updateProperty(idx, { highlights: e.target.value })}
+                      placeholder="Piscina, churrasqueira, vista mar, academia" className={inputCls} />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <span className={labelCls}>Descrição (opcional)</span>
+                    <textarea value={prop.description} onChange={e => updateProperty(idx, { description: e.target.value })}
+                      placeholder="Descreva o imóvel em poucas palavras..."
+                      className={`${inputCls} resize-none min-h-[60px]`} rows={2} />
                   </div>
                 </div>
-              ))}
-              <label className="flex items-center justify-center w-24 h-24 rounded-xl border-2 border-dashed border-white/15 cursor-pointer hover:border-amber-500/40 transition-colors">
-                <div className="text-center">
-                  <Building2 className="w-5 h-5 text-white/25 mx-auto mb-1" />
-                  <span className="text-[10px] text-white/25">Imóvel</span>
-                </div>
-                <input type="file" accept="image/*" multiple className="hidden"
-                  onChange={(e) => addFiles(setPropertyFiles, setPropertyPreviews, e.target.files)} />
-              </label>
-            </div>
-            {propertyFiles.length > 0 && propertyFiles.length < 3 && (
-              <p className="text-xs text-amber-400/70 mt-2">Adicione pelo menos 3 fotos do imóvel ({propertyFiles.length}/3)</p>
-            )}
+              );
+            })()}
           </div>
         );
 

@@ -5736,11 +5736,64 @@ FORBIDDEN:
             </div>
 
             <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
-              {/* Left: preview with card navigation */}
+              {/* Left sidebar - editing panel (slides in from left on desktop) */}
+              <motion.div
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -100, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="order-2 md:order-1 md:w-[380px] flex-1 md:flex-none shrink-0 overflow-y-auto"
+                style={{ backgroundColor: '#111118', borderRight: '1px solid rgba(255,255,255,0.06)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <CarouselEditorSidebar
+                  card={ec}
+                  cardIndex={validIndex}
+                  totalCards={carouselData.cards.length}
+                  bgColor={bgColor}
+                  accentColor={accentColor}
+                  textColor={textColor}
+                  onUpdateCard={updateCard}
+                  onUpdateAllCards={updateAllCards}
+                  onClose={() => setEditingCard(null)}
+                  onUploadImage={handleFileUpload}
+                  onOpenImagePicker={(i) => { setShowImagePicker(i); }}
+                  onGenerateAiImage={generateAiImage}
+                  generatingAiImage={generatingAiImage}
+                  aiImagePrompt={aiImagePrompt}
+                  setAiImagePrompt={setAiImagePrompt}
+                  onChangeBgColor={setBgColor}
+                  onChangeAccentColor={setAccentColor}
+                  onChangeTextColor={setTextColor}
+                  fontOptions={FONT_OPTIONS}
+                  selectedFont={selectedFont}
+                  onChangeFont={setSelectedFont}
+                  referenceImageUrl={editorRefImage}
+                  onUploadReferenceImage={handleEditorRefImageUpload}
+                  onRemoveReferenceImage={() => setEditorRefImage(null)}
+                  isRealEstate={isRealEstateStyle && propertyList.length > 0}
+                  propertyData={isRealEstateStyle && propertyList.length > 0 ? (() => {
+                    const propIdx = realEstateMode === 'multiple' ? (validIndex % propertyList.length) : 0;
+                    const p = propertyList[propIdx];
+                    return p ? { price: p.price, area: p.area, bedrooms: p.bedrooms, bathrooms: p.bathrooms, parking: p.parking, location: p.location, neighborhood: p.neighborhood, highlights: p.highlights, title: p.title } : undefined;
+                  })() : undefined}
+                  onPropertyFieldChange={isRealEstateStyle && propertyList.length > 0 ? ((field: string, value: string) => {
+                    const propIdx = realEstateMode === 'multiple' ? (validIndex % propertyList.length) : 0;
+                    setPropertyList(prev => {
+                      const updated = [...prev];
+                      const p = { ...updated[propIdx] };
+                      (p as any)[field] = value;
+                      updated[propIdx] = p;
+                      return updated;
+                    });
+                  }) : undefined}
+                />
+              </motion.div>
+
+              {/* Right: preview with card navigation */}
               <motion.div
                 initial={{ x: 0 }}
                 animate={{ x: 0 }}
-                className="flex flex-col items-center p-2 md:p-4 shrink-0 md:flex-1 md:overflow-auto relative"
+                className="order-1 md:order-2 flex flex-col items-center p-2 md:p-4 shrink-0 md:flex-1 md:overflow-auto relative"
                 style={{ backgroundColor: '#0a0a0f' }}
               >
                 {/* Glow effect */}
@@ -5819,59 +5872,6 @@ FORBIDDEN:
                     <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-white/70" />
                   </button>
                 </div>
-              </motion.div>
-
-              {/* Right sidebar - dark themed, slides in */}
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="md:w-[380px] flex-1 md:flex-none shrink-0 overflow-y-auto"
-                style={{ backgroundColor: '#111118', borderLeft: '1px solid rgba(255,255,255,0.06)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <CarouselEditorSidebar
-                  card={ec}
-                  cardIndex={validIndex}
-                  totalCards={carouselData.cards.length}
-                  bgColor={bgColor}
-                  accentColor={accentColor}
-                  textColor={textColor}
-                  onUpdateCard={updateCard}
-                  onUpdateAllCards={updateAllCards}
-                  onClose={() => setEditingCard(null)}
-                  onUploadImage={handleFileUpload}
-                  onOpenImagePicker={(i) => { setShowImagePicker(i); }}
-                  onGenerateAiImage={generateAiImage}
-                  generatingAiImage={generatingAiImage}
-                  aiImagePrompt={aiImagePrompt}
-                  setAiImagePrompt={setAiImagePrompt}
-                  onChangeBgColor={setBgColor}
-                  onChangeAccentColor={setAccentColor}
-                  onChangeTextColor={setTextColor}
-                  fontOptions={FONT_OPTIONS}
-                  selectedFont={selectedFont}
-                  onChangeFont={setSelectedFont}
-                  referenceImageUrl={editorRefImage}
-                  onUploadReferenceImage={handleEditorRefImageUpload}
-                  onRemoveReferenceImage={() => setEditorRefImage(null)}
-                  isRealEstate={isRealEstateStyle && propertyList.length > 0}
-                  propertyData={isRealEstateStyle && propertyList.length > 0 ? (() => {
-                    const propIdx = realEstateMode === 'multiple' ? (validIndex % propertyList.length) : 0;
-                    const p = propertyList[propIdx];
-                    return p ? { price: p.price, area: p.area, bedrooms: p.bedrooms, bathrooms: p.bathrooms, parking: p.parking, location: p.location, neighborhood: p.neighborhood, highlights: p.highlights, title: p.title } : undefined;
-                  })() : undefined}
-                  onPropertyFieldChange={isRealEstateStyle && propertyList.length > 0 ? ((field: string, value: string) => {
-                    const propIdx = realEstateMode === 'multiple' ? (validIndex % propertyList.length) : 0;
-                    setPropertyList(prev => {
-                      const updated = [...prev];
-                      const p = { ...updated[propIdx] };
-                      (p as any)[field] = value;
-                      updated[propIdx] = p;
-                      return updated;
-                    });
-                  }) : undefined}
-                />
               </motion.div>
             </div>
           </motion.div>

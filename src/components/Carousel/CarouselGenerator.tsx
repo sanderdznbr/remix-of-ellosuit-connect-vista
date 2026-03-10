@@ -294,6 +294,18 @@ const CarouselGenerator: React.FC = () => {
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
   const [loadedMarketplaceStyleId, setLoadedMarketplaceStyleId] = useState<string | null>(null);
   const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+  const isRealEstateStyle = !!activeMarketplaceStyle?.is_real_estate;
+  const realEstateMode = (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single';
+
+  // Compute wizard steps after all state is declared
+  const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
+  const SIMPLE_STEPS = isRealEstateStyle
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+  const ADVANCED_STEPS = isRealEstateStyle
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Imóvel', 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');

@@ -4297,6 +4297,19 @@ FORBIDDEN:
                             <p className="text-[10px] text-white/40">Somente texto</p>
                           </div>
                         </button>
+                        <div className="h-px mx-2 my-1" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                        <button
+                          onClick={() => { setShowAddCardMenu(false); setShowStylePanel(true); }}
+                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
+                        >
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(52,211,153,0.15)' }}>
+                            <Palette className="h-3.5 w-3.5 text-emerald-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/90">Mudar Estilo</p>
+                            <p className="text-[10px] text-white/40">Recriar em outro estilo</p>
+                          </div>
+                        </button>
                       </div>
                     </>
                   )}

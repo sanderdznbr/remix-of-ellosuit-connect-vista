@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import ImageInpaintEditor from './ImageInpaintEditor';
+import GalleryPicker from '@/components/Carousel/wizard/GalleryPicker';
 
 interface MarketplaceStyle {
   id: string;

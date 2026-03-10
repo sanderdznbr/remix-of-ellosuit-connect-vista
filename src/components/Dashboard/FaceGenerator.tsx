@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, ChevronRight, ChevronLeft, Sparkles, Image as ImageIcon, Loader2, Download, Trash2, Maximize2, Pencil } from 'lucide-react';
+import { Upload, X, ChevronRight, ChevronLeft, Sparkles, Image as ImageIcon, Loader2, Download, Trash2, Maximize2, Pencil, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';

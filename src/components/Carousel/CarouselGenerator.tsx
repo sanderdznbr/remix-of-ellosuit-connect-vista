@@ -287,6 +287,7 @@ const CarouselGenerator: React.FC = () => {
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
+  const activeMarketplaceStyleRef = useRef<any>(null);
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);
   const [loadedMarketplaceStyleId, setLoadedMarketplaceStyleId] = useState<string | null>(null);
   const isFullBleedMarketplace = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;

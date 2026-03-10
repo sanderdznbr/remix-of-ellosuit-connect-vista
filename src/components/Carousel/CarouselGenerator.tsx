@@ -1778,8 +1778,11 @@ const CarouselGenerator: React.FC = () => {
         const hasPhotos = currentPropertyList.some(p => p.photos.length > 0);
         console.log('[REAL_ESTATE_DEBUG] hasPhotos:', hasPhotos, 'propertyListRef photos:', currentPropertyList.map(p => p.photos.length), 'entering Canvas path regardless');
         if (!hasPhotos) {
-          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Cards will use AI generation as fallback.');
-        }
+          console.warn('[REAL_ESTATE_DEBUG] No property photos found! Falling through to AI generation.');
+          // DON'T enter Canvas path without photos — let normal AI generation handle it
+          // but log extensively to help debug
+          toast({ title: '⚠️ Nenhuma foto do imóvel encontrada', description: 'Usando imagem gerada por IA como alternativa. Para usar suas fotos reais, adicione-as no passo "Fotos do Imóvel".', variant: 'default' });
+        } else {
         setImageGenProgress('🏠 Gerando cards imobiliários...');
         
         const convertToBase64 = async (url: string): Promise<string> => {

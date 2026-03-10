@@ -208,11 +208,9 @@ Deno.serve(async (req) => {
       }
       textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      // 2-STAGE MODE: Stage 1 generates with a person silhouette/placeholder, Stage 2 swaps face
-      textPrompt += `\n\nPESSOA + PRODUTO: Gere uma pessoa ${singleGender || 'profissional'} usando/segurando o produto. A pessoa DEVE ter um rosto GENÉRICO neutro e atraente (será substituído na pós-produção). Foque na composição, pose, iluminação e integração com o produto. O rosto NÃO precisa ser fiel a ninguém — apenas gere um rosto limpo e bem iluminado de frente ou 3/4.`;
+      textPrompt += `\n\nPESSOA + PRODUTO: Gere esta EXATA pessoa (das fotos de referência) usando/segurando o produto. ${singleGender} COPIE FIELMENTE: estrutura óssea, olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor/textura do cabelo. Rosto visível de frente ou 3/4, bem iluminado. A pessoa DEVE interagir naturalmente com o produto.`;
     } else if (validFaceRefs.length > 0) {
-      // 2-STAGE MODE: Stage 1 generates with placeholder face, Stage 2 swaps
-      textPrompt += `\n\nPESSOA NA CENA: Gere uma pessoa ${singleGender || 'profissional atraente'} que se encaixe perfeitamente na composição. A pessoa DEVE ter rosto GENÉRICO neutro e bem iluminado (será substituído na pós-produção). Foque em: pose natural, iluminação consistente, enquadramento editorial. Rosto visível de frente ou 3/4, sem obstruções. O rosto NÃO precisa ser fiel a nenhuma referência — apenas limpo e claro.`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: A pessoa na imagem DEVE ser EXATAMENTE a pessoa das fotos de referência. ${singleGender} Copie com precisão cirúrgica: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo, formato do rosto. Rosto visível de frente ou 3/4, bem iluminado, sem obstruções. Esta é a prioridade #1 da geração — fidelidade facial absoluta.`;
     }
 
     if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
@@ -224,49 +222,47 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nCORES DA MARCA: ${brandColors.join(', ')}`;
     }
 
-    // === MESSAGE ASSEMBLY ===
-    // 2-STAGE APPROACH: When face refs exist (single person), Stage 1 generates WITHOUT face refs
-    // (placeholder face), then Stage 2 does a focused face swap for maximum fidelity.
-    // Multi-person mode still uses single-stage (too complex for 2-stage).
+    // === 2-STAGE APPROACH: Stage 1 generates WITH face refs (best effort),
+    // Stage 2 REFINES facial fidelity using the generated image + face refs again.
+    // This is better than generating a generic face and trying to swap.
     const isTwoStageMode = validFaceRefs.length > 0 && !isMultiPerson;
 
     if (isTwoStageMode) {
-      console.log('🎭 2-STAGE MODE: Stage 1 will generate WITHOUT face refs, Stage 2 will swap face');
+      console.log('🎭 2-STAGE MODE: Stage 1 generates WITH face refs, Stage 2 refines fidelity');
     }
 
     if (isVisualCloneMode) {
-      // VISUAL CLONE MODE
+      // VISUAL CLONE MODE — always send face refs in Stage 1
 
-      if (!isTwoStageMode && validFaceRefs.length > 0 && isMultiPerson) {
-        // Multi-person: send face refs inline (single-stage)
-        let photoOffset = 0;
-        for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
-          const pm = facePersonsMetadata[pi];
-          const count = Math.min(pm.photoCount || 1, validFaceRefs.length - photoOffset);
-          if (count <= 0) break;
-          messageContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA: ${(pm.label || `Pessoa ${pi + 1}`).toUpperCase()} (${pm.gender || 'auto'}) ⚠️` });
-          for (let j = 0; j < count; j++) {
-            if (photoOffset + j < validFaceRefs.length) {
-              messageContent.push({ type: 'image_url', image_url: { url: validFaceRefs[photoOffset + j] } });
-            }
-          }
-          photoOffset += count;
+      if (validFaceRefs.length > 0) {
+        // Limit style refs when face refs present to avoid visual competition
+        const maxStyleRefs = validFaceRefs.length > 0 ? Math.min(validStyleRefs.length, 3) : validStyleRefs.length;
+        
+        // Face refs FIRST — highest priority
+        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL OBRIGATÓRIA — Esta é a pessoa que DEVE aparecer na imagem. Copie EXATAMENTE este rosto:` });
+        for (const ref of validFaceRefs.slice(0, 6)) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-      }
-      // In 2-stage mode: NO face refs sent in Stage 1
 
-      // Style refs
-      for (const ref of validStyleRefs) {
-        messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        // Style refs AFTER face refs
+        for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos das referências de estilo. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial.` });
+      } else {
+        // No face refs — send all style refs
+        for (const ref of validStyleRefs) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
+        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências.` });
       }
-      messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Replique este estilo visual (cores, tipografia, layout, elementos gráficos) — mas NÃO copie rostos, nomes ou @handles das referências. Crie elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.` });
 
       messageContent.push({ type: 'text', text: textPrompt });
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
     } else {
       // STANDARD MODE
 
-      if (!isTwoStageMode && validFaceRefs.length > 0 && isMultiPerson) {
+      if (validFaceRefs.length > 0 && isMultiPerson) {
         // Multi-person: send face refs inline (single-stage)
         let photoOffset = 0;
         for (let pi = 0; pi < facePersonsMetadata.length; pi++) {
@@ -281,8 +277,13 @@ Deno.serve(async (req) => {
           }
           photoOffset += count;
         }
+      } else if (validFaceRefs.length > 0) {
+        // Single person: send face refs with strong identity instructions
+        messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL OBRIGATÓRIA — Esta é a pessoa que DEVE aparecer na imagem. Copie EXATAMENTE este rosto:` });
+        for (const ref of validFaceRefs.slice(0, 6)) {
+          messageContent.push({ type: 'image_url', image_url: { url: ref } });
+        }
       }
-      // In 2-stage mode: NO face refs sent in Stage 1
 
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — replique este estilo visual:` });
@@ -294,6 +295,9 @@ Deno.serve(async (req) => {
 
       if (validStyleRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE: O resultado DEVE ser visualmente idêntico ao estilo das referências.` });
+      }
+      if (validFaceRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência — mesma estrutura óssea, olhos, nariz, lábios, maxilar, tom de pele.` });
       }
     }
 
@@ -399,13 +403,11 @@ Deno.serve(async (req) => {
     // Attempt 2: retry with pro model, simplified content
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
-      // In 2-stage mode: NO face refs in retries either (Stage 2 handles it)
-      if (!isTwoStageMode) {
-        const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
-        if (activeFaceRefs.length > 0) {
-          retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
-          for (const ref of activeFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-        }
+      // Always send face refs in retries for best fidelity
+      const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+      if (activeFaceRefs.length > 0) {
+        retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
+        for (const ref of activeFaceRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
@@ -426,12 +428,10 @@ Deno.serve(async (req) => {
     // Attempt 3: pro model, minimal refs
     if (!generatedImage && usePremium) {
       const textOnlyContent: any[] = [];
-      if (!isTwoStageMode) {
-        const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
-        if (safeFaceRefs.length > 0) {
-          textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
-          for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
-        }
+      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 3);
+      if (safeFaceRefs.length > 0) {
+        textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+        for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
@@ -448,12 +448,10 @@ Deno.serve(async (req) => {
     // Attempt 4: flash fallback
     if (!generatedImage) {
       const fallbackContent: any[] = [];
-      if (!isTwoStageMode) {
-        const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
-        if (safeFaceRefs.length > 0) {
-          fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
-          for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
-        }
+      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      if (safeFaceRefs.length > 0) {
+        fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
+        for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       if (stylePrompt) {
         fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
@@ -474,66 +472,55 @@ Deno.serve(async (req) => {
     // === STAGE 2: FACE SWAP ===
     // If 2-stage mode, take the generated image and swap the placeholder face with the real face
     if (isTwoStageMode && generatedImage) {
-      console.log('🎭 Stage 2: Face swap starting...');
+      console.log('🎭 Stage 2: Face refinement starting...');
       
-      const faceSwapContent: any[] = [];
+      const refineContent: any[] = [];
       
-      // Send face references FIRST — this is the identity to apply
-      faceSwapContent.push({ type: 'text', text: `🚨 FACE IDENTITY REFERENCES — Study these ${validFaceRefs.length} photos carefully. This is the EXACT person whose face must appear in the final image:` });
+      // Send face references FIRST
+      refineContent.push({ type: 'text', text: `🚨 REFERÊNCIAS FACIAIS — Estas ${validFaceRefs.length} fotos mostram a pessoa EXATA cujo rosto deve aparecer na imagem final. Memorize cada detalhe facial:` });
       for (const ref of validFaceRefs.slice(0, 6)) {
-        faceSwapContent.push({ type: 'image_url', image_url: { url: ref } });
+        refineContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       
       // Then send the generated image
-      faceSwapContent.push({ type: 'text', text: `Below is the SOURCE IMAGE. Replace ONLY the face/head of the person in this image with the EXACT face from the references above.` });
-      faceSwapContent.push({ type: 'image_url', image_url: { url: generatedImage } });
+      refineContent.push({ type: 'text', text: `A imagem abaixo é o RESULTADO ATUAL. Refine o rosto da pessoa para que fique MAIS PARECIDO com as fotos de referência acima:` });
+      refineContent.push({ type: 'image_url', image_url: { url: generatedImage } });
       
-      const aspectInstruction = outputAspectRatio === '9:16' 
+      const aspectInstr = outputAspectRatio === '9:16' 
         ? 'Output MUST be PORTRAIT 9:16 (1080x1920). Fill the entire vertical canvas.'
         : `Output aspect ratio: ${outputAspectRatio}. Fill the entire canvas.`;
       
-      faceSwapContent.push({ type: 'text', text: `CRITICAL FACE SWAP RULES:
-1. KEEP EVERYTHING IDENTICAL: background, clothing, body pose, text overlays, logos, colors, layout, composition, ALL graphic elements — change NOTHING except the face.
-2. The face MUST be the EXACT person from the reference photos — same bone structure, eyes, nose, lips, eyebrows, jawline, skin tone, hair color/texture.
-3. Match the lighting and angle of the original face position naturally.
-4. ${aspectInstruction}
-5. The output must fill 100% of the canvas — NO borders, NO cropping, NO black bars.
-6. Do NOT alter, move, or remove any text, logos, or design elements.
-7. ${singleGender}` });
+      refineContent.push({ type: 'text', text: `REGRAS DE REFINAMENTO FACIAL:
+1. MANTENHA TUDO IDÊNTICO: fundo, roupas, pose corporal, textos, logos, cores, layout, composição, TODOS os elementos gráficos — mude APENAS o rosto para ficar mais fiel às referências.
+2. O rosto DEVE reproduzir EXATAMENTE: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo da pessoa nas referências.
+3. Mantenha a iluminação e ângulo naturais da posição original do rosto.
+4. ${aspectInstr}
+5. O output deve preencher 100% do canvas — SEM bordas, SEM cortes, SEM barras pretas.
+6. NÃO altere, mova ou remova nenhum texto, logo ou elemento de design.
+7. ${singleGender}
+8. Se o rosto já está muito parecido com as referências, faça ajustes SUTIS para máxima fidelidade — não recrie a imagem do zero.` });
 
-      // Try face swap with premium model first, then flash
-      const faceSwapModels = ['google/gemini-3-pro-image-preview', 'google/gemini-2.5-flash-image'];
-      let swappedImage: string | null = null;
+      // Try refinement with premium model only (flash is too imprecise for this)
+      let refinedImage: string | null = null;
       
-      for (const swapModel of faceSwapModels) {
-        try {
-          console.log(`🎭 Face swap attempt with ${swapModel}...`);
-          const swapRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: swapModel,
-              messages: [{ role: 'user', content: faceSwapContent }],
-              modalities: ['image', 'text'],
-              temperature: 0.05, // Ultra-low temp for maximum face fidelity
-            }),
-          });
-          
-          if (!swapRes.ok) {
-            const errText = await swapRes.text();
-            console.error(`Face swap error with ${swapModel}:`, swapRes.status, errText.slice(0, 300));
-            if (swapRes.status === 429 || swapRes.status === 402) {
-              // Rate limited — return Stage 1 image rather than failing completely
-              console.log('Rate limited on face swap, returning Stage 1 image');
-              break;
-            }
-            continue;
-          }
-          
-          const raw = await swapRes.text();
+      try {
+        console.log('🎭 Face refinement with gemini-3-pro...');
+        const refineRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-pro-image-preview',
+            messages: [{ role: 'user', content: refineContent }],
+            modalities: ['image', 'text'],
+            temperature: 0.05,
+          }),
+        });
+        
+        if (refineRes.ok) {
+          const raw = await refineRes.text();
           const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
           for (const pattern of extractPatterns) {
             const idx = raw.indexOf(pattern);
@@ -541,24 +528,25 @@ Deno.serve(async (req) => {
             const urlStart = raw.indexOf('"', idx + 5) + 1;
             const urlEnd = raw.indexOf('"', urlStart);
             if (urlEnd === -1) continue;
-            swappedImage = raw.slice(urlStart, urlEnd);
+            refinedImage = raw.slice(urlStart, urlEnd);
             break;
           }
-          
-          if (swappedImage) {
-            console.log(`🎭 Face swap SUCCESS with ${swapModel} (${swappedImage.length} chars)`);
-            generatedImage = swappedImage;
-            break;
+          if (refinedImage) {
+            console.log(`🎭 Face refinement SUCCESS (${refinedImage.length} chars)`);
+            generatedImage = refinedImage;
+          } else {
+            console.log('Face refinement: no image in response');
           }
-          console.log(`Face swap: no image in response from ${swapModel}`);
-        } catch (swapErr: any) {
-          console.error(`Face swap error with ${swapModel}:`, swapErr);
+        } else {
+          const errText = await refineRes.text();
+          console.error('Face refinement error:', refineRes.status, errText.slice(0, 300));
         }
+      } catch (refineErr: any) {
+        console.error('Face refinement error:', refineErr);
       }
       
-      if (!swappedImage) {
-        console.log('⚠️ Face swap failed on all models, returning Stage 1 image (placeholder face)');
-        // Still return Stage 1 — better than nothing
+      if (!refinedImage) {
+        console.log('⚠️ Face refinement failed, returning Stage 1 image');
       }
     }
 

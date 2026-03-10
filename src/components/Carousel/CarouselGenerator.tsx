@@ -2046,6 +2046,33 @@ const CarouselGenerator: React.FC = () => {
             }
           }
 
+          // ===== DRAW LOGO IMAGE on canvas at selected position =====
+          if (logoUrl) {
+            try {
+              const logoBase64 = await convertToBase64(logoUrl);
+              const logoImg = await loadImage(logoBase64);
+              const maxLogoW = 180, maxLogoH = 80;
+              const logoScale = Math.min(maxLogoW / logoImg.width, maxLogoH / logoImg.height, 1);
+              const lw = logoImg.width * logoScale;
+              const lh = logoImg.height * logoScale;
+              const pad = 50;
+              let lx = pad, ly = pad; // default top-left
+              const lp = logoPosition || 'top-left';
+              if (lp.includes('center')) lx = (W - lw) / 2;
+              if (lp.includes('right')) lx = W - lw - pad;
+              if (lp.includes('middle')) ly = (H - lh) / 2;
+              if (lp.includes('bottom')) ly = H - lh - pad;
+              ctx.shadowColor = 'rgba(0,0,0,0.5)';
+              ctx.shadowBlur = 10;
+              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
+              console.log('[REAL_ESTATE_DEBUG] Logo drawn at', lp, 'coords:', lx, ly, 'size:', lw, lh);
+            } catch (logoErr) {
+              console.warn('[REAL_ESTATE_DEBUG] Failed to draw logo:', logoErr);
+            }
+          }
+
           return canvas.toDataURL('image/jpeg', 0.92);
         };
         

@@ -281,8 +281,11 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     const styleNeg = marketplaceStyle?.imageGeneration?.negative_prompt || '';
     const baseNeg = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
     const styleRecommendsNoFaces = !!marketplaceStyle?.recommended_no_faces;
+    const hasFaceRefsForCarousel = faceRefUrls.length > 0;
     const antiFaceNeg = styleRecommendsNoFaces
       ? 'Do NOT include any human faces, people, portraits, selfies, headshots, or human figures. This style is purely typographic/graphic. Focus ONLY on typography, graphic elements, objects, and editorial compositions.'
+      : hasFaceRefsForCarousel
+      ? 'Do NOT copy faces from the STYLE REFERENCE images. ONLY use the face from the FACE REFERENCE photos provided separately. The face identity comes EXCLUSIVELY from the face reference photos.'
       : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.';
 
     const refImages = job.reference_images || [];

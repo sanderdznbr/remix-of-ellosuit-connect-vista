@@ -3627,47 +3627,9 @@ FORBIDDEN:
   };
 
   const renderCardPreview = (card: CarouselCard, index: number, isExport = false) => {
-    // Real estate template mode: editable HTML templates with real photos
-    if (isRealEstateStyle && propertyList.length > 0) {
-      const w = isExport ? CARD_W : PREVIEW_W;
-      const h = isExport ? CARD_H : PREVIEW_H;
-      const s = isExport ? 1 : PREVIEW_W / CARD_W;
-      const propIdx = realEstateMode === 'multiple' ? (index % propertyList.length) : 0;
-      const prop = propertyList[propIdx] || propertyList[0];
-      const photoIdx = index % Math.max(prop.photos.length, 1);
-      const photo = prop.photos[photoIdx]?.url || card.imageUrl || '';
-      
-      const propertyCardData: PropertyCardData = {
-        photo, title: prop.title, type: prop.type, mode: prop.mode,
-        price: prop.price, area: prop.area, bedrooms: prop.bedrooms,
-        suites: prop.suites, bathrooms: prop.bathrooms, parking: prop.parking,
-        location: prop.location, neighborhood: prop.neighborhood, highlights: prop.highlights,
-      };
-      
-      const handlePropertyFieldChange = (field: keyof PropertyCardData, value: string) => {
-        const propIdx2 = realEstateMode === 'multiple' ? (index % propertyList.length) : 0;
-        setPropertyList(prev => {
-          const updated = [...prev];
-          const p = { ...updated[propIdx2] };
-          (p as any)[field] = value;
-          updated[propIdx2] = p;
-          return updated;
-        });
-      };
-
-      return (
-        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}>
-          {renderRealEstateCard({
-            card, property: propertyCardData, w, h, s,
-            accentColor, bgColor,
-            fontFamily: serif, sansFamily: sans,
-            logoUrl: logoUrl || undefined, logoPosition,
-            brandName, userName, isExport,
-            cardIndex: index, totalCards: carouselData?.cards.length || 1,
-            onPropertyChange: isExport ? undefined : handlePropertyFieldChange,
-          })}
-        </div>
-      );
+    // Real estate: now uses AI-generated full-bleed images (same as marketplace full-bleed)
+    if (isRealEstateStyle) {
+      return renderMarketplaceFullBleedCard(card, index, isExport);
     }
 
     // Marketplace full-bleed mode: AI generates complete images with text baked in

@@ -1782,7 +1782,7 @@ const CarouselGenerator: React.FC = () => {
 
         const loadImage = (src: string): Promise<HTMLImageElement> => {
           return new Promise((resolve, reject) => {
-            const img = new Image();
+            const img = document.createElement('img') as HTMLImageElement;
             img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
             img.onerror = () => reject(new Error('Image load failed'));

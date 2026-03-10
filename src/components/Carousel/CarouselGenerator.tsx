@@ -4837,6 +4837,14 @@ FORBIDDEN:
                   )}
                 </div>
               )}
+              {/* Recriar em outro estilo - always visible */}
+              {!isGuest && (
+                <button onClick={() => setShowStylePanel(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
+                  style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
+                  <Palette className="h-3.5 w-3.5" /> Mudar Estilo
+                </button>
+              )}
               <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>

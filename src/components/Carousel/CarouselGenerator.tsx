@@ -1774,16 +1774,25 @@ const CarouselGenerator: React.FC = () => {
         setImageGenProgress('🏠 Gerando cards imobiliários...');
         
         const convertToBase64 = async (url: string): Promise<string> => {
+          // Already a data URL — no conversion needed
+          if (url.startsWith('data:')) return url;
           try {
             const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) {
+              console.warn('[REAL_ESTATE_DEBUG] Non-image blob type:', blob.type);
+            }
             return new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => resolve(reader.result as string);
               reader.onerror = reject;
               reader.readAsDataURL(blob);
             });
-          } catch { return url; }
+          } catch (err) {
+            console.error('[REAL_ESTATE_DEBUG] convertToBase64 failed:', err);
+            return url;
+          }
         };
 
         const loadImage = (src: string): Promise<HTMLImageElement> => {

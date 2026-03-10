@@ -403,13 +403,11 @@ Deno.serve(async (req) => {
     // Attempt 2: retry with pro model, simplified content
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
-      // In 2-stage mode: NO face refs in retries either (Stage 2 handles it)
-      if (!isTwoStageMode) {
-        const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
-        if (activeFaceRefs.length > 0) {
-          retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
-          for (const ref of activeFaceRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
-        }
+      // Always send face refs in retries for best fidelity
+      const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+      if (activeFaceRefs.length > 0) {
+        retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
+        for (const ref of activeFaceRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });

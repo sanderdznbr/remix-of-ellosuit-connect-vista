@@ -3297,6 +3297,115 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         throw new Error('Não consegui gerar a imagem deste novo card automaticamente. Tente novamente em alguns segundos.');
       }
 
+      // === REAL ESTATE BLEND: merge property photo + AI overlay ===
+      if (regenHasPhotos && newImageUrl) {
+        try {
+          console.log('[REGEN_BLEND] Starting real estate blend for card', cardIndex);
+          // Find the correct property photo for this card
+          let photoUrl = '';
+          let focalPt = 'center';
+          let cropOff: number | undefined;
+          if (realEstateMode === 'multiple') {
+            const propIdx = cardIndex % regenPropertyList.length;
+            const propData = regenPropertyList[propIdx];
+            photoUrl = propData?.photos?.[0]?.url || '';
+            focalPt = propData?.photos?.[0]?.focalPoint || 'center';
+            cropOff = propData?.photos?.[0]?.cropOffsetY;
+          } else {
+            const allPhotos = regenPropertyList[0]?.photos || [];
+            const photoIdx = cardIndex % Math.max(allPhotos.length, 1);
+            photoUrl = allPhotos[photoIdx]?.url || allPhotos[0]?.url || '';
+            focalPt = allPhotos[photoIdx]?.focalPoint || 'center';
+            cropOff = allPhotos[photoIdx]?.cropOffsetY;
+          }
+
+          if (photoUrl) {
+            // Convert photo to base64 if needed
+            let photoBase64 = photoUrl;
+            if (!photoUrl.startsWith('data:')) {
+              const resp = await fetch(photoUrl);
+              const blob = await resp.blob();
+              photoBase64 = await new Promise<string>((res, rej) => {
+                const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(blob);
+              });
+            }
+
+            const W = 1080, H = 1350;
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d')!;
+            const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+              const img = document.createElement('img') as HTMLImageElement;
+              if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+              img.onload = () => resolve(img);
+              img.onerror = reject;
+              img.src = src;
+            });
+
+            // Draw real photo (cover fit)
+            const photoImg = await loadImg(photoBase64);
+            const pRatio = photoImg.width / photoImg.height;
+            const cRatio = W / H;
+            let sw = photoImg.width, sh = photoImg.height, sx = 0, sy = 0;
+            if (pRatio > cRatio) {
+              sw = photoImg.height * cRatio; sx = (photoImg.width - sw) / 2;
+              if (cropOff !== undefined) sx = cropOff * (photoImg.width - sw);
+            } else {
+              sh = photoImg.width / cRatio;
+              const maxSy = photoImg.height - sh;
+              if (cropOff !== undefined) sy = cropOff * maxSy;
+              else if (focalPt === 'top') sy = 0;
+              else if (focalPt === 'bottom') sy = maxSy;
+              else sy = maxSy / 2;
+            }
+            ctx.drawImage(photoImg, sx, sy, sw, sh, 0, 0, W, H);
+
+            // Dark gradient
+            const gradient = ctx.createLinearGradient(0, H * 0.35, 0, H);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.4, 'rgba(0,0,0,0.3)');
+            gradient.addColorStop(0.7, 'rgba(0,0,0,0.65)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, W, H);
+
+            // Screen blend AI overlay
+            const aiImg = await loadImg(newImageUrl);
+            ctx.globalCompositeOperation = 'screen';
+            ctx.drawImage(aiImg, 0, 0, aiImg.width, aiImg.height, 0, 0, W, H);
+            ctx.globalCompositeOperation = 'source-over';
+
+            // Logo
+            if (logoUrl) {
+              try {
+                const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+                  const r = await fetch(logoUrl); const b = await r.blob();
+                  return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+                })();
+                const logoImg = await loadImg(logoB64);
+                const maxLW = 180, maxLH = 80;
+                const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+                const lw = logoImg.width * ls, lh = logoImg.height * ls;
+                const pad = 50;
+                let lx = pad, ly = pad;
+                const lp = logoPosition || 'top-left';
+                if (lp.includes('center')) lx = (W - lw) / 2;
+                if (lp.includes('right')) lx = W - lw - pad;
+                if (lp.includes('bottom')) ly = H - lh - pad;
+                ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
+                ctx.drawImage(logoImg, lx, ly, lw, lh);
+                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+              } catch (e) { console.warn('[REGEN_BLEND] Logo failed:', e); }
+            }
+
+            newImageUrl = canvas.toDataURL('image/jpeg', 0.92);
+            console.log('[REGEN_BLEND] ✅ Blend complete for card', cardIndex);
+          }
+        } catch (blendErr) {
+          console.warn('[REGEN_BLEND] Blend failed, using AI image as fallback:', blendErr);
+        }
+      }
+
       // 3. Update card
       let updatedData: CarouselData | null = null;
       setCarouselData((prev) => {

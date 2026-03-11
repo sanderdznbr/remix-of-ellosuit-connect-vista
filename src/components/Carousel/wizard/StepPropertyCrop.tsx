@@ -175,18 +175,18 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
     onChange(newOffset);
   }, [dragging, maxPan, onChange, isHorizontalPan]);
 
-  if (!imgSize.w) {
-    return <div className="flex items-center justify-center" style={{ width: FRAME_W, height: FRAME_H }}>
-      <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-    </div>;
-  }
-
   // If no overflow at all, auto-confirm
   useEffect(() => {
     if (imgSize.w && maxPan === 0) {
       onChange(0.5);
     }
   }, [imgSize.w, maxPan]);
+
+  if (!imgSize.w) {
+    return <div className="flex items-center justify-center" style={{ width: FRAME_W, height: FRAME_H }}>
+      <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+    </div>;
+  }
 
   const imgStyle: React.CSSProperties = {
     width: displayW,

@@ -98,6 +98,7 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
   const [offset, setOffset] = useState(photo.cropOffsetY ?? 0.5);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ startPos: 0, startOffset: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load natural dimensions
   useEffect(() => {
@@ -125,44 +126,34 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
     }
   }, [photo.focalPoint, photo.cropOffsetY]);
 
-  if (!naturalW || !naturalH) {
-    return (
-      <div className="flex items-center justify-center mx-auto" style={{ width: FRAME_W, height: FRAME_H }}>
-        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  // Compute layout values (safe even when naturalW/H are 0)
+  const scaleX = naturalW ? FRAME_W / naturalW : 1;
+  const scaleY = naturalH ? FRAME_H / naturalH : 1;
+  const coverScale = Math.max(scaleX, scaleY);
 
-  // COVER logic: scale image so it completely fills the frame
-  const scaleX = FRAME_W / naturalW;
-  const scaleY = FRAME_H / naturalH;
-  const coverScale = Math.max(scaleX, scaleY); // use the LARGER scale to ensure full coverage
+  const displayW = Math.round((naturalW || FRAME_W) * coverScale);
+  const displayH = Math.round((naturalH || FRAME_H) * coverScale);
 
-  const displayW = Math.round(naturalW * coverScale);
-  const displayH = Math.round(naturalH * coverScale);
-
-  // Overflow in each axis
   const overflowX = Math.max(0, displayW - FRAME_W);
   const overflowY = Math.max(0, displayH - FRAME_H);
 
-  // Determine pan axis — whichever has overflow
   const panAxis = overflowX > overflowY ? 'x' : 'y';
   const maxPan = panAxis === 'x' ? overflowX : overflowY;
 
   const currentPan = offset * maxPan;
-
   const imgLeft = panAxis === 'x' ? -currentPan : -(overflowX / 2);
   const imgTop = panAxis === 'y' ? -currentPan : -(overflowY / 2);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (maxPan === 0) return;
     e.preventDefault();
+    e.stopPropagation();
     setDragging(true);
     dragRef.current = {
       startPos: panAxis === 'x' ? e.clientX : e.clientY,
       startOffset: offset,
     };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    containerRef.current?.setPointerCapture(e.pointerId);
   }, [offset, panAxis, maxPan]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -183,9 +174,18 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
     onChange(newOffset);
   }, [dragging, maxPan, panAxis, onChange]);
 
+  if (!naturalW || !naturalH) {
+    return (
+      <div className="flex items-center justify-center mx-auto" style={{ width: FRAME_W, height: FRAME_H }}>
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center gap-3">
       <div
+        ref={containerRef}
         className="relative overflow-hidden rounded-xl border-2 border-purple-500/40 mx-auto touch-none select-none"
         style={{
           width: FRAME_W,

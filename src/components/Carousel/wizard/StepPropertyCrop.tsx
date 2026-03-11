@@ -97,59 +97,90 @@ interface CropEditorProps {
 const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
-  const [offsetY, setOffsetY] = useState(photo.cropOffsetY ?? 0.5);
+  const [offset, setOffset] = useState(photo.cropOffsetY ?? 0.5);
   const [dragging, setDragging] = useState(false);
-  const dragStartRef = useRef({ y: 0, startOffset: 0 });
+  const dragStartRef = useRef({ pos: 0, startOffset: 0 });
 
-  // Load image to get natural dimensions
   useEffect(() => {
     const img = new Image();
     img.onload = () => setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
     img.src = photo.url;
   }, [photo.url]);
 
-  // Compute how much vertical overflow there is
-  const imgRatio = imgSize.w / (imgSize.h || 1);
-  const hasVerticalOverflow = imgRatio > TARGET_RATIO; // wider image → crop top/bottom (no, wait)
-  // Actually: if image is WIDER than target → fit width, crop height → vertical overflow
-  // If image is TALLER than target → fit height, crop width → horizontal (we ignore horizontal for now)
-  
-  // For 1080x1350 (portrait): most landscape photos will need vertical cropping
-  // We display the crop frame at a fixed aspect ratio and let the user drag the image up/down
-  
-  const FRAME_W = 320; // display width
+  // Auto-set initial offset based on focal point
+  useEffect(() => {
+    if (photo.cropOffsetY !== undefined) {
+      setOffset(photo.cropOffsetY);
+    } else if (photo.focalPoint === 'top') {
+      setOffset(0);
+    } else if (photo.focalPoint === 'bottom') {
+      setOffset(1);
+    } else {
+      setOffset(0.5);
+    }
+  }, [photo.focalPoint, photo.cropOffsetY]);
+
+  const FRAME_W = 320;
   const FRAME_H = FRAME_W / TARGET_RATIO; // ~400px
 
-  // Scale image to fill the frame width
-  const displayScale = FRAME_W / (imgSize.w || 1);
-  const displayImgH = (imgSize.h || 1) * displayScale;
-  const maxPanY = Math.max(0, displayImgH - FRAME_H);
+  // Use "cover" mode: scale so the image fully covers the frame
+  const imgRatio = imgSize.w / (imgSize.h || 1);
+  const frameRatio = FRAME_W / FRAME_H;
 
-  const currentPanY = offsetY * maxPanY;
+  // If image is wider relative to frame → fit height, pan horizontally
+  // If image is taller relative to frame → fit width, pan vertically
+  const isHorizontalPan = imgRatio > frameRatio;
+
+  let displayW: number, displayH: number;
+  if (isHorizontalPan) {
+    // Fit height, image wider than frame
+    displayH = FRAME_H;
+    displayW = imgRatio * FRAME_H;
+  } else {
+    // Fit width, image taller than frame
+    displayW = FRAME_W;
+    displayH = FRAME_W / imgRatio;
+  }
+
+  const maxPan = isHorizontalPan
+    ? Math.max(0, displayW - FRAME_W)
+    : Math.max(0, displayH - FRAME_H);
+
+  const currentPan = offset * maxPan;
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     setDragging(true);
-    dragStartRef.current = { y: e.clientY, startOffset: offsetY };
+    const pos = isHorizontalPan ? e.clientX : e.clientY;
+    dragStartRef.current = { pos, startOffset: offset };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [offsetY]);
+  }, [offset, isHorizontalPan]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragging) return;
-    const dy = e.clientY - dragStartRef.current.y;
-    // Moving pointer DOWN → image moves DOWN → offset decreases
-    const newOffset = Math.max(0, Math.min(1, dragStartRef.current.startOffset - dy / (maxPanY || 1)));
-    setOffsetY(newOffset);
-  }, [dragging, maxPanY]);
+    const pos = isHorizontalPan ? e.clientX : e.clientY;
+    const delta = pos - dragStartRef.current.pos;
+    // Moving pointer in positive direction → image moves that way → offset decreases
+    const newOffset = Math.max(0, Math.min(1, dragStartRef.current.startOffset - delta / (maxPan || 1)));
+    setOffset(newOffset);
+  }, [dragging, maxPan, isHorizontalPan]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (!dragging) return;
     setDragging(false);
-    const dy = e.clientY - dragStartRef.current.y;
-    const newOffset = Math.max(0, Math.min(1, dragStartRef.current.startOffset - dy / (maxPanY || 1)));
-    setOffsetY(newOffset);
+    const pos = isHorizontalPan ? e.clientX : e.clientY;
+    const delta = pos - dragStartRef.current.pos;
+    const newOffset = Math.max(0, Math.min(1, dragStartRef.current.startOffset - delta / (maxPan || 1)));
+    setOffset(newOffset);
     onChange(newOffset);
-  }, [dragging, maxPanY, onChange]);
+  }, [dragging, maxPan, onChange, isHorizontalPan]);
+
+  // If no overflow at all, auto-confirm
+  useEffect(() => {
+    if (imgSize.w && maxPan === 0) {
+      onChange(0.5);
+    }
+  }, [imgSize.w, maxPan]);
 
   if (!imgSize.w) {
     return <div className="flex items-center justify-center" style={{ width: FRAME_W, height: FRAME_H }}>
@@ -157,41 +188,49 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
     </div>;
   }
 
+  const imgStyle: React.CSSProperties = {
+    width: displayW,
+    height: displayH,
+    position: 'absolute' as const,
+    ...(isHorizontalPan
+      ? { top: 0, left: -currentPan }
+      : { left: 0, top: -currentPan }),
+  };
+
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Crop frame */}
       <div
         ref={containerRef}
-        className="relative overflow-hidden rounded-xl border-2 border-purple-500/40 mx-auto"
-        style={{ width: FRAME_W, height: FRAME_H, cursor: maxPanY > 0 ? (dragging ? 'grabbing' : 'grab') : 'default' }}
-        onPointerDown={maxPanY > 0 ? handlePointerDown : undefined}
-        onPointerMove={maxPanY > 0 ? handlePointerMove : undefined}
-        onPointerUp={maxPanY > 0 ? handlePointerUp : undefined}
-        onPointerCancel={maxPanY > 0 ? handlePointerUp : undefined}
+        className="relative overflow-hidden rounded-xl border-2 border-purple-500/40 mx-auto touch-none"
+        style={{ width: FRAME_W, height: FRAME_H, cursor: maxPan > 0 ? (dragging ? 'grabbing' : 'grab') : 'default' }}
+        onPointerDown={maxPan > 0 ? handlePointerDown : undefined}
+        onPointerMove={maxPan > 0 ? handlePointerMove : undefined}
+        onPointerUp={maxPan > 0 ? handlePointerUp : undefined}
+        onPointerCancel={maxPan > 0 ? handlePointerUp : undefined}
       >
         <img
           src={photo.url}
           alt=""
           draggable={false}
-          className="absolute left-0 select-none pointer-events-none"
-          style={{
-            width: FRAME_W,
-            height: displayImgH,
-            top: -currentPanY,
-          }}
+          className="select-none pointer-events-none"
+          style={imgStyle}
         />
         {/* Overlay guides */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Rule of thirds lines */}
           <div className="absolute left-0 right-0 border-t border-white/10" style={{ top: '33.33%' }} />
           <div className="absolute left-0 right-0 border-t border-white/10" style={{ top: '66.66%' }} />
           <div className="absolute top-0 bottom-0 border-l border-white/10" style={{ left: '33.33%' }} />
           <div className="absolute top-0 bottom-0 border-l border-white/10" style={{ left: '66.66%' }} />
         </div>
         {/* Drag hint */}
-        {maxPanY > 0 && !dragging && (
+        {maxPan > 0 && !dragging && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 text-white/70 text-[10px]">
-            <Move className="w-3 h-3" /> Arraste para ajustar
+            <Move className="w-3 h-3" /> {isHorizontalPan ? 'Arraste ↔ para ajustar' : 'Arraste ↕ para ajustar'}
+          </div>
+        )}
+        {maxPan === 0 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-600/70 text-white text-[10px]">
+            <Check className="w-3 h-3" /> Enquadramento perfeito
           </div>
         )}
         {/* Corner marks */}
@@ -206,10 +245,10 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
         <span>1080 × 1350px</span>
         <span>•</span>
         <span>4:5 Instagram</span>
-        {maxPanY > 0 && (
+        {maxPan > 0 && (
           <>
             <span>•</span>
-            <span className="text-purple-400/60">Posição: {Math.round(offsetY * 100)}%</span>
+            <span className="text-purple-400/60">Posição: {Math.round(offset * 100)}%</span>
           </>
         )}
       </div>

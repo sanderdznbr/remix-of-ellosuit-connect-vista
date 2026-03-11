@@ -7,10 +7,7 @@ interface StepPropertyCropProps {
   setProperties: React.Dispatch<React.SetStateAction<PropertyData[]>>;
 }
 
-const TARGET_RATIO = 1080 / 1350; // 0.8 — portrait
-
 const StepPropertyCrop: React.FC<StepPropertyCropProps> = ({ properties, setProperties }) => {
-  // Collect all photos across properties with their indices
   const allPhotos = properties.flatMap((prop, pi) =>
     prop.photos.map((photo, phi) => ({ propIdx: pi, photoIdx: phi, photo, propId: prop.id }))
   );
@@ -23,7 +20,6 @@ const StepPropertyCrop: React.FC<StepPropertyCropProps> = ({ properties, setProp
       <div className="flex flex-col items-center justify-center py-12 text-white/40">
         <Crop className="w-8 h-8 mb-2" />
         <p className="text-sm">Nenhuma foto para ajustar</p>
-        <p className="text-xs mt-1">Volte e adicione fotos do imóvel</p>
       </div>
     );
   }
@@ -56,7 +52,6 @@ const StepPropertyCrop: React.FC<StepPropertyCropProps> = ({ properties, setProp
         }}
       />
 
-      {/* Navigation */}
       {allPhotos.length > 1 && (
         <div className="flex items-center justify-center gap-3">
           <button
@@ -88,144 +83,144 @@ const StepPropertyCrop: React.FC<StepPropertyCropProps> = ({ properties, setProp
   );
 };
 
-// ========== CROP EDITOR (drag to reposition) ==========
+// ========== CROP EDITOR ==========
 interface CropEditorProps {
   photo: { url: string; cropOffsetY?: number; focalPoint?: string };
   onChange: (offsetY: number) => void;
 }
 
+const FRAME_W = 300;
+const FRAME_H = Math.round(FRAME_W * (1350 / 1080)); // 375px — portrait 4:5
+
 const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+  const [naturalW, setNaturalW] = useState(0);
+  const [naturalH, setNaturalH] = useState(0);
   const [offset, setOffset] = useState(photo.cropOffsetY ?? 0.5);
   const [dragging, setDragging] = useState(false);
-  const dragStartRef = useRef({ pos: 0, startOffset: 0 });
+  const dragRef = useRef({ startPos: 0, startOffset: 0 });
 
+  // Load natural dimensions
   useEffect(() => {
     const img = new Image();
-    img.onload = () => setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onload = () => {
+      setNaturalW(img.naturalWidth);
+      setNaturalH(img.naturalHeight);
+    };
     img.src = photo.url;
   }, [photo.url]);
 
-  // Auto-set initial offset based on focal point
+  // Set initial offset
   useEffect(() => {
     if (photo.cropOffsetY !== undefined) {
       setOffset(photo.cropOffsetY);
     } else if (photo.focalPoint === 'top') {
       setOffset(0);
+      onChange(0);
     } else if (photo.focalPoint === 'bottom') {
       setOffset(1);
+      onChange(1);
     } else {
       setOffset(0.5);
+      onChange(0.5);
     }
   }, [photo.focalPoint, photo.cropOffsetY]);
 
-  const FRAME_W = 320;
-  const FRAME_H = FRAME_W / TARGET_RATIO; // ~400px
-
-  // Use "cover" mode: scale so the image fully covers the frame
-  const imgRatio = imgSize.w / (imgSize.h || 1);
-  const frameRatio = FRAME_W / FRAME_H;
-
-  // If image is wider relative to frame → fit height, pan horizontally
-  // If image is taller relative to frame → fit width, pan vertically
-  const isHorizontalPan = imgRatio > frameRatio;
-
-  let displayW: number, displayH: number;
-  if (isHorizontalPan) {
-    // Fit height, image wider than frame
-    displayH = FRAME_H;
-    displayW = imgRatio * FRAME_H;
-  } else {
-    // Fit width, image taller than frame
-    displayW = FRAME_W;
-    displayH = FRAME_W / imgRatio;
+  if (!naturalW || !naturalH) {
+    return (
+      <div className="flex items-center justify-center mx-auto" style={{ width: FRAME_W, height: FRAME_H }}>
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  const maxPan = isHorizontalPan
-    ? Math.max(0, displayW - FRAME_W)
-    : Math.max(0, displayH - FRAME_H);
+  // COVER logic: scale image so it completely fills the frame
+  const scaleX = FRAME_W / naturalW;
+  const scaleY = FRAME_H / naturalH;
+  const coverScale = Math.max(scaleX, scaleY); // use the LARGER scale to ensure full coverage
+
+  const displayW = Math.round(naturalW * coverScale);
+  const displayH = Math.round(naturalH * coverScale);
+
+  // Overflow in each axis
+  const overflowX = Math.max(0, displayW - FRAME_W);
+  const overflowY = Math.max(0, displayH - FRAME_H);
+
+  // Determine pan axis — whichever has overflow
+  const panAxis = overflowX > overflowY ? 'x' : 'y';
+  const maxPan = panAxis === 'x' ? overflowX : overflowY;
 
   const currentPan = offset * maxPan;
 
+  const imgLeft = panAxis === 'x' ? -currentPan : -(overflowX / 2);
+  const imgTop = panAxis === 'y' ? -currentPan : -(overflowY / 2);
+
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (maxPan === 0) return;
     e.preventDefault();
     setDragging(true);
-    const pos = isHorizontalPan ? e.clientX : e.clientY;
-    dragStartRef.current = { pos, startOffset: offset };
+    dragRef.current = {
+      startPos: panAxis === 'x' ? e.clientX : e.clientY,
+      startOffset: offset,
+    };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [offset, isHorizontalPan]);
+  }, [offset, panAxis, maxPan]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging) return;
-    const pos = isHorizontalPan ? e.clientX : e.clientY;
-    const delta = pos - dragStartRef.current.pos;
-    // Moving pointer in positive direction → image moves that way → offset decreases
-    const newOffset = Math.max(0, Math.min(1, dragStartRef.current.startOffset - delta / (maxPan || 1)));
+    if (!dragging || maxPan === 0) return;
+    const pos = panAxis === 'x' ? e.clientX : e.clientY;
+    const delta = pos - dragRef.current.startPos;
+    const newOffset = Math.max(0, Math.min(1, dragRef.current.startOffset - delta / maxPan));
     setOffset(newOffset);
-  }, [dragging, maxPan, isHorizontalPan]);
+  }, [dragging, maxPan, panAxis]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (!dragging) return;
     setDragging(false);
-    const pos = isHorizontalPan ? e.clientX : e.clientY;
-    const delta = pos - dragStartRef.current.pos;
-    const newOffset = Math.max(0, Math.min(1, dragStartRef.current.startOffset - delta / (maxPan || 1)));
+    const pos = panAxis === 'x' ? e.clientX : e.clientY;
+    const delta = pos - dragRef.current.startPos;
+    const newOffset = Math.max(0, Math.min(1, dragRef.current.startOffset - delta / maxPan));
     setOffset(newOffset);
     onChange(newOffset);
-  }, [dragging, maxPan, onChange, isHorizontalPan]);
-
-  // If no overflow at all, auto-confirm
-  useEffect(() => {
-    if (imgSize.w && maxPan === 0) {
-      onChange(0.5);
-    }
-  }, [imgSize.w, maxPan]);
-
-  if (!imgSize.w) {
-    return <div className="flex items-center justify-center" style={{ width: FRAME_W, height: FRAME_H }}>
-      <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-    </div>;
-  }
-
-  const imgStyle: React.CSSProperties = {
-    width: displayW,
-    height: displayH,
-    position: 'absolute' as const,
-    ...(isHorizontalPan
-      ? { top: 0, left: -currentPan }
-      : { left: 0, top: -currentPan }),
-  };
+  }, [dragging, maxPan, panAxis, onChange]);
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div
-        ref={containerRef}
-        className="relative overflow-hidden rounded-xl border-2 border-purple-500/40 mx-auto touch-none"
-        style={{ width: FRAME_W, height: FRAME_H, cursor: maxPan > 0 ? (dragging ? 'grabbing' : 'grab') : 'default' }}
-        onPointerDown={maxPan > 0 ? handlePointerDown : undefined}
-        onPointerMove={maxPan > 0 ? handlePointerMove : undefined}
-        onPointerUp={maxPan > 0 ? handlePointerUp : undefined}
-        onPointerCancel={maxPan > 0 ? handlePointerUp : undefined}
+        className="relative overflow-hidden rounded-xl border-2 border-purple-500/40 mx-auto touch-none select-none"
+        style={{
+          width: FRAME_W,
+          height: FRAME_H,
+          cursor: maxPan > 0 ? (dragging ? 'grabbing' : 'grab') : 'default',
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <img
           src={photo.url}
           alt=""
           draggable={false}
-          className="select-none pointer-events-none"
-          style={imgStyle}
+          className="pointer-events-none"
+          style={{
+            position: 'absolute',
+            width: displayW,
+            height: displayH,
+            left: imgLeft,
+            top: imgTop,
+          }}
         />
-        {/* Overlay guides */}
+        {/* Grid guides */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute left-0 right-0 border-t border-white/10" style={{ top: '33.33%' }} />
           <div className="absolute left-0 right-0 border-t border-white/10" style={{ top: '66.66%' }} />
           <div className="absolute top-0 bottom-0 border-l border-white/10" style={{ left: '33.33%' }} />
           <div className="absolute top-0 bottom-0 border-l border-white/10" style={{ left: '66.66%' }} />
         </div>
-        {/* Drag hint */}
+        {/* Hint */}
         {maxPan > 0 && !dragging && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/70 text-white/70 text-[10px]">
-            <Move className="w-3 h-3" /> {isHorizontalPan ? 'Arraste ↔ para ajustar' : 'Arraste ↕ para ajustar'}
+            <Move className="w-3 h-3" /> {panAxis === 'x' ? 'Arraste ↔' : 'Arraste ↕'}
           </div>
         )}
         {maxPan === 0 && (
@@ -240,7 +235,6 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
         <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-purple-400/60 rounded-br" />
       </div>
 
-      {/* Info */}
       <div className="flex items-center gap-4 text-[10px] text-white/30">
         <span>1080 × 1350px</span>
         <span>•</span>

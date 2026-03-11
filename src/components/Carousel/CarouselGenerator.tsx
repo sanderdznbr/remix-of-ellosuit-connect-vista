@@ -3156,6 +3156,11 @@ FORBIDDEN:
       let imgPrompt: string;
       let negPrompt: string;
       
+      // Detect real estate mode for regeneration
+      const regenIsRealEstate = isRealEstateStyle || !!activeMarketplaceStyleRef.current?.is_real_estate;
+      const regenPropertyList = propertyListRef.current || propertyList;
+      const regenHasPhotos = regenIsRealEstate && regenPropertyList.some(p => p.photos && p.photos.length > 0);
+
       if (isFullBleedMarketplace) {
         // Build full-bleed prompt with card text context (same as initial generation)
         const isCover = card.type === 'cover' || cardIndex === 0;
@@ -3165,6 +3170,14 @@ FORBIDDEN:
         parts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
         parts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+
+        // Real estate: force black BG for screen blend
+        if (regenHasPhotos) {
+          parts.push(`\n🏠 INSTRUÇÃO CRÍTICA — CARD IMOBILIÁRIO:
+Use um FUNDO SÓLIDO PRETO (#000000) puro como base da imagem. NÃO gere nenhuma foto de casa, prédio, imóvel ou cenário de fundo.
+Coloque APENAS os elementos de texto, preço, especificações e decoração sobre o fundo preto.
+O fundo preto será mesclado com a foto real do imóvel via composição "screen".`);
+        }
         if (disallowPeople) {
           parts.push(`DIREÇÃO VISUAL OBRIGATÓRIA: card tipográfico/editorial SOMENTE com elementos gráficos (formas, textura, gradientes, composição).`);
           parts.push(`NÃO use retrato, pessoa, modelo, rosto, mãos, corpo humano ou silhuetas humanas.`);

@@ -3503,6 +3503,48 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         }
       }
 
+      // === NON-REAL-ESTATE: Programmatic logo overlay for regenerated card ===
+      if (!regenHasPhotos && logoUrl && newImageUrl) {
+        try {
+          console.log('[REGEN_LOGO] Adding logo to regenerated card', cardIndex);
+          const W = 1080, H = 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+            const img = document.createElement('img') as HTMLImageElement;
+            if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+          });
+          const baseImg = await loadImg(newImageUrl);
+          ctx.drawImage(baseImg, 0, 0, baseImg.width, baseImg.height, 0, 0, W, H);
+          const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+            const r = await fetch(logoUrl); const b = await r.blob();
+            return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+          })();
+          const logoImg = await loadImg(logoB64);
+          const maxLW = 180, maxLH = 80;
+          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+          const lw = logoImg.width * ls, lh = logoImg.height * ls;
+          const pad = 50;
+          let lx = pad, ly = pad;
+          const lp = logoPosition || 'top-left';
+          if (lp.includes('center')) lx = (W - lw) / 2;
+          if (lp.includes('right')) lx = W - lw - pad;
+          if (lp.includes('middle')) ly = (H - lh) / 2;
+          if (lp.includes('bottom')) ly = H - lh - pad;
+          ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
+          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+          newImageUrl = canvas.toDataURL('image/jpeg', 0.92);
+          console.log('[REGEN_LOGO] ✅ Logo applied!');
+        } catch (logoErr) {
+          console.warn('[REGEN_LOGO] Failed:', logoErr);
+        }
+      }
+
       // 3. Update card
       let updatedData: CarouselData | null = null;
       setCarouselData((prev) => {

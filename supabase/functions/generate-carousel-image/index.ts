@@ -540,7 +540,8 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
 5. O output deve preencher 100% do canvas — SEM bordas, SEM cortes, SEM barras pretas.
 6. NÃO altere, mova ou remova nenhum texto, logo ou elemento de design.
 7. ${singleGender}
-8. Se o rosto já está muito parecido com as referências, faça ajustes SUTIS para máxima fidelidade — não recrie a imagem do zero.` });
+8. Se o rosto já está muito parecido com as referências, faça ajustes SUTIS para máxima fidelidade — não recrie a imagem do zero.
+9. INTEGRAÇÃO ANATÔMICA: O rosto refinado DEVE manter o MESMO tom de pele do pescoço e corpo. A transição entre rosto, pescoço e ombros deve ser INVISÍVEL e natural. NÃO mude o tamanho ou a proporção do rosto — apenas refine as feições para maior semelhança com a referência.` });
 
       // Try refinement with premium model only (flash is too imprecise for this)
       let refinedImage: string | null = null;

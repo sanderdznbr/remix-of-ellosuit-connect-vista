@@ -155,7 +155,6 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
   const imgLeft = panAxis === 'x' ? -currentPan : -(overflowX / 2);
   const imgTop = panAxis === 'y' ? -currentPan : -(overflowY / 2);
 
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (maxPan === 0) return;

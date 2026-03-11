@@ -98,6 +98,7 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
   const [offset, setOffset] = useState(photo.cropOffsetY ?? 0.5);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ startPos: 0, startOffset: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load natural dimensions
   useEffect(() => {

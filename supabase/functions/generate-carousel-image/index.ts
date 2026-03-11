@@ -200,10 +200,22 @@ Deno.serve(async (req) => {
       : gender === 'female' ? 'FEMALE with feminine build and features.'
       : '';
     const singleGender = faceGender === 'male' 
-      ? 'The user has CONFIRMED this person is MALE. Generate a MALE body.' 
+      ? 'The user has CONFIRMED this person is MALE. Generate a MALE body with matching masculine proportions, skin tone, and build.' 
       : faceGender === 'female' 
-      ? 'The user has CONFIRMED this person is FEMALE. Generate a FEMALE body.' 
+      ? 'The user has CONFIRMED this person is FEMALE. Generate a FEMALE body with matching feminine proportions, skin tone, and build.' 
       : '';
+
+    // Anatomical integration instructions — critical to avoid "floating head" effect
+    const anatomicalRules = `
+INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
+- O rosto e o corpo DEVEM pertencer NATURALMENTE à mesma pessoa — como uma FOTOGRAFIA REAL.
+- O tom de pele do rosto DEVE ser IDÊNTICO ao tom de pele do pescoço, mãos e corpo. Sem diferenças de cor.
+- A iluminação no rosto DEVE ser consistente com a iluminação no corpo e ambiente. Mesma direção de luz, mesma intensidade.
+- O tamanho do rosto DEVE ser proporcional ao corpo. NÃO gere rostos grandes demais ou pequenos demais.
+- O pescoço DEVE conectar naturalmente a cabeça ao tronco — sem cortes, sem transições visíveis, sem "colagem".
+- A perspectiva/ângulo do rosto DEVE ser coerente com a pose corporal.
+- Gere a pessoa INTEIRA como uma unidade orgânica — NÃO gere o rosto separadamente do corpo.
+- O cabelo deve ter transição natural com o pescoço/ombros, sem bordas artificiais.`;
 
     if (validFaceRefs.length > 0 && isMultiPerson) {
       const personCount = facePersonsMetadata.length;
@@ -219,11 +231,11 @@ Deno.serve(async (req) => {
         personDescriptions += `\n- ${pm.label || `Person ${pi + 1}`} (face refs #${startIdx}${count > 1 ? `-#${endIdx}` : ''}): ${genderDesc}${glassesDesc}`;
         photoOffset += count;
       }
-      textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}`;
+      textPrompt += `\n\nMÚLTIPLAS PESSOAS (${personCount}): Cada pessoa DEVE ter o rosto EXATO da referência correspondente.${personDescriptions}${anatomicalRules}`;
     } else if (validFaceRefs.length > 0 && validGeneralRefs.length > 0) {
-      textPrompt += `\n\nPESSOA + PRODUTO: Gere esta EXATA pessoa (das fotos de referência) usando/segurando o produto. ${singleGender} COPIE FIELMENTE: estrutura óssea, olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor/textura do cabelo. Rosto visível de frente ou 3/4, bem iluminado. A pessoa DEVE interagir naturalmente com o produto.`;
+      textPrompt += `\n\nPESSOA + PRODUTO: Gere esta EXATA pessoa (das fotos de referência) usando/segurando o produto. ${singleGender} COPIE FIELMENTE: estrutura óssea, olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor/textura do cabelo. Rosto visível de frente ou 3/4, bem iluminado. A pessoa DEVE interagir naturalmente com o produto.${anatomicalRules}`;
     } else if (validFaceRefs.length > 0) {
-      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: A pessoa na imagem DEVE ser EXATAMENTE a pessoa das fotos de referência. ${singleGender} Copie com precisão cirúrgica: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo, formato do rosto. Rosto visível de frente ou 3/4, bem iluminado, sem obstruções. Esta é a prioridade #1 da geração — fidelidade facial absoluta.`;
+      textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: A pessoa na imagem DEVE ser EXATAMENTE a pessoa das fotos de referência. ${singleGender} Copie com precisão cirúrgica: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo, formato do rosto. Rosto visível de frente ou 3/4, bem iluminado, sem obstruções.${anatomicalRules}`;
     }
 
     // Detect real estate mode from prompt content

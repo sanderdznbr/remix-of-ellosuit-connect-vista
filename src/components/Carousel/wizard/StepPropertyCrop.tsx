@@ -189,6 +189,7 @@ const CropEditor: React.FC<CropEditorProps> = ({ photo, onChange }) => {
   return (
     <div className="flex flex-col items-center gap-3">
       <div
+        ref={containerRef}
         className="relative overflow-hidden rounded-xl border-2 border-purple-500/40 mx-auto touch-none select-none"
         style={{
           width: FRAME_W,

@@ -78,7 +78,7 @@ import SocialPublishDialog from './SocialPublishDialog';
 // CarouselTour removed
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
-import ImageInpaintEditor from '@/components/Dashboard/ImageInpaintEditor';
+import PostCorrectionEditor from './PostCorrectionEditor';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
@@ -6717,7 +6717,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       {/* ===== POST CORRECTION (Inpainting Editor) ===== */}
       {correctionCardIndex !== null && carouselData?.cards[correctionCardIndex]?.imageUrl && (
-        <ImageInpaintEditor
+        <PostCorrectionEditor
           imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
           onClose={() => setCorrectionCardIndex(null)}
           onImageEdited={(newUrl) => {

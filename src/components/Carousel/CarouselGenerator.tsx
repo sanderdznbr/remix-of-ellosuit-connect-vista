@@ -6077,7 +6077,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         ))}
                       </div>
                     )}
-                    
+                    {card.imageUrl && (
+                      <button
+                        onClick={() => { setModifyMenuCard(null); setCorrectionCardIndex(cardIdx); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors">
+                        <Pencil className="h-4 w-4 text-orange-400" />
+                        Correção (editar região)
+                      </button>
+                    )}
+
                     {/* Upload & Gallery buttons */}
                     {tempFaceFiles.length < 5 && (
                       <div className="flex gap-2 mb-4">

@@ -5965,7 +5965,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Delete button - top right */}
                     {carouselData.cards.length > 2 && (
                       <button onClick={(e) => { e.stopPropagation(); removeCard(i); }}
-                        className="absolute top-1 right-1 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                        className="absolute top-1 right-1 p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity z-20"
                         style={{ backgroundColor: 'rgba(220,38,38,0.8)' }}
                         title="Excluir card">
                         <Trash2 className="h-3 w-3 text-white" />

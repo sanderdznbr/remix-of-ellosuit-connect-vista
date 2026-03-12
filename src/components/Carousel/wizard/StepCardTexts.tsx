@@ -41,9 +41,14 @@ const StepCardTexts: React.FC<Props> = ({
   };
 
   const fillWithAI = async () => {
-    if (!topic.trim() || filling) return;
+    if (filling) return;
+    if (!topic.trim()) {
+      toast.error('Defina um tema antes de gerar o roteiro.');
+      return;
+    }
     setFilling(true);
     try {
+      console.log('[StepCardTexts] Calling generate-outline with topic:', topic.trim(), 'cards:', totalCards);
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-outline',
@@ -52,12 +57,34 @@ const StepCardTexts: React.FC<Props> = ({
           contentMode,
         },
       });
+      console.log('[StepCardTexts] Response:', { data, error });
       if (error) throw error;
-      if (data?.outline) {
+      if (data?.outline && Array.isArray(data.outline) && data.outline.length > 0) {
         setManualCardTexts(data.outline);
+        toast.success('Roteiro gerado com sucesso!');
+      } else {
+        // Fallback: generate basic outline locally
+        console.warn('[StepCardTexts] No outline from API, using local fallback');
+        const fallback = Array.from({ length: totalCards }, (_, i) => {
+          if (contentMode === 'single-post') return { title: topic.trim().slice(0, 60), body: '' };
+          if (i === 0) return { title: topic.trim().slice(0, 60), body: 'Descubra tudo sobre este assunto' };
+          if (i === totalCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
+          return { title: `Ponto ${i}`, body: '' };
+        });
+        setManualCardTexts(fallback);
+        toast.info('Roteiro gerado com modelo local.');
       }
     } catch (err) {
-      console.error('AI fill error:', err);
+      console.error('[StepCardTexts] AI fill error:', err);
+      toast.error('Erro ao gerar roteiro. Tente novamente.');
+      // Local fallback on error
+      const fallback = Array.from({ length: totalCards }, (_, i) => {
+        if (contentMode === 'single-post') return { title: topic.trim().slice(0, 60), body: '' };
+        if (i === 0) return { title: topic.trim().slice(0, 60), body: 'Descubra tudo sobre este assunto' };
+        if (i === totalCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
+        return { title: `Ponto ${i}`, body: '' };
+      });
+      setManualCardTexts(fallback);
     } finally {
       setFilling(false);
     }

@@ -247,9 +247,9 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
       textPrompt += `\n\nPRODUTO: Reproduza o produto das referências fielmente.`;
     }
 
-    // Brand colors — ONLY when no style refs (prevents palette contamination)
-    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0 && validStyleRefs.length === 0 && !stylePrompt) {
-      textPrompt += `\n\nCORES DA MARCA: ${brandColors.join(', ')}`;
+    // Brand colors — always apply when provided (user's brand identity overrides style palette)
+    if (brandColors && Array.isArray(brandColors) && brandColors.length > 0) {
+      textPrompt += `\n\nCORES DA MARCA (PRIORIDADE MÁXIMA): A paleta da marca do usuário é: ${brandColors.join(', ')}. Você DEVE adaptar a composição para usar estas cores predominantemente. Substitua as cores do estilo original pelas cores da marca. O fundo, elementos decorativos, acentos e tipografia devem refletir esta paleta. Mantenha o layout e a estrutura editorial do estilo, apenas TROQUE as cores.`;
     }
 
     // === 2-STAGE APPROACH: Stage 1 generates WITH face refs (best effort),

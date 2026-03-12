@@ -6717,7 +6717,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       {/* ===== POST CORRECTION (Inpainting Editor) ===== */}
       {correctionCardIndex !== null && carouselData?.cards[correctionCardIndex]?.imageUrl && (
-        <ImageInpaintEditor
+        <PostCorrectionEditor
           imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
           onClose={() => setCorrectionCardIndex(null)}
           onImageEdited={(newUrl) => {

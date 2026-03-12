@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2, Wand2, ChevronDown, ChevronUp, Type } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface CardText {
   title?: string;

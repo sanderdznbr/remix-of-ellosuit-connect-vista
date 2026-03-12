@@ -873,10 +873,9 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`Include a person/model in this image. ${genderMap[peopleMode] || ''} Use a photorealistic, professional-looking person that fits the editorial context. The person should look confident and natural.`);
     }
 
-    // Brand colors — inject when NO marketplace style is active, OR when admin user has brand override
-    const isAdminBrandOverride = user?.email === 'admin@gmail.com';
-    if (logoBrandColors.length > 0 && (!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || isAdminBrandOverride)) {
-      parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca.`);
+    // Brand colors — always inject when user has brand colors from logo
+    if (logoBrandColors.length > 0) {
+      parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 
     // Only add 4:5 aspect ratio for non-panoramic prompts
@@ -949,7 +948,7 @@ const CarouselGenerator: React.FC = () => {
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
-        ...(logoBrandColors.length > 0 && (!isFullBleedMarketplace || user?.email === 'admin@gmail.com') ? { brandColors: logoBrandColors } : {}),
+        ...(logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
       },
     });
     

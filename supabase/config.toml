@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.generate-realestate-card]
 verify_jwt = false
+
+[functions.post-correction]
+verify_jwt = false

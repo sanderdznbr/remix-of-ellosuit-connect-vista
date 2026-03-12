@@ -6046,6 +6046,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         Ver prompt usado
                       </button>
                     )}
+                    {card.imageUrl && (
+                      <button
+                        onClick={() => { setModifyMenuCard(null); setCorrectionCardIndex(cardIdx); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors">
+                        <Pencil className="h-4 w-4 text-orange-400" />
+                        Correção (editar região)
+                      </button>
+                    )}
                     {carouselData.cards.length > 2 && (
                       <>
                         <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />

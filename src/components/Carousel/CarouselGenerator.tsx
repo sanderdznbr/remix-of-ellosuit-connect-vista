@@ -6706,6 +6706,63 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         </div>
       )}
       </>}
+
+      {/* ===== POST CORRECTION (Inpainting Editor) ===== */}
+      {correctionCardIndex !== null && carouselData?.cards[correctionCardIndex]?.imageUrl && (
+        <ImageInpaintEditor
+          imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
+          onClose={() => setCorrectionCardIndex(null)}
+          onImageEdited={(newUrl) => {
+            setCardImage(correctionCardIndex, newUrl);
+            setCorrectionCardIndex(null);
+            toast({ title: 'Correção aplicada!' });
+          }}
+          editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string) => {
+            // Convert image and mask to base64
+            const toBase64 = async (url: string): Promise<string> => {
+              if (url.startsWith('data:')) {
+                return url.replace(/^data:[^;]+;base64,/, '');
+              }
+              const res = await fetch(url);
+              const blob = await res.blob();
+              return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve((reader.result as string).replace(/^data:[^;]+;base64,/, ''));
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            };
+
+            const [imageBase64, maskBase64] = await Promise.all([
+              toBase64(originalUrl),
+              toBase64(maskDataUrl),
+            ]);
+
+            const { data: session } = await supabase.auth.getSession();
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-correction`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session.session?.access_token}`,
+                },
+                body: JSON.stringify({ imageBase64, maskBase64, editPrompt }),
+              }
+            );
+
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({}));
+              throw new Error(err.error || `Error ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (!result.resultBase64) throw new Error('Nenhuma imagem retornada');
+
+            return `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
+          }}
+        />
+      )}
     </div>
   );
 };

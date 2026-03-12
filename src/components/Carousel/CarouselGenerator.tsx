@@ -4810,6 +4810,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 };
 
                                 try {
+                                  console.log('[Wizard] Auto-generating outline, topic:', topic.trim(), 'cards:', totalCards);
                                   const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
                                     body: {
                                       action: 'generate-outline',
@@ -4818,7 +4819,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                       contentMode,
                                     },
                                   });
-                                  if (!outlineErr && outlineData?.outline && outlineData.outline.length > 0) {
+                                  console.log('[Wizard] Outline response:', { outlineData, outlineErr });
+                                  if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
                                     setManualCardTexts(outlineData.outline);
                                   } else {
                                     // Edge function returned empty — use local fallback

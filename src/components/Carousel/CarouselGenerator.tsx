@@ -4617,8 +4617,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             }
                             if (extremePhotos.length > 0) {
                               setReferenceImages(prev => [
-                                ...prev.filter(r => r.category !== 'extreme'),
-                                ...extremePhotos.map(p => ({ ...p, category: 'style' })),
+                                ...prev,
+                                ...extremePhotos.map(p => ({
+                                  url: p.url,
+                                  thumb: p.url,
+                                  label: 'extreme-ref',
+                                  source: 'upload' as const,
+                                  category: 'style' as const,
+                                })),
                               ]);
                             }
                             // Enrich topic with extreme vision details

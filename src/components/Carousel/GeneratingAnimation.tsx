@@ -33,8 +33,8 @@ const GeneratingAnimation: React.FC<Props> = ({
   skipWebSearch = false,
   onGoHome,
 }) => {
-  // Always use bright purple for loading, ignoring user's accentColor
-  const loadingColor = LOADING_PURPLE;
+  // Always use bright orange for loading, ignoring user's accentColor
+  const loadingColor = LOADING_ORANGE;
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);

@@ -14,6 +14,25 @@ interface Props {
 const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandColors = [] }) => {
   const [galleryFieldId, setGalleryFieldId] = useState<string | null>(null);
 
+  // Auto-populate color fields with brand colors when they become available
+  useEffect(() => {
+    if (brandColors.length === 0) return;
+    const colorFields = analysis.fields.filter(f => f.type === 'color');
+    if (colorFields.length === 0) return;
+    
+    const updates: Record<string, any> = {};
+    let colorIdx = 0;
+    for (const field of colorFields) {
+      if (!values[field.id]) {
+        updates[field.id] = brandColors[colorIdx % brandColors.length];
+        colorIdx++;
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      onChange({ ...values, ...updates });
+    }
+  }, [brandColors, analysis.fields]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const updateField = useCallback((id: string, value: any) => {
     onChange({ ...values, [id]: value });
   }, [values, onChange]);

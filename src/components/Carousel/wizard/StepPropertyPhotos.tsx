@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Camera, Plus, X, Upload, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
 import { PropertyData, createEmptyProperty, PhotoFocalPoint } from './StepProperty';
 
 interface StepPropertyPhotosProps {

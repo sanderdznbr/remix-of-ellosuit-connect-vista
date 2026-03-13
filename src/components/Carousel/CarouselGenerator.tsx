@@ -5317,7 +5317,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 <Home className="w-5 h-5 text-white/60" />
               </button>
               <button
-                onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
+                onClick={() => { console.log('[EXPORT] Button clicked, isGuest:', isGuest); if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
                 disabled={exporting}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}
@@ -5436,7 +5436,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Ver prompt usado */}
                     {!isGuest && (() => { const c = carouselData.cards[activeCardIndex]; return c && (c.generatedPrompt || c.imagePrompt || c.isAiImage); })() && (
                       <button
-                        onClick={() => setViewPromptCard(activeCardIndex)}
+                        onClick={() => { console.log('[PROMPT] View prompt clicked, cardIndex:', activeCardIndex); setViewPromptCard(activeCardIndex); }}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all w-full">
                         <FileText className="h-4 w-4 text-yellow-400" /> Ver Prompt
                       </button>

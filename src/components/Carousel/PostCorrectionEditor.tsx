@@ -169,7 +169,7 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
 
   const isExactAttachmentReplacePrompt = (prompt: string) => {
     const normalized = prompt.toLowerCase();
-    return /(substit|troca|troque|replace|anexad|exat|id[êe]ntic|igual)/i.test(normalized);
+    return /(substit|troca|troque|replace|anexad|exat|id[êe]ntic|igual|alter|muda|mudar|mude|coloc|coloqu|inserir|insira|usar|use|põe|ponha|bot[ae])/i.test(normalized);
   };
 
   const loadImage = (src: string) =>

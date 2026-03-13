@@ -5261,6 +5261,71 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                               }
                             }
+                            // Extreme Resumo → Roteiro: set up context before advancing
+                            if (currentStepName === 'Resumo' && wizardMode === 'extreme' && contentMode === 'carousel' && cardCount > 1 && extremeAnalysis) {
+                              // Same setup as onGenerate but WITHOUT triggering generation
+                              const nextIsSinglePost = cardCount === 1;
+                              if (nextIsSinglePost) {
+                                setContentMode('single-post');
+                                setImageCardCount(1);
+                              } else {
+                                setContentMode('carousel');
+                                setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                              }
+
+                              const newRefs: Array<{ url: string; thumb: string; label: string; source: 'upload'; category: 'product' | 'style' }> = [];
+                              for (const field of extremeAnalysis.fields) {
+                                if (field.type === 'photo_upload') {
+                                  const photos = extremeFormValues[field.id] as string[] | undefined;
+                                  if (photos?.length) {
+                                    const fieldLabel = (field.label + ' ' + (field.id || '')).toLowerCase();
+                                    const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca/i.test(fieldLabel);
+                                    photos.forEach((url, idx) => {
+                                      newRefs.push({ url, thumb: url, label: `${field.label} ${idx + 1}`, source: 'upload' as const, category: isProduct ? 'product' : 'style' });
+                                    });
+                                  }
+                                }
+                              }
+                              if (extremeBehanceRefs.length > 0) {
+                                extremeBehanceRefs.forEach((url, idx) => {
+                                  newRefs.push({ url, thumb: url, label: `Behance Ref ${idx + 1}`, source: 'upload' as const, category: 'style' as const });
+                                });
+                              }
+                              if (extremeSelectedFont) {
+                                newRefs.push({ url: extremeSelectedFont.previewUrl, thumb: extremeSelectedFont.previewUrl, label: `Fonte: ${extremeSelectedFont.name}`, source: 'upload' as const, category: 'style' as const });
+                              }
+                              if (newRefs.length > 0) {
+                                setReferenceImages(prev => [...prev, ...newRefs]);
+                              }
+
+                              const exactText = getExtremeExactText();
+                              setManualPostText(exactText || '');
+
+                              const formSummary = extremeAnalysis.fields
+                                .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')
+                                .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
+                                .join('. ');
+                              const photoFields = extremeAnalysis.fields.filter(f => f.type === 'photo_upload' && (extremeFormValues[f.id] as string[])?.length > 0);
+                              const photoContext = photoFields.map(f => {
+                                const count = (extremeFormValues[f.id] as string[]).length;
+                                return `[${count} imagem(ns) de "${f.label}" fornecida(s) como referência obrigatória]`;
+                              }).join(' ');
+                              const fontContext = extremeSelectedFont
+                                ? `FONTE TIPOGRÁFICA OBRIGATÓRIA: Use EXATAMENTE a fonte "${extremeSelectedFont.name}" como referência visual.`
+                                : '';
+
+                              const enrichedTopic = [
+                                `MODO EXTREME — VISÃO DO USUÁRIO: ${extremeVision}`,
+                                formSummary ? `DETALHES: ${formSummary}` : '',
+                                exactText ? `TEXTO EXATO OBRIGATÓRIO (NÃO ALTERAR, NÃO REESCREVER): "${exactText}"` : '',
+                                photoContext || '',
+                                fontContext,
+                                'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição.',
+                                'FORMATO OBRIGATÓRIO: Cada card do carrossel deve ser UMA ÚNICA imagem/composição visual completa (1080x1080). NUNCA crie grids, colagens, mosaicos ou sub-divisões dentro de um card.',
+                                'DIFERENCIAÇÃO DE CARDS: Card 1 = CAPA impactante (hero/título grande). Cards intermediários = CONTEÚDO (slides informativos, NÃO capas). Último card = CTA (call-to-action). Cada card DEVE ter um visual DIFERENTE.',
+                              ].filter(Boolean).join('\n');
+                              setTopic(enrichedTopic);
+                            }
                             // Roteiro step: auto-generate on first click, advance on second
                             if (currentStepName === 'Roteiro') {
                               const hasAnyCardText = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());

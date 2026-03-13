@@ -244,11 +244,28 @@ const StyleCard: React.FC<{
             <Check className="w-3 h-3" /> ADQUIRIDO
           </div>
         )}
+        {isAdmin && isHidden && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-[5] pointer-events-none">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/80 text-white text-xs font-bold">
+              <EyeOff className="w-3.5 h-3.5" /> OCULTO
+            </div>
+          </div>
+        )}
         {isAdmin && (
-          <button onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-yellow-400 shadow-lg z-10">
-            <Pencil className="w-3.5 h-3.5" /> Editar
-          </button>
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <button onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(); }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer shadow-lg transition-colors ${
+                isHidden
+                  ? 'bg-green-500/90 text-white hover:bg-green-400'
+                  : 'bg-red-500/80 text-white hover:bg-red-400'
+              }`}>
+              {isHidden ? <><Eye className="w-3 h-3" /> Mostrar</> : <><EyeOff className="w-3 h-3" /> Ocultar</>}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold cursor-pointer hover:bg-yellow-400 shadow-lg">
+              <Pencil className="w-3.5 h-3.5" /> Editar
+            </button>
+          </div>
         )}
       </div>
       <div className="p-4">

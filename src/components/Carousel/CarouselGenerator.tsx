@@ -6101,15 +6101,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <Trash2 className="h-3 w-3 text-white" />
                       </button>
                     )}
-                    {/* Single "Modificar" button */}
-                    <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10">
-                      <button onClick={(e) => { e.stopPropagation(); setModifyMenuCard(modifyMenuCard === i ? null : i); }}
-                        className="px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-[11px] font-medium text-white"
-                        style={{ backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
-                        {(regeneratingCard === i || regeneratingFace === i) ? <Loader2 className="h-3 w-3 animate-spin" /> : <Pencil className="h-3 w-3" />}
-                        Modificar
-                      </button>
-                    </div>
+                    {/* Modificar button removed - functions moved to sidebar */}
                     <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
                   );

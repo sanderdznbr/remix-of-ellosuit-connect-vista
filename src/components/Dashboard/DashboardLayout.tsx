@@ -124,12 +124,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
       }
     })();
-    return <div className="flex-1 min-w-0 min-h-0 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>{content}</div>;
+    return <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>{content}</div>;
   };
 
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen w-full" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex flex-col h-[100dvh] w-full" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Mobile Header */}
         <header className="flex items-center justify-between px-4 h-14 shrink-0 relative z-50" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Left: hamburger to open sidebar */}
@@ -199,9 +199,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         )}
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
-          {renderContent()}
-        </div>
+        {renderContent()}
       </div>
     );
   }

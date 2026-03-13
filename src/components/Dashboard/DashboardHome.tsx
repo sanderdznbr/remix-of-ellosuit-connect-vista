@@ -225,7 +225,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden h-full" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
       {/* Orb — centered on screen */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper w-[170vw] h-[170vw] md:w-[900px] md:h-[900px]">
@@ -366,7 +366,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       {/* Recent projects — pinned to bottom with horizontal slider */}
       {recentCarousels.length > 0 && (
       <motion.div
-        className="relative z-[1] px-4 md:px-8 pb-6 shrink-0"
+        className="relative z-[1] px-4 md:px-8 shrink-0"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.4 }}

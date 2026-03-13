@@ -70,6 +70,7 @@ import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
 import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
+import StepExtremeFonts from './wizard/StepExtremeFonts';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
@@ -183,6 +184,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeVision, setExtremeVision] = useState('');
   const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
   const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
+  const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -325,7 +327,7 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Referências', 'Estilo', 'Resumo']
+    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo']
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -450,6 +452,7 @@ const CarouselGenerator: React.FC = () => {
     setExtremeAnalysis(null);
     setExtremeVision('');
     setExtremeFormValues({});
+    setExtremeSelectedFont(null);
     setKeywords('');
     setCardCount(5);
     setImageCardCount(4);
@@ -1290,7 +1293,7 @@ const CarouselGenerator: React.FC = () => {
         product_context: isRealEstateStyle
           ? `REAL_ESTATE_DATA:${JSON.stringify({ properties: propertyList.map(p => ({ ...p, photos: p.photos.map(ph => ph.url) })), mode: realEstateMode })}`
           : wizardMode === 'extreme' && extremeAnalysis
-            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}`
+            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual. Replique o estilo, peso e proporções da fonte mostrada na imagem de referência.' } : null })}`
             : productContext,
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
@@ -4739,6 +4742,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onChange={setExtremeFormValues}
                       />
                     )}
+                    {currentStepName === 'Fontes' && extremeAnalysis && (
+                      <StepExtremeFonts
+                        selectedFont={extremeSelectedFont}
+                        onSelect={setExtremeSelectedFont}
+                      />
+                    )}
                     {currentStepName === 'Referências' && extremeAnalysis && (
                       <StepExtremeBehanceRefs
                         vision={extremeVision}
@@ -4804,6 +4813,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               });
                             }
 
+                            // Add font reference if selected
+                            if (extremeSelectedFont) {
+                              newRefs.push({
+                                url: extremeSelectedFont.previewUrl,
+                                thumb: extremeSelectedFont.previewUrl,
+                                label: `Fonte: ${extremeSelectedFont.name}`,
+                                source: 'upload' as const,
+                                category: 'style' as const,
+                              });
+                            }
+
                             if (newRefs.length > 0) {
                               setReferenceImages(prev => [...prev, ...newRefs]);
                             }
@@ -4822,11 +4842,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               return `[${count} imagem(ns) de "${f.label}" fornecida(s) como referência obrigatória]`;
                             }).join(' ');
 
+                            const fontContext = extremeSelectedFont
+                              ? `FONTE TIPOGRÁFICA OBRIGATÓRIA: Use EXATAMENTE a fonte "${extremeSelectedFont.name}" como referência visual. A imagem de preview da fonte foi incluída nas referências de estilo. Replique fielmente o estilo, peso e proporções desta fonte em todos os textos do design.`
+                              : '';
+
                             const enrichedTopic = [
                               `MODO EXTREME — VISÃO DO USUÁRIO: ${extremeVision}`,
                               formSummary ? `DETALHES: ${formSummary}` : '',
                               exactText ? `TEXTO EXATO OBRIGATÓRIO (NÃO ALTERAR, NÃO REESCREVER): "${exactText}"` : '',
                               photoContext || '',
+                              fontContext,
                               'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição (ex: se enviou print de app, coloque na tela de um mockup de celular; se enviou logo, inclua no design).',
                               'FORMATO OBRIGATÓRIO: Cada card do carrossel deve ser UMA ÚNICA imagem/composição visual completa (1080x1080). NUNCA crie grids, colagens, mosaicos ou sub-divisões dentro de um card. Cada card = 1 cena única.',
                             ].filter(Boolean).join('\n');

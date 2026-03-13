@@ -204,9 +204,11 @@ const MarketplaceContent: React.FC = () => {
 
 // ---- Style Card ----
 const StyleCard: React.FC<{
-  style: MarketplaceStyle; owned: boolean; onClick: () => void;
+  style: MarketplaceStyle & { is_active?: boolean }; owned: boolean; onClick: () => void;
   featured?: boolean; isAdmin?: boolean; onEdit?: () => void;
-}> = ({ style, owned, onClick, featured, isAdmin, onEdit }) => {
+  onToggleVisibility?: () => void;
+}> = ({ style, owned, onClick, featured, isAdmin, onEdit, onToggleVisibility }) => {
+  const isHidden = style.is_active === false;
   const previewImage = style.preview_images?.[0];
   return (
     <div onClick={onClick}

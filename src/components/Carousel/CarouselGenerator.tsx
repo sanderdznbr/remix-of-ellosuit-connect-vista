@@ -5494,7 +5494,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         )}
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
-        {carouselData && editingCard === null && (
+        {carouselData && editingCard === null && (() => {
+          const isExtreme = wizardMode === 'extreme';
+          const themeHex = isExtreme ? '#E84D1A' : '#8B5CF6';
+          const themeHexDark = isExtreme ? '#C43A0F' : '#6D28D9';
+          const themeRgb = isExtreme ? '232,77,26' : '139,92,246';
+          const themeRgb2 = isExtreme ? '200,60,20' : '99,102,241';
+          return (
           <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Header bar */}
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
@@ -5505,18 +5511,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 <Home className="w-5 h-5 text-white/60" />
               </button>
               <button
-                onClick={() => { console.log('[EXPORT] Button clicked, isGuest:', isGuest); if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
+                onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { exportAllCards('png'); } }}
                 disabled={exporting}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}
+                style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
               >
                 {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Salvar Post
               </button>
             </div>
             {/* Subtle background glow effects */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
-            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: `radial-gradient(circle, rgba(${themeRgb},0.4) 0%, transparent 70%)` }} />
+            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: `radial-gradient(circle, rgba(${themeRgb2},0.5) 0%, transparent 70%)` }} />
 
             {/* Center area: phone + inline editor panel */}
             <div className="flex flex-row items-start justify-center gap-0 md:gap-6 flex-1 relative z-10">
@@ -5551,8 +5557,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Export */}
                     <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium text-white border transition-all disabled:opacity-50 w-full"
-                      style={{ borderColor: 'rgba(139,92,246,0.3)', background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(139,92,246,0.04))' }}>
-                      {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4 text-purple-400" />}
+                      style={{ borderColor: `rgba(${themeRgb},0.3)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.12), rgba(${themeRgb},0.04))` }}>
+                      {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" style={{ color: themeHex }} />}
                       {isGuest ? 'Assine para baixar' : 'Exportar'}
                     </button>
 
@@ -5638,7 +5644,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             <div className="h-px bg-white/[0.06]" />
                             <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
                               className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                              <Layers className="h-3.5 w-3.5 text-purple-400" />
+                              <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
                               <div>
                                 <p className="font-semibold">Contínuo</p>
                                 <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
@@ -5683,7 +5689,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <button
                     onClick={() => setShowInlineEditor(!showInlineEditor)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all hover:scale-110"
-                    style={{ borderColor: showInlineEditor ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.2)', backgroundColor: showInlineEditor ? 'rgba(139,92,246,0.25)' : 'rgba(20,20,30,0.85)' }}
+                    style={{ borderColor: showInlineEditor ? `rgba(${themeRgb},0.5)` : 'rgba(255,255,255,0.2)', backgroundColor: showInlineEditor ? `rgba(${themeRgb},0.25)` : 'rgba(20,20,30,0.85)' }}
                     aria-label="Editar card"
                   >
                     <Pencil className="h-4.5 w-4.5" />
@@ -5694,7 +5700,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <button
                     onClick={() => setShowAddCardMenu((prev) => !prev)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all"
-                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: showAddCardMenu ? 'rgba(139,92,246,0.3)' : 'rgba(20,20,30,0.85)' }}
+                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: showAddCardMenu ? `rgba(${themeRgb},0.3)` : 'rgba(20,20,30,0.85)' }}
                     aria-label="Adicionar card"
                   >
                     <Plus className="h-5 w-5" />
@@ -5711,8 +5717,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           onClick={() => { setShowAddCardMenu(false); setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' }); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
-                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                            <User className="h-3.5 w-3.5 text-purple-400" />
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: `rgba(${themeRgb},0.15)` }}>
+                            <User className="h-3.5 w-3.5" style={{ color: themeHex }} />
                           </div>
                           <div>
                             <p className="text-xs font-medium text-white/90">Composto</p>
@@ -5723,8 +5729,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           onClick={() => { setShowAddCardMenu(false); setAddCardModal({ open: true, cardType: 'solid', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' }); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
-                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                            <Type className="h-3.5 w-3.5 text-purple-400" />
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: `rgba(${themeRgb},0.15)` }}>
+                            <Type className="h-3.5 w-3.5" style={{ color: themeHex }} />
                           </div>
                           <div>
                             <p className="text-xs font-medium text-white/90">Sólido</p>
@@ -5872,14 +5878,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       {/* Regenerating overlay on mockup */}
                       {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                          <div className="w-10 h-10 rounded-full border-3 border-purple-500/30 border-t-purple-500 animate-spin mb-3" />
+                          <div className="w-10 h-10 rounded-full border-3 animate-spin mb-3" style={{ borderColor: `rgba(${themeRgb},0.3)`, borderTopColor: themeHex }} />
                           <p className="text-white/80 text-xs font-medium">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
                         </div>
                       )}
                       {/* Guest lock overlay */}
                       {isCardLocked(activeCardIndex) && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                          <Lock className="w-8 h-8 mb-3" style={{ color: '#8B5CF6' }} />
+                          <Lock className="w-8 h-8 mb-3" style={{ color: themeHex }} />
                           <p className="text-white font-semibold text-sm mb-1">Card bloqueado</p>
                           <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
                           <button onClick={() => navigate('/checkout')}
@@ -5927,7 +5933,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           width: i === activeCardIndex ? 8 : 5,
                           height: i === activeCardIndex ? 8 : 5,
                           borderRadius: '50%',
-                          backgroundColor: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.2)',
+                          backgroundColor: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.2)',
                         }} />
                     ))}
                   </div>
@@ -5969,7 +5975,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   }}>
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-2">
-                        <Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} />
+                        <Palette className="h-5 w-5" style={{ color: themeHex }} />
                         <h3 className="font-bold text-white text-base">
                           {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
                         </h3>
@@ -6045,7 +6051,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                     <div className="flex items-center justify-between px-4 pb-3 shrink-0">
                       <div className="flex items-center gap-2">
-                        <Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} />
+                        <Palette className="h-5 w-5" style={{ color: themeHex }} />
                         <h3 className="font-bold text-white text-base">
                           {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
                         </h3>
@@ -6114,7 +6120,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     }}>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-purple-400" />
+                          <FileText className="h-4 w-4" style={{ color: themeHex }} />
                           <h3 className="text-sm font-semibold text-white">Legenda da Publicação</h3>
                         </div>
                         <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -6158,7 +6164,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   >
                     <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-purple-400" />
+                        <FileText className="h-4 w-4" style={{ color: themeHex }} />
                         <h3 className="text-sm font-semibold text-white">Legenda</h3>
                       </div>
                       <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -6178,7 +6184,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <div className="flex gap-2">
                         <button onClick={generateCaption} disabled={generatingCaption}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                          style={{ backgroundColor: 'rgba(139,92,246,0.12)', color: 'rgba(173,95,255,0.9)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                          style={{ backgroundColor: `rgba(${themeRgb},0.12)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.15)` }}>
                           {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                           {generatingCaption ? 'Gerando...' : 'Gerar com IA'}
                         </button>
@@ -6201,12 +6207,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {isGuest && (
               <div className="flex items-center justify-center gap-3 mt-4 w-full relative z-10 px-4">
                 <div className="flex items-center gap-3 px-5 py-3 rounded-2xl w-full max-w-xl"
-                  style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))', border: '1px solid rgba(139,92,246,0.2)' }}>
-                  <Lock className="h-4 w-4 shrink-0" style={{ color: '#8B5CF6' }} />
+                  style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))`, border: `1px solid rgba(${themeRgb},0.2)` }}>
+                  <Lock className="h-4 w-4 shrink-0" style={{ color: themeHex }} />
                   <p className="text-xs text-white/60 flex-1">Cadastre-se para desbloquear todos os cards, salvar e exportar seus carrosséis.</p>
                   <button onClick={() => navigate('/checkout')}
                     className="px-4 py-2 rounded-xl text-xs font-bold text-white shrink-0 transition-all hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                    style={{ background: `linear-gradient(135deg, ${themeHex} 0%, ${themeHexDark} 100%)` }}>
                     Cadastrar
                   </button>
                 </div>
@@ -6223,7 +6229,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* Export button */}
               <button data-tour="btn-export" onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
-                style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                style={{ borderColor: `rgba(${themeRgb},0.4)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))` }}>
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
                 {isGuest ? 'Assine para baixar' : 'Exportar'}
               </button>
@@ -6284,7 +6290,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   </button>
                   <button data-tour="btn-style" onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(!showStylePanel); }} disabled={isGuest}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                    style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
+                    style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
                     <Palette className="h-3.5 w-3.5" /> Estilo
                   </button>
                 </>
@@ -6552,14 +6558,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     )}
                     {/* Modificar button removed - functions moved to sidebar */}
-                    <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
+                    <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
                   );
                 })}
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* ===== MODIFY CARD MODAL ===== */}

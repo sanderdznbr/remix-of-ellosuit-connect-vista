@@ -29,6 +29,7 @@ const StepExtremeResumo: React.FC<Props> = ({
   setSpeed,
   generating,
   onGenerate,
+  hideGenerateButton,
 }) => {
   const filledFields = analysis.fields.filter(f => {
     const v = formValues[f.id];

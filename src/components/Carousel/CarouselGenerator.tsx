@@ -367,25 +367,40 @@ const CarouselGenerator: React.FC = () => {
   // CRITICAL: Sync marketplace style ref inline at render time (NOT in useEffect)
   activeMarketplaceStyleRef.current = activeMarketplaceStyle;
 
+  const triggerCloudFallback = useCallback((jobId: string, useKeepAlive = false) => {
+    const body = JSON.stringify({ jobId });
+
+    if (useKeepAlive) {
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`, {
+        method: 'POST',
+        body,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        keepalive: true,
+      }).catch(() => {});
+      return;
+    }
+
+    supabase.functions.invoke('generate-carousel-cloud', {
+      body: { jobId },
+    }).catch((err) => {
+      console.warn('Cloud fallback trigger failed:', err);
+    });
+  }, []);
+
   // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
   useEffect(() => {
     const handleBeforeUnload = () => {
       const jobId = cloudJobIdRef.current;
       if (!jobId || !generatingRef.current) return;
-      // Fire-and-forget: trigger cloud generation for this job
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`;
-      const body = JSON.stringify({ jobId });
-      // Use sendBeacon for reliability during page unload
-      if (navigator.sendBeacon) {
-        const blob = new Blob([body], { type: 'application/json' });
-        navigator.sendBeacon(url, blob);
-      } else {
-        fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, keepalive: true }).catch(() => {});
-      }
+      triggerCloudFallback(jobId, true);
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  }, [triggerCloudFallback]);
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);
@@ -1708,6 +1723,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             if (currentCarouselIdRef.current) {
               await supabase.from('generated_carousels').update({ title: finalData.title, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
               captureCoverImage(currentCarouselIdRef.current, companyData.company_id, finalData).catch(() => {});
+              if (jobId) completeCloudJob(jobId, currentCarouselIdRef.current);
             } else {
               const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
               if (insertErr) {
@@ -1723,10 +1739,13 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
       // Clear cloud job on success
-      if (jobId) { setCloudJobId(null); if (!currentCarouselId) completeCloudJob(jobId); }
+      if (jobId) { setCloudJobId(null); }
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message || 'Não foi possível gerar o post', variant: 'destructive' });
-      // Don't mark job as failed — leave it pending so cloud can pick it up if browser closes
+      if (jobId) {
+        failCloudJob(jobId, err.message || 'Falha na geração local do post');
+        setCloudJobId(null);
+      }
     } finally {
       setGenerating(false);
       setGeneratingAllImages(false);
@@ -2090,6 +2109,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
                 if (currentCarouselIdRef.current) {
                   await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
                   setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
+                  if (localJobId) completeCloudJob(localJobId, currentCarouselIdRef.current);
                 } else {
                   const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
                   if (inserted) {
@@ -2676,6 +2696,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             if (currentCarouselIdRef.current) {
               await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
               setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
+              if (localJobId) completeCloudJob(localJobId, currentCarouselIdRef.current);
             } else {
               const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
               if (inserted) {
@@ -2692,6 +2713,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
     } catch (err: any) {
       console.error('Generation error:', err);
       sonnerToast.error(err.message || 'Não foi possível gerar o carrossel. Tente novamente.');
+      if (localJobId) {
+        failCloudJob(localJobId, err.message || 'Falha na geração local do carrossel');
+      }
     } finally {
       setGenerating(false);
       setGeneratingAllImages(false);
@@ -5491,14 +5515,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;
               if (jobId) {
-                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`;
-                const body = JSON.stringify({ jobId });
-                if (navigator.sendBeacon) {
-                  const blob = new Blob([body], { type: 'application/json' });
-                  navigator.sendBeacon(url, blob);
-                } else {
-                  fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, keepalive: true }).catch(() => {});
-                }
+                triggerCloudFallback(jobId);
               }
               // Reset generation state and go to dashboard
               setGenerating(false);

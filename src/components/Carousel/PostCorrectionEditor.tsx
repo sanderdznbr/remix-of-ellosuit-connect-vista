@@ -167,79 +167,10 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
     return canvas.toDataURL('image/png');
   };
 
-  const isExactAttachmentReplacePrompt = (prompt: string) => {
-    const normalized = prompt.toLowerCase();
-    return /(substit|troca|troque|replace|anexad|exat|id[êe]ntic|igual|alter|muda|mudar|mude|coloc|coloqu|inserir|insira|usar|use|põe|ponha|bot[ae])/i.test(normalized);
-  };
-
-  const loadImage = (src: string) =>
-    new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
-    });
-
-  const applyExactAttachmentReplace = async (originalSrc: string, attachmentSrc: string): Promise<string> => {
-    const [originalImg, attachmentImg] = await Promise.all([
-      loadImage(originalSrc),
-      loadImage(attachmentSrc),
-    ]);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = originalImg.naturalWidth;
-    canvas.height = originalImg.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Falha ao preparar canvas');
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(originalImg, 0, 0, canvas.width, canvas.height);
-
-    for (const r of regions) {
-      const rx = (r.x / 100) * canvas.width;
-      const ry = (r.y / 100) * canvas.height;
-      const rw = (r.width / 100) * canvas.width;
-      const rh = (r.height / 100) * canvas.height;
-
-      const regionRatio = rw / rh;
-      const attachmentRatio = attachmentImg.naturalWidth / attachmentImg.naturalHeight;
-
-      let sx = 0;
-      let sy = 0;
-      let sw = attachmentImg.naturalWidth;
-      let sh = attachmentImg.naturalHeight;
-
-      if (attachmentRatio > regionRatio) {
-        sh = attachmentImg.naturalHeight;
-        sw = sh * regionRatio;
-        sx = (attachmentImg.naturalWidth - sw) / 2;
-      } else {
-        sw = attachmentImg.naturalWidth;
-        sh = sw / regionRatio;
-        sy = (attachmentImg.naturalHeight - sh) / 2;
-      }
-
-      ctx.drawImage(attachmentImg, sx, sy, sw, sh, rx, ry, rw, rh);
-    }
-
-    return canvas.toDataURL('image/png');
-  };
-
   const handleSubmit = async () => {
     if (!editPrompt.trim() || regions.length === 0) return;
     setIsProcessing(true);
     try {
-      const shouldUseExactAttachmentReplace =
-        !!attachmentPreview && isExactAttachmentReplacePrompt(editPrompt);
-
-      if (shouldUseExactAttachmentReplace) {
-        const newUrl = await applyExactAttachmentReplace(imageUrl, attachmentPreview);
-        onImageEdited(newUrl);
-        return;
-      }
-
       const maskDataUrl = getMaskDataUrl();
       if (!maskDataUrl) throw new Error('Falha ao gerar máscara');
       const newUrl = await editFn(imageUrl, maskDataUrl, editPrompt, attachmentBase64 || undefined);

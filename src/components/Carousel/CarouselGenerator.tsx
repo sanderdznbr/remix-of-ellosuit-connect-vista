@@ -7000,7 +7000,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
                 <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 relative"
-                  style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
+                  style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #E84D1A, #C43A0F)' : 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
                   {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
                   <span className="hidden sm:inline">{isGuest ? 'Assine' : 'Exportar'}</span>
                 </button>

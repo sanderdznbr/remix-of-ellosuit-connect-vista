@@ -5700,7 +5700,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <button
                     onClick={() => setShowAddCardMenu((prev) => !prev)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all"
-                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: showAddCardMenu ? 'rgba(139,92,246,0.3)' : 'rgba(20,20,30,0.85)' }}
+                    style={{ borderColor: 'rgba(255,255,255,0.2)', backgroundColor: showAddCardMenu ? `rgba(${themeRgb},0.3)` : 'rgba(20,20,30,0.85)' }}
                     aria-label="Adicionar card"
                   >
                     <Plus className="h-5 w-5" />

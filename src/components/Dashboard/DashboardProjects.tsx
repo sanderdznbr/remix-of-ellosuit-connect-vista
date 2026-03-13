@@ -382,6 +382,19 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             </div>
           )}
         </motion.div>
+
+        {/* Load more */}
+        {sorted.length > visibleCount && (
+          <div className="flex justify-center mt-6 pb-4">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 9)}
+              className="px-6 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 transition-all cursor-pointer"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              Carregar mais
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Publish Dialog */}

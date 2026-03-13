@@ -323,7 +323,7 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Resumo']
+    ? ['Modo', 'Visão', 'Detalhes', 'Estilo', 'Resumo']
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -2614,6 +2614,27 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       });
   }, [wizardMode, extremeAnalysis, extremeFormValues]);
 
+
+  // ===== HELPER: Extract exact text from Extreme form =====
+  const getExtremeExactText = useCallback((): string => {
+    if (wizardMode !== 'extreme' || !extremeAnalysis) return '';
+
+    const textFields = extremeAnalysis.fields
+      .filter((field) => field.type === 'text' || field.type === 'textarea')
+      .map((field) => ({
+        field,
+        value: typeof extremeFormValues[field.id] === 'string' ? String(extremeFormValues[field.id]).trim() : '',
+      }))
+      .filter((item) => item.value.length > 0);
+
+    if (textFields.length === 0) return '';
+
+    const priorityRegex = /titulo|title|headline|texto.*(post|principal|exato)|chamada|frase|copy|slogan/i;
+    const prioritized = textFields.find((item) => priorityRegex.test(`${item.field.label} ${item.field.id}`));
+
+    return (prioritized?.value || textFields[0].value || '').trim();
+  }, [wizardMode, extremeAnalysis, extremeFormValues]);
+
   // ===== HELPER: Build Extreme vision context for prompt enrichment =====
   const buildExtremePromptContext = useCallback((): string => {
     if (wizardMode !== 'extreme' || !extremeAnalysis) return '';
@@ -4696,25 +4717,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setContentMode={setContentMode}
                         cardCount={cardCount}
                         setCardCount={setCardCount}
-                        speed={imageSettings.model === 'nano-banana' ? 'flash' : 'pro'}
-                        setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'flash' ? 'nano-banana' : 'gemini' }))}
+                        speed={imageSettings.model === 'nano-banana' ? 'pro' : 'flash'}
+                        setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'pro' ? 'nano-banana' : 'gemini' }))}
                         generating={generating || transitionToGenerate}
                         onGenerate={() => {
-                          if (cardCount === 1) {
+                          const nextIsSinglePost = cardCount === 1;
+                          if (nextIsSinglePost) {
                             setContentMode('single-post');
                             setImageCardCount(1);
                           } else {
                             setContentMode('carousel');
                             setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                           }
-                          // Inject extreme form photos as product/style reference images
+
+                          // Inject extreme form photos + exact text context
                           if (extremeAnalysis) {
                             const newRefs: Array<{ url: string; thumb: string; label: string; source: 'upload'; category: 'product' | 'style' }> = [];
                             for (const field of extremeAnalysis.fields) {
                               if (field.type === 'photo_upload') {
                                 const photos = extremeFormValues[field.id] as string[] | undefined;
                                 if (photos?.length) {
-                                  // Determine category from field label/id
                                   const fieldLabel = (field.label + ' ' + (field.id || '')).toLowerCase();
                                   const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca/i.test(fieldLabel);
                                   photos.forEach((url, idx) => {
@@ -4729,30 +4751,35 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 }
                               }
                             }
+
                             if (newRefs.length > 0) {
                               setReferenceImages(prev => [...prev, ...newRefs]);
                             }
-                            // Build rich topic with extreme context
+
+                            const exactText = getExtremeExactText();
+                            setManualPostText(exactText || '');
+
                             const formSummary = extremeAnalysis.fields
                               .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')
                               .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
                               .join('. ');
-                            
-                            // Build smart image generation context
+
                             const photoFields = extremeAnalysis.fields.filter(f => f.type === 'photo_upload' && (extremeFormValues[f.id] as string[])?.length > 0);
                             const photoContext = photoFields.map(f => {
                               const count = (extremeFormValues[f.id] as string[]).length;
                               return `[${count} imagem(ns) de "${f.label}" fornecida(s) como referência obrigatória]`;
                             }).join(' ');
-                            
+
                             const enrichedTopic = [
                               `MODO EXTREME — VISÃO DO USUÁRIO: ${extremeVision}`,
                               formSummary ? `DETALHES: ${formSummary}` : '',
+                              exactText ? `TEXTO EXATO OBRIGATÓRIO (NÃO ALTERAR, NÃO REESCREVER): "${exactText}"` : '',
                               photoContext || '',
                               'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição (ex: se enviou print de app, coloque na tela de um mockup de celular; se enviou logo, inclua no design).',
                             ].filter(Boolean).join('\n');
                             setTopic(enrichedTopic);
                           }
+
                           setTransitionToGenerate(true);
                           setTimeout(() => generateContent(), 1200);
                         }}

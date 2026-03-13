@@ -93,6 +93,10 @@ Deno.serve(async (req) => {
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
     const outputAspectRatio = typeof imageSize === 'string' && imageSize.trim() ? imageSize.trim() : '3:4';
     const isPanoramicMode = Boolean(panoramic);
+    const isExtremePrompt = /MODO EXTREME|EXTREME_VISION|VISÃO DO USUÁRIO/i.test(imagePrompt);
+    const exactTextMatch = imagePrompt.match(/TEXTO EXATO (?:PARA A IMAGEM|OBRIGATÓRIO)[^"\n]*"([^"]+)"/i)
+      || imagePrompt.match(/TÍTULO PARA RENDERIZAR NA IMAGEM:\s*"([^"]+)"/i);
+    const extractedExactText = (exactTextMatch?.[1] || '').trim();
     const panoramicSections = Number.isFinite(Number(panoramicCardCount))
       ? Math.max(2, Number(panoramicCardCount))
       : 2;
@@ -179,6 +183,11 @@ Deno.serve(async (req) => {
       }
     } else if (cleanStylePrompt) {
       textPrompt = `${cleanStylePrompt}\n\n${imagePrompt}\n\nIMPORTANTE: NÃO copie textos das referências. Use APENAS os textos fornecidos acima.`;
+    } else if (isExtremePrompt) {
+      textPrompt = `Crie um post EXTREME com qualidade de agência premium para Instagram.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\nREGRAS CRÍTICAS DE TEXTO E IDIOMA:\n- TODO texto visível na arte DEVE estar em PORTUGUÊS BRASILEIRO correto e natural.\n- Proibido espanhol/inglês, erros gramaticais, erros ortográficos e palavras truncadas.\n- Tipografia profissional com hierarquia clara: título principal forte + subtítulo curto opcional + CTA opcional.\n- Máximo 3 blocos de texto curtos; nunca parágrafos longos.`;
+      if (extractedExactText) {
+        textPrompt += `\n- TEXTO EXATO OBRIGATÓRIO: renderize esta frase exatamente como está, sem alterar nenhuma palavra, acento, pontuação ou ordem: \"${extractedExactText}\".`;
+      }
     } else {
       textPrompt = `Generate a professional editorial magazine-quality image for an Instagram carousel post.\n\nDESCRIPTION: ${imagePrompt}\n\nSTYLE REQUIREMENTS:\n- High-end editorial/magazine aesthetic\n- Rich colors and professional color grading\n- Clean composition suitable for overlay text\n- Ultra high resolution, photorealistic quality`;
     }
@@ -240,7 +249,7 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
 
     // Detect special modes from prompt content
     const isRealEstatePrompt = /FOTO DO IMÓVEL|FOTO REAL|imóvel|imovel|propriedade|property photo/i.test(imagePrompt);
-    const isExtremeMode = /MODO EXTREME|EXTREME_VISION|VISÃO DO USUÁRIO/i.test(imagePrompt);
+    const isExtremeMode = isExtremePrompt;
     const isAppMockup = /app|aplicativo|celular|smartphone|tela|mockup|print.*app|screenshot/i.test(imagePrompt);
 
     // === EXTREME MODE: Inject professional design DNA ===

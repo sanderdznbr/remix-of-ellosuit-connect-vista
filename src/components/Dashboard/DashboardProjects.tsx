@@ -259,11 +259,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   <div
                     className="w-12 h-14 rounded-lg shrink-0 overflow-hidden relative"
                     style={{
-                      background: !cover
-                        ? sc.bgColor
-                          ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                          : 'rgba(255,255,255,0.06)'
-                        : 'rgba(255,255,255,0.06)',
+                      background: cover ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.06)',
                     }}
                   >
                     {cover && (

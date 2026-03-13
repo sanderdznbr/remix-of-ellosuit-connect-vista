@@ -68,6 +68,7 @@ import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
 import StepExtremeForm from './wizard/StepExtremeForm';
+import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
@@ -322,7 +323,7 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    ? ['Modo', 'Visão', 'Detalhes', 'Resumo']
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -1248,7 +1249,9 @@ const CarouselGenerator: React.FC = () => {
         face_ref_urls: (() => { const active = facePersons.filter(p => p.photos.length > 0); return active.length > 0 ? active.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url); })() as any,
         product_context: isRealEstateStyle
           ? `REAL_ESTATE_DATA:${JSON.stringify({ properties: propertyList.map(p => ({ ...p, photos: p.photos.map(ph => ph.url) })), mode: realEstateMode })}`
-          : productContext,
+          : wizardMode === 'extreme' && extremeAnalysis
+            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}`
+            : productContext,
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
         negative_prompt: imageSettings.negativePrompt || null,
@@ -1743,7 +1746,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
-          ...(productContext ? { productContext } : {}),
+          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : productContext ? { productContext } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
         },
       });
@@ -4579,6 +4582,31 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onChange={setExtremeFormValues}
                       />
                     )}
+                    {currentStepName === 'Resumo' && extremeAnalysis && (
+                      <StepExtremeResumo
+                        analysis={extremeAnalysis}
+                        vision={extremeVision}
+                        formValues={extremeFormValues}
+                        contentMode={contentMode}
+                        setContentMode={setContentMode}
+                        cardCount={cardCount}
+                        setCardCount={setCardCount}
+                        speed={imageSettings.model === 'nano-banana' ? 'flash' : 'pro'}
+                        setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'flash' ? 'nano-banana' : 'gemini' }))}
+                        generating={generating || transitionToGenerate}
+                        onGenerate={() => {
+                          if (cardCount === 1) {
+                            setContentMode('single-post');
+                            setImageCardCount(1);
+                          } else {
+                            setContentMode('carousel');
+                            setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                          }
+                          setTransitionToGenerate(true);
+                          setTimeout(() => generateContent(), 1200);
+                        }}
+                      />
+                    )}
                     {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}
@@ -4766,7 +4794,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
 
-                    {currentStepName === 'Visão' ? (
+                    {(currentStepName === 'Visão' || currentStepName === 'Resumo') ? (
                       <div />
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">

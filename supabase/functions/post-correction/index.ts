@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, maskBase64, editPrompt } = await req.json();
+    const { imageBase64, maskBase64, editPrompt, attachmentBase64 } = await req.json();
 
     if (!imageBase64 || !maskBase64 || !editPrompt) {
       return new Response(JSON.stringify({ error: "imageBase64, maskBase64 and editPrompt are required" }), {
@@ -25,7 +25,7 @@ serve(async (req) => {
       });
     }
 
-    console.log("Post correction request:", { promptLength: editPrompt.length, hasMask: !!maskBase64 });
+    console.log("Post correction request:", { promptLength: editPrompt.length, hasMask: !!maskBase64, hasAttachment: !!attachmentBase64 });
 
     const models = ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"];
 

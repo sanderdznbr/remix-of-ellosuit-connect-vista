@@ -6425,7 +6425,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
                     style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
                     {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                    {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
+                    {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
                   </button>
                   {showRegenModeMenu && !regeneratingAll && (
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">

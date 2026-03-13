@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { ShoppingBag, Sparkles, Check, Search, Crown, Pencil, Plus, Star, EyeOff, Eye } from 'lucide-react';
 import AdminStyleDialog from './AdminStyleDialog';
 

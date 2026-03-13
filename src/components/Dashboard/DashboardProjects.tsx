@@ -70,19 +70,29 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    e.preventDefault();
     if (deleteConfirmId === id) {
+      const carouselToDelete = carousels.find(c => c.id === id);
       setCarousels(prev => prev.filter(c => c.id !== id));
       setDeleteConfirmId(null);
-      const { error } = await supabase.from('generated_carousels').delete().eq('id', id);
-      if (error) {
+      try {
+        const { error } = await supabase.from('generated_carousels').delete().eq('id', id);
+        if (error) {
+          // Restore on failure
+          if (carouselToDelete) setCarousels(prev => [...prev, carouselToDelete]);
+          toast.error('Erro ao excluir projeto');
+          console.error('Delete error:', error);
+        } else {
+          toast.success('Projeto excluído');
+        }
+      } catch (err) {
+        if (carouselToDelete) setCarousels(prev => [...prev, carouselToDelete]);
         toast.error('Erro ao excluir projeto');
-        console.error(error);
-      } else {
-        toast.success('Projeto excluído');
+        console.error('Delete exception:', err);
       }
     } else {
       setDeleteConfirmId(id);
-      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 5000);
     }
   };
 

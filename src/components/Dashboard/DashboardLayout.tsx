@@ -125,6 +125,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       }
     })();
     return <div className="flex-1 min-w-0 min-h-0 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>{content}</div>;
+  };
 
   if (isMobile) {
     return (

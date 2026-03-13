@@ -152,7 +152,7 @@ COMPOSITING RULES (MANDATORY — VIOLATING ANY = FAILURE):
         model: IMAGE_MODEL,
         messages: [{ role: "user", content: contentParts }],
         modalities: ["image", "text"],
-        temperature: 0.05,
+        temperature: 0.2,
         stream: false,
       }),
     });

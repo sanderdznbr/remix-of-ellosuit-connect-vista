@@ -367,25 +367,40 @@ const CarouselGenerator: React.FC = () => {
   // CRITICAL: Sync marketplace style ref inline at render time (NOT in useEffect)
   activeMarketplaceStyleRef.current = activeMarketplaceStyle;
 
+  const triggerCloudFallback = useCallback((jobId: string, useKeepAlive = false) => {
+    const body = JSON.stringify({ jobId });
+
+    if (useKeepAlive) {
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`, {
+        method: 'POST',
+        body,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        keepalive: true,
+      }).catch(() => {});
+      return;
+    }
+
+    supabase.functions.invoke('generate-carousel-cloud', {
+      body: { jobId },
+    }).catch((err) => {
+      console.warn('Cloud fallback trigger failed:', err);
+    });
+  }, []);
+
   // === BEFOREUNLOAD: If user closes while generating, trigger cloud fallback ===
   useEffect(() => {
     const handleBeforeUnload = () => {
       const jobId = cloudJobIdRef.current;
       if (!jobId || !generatingRef.current) return;
-      // Fire-and-forget: trigger cloud generation for this job
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`;
-      const body = JSON.stringify({ jobId });
-      // Use sendBeacon for reliability during page unload
-      if (navigator.sendBeacon) {
-        const blob = new Blob([body], { type: 'application/json' });
-        navigator.sendBeacon(url, blob);
-      } else {
-        fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, keepalive: true }).catch(() => {});
-      }
+      triggerCloudFallback(jobId, true);
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  }, [triggerCloudFallback]);
   const handleEditorRefImageUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);

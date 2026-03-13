@@ -928,6 +928,8 @@ const CarouselGenerator: React.FC = () => {
     referenceImageUrls?: string[];
     negativePrompt?: string;
     facePersonsMetadata?: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[];
+    fontReferenceImage?: string;
+    fontReferenceName?: string;
   }): Promise<string | null> => {
     // Use the model selected by the user (gemini = fast, nano-banana = quality)
     const resolvedModel = imageSettings.model === 'auto'
@@ -975,6 +977,7 @@ const CarouselGenerator: React.FC = () => {
         facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
+        ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
       },
     });
     
@@ -1369,8 +1372,17 @@ const CarouselGenerator: React.FC = () => {
       const extremeStyleRefs = extremeRefs.filter(r => r.category === 'style').map(r => r.url);
       const mergedFaceRefs = [...faceRefUrls, ...extremeFaceRefs];
       const mergedProductRefs = [...productRefUrls, ...extremeProductRefs];
-      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs];
-      console.log('[SINGLE_POST] Extreme refs:', { face: extremeFaceRefs.length, product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
+      // Filter out font reference from style refs (it will be sent separately as fontReferenceImage)
+      const fontRefLabel = extremeSelectedFont ? `Fonte: ${extremeSelectedFont.name}` : null;
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs].filter(url => {
+        // Remove the font preview URL from style refs — it goes as a dedicated param
+        if (fontRefLabel && extremeSelectedFont) {
+          const fontUrl = extremeSelectedFont.previewUrl;
+          return url !== fontUrl;
+        }
+        return true;
+      });
+      console.log('[SINGLE_POST] Extreme refs:', { face: extremeFaceRefs.length, product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length, hasFont: !!extremeSelectedFont });
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];
@@ -1476,6 +1488,29 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
       const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
 
+      // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
+      let fontBase64: string | undefined;
+      let fontName: string | undefined;
+      if (extremeSelectedFont?.previewUrl) {
+        try {
+          setImageGenProgress('🔤 Processando referência de fonte...');
+          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          if (fontResp.ok) {
+            const blob = await fontResp.blob();
+            if (!blob.type.includes('text/html')) {
+              fontBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              fontName = extremeSelectedFont.name;
+              console.log('[SINGLE_POST] Font reference converted to base64:', fontName);
+            }
+          }
+        } catch (e) { console.warn('[SINGLE_POST] Font base64 conversion failed:', e); }
+      }
+
       const imageUrl = await generateImage({
         prompt: finalPrompt,
         faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
@@ -1483,6 +1518,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         referenceImageUrls: effectiveProductRefs,
         negativePrompt: negPrompt,
         facePersonsMetadata: singlePostFaceMeta,
+        fontReferenceImage: fontBase64,
+        fontReferenceName: fontName,
       });
 
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem do post');
@@ -2124,6 +2161,29 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         );
       }
 
+      // === FONT REFERENCE: Convert Envato preview to base64 for carousel AI ===
+      let carouselFontBase64: string | undefined;
+      let carouselFontName: string | undefined;
+      if (extremeSelectedFont?.previewUrl) {
+        try {
+          setImageGenProgress('🔤 Processando referência de fonte...');
+          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          if (fontResp.ok) {
+            const blob = await fontResp.blob();
+            if (!blob.type.includes('text/html')) {
+              carouselFontBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              carouselFontName = extremeSelectedFont.name;
+              console.log('[CAROUSEL] Font reference converted to base64:', carouselFontName);
+            }
+          }
+        } catch (e) { console.warn('[CAROUSEL] Font base64 conversion failed:', e); }
+      }
+
       let webImageIndex = 0;
       const imageFactories: { index: number; factory: () => Promise<string | null>; prompt: string }[] = [];
       let totalImages = 0;
@@ -2321,6 +2381,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
               referenceImageUrls: capturedProductRefs,
               negativePrompt: capturedNegative,
               facePersonsMetadata: cardFacePersonsMeta,
+              fontReferenceImage: carouselFontBase64,
+              fontReferenceName: carouselFontName,
             }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
           });
         }

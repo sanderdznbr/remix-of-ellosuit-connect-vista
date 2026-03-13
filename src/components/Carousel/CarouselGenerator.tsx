@@ -5470,6 +5470,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onClick={() => {
                           const last = correctionUndoStack[correctionUndoStack.length - 1];
                           setCardImage(last.cardIndex, last.imageUrl);
+                          if (last.cardIndex === 0 && currentCarouselId) {
+                            supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+                          }
                           setCorrectionUndoStack(prev => prev.slice(0, -1));
                           toast({ title: 'Edição revertida!' });
                         }}

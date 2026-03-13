@@ -345,6 +345,7 @@ const CarouselGenerator: React.FC = () => {
   const carouselDataRef = useRef<CarouselData | null>(null);
   const skipCloudRef = useRef(false);
   const generatingRef = useRef(false);
+  const pendingExtremeRefsRef = useRef<ReferenceImage[]>([]);
 
   // DEFINITIVE FIX: Generation snapshot ref — captures ALL critical data at click time
   // This eliminates ALL stale closure issues because generateContent reads from this snapshot
@@ -1217,6 +1218,37 @@ const CarouselGenerator: React.FC = () => {
         productSize,
         productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
       }) : null;
+
+      const extremeFormPhotoRefs: ReferenceImage[] = wizardMode === 'extreme' && extremeAnalysis
+        ? extremeAnalysis.fields
+            .filter((field) => field.type === 'photo_upload')
+            .flatMap((field) => {
+              const photos = extremeFormValues[field.id] as string[] | undefined;
+              if (!photos?.length) return [];
+              const normalized = `${field.label} ${field.id}`.toLowerCase();
+              const category: ReferenceImage['category'] = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized)
+                ? 'product'
+                : 'style';
+              return photos.map((url, idx) => ({
+                url,
+                thumb: url,
+                label: `${field.label} ${idx + 1}`,
+                source: 'upload' as const,
+                category,
+              }));
+            })
+        : [];
+
+      const mergedReferenceImages: ReferenceImage[] = [...referenceImages, ...extremeFormPhotoRefs]
+        .filter((ref, idx, arr) => !!ref?.url && arr.findIndex((r) => r.url === ref.url) === idx);
+
+      const extremeProductUrls = extremeFormPhotoRefs
+        .filter((ref) => ref.category === 'product' || ref.category === 'general')
+        .map((ref) => ref.url);
+
+      const extremeStyleUrls = extremeFormPhotoRefs
+        .filter((ref) => ref.category === 'style')
+        .map((ref) => ref.url);
 
       let marketplaceConfig = activeMarketplaceStyle ? { ...activeMarketplaceStyle } : null;
       if (marketplaceConfig?._previewImages?.length) {

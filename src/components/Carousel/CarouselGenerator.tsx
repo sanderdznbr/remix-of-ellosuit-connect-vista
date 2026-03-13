@@ -1228,9 +1228,9 @@ const CarouselGenerator: React.FC = () => {
               const photos = extremeFormValues[field.id] as string[] | undefined;
               if (!photos?.length) return [];
               const normalized = `${field.label} ${field.id}`.toLowerCase();
-              const category: ReferenceImage['category'] = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized)
-                ? 'product'
-                : 'style';
+              const isFace = /pessoa|rosto|face|foto.*pessoa|retrato|portrait|selfie|model|cliente|character|personagem|humano|human/.test(normalized);
+              const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized);
+              const category: ReferenceImage['category'] = isFace ? 'face' : isProduct ? 'product' : 'style';
               return photos.map((url, idx) => ({
                 url,
                 thumb: url,
@@ -1355,11 +1355,13 @@ const CarouselGenerator: React.FC = () => {
 
       // === EXTREME MODE: Extract photos from dynamic form and merge ===
       const extremeRefs = getExtremeFormPhotoRefs();
+      const extremeFaceRefs = extremeRefs.filter(r => r.category === 'face').map(r => r.url);
       const extremeProductRefs = extremeRefs.filter(r => r.category === 'product').map(r => r.url);
       const extremeStyleRefs = extremeRefs.filter(r => r.category === 'style').map(r => r.url);
+      const mergedFaceRefs = [...faceRefUrls, ...extremeFaceRefs];
       const mergedProductRefs = [...productRefUrls, ...extremeProductRefs];
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs];
-      console.log('[SINGLE_POST] Extreme refs:', { product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
+      console.log('[SINGLE_POST] Extreme refs:', { face: extremeFaceRefs.length, product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];
@@ -1467,7 +1469,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
 
       const imageUrl = await generateImage({
         prompt: finalPrompt,
-        faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+        faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
         styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
         referenceImageUrls: effectiveProductRefs,
         negativePrompt: negPrompt,
@@ -2066,7 +2068,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       
       // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
-      const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const allFaceRefUrls = [...referenceImages.filter(r => r.category === 'face').map(r => r.url), ...getExtremeFormPhotoRefs().filter(r => r.category === 'face').map(r => r.url)];
       const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
@@ -2200,8 +2202,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
           const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-          // === EXTREME MODE: Inject uploaded photos as product/style refs ===
+          // === EXTREME MODE: Inject uploaded photos as product/style/face refs ===
           const carouselExtremeRefs = getExtremeFormPhotoRefs();
+          const carouselExtremeFaceRefs = carouselExtremeRefs.filter(r => r.category === 'face').map(r => r.url);
           const carouselExtremeProductRefs = carouselExtremeRefs.filter(r => r.category === 'product').map(r => r.url);
           const carouselExtremeStyleRefs = carouselExtremeRefs.filter(r => r.category === 'style').map(r => r.url);
           const allStyleRefs = [...styleRefUrls, ...carouselExtremeStyleRefs];
@@ -2603,9 +2606,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         const photos = extremeFormValues[field.id] as string[] | undefined;
         if (!photos?.length) return [];
         const normalized = `${field.label} ${field.id}`.toLowerCase();
-        const category: ReferenceImage['category'] = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized)
-          ? 'product'
-          : 'style';
+        const isFace = /pessoa|rosto|face|foto.*pessoa|retrato|portrait|selfie|model|cliente|character|personagem|humano|human/.test(normalized);
+        const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized);
+        const category: ReferenceImage['category'] = isFace ? 'face' : isProduct ? 'product' : 'style';
         return photos.map((url, idx) => ({
           url,
           thumb: url,

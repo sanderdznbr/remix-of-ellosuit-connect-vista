@@ -1739,10 +1739,13 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
       // Clear cloud job on success
-      if (jobId) { setCloudJobId(null); if (!currentCarouselId) completeCloudJob(jobId); }
+      if (jobId) { setCloudJobId(null); }
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message || 'Não foi possível gerar o post', variant: 'destructive' });
-      // Don't mark job as failed — leave it pending so cloud can pick it up if browser closes
+      if (jobId) {
+        failCloudJob(jobId, err.message || 'Falha na geração local do post');
+        setCloudJobId(null);
+      }
     } finally {
       setGenerating(false);
       setGeneratingAllImages(false);

@@ -4813,6 +4813,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               });
                             }
 
+                            // Add font reference if selected
+                            if (extremeSelectedFont) {
+                              newRefs.push({
+                                url: extremeSelectedFont.previewUrl,
+                                thumb: extremeSelectedFont.previewUrl,
+                                label: `Fonte: ${extremeSelectedFont.name}`,
+                                source: 'upload' as const,
+                                category: 'style' as const,
+                              });
+                            }
+
                             if (newRefs.length > 0) {
                               setReferenceImages(prev => [...prev, ...newRefs]);
                             }

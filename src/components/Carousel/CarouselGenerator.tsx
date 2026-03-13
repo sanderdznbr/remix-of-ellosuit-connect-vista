@@ -4810,7 +4810,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               width: realIndex === wizardStep ? 24 : 6,
                               height: 6,
                               borderRadius: 3,
-                              backgroundColor: realIndex === wizardStep ? '#9B6BFF' : realIndex < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
+                              backgroundColor: realIndex === wizardStep ? (wizardMode === 'extreme' ? '#F97316' : '#9B6BFF') : realIndex < wizardStep ? (wizardMode === 'extreme' ? 'rgba(249,115,22,0.5)' : 'rgba(155,107,255,0.5)') : 'rgba(255,255,255,0.08)',
                               cursor: realIndex <= wizardStep ? 'pointer' : 'default',
                             }}
                           />

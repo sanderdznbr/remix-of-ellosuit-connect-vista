@@ -2212,7 +2212,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             marketplaceRefUrls.push(...allPreviews);
           }
           
-          let capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          // Add Extreme vision context to each card's prompt
+          const carouselExtremeCtx = buildExtremePromptContext();
+          let capturedPrompt = buildImagePrompt(imgPrompt + (carouselExtremeCtx || '')) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
           
           if (!hasFaceRefsForGen && peopleMode !== 'none') {
             const shouldHaveRandomPerson = randomPeopleCardIndices.has(i);

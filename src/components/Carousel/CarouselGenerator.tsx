@@ -6529,8 +6529,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       setActiveCardIndex(i);
                     }}>
                     <div className="rounded-xl overflow-hidden transition-all" style={{
-                      border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',
-                      boxShadow: i === activeCardIndex ? '0 0 20px rgba(139,92,246,0.3)' : 'none',
+                      border: i === activeCardIndex ? `2px solid ${themeHex}` : '2px solid rgba(255,255,255,0.08)',
+                      boxShadow: i === activeCardIndex ? `0 0 20px rgba(${themeRgb},0.3)` : 'none',
                       opacity: i === activeCardIndex ? 1 : 0.6,
                       transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
                     }}>

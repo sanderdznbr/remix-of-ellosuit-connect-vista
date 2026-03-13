@@ -4740,6 +4740,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         analysis={extremeAnalysis}
                         values={extremeFormValues}
                         onChange={setExtremeFormValues}
+                        brandColors={logoBrandColors}
+                      />
                       />
                     )}
                     {currentStepName === 'Fontes' && extremeAnalysis && (

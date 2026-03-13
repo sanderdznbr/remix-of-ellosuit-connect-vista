@@ -2939,6 +2939,10 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         ? activeFP.map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length }))
         : undefined;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      // === EXTREME MODE: Inject refs for second carousel gen loop ===
+      const loop2ExtremeRefs = getExtremeFormPhotoRefs();
+      const loop2ExtremeProductRefs = loop2ExtremeRefs.filter(r => r.category === 'product').map(r => r.url);
+      const loop2ExtremeStyleRefs = loop2ExtremeRefs.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const updatedCards = [...cards];
       const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;

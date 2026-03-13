@@ -5436,7 +5436,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Ver prompt usado */}
                     {!isGuest && (() => { const c = carouselData.cards[activeCardIndex]; return c && (c.generatedPrompt || c.imagePrompt || c.isAiImage); })() && (
                       <button
-                        onClick={() => setViewPromptCard(activeCardIndex)}
+                        onClick={() => { console.log('[PROMPT] View prompt clicked, cardIndex:', activeCardIndex); setViewPromptCard(activeCardIndex); }}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all w-full">
                         <FileText className="h-4 w-4 text-yellow-400" /> Ver Prompt
                       </button>

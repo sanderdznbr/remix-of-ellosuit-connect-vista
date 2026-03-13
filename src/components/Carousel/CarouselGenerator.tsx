@@ -5044,16 +5044,25 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (
-          <div className="flex-1 flex flex-col items-center justify-start py-8 px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
-            {/* Home button */}
-            {user && (
+          <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+            {/* Header bar */}
+            <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
               <button
                 onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
-                className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
                 <Home className="w-5 h-5 text-white/60" />
               </button>
-            )}
+              <button
+                onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
+                disabled={exporting}
+                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}
+              >
+                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                Salvar Post
+              </button>
+            </div>
             {/* Subtle background glow effects */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />

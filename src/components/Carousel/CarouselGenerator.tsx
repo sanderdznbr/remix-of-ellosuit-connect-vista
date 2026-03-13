@@ -3500,7 +3500,7 @@ FORBIDDEN:
       const allowFaceReferences = !disallowPeople;
       // If no wizard face refs, use the cover image as face reference to maintain the same person
       const coverImageUrl = carouselData.cards[0]?.imageUrl;
-      const faceRefUrls = allowFaceReferences
+      let faceRefUrls = allowFaceReferences
         ? (wizardFaceRefs.length > 0 ? wizardFaceRefs : (coverImageUrl && !coverImageUrl.startsWith('data:') ? [coverImageUrl] : []))
         : [];
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);

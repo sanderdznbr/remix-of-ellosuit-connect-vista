@@ -6501,7 +6501,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div className="flex gap-2">
                     <button onClick={downloadStoriesImage}
                       className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-medium text-white border transition-colors"
-                      style={{ borderColor: 'rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))' }}>
+                      style={{ borderColor: `rgba(${themeRgb},0.4)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))` }}>
                       <Download className="h-3.5 w-3.5" /> Baixar Stories
                     </button>
                     <button onClick={() => { setShowStoriesPreview(false); generateStoriesImage(); }}

@@ -772,7 +772,7 @@ const CarouselGenerator: React.FC = () => {
     }, 3000); // 3s debounce
     
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
-  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId]);
+  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId, regeneratingAll, regeneratingCard]);
 
   // Export dialog is now a centered modal, no outside-click handler needed
 

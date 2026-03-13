@@ -437,6 +437,11 @@ const MarketplacePopup: React.FC<{
                           <Crown className="w-3 h-3" />
                         </div>
                       )}
+                      {(style as any).style_config?.is_beta && (
+                        <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/90 text-white text-[10px] font-bold" style={style.is_featured && !owned ? { left: '2rem' } : {}}>
+                          BETA
+                        </div>
+                      )}
                     </div>
                     <div className="p-3">
                       <p className="text-xs font-medium text-white truncate">{style.name}</p>

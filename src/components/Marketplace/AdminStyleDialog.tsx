@@ -198,6 +198,7 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
     const config: any = {
       description: form.is_real_estate ? 'Estilo imobiliário baseado em referências visuais.' : 'Estilo customizado baseado em referências visuais.',
       is_real_estate: form.is_real_estate,
+      is_beta: form.is_beta,
       real_estate_mode: form.is_real_estate ? form.real_estate_mode : undefined,
       colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
       imageGeneration: {

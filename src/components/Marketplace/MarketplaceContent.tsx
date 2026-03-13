@@ -169,7 +169,8 @@ const MarketplaceContent: React.FC = () => {
                   {featured.map(style => (
                     <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)}
                       onClick={() => navigate(`/marketplace/${style.id}`)} featured
-                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }} />
+                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }}
+                      onToggleVisibility={() => toggleStyleVisibility(style.id, (style as any).is_active !== false)} />
                   ))}
                 </div>
               </div>

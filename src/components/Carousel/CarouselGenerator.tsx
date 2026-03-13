@@ -182,6 +182,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
   const [extremeVision, setExtremeVision] = useState('');
   const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
+  const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

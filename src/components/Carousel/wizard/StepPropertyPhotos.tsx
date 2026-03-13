@@ -23,6 +23,7 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
   };
 
   const addPhotos = async (id: string, files: FileList) => {
+    autoSaveFilesToGallery(files);
     const newPhotos: { url: string; file: File }[] = [];
     for (const file of Array.from(files)) {
       try {

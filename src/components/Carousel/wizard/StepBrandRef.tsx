@@ -61,6 +61,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         <input type="file" accept="image/*" multiple className="hidden"
           onChange={(e) => {
             if (!e.target.files) return;
+            autoSaveFilesToGallery(e.target.files);
             Array.from(e.target.files).forEach(file => {
               const reader = new FileReader();
               reader.onload = (ev) => {

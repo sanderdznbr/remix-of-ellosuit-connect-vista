@@ -6558,7 +6558,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     )}
                     {/* Modificar button removed - functions moved to sidebar */}
-                    <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
+                    <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
                   </div>
                   );
                 })}

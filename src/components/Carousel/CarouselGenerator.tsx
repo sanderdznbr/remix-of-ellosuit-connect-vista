@@ -5890,7 +5890,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
                           <button onClick={() => navigate('/checkout')}
                             className="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
-                            style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                            style={{ background: `linear-gradient(135deg, ${themeHex} 0%, ${themeHexDark} 100%)` }}>
                             Cadastrar e Desbloquear
                           </button>
                         </div>

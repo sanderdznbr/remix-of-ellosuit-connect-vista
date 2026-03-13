@@ -6461,7 +6461,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <div key={i} className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${hasContent ? `rgba(${themeRgb},0.25)` : 'rgba(255,255,255,0.06)'}` }}>
                             <div className="flex items-center gap-2">
                               <span className="text-[11px] font-medium text-white/60">{label}</span>
-                              {hasContent && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">editado</span>}
+                              {hasContent && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `rgba(${themeRgb},0.2)`, color: themeHex }}>editado</span>}
                             </div>
                             <input value={cardText.title || ''} onChange={(e) => { const u = [...coverCardTexts]; u[i] = { ...u[i], title: e.target.value }; setCoverCardTexts(u); }}
                               placeholder={i === 0 ? 'Título da capa...' : 'Título do card...'}

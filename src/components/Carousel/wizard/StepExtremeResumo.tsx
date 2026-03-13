@@ -14,6 +14,7 @@ interface Props {
   setSpeed: (v: 'flash' | 'pro') => void;
   generating: boolean;
   onGenerate: () => void;
+  hideGenerateButton?: boolean;
 }
 
 const StepExtremeResumo: React.FC<Props> = ({

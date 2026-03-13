@@ -44,14 +44,16 @@ serve(async (req) => {
 
     console.log("Post correction request:", {
       promptLength: editPrompt.length,
-      hasAttachment: !!attachmentBase64,
+      hasAttachment: !!attachmentImageDataUrl,
       model: IMAGE_MODEL,
+      imageSource: imageDataUrl ? "data_url" : "base64_legacy",
+      maskSource: maskDataUrl ? "data_url" : "base64_legacy",
     });
 
     // Build prompt — always send FULL image, mask shows WHERE to edit
     const contentParts: any[] = [];
 
-    if (attachmentBase64) {
+    if (attachmentImageDataUrl) {
       // WITH ATTACHMENT: 3 images
       contentParts.push({
         type: "text",
@@ -76,9 +78,9 @@ YOUR TASK:
 
 Return ONLY the edited image, nothing else.`
       });
-      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } });
-      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } });
-      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${attachmentBase64}` } });
+      contentParts.push({ type: "image_url", image_url: { url: originalImageDataUrl } });
+      contentParts.push({ type: "image_url", image_url: { url: maskImageDataUrl } });
+      contentParts.push({ type: "image_url", image_url: { url: attachmentImageDataUrl } });
     } else {
       // WITHOUT ATTACHMENT: 2 images
       contentParts.push({
@@ -102,8 +104,8 @@ YOUR TASK:
 
 Return ONLY the edited image, nothing else.`
       });
-      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } });
-      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } });
+      contentParts.push({ type: "image_url", image_url: { url: originalImageDataUrl } });
+      contentParts.push({ type: "image_url", image_url: { url: maskImageDataUrl } });
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

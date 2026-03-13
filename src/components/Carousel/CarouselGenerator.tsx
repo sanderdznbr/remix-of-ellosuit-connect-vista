@@ -1461,7 +1461,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
       // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
-      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (productRefUrls.length > 0 ? productRefUrls : undefined);
+      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
 
       const imageUrl = await generateImage({
         prompt: finalPrompt,

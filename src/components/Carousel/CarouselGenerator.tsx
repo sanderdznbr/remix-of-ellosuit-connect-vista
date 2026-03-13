@@ -7167,17 +7167,39 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         <PostCorrectionEditor
           imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
           onClose={() => setCorrectionCardIndex(null)}
-          onImageEdited={(newUrl) => {
+          onImageEdited={async (newUrl) => {
             // Store previous image for undo
             const prevUrl = carouselData.cards[correctionCardIndex].imageUrl!;
             setCorrectionUndoStack(prev => [...prev, { cardIndex: correctionCardIndex, imageUrl: prevUrl }]);
             setCardImage(correctionCardIndex, newUrl);
-            // Update cover_url in DB if we edited the first card (cover)
-            if (correctionCardIndex === 0 && currentCarouselId) {
-              supabase.from('generated_carousels').update({ cover_url: `${newUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-            }
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
+
+            // Update cover_url in DB if we edited the first card (cover)
+            if (correctionCardIndex === 0 && currentCarouselId) {
+              try {
+                // Upload the base64 image to storage to get a proper URL
+                const { data: userData } = await supabase.auth.getUser();
+                if (!userData?.user) return;
+                const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+                if (!cu) return;
+                
+                // Convert base64 to blob
+                const res = await fetch(newUrl);
+                const blob = await res.blob();
+                const ext = blob.type.includes('png') ? 'png' : 'jpg';
+                const fileName = `${cu.company_id}/${currentCarouselId}.${ext}`;
+                
+                await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
+                const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+                if (urlData?.publicUrl) {
+                  const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                  await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', currentCarouselId);
+                }
+              } catch (err) {
+                console.error('Cover update after correction failed:', err);
+              }
+            }
           }}
           editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string, attachmentBase64?: string) => {
             const toDataUrl = async (url: string): Promise<string> => {

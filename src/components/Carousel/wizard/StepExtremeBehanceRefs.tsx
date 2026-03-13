@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Globe, Loader2, Search, Check, RefreshCw, Sparkles } from 'lucide-react';
+import { Globe, Loader2, Search, Check, RefreshCw, Sparkles, ChevronDown } from 'lucide-react';
 
 interface BehanceImage {
   imageUrl: string;
@@ -14,65 +14,38 @@ interface Props {
 }
 
 const MAX_SELECT = 5;
+const PAGE_SIZE = 12;
 
-// Map common Portuguese design terms to English for Behance search
-const PT_TO_EN: Record<string, string> = {
-  celular: 'phone mockup', iphone: 'iphone mockup', tela: 'screen mockup',
-  aplicativo: 'app design', app: 'app ui', mockup: 'mockup',
-  post: 'social media post', carrossel: 'carousel', stories: 'stories',
-  minimalista: 'minimal', moderno: 'modern', elegante: 'elegant',
-  escuro: 'dark', claro: 'light', gradiente: 'gradient',
-  neon: 'neon', urbano: 'urban', profissional: 'professional',
-  corporativo: 'corporate', criativo: 'creative', futurista: 'futuristic',
-  tecnologia: 'technology', saude: 'health', fitness: 'fitness',
-  comida: 'food', restaurante: 'restaurant', moda: 'fashion',
-  beleza: 'beauty', imobiliario: 'real estate', loja: 'store',
-  produto: 'product', marca: 'brand', logo: 'logo',
-  foto: 'photo', imagem: 'image', pessoa: 'person',
-  rosto: 'portrait', fundo: 'background', texto: 'typography',
-  tipografia: 'typography', cor: 'color', roxo: 'purple',
-  azul: 'blue', verde: 'green', laranja: 'orange', vermelho: 'red',
-  preto: 'black', branco: 'white', dourado: 'gold',
-  instagram: 'instagram', marketing: 'marketing', digital: 'digital',
-  banner: 'banner', flyer: 'flyer', cartao: 'card design',
-  apresentacao: 'presentation', slide: 'slide design',
-};
-
-function visionToEnglishQuery(vision: string, suggestedStyle?: string): string[] {
-  const words = vision
-    .toLowerCase()
-    .replace(/[^\w\sáéíóúãõçê]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 2);
-
-  const translated = new Set<string>();
+// Always prefix with "social media" to stay relevant
+function visionToSearchQueries(vision: string, suggestedStyle?: string): string[] {
+  const raw = vision.toLowerCase().replace(/[^\w\sáéíóúãõçê]/g, ' ').trim();
   
-  for (const word of words) {
-    // Only exact match — no partial matching to avoid false positives
-    if (PT_TO_EN[word]) {
-      translated.add(PT_TO_EN[word]);
-    }
-  }
-
-  if (suggestedStyle) {
-    translated.add(suggestedStyle.toLowerCase());
-  }
-
-  // Build queries: user-specific terms first, then broad fallbacks
-  const userTerms = Array.from(translated).slice(0, 5);
+  // Extract meaningful keywords (skip very short/common words)
+  const stopwords = new Set(['de', 'da', 'do', 'para', 'com', 'em', 'um', 'uma', 'que', 'por', 'se', 'na', 'no', 'os', 'as', 'dos', 'das', 'mais', 'mas', 'como', 'ser', 'ter', 'seu', 'sua', 'ou', 'ao', 'nos', 'nas', 'esse', 'essa', 'este', 'esta']);
+  const words = raw.split(/\s+/).filter(w => w.length > 2 && !stopwords.has(w));
   
-  const fallbacks: string[] = [];
+  // Build a short keyword hint from the vision
+  const hint = words.slice(0, 3).join(' ');
+  const styleHint = suggestedStyle ? suggestedStyle.toLowerCase() : '';
 
-  if (userTerms.length > 0) {
-    fallbacks.push(`social media ${userTerms.join(' ')}`);
-    fallbacks.push(`instagram post ${userTerms.slice(0, 3).join(' ')}`);
+  const queries: string[] = [];
+
+  // Primary: social media + context
+  if (hint) {
+    queries.push(`social media ${hint}`);
+    queries.push(`social media post ${hint}`);
+  }
+  if (styleHint) {
+    queries.push(`social media ${styleHint} design`);
   }
 
-  // Always include broad generic fallbacks
-  fallbacks.push('social media post design inspiration');
-  fallbacks.push('instagram carousel design modern');
+  // Broad fallbacks always with "social media"
+  queries.push('social media post design inspiration');
+  queries.push('social media app design modern');
+  queries.push('social media instagram carousel');
 
-  return fallbacks;
+  // Deduplicate
+  return [...new Set(queries)];
 }
 
 const StepExtremeBehanceRefs: React.FC<Props> = ({
@@ -82,15 +55,15 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
   onSelectionChange,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [images, setImages] = useState<BehanceImage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const searchBehance = useCallback(async (query: string) => {
-    if (!query.trim()) return;
-    setLoading(true);
-    setError(null);
+  const searchBehance = useCallback(async (query: string, limit = 20) => {
+    if (!query.trim()) return false;
 
     try {
       const { supabase } = await import('@/integrations/supabase/client');
@@ -105,7 +78,7 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
             'Content-Type': 'application/json',
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
-          body: JSON.stringify({ action: 'search', query, limit: 8 }),
+          body: JSON.stringify({ action: 'search', query, limit }),
         }
       );
 
@@ -113,16 +86,12 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
       const data = await res.json();
 
       if (data.results?.length > 0) {
-        setImages(data.results);
-        setHasSearched(true);
-        return true;
+        return data.results as BehanceImage[];
       }
-      return false;
+      return null;
     } catch (err: any) {
       console.error('Behance search error:', err);
-      return false;
-    } finally {
-      setLoading(false);
+      return null;
     }
   }, []);
 
@@ -130,29 +99,75 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
   useEffect(() => {
     if (hasSearched || loading) return;
 
-    const queries = visionToEnglishQuery(vision, suggestedStyle);
+    const queries = visionToSearchQueries(vision, suggestedStyle);
     setSearchQuery(queries[0]);
 
     const tryQueries = async () => {
+      setLoading(true);
+      setError(null);
+      const allImages: BehanceImage[] = [];
+      const seenUrls = new Set<string>();
+
       for (const q of queries) {
         setSearchQuery(q);
-        const found = await searchBehance(q);
-        if (found) return;
+        const results = await searchBehance(q, 12);
+        if (results) {
+          for (const img of results) {
+            if (!seenUrls.has(img.imageUrl)) {
+              seenUrls.add(img.imageUrl);
+              allImages.push(img);
+            }
+          }
+        }
+        if (allImages.length >= 16) break;
       }
-      // If all failed, show message but not as error
+
+      if (allImages.length > 0) {
+        setImages(allImages);
+      } else {
+        setError('Nenhuma referência encontrada. Tente buscar manualmente.');
+      }
       setHasSearched(true);
-      setError('Nenhuma referência encontrada. Tente buscar manualmente.');
+      setSearchQuery(queries[0]);
+      setLoading(false);
     };
 
     tryQueries();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleManualSearch = async () => {
-    const found = await searchBehance(searchQuery);
-    if (!found) {
-      setError('Nenhuma referência encontrada. Tente outro termo em inglês.');
+    setLoading(true);
+    setError(null);
+    const results = await searchBehance(searchQuery, 20);
+    if (results && results.length > 0) {
+      setImages(results);
+      setVisibleCount(PAGE_SIZE);
+    } else {
+      setError('Nenhuma referência encontrada. Tente outro termo.');
     }
     setHasSearched(true);
+    setLoading(false);
+  };
+
+  const handleLoadMore = async () => {
+    if (visibleCount < images.length) {
+      // Show more from already loaded
+      setVisibleCount(prev => prev + PAGE_SIZE);
+      return;
+    }
+    // Fetch more from Behance with a variation
+    setLoadingMore(true);
+    const extraQuery = `${searchQuery} creative`;
+    const results = await searchBehance(extraQuery, 12);
+    if (results) {
+      const seenUrls = new Set(images.map(i => i.imageUrl));
+      const newImages = results.filter(r => !seenUrls.has(r.imageUrl));
+      if (newImages.length > 0) {
+        setImages(prev => [...prev, ...newImages]);
+        setVisibleCount(prev => prev + PAGE_SIZE);
+      }
+    }
+    setLoadingMore(false);
   };
 
   const toggleImage = (url: string) => {
@@ -162,6 +177,9 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
       onSelectionChange([...selectedImages, url]);
     }
   };
+
+  const visibleImages = images.slice(0, visibleCount);
+  const hasMore = visibleCount < images.length || images.length >= 8;
 
   return (
     <div className="space-y-5" style={{ minHeight: '300px' }}>
@@ -185,7 +203,7 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
-            placeholder="Search Behance (use English)..."
+            placeholder="social media design..."
             className="w-full pl-9 pr-3 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/20 outline-none focus:border-orange-500/40 transition-colors"
           />
         </div>
@@ -213,7 +231,7 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
         <div className="px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
           <span className="text-xs text-yellow-400">{error}</span>
           <p className="text-[10px] text-white/30 mt-1">
-            Dica: use termos em inglês como "app mockup", "instagram post", "minimal design"
+            Dica: use termos como "social media tech", "social media app", "social media modern"
           </p>
         </div>
       )}
@@ -227,53 +245,71 @@ const StepExtremeBehanceRefs: React.FC<Props> = ({
           </div>
           <div className="grid grid-cols-2 gap-3">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="aspect-[4/5] rounded-xl bg-white/[0.04] animate-pulse" />
+              <div key={i} className="aspect-video rounded-xl bg-white/[0.04] animate-pulse" />
             ))}
           </div>
         </div>
       )}
 
-      {/* Image grid */}
-      {!loading && images.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1">
-          {images.map((img, idx) => {
-            const isSelected = selectedImages.includes(img.imageUrl);
-            return (
-              <button
-                key={idx}
-                onClick={() => toggleImage(img.imageUrl)}
-                className={`relative aspect-[4/5] rounded-xl overflow-hidden border-2 transition-all ${
-                  isSelected
-                    ? 'border-orange-500 ring-2 ring-orange-500/30'
-                    : 'border-transparent hover:border-white/20'
-                }`}
-              >
-                <img
-                  src={img.imageUrl}
-                  alt={`Behance ref ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <div className={`absolute inset-0 transition-all ${
-                  isSelected ? 'bg-orange-500/20' : 'bg-black/0 hover:bg-black/20'
-                }`} />
-                {isSelected && (
-                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
-                    <Check className="w-3.5 h-3.5 text-white" />
-                  </div>
-                )}
-                {isSelected && (
-                  <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[10px] text-white font-bold">
-                    #{selectedImages.indexOf(img.imageUrl) + 1}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* Image grid — 16:9 aspect ratio */}
+      {!loading && visibleImages.length > 0 && (
+        <>
+          <div className="grid grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
+            {visibleImages.map((img, idx) => {
+              const isSelected = selectedImages.includes(img.imageUrl);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => toggleImage(img.imageUrl)}
+                  className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${
+                    isSelected
+                      ? 'border-orange-500 ring-2 ring-orange-500/30'
+                      : 'border-transparent hover:border-white/20'
+                  }`}
+                >
+                  <img
+                    src={img.imageUrl}
+                    alt={`Behance ref ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <div className={`absolute inset-0 transition-all ${
+                    isSelected ? 'bg-orange-500/20' : 'bg-black/0 hover:bg-black/20'
+                  }`} />
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                  {isSelected && (
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[10px] text-white font-bold">
+                      #{selectedImages.indexOf(img.imageUrl) + 1}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Load more button */}
+          {hasMore && (
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="w-full py-2.5 rounded-xl text-sm font-medium transition-all bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/70 flex items-center justify-center gap-2"
+            >
+              {loadingMore ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+              {loadingMore ? 'Carregando...' : 'Carregar mais'}
+            </button>
+          )}
+        </>
       )}
 
       {/* Skip hint */}

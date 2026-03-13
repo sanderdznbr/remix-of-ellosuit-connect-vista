@@ -111,6 +111,10 @@ CRITICAL RULES:
     if (isCropEdit) {
       contentParts.push({
         type: "image_url",
+        image_url: { url: `data:image/png;base64,${cropMaskBase64}` },
+      });
+      contentParts.push({
+        type: "image_url",
         image_url: { url: `data:image/png;base64,${attachmentBase64}` },
       });
     } else {

@@ -398,6 +398,10 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${form.is_free ? 'bg-green-500/20 text-green-300' : 'bg-white/[0.04] text-white/30'}`}>
                 {form.is_free ? '✓' : '○'} Grátis
               </button>
+              <button onClick={() => setForm(f => ({ ...f, is_beta: !f.is_beta }))}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${form.is_beta ? 'bg-blue-500/20 text-blue-300' : 'bg-white/[0.04] text-white/30'}`}>
+                {form.is_beta ? '✓' : '○'} Beta
+              </button>
             </div>
           </div>
 

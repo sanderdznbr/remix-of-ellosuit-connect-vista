@@ -734,7 +734,7 @@ const CarouselGenerator: React.FC = () => {
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
         const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
         
-        if (currentCarouselId) {
+        if (currentCarouselIdRef.current) {
           await supabase.from('generated_carousels').update({ 
             title: carouselData.title || topic, topic, 
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
@@ -742,7 +742,7 @@ const CarouselGenerator: React.FC = () => {
             card_count: carouselData.cards.length,
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
             generation_config: buildGenerationConfig(),
-          } as any).eq('id', currentCarouselId);
+          } as any).eq('id', currentCarouselIdRef.current);
         } else {
           const { data: inserted } = await supabase.from('generated_carousels').insert({ 
             company_id: companyData.company_id, user_id: userData.user.id, 

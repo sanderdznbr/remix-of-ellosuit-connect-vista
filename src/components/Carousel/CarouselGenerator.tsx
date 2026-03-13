@@ -6889,6 +6889,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             toast({ title: 'Correção aplicada!' });
           }}
           editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string, attachmentBase64?: string) => {
+            type CropBounds = { x: number; y: number; width: number; height: number };
+
             const toBase64 = async (url: string): Promise<string> => {
               if (url.startsWith('data:')) return url.replace(/^data:[^;]+;base64,/, '');
               const res = await fetch(url);
@@ -6901,21 +6903,133 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               });
             };
 
-            const [imageBase64, maskBase64] = await Promise.all([
+            const loadImageElement = (src: string) =>
+              new Promise<HTMLImageElement>((resolve, reject) => {
+                const img = new window.Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+              });
+
+            const getMaskBounds = async (maskUrl: string): Promise<CropBounds | null> => {
+              const maskImg = await loadImageElement(maskUrl);
+              const canvas = document.createElement('canvas');
+              canvas.width = maskImg.naturalWidth;
+              canvas.height = maskImg.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return null;
+
+              ctx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
+              const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+              let minX = canvas.width;
+              let minY = canvas.height;
+              let maxX = -1;
+              let maxY = -1;
+
+              for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                  const i = (y * canvas.width + x) * 4;
+                  const isWhite = data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240 && data[i + 3] > 10;
+                  if (!isWhite) continue;
+
+                  if (x < minX) minX = x;
+                  if (y < minY) minY = y;
+                  if (x > maxX) maxX = x;
+                  if (y > maxY) maxY = y;
+                }
+              }
+
+              if (maxX < 0 || maxY < 0) return null;
+
+              const padding = 2;
+              const x = Math.max(0, minX - padding);
+              const y = Math.max(0, minY - padding);
+              const boundedMaxX = Math.min(canvas.width - 1, maxX + padding);
+              const boundedMaxY = Math.min(canvas.height - 1, maxY + padding);
+
+              return {
+                x,
+                y,
+                width: Math.max(1, boundedMaxX - x + 1),
+                height: Math.max(1, boundedMaxY - y + 1),
+              };
+            };
+
+            const cropImageToBounds = async (sourceUrl: string, bounds: CropBounds): Promise<string> => {
+              const sourceImg = await loadImageElement(sourceUrl);
+              const canvas = document.createElement('canvas');
+              canvas.width = bounds.width;
+              canvas.height = bounds.height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) throw new Error('Falha ao preparar crop');
+
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(
+                sourceImg,
+                bounds.x,
+                bounds.y,
+                bounds.width,
+                bounds.height,
+                0,
+                0,
+                bounds.width,
+                bounds.height,
+              );
+
+              return canvas.toDataURL('image/png');
+            };
+
+            const pasteCropIntoOriginal = async (sourceUrl: string, editedCropUrl: string, bounds: CropBounds): Promise<string> => {
+              const [sourceImg, editedCropImg] = await Promise.all([
+                loadImageElement(sourceUrl),
+                loadImageElement(editedCropUrl),
+              ]);
+
+              const canvas = document.createElement('canvas');
+              canvas.width = sourceImg.naturalWidth;
+              canvas.height = sourceImg.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) throw new Error('Falha ao recompor imagem final');
+
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(sourceImg, 0, 0, canvas.width, canvas.height);
+              ctx.drawImage(editedCropImg, 0, 0, editedCropImg.naturalWidth, editedCropImg.naturalHeight, bounds.x, bounds.y, bounds.width, bounds.height);
+
+              return canvas.toDataURL('image/png');
+            };
+
+            const [imageBase64, maskBase64, maskBounds] = await Promise.all([
               toBase64(originalUrl),
               toBase64(maskDataUrl),
+              attachmentBase64 ? getMaskBounds(maskDataUrl) : Promise.resolve(null),
             ]);
 
+            let cropImageBase64: string | undefined;
+            let crop: CropBounds | undefined;
+
+            if (attachmentBase64 && maskBounds) {
+              crop = maskBounds;
+              const croppedDataUrl = await cropImageToBounds(originalUrl, maskBounds);
+              cropImageBase64 = croppedDataUrl.replace(/^data:[^;]+;base64,/, '');
+            }
+
             const { data: session } = await supabase.auth.getSession();
+            const accessToken = session.session?.access_token;
+            if (!accessToken) throw new Error('Sessão expirada. Faça login novamente.');
+
             const response = await fetch(
               `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post-correction`,
               {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.session?.access_token}`,
+                  Authorization: `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify({ imageBase64, maskBase64, editPrompt, attachmentBase64 }),
+                body: JSON.stringify({ imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, crop }),
               }
             );
 
@@ -6928,6 +7042,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             if (!result.resultBase64) throw new Error('Nenhuma imagem retornada');
 
             const aiResultDataUrl = `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
+
+            if (crop && cropImageBase64) {
+              return await pasteCropIntoOriginal(originalUrl, aiResultDataUrl, crop);
+            }
 
             // === COMPOSITE: paste only masked regions from AI result onto original ===
             const compositeResult = await new Promise<string>((resolve, reject) => {

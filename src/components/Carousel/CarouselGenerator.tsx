@@ -7231,7 +7231,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             <button onClick={() => setShowGuestPaywall(false)} className="absolute top-3 right-3 p-1 text-white/30 hover:text-white/60 cursor-pointer">
               <X className="w-5 h-5" />
             </button>
-            <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
+            <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, rgba(232,77,26,0.2), rgba(232,77,26,0.05))' : 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
               <Sparkles className="w-8 h-8" style={{ color: '#9B6BFF' }} />
             </div>
             <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>

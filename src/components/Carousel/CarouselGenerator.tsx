@@ -6392,8 +6392,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Carousel from cover modal - enhanced */}
             {showCarouselFromCover && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setShowCarouselFromCover(false)}>
-                <div className="rounded-2xl border border-purple-500/20 p-6 w-full max-w-md max-h-[85vh] flex flex-col gap-5 overflow-hidden shadow-2xl shadow-purple-500/10"
-                  style={{ backgroundColor: 'rgba(12,10,24,0.98)' }}
+                <div className="rounded-2xl p-6 w-full max-w-md max-h-[85vh] flex flex-col gap-5 overflow-hidden"
+                  style={{ backgroundColor: 'rgba(12,10,24,0.98)', border: `1px solid rgba(${themeRgb},0.25)`, boxShadow: `0 20px 50px rgba(${themeRgb},0.14)` }}
                   onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-base font-bold text-white text-center flex items-center justify-center gap-2">
                     <Sparkles className="h-4 w-4 text-purple-400" />

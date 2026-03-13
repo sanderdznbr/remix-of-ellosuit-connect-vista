@@ -327,7 +327,7 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo']
+    ? ['Modo', 'Visão', 'Logo', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo']
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -4792,7 +4792,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
                           setExtremeFormValues({});
                           // Auto-advance: after analysis, Detalhes will be at index 2
-                          // (Modo=0, Visão=1, Detalhes=2)
+                          // After analysis, advance to Logo step (Modo=0, Visão=1, Logo=2, Detalhes=3)
                           setWizardStep(2);
                         }}
                       />

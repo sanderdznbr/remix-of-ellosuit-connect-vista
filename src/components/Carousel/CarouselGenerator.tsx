@@ -3563,6 +3563,25 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
           parts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
         }
+        // Inject extreme mode vision/form context into the image prompt
+        if (wizardMode === 'extreme' && extremeAnalysis) {
+          parts.push(`\nMODO EXTREME — VISÃO DO USUÁRIO: "${extremeVision}"`);
+          // Add form field values as context
+          const formContext = extremeAnalysis.fields
+            .filter(f => f.type !== 'photo_upload' && extremeFormValues[f.id])
+            .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
+            .join(', ');
+          if (formContext) parts.push(`DETALHES: ${formContext}`);
+          if (extremeSelectedFont) {
+            parts.push(`FONTE OBRIGATÓRIA: Use a fonte "${extremeSelectedFont.name}" como referência visual.`);
+          }
+          // Add exact text instructions
+          const exactTexts = getExtremeExactTexts();
+          if (exactTexts.length > 0) {
+            parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere):`);
+            exactTexts.forEach(t => parts.push(`- ${t.label}: "${t.value}"`));
+          }
+        }
         if (isCover) {
           parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
           parts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);

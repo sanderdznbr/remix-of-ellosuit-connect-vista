@@ -5878,8 +5878,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       {/* Regenerating overlay on mockup */}
                       {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                          <div className="w-10 h-10 rounded-full border-3 animate-spin mb-3" style={{ borderColor: `rgba(${themeRgb},0.3)`, borderTopColor: themeHex }} />
-                          <p className="text-white/80 text-xs font-medium">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                          <div className="carousel-loader-wrapper" style={{ width: 100, height: 100 }}>
+                            <div className="carousel-loader-spinner carousel-loader-spinner--orange" style={{ width: 100, height: 100 }} />
+                          </div>
+                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
                         </div>
                       )}
                       {/* Guest lock overlay */}

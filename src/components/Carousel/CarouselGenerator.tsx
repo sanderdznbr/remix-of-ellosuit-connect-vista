@@ -6932,7 +6932,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             const aiResultDataUrl = `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
 
-            // === COMPOSITE: paste only masked regions from AI result onto original ===
+            // === COMPOSITE: blend AI result into original using feathered mask ===
             const compositeResult = await new Promise<string>((resolve, reject) => {
               const origImg = new window.Image();
               origImg.crossOrigin = 'anonymous';
@@ -6944,36 +6944,77 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 loaded++;
                 if (loaded < 3) return;
                 try {
+                  const W = origImg.naturalWidth;
+                  const H = origImg.naturalHeight;
+
+                  // Draw original
                   const canvas = document.createElement('canvas');
-                  canvas.width = origImg.naturalWidth;
-                  canvas.height = origImg.naturalHeight;
+                  canvas.width = W;
+                  canvas.height = H;
                   const ctx = canvas.getContext('2d')!;
+                  ctx.drawImage(origImg, 0, 0, W, H);
 
-                  ctx.drawImage(origImg, 0, 0, canvas.width, canvas.height);
+                  // Draw AI result
+                  const aiCanvas = document.createElement('canvas');
+                  aiCanvas.width = W;
+                  aiCanvas.height = H;
+                  const aiCtx = aiCanvas.getContext('2d')!;
+                  aiCtx.drawImage(aiImg, 0, 0, W, H);
 
-                  const tempCanvas = document.createElement('canvas');
-                  tempCanvas.width = canvas.width;
-                  tempCanvas.height = canvas.height;
-                  const tempCtx = tempCanvas.getContext('2d')!;
-                  tempCtx.drawImage(aiImg, 0, 0, canvas.width, canvas.height);
-
+                  // Draw mask and create feathered alpha
                   const maskCanvas = document.createElement('canvas');
-                  maskCanvas.width = canvas.width;
-                  maskCanvas.height = canvas.height;
+                  maskCanvas.width = W;
+                  maskCanvas.height = H;
                   const maskCtx = maskCanvas.getContext('2d')!;
-                  maskCtx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
+                  maskCtx.drawImage(maskImg, 0, 0, W, H);
+                  const maskData = maskCtx.getImageData(0, 0, W, H);
 
-                  const maskData = maskCtx.getImageData(0, 0, canvas.width, canvas.height);
-                  const aiData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-                  const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                  // Create feathered mask by blurring edges (simple box blur on alpha)
+                  const alpha = new Float32Array(W * H);
+                  for (let i = 0; i < W * H; i++) {
+                    alpha[i] = maskData.data[i * 4] > 128 ? 1.0 : 0.0;
+                  }
 
-                  for (let i = 0; i < maskData.data.length; i += 4) {
-                    if (maskData.data[i] > 128) {
-                      origData.data[i] = aiData.data[i];
-                      origData.data[i + 1] = aiData.data[i + 1];
-                      origData.data[i + 2] = aiData.data[i + 2];
-                      origData.data[i + 3] = aiData.data[i + 3];
+                  // Apply 2-pass box blur for feathering (radius ~8px scaled to image)
+                  const featherRadius = Math.max(4, Math.round(Math.min(W, H) * 0.006));
+                  const blurred = new Float32Array(W * H);
+
+                  // Horizontal pass
+                  for (let y = 0; y < H; y++) {
+                    for (let x = 0; x < W; x++) {
+                      let sum = 0, count = 0;
+                      for (let dx = -featherRadius; dx <= featherRadius; dx++) {
+                        const nx = x + dx;
+                        if (nx >= 0 && nx < W) { sum += alpha[y * W + nx]; count++; }
+                      }
+                      blurred[y * W + x] = sum / count;
                     }
+                  }
+                  // Vertical pass
+                  const feathered = new Float32Array(W * H);
+                  for (let y = 0; y < H; y++) {
+                    for (let x = 0; x < W; x++) {
+                      let sum = 0, count = 0;
+                      for (let dy = -featherRadius; dy <= featherRadius; dy++) {
+                        const ny = y + dy;
+                        if (ny >= 0 && ny < H) { sum += blurred[ny * W + x]; count++; }
+                      }
+                      feathered[y * W + x] = sum / count;
+                    }
+                  }
+
+                  // Blend: original * (1-alpha) + ai * alpha
+                  const origData = ctx.getImageData(0, 0, W, H);
+                  const aiData = aiCtx.getImageData(0, 0, W, H);
+
+                  for (let i = 0; i < W * H; i++) {
+                    const a = feathered[i];
+                    if (a < 0.001) continue; // fully original
+                    const pi = i * 4;
+                    origData.data[pi]     = Math.round(origData.data[pi]     * (1 - a) + aiData.data[pi]     * a);
+                    origData.data[pi + 1] = Math.round(origData.data[pi + 1] * (1 - a) + aiData.data[pi + 1] * a);
+                    origData.data[pi + 2] = Math.round(origData.data[pi + 2] * (1 - a) + aiData.data[pi + 2] * a);
+                    origData.data[pi + 3] = 255;
                   }
 
                   ctx.putImageData(origData, 0, 0);

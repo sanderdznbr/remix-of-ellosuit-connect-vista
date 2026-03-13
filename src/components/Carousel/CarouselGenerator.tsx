@@ -4575,6 +4575,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         values={extremeFormValues}
                         onChange={setExtremeFormValues}
                       />
+                    )}
                     {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}

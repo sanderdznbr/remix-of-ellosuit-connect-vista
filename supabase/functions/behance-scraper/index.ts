@@ -11,14 +11,93 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, url, urls } = body;
+    const { action, url, urls, query, limit } = body;
 
-    // Action: download images via proxy (server-side, no CORS restrictions)
+    // ====== ACTION: search Behance projects by query ======
+    if (action === 'search' && query) {
+      const searchQuery = encodeURIComponent(query.trim());
+      const maxResults = Math.min(limit || 5, 10);
+      const searchUrl = `https://www.behance.net/search/projects?search=${searchQuery}&sort=appreciations&time=month`;
+
+      console.log('Searching Behance:', searchUrl);
+
+      const resp = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+      });
+
+      if (!resp.ok) {
+        console.error('Behance search failed:', resp.status);
+        return new Response(
+          JSON.stringify({ error: `Falha na busca (${resp.status})` }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const html = await resp.text();
+
+      // Extract project cover images from search results
+      const results: { imageUrl: string; title: string; projectUrl: string }[] = [];
+      const seen = new Set<string>();
+
+      // Pattern 1: project cover images
+      const coverRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project[s_]?[^"]*\/(404|808|max_[0-9]+|1400|disp|fs)\/[^"]+)"/g;
+      let match;
+      while ((match = coverRegex.exec(html)) !== null && results.length < maxResults) {
+        const imgUrl = match[1].split('?')[0];
+        const fileKey = imgUrl.split('/').pop() || imgUrl;
+        if (!seen.has(fileKey)) {
+          seen.add(fileKey);
+          results.push({ imageUrl: imgUrl, title: '', projectUrl: '' });
+        }
+      }
+
+      // Pattern 2: project_modules images (fallback)
+      if (results.length < maxResults) {
+        const moduleRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
+        while ((match = moduleRegex.exec(html)) !== null && results.length < maxResults) {
+          const imgUrl = match[1].split('?')[0];
+          const fileKey = imgUrl.split('/').pop() || imgUrl;
+          if (!seen.has(fileKey)) {
+            seen.add(fileKey);
+            results.push({ imageUrl: imgUrl, title: '', projectUrl: '' });
+          }
+        }
+      }
+
+      // Pattern 3: srcset fallback
+      if (results.length < maxResults) {
+        const srcsetRegex = /srcset="([^"]*mir-s3-cdn-cf\.behance\.net[^"]+)"/g;
+        while ((match = srcsetRegex.exec(html)) !== null && results.length < maxResults) {
+          const parts = match[1].split(',').map((p: string) => p.trim().split(' ')[0]).filter((u: string) => u?.startsWith('https://'));
+          const bestUrl = parts[parts.length - 1];
+          if (bestUrl) {
+            const fileKey = bestUrl.split('/').pop() || bestUrl;
+            if (!seen.has(fileKey)) {
+              seen.add(fileKey);
+              results.push({ imageUrl: bestUrl, title: '', projectUrl: '' });
+            }
+          }
+        }
+      }
+
+      console.log(`Behance search found ${results.length} images for "${query}"`);
+
+      return new Response(
+        JSON.stringify({ results, count: results.length, query }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ====== ACTION: download images via proxy ======
     if (action === 'download' && Array.isArray(urls)) {
       console.log(`Proxying download for ${urls.length} images`);
       const results: { base64: string; mimeType: string }[] = [];
 
-      for (const imgUrl of urls.slice(0, 20)) { // max 20
+      for (const imgUrl of urls.slice(0, 20)) {
         try {
           const resp = await fetch(imgUrl, {
             headers: {
@@ -48,10 +127,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Default action: scrape gallery for image URLs
+    // ====== DEFAULT: scrape gallery for image URLs ======
     if (!url || !url.includes('behance.net/gallery/')) {
       return new Response(
-        JSON.stringify({ error: 'URL de galeria do Behance inválida' }),
+        JSON.stringify({ error: 'URL de galeria do Behance inválida ou ação não reconhecida' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -76,8 +155,6 @@ Deno.serve(async (req) => {
 
     const html = await resp.text();
 
-    // Extract image URLs from srcset attributes in project module pictures
-    // Pattern: mir-s3-cdn-cf.behance.net/project_modules/...
     const galleryImageUrls: string[] = [];
     const seen = new Set<string>();
 
@@ -90,33 +167,28 @@ Deno.serve(async (req) => {
     };
 
     const pushFromSrcset = (srcset: string) => {
-      // srcset can be: "url1 600w, url2 1080w" OR "url 1080w"
       for (const part of srcset.split(',')) {
         const token = part.trim().split(' ')[0];
         if (token?.startsWith('https://')) pushUrl(token);
       }
     };
 
-    // Prefer: <source data-ut="project-module-source-webp" srcset="...">
     const webpSourceRegex = /<source[^>]*data-ut="project-module-source-webp"[^>]*srcset="([^"]+)"/g;
     let match;
     while ((match = webpSourceRegex.exec(html)) !== null) {
       pushFromSrcset(match[1]);
     }
 
-    // Fallback: any srcset URLs pointing to project_modules
     const srcsetRegex = /srcset="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
     while ((match = srcsetRegex.exec(html)) !== null) {
       pushFromSrcset(match[1]);
     }
 
-    // Fallback: img src URLs
     const imgSrcRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
     while ((match = imgSrcRegex.exec(html)) !== null) {
       pushUrl(match[1]);
     }
 
-    // Extract title
     const titleMatch = html.match(/<title>([^<]+)<\/title>/);
     const title = titleMatch ? titleMatch[1].replace(' on Behance', '').trim() : 'Behance Gallery';
 

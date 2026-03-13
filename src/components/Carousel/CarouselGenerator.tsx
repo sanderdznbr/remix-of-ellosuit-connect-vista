@@ -4721,21 +4721,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'flash' ? 'nano-banana' : 'gemini' }))}
                         generating={generating || transitionToGenerate}
                         onGenerate={() => {
-                          if (cardCount === 1) {
+                          const nextIsSinglePost = cardCount === 1;
+                          if (nextIsSinglePost) {
                             setContentMode('single-post');
                             setImageCardCount(1);
                           } else {
                             setContentMode('carousel');
                             setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                           }
-                          // Inject extreme form photos as product/style reference images
+
+                          // Inject extreme form photos + exact text context
                           if (extremeAnalysis) {
                             const newRefs: Array<{ url: string; thumb: string; label: string; source: 'upload'; category: 'product' | 'style' }> = [];
                             for (const field of extremeAnalysis.fields) {
                               if (field.type === 'photo_upload') {
                                 const photos = extremeFormValues[field.id] as string[] | undefined;
                                 if (photos?.length) {
-                                  // Determine category from field label/id
                                   const fieldLabel = (field.label + ' ' + (field.id || '')).toLowerCase();
                                   const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca/i.test(fieldLabel);
                                   photos.forEach((url, idx) => {
@@ -4750,30 +4751,37 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 }
                               }
                             }
+
                             if (newRefs.length > 0) {
                               setReferenceImages(prev => [...prev, ...newRefs]);
                             }
-                            // Build rich topic with extreme context
+
+                            const exactText = getExtremeExactText();
+                            if (exactText) {
+                              setManualPostText(exactText);
+                            }
+
                             const formSummary = extremeAnalysis.fields
                               .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')
                               .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
                               .join('. ');
-                            
-                            // Build smart image generation context
+
                             const photoFields = extremeAnalysis.fields.filter(f => f.type === 'photo_upload' && (extremeFormValues[f.id] as string[])?.length > 0);
                             const photoContext = photoFields.map(f => {
                               const count = (extremeFormValues[f.id] as string[]).length;
                               return `[${count} imagem(ns) de "${f.label}" fornecida(s) como referência obrigatória]`;
                             }).join(' ');
-                            
+
                             const enrichedTopic = [
                               `MODO EXTREME — VISÃO DO USUÁRIO: ${extremeVision}`,
                               formSummary ? `DETALHES: ${formSummary}` : '',
+                              exactText ? `TEXTO EXATO OBRIGATÓRIO (NÃO ALTERAR, NÃO REESCREVER): "${exactText}"` : '',
                               photoContext || '',
                               'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição (ex: se enviou print de app, coloque na tela de um mockup de celular; se enviou logo, inclua no design).',
                             ].filter(Boolean).join('\n');
                             setTopic(enrichedTopic);
                           }
+
                           setTransitionToGenerate(true);
                           setTimeout(() => generateContent(), 1200);
                         }}

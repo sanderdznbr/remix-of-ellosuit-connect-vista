@@ -15,10 +15,12 @@ interface Props {
   logoUrl?: string | null;
   skipWebSearch?: boolean;
   onGoHome?: () => void;
+  isExtreme?: boolean;
 }
 
 // Fixed bright purple for loading UI - never uses user's accent color
 const LOADING_PURPLE = '#A855F7';
+const LOADING_ORANGE = '#F97316';
 
 const GeneratingAnimation: React.FC<Props> = ({
   imageGenProgress,
@@ -32,9 +34,10 @@ const GeneratingAnimation: React.FC<Props> = ({
   logoUrl = null,
   skipWebSearch = false,
   onGoHome,
+  isExtreme = false,
 }) => {
-  // Always use bright purple for loading, ignoring user's accentColor
-  const loadingColor = LOADING_PURPLE;
+  // Use orange for extreme mode, purple otherwise
+  const loadingColor = isExtreme ? LOADING_ORANGE : LOADING_PURPLE;
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);
@@ -195,7 +198,7 @@ const GeneratingAnimation: React.FC<Props> = ({
           style={{ background: `radial-gradient(circle, ${loadingColor}99 0%, transparent 70%)` }} />
 
         <div className="carousel-loader-wrapper" style={{ width: 200, height: 200 }}>
-          <div className="carousel-loader-spinner" />
+          <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : ''}`} />
         </div>
 
         {imageGenProgress && (

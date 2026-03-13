@@ -4810,7 +4810,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               width: realIndex === wizardStep ? 24 : 6,
                               height: 6,
                               borderRadius: 3,
-                              backgroundColor: realIndex === wizardStep ? '#9B6BFF' : realIndex < wizardStep ? 'rgba(155,107,255,0.5)' : 'rgba(255,255,255,0.08)',
+                              backgroundColor: realIndex === wizardStep ? (wizardMode === 'extreme' ? '#F97316' : '#9B6BFF') : realIndex < wizardStep ? (wizardMode === 'extreme' ? 'rgba(249,115,22,0.5)' : 'rgba(155,107,255,0.5)') : 'rgba(255,255,255,0.08)',
                               cursor: realIndex <= wizardStep ? 'pointer' : 'default',
                             }}
                           />
@@ -5281,7 +5281,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             setWizardStep(next);
                           }} disabled={!canProceed || searchingWeb || generatingRoteiro || !!webSearchSuggestion}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
-                          style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
+                          style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                           {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
                         </button>
                       </div>
@@ -5384,7 +5384,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           }
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
-                        style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
+                        style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
                         {isGuest ? <><Sparkles className="h-4 w-4" /> Gerar Post Grátis</> : <><Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}</>}
                       </button>
                     )}
@@ -5395,7 +5395,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
                 <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
-                  <div className="carousel-loader-spinner" />
+                  <div className={`carousel-loader-spinner ${wizardMode === 'extreme' ? 'carousel-loader-spinner--orange' : ''}`} />
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={Math.round((wizardStep / Math.max(WIZARD_STEPS.length - 1, 1)) * 99)} />
                   </span>
@@ -5466,6 +5466,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             brandName={brandName}
             logoUrl={logoUrl}
             skipWebSearch={skipWebSearch}
+            isExtreme={wizardMode === 'extreme'}
             onGoHome={user ? () => {
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;

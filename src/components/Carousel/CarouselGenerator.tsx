@@ -4045,7 +4045,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         }
       } else {
         // Non-continuous: regenerate each card sequentially
-        for (let i = 0; i < currentData.cards.length; i++) {
+        const total = currentData.cards.length;
+        for (let i = 0; i < total; i++) {
+          setRegenAllProgress({ current: i + 1, total });
           setRegeneratingCard(i);
           try {
             await regenerateCard(i);
@@ -4054,8 +4056,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           }
           setRegeneratingCard(null);
           // Small delay between cards
-          if (i < currentData.cards.length - 1) await new Promise(r => setTimeout(r, 500));
+          if (i < total - 1) await new Promise(r => setTimeout(r, 500));
         }
+        setRegenAllProgress(null);
         toast({ title: '✨ Todos os cards regenerados!' });
       }
       // Auto-save after regeneration

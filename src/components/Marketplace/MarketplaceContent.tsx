@@ -204,6 +204,11 @@ const StyleCard: React.FC<{
             <Crown className="w-3 h-3" /> DESTAQUE
           </div>
         )}
+        {style.style_config?.is_beta && (
+          <div className="absolute top-3 flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/90 text-white text-[10px] font-bold" style={{ left: featured ? '5.5rem' : '0.75rem' }}>
+            BETA
+          </div>
+        )}
         {owned && (
           <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/90 text-white text-[10px] font-bold">
             <Check className="w-3 h-3" /> ADQUIRIDO

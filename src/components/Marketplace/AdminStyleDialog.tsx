@@ -83,6 +83,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     is_featured: false, is_free: false, strict_instructions: '',
     is_real_estate: false,
     real_estate_mode: 'single' as 'single' | 'multiple',
+    is_beta: false,
   });
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [refPreviews, setRefPreviews] = useState<string[]>([]);
@@ -135,10 +136,11 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
           strict_instructions: (editStyle as any).strict_instructions || '',
           is_real_estate: !!sc.is_real_estate,
           real_estate_mode: sc.real_estate_mode || 'single',
+          is_beta: !!sc.is_beta,
         });
         setExistingImages(editStyle.preview_images || []);
       } else {
-        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single' });
+        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single', is_beta: false });
         setExistingImages([]);
       }
       setRefFiles([]);
@@ -196,6 +198,7 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
     const config: any = {
       description: form.is_real_estate ? 'Estilo imobiliário baseado em referências visuais.' : 'Estilo customizado baseado em referências visuais.',
       is_real_estate: form.is_real_estate,
+      is_beta: form.is_beta,
       real_estate_mode: form.is_real_estate ? form.real_estate_mode : undefined,
       colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
       imageGeneration: {
@@ -395,6 +398,10 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
               <button onClick={() => setForm(f => ({ ...f, is_free: !f.is_free, ...(!f.is_free ? { price_credits: 0, price_brl: 0 } : {}) }))}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${form.is_free ? 'bg-green-500/20 text-green-300' : 'bg-white/[0.04] text-white/30'}`}>
                 {form.is_free ? '✓' : '○'} Grátis
+              </button>
+              <button onClick={() => setForm(f => ({ ...f, is_beta: !f.is_beta }))}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors ${form.is_beta ? 'bg-blue-500/20 text-blue-300' : 'bg-white/[0.04] text-white/30'}`}>
+                {form.is_beta ? '✓' : '○'} Beta
               </button>
             </div>
           </div>

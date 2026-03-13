@@ -199,9 +199,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         )}
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
-          {renderContent()}
-        </div>
+        {renderContent()}
       </div>
     );
   }

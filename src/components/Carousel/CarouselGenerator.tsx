@@ -5061,61 +5061,154 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Center area: phone + inline editor panel */}
             <div className="flex flex-row items-start justify-center gap-0 md:gap-0 flex-1 relative z-10">
 
-            {/* Inline Editor Panel - slides in from left */}
+            {/* Tools Sidebar - slides in from left on desktop */}
             <AnimatePresence>
               {showInlineEditor && carouselData && (
                 <motion.div
                   key="inline-editor-panel"
                   initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 360, opacity: 1 }}
+                  animate={{ width: 320, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   className="hidden md:block overflow-hidden flex-shrink-0 h-[85vh] sticky top-0"
                 >
-                  <div className="w-[360px] h-full overflow-y-auto rounded-2xl"
+                  <div className="w-[320px] h-full overflow-y-auto rounded-2xl p-4 flex flex-col gap-1"
                     style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <CarouselEditorSidebar
-                      card={carouselData.cards[activeCardIndex]}
-                      cardIndex={activeCardIndex}
-                      totalCards={carouselData.cards.length}
-                      bgColor={bgColor}
-                      accentColor={accentColor}
-                      textColor={textColor}
-                      onUpdateCard={updateCard}
-                      onUpdateAllCards={updateAllCards}
-                      onClose={() => setShowInlineEditor(false)}
-                      onUploadImage={handleFileUpload}
-                      onOpenImagePicker={(i) => { setShowImagePicker(i); }}
-                      onGenerateAiImage={generateAiImage}
-                      generatingAiImage={generatingAiImage}
-                      aiImagePrompt={aiImagePrompt}
-                      setAiImagePrompt={setAiImagePrompt}
-                      onChangeBgColor={setBgColor}
-                      onChangeAccentColor={setAccentColor}
-                      onChangeTextColor={setTextColor}
-                      fontOptions={FONT_OPTIONS}
-                      selectedFont={selectedFont}
-                      onChangeFont={setSelectedFont}
-                      referenceImageUrl={editorRefImage}
-                      onUploadReferenceImage={handleEditorRefImageUpload}
-                      onRemoveReferenceImage={() => setEditorRefImage(null)}
-                      isRealEstate={isRealEstateStyle && propertyList.length > 0}
-                      propertyData={isRealEstateStyle && propertyList.length > 0 ? (() => {
-                        const propIdx = realEstateMode === 'multiple' ? (activeCardIndex % propertyList.length) : 0;
-                        const p = propertyList[propIdx];
-                        return p ? { price: p.price, area: p.area, bedrooms: p.bedrooms, bathrooms: p.bathrooms, parking: p.parking, location: p.location, neighborhood: p.neighborhood, highlights: p.highlights, title: p.title } : undefined;
-                      })() : undefined}
-                      onPropertyFieldChange={isRealEstateStyle && propertyList.length > 0 ? ((field: string, value: string) => {
-                        const propIdx = realEstateMode === 'multiple' ? (activeCardIndex % propertyList.length) : 0;
-                        setPropertyList(prev => {
-                          const updated = [...prev];
-                          const p = { ...updated[propIdx] };
-                          (p as any)[field] = value;
-                          updated[propIdx] = p;
-                          return updated;
-                        });
-                      }) : undefined}
-                    />
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <h3 className="text-sm font-semibold text-white/80">Ferramentas</h3>
+                      <button onClick={() => setShowInlineEditor(false)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors cursor-pointer">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Auto-save status */}
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-white/40 border border-white/5 mb-2">
+                      {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
+                      {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
+                    </div>
+
+                    {/* Export */}
+                    <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium text-white border transition-all disabled:opacity-50 w-full"
+                      style={{ borderColor: 'rgba(139,92,246,0.3)', background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(139,92,246,0.04))' }}>
+                      {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4 text-purple-400" />}
+                      {isGuest ? 'Assine para baixar' : 'Exportar'}
+                    </button>
+
+                    {/* Stories */}
+                    {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
+                      <button onClick={generateStoriesImage} disabled={generatingStories}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/80 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-50 w-full">
+                        {generatingStories ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4 text-blue-400" />}
+                        {generatingStories ? 'Gerando...' : 'Converter em Stories'}
+                      </button>
+                    )}
+
+                    {/* Generate carousel from cover */}
+                    {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
+                      <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-purple-300 hover:text-purple-200 hover:bg-white/[0.06] transition-all w-full">
+                        <Sparkles className="h-4 w-4 text-yellow-400" /> Gerar Carrossel
+                      </button>
+                    )}
+
+                    <div className="h-px bg-white/[0.06] my-1" />
+
+                    {/* Mudar Estilo */}
+                    {!isGuest && (
+                      <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-emerald-300 hover:text-emerald-200 hover:bg-white/[0.06] transition-all w-full">
+                        <Palette className="h-4 w-4 text-emerald-400" /> Mudar Estilo
+                      </button>
+                    )}
+
+                    {/* Legenda */}
+                    <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/80 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full"
+                      style={{ backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.1)' : 'transparent' }}>
+                      <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
+                    </button>
+
+                    <div className="h-px bg-white/[0.06] my-1" />
+
+                    {/* Corrigir área */}
+                    {!isGuest && (
+                      <button
+                        onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                        disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                        <Pencil className="h-4 w-4 text-orange-400" /> Corrigir Área
+                      </button>
+                    )}
+
+                    {/* Retornar edição */}
+                    {!isGuest && (
+                      <button
+                        onClick={() => {
+                          const last = correctionUndoStack[correctionUndoStack.length - 1];
+                          setCardImage(last.cardIndex, last.imageUrl);
+                          setCorrectionUndoStack(prev => prev.slice(0, -1));
+                          toast({ title: 'Edição revertida!' });
+                        }}
+                        disabled={correctionUndoStack.length === 0}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                        <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição
+                      </button>
+                    )}
+
+                    <div className="h-px bg-white/[0.06] my-1" />
+
+                    {/* Regenerar Tudo */}
+                    {carouselData.cards.length >= 2 && !isGuest && (
+                      <div className="relative">
+                        <button onClick={() => {
+                          if (regeneratingAll || regeneratingCard !== null) return;
+                          setShowRegenModeMenu(prev => !prev);
+                        }} disabled={regeneratingAll || regeneratingCard !== null}
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-40 w-full">
+                          {regeneratingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 text-orange-400" />}
+                          {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
+                        </button>
+                        {showRegenModeMenu && !regeneratingAll && (
+                          <div className="mt-1 w-full rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
+                            <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
+                              className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                              <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
+                              <div>
+                                <p className="font-semibold">Normal</p>
+                                <p className="text-[10px] text-white/40 mt-0.5">Cada card com imagem independente</p>
+                              </div>
+                            </button>
+                            <div className="h-px bg-white/[0.06]" />
+                            <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
+                              className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                              <Layers className="h-3.5 w-3.5 text-purple-400" />
+                              <div>
+                                <p className="font-semibold">Contínuo</p>
+                                <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
+                              </div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Adicionar Card */}
+                    {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                      <button onClick={() => setShowAddCardMenu(true)}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.06] transition-all w-full">
+                        <Plus className="h-4 w-4" /> Adicionar Card
+                      </button>
+                    )}
+
+                    <div className="flex-1" />
+
+                    {/* Novo */}
+                    <button onClick={() => { resetWizardState(); }}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all w-full mt-2">
+                      <Plus className="h-4 w-4" /> Novo Projeto
+                    </button>
                   </div>
                 </motion.div>
               )}

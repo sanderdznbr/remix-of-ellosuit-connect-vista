@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Sparkles, Check, Search, Crown, Pencil, Plus, Star } from 'lucide-react';
+import { toast } from 'sonner';
+import { ShoppingBag, Sparkles, Check, Search, Crown, Pencil, Plus, Star, EyeOff, Eye } from 'lucide-react';
 import AdminStyleDialog from './AdminStyleDialog';
 
 const ADMIN_EMAIL = 'admin@gmail.com';
@@ -37,25 +38,50 @@ const MarketplaceContent: React.FC = () => {
   const [editStyle, setEditStyle] = useState<MarketplaceStyle | null>(null);
 
   useEffect(() => {
-    fetchStyles();
     if (user) {
       fetchPurchased();
       checkAdmin();
+    } else {
+      fetchStyles();
     }
   }, [user]);
+
+  // Refetch styles when admin status is determined (to include hidden ones)
+  useEffect(() => {
+    fetchStyles();
+  }, [isAdmin]);
 
   const checkAdmin = async () => {
     const { data } = await supabase.auth.getUser();
     setIsAdmin(data.user?.email === ADMIN_EMAIL);
   };
 
+  const toggleStyleVisibility = async (styleId: string, currentlyActive: boolean) => {
+    const { error } = await supabase
+      .from('marketplace_styles')
+      .update({ is_active: !currentlyActive })
+      .eq('id', styleId);
+    if (error) {
+      toast.error('Erro ao alterar visibilidade');
+    } else {
+      toast.success(currentlyActive ? 'Estilo ocultado' : 'Estilo visível novamente');
+      fetchStyles();
+    }
+  };
+
   const fetchStyles = async () => {
     setLoading(true);
-    const { data } = await supabase
+    // Admin sees ALL styles (including hidden ones), normal users only see active
+    const query = supabase
       .from('marketplace_styles')
       .select('*')
-      .eq('is_active', true)
       .order('sort_order', { ascending: true });
+    
+    if (!isAdmin) {
+      query.eq('is_active', true);
+    }
+    
+    const { data } = await query;
     setStyles((data as any[]) || []);
     setLoading(false);
   };
@@ -143,7 +169,8 @@ const MarketplaceContent: React.FC = () => {
                   {featured.map(style => (
                     <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)}
                       onClick={() => navigate(`/marketplace/${style.id}`)} featured
-                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }} />
+                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }}
+                      onToggleVisibility={() => toggleStyleVisibility(style.id, (style as any).is_active !== false)} />
                   ))}
                 </div>
               </div>
@@ -155,7 +182,8 @@ const MarketplaceContent: React.FC = () => {
                   {regular.map(style => (
                     <StyleCard key={style.id} style={style} owned={purchasedIds.has(style.id)}
                       onClick={() => navigate(`/marketplace/${style.id}`)}
-                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }} />
+                      isAdmin={isAdmin} onEdit={() => { setEditStyle(style); setDialogOpen(true); }}
+                      onToggleVisibility={() => toggleStyleVisibility(style.id, (style as any).is_active !== false)} />
                   ))}
                 </div>
               </div>
@@ -178,9 +206,11 @@ const MarketplaceContent: React.FC = () => {
 
 // ---- Style Card ----
 const StyleCard: React.FC<{
-  style: MarketplaceStyle; owned: boolean; onClick: () => void;
+  style: MarketplaceStyle & { is_active?: boolean }; owned: boolean; onClick: () => void;
   featured?: boolean; isAdmin?: boolean; onEdit?: () => void;
-}> = ({ style, owned, onClick, featured, isAdmin, onEdit }) => {
+  onToggleVisibility?: () => void;
+}> = ({ style, owned, onClick, featured, isAdmin, onEdit, onToggleVisibility }) => {
+  const isHidden = style.is_active === false;
   const previewImage = style.preview_images?.[0];
   return (
     <div onClick={onClick}
@@ -214,11 +244,28 @@ const StyleCard: React.FC<{
             <Check className="w-3 h-3" /> ADQUIRIDO
           </div>
         )}
+        {isAdmin && isHidden && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-[5] pointer-events-none">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/80 text-white text-xs font-bold">
+              <EyeOff className="w-3.5 h-3.5" /> OCULTO
+            </div>
+          </div>
+        )}
         {isAdmin && (
-          <button onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-            className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-yellow-400 shadow-lg z-10">
-            <Pencil className="w-3.5 h-3.5" /> Editar
-          </button>
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <button onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(); }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer shadow-lg transition-colors ${
+                isHidden
+                  ? 'bg-green-500/90 text-white hover:bg-green-400'
+                  : 'bg-red-500/80 text-white hover:bg-red-400'
+              }`}>
+              {isHidden ? <><Eye className="w-3 h-3" /> Mostrar</> : <><EyeOff className="w-3 h-3" /> Ocultar</>}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/90 text-black text-xs font-bold cursor-pointer hover:bg-yellow-400 shadow-lg">
+              <Pencil className="w-3.5 h-3.5" /> Editar
+            </button>
+          </div>
         )}
       </div>
       <div className="p-4">

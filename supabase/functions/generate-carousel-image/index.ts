@@ -390,10 +390,19 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
     }
 
+    // === FONT REFERENCE: Dedicated font image for AI to replicate ===
+    if (fontReferenceImage) {
+      const fontLabel = fontReferenceName || 'selecionada';
+      messageContent.push({ type: 'text', text: `🔤 FONTE TIPOGRÁFICA OBRIGATÓRIA — A imagem abaixo mostra a fonte "${fontLabel}" que você DEVE usar em TODOS os textos do design. Replique 100% fielmente: estilo, peso, serifas, proporções, espaçamento e personalidade visual desta fonte. NÃO use outra fonte. Esta é a referência ABSOLUTA de tipografia:` });
+      messageContent.push({ type: 'image_url', image_url: { url: fontReferenceImage } });
+      messageContent.push({ type: 'text', text: `REGRA DE TIPOGRAFIA INVIOLÁVEL: A fonte renderizada no post DEVE ser VISUALMENTE IDÊNTICA à imagem de referência acima ("${fontLabel}"). Copie cada detalhe: serifas ou sem serifas, peso (bold/light/regular), largura, espaçamento entre letras, estilo decorativo. A tipografia é tão importante quanto o conteúdo visual. Se a fonte é bold e impactante, use bold e impactante. Se é elegante e fina, use elegante e fina. FIDELIDADE TOTAL.` });
+      console.log('Font reference injected:', fontLabel, 'base64 length:', fontReferenceImage.length);
+    }
+
     // === DIAGNOSTIC: Log total message size ===
     const totalTextChars = messageContent.filter(p => p.type === 'text').reduce((sum, p) => sum + p.text.length, 0);
     const totalImages = messageContent.filter(p => p.type === 'image_url').length;
-    console.log(`Message assembly: ${totalImages} images, ${totalTextChars} text chars, ${messageContent.length} parts, mode=${isVisualCloneMode ? 'VISUAL_CLONE' : 'STANDARD'}`);
+    console.log(`Message assembly: ${totalImages} images, ${totalTextChars} text chars, ${messageContent.length} parts, mode=${isVisualCloneMode ? 'VISUAL_CLONE' : 'STANDARD'}${fontReferenceImage ? ', HAS_FONT_REF' : ''}`);
 
     // Model selection
     const requestedModel = (imageModel || 'auto').toString().toLowerCase();

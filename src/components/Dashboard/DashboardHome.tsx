@@ -407,10 +407,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             </div>
           </div>
 
-          <div className="relative">
+          <div className="-mr-4 md:-mr-8">
             <div
               ref={scrollContainerRef}
-              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x"
+              className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
             >
             {recentCarousels.map((item) => {
@@ -444,7 +444,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                       className="absolute inset-0 w-full h-full object-cover"
                       loading="lazy"
                       onError={(e) => {
-                        // Hide broken image and show fallback
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
@@ -454,13 +453,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                       <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
                     </div>
                   )}
-                  {/* Clean cover — no text overlay */}
                 </div>
               );
             })}
             </div>
-            {/* Fade-out gradient on the right edge */}
-            <div className="pointer-events-none absolute top-0 right-0 w-20 h-full" style={{ background: 'linear-gradient(to right, transparent, #0a0a0f)' }} />
           </div>
         </div>
       </motion.div>

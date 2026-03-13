@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { X, Trash2, Plus, Info, Pencil, Loader2, Send, Undo2 } from 'lucide-react';
+import { X, Trash2, Plus, Info, Pencil, Loader2, Send, Undo2, Paperclip, Image as ImageIcon } from 'lucide-react';
 
 interface Region {
   id: string;
@@ -13,7 +13,7 @@ interface Props {
   imageUrl: string;
   onClose: () => void;
   onImageEdited: (newImageUrl: string) => void;
-  editFn: (originalUrl: string, maskDataUrl: string, prompt: string) => Promise<string>;
+  editFn: (originalUrl: string, maskDataUrl: string, prompt: string, attachmentBase64?: string) => Promise<string>;
 }
 
 const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited, editFn }) => {
@@ -28,6 +28,9 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
   const [drawBox, setDrawBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [editPrompt, setEditPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [attachmentBase64, setAttachmentBase64] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setImgLoaded(false);
@@ -35,7 +38,22 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
     setSelectedId(null);
     setDrawBox(null);
     setEditPrompt('');
+    setAttachmentPreview(null);
+    setAttachmentBase64(null);
   }, [imageUrl]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setAttachmentPreview(dataUrl);
+      setAttachmentBase64(dataUrl.replace(/^data:[^;]+;base64,/, ''));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const getPercent = useCallback((clientX: number, clientY: number) => {
     const el = containerRef.current;
@@ -155,7 +173,7 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
     try {
       const maskDataUrl = getMaskDataUrl();
       if (!maskDataUrl) throw new Error('Falha ao gerar máscara');
-      const newUrl = await editFn(imageUrl, maskDataUrl, editPrompt);
+      const newUrl = await editFn(imageUrl, maskDataUrl, editPrompt, attachmentBase64 || undefined);
       onImageEdited(newUrl);
     } catch (err: any) {
       console.error('Post correction error:', err);
@@ -272,12 +290,36 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
       {/* Prompt input */}
       {regions.length > 0 && (
         <div className="w-full max-w-xl mt-4 shrink-0">
+          {attachmentPreview && (
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-orange-500/30 shrink-0">
+                <img src={attachmentPreview} alt="Anexo" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => { setAttachmentPreview(null); setAttachmentBase64(null); }}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center cursor-pointer"
+                  style={{ backgroundColor: '#ef4444', color: '#fff' }}>
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+              <span className="text-xs" style={{ color: 'rgba(251,146,60,0.7)' }}>Imagem anexada — mencione no prompt</span>
+            </div>
+          )}
           <div className="flex gap-2">
+            <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileSelect} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-3 rounded-xl transition-colors cursor-pointer shrink-0"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: attachmentPreview ? '#fb923c' : 'rgba(255,255,255,0.4)' }}
+              title="Anexar imagem de referência"
+              disabled={isProcessing}
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
             <input
               type="text"
               value={editPrompt}
               onChange={(e) => setEditPrompt(e.target.value)}
-              placeholder="Descreva o que mudar... Ex: trocar texto para X, remover objeto"
+              placeholder={attachmentPreview ? "Ex: troque a foto do celular pela imagem anexada" : "Descreva o que mudar... Ex: trocar texto para X, remover objeto"}
               className="flex-1 bg-white/[0.06] border border-white/[0.12] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-orange-500/40 transition-colors"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               disabled={isProcessing}
@@ -294,7 +336,7 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
             </button>
           </div>
           <p className="text-[10px] mt-2 text-center" style={{ color: 'rgba(255,255,255,0.2)' }}>
-            A IA irá alterar apenas as áreas selecionadas em laranja
+            📎 Anexe uma imagem e descreva a substituição · A IA edita apenas as áreas em laranja
           </p>
         </div>
       )}

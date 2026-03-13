@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, maskBase64, editPrompt } = await req.json();
+    const { imageBase64, maskBase64, editPrompt, attachmentBase64 } = await req.json();
 
     if (!imageBase64 || !maskBase64 || !editPrompt) {
       return new Response(JSON.stringify({ error: "imageBase64, maskBase64 and editPrompt are required" }), {
@@ -25,7 +25,7 @@ serve(async (req) => {
       });
     }
 
-    console.log("Post correction request:", { promptLength: editPrompt.length, hasMask: !!maskBase64 });
+    console.log("Post correction request:", { promptLength: editPrompt.length, hasMask: !!maskBase64, hasAttachment: !!attachmentBase64 });
 
     const models = ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"];
 
@@ -33,13 +33,24 @@ serve(async (req) => {
       const label = model.split("/").pop();
       console.log(`Trying ${label}...`);
 
-      const messages = [
+      const contentParts: any[] = [
         {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `You are an expert image editor. You will receive TWO images:
+          type: "text",
+          text: attachmentBase64
+            ? `You are an expert image editor. You will receive ${attachmentBase64 ? 'THREE' : 'TWO'} images:
+
+IMAGE 1: The ORIGINAL image.
+IMAGE 2: A MASK image where WHITE areas indicate the regions to EDIT and BLACK areas must remain UNCHANGED.
+IMAGE 3: A REFERENCE image that should be used as part of the edit.
+
+YOUR TASK:
+1. Look at the MASK (IMAGE 2) to identify the WHITE regions — these are the ONLY areas you should modify.
+2. Apply the following edit ONLY to the white regions: "${editPrompt}"
+3. Use IMAGE 3 (the reference image) as instructed in the edit prompt above.
+4. Everything in the BLACK regions of the mask must remain PIXEL-IDENTICAL to the original image.
+5. The result should look natural and seamless.
+6. Return ONLY the final edited image.`
+            : `You are an expert image editor. You will receive TWO images:
 
 IMAGE 1: The ORIGINAL image.
 IMAGE 2: A MASK image where WHITE areas indicate the regions to EDIT and BLACK areas must remain UNCHANGED.
@@ -50,12 +61,16 @@ YOUR TASK:
 3. Everything in the BLACK regions of the mask must remain PIXEL-IDENTICAL to the original image.
 4. The result should look natural and seamless.
 5. Return ONLY the final edited image.`,
-            },
-            { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
-            { type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } },
-          ],
         },
+        { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
+        { type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } },
       ];
+
+      if (attachmentBase64) {
+        contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${attachmentBase64}` } });
+      }
+
+      const messages = [{ role: "user", content: contentParts }];
 
       let response: Response;
       try {

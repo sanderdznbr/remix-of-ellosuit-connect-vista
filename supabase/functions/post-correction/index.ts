@@ -20,7 +20,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, crop } = await req.json();
+    const { imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, cropMaskBase64, crop } = await req.json();
 
     if (!editPrompt || (!imageBase64 && !cropImageBase64)) {
       return new Response(JSON.stringify({ error: "editPrompt and imageBase64/cropImageBase64 are required" }), {
@@ -36,7 +36,7 @@ serve(async (req) => {
       typeof crop.width === "number" &&
       typeof crop.height === "number";
 
-    const isCropEdit = Boolean(cropImageBase64 && attachmentBase64 && hasValidCrop);
+    const isCropEdit = Boolean(cropImageBase64 && cropMaskBase64 && attachmentBase64 && hasValidCrop);
 
     if (!isCropEdit && !maskBase64) {
       return new Response(JSON.stringify({ error: "maskBase64 is required when crop mode is not used" }), {
@@ -57,21 +57,22 @@ serve(async (req) => {
       {
         type: "text",
         text: isCropEdit
-          ? `You are an expert image retoucher. You will receive TWO images:
+          ? `You are an expert image retoucher. You will receive THREE images:
 
 IMAGE 1: A CROPPED region from the original image.
-IMAGE 2: A REFERENCE image to use in the replacement.
+IMAGE 2: A CROPPED MASK image where WHITE pixels are the ONLY editable area and BLACK pixels must remain unchanged.
+IMAGE 3: A REFERENCE image to guide the requested edit.
 
 TASK:
 ${editPrompt}
 
 CRITICAL RULES:
 1. Keep the output with the EXACT SAME dimensions as IMAGE 1.
-2. Keep all non-target pixels from IMAGE 1 unchanged (hands, frame, reflections and background).
-3. Replace ONLY the intended display/content area in IMAGE 1 using IMAGE 2 as visual source.
-4. Place IMAGE 2 content edge-to-edge in the display area with correct perspective.
-5. Keep the result sharp and clean (no blur, no floating cards, no extra overlays, no new UI chrome).
-6. Do not add logos/text/elements not present in the provided images.
+2. Modify ONLY WHITE mask areas from IMAGE 2.
+3. Keep BLACK mask areas pixel-identical to IMAGE 1.
+4. Use IMAGE 3 only as visual reference for the requested change.
+5. Preserve perspective, hand anatomy, phone edges, reflections and local lighting.
+6. No blur, no white boxes, no floating overlays, no extra UI elements.
 7. Return ONLY one edited image.`
           : attachmentBase64
             ? `You are an expert image editor. You will receive THREE images:
@@ -108,6 +109,10 @@ CRITICAL RULES:
     ];
 
     if (isCropEdit) {
+      contentParts.push({
+        type: "image_url",
+        image_url: { url: `data:image/png;base64,${cropMaskBase64}` },
+      });
       contentParts.push({
         type: "image_url",
         image_url: { url: `data:image/png;base64,${attachmentBase64}` },

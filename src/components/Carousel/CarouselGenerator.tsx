@@ -6957,7 +6957,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               };
             };
 
-            const cropImageToBounds = async (sourceUrl: string, bounds: CropBounds): Promise<string> => {
+            const cropImageToBounds = async (
+              sourceUrl: string,
+              bounds: CropBounds,
+            ): Promise<{ dataUrl: string; targetWidth: number; targetHeight: number }> => {
               const sourceImg = await loadImageElement(sourceUrl);
               const longestSide = Math.max(bounds.width, bounds.height);
               const upscaleFactor = longestSide < 1024 ? Math.min(6, 1024 / Math.max(1, longestSide)) : 1;
@@ -6984,13 +6987,48 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 targetHeight,
               );
 
+              return { dataUrl: canvas.toDataURL('image/png'), targetWidth, targetHeight };
+            };
+
+            const cropMaskToBounds = async (
+              maskUrl: string,
+              bounds: CropBounds,
+              targetWidth: number,
+              targetHeight: number,
+            ): Promise<string> => {
+              const maskImg = await loadImageElement(maskUrl);
+              const canvas = document.createElement('canvas');
+              canvas.width = targetWidth;
+              canvas.height = targetHeight;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) throw new Error('Falha ao preparar máscara do crop');
+
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(
+                maskImg,
+                bounds.x,
+                bounds.y,
+                bounds.width,
+                bounds.height,
+                0,
+                0,
+                targetWidth,
+                targetHeight,
+              );
+
               return canvas.toDataURL('image/png');
             };
 
-            const pasteCropIntoOriginal = async (sourceUrl: string, editedCropUrl: string, bounds: CropBounds): Promise<string> => {
-              const [sourceImg, editedCropImg] = await Promise.all([
+            const pasteCropIntoOriginal = async (
+              sourceUrl: string,
+              editedCropUrl: string,
+              cropMaskUrl: string,
+              bounds: CropBounds,
+            ): Promise<string> => {
+              const [sourceImg, editedCropImg, cropMaskImg] = await Promise.all([
                 loadImageElement(sourceUrl),
                 loadImageElement(editedCropUrl),
+                loadImageElement(cropMaskUrl),
               ]);
 
               const canvas = document.createElement('canvas');
@@ -7002,8 +7040,36 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               ctx.imageSmoothingEnabled = true;
               ctx.imageSmoothingQuality = 'high';
               ctx.drawImage(sourceImg, 0, 0, canvas.width, canvas.height);
-              ctx.drawImage(editedCropImg, 0, 0, editedCropImg.naturalWidth, editedCropImg.naturalHeight, bounds.x, bounds.y, bounds.width, bounds.height);
 
+              const editedCanvas = document.createElement('canvas');
+              editedCanvas.width = bounds.width;
+              editedCanvas.height = bounds.height;
+              const editedCtx = editedCanvas.getContext('2d');
+              if (!editedCtx) throw new Error('Falha ao preparar canvas do recorte editado');
+              editedCtx.drawImage(editedCropImg, 0, 0, bounds.width, bounds.height);
+
+              const maskCanvas = document.createElement('canvas');
+              maskCanvas.width = bounds.width;
+              maskCanvas.height = bounds.height;
+              const maskCtx = maskCanvas.getContext('2d');
+              if (!maskCtx) throw new Error('Falha ao preparar canvas da máscara recortada');
+              maskCtx.imageSmoothingEnabled = false;
+              maskCtx.drawImage(cropMaskImg, 0, 0, bounds.width, bounds.height);
+
+              const editedData = editedCtx.getImageData(0, 0, bounds.width, bounds.height);
+              const maskData = maskCtx.getImageData(0, 0, bounds.width, bounds.height);
+              const originalRegion = ctx.getImageData(bounds.x, bounds.y, bounds.width, bounds.height);
+
+              for (let i = 0; i < maskData.data.length; i += 4) {
+                if (maskData.data[i] > 128) {
+                  originalRegion.data[i] = editedData.data[i];
+                  originalRegion.data[i + 1] = editedData.data[i + 1];
+                  originalRegion.data[i + 2] = editedData.data[i + 2];
+                  originalRegion.data[i + 3] = editedData.data[i + 3];
+                }
+              }
+
+              ctx.putImageData(originalRegion, bounds.x, bounds.y);
               return canvas.toDataURL('image/png');
             };
 
@@ -7014,12 +7080,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             ]);
 
             let cropImageBase64: string | undefined;
+            let cropMaskBase64: string | undefined;
+            let cropMaskDataUrl: string | undefined;
             let crop: CropBounds | undefined;
 
             if (attachmentBase64 && maskBounds) {
               crop = maskBounds;
-              const croppedDataUrl = await cropImageToBounds(originalUrl, maskBounds);
+              const { dataUrl: croppedDataUrl, targetWidth, targetHeight } = await cropImageToBounds(originalUrl, maskBounds);
               cropImageBase64 = croppedDataUrl.replace(/^data:[^;]+;base64,/, '');
+
+              cropMaskDataUrl = await cropMaskToBounds(maskDataUrl, maskBounds, targetWidth, targetHeight);
+              cropMaskBase64 = cropMaskDataUrl.replace(/^data:[^;]+;base64,/, '');
             }
 
             const { data: session } = await supabase.auth.getSession();
@@ -7034,7 +7105,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   'Content-Type': 'application/json',
                   Authorization: `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify({ imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, crop }),
+                body: JSON.stringify({
+                  imageBase64,
+                  maskBase64,
+                  editPrompt,
+                  attachmentBase64,
+                  cropImageBase64,
+                  cropMaskBase64,
+                  crop,
+                }),
               }
             );
 
@@ -7048,8 +7127,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             const aiResultDataUrl = `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
 
-            if (crop && cropImageBase64) {
-              return await pasteCropIntoOriginal(originalUrl, aiResultDataUrl, crop);
+            if (crop && cropImageBase64 && cropMaskDataUrl) {
+              return await pasteCropIntoOriginal(originalUrl, aiResultDataUrl, cropMaskDataUrl, crop);
             }
 
             // === COMPOSITE: paste only masked regions from AI result onto original ===

@@ -4327,7 +4327,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     }
 
     // Marketplace full-bleed mode: AI generates complete images with text baked in
-    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed;
+    // Extreme mode also generates full-bleed images with text baked in by the AI
+    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
     if (isMarketplaceFullBleed) return renderMarketplaceFullBleedCard(card, index, isExport);
 
     const isBetaTest2 = activePresetId === 'beta-test2';

@@ -5059,7 +5059,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
 
             {/* Center area: phone + inline editor panel */}
-            <div className="flex flex-row items-start justify-center gap-0 md:gap-0 flex-1 relative z-10">
+            <div className="flex flex-row items-start justify-center gap-0 md:gap-6 flex-1 relative z-10">
 
             {/* Tools Sidebar - slides in from left on desktop */}
             <AnimatePresence>

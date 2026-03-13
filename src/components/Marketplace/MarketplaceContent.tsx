@@ -37,16 +37,35 @@ const MarketplaceContent: React.FC = () => {
   const [editStyle, setEditStyle] = useState<MarketplaceStyle | null>(null);
 
   useEffect(() => {
-    fetchStyles();
     if (user) {
       fetchPurchased();
       checkAdmin();
+    } else {
+      fetchStyles();
     }
   }, [user]);
+
+  // Refetch styles when admin status is determined (to include hidden ones)
+  useEffect(() => {
+    fetchStyles();
+  }, [isAdmin]);
 
   const checkAdmin = async () => {
     const { data } = await supabase.auth.getUser();
     setIsAdmin(data.user?.email === ADMIN_EMAIL);
+  };
+
+  const toggleStyleVisibility = async (styleId: string, currentlyActive: boolean) => {
+    const { error } = await supabase
+      .from('marketplace_styles')
+      .update({ is_active: !currentlyActive })
+      .eq('id', styleId);
+    if (error) {
+      toast.error('Erro ao alterar visibilidade');
+    } else {
+      toast.success(currentlyActive ? 'Estilo ocultado' : 'Estilo visível novamente');
+      fetchStyles();
+    }
   };
 
   const fetchStyles = async () => {

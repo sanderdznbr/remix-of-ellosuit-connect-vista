@@ -2161,6 +2161,29 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         );
       }
 
+      // === FONT REFERENCE: Convert Envato preview to base64 for carousel AI ===
+      let carouselFontBase64: string | undefined;
+      let carouselFontName: string | undefined;
+      if (extremeSelectedFont?.previewUrl) {
+        try {
+          setImageGenProgress('🔤 Processando referência de fonte...');
+          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          if (fontResp.ok) {
+            const blob = await fontResp.blob();
+            if (!blob.type.includes('text/html')) {
+              carouselFontBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              carouselFontName = extremeSelectedFont.name;
+              console.log('[CAROUSEL] Font reference converted to base64:', carouselFontName);
+            }
+          }
+        } catch (e) { console.warn('[CAROUSEL] Font base64 conversion failed:', e); }
+      }
+
       let webImageIndex = 0;
       const imageFactories: { index: number; factory: () => Promise<string | null>; prompt: string }[] = [];
       let totalImages = 0;

@@ -6549,7 +6549,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Lock overlay for guest thumbnails */}
                     {isCardLocked(i) && (
                       <div className="absolute inset-0 rounded-xl flex items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
-                        <Lock className="w-4 h-4" style={{ color: 'rgba(139,92,246,0.7)' }} />
+                        <Lock className="w-4 h-4" style={{ color: `rgba(${themeRgb},0.7)` }} />
                       </div>
                     )}
                     {/* Delete button - top right */}

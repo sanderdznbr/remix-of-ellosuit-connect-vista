@@ -225,7 +225,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden h-full" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
       {/* Orb — centered on screen */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper w-[170vw] h-[170vw] md:w-[900px] md:h-[900px]">

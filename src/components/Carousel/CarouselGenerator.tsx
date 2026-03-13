@@ -177,6 +177,9 @@ const CarouselGenerator: React.FC = () => {
   // Wizard mode: simple vs advanced
   const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme'>('simple');
   const [continuousMode, setContinuousMode] = useState(false);
+  const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
+  const [extremeVision, setExtremeVision] = useState('');
+  const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

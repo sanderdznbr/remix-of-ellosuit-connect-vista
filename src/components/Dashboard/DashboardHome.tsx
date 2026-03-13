@@ -81,14 +81,26 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
+    let animFrame = 0;
+    let targetScroll = el.scrollLeft;
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         e.preventDefault();
-        el.scrollBy({ left: e.deltaY, behavior: 'smooth' });
+        targetScroll += e.deltaY;
+        targetScroll = Math.max(0, Math.min(targetScroll, el.scrollWidth - el.clientWidth));
+        if (!animFrame) {
+          const step = () => {
+            const diff = targetScroll - el.scrollLeft;
+            if (Math.abs(diff) < 0.5) { el.scrollLeft = targetScroll; animFrame = 0; return; }
+            el.scrollLeft += diff * 0.15;
+            animFrame = requestAnimationFrame(step);
+          };
+          animFrame = requestAnimationFrame(step);
+        }
       }
     };
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    return () => { el.removeEventListener('wheel', onWheel); if (animFrame) cancelAnimationFrame(animFrame); };
   }, [recentCarousels.length]);
 
   // ===== ACTIVE JOBS: Check for pending cloud generation jobs =====

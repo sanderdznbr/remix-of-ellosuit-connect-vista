@@ -51,11 +51,17 @@ const MarketplaceContent: React.FC = () => {
 
   const fetchStyles = async () => {
     setLoading(true);
-    const { data } = await supabase
+    // Admin sees ALL styles (including hidden ones), normal users only see active
+    const query = supabase
       .from('marketplace_styles')
       .select('*')
-      .eq('is_active', true)
       .order('sort_order', { ascending: true });
+    
+    if (!isAdmin) {
+      query.eq('is_active', true);
+    }
+    
+    const { data } = await query;
     setStyles((data as any[]) || []);
     setLoading(false);
   };

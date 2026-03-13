@@ -353,6 +353,113 @@ Retorne APENAS a legenda pronta, sem explicações.`;
       });
     }
 
+    // === PUBLISH INSTAGRAM DIRECT (using META_GRAPH_ACCESS_TOKEN secret) ===
+    if (action === "publish_instagram_direct") {
+      const { imageUrls, caption } = params;
+      const accessToken = Deno.env.get("META_GRAPH_ACCESS_TOKEN");
+      if (!accessToken) throw new Error("META_GRAPH_ACCESS_TOKEN not configured");
+
+      // 1. Discover Instagram Business Account via pages
+      const pagesRes = await fetch(`https://graph.facebook.com/v25.0/me/accounts?access_token=${accessToken}`);
+      const pagesData = await pagesRes.json();
+      if (pagesData.error) throw new Error(`Pages fetch failed: ${pagesData.error.message}`);
+      
+      const pages = pagesData.data || [];
+      if (pages.length === 0) throw new Error("No Facebook Pages found for this token");
+
+      // Find first page with an Instagram Business Account
+      let igId: string | null = null;
+      let pageToken: string = accessToken;
+      
+      for (const page of pages) {
+        const igRes = await fetch(`https://graph.facebook.com/v25.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token || accessToken}`);
+        const igData = await igRes.json();
+        if (igData.instagram_business_account?.id) {
+          igId = igData.instagram_business_account.id;
+          pageToken = page.access_token || accessToken;
+          break;
+        }
+      }
+
+      if (!igId) throw new Error("No Instagram Business Account found linked to any Facebook Page");
+
+      // 2. Publish
+      if (imageUrls.length > 1) {
+        // Carousel
+        const childIds: string[] = [];
+        for (const url of imageUrls) {
+          const res = await fetch(`https://graph.facebook.com/v25.0/${igId}/media`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              image_url: url,
+              is_carousel_item: true,
+              access_token: pageToken,
+            }),
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(`Media upload failed: ${data.error.message}`);
+          childIds.push(data.id);
+        }
+
+        const carouselRes = await fetch(`https://graph.facebook.com/v25.0/${igId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            media_type: "CAROUSEL",
+            children: childIds.join(","),
+            caption: caption || "",
+            access_token: pageToken,
+          }),
+        });
+        const carouselData = await carouselRes.json();
+        if (carouselData.error) throw new Error(`Carousel creation failed: ${carouselData.error.message}`);
+
+        const publishRes = await fetch(`https://graph.facebook.com/v25.0/${igId}/media_publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            creation_id: carouselData.id,
+            access_token: pageToken,
+          }),
+        });
+        const publishData = await publishRes.json();
+        if (publishData.error) throw new Error(`Publish failed: ${publishData.error.message}`);
+
+        return new Response(JSON.stringify({ success: true, postId: publishData.id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } else {
+        // Single image
+        const createRes = await fetch(`https://graph.facebook.com/v25.0/${igId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_url: imageUrls[0],
+            caption: caption || "",
+            access_token: pageToken,
+          }),
+        });
+        const createData = await createRes.json();
+        if (createData.error) throw new Error(createData.error.message);
+
+        const publishRes = await fetch(`https://graph.facebook.com/v25.0/${igId}/media_publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            creation_id: createData.id,
+            access_token: pageToken,
+          }),
+        });
+        const publishData = await publishRes.json();
+        if (publishData.error) throw new Error(publishData.error.message);
+
+        return new Response(JSON.stringify({ success: true, postId: publishData.id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

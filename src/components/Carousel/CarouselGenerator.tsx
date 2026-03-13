@@ -5689,7 +5689,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <button
                     onClick={() => setShowInlineEditor(!showInlineEditor)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all hover:scale-110"
-                    style={{ borderColor: showInlineEditor ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.2)', backgroundColor: showInlineEditor ? 'rgba(139,92,246,0.25)' : 'rgba(20,20,30,0.85)' }}
+                    style={{ borderColor: showInlineEditor ? `rgba(${themeRgb},0.5)` : 'rgba(255,255,255,0.2)', backgroundColor: showInlineEditor ? `rgba(${themeRgb},0.25)` : 'rgba(20,20,30,0.85)' }}
                     aria-label="Editar card"
                   >
                     <Pencil className="h-4.5 w-4.5" />

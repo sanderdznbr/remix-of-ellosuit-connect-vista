@@ -6164,7 +6164,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   >
                     <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-purple-400" />
+                        <FileText className="h-4 w-4" style={{ color: themeHex }} />
                         <h3 className="text-sm font-semibold text-white">Legenda</h3>
                       </div>
                       <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">

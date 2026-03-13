@@ -6420,7 +6420,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <div className="flex items-center gap-3">
                           <input type="range" min={4} max={20} value={carouselFromCoverCount}
                             onChange={(e) => { setCarouselFromCoverCount(Number(e.target.value)); setCoverCardTexts(Array.from({ length: Number(e.target.value) }, (_, i) => coverCardTexts[i] || { title: '', body: '' })); }}
-                            className="flex-1 accent-purple-500" />
+                            className="flex-1" style={{ accentColor: themeHex }} />
                           <span className="text-xl font-bold text-white w-8 text-center">{carouselFromCoverCount}</span>
                         </div>
                         <div className="flex gap-1.5 justify-center flex-wrap">

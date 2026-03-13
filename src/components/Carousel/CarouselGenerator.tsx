@@ -2603,9 +2603,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         const photos = extremeFormValues[field.id] as string[] | undefined;
         if (!photos?.length) return [];
         const normalized = `${field.label} ${field.id}`.toLowerCase();
-        const category: ReferenceImage['category'] = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized)
-          ? 'product'
-          : 'style';
+        const isFace = /pessoa|rosto|face|foto.*pessoa|retrato|portrait|selfie|model|cliente|character|personagem|humano|human/.test(normalized);
+        const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized);
+        const category: ReferenceImage['category'] = isFace ? 'face' : isProduct ? 'product' : 'style';
         return photos.map((url, idx) => ({
           url,
           thumb: url,

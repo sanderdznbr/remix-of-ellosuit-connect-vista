@@ -2998,18 +2998,18 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
 
         const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
         const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+        const mergedLoop2ProductRefs = [...productRefUrls, ...loop2ExtremeProductRefs];
         const marketplaceRefUrls: string[] = [];
         if (activeMarketplaceStyle?._previewImages?.length) {
           const origin = window.location.origin;
           const allPreviews = (activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-          // Limit marketplace preview images to avoid overwhelming the model
           marketplaceRefUrls.push(...allPreviews.slice(0, 8));
         }
 
         // Use the cover image as PRIORITY style reference — it defines the visual series
         const coverStyleRef = coverCard.imageUrl && !coverCard.imageUrl.startsWith('data:') ? [coverCard.imageUrl] : [];
         // Cap total style refs to 8 max — cover image FIRST for highest priority
-        const allStyleCandidates = [...coverStyleRef, ...styleRefUrls, ...marketplaceRefUrls];
+        const allStyleCandidates = [...coverStyleRef, ...styleRefUrls, ...loop2ExtremeStyleRefs, ...marketplaceRefUrls];
         const capturedStyleRefs = allStyleCandidates.length > 0 ? allStyleCandidates.slice(0, 8) : undefined;
 
         // For text-only cards, don't send face references

@@ -6732,16 +6732,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
           onClose={() => setCorrectionCardIndex(null)}
           onImageEdited={(newUrl) => {
+            // Store previous image for undo
+            const prevUrl = carouselData.cards[correctionCardIndex].imageUrl!;
+            setCorrectionUndoStack(prev => [...prev, { cardIndex: correctionCardIndex, imageUrl: prevUrl }]);
             setCardImage(correctionCardIndex, newUrl);
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
           }}
           editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string, attachmentBase64?: string) => {
-            // Convert image and mask to base64
             const toBase64 = async (url: string): Promise<string> => {
-              if (url.startsWith('data:')) {
-                return url.replace(/^data:[^;]+;base64,/, '');
-              }
+              if (url.startsWith('data:')) return url.replace(/^data:[^;]+;base64,/, '');
               const res = await fetch(url);
               const blob = await res.blob();
               return new Promise((resolve, reject) => {
@@ -6778,7 +6778,74 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             const result = await response.json();
             if (!result.resultBase64) throw new Error('Nenhuma imagem retornada');
 
-            return `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
+            const aiResultDataUrl = `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
+
+            // === COMPOSITE: paste only masked regions from AI result onto original ===
+            const compositeResult = await new Promise<string>((resolve, reject) => {
+              const origImg = new window.Image();
+              origImg.crossOrigin = 'anonymous';
+              const aiImg = new window.Image();
+              const maskImg = new window.Image();
+
+              let loaded = 0;
+              const onAllLoaded = () => {
+                loaded++;
+                if (loaded < 3) return;
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = origImg.naturalWidth;
+                  canvas.height = origImg.naturalHeight;
+                  const ctx = canvas.getContext('2d')!;
+
+                  // Draw original
+                  ctx.drawImage(origImg, 0, 0, canvas.width, canvas.height);
+
+                  // Draw AI result scaled to same size
+                  const tempCanvas = document.createElement('canvas');
+                  tempCanvas.width = canvas.width;
+                  tempCanvas.height = canvas.height;
+                  const tempCtx = tempCanvas.getContext('2d')!;
+                  tempCtx.drawImage(aiImg, 0, 0, canvas.width, canvas.height);
+
+                  // Use mask to copy only white regions from AI result
+                  const maskCanvas = document.createElement('canvas');
+                  maskCanvas.width = canvas.width;
+                  maskCanvas.height = canvas.height;
+                  const maskCtx = maskCanvas.getContext('2d')!;
+                  maskCtx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
+
+                  const maskData = maskCtx.getImageData(0, 0, canvas.width, canvas.height);
+                  const aiData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+                  const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                  for (let i = 0; i < maskData.data.length; i += 4) {
+                    // If mask pixel is white (edited region), use AI pixel
+                    if (maskData.data[i] > 128) {
+                      origData.data[i] = aiData.data[i];
+                      origData.data[i + 1] = aiData.data[i + 1];
+                      origData.data[i + 2] = aiData.data[i + 2];
+                      origData.data[i + 3] = aiData.data[i + 3];
+                    }
+                  }
+
+                  ctx.putImageData(origData, 0, 0);
+                  resolve(canvas.toDataURL('image/png'));
+                } catch (e) { reject(e); }
+              };
+
+              origImg.onload = onAllLoaded;
+              aiImg.onload = onAllLoaded;
+              maskImg.onload = onAllLoaded;
+              origImg.onerror = reject;
+              aiImg.onerror = reject;
+              maskImg.onerror = reject;
+
+              origImg.src = originalUrl.startsWith('data:') ? originalUrl : originalUrl;
+              aiImg.src = aiResultDataUrl;
+              maskImg.src = maskDataUrl;
+            });
+
+            return compositeResult;
           }}
         />
       )}

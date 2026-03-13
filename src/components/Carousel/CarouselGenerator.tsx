@@ -6439,9 +6439,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       {/* AI fill button */}
                       <button onClick={fillCoverTextsWithAI} disabled={fillingCoverTexts || !topic.trim()}
                         className="flex items-center gap-2 w-full p-2.5 rounded-xl transition-all text-left"
-                        style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
-                        <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                          {fillingCoverTexts ? <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-400" /> : <Wand2 className="h-3.5 w-3.5 text-purple-400" />}
+                        style={{ backgroundColor: `rgba(${themeRgb},0.08)`, border: `1px solid rgba(${themeRgb},0.2)` }}>
+                        <div className="p-1.5 rounded-lg" style={{ backgroundColor: `rgba(${themeRgb},0.15)` }}>
+                          {fillingCoverTexts ? <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: themeHex }} /> : <Wand2 className="h-3.5 w-3.5" style={{ color: themeHex }} />}
                         </div>
                         <div className="flex-1">
                           <p className="text-xs font-medium text-white/80">{fillingCoverTexts ? 'Gerando...' : 'Preencher com IA'}</p>

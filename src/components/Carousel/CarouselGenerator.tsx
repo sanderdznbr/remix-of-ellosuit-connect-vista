@@ -3623,7 +3623,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         marketplaceRefUrls.push(...allPreviews);
       }
       
-      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls, ...existingCardImages];
+      const allStyleRefs = [...styleRefUrls, ...extremeStyleRefs, ...productRefUrls, ...extremeProductRefs, ...marketplaceRefUrls, ...existingCardImages];
       
       try {
         // Retry image generation with progressive fallback to avoid blank cards

@@ -5556,48 +5556,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       {isGuest ? 'Assine para baixar' : 'Exportar'}
                     </button>
 
-                    {/* Stories */}
-                    {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
-                      <button onClick={generateStoriesImage} disabled={generatingStories}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/80 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-50 w-full">
-                        {generatingStories ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4 text-blue-400" />}
-                        {generatingStories ? 'Gerando...' : 'Converter em Stories'}
-                      </button>
-                    )}
+                    {/* Stories - hidden */}
 
                     {/* Generate carousel from cover */}
-                    {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
-                      <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-purple-300 hover:text-purple-200 hover:bg-white/[0.06] transition-all w-full">
-                        <Sparkles className="h-4 w-4 text-yellow-400" /> Gerar Carrossel
-                      </button>
-                    )}
-
-                    <div className="h-px bg-white/[0.06] my-1" />
-
-                    {/* Mudar Estilo */}
-                    {!isGuest && (
-                      <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-emerald-300 hover:text-emerald-200 hover:bg-white/[0.06] transition-all w-full">
-                        <Palette className="h-4 w-4 text-emerald-400" /> Mudar Estilo
-                      </button>
-                    )}
-
-                    {/* Legenda */}
-                    <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/80 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full"
-                      style={{ backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.1)' : 'transparent' }}>
-                      <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
-                    </button>
-
-                    {/* Publicar no Instagram */}
-                    {!isGuest && (
-                      <button onClick={() => setShowPublishDialog(true)}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-pink-300 hover:text-pink-200 hover:bg-white/[0.06] transition-all w-full"
-                        style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.1), rgba(225,48,108,0.1))' }}>
-                        <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
-                      </button>
-                    )}
 
                     <div className="h-px bg-white/[0.06] my-1" />
 
@@ -5630,14 +5591,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     )}
 
-                    {/* Ver prompt usado */}
-                    {!isGuest && (() => { const c = carouselData.cards[activeCardIndex]; return c && (c.generatedPrompt || c.imagePrompt || c.isAiImage); })() && (
-                      <button
-                        onClick={() => { console.log('[PROMPT] View prompt clicked, cardIndex:', activeCardIndex); setViewPromptCard(activeCardIndex); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all w-full">
-                        <FileText className="h-4 w-4 text-yellow-400" /> Ver Prompt
-                      </button>
-                    )}
+                    {/* Ver prompt usado - hidden */}
 
                     {/* Corrigir área */}
                     {!isGuest && (

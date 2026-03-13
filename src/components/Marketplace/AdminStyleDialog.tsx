@@ -83,6 +83,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     is_featured: false, is_free: false, strict_instructions: '',
     is_real_estate: false,
     real_estate_mode: 'single' as 'single' | 'multiple',
+    is_beta: false,
   });
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [refPreviews, setRefPreviews] = useState<string[]>([]);

@@ -37,7 +37,7 @@ const StepBranding: React.FC<Props> = ({
         </div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`p-2.5 rounded-xl transition-all cursor-pointer ${showAdvanced ? 'bg-purple-500/20 text-purple-400' : 'bg-white/[0.04] text-white/30 hover:text-white/50 hover:bg-white/[0.08]'}`}
+          className={`p-2.5 rounded-xl transition-all cursor-pointer ${showAdvanced ? (isExtreme ? 'bg-orange-500/20 text-orange-400' : 'bg-purple-500/20 text-purple-400') : 'bg-white/[0.04] text-white/30 hover:text-white/50 hover:bg-white/[0.08]'}`}
           title="Configurações avançadas de cabeçalho"
         >
           <Settings2 className="h-4 w-4" />

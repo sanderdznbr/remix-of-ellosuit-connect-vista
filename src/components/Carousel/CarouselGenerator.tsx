@@ -1488,6 +1488,29 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
       const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
 
+      // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
+      let fontBase64: string | undefined;
+      let fontName: string | undefined;
+      if (extremeSelectedFont?.previewUrl) {
+        try {
+          setImageGenProgress('🔤 Processando referência de fonte...');
+          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          if (fontResp.ok) {
+            const blob = await fontResp.blob();
+            if (!blob.type.includes('text/html')) {
+              fontBase64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+              fontName = extremeSelectedFont.name;
+              console.log('[SINGLE_POST] Font reference converted to base64:', fontName);
+            }
+          }
+        } catch (e) { console.warn('[SINGLE_POST] Font base64 conversion failed:', e); }
+      }
+
       const imageUrl = await generateImage({
         prompt: finalPrompt,
         faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
@@ -1495,6 +1518,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         referenceImageUrls: effectiveProductRefs,
         negativePrompt: negPrompt,
         facePersonsMetadata: singlePostFaceMeta,
+        fontReferenceImage: fontBase64,
+        fontReferenceName: fontName,
       });
 
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem do post');

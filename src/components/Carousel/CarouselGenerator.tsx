@@ -2381,6 +2381,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
               referenceImageUrls: capturedProductRefs,
               negativePrompt: capturedNegative,
               facePersonsMetadata: cardFacePersonsMeta,
+              fontReferenceImage: carouselFontBase64,
+              fontReferenceName: carouselFontName,
             }).catch(err => { console.error('Image gen error for card', i, err); return null; }),
           });
         }

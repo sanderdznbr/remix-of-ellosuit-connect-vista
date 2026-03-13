@@ -452,6 +452,7 @@ const CarouselGenerator: React.FC = () => {
     setExtremeAnalysis(null);
     setExtremeVision('');
     setExtremeFormValues({});
+    setExtremeSelectedFont(null);
     setKeywords('');
     setCardCount(5);
     setImageCardCount(4);

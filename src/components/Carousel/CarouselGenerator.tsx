@@ -5791,6 +5791,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: showCaptionPanel ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)' }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda
               </button>
+              {/* Corrigir área button */}
+              {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
+                <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all"
+                  style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                  <Pencil className="h-3.5 w-3.5" /> Corrigir
+                </button>
+              )}
               <button onClick={() => { resetWizardState(); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>

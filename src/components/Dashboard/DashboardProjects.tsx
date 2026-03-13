@@ -153,7 +153,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f', WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
       {/* Header */}
       <div className="px-4 md:px-8 pt-6 md:pt-8 pb-4">
         <motion.h1

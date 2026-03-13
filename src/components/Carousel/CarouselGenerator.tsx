@@ -6455,7 +6455,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         const label = i === 0 ? 'Card 1 — Capa' : i === carouselFromCoverCount - 1 ? `Card ${i + 1} — CTA` : `Card ${i + 1}`;
                         const hasContent = (cardText.title || '').trim() || (cardText.body || '').trim();
                         return (
-                          <div key={i} className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${hasContent ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)'}` }}>
+                          <div key={i} className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${hasContent ? `rgba(${themeRgb},0.25)` : 'rgba(255,255,255,0.06)'}` }}>
                             <div className="flex items-center gap-2">
                               <span className="text-[11px] font-medium text-white/60">{label}</span>
                               {hasContent && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">editado</span>}

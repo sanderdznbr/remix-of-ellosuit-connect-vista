@@ -1355,11 +1355,13 @@ const CarouselGenerator: React.FC = () => {
 
       // === EXTREME MODE: Extract photos from dynamic form and merge ===
       const extremeRefs = getExtremeFormPhotoRefs();
+      const extremeFaceRefs = extremeRefs.filter(r => r.category === 'face').map(r => r.url);
       const extremeProductRefs = extremeRefs.filter(r => r.category === 'product').map(r => r.url);
       const extremeStyleRefs = extremeRefs.filter(r => r.category === 'style').map(r => r.url);
+      const mergedFaceRefs = [...faceRefUrls, ...extremeFaceRefs];
       const mergedProductRefs = [...productRefUrls, ...extremeProductRefs];
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs];
-      console.log('[SINGLE_POST] Extreme refs:', { product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
+      console.log('[SINGLE_POST] Extreme refs:', { face: extremeFaceRefs.length, product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];

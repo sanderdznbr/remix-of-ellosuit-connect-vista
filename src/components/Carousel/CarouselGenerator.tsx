@@ -1348,11 +1348,16 @@ const CarouselGenerator: React.FC = () => {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        // Limit to 8 style refs to maintain quality
         marketplaceRefUrls.push(...allPreviews.slice(0, 8));
       }
 
-      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+      // === EXTREME MODE: Extract photos from dynamic form and merge ===
+      const extremeRefs = getExtremeFormPhotoRefs();
+      const extremeProductRefs = extremeRefs.filter(r => r.category === 'product').map(r => r.url);
+      const extremeStyleRefs = extremeRefs.filter(r => r.category === 'style').map(r => r.url);
+      const mergedProductRefs = [...productRefUrls, ...extremeProductRefs];
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs];
+      console.log('[SINGLE_POST] Extreme refs:', { product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];
@@ -1395,6 +1400,12 @@ const CarouselGenerator: React.FC = () => {
       }
       if (logoBrandColors.length > 0) {
         promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
+      }
+
+      // === EXTREME MODE: Add vision context to prompt ===
+      const extremeContext = buildExtremePromptContext();
+      if (extremeContext) {
+        promptParts.push(extremeContext);
       }
 
       // === REAL ESTATE BLEND DETECTION (triple-source: snapshot > ref > state) ===
@@ -1450,7 +1461,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
       // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
-      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (productRefUrls.length > 0 ? productRefUrls : undefined);
+      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
 
       const imageUrl = await generateImage({
         prompt: finalPrompt,
@@ -2187,7 +2198,11 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
           const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-          const allStyleRefs = [...styleRefUrls];
+          // === EXTREME MODE: Inject uploaded photos as product/style refs ===
+          const carouselExtremeRefs = getExtremeFormPhotoRefs();
+          const carouselExtremeProductRefs = carouselExtremeRefs.filter(r => r.category === 'product').map(r => r.url);
+          const carouselExtremeStyleRefs = carouselExtremeRefs.filter(r => r.category === 'style').map(r => r.url);
+          const allStyleRefs = [...styleRefUrls, ...carouselExtremeStyleRefs];
           
           const marketplaceRefUrls: string[] = [];
           if (activeMarketplaceStyleRef.current?._previewImages?.length) {
@@ -2197,7 +2212,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             marketplaceRefUrls.push(...allPreviews);
           }
           
-          let capturedPrompt = buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          // Add Extreme vision context to each card's prompt
+          const carouselExtremeCtx = buildExtremePromptContext();
+          let capturedPrompt = buildImagePrompt(imgPrompt + (carouselExtremeCtx || '')) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
           
           if (!hasFaceRefsForGen && peopleMode !== 'none') {
             const shouldHaveRandomPerson = randomPeopleCardIndices.has(i);
@@ -2248,7 +2265,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
               }
             }
           } else {
-            capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
+            const mergedProductUrls = [...productRefUrls, ...carouselExtremeProductRefs];
+            capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
           }
           
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
@@ -2574,6 +2592,54 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
     }
   };
 
+  // ===== HELPER: Extract Extreme form photo refs =====
+  const getExtremeFormPhotoRefs = useCallback((): ReferenceImage[] => {
+    if (wizardMode !== 'extreme' || !extremeAnalysis) return [];
+    return extremeAnalysis.fields
+      .filter((field) => field.type === 'photo_upload')
+      .flatMap((field) => {
+        const photos = extremeFormValues[field.id] as string[] | undefined;
+        if (!photos?.length) return [];
+        const normalized = `${field.label} ${field.id}`.toLowerCase();
+        const category: ReferenceImage['category'] = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized)
+          ? 'product'
+          : 'style';
+        return photos.map((url, idx) => ({
+          url,
+          thumb: url,
+          label: `${field.label} ${idx + 1}`,
+          source: 'upload' as const,
+          category,
+        }));
+      });
+  }, [wizardMode, extremeAnalysis, extremeFormValues]);
+
+  // ===== HELPER: Build Extreme vision context for prompt enrichment =====
+  const buildExtremePromptContext = useCallback((): string => {
+    if (wizardMode !== 'extreme' || !extremeAnalysis) return '';
+    const parts: string[] = [];
+    parts.push(`\n\n🔥 MODO EXTREME — VISÃO DO USUÁRIO (PRIORIDADE MÁXIMA):`);
+    parts.push(`DESCRIÇÃO DA VISÃO: "${extremeVision}"`);
+    parts.push(`RESUMO DA IA: ${extremeAnalysis.summary}`);
+    // Add all non-photo form values as context
+    for (const field of extremeAnalysis.fields) {
+      if (field.type === 'photo_upload') continue;
+      const val = extremeFormValues[field.id];
+      if (val && typeof val === 'string' && val.trim()) {
+        parts.push(`${field.label}: ${val}`);
+      }
+    }
+    // Smart detection
+    const visionLower = extremeVision.toLowerCase();
+    if (/app|aplicativo|celular|smartphone|tela|print|screenshot/i.test(visionLower)) {
+      parts.push(`📱 MOCKUP OBRIGATÓRIO: O usuário mencionou um aplicativo/tela. As imagens de referência são SCREENSHOTS REAIS. Crie um mockup PROFISSIONAL de iPhone com o screenshot EXATO na tela. Composição premium de lançamento de app.`);
+    }
+    if (/logo|marca|logotipo|logomarca/i.test(visionLower)) {
+      parts.push(`🏷️ LOGO OBRIGATÓRIO: O usuário forneceu seu logo. Ele DEVE aparecer no design final, posicionado de forma elegante e profissional.`);
+    }
+    return parts.join('\n');
+  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues]);
+
 
   // ===== FILL COVER MODAL TEXTS WITH AI =====
   const fillCoverTextsWithAI = async () => {
@@ -2873,6 +2939,10 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         ? activeFP.map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length }))
         : undefined;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      // === EXTREME MODE: Inject refs for second carousel gen loop ===
+      const loop2ExtremeRefs = getExtremeFormPhotoRefs();
+      const loop2ExtremeProductRefs = loop2ExtremeRefs.filter(r => r.category === 'product').map(r => r.url);
+      const loop2ExtremeStyleRefs = loop2ExtremeRefs.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const updatedCards = [...cards];
       const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
@@ -2928,30 +2998,31 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
 
         const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
         const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+        const mergedLoop2ProductRefs = [...productRefUrls, ...loop2ExtremeProductRefs];
         const marketplaceRefUrls: string[] = [];
         if (activeMarketplaceStyle?._previewImages?.length) {
           const origin = window.location.origin;
           const allPreviews = (activeMarketplaceStyle._previewImages as string[]).map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-          // Limit marketplace preview images to avoid overwhelming the model
           marketplaceRefUrls.push(...allPreviews.slice(0, 8));
         }
 
         // Use the cover image as PRIORITY style reference — it defines the visual series
         const coverStyleRef = coverCard.imageUrl && !coverCard.imageUrl.startsWith('data:') ? [coverCard.imageUrl] : [];
         // Cap total style refs to 8 max — cover image FIRST for highest priority
-        const allStyleCandidates = [...coverStyleRef, ...styleRefUrls, ...marketplaceRefUrls];
+        const allStyleCandidates = [...coverStyleRef, ...styleRefUrls, ...loop2ExtremeStyleRefs, ...marketplaceRefUrls];
         const capturedStyleRefs = allStyleCandidates.length > 0 ? allStyleCandidates.slice(0, 8) : undefined;
 
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
 
+        const loop2ExtremeCtx = buildExtremePromptContext();
         imageFactories.push({
           index: i,
           factory: () => generateImage({
-            prompt: buildImagePrompt(imgPrompt) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            prompt: buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
             faceReferenceUrls: cardFaceRefs,
             styleReferenceUrls: capturedStyleRefs,
-            referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
+            referenceImageUrls: mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined,
             negativePrompt: finalNegative + (!showPerson && faceRefUrls.length > 0 ? ', no people, no faces, no portraits' : ''),
             facePersonsMetadata: showPerson ? facePersonsMeta : undefined,
           }).catch(err => { console.error('Image gen error for card', i, err); return null; }),

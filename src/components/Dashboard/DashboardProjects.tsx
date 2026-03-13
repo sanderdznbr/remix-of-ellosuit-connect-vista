@@ -43,7 +43,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
         let query = supabase
           .from('generated_carousels')
-          .select('id, title, topic, created_at, card_count, style_config, cover_url, is_starred')
+          .select('id, title, topic, created_at, card_count, cover_url, is_starred')
           .eq('company_id', companyData.company_id);
 
         if (filterMode === 'starred') {
@@ -70,19 +70,29 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    e.preventDefault();
     if (deleteConfirmId === id) {
+      const carouselToDelete = carousels.find(c => c.id === id);
       setCarousels(prev => prev.filter(c => c.id !== id));
       setDeleteConfirmId(null);
-      const { error } = await supabase.from('generated_carousels').delete().eq('id', id);
-      if (error) {
+      try {
+        const { error } = await supabase.from('generated_carousels').delete().eq('id', id);
+        if (error) {
+          // Restore on failure
+          if (carouselToDelete) setCarousels(prev => [...prev, carouselToDelete]);
+          toast.error('Erro ao excluir projeto');
+          console.error('Delete error:', error);
+        } else {
+          toast.success('Projeto excluído');
+        }
+      } catch (err) {
+        if (carouselToDelete) setCarousels(prev => [...prev, carouselToDelete]);
         toast.error('Erro ao excluir projeto');
-        console.error(error);
-      } else {
-        toast.success('Projeto excluído');
+        console.error('Delete exception:', err);
       }
     } else {
       setDeleteConfirmId(id);
-      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 5000);
     }
   };
 
@@ -235,8 +245,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
           {/* Project cards */}
           {sorted.map((item) => {
-            const sc = item.style_config || {};
-            const cover = item.cover_url;
+            // Skip base64 covers (they're too large and cause slowness)
+            const cover = item.cover_url && !item.cover_url.startsWith('data:') ? item.cover_url : null;
 
             if (viewMode === 'list') {
               return (
@@ -249,11 +259,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   <div
                     className="w-12 h-14 rounded-lg shrink-0 overflow-hidden relative"
                     style={{
-                      background: !cover
-                        ? sc.bgColor
-                          ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                          : 'rgba(255,255,255,0.06)'
-                        : 'rgba(255,255,255,0.06)',
+                      background: cover ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.06)',
                     }}
                   >
                     {cover && (
@@ -300,11 +306,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                 key={item.id}
                 className="rounded-xl overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[4/5]"
                 style={{
-                  background: !cover
-                    ? sc.bgColor
-                      ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                      : 'rgba(255,255,255,0.04)'
-                    : 'rgba(255,255,255,0.04)',
+                  background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
                 onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}

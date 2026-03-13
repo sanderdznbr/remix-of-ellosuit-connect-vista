@@ -23,7 +23,10 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandCol
     const updates: Record<string, any> = {};
     let colorIdx = 0;
     for (const field of colorFields) {
-      if (!values[field.id]) {
+      // Always overwrite with brand colors (even if previously set to a default)
+      const currentVal = values[field.id] as string | undefined;
+      const isDefault = !currentVal || currentVal === '#ff6600';
+      if (isDefault) {
         updates[field.id] = brandColors[colorIdx % brandColors.length];
         colorIdx++;
       }

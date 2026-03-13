@@ -226,15 +226,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden h-full" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Orb — centered higher on screen */}
-      <div className="absolute top-[90%] md:top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+      {/* Orb — centered on screen */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <div className="carousel-loader-wrapper w-[170vw] h-[170vw] md:w-[900px] md:h-[900px]">
           <div className="carousel-loader-spinner" />
         </div>
       </div>
 
       {/* Center content — title + input */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 min-h-0 pb-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 min-h-0">
         <motion.h1
           className="text-2xl md:text-4xl font-semibold leading-snug mb-3"
           initial={{ opacity: 0, y: 20 }}

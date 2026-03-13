@@ -5760,7 +5760,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="rounded-[3rem] overflow-hidden" style={{
                 border: '3px solid rgba(255,255,255,0.1)',
                 background: '#000',
-                boxShadow: '0 0 80px rgba(139,92,246,0.15), 0 0 2px rgba(255,255,255,0.1) inset',
+                boxShadow: `0 0 80px rgba(${themeRgb},0.18), 0 0 2px rgba(255,255,255,0.1) inset`,
               }}>
                 {/* Notch */}
                 <div className="flex justify-center pt-3 pb-1" style={{ backgroundColor: '#000' }}>

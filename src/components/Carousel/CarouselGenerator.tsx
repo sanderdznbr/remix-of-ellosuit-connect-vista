@@ -1402,6 +1402,12 @@ const CarouselGenerator: React.FC = () => {
         promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
       }
 
+      // === EXTREME MODE: Add vision context to prompt ===
+      const extremeContext = buildExtremePromptContext();
+      if (extremeContext) {
+        promptParts.push(extremeContext);
+      }
+
       // === REAL ESTATE BLEND DETECTION (triple-source: snapshot > ref > state) ===
       const snapshot = generationSnapshotRef.current;
       const snapshotIsRealEstate = snapshot?.isRealEstate ?? isRealEstateStyle;

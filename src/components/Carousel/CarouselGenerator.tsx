@@ -345,6 +345,7 @@ const CarouselGenerator: React.FC = () => {
   const carouselDataRef = useRef<CarouselData | null>(null);
   const skipCloudRef = useRef(false);
   const generatingRef = useRef(false);
+  const pendingExtremeRefsRef = useRef<ReferenceImage[]>([]);
 
   // DEFINITIVE FIX: Generation snapshot ref — captures ALL critical data at click time
   // This eliminates ALL stale closure issues because generateContent reads from this snapshot

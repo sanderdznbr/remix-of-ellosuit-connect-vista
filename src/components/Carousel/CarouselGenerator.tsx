@@ -712,7 +712,13 @@ const CarouselGenerator: React.FC = () => {
     showHeader,
     marketplaceStyleId: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
     marketplaceStyleName: activeMarketplaceStyle?.name || null,
-  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId]);
+    // Extreme mode settings
+    wizardMode,
+    extremeVision: wizardMode === 'extreme' ? extremeVision : undefined,
+    extremeAnalysis: wizardMode === 'extreme' ? extremeAnalysis : undefined,
+    extremeFormValues: wizardMode === 'extreme' ? extremeFormValues : undefined,
+    extremeSelectedFont: wizardMode === 'extreme' ? extremeSelectedFont : undefined,
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont]);
 
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -6299,9 +6299,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* Generate carousel from cover */}
               {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
                 <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-purple-300 hover:text-purple-200 border transition-all"
-                  style={{ borderColor: 'rgba(139,92,246,0.3)', backgroundColor: 'rgba(139,92,246,0.08)' }}>
-                  <Sparkles className="h-3.5 w-3.5 text-yellow-400" /> Gerar Carrossel
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium border transition-all"
+                  style={{ color: themeHex, borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
+                  <Sparkles className="h-3.5 w-3.5" style={{ color: themeHex }} /> Gerar Carrossel
                 </button>
               )}
               {/* Regenerate All button with mode selector */}

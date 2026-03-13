@@ -39,30 +39,40 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert creative director for social media posts. The user will describe their visual idea for a social media post/carousel. Your job is to analyze their vision and generate a dynamic form with the exact fields needed to create this specific post.
+            content: `You are an expert creative director for social media posts (Instagram). The user will describe their visual idea for a social media post/carousel. Your job is to analyze their vision and generate a dynamic form with the exact fields needed to create this specific post.
 
 RULES:
 - Generate ONLY the fields that are relevant to what the user described
 - Each field must have a clear purpose related to the user's vision
-- Include photo_upload fields when the user mentions people, products, apps, or specific visual elements
+- Include photo_upload fields when the user mentions people, products, apps, screenshots, logos, or specific visual elements that need real images
 - Include select fields for choices like style, mood, perspective, etc.
 - Always include a field for the main text/title of the post
 - Keep it focused — typically 4-8 fields, max 12
-- Field IDs must be snake_case
+- Field IDs must be snake_case and DESCRIPTIVE (e.g., "print_do_app", "logo_da_marca", "foto_do_rosto")
 - All labels and descriptions must be in Brazilian Portuguese
+
+SMART DETECTION:
+- If user mentions "app", "aplicativo", "celular", "tela": create a photo_upload for "Print do Aplicativo" and a select for phone model/mockup style
+- If user mentions "pessoa", "eu", "rosto", "montado": create a photo_upload for face reference
+- If user mentions "marca", "logo", "logotipo": create a photo_upload for logo
+- If user mentions "produto", "roupa", "comida": create a photo_upload for product photo
+- If user mentions colors or specific palette: create color fields
+- If user mentions text/title: create text fields for the exact content
+- Always think about what VISUAL ASSETS the AI will need to compose the image faithfully
 
 AVAILABLE FIELD TYPES:
 - text: single line text input
 - textarea: multi-line text
 - select: choose from options (provide options array)
-- photo_upload: image upload (for faces, products, screenshots, etc.)
+- photo_upload: image upload (for faces, products, screenshots, logos, etc.)
 - color: color picker`
           },
           {
             role: "user",
             content: `O usuário descreveu sua visão assim: "${vision}"
 
-Analise e retorne um JSON com a estrutura exata abaixo. Retorne APENAS o JSON, sem markdown, sem explicações.`
+Analise e retorne um JSON com a estrutura exata abaixo. Retorne APENAS o JSON, sem markdown, sem explicações.
+IMPORTANTE: Para campos photo_upload, use IDs descritivos como "print_app", "logo_marca", "foto_rosto", "foto_produto" — isso ajuda o sistema a saber como usar cada imagem na geração.`
           }
         ],
         tools: [

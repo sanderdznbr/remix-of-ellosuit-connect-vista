@@ -6255,7 +6255,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {contentMode !== 'single-post' && (
                       <button onClick={() => exportAllCards('png', true)}
                         className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
-                        <FileText className="h-4 w-4 text-purple-400" /> Baixar ZIP
+                        <FileText className="h-4 w-4" style={{ color: themeHex }} /> Baixar ZIP
                       </button>
                     )}
                     <button onClick={() => exportAllCards('png')}

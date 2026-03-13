@@ -5317,7 +5317,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 <Home className="w-5 h-5 text-white/60" />
               </button>
               <button
-                onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
+                onClick={() => { console.log('[EXPORT] Button clicked, isGuest:', isGuest); if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
                 disabled={exporting}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}

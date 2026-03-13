@@ -6131,6 +6131,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
                       <ImageIcon className="h-4 w-4" /> Baixar WEBP
                     </button>
+                    <div className="h-px bg-white/10 my-1" />
+                    <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"
+                      style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.15), rgba(225,48,108,0.15))' }}>
+                      <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
+                    </button>
                   </div>
                 </div>
               )}

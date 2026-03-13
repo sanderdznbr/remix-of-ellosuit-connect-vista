@@ -335,10 +335,16 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
       messageContent.push({ type: 'text', text: textPrompt });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
+      } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone profissional. NÃO altere o conteúdo da tela:` });
+      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
+        messageContent.push({ type: 'text', text: `🎨 REFERÊNCIAS VISUAIS DO USUÁRIO ABAIXO — Use estas imagens como ELEMENTOS OBRIGATÓRIOS na composição final (logos, screenshots, produtos, etc.):` });
       }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. INCORPORE-A como imagem de fundo/principal do post.` });
+      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
+        messageContent.push({ type: 'text', text: `As imagens acima são CONTEÚDO OBRIGATÓRIO do usuário. Cada uma deve aparecer fielmente no resultado final. Para screenshots de app: coloque em mockup de celular. Para logos: inclua no design. Para produtos: destaque na composição.` });
       }
 
       if (validStyleRefs.length > 0) {

@@ -306,11 +306,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                 key={item.id}
                 className="rounded-xl overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[4/5]"
                 style={{
-                  background: !cover
-                    ? sc.bgColor
-                      ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`
-                      : 'rgba(255,255,255,0.04)'
-                    : 'rgba(255,255,255,0.04)',
+                  background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
                 }}
                 onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}

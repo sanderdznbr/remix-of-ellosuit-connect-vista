@@ -712,7 +712,13 @@ const CarouselGenerator: React.FC = () => {
     showHeader,
     marketplaceStyleId: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
     marketplaceStyleName: activeMarketplaceStyle?.name || null,
-  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId]);
+    // Extreme mode settings
+    wizardMode,
+    extremeVision: wizardMode === 'extreme' ? extremeVision : undefined,
+    extremeAnalysis: wizardMode === 'extreme' ? extremeAnalysis : undefined,
+    extremeFormValues: wizardMode === 'extreme' ? extremeFormValues : undefined,
+    extremeSelectedFont: wizardMode === 'extreme' ? extremeSelectedFont : undefined,
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont]);
 
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1179,6 +1185,19 @@ const CarouselGenerator: React.FC = () => {
       if (sc.continuousMode) setContinuousMode(true); else setContinuousMode(false);
       // Restore real estate property data
       if (sc.propertyList?.length) setPropertyList(sc.propertyList);
+    }
+    // Restore extreme mode settings from generation_config
+    const gc = item.generation_config;
+    if (gc) {
+      if (gc.wizardMode === 'extreme') {
+        setWizardMode('extreme');
+        if (gc.extremeVision) setExtremeVision(gc.extremeVision);
+        if (gc.extremeAnalysis) setExtremeAnalysis(gc.extremeAnalysis);
+        if (gc.extremeFormValues) setExtremeFormValues(gc.extremeFormValues);
+        if (gc.extremeSelectedFont) setExtremeSelectedFont(gc.extremeSelectedFont);
+      } else {
+        setWizardMode(gc.wizardMode || 'simple');
+      }
     }
     setShowHistory(false);
     setActiveCardIndex(0);
@@ -2931,6 +2950,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyle ? { marketplaceStyleConfig: activeMarketplaceStyle } : {}),
+          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : {}),
           regenerateCardIndex: cardIndex,
           existingCardSummaries,
         },
@@ -3427,12 +3447,13 @@ FORBIDDEN:
           action: 'generate-content',
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount: carouselData.cards.length, // Use actual card count for proper context
+          cardCount: carouselData.cards.length,
           imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
-          regenerateCardIndex: cardIndex, // hint to backend
-          existingCardSummaries, // avoid repeating content from other cards
+          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual.' } : null })}` } : {}),
+          regenerateCardIndex: cardIndex,
+          existingCardSummaries,
         },
       });
       
@@ -3480,12 +3501,20 @@ FORBIDDEN:
       const allowFaceReferences = !disallowPeople;
       // If no wizard face refs, use the cover image as face reference to maintain the same person
       const coverImageUrl = carouselData.cards[0]?.imageUrl;
-      const faceRefUrls = allowFaceReferences
+      let faceRefUrls = allowFaceReferences
         ? (wizardFaceRefs.length > 0 ? wizardFaceRefs : (coverImageUrl && !coverImageUrl.startsWith('data:') ? [coverImageUrl] : []))
         : [];
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-      const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
+      // Include extreme mode photo refs
+      const extremePhotoRefs = getExtremeFormPhotoRefs();
+      const extremeFaceRefs = extremePhotoRefs.filter(r => r.category === 'face').map(r => r.url);
+      const extremeStyleRefs = extremePhotoRefs.filter(r => r.category === 'style').map(r => r.url);
+      const extremeProductRefs = extremePhotoRefs.filter(r => r.category === 'product').map(r => r.url);
+      if (extremeFaceRefs.length > 0 && faceRefUrls.length === 0) {
+        faceRefUrls.push(...extremeFaceRefs);
+      }
+      const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId) || wizardMode === 'extreme';
       
       let imgPrompt: string;
       let negPrompt: string;
@@ -3535,6 +3564,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
           parts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
         }
+        // Inject extreme mode vision/form context into the image prompt
+        if (wizardMode === 'extreme' && extremeAnalysis) {
+          parts.push(`\nMODO EXTREME — VISÃO DO USUÁRIO: "${extremeVision}"`);
+          // Add form field values as context
+          const formContext = extremeAnalysis.fields
+            .filter(f => f.type !== 'photo_upload' && extremeFormValues[f.id])
+            .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
+            .join(', ');
+          if (formContext) parts.push(`DETALHES: ${formContext}`);
+          if (extremeSelectedFont) {
+            parts.push(`FONTE OBRIGATÓRIA: Use a fonte "${extremeSelectedFont.name}" como referência visual.`);
+          }
+          // Add exact text instructions
+          const exactText = getExtremeExactText();
+          if (exactText) {
+            parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere): ${exactText}`);
+          }
+        }
         if (isCover) {
           parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
           parts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);
@@ -3577,7 +3624,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         marketplaceRefUrls.push(...allPreviews);
       }
       
-      const allStyleRefs = [...styleRefUrls, ...productRefUrls, ...marketplaceRefUrls, ...existingCardImages];
+      const allStyleRefs = [...styleRefUrls, ...extremeStyleRefs, ...productRefUrls, ...extremeProductRefs, ...marketplaceRefUrls, ...existingCardImages];
       
       try {
         // Retry image generation with progressive fallback to avoid blank cards

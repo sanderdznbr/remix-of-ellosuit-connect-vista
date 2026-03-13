@@ -3582,6 +3582,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere): ${exactText}`);
           }
         }
+        // Instruct AI to include product/screen images provided as references
+        const allProductRefsForPrompt = [...productRefUrls, ...extremeProductRefs];
+        if (allProductRefsForPrompt.length > 0) {
+          parts.push(`\nREFERÊNCIAS DE PRODUTO/TELA OBRIGATÓRIAS: Foram fornecidas ${allProductRefsForPrompt.length} imagem(ns) de produto/tela/app como referência. Você DEVE incluir essas imagens de produto/tela no card regenerado, renderizando-as fielmente (mockup de celular, print de tela, etc). NÃO ignore essas referências.`);
+        }
+        if (logoUrl) {
+          parts.push(`REFERÊNCIA DE LOGO: A imagem da logomarca foi fornecida como referência. Renderize-a fielmente na posição indicada.`);
+        }
         if (isCover) {
           parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
           parts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);

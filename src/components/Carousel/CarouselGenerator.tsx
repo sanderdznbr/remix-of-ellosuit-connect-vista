@@ -3505,7 +3505,15 @@ FORBIDDEN:
         : [];
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-      const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId);
+      // Include extreme mode photo refs
+      const extremePhotoRefs = getExtremeFormPhotoRefs();
+      const extremeFaceRefs = extremePhotoRefs.filter(r => r.category === 'face').map(r => r.url);
+      const extremeStyleRefs = extremePhotoRefs.filter(r => r.category === 'style').map(r => r.url);
+      const extremeProductRefs = extremePhotoRefs.filter(r => r.category === 'product').map(r => r.url);
+      if (extremeFaceRefs.length > 0 && faceRefUrls.length === 0) {
+        faceRefUrls.push(...extremeFaceRefs);
+      }
+      const isFullBleedMarketplace = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style || (isLoadedFullBleed && !!loadedMarketplaceStyleId) || wizardMode === 'extreme';
       
       let imgPrompt: string;
       let negPrompt: string;

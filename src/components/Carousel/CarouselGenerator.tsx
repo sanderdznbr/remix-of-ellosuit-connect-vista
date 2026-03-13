@@ -6468,7 +6468,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-xs px-2.5 py-1.5 rounded-lg outline-none focus:border-white/20" />
                             <textarea value={cardText.body || ''} onChange={(e) => { const u = [...coverCardTexts]; u[i] = { ...u[i], body: e.target.value }; setCoverCardTexts(u); }}
                               placeholder={i === 0 ? 'Subtítulo...' : 'Conteúdo...'}
-                              className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-xs px-2.5 py-1.5 rounded-lg resize-none outline-none focus:border-purple-500/30 min-h-[50px]"
+                              className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-xs px-2.5 py-1.5 rounded-lg resize-none outline-none focus:border-white/20 min-h-[50px]"
                               rows={2} />
                           </div>
                         );

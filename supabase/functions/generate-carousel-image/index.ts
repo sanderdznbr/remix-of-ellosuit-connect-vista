@@ -249,7 +249,7 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
 
     // Detect special modes from prompt content
     const isRealEstatePrompt = /FOTO DO IMÓVEL|FOTO REAL|imóvel|imovel|propriedade|property photo/i.test(imagePrompt);
-    const isExtremeMode = /MODO EXTREME|EXTREME_VISION|VISÃO DO USUÁRIO/i.test(imagePrompt);
+    const isExtremeMode = isExtremePrompt;
     const isAppMockup = /app|aplicativo|celular|smartphone|tela|mockup|print.*app|screenshot/i.test(imagePrompt);
 
     // === EXTREME MODE: Inject professional design DNA ===

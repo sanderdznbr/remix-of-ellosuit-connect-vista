@@ -4757,9 +4757,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             }
 
                             const exactText = getExtremeExactText();
-                            if (exactText) {
-                              setManualPostText(exactText);
-                            }
+                            setManualPostText(exactText || '');
 
                             const formSummary = extremeAnalysis.fields
                               .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')

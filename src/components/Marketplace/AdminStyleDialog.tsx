@@ -136,6 +136,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
           strict_instructions: (editStyle as any).strict_instructions || '',
           is_real_estate: !!sc.is_real_estate,
           real_estate_mode: sc.real_estate_mode || 'single',
+          is_beta: !!sc.is_beta,
         });
         setExistingImages(editStyle.preview_images || []);
       } else {

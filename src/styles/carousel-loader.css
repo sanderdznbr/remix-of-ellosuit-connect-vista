@@ -50,6 +50,34 @@
   }
 }
 
+.carousel-loader-spinner--orange {
+  animation-name: carousel-loader-rotate-orange;
+}
+
+@keyframes carousel-loader-rotate-orange {
+  0% {
+    transform: rotate(90deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 30px 0 #fdba74 inset,
+      0 60px 60px 0 #ea580c inset;
+  }
+  50% {
+    transform: rotate(270deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 10px 0 #f97316 inset,
+      0 40px 60px 0 #c2410c inset;
+  }
+  100% {
+    transform: rotate(450deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 30px 0 #fdba74 inset,
+      0 60px 60px 0 #ea580c inset;
+  }
+}
+
 .carousel-loader-letter {
   display: inline-block;
   opacity: 0.4;

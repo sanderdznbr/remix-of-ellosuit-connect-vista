@@ -5466,6 +5466,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             brandName={brandName}
             logoUrl={logoUrl}
             skipWebSearch={skipWebSearch}
+            isExtreme={wizardMode === 'extreme'}
             onGoHome={user ? () => {
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;

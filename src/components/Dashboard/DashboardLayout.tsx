@@ -129,9 +129,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
+      <div className="flex flex-col h-screen w-full" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Mobile Header */}
-        <header className="flex items-center justify-between px-4 h-14 shrink-0 relative z-50" style={{ backgroundColor: '#0a0a0f' }}>
+        <header className="flex items-center justify-between px-4 h-14 shrink-0 relative z-50" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Left: hamburger to open sidebar */}
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/70 cursor-pointer">
             <Menu className="w-5 h-5" />

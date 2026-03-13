@@ -37,36 +37,39 @@ serve(async (req) => {
 
     // Build prompt based on whether there's a reference attachment
     const promptText = attachmentBase64
-      ? `You are an expert image editor. You will receive THREE images in order:
+      ? `You are an expert photo retoucher and compositing artist. You will receive THREE images:
 
-IMAGE 1 (ORIGINAL): The complete artwork/post to edit. Study its colors, lighting, composition, typography and style carefully.
-IMAGE 2 (MASK): A black-and-white mask. WHITE pixels = areas to modify. BLACK pixels = areas that MUST remain pixel-identical to IMAGE 1.
-IMAGE 3 (REFERENCE): A reference image to use for the edit.
-
-USER REQUEST: "${editPrompt}"
-
-CRITICAL RULES:
-1. Output MUST have EXACTLY the same dimensions and aspect ratio as IMAGE 1.
-2. Modify ONLY the WHITE areas from the MASK. Every BLACK pixel must be identical to IMAGE 1.
-3. Use IMAGE 3 as visual reference for what to place/change in the white areas.
-4. Match the lighting, color temperature, and perspective of IMAGE 1 in the edited region.
-5. Blend edges naturally — no hard cuts, no white boxes, no floating elements.
-6. Preserve all text, logos, and graphic elements outside the mask.
-7. Return ONLY the final edited image, nothing else.`
-      : `You are an expert image editor. You will receive TWO images in order:
-
-IMAGE 1 (ORIGINAL): The complete artwork/post to edit. Study its colors, lighting, composition, typography and style carefully.
-IMAGE 2 (MASK): A black-and-white mask. WHITE pixels = areas to modify. BLACK pixels = areas that MUST remain pixel-identical to IMAGE 1.
+IMAGE 1 (ORIGINAL): The complete artwork/post. This is your canvas — study every detail: background colors, textures, lighting direction, shadows, reflections, skin tones, clothing, and overall mood.
+IMAGE 2 (MASK): Black-and-white mask. WHITE = areas you must edit. BLACK = areas that must stay EXACTLY as IMAGE 1.
+IMAGE 3 (REFERENCE): Visual reference for the edit request.
 
 USER REQUEST: "${editPrompt}"
 
-CRITICAL RULES:
-1. Output MUST have EXACTLY the same dimensions and aspect ratio as IMAGE 1.
-2. Modify ONLY the WHITE areas from the MASK. Every BLACK pixel must be identical to IMAGE 1.
-3. Match the lighting, color temperature, and perspective of IMAGE 1 in the edited region.
-4. Blend edges naturally — no hard cuts, no white boxes, no floating elements.
-5. Preserve all text, logos, and graphic elements outside the mask.
-6. Return ONLY the final edited image, nothing else.`;
+ABSOLUTE REQUIREMENTS:
+1. Your output MUST be a COMPLETE image with EXACTLY the same dimensions as IMAGE 1.
+2. The output must look like a single, cohesive photograph — NOT a collage or cutout.
+3. In the WHITE mask areas: apply the requested edit, using IMAGE 3 as reference. The edited content MUST blend seamlessly into the surrounding original image.
+4. NEVER leave white, blank, or transparent areas. Every pixel of the output must contain meaningful image content.
+5. The edited region must inherit the EXACT same lighting, color grading, shadows, and atmosphere as the original image.
+6. Edges between edited and non-edited areas must be invisible — use natural transitions, matching shadows and highlights.
+7. In BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel. Do not alter anything.
+8. Return ONLY the final composited image.`
+      : `You are an expert photo retoucher and compositing artist. You will receive TWO images:
+
+IMAGE 1 (ORIGINAL): The complete artwork/post. This is your canvas — study every detail: background colors, textures, lighting direction, shadows, reflections, skin tones, clothing, and overall mood.
+IMAGE 2 (MASK): Black-and-white mask. WHITE = areas you must edit. BLACK = areas that must stay EXACTLY as IMAGE 1.
+
+USER REQUEST: "${editPrompt}"
+
+ABSOLUTE REQUIREMENTS:
+1. Your output MUST be a COMPLETE image with EXACTLY the same dimensions as IMAGE 1.
+2. The output must look like a single, cohesive photograph — NOT a collage or cutout.
+3. In the WHITE mask areas: apply the requested edit. The edited content MUST blend seamlessly into the surrounding original image.
+4. NEVER leave white, blank, or transparent areas. Every pixel of the output must contain meaningful image content.
+5. The edited region must inherit the EXACT same lighting, color grading, shadows, and atmosphere as the original image.
+6. Edges between edited and non-edited areas must be invisible — use natural transitions, matching shadows and highlights.
+7. In BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel. Do not alter anything.
+8. Return ONLY the final composited image.`;
 
     const contentParts: any[] = [
       { type: "text", text: promptText },

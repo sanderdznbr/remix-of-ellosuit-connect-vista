@@ -20,10 +20,23 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, maskBase64, editPrompt, attachmentBase64 } = await req.json();
+    const payload = await req.json();
+    const {
+      imageDataUrl,
+      maskDataUrl,
+      attachmentDataUrl,
+      imageBase64,
+      maskBase64,
+      attachmentBase64,
+      editPrompt,
+    } = payload ?? {};
 
-    if (!imageBase64 || !maskBase64 || !editPrompt) {
-      return new Response(JSON.stringify({ error: "imageBase64, maskBase64 and editPrompt are required" }), {
+    const originalImageDataUrl = normalizeToDataUrl(imageDataUrl ?? imageBase64, "image/png");
+    const maskImageDataUrl = normalizeToDataUrl(maskDataUrl ?? maskBase64, "image/png");
+    const attachmentImageDataUrl = normalizeToDataUrl(attachmentDataUrl ?? attachmentBase64, "image/png");
+
+    if (!originalImageDataUrl || !maskImageDataUrl || !editPrompt) {
+      return new Response(JSON.stringify({ error: "image/mask and editPrompt are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

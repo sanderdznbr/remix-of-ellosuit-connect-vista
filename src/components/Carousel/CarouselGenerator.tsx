@@ -6408,7 +6408,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       ⚙️ Configuração
                     </button>
                     <button onClick={() => setCoverModalTab('texts')}
-                      className={`flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all ${coverModalTab === 'texts' ? 'bg-purple-600 text-white' : 'text-white/40 hover:text-white/60'}`}>
+                      className="flex-1 py-2.5 px-3 rounded-lg text-xs font-medium transition-all"
+                      style={coverModalTab === 'texts' ? { backgroundColor: themeHex, color: '#fff' } : { color: 'rgba(255,255,255,0.4)' }}>
                       <Type className="h-3 w-3 inline mr-1" /> Textos
                     </button>
                   </div>

@@ -5933,7 +5933,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           width: i === activeCardIndex ? 8 : 5,
                           height: i === activeCardIndex ? 8 : 5,
                           borderRadius: '50%',
-                          backgroundColor: i === activeCardIndex ? '#8B5CF6' : 'rgba(255,255,255,0.2)',
+                          backgroundColor: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.2)',
                         }} />
                     ))}
                   </div>

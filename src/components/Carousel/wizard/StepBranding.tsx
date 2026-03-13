@@ -91,9 +91,9 @@ const StepBranding: React.FC<Props> = ({
           </div>
         ) : (
           <button onClick={() => logoInputRef.current?.click()}
-            className="w-full flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border-2 border-dashed border-purple-500/30 bg-purple-500/[0.04] hover:bg-purple-500/[0.08] text-white/50 hover:text-white/70 transition-all cursor-pointer">
-            <div className="w-14 h-14 rounded-xl bg-purple-500/10 flex items-center justify-center">
-              <Upload className="h-6 w-6 text-purple-400" />
+            className={`w-full flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border-2 border-dashed ${isExtreme ? 'border-orange-500/30 bg-orange-500/[0.04] hover:bg-orange-500/[0.08]' : 'border-purple-500/30 bg-purple-500/[0.04] hover:bg-purple-500/[0.08]'} text-white/50 hover:text-white/70 transition-all cursor-pointer`}>
+            <div className={`w-14 h-14 rounded-xl ${isExtreme ? 'bg-orange-500/10' : 'bg-purple-500/10'} flex items-center justify-center`}>
+              <Upload className={`h-6 w-6 ${isExtreme ? 'text-orange-400' : 'text-purple-400'}`} />
             </div>
             <div className="text-center">
               <span className="text-sm font-semibold block">Enviar logomarca</span>

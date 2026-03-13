@@ -3582,6 +3582,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere): ${exactText}`);
           }
         }
+        // Instruct AI to include product/screen images provided as references
+        const allProductRefsForPrompt = [...productRefUrls, ...extremeProductRefs];
+        if (allProductRefsForPrompt.length > 0) {
+          parts.push(`\nREFERÊNCIAS DE PRODUTO/TELA OBRIGATÓRIAS: Foram fornecidas ${allProductRefsForPrompt.length} imagem(ns) de produto/tela/app como referência. Você DEVE incluir essas imagens de produto/tela no card regenerado, renderizando-as fielmente (mockup de celular, print de tela, etc). NÃO ignore essas referências.`);
+        }
+        if (logoUrl) {
+          parts.push(`REFERÊNCIA DE LOGO: A imagem da logomarca foi fornecida como referência. Renderize-a fielmente na posição indicada.`);
+        }
         if (isCover) {
           parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
           parts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);
@@ -3624,13 +3632,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         marketplaceRefUrls.push(...allPreviews);
       }
       
-      const allStyleRefs = [...styleRefUrls, ...extremeStyleRefs, ...productRefUrls, ...extremeProductRefs, ...marketplaceRefUrls, ...existingCardImages];
+      const allStyleRefs = [...styleRefUrls, ...extremeStyleRefs, ...marketplaceRefUrls, ...existingCardImages];
+      // Product refs and logo should be sent as referenceImageUrls for higher fidelity
+      const allProductRefs = [...productRefUrls, ...extremeProductRefs];
+      // Include logo as a reference image so the AI can reproduce it exactly
+      const regenReferenceImages: string[] = [...allProductRefs];
+      if (logoUrl && logoUrl.startsWith('http')) {
+        regenReferenceImages.push(logoUrl);
+      }
       
       try {
         // Retry image generation with progressive fallback to avoid blank cards
         const generationAttempts: Array<{
           faceReferenceUrls?: string[];
           styleReferenceUrls?: string[];
+          referenceImageUrls?: string[];
           prompt: string;
           negativePrompt?: string;
         }> = [
@@ -3638,18 +3654,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             prompt: buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
             faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
             styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+            referenceImageUrls: regenReferenceImages.length > 0 ? regenReferenceImages : undefined,
             negativePrompt: negPrompt || undefined,
           },
           {
             prompt: buildImagePrompt(imgPrompt) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
             faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
             styleReferenceUrls: styleRefUrls.length > 0 ? styleRefUrls : undefined,
+            referenceImageUrls: regenReferenceImages.length > 0 ? regenReferenceImages : undefined,
             negativePrompt: negPrompt || undefined,
           },
           {
             prompt: buildImagePrompt(`${imgPrompt}. Manter identidade visual do carrossel sem copiar conteúdo textual de referências.`) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
             faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
             styleReferenceUrls: undefined,
+            referenceImageUrls: regenReferenceImages.length > 0 ? regenReferenceImages : undefined,
             negativePrompt: negPrompt || undefined,
           },
         ];

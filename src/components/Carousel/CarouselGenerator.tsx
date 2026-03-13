@@ -4556,6 +4556,25 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'Modo' && (
                       <StepMode wizardMode={wizardMode} setWizardMode={setWizardMode} />
                     )}
+                    {currentStepName === 'Visão' && (
+                      <StepExtremeVision
+                        onAnalysisComplete={(analysis, vision) => {
+                          setExtremeAnalysis(analysis);
+                          setExtremeVision(vision);
+                          if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
+                          setExtremeFormValues({});
+                          // Auto-advance to Detalhes step
+                          const detalhesIdx = EXTREME_STEPS.indexOf('Detalhes');
+                          if (detalhesIdx >= 0) setWizardStep(detalhesIdx);
+                        }}
+                      />
+                    )}
+                    {currentStepName === 'Detalhes' && extremeAnalysis && (
+                      <StepExtremeForm
+                        analysis={extremeAnalysis}
+                        values={extremeFormValues}
+                        onChange={setExtremeFormValues}
+                      />
                     {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}

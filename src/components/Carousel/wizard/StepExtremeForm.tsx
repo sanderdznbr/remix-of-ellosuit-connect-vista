@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Sparkles, Upload, X, Check } from 'lucide-react';
+import { Sparkles, Upload, X, Check, Folder } from 'lucide-react';
 import type { ExtremeAnalysis, ExtremeField } from './StepExtremeVision';
+import GalleryPicker from './GalleryPicker';
+import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
 
 interface Props {
   analysis: ExtremeAnalysis;
@@ -9,6 +11,8 @@ interface Props {
 }
 
 const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
+  const [galleryFieldId, setGalleryFieldId] = useState<string | null>(null);
+
   const updateField = useCallback((id: string, value: any) => {
     onChange({ ...values, [id]: value });
   }, [values, onChange]);
@@ -16,6 +20,9 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
   const handleFileUpload = useCallback((fieldId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
+
+    // Auto-save to gallery
+    autoSaveFilesToGallery(files);
 
     const existing = (values[fieldId] as string[] | undefined) || [];
     const readers: Promise<string>[] = [];
@@ -38,6 +45,12 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
   const removePhoto = useCallback((fieldId: string, idx: number) => {
     const current = (values[fieldId] as string[] | undefined) || [];
     updateField(fieldId, current.filter((_, i) => i !== idx));
+  }, [values, updateField]);
+
+  const handleGallerySelect = useCallback((fieldId: string, files: { url: string; name: string }[]) => {
+    const existing = (values[fieldId] as string[] | undefined) || [];
+    const newUrls = files.map(f => f.url);
+    updateField(fieldId, [...existing, ...newUrls]);
   }, [values, updateField]);
 
   const renderField = (field: ExtremeField) => {
@@ -104,6 +117,14 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
                 <Upload className="w-5 h-5 text-white/20" />
                 <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFileUpload(field.id, e)} />
               </label>
+              <button
+                onClick={() => setGalleryFieldId(field.id)}
+                className="w-16 h-16 rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-purple-500/30 transition-colors gap-0.5"
+                title="Selecionar da Galeria"
+              >
+                <Folder className="w-4 h-4 text-purple-400/50" />
+                <span className="text-[8px] text-white/20">Galeria</span>
+              </button>
             </div>
           </div>
         );
@@ -146,6 +167,18 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
           </div>
         ))}
       </div>
+
+      {/* Gallery Picker */}
+      <GalleryPicker
+        open={!!galleryFieldId}
+        onClose={() => setGalleryFieldId(null)}
+        onSelectFiles={(files) => {
+          if (galleryFieldId) handleGallerySelect(galleryFieldId, files);
+          setGalleryFieldId(null);
+        }}
+        label="Selecionar da Galeria"
+        maxFiles={10}
+      />
     </div>
   );
 };

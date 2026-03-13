@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Camera, Plus, X, Upload, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
 import { PropertyData, createEmptyProperty, PhotoFocalPoint } from './StepProperty';
 
 interface StepPropertyPhotosProps {
@@ -22,6 +23,7 @@ const StepPropertyPhotos: React.FC<StepPropertyPhotosProps> = ({ properties, set
   };
 
   const addPhotos = async (id: string, files: FileList) => {
+    autoSaveFilesToGallery(files);
     const newPhotos: { url: string; file: File }[] = [];
     for (const file of Array.from(files)) {
       try {

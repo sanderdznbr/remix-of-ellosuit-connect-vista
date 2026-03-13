@@ -5580,16 +5580,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     )}
 
-                    {/* Regenerar rosto */}
-                    {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                      <button
-                        onClick={() => { setModifyMenuCard(activeCardIndex); setFaceUploadMode(true); setTempFaceFiles(referenceImages.filter(r => r.category === 'face').map(r => r.url)); }}
-                        disabled={regeneratingFace === activeCardIndex}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-green-300 hover:text-green-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                        {regeneratingFace === activeCardIndex ? <Loader2 className="h-4 w-4 text-green-400 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-400" />}
-                        Regenerar Rosto
-                      </button>
-                    )}
+                    {/* Regenerar rosto - hidden */}
 
                     {/* Ver prompt usado - hidden */}
 

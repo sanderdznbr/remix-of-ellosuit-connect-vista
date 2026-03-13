@@ -3015,13 +3015,14 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
 
+        const loop2ExtremeCtx = buildExtremePromptContext();
         imageFactories.push({
           index: i,
           factory: () => generateImage({
-            prompt: buildImagePrompt(imgPrompt) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            prompt: buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
             faceReferenceUrls: cardFaceRefs,
             styleReferenceUrls: capturedStyleRefs,
-            referenceImageUrls: productRefUrls.length > 0 ? productRefUrls : undefined,
+            referenceImageUrls: mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined,
             negativePrompt: finalNegative + (!showPerson && faceRefUrls.length > 0 ? ', no people, no faces, no portraits' : ''),
             facePersonsMetadata: showPerson ? facePersonsMeta : undefined,
           }).catch(err => { console.error('Image gen error for card', i, err); return null; }),

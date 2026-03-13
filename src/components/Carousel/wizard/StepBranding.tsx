@@ -17,6 +17,7 @@ interface Props {
   setUserName?: (v: string) => void;
   dateLabel?: string;
   setDateLabel?: (v: string) => void;
+  isExtreme?: boolean;
 }
 
 const StepBranding: React.FC<Props> = ({

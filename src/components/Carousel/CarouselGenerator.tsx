@@ -6523,11 +6523,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     onClick={() => {
                       if (isCardLocked(i)) return;
                       setActiveCardIndex(i);
-                      // Don't open editor for marketplace full-bleed styles
-                      if (!activeMarketplaceStyle?.imageGeneration?.prompt_style) {
-                        setEditingCard(i);
-                        setAiImagePrompt(card.imagePrompt || card.title || '');
-                      }
                     }}>
                     <div className="rounded-xl overflow-hidden transition-all" style={{
                       border: i === activeCardIndex ? '2px solid #8B5CF6' : '2px solid rgba(255,255,255,0.08)',

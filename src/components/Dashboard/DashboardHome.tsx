@@ -407,11 +407,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             </div>
           </div>
 
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
-          >
+          <div className="relative">
+            <div
+              ref={scrollContainerRef}
+              className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
+            >
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
               const cover = item.cover_url;
@@ -457,6 +458,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 </div>
               );
             })}
+            </div>
+            {/* Fade-out gradient on the right edge */}
+            <div className="pointer-events-none absolute top-0 right-0 w-20 h-full" style={{ background: 'linear-gradient(to right, transparent, #0a0a0f)' }} />
           </div>
         </div>
       </motion.div>

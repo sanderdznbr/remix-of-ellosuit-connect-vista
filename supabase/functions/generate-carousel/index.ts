@@ -590,7 +590,24 @@ Responda APENAS em JSON válido:
               }${
               body.webSearchContent ? `\n\nDADOS REAIS DA WEB (USE OBRIGATORIAMENTE estes dados verificados para criar o conteúdo):\nTítulo: ${body.webSearchContent.title}\nResumo: ${body.webSearchContent.summary}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body} (Fonte: ${f.source})`).join('\n')}\n\nFontes: ${(body.webSearchCitations || []).slice(0, 5).join(', ')}\n\nIMPORTANTE: Baseie TODO o conteúdo nesses dados reais e verificados. Cite estatísticas e fatos reais.` : ''
             }${
-              body.productContext ? `\n\nPRODUTO IDENTIFICADO:\n- Tipo: ${body.productContext.productType}\n- Descrição: ${body.productContext.productDescription}\n\nIMPORTANTE: O carrossel deve destacar este produto. Use o produto como referência criativa — NÃO precisa replicá-lo exatamente. Varie ângulos, cenários, composições e contextos de uso em cada card. Para roupas, mostre em modelos diferentes, ângulos variados, combinações criativas. Para objetos, alterne entre mockups, flat-lays, alguém segurando, contexto de uso real. Para alimentos, varie entre close-ups, composições com ingredientes, mesa posta. Cada imagePrompt deve criar uma cena ÚNICA e DIFERENTE com o produto.` : ''
+              (() => {
+                if (!body.productContext) return '';
+                // Extreme mode: full AI-guided vision
+                if (typeof body.productContext === 'string' && body.productContext.startsWith('EXTREME_VISION:')) {
+                  try {
+                    const extreme = JSON.parse(body.productContext.replace('EXTREME_VISION:', ''));
+                    const formDetails = Object.entries(extreme.formValues || {})
+                      .filter(([_, v]) => v && (typeof v === 'string' ? v.trim() : (Array.isArray(v) ? v.length > 0 : true)))
+                      .filter(([_, v]) => typeof v === 'string') // skip photo arrays
+                      .map(([k, v]) => `- ${k}: ${v}`)
+                      .join('\n');
+                    return `\n\nMODO EXTREME — VISÃO DO USUÁRIO (PRIORIDADE MÁXIMA):\nDescrição visual: "${extreme.vision}"\nResumo IA: ${extreme.analysis?.summary || ''}\n${formDetails ? `Detalhes fornecidos:\n${formDetails}` : ''}\n\nIMPORTANTE: Crie o conteúdo visual e textual EXATAMENTE de acordo com a visão descrita acima. Esta é a intenção criativa do usuário — respeite cada detalhe mencionado. Os imagePrompts devem descrever cenas que realizam FIELMENTE a visão visual do usuário. Se o usuário mencionou prints de app, mockups, cenários específicos, pessoas, objetos — inclua tudo nos prompts de imagem. As referências de imagem enviadas devem ser usadas como base visual obrigatória.`;
+                  } catch (e) {
+                    return `\n\nCONTEXTO EXTREME: ${body.productContext}`;
+                  }
+                }
+                return `\n\nPRODUTO IDENTIFICADO:\n- Tipo: ${body.productContext.productType}\n- Descrição: ${body.productContext.productDescription}\n\nIMPORTANTE: O carrossel deve destacar este produto. Use o produto como referência criativa — NÃO precisa replicá-lo exatamente. Varie ângulos, cenários, composições e contextos de uso em cada card. Para roupas, mostre em modelos diferentes, ângulos variados, combinações criativas. Para objetos, alterne entre mockups, flat-lays, alguém segurando, contexto de uso real. Para alimentos, varie entre close-ups, composições com ingredientes, mesa posta. Cada imagePrompt deve criar uma cena ÚNICA e DIFERENTE com o produto.`;
+              })()
             }`;
 
       // Retry logic: attempt up to 3 times if AI returns empty content

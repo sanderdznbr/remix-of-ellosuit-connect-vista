@@ -17,15 +17,15 @@ interface Props {
   onGoHome?: () => void;
 }
 
-// Fixed bright orange for loading UI - never uses user's accent color
-const LOADING_ORANGE = '#F97316';
+// Fixed bright purple for loading UI - never uses user's accent color
+const LOADING_PURPLE = '#A855F7';
 
 const GeneratingAnimation: React.FC<Props> = ({
   imageGenProgress,
   topic = 'Seu tema incrível',
   cardCount = 8,
   bgColor = '#0A0A1A',
-  accentColor = LOADING_ORANGE,
+  accentColor = LOADING_PURPLE,
   textColor = '#FFFFFF',
   selectedFont = 'Inter',
   brandName = '',
@@ -33,8 +33,8 @@ const GeneratingAnimation: React.FC<Props> = ({
   skipWebSearch = false,
   onGoHome,
 }) => {
-  // Always use bright orange for loading, ignoring user's accentColor
-  const loadingColor = LOADING_ORANGE;
+  // Always use bright purple for loading, ignoring user's accentColor
+  const loadingColor = LOADING_PURPLE;
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);

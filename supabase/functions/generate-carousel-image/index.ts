@@ -93,6 +93,10 @@ Deno.serve(async (req) => {
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
     const outputAspectRatio = typeof imageSize === 'string' && imageSize.trim() ? imageSize.trim() : '3:4';
     const isPanoramicMode = Boolean(panoramic);
+    const isExtremePrompt = /MODO EXTREME|EXTREME_VISION|VISÃO DO USUÁRIO/i.test(imagePrompt);
+    const exactTextMatch = imagePrompt.match(/TEXTO EXATO (?:PARA A IMAGEM|OBRIGATÓRIO)[^"\n]*"([^"]+)"/i)
+      || imagePrompt.match(/TÍTULO PARA RENDERIZAR NA IMAGEM:\s*"([^"]+)"/i);
+    const extractedExactText = (exactTextMatch?.[1] || '').trim();
     const panoramicSections = Number.isFinite(Number(panoramicCardCount))
       ? Math.max(2, Number(panoramicCardCount))
       : 2;

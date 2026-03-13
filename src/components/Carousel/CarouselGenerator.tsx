@@ -4792,7 +4792,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
 
-                    {currentStepName === 'Visão' ? (
+                    {(currentStepName === 'Visão' || currentStepName === 'Resumo') ? (
                       <div />
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">

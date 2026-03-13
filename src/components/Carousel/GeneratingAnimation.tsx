@@ -17,8 +17,8 @@ interface Props {
   onGoHome?: () => void;
 }
 
-// Fixed bright purple for loading UI - never uses user's accent color
-const LOADING_PURPLE = '#A855F7';
+// Fixed bright orange for loading UI - never uses user's accent color
+const LOADING_ORANGE = '#F97316';
 
 const GeneratingAnimation: React.FC<Props> = ({
   imageGenProgress,

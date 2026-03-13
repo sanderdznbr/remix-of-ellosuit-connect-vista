@@ -51,6 +51,7 @@ const StepProduct: React.FC<Props> = ({
 
   const handleUpload = (files: FileList | null) => {
     if (!files) return;
+    autoSaveFilesToGallery(files);
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {

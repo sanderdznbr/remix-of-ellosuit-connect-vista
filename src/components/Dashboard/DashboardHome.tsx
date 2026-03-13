@@ -107,6 +107,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   // ===== ACTIVE JOBS: Check for pending cloud generation jobs =====
   useEffect(() => {
     if (!user) return;
+
     const checkActiveJobs = async () => {
       try {
         const { data } = await supabase
@@ -116,17 +117,32 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           .in('status', ['pending', 'generating_text', 'generating_images'])
           .order('created_at', { ascending: false })
           .limit(3);
-        if (data?.length) {
-          const now = Date.now();
-          const validJobs = data.filter(j => {
-            const updatedAt = new Date(j.updated_at).getTime();
-            return now - updatedAt < 5 * 60 * 1000; // 5 min timeout
-          });
-          setActiveJobs(validJobs as ActiveJob[]);
+
+        const rows = data || [];
+        const now = Date.now();
+        const staleThresholdMs = 5 * 60 * 1000;
+
+        const staleIds = rows
+          .filter((job) => now - new Date(job.updated_at).getTime() >= staleThresholdMs)
+          .map((job) => job.id);
+
+        if (staleIds.length > 0) {
+          await supabase
+            .from('carousel_generation_jobs')
+            .update({ status: 'failed', error_message: 'A geração expirou.', completed_at: new Date().toISOString() })
+            .in('id', staleIds);
         }
-      } catch (err) { console.error('Failed to check active jobs:', err); }
+
+        const validJobs = rows.filter((job) => !staleIds.includes(job.id));
+        setActiveJobs(validJobs as ActiveJob[]);
+      } catch (err) {
+        console.error('Failed to check active jobs:', err);
+      }
     };
+
     checkActiveJobs();
+    const interval = setInterval(checkActiveJobs, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   // ===== REALTIME: Subscribe to active job updates =====

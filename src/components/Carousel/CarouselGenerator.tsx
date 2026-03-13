@@ -5494,7 +5494,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         )}
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
-        {carouselData && editingCard === null && (
+        {carouselData && editingCard === null && (() => {
+          const isExtreme = wizardMode === 'extreme';
+          const themeHex = isExtreme ? '#E84D1A' : '#8B5CF6';
+          const themeHexDark = isExtreme ? '#C43A0F' : '#6D28D9';
+          const themeRgb = isExtreme ? '232,77,26' : '139,92,246';
+          const themeRgb2 = isExtreme ? '200,60,20' : '99,102,241';
+          return (
           <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Header bar */}
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
@@ -5505,18 +5511,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 <Home className="w-5 h-5 text-white/60" />
               </button>
               <button
-                onClick={() => { console.log('[EXPORT] Button clicked, isGuest:', isGuest); if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
+                onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { exportAllCards('png'); } }}
                 disabled={exporting}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}
+                style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
               >
                 {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Salvar Post
               </button>
             </div>
             {/* Subtle background glow effects */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)' }} />
-            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.5) 0%, transparent 70%)' }} />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: `radial-gradient(circle, rgba(${themeRgb},0.4) 0%, transparent 70%)` }} />
+            <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: `radial-gradient(circle, rgba(${themeRgb2},0.5) 0%, transparent 70%)` }} />
 
             {/* Center area: phone + inline editor panel */}
             <div className="flex flex-row items-start justify-center gap-0 md:gap-6 flex-1 relative z-10">

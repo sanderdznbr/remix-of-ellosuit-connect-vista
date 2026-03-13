@@ -14,10 +14,11 @@ interface Props {
   manualCardTexts: CardText[];
   setManualCardTexts: (v: CardText[]) => void;
   topic: string;
+  accentTheme?: 'purple' | 'orange';
 }
 
 const StepCardTexts: React.FC<Props> = ({
-  cardCount, contentMode, manualCardTexts, setManualCardTexts, topic,
+  cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);

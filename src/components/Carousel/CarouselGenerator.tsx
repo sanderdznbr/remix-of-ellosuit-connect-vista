@@ -4762,6 +4762,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               }
                             }
 
+                            // Add Behance style references
+                            if (extremeBehanceRefs.length > 0) {
+                              extremeBehanceRefs.forEach((url, idx) => {
+                                newRefs.push({
+                                  url,
+                                  thumb: url,
+                                  label: `Behance Ref ${idx + 1}`,
+                                  source: 'upload' as const,
+                                  category: 'style' as const,
+                                });
+                              });
+                            }
+
                             if (newRefs.length > 0) {
                               setReferenceImages(prev => [...prev, ...newRefs]);
                             }

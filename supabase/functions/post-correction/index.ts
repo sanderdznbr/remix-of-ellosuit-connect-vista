@@ -37,38 +37,54 @@ serve(async (req) => {
 
     // Build prompt based on whether there's a reference attachment
     const promptText = attachmentBase64
-      ? `You are an expert photo retoucher and compositing artist. You will receive THREE images:
+      ? `You are a world-class photo retoucher specializing in seamless compositing. You will receive THREE images:
 
-IMAGE 1 (ORIGINAL): The complete artwork/post. This is your canvas — study every detail: background colors, textures, lighting direction, shadows, reflections, skin tones, clothing, and overall mood.
-IMAGE 2 (MASK): Black-and-white mask. WHITE = areas you must edit. BLACK = areas that must stay EXACTLY as IMAGE 1.
-IMAGE 3 (REFERENCE): Visual reference for the edit request.
+IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Analyze EVERY detail: background environment, lighting direction and intensity, color temperature, shadows, reflections, skin tones, clothing folds, body posture, and overall atmosphere.
+IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = must remain pixel-identical to IMAGE 1.
+IMAGE 3 (REFERENCE): Visual reference for the requested change.
 
 USER REQUEST: "${editPrompt}"
 
-ABSOLUTE REQUIREMENTS:
-1. Your output MUST be a COMPLETE image with EXACTLY the same dimensions as IMAGE 1.
-2. The output must look like a single, cohesive photograph — NOT a collage or cutout.
-3. In the WHITE mask areas: apply the requested edit, using IMAGE 3 as reference. The edited content MUST blend seamlessly into the surrounding original image.
-4. NEVER leave white, blank, or transparent areas. Every pixel of the output must contain meaningful image content.
-5. The edited region must inherit the EXACT same lighting, color grading, shadows, and atmosphere as the original image.
-6. Edges between edited and non-edited areas must be invisible — use natural transitions, matching shadows and highlights.
-7. In BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel. Do not alter anything.
+COMPOSITING RULES (NON-NEGOTIABLE):
+1. Output = COMPLETE image, EXACTLY same dimensions as IMAGE 1. Not a crop, not a fragment.
+2. ANATOMICAL CONTINUITY: If the edit involves repositioning a body part (hand, arm, head, leg), you MUST:
+   - Connect it naturally to the existing body in IMAGE 1 (wrist connects to arm, arm connects to shoulder, etc.)
+   - Match skin tone, clothing texture, and body proportions from IMAGE 1
+   - Generate realistic shadows cast by the repositioned element onto the surrounding surfaces
+   - Ensure joints, folds, and muscle contours are anatomically correct
+3. ENVIRONMENTAL CONTINUITY: The edited area must inherit:
+   - The EXACT background that was behind it in IMAGE 1 (walls, objects, textures — NOT white/blank)
+   - Same lighting direction, intensity, and color temperature
+   - Same depth of field and focus level
+   - Natural shadow interaction between the edited element and its surroundings
+4. ZERO ARTIFACTS: No white patches, no blank areas, no hard edges, no floating elements, no color mismatches at boundaries.
+5. SEAMLESS BLENDING: The transition between edited and non-edited areas must be INVISIBLE. Use soft transitions matching the original image's characteristics.
+6. BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel.
+7. The final image must look like it was ORIGINALLY photographed this way — a viewer should not be able to tell any edit was made.
 8. Return ONLY the final composited image.`
-      : `You are an expert photo retoucher and compositing artist. You will receive TWO images:
+      : `You are a world-class photo retoucher specializing in seamless compositing. You will receive TWO images:
 
-IMAGE 1 (ORIGINAL): The complete artwork/post. This is your canvas — study every detail: background colors, textures, lighting direction, shadows, reflections, skin tones, clothing, and overall mood.
-IMAGE 2 (MASK): Black-and-white mask. WHITE = areas you must edit. BLACK = areas that must stay EXACTLY as IMAGE 1.
+IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Analyze EVERY detail: background environment, lighting direction and intensity, color temperature, shadows, reflections, skin tones, clothing folds, body posture, and overall atmosphere.
+IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = must remain pixel-identical to IMAGE 1.
 
 USER REQUEST: "${editPrompt}"
 
-ABSOLUTE REQUIREMENTS:
-1. Your output MUST be a COMPLETE image with EXACTLY the same dimensions as IMAGE 1.
-2. The output must look like a single, cohesive photograph — NOT a collage or cutout.
-3. In the WHITE mask areas: apply the requested edit. The edited content MUST blend seamlessly into the surrounding original image.
-4. NEVER leave white, blank, or transparent areas. Every pixel of the output must contain meaningful image content.
-5. The edited region must inherit the EXACT same lighting, color grading, shadows, and atmosphere as the original image.
-6. Edges between edited and non-edited areas must be invisible — use natural transitions, matching shadows and highlights.
-7. In BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel. Do not alter anything.
+COMPOSITING RULES (NON-NEGOTIABLE):
+1. Output = COMPLETE image, EXACTLY same dimensions as IMAGE 1. Not a crop, not a fragment.
+2. ANATOMICAL CONTINUITY: If the edit involves repositioning a body part (hand, arm, head, leg), you MUST:
+   - Connect it naturally to the existing body in IMAGE 1 (wrist connects to arm, arm connects to shoulder, etc.)
+   - Match skin tone, clothing texture, and body proportions from IMAGE 1
+   - Generate realistic shadows cast by the repositioned element onto the surrounding surfaces
+   - Ensure joints, folds, and muscle contours are anatomically correct
+3. ENVIRONMENTAL CONTINUITY: The edited area must inherit:
+   - The EXACT background that was behind it in IMAGE 1 (walls, objects, textures — NOT white/blank)
+   - Same lighting direction, intensity, and color temperature
+   - Same depth of field and focus level
+   - Natural shadow interaction between the edited element and its surroundings
+4. ZERO ARTIFACTS: No white patches, no blank areas, no hard edges, no floating elements, no color mismatches at boundaries.
+5. SEAMLESS BLENDING: The transition between edited and non-edited areas must be INVISIBLE. Use soft transitions matching the original image's characteristics.
+6. BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel.
+7. The final image must look like it was ORIGINALLY photographed this way — a viewer should not be able to tell any edit was made.
 8. Return ONLY the final composited image.`;
 
     const contentParts: any[] = [

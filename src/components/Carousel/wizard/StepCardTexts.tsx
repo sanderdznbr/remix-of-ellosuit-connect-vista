@@ -140,7 +140,7 @@ const StepCardTexts: React.FC<Props> = ({
               className="rounded-xl transition-all"
               style={{
                 backgroundColor: isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${hasContent ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                border: `1px solid ${hasContent ? accentBorder : 'rgba(255,255,255,0.06)'}`,
               }}
             >
               <button
@@ -151,7 +151,7 @@ const StepCardTexts: React.FC<Props> = ({
                   <Type className="h-3.5 w-3.5 text-white/30" />
                   <span className="text-sm font-medium text-white/70">{getCardLabel(i)}</span>
                   {hasContent && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">editado</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${accentBadgeBg} ${accentBadgeText}`}>editado</span>
                   )}
                 </div>
                 {isExpanded ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}

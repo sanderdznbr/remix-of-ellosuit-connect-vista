@@ -173,7 +173,7 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
     try {
       const maskDataUrl = getMaskDataUrl();
       if (!maskDataUrl) throw new Error('Falha ao gerar máscara');
-      const newUrl = await editFn(imageUrl, maskDataUrl, editPrompt, attachmentBase64 || undefined);
+      const newUrl = await editFn(imageUrl, maskDataUrl, editPrompt, attachmentPreview || attachmentBase64 || undefined);
       onImageEdited(newUrl);
     } catch (err: any) {
       console.error('Post correction error:', err);

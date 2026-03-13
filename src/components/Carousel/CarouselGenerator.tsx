@@ -6889,21 +6889,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             toast({ title: 'Correção aplicada!' });
           }}
           editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string, attachmentBase64?: string) => {
-            const toBase64 = async (url: string): Promise<string> => {
-              if (url.startsWith('data:')) return url.replace(/^data:[^;]+;base64,/, '');
+            const toDataUrl = async (url: string): Promise<string> => {
+              if (url.startsWith('data:image/')) return url;
               const res = await fetch(url);
               const blob = await res.blob();
-              return new Promise((resolve, reject) => {
+              return await new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve((reader.result as string).replace(/^data:[^;]+;base64,/, ''));
+                reader.onload = () => resolve(reader.result as string);
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
               });
             };
 
-            const [imageBase64, maskBase64] = await Promise.all([
-              toBase64(originalUrl),
-              toBase64(maskDataUrl),
+            const [imageDataUrl, maskDataUrlFull] = await Promise.all([
+              toDataUrl(originalUrl),
+              toDataUrl(maskDataUrl),
             ]);
 
             const { data: session } = await supabase.auth.getSession();
@@ -6918,7 +6918,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   'Content-Type': 'application/json',
                   Authorization: `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify({ imageBase64, maskBase64, editPrompt, attachmentBase64 }),
+                body: JSON.stringify({
+                  imageDataUrl,
+                  maskDataUrl: maskDataUrlFull,
+                  editPrompt,
+                  attachmentDataUrl: attachmentBase64
+                    ? (attachmentBase64.startsWith('data:image/')
+                        ? attachmentBase64
+                        : `data:image/png;base64,${attachmentBase64}`)
+                    : undefined,
+                }),
               }
             );
 

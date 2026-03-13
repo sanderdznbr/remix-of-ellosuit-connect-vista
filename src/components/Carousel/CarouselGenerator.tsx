@@ -4561,14 +4561,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
-                        onAnalysisComplete={(analysis, vision) => {
+                         onAnalysisComplete={(analysis, vision) => {
                           setExtremeAnalysis(analysis);
                           setExtremeVision(vision);
                           if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
                           setExtremeFormValues({});
-                          // Auto-advance to Detalhes step
-                          const detalhesIdx = EXTREME_STEPS.indexOf('Detalhes');
-                          if (detalhesIdx >= 0) setWizardStep(detalhesIdx);
+                          // Auto-advance: after analysis, Detalhes will be at index 2
+                          // (Modo=0, Visão=1, Detalhes=2)
+                          setWizardStep(2);
                         }}
                       />
                     )}
@@ -4766,7 +4766,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
 
-                    {wizardStep < WIZARD_STEPS.length - 1 ? (
+                    {currentStepName === 'Visão' ? (
+                      <div />
+                    ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
                         {(currentStepName === 'Rosto' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro' || currentStepName === 'Imóvel') && (

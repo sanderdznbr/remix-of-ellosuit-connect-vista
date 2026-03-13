@@ -4626,11 +4626,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             }
                             if (newRefs.length > 0) {
                               setReferenceImages(prev => [...prev, ...newRefs]);
-                              // Also set product images for proper pipeline handling
-                              const productRefs = newRefs.filter(r => r.category === 'product');
-                              if (productRefs.length > 0) {
-                                setProductImages(prev => [...prev, ...productRefs.map(r => ({ url: r.url, thumb: r.url }))]);
-                              }
                             }
                             // Build rich topic with extreme context
                             const formSummary = extremeAnalysis.fields

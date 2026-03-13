@@ -8,6 +8,7 @@ interface Props {
   analysis: ExtremeAnalysis;
   values: Record<string, any>;
   onChange: (values: Record<string, any>) => void;
+  brandColors?: string[];
 }
 
 const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {

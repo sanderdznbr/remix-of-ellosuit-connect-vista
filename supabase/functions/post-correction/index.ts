@@ -172,6 +172,13 @@ Return ONLY the edited image, nothing else.`
   }
 });
 
+function normalizeToDataUrl(input: unknown, fallbackMime: string): string | null {
+  if (typeof input !== "string" || !input.trim()) return null;
+  const value = input.trim();
+  if (value.startsWith("data:image/")) return value;
+  return `data:${fallbackMime};base64,${value.replace(/^data:[^;]+;base64,/, "")}`;
+}
+
 function extractBase64Image(data: any): { base64: string; mimeType: string } | null {
   const message = data?.choices?.[0]?.message;
   if (!message) return null;

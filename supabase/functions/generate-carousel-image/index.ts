@@ -243,10 +243,36 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
     const isExtremeMode = /MODO EXTREME|EXTREME_VISION|VISÃO DO USUÁRIO/i.test(imagePrompt);
     const isAppMockup = /app|aplicativo|celular|smartphone|tela|mockup|print.*app|screenshot/i.test(imagePrompt);
 
+    // === EXTREME MODE: Inject professional design DNA ===
+    if (isExtremeMode) {
+      textPrompt += `\n\n🎯 PADRÃO DE QUALIDADE PROFISSIONAL (OBRIGATÓRIO):
+Você é um designer gráfico SÊNIOR de uma agência premium. O resultado DEVE parecer um post criado por uma agência de design de alto nível, NÃO algo amador ou genérico.
+
+REGRAS DE DESIGN EDITORIAL:
+1. TIPOGRAFIA: Use fontes ELEGANTES e MODERNAS. Título em fonte BOLD grande e impactante (tipo Montserrat Bold, Playfair Display ou similar). Subtítulos em fonte fina e leve. NUNCA use fontes genéricas, Comic Sans, ou fontes que pareçam "default". A tipografia deve ter HIERARQUIA CLARA: título grande > subtítulo médio > detalhes pequenos.
+2. COMPOSIÇÃO: Use a REGRA DOS TERÇOS. Elementos alinhados com precisão milimétrica. Espaçamento generoso entre elementos. Nada amontoado, nada desalinhado. Layout LIMPO e RESPIRADO.
+3. CORES: Paleta COESA de no máximo 3-4 cores. Contraste alto entre texto e fundo. Se o fundo é escuro, use textos claros com detalhes de cor de destaque (laranja, dourado, azul elétrico). Se o fundo é claro, use textos escuros elegantes.
+4. ELEMENTOS GRÁFICOS: Use elementos sutis como gradientes, linhas finas decorativas, formas geométricas suaves, ícones minimalistas. NUNCA sobrecarregue — menos é mais.
+5. MOCKUPS: Se há screenshot de app, use mockup de iPhone 15 Pro REALISTA com reflexos e sombras sutis, ângulo levemente inclinado (3/4), como em anúncio da Apple.
+6. TEXTOS: Máximo 3 blocos de texto. Título CURTO e PODEROSO (máx 6 palavras). Subtítulo explicativo (máx 15 palavras). CTA opcional. ZERO parágrafos longos.
+7. FULL BLEED: Preencha 100% do canvas. Zero bordas. Zero espaço desperdiçado.
+
+REFERÊNCIA DE QUALIDADE: Pense em posts do Instagram de marcas como Apple, Nike, Nubank, Avenue, XP — design minimalista, tipografia impecável, composição premium.`;
+    }
+
     if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
       textPrompt += `\n\n📸 FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA): A imagem de referência fornecida é uma FOTOGRAFIA REAL do imóvel. Você DEVE usar esta foto como a imagem principal/de fundo do card. NÃO gere uma casa ou imóvel artificial — INCORPORE a foto real no design. A foto real deve ocupar pelo menos 60-80% da área visual do card. Aplique o estilo editorial (textos, badges, overlays, elementos gráficos) POR CIMA da foto real. Trate a foto como se fosse uma imagem de fundo editorializada.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
-      textPrompt += `\n\n📱 MOCKUP DE APP (PRIORIDADE MÁXIMA): As imagens de referência de produto contêm SCREENSHOTS REAIS do aplicativo do usuário. Você DEVE criar um mockup REALISTA de um smartphone (iPhone/Android) e inserir o screenshot do app EXATAMENTE como aparece na tela do celular. O mockup deve ser profissional, com reflexos sutis, sombras realistas, e o app visível na tela. A composição deve ser como um anúncio premium de lançamento de app. NÃO gere uma interface genérica — use EXATAMENTE a imagem fornecida na tela do celular.`;
+      textPrompt += `\n\n📱 MOCKUP DE APP (PRIORIDADE MÁXIMA): As imagens de referência de produto contêm SCREENSHOTS REAIS do aplicativo do usuário.
+INSTRUÇÕES PRECISAS PARA O MOCKUP:
+- Crie um iPhone 15 Pro FOTORREALISTA (bordas em titânio, Dynamic Island no topo).
+- Posicione o celular em ângulo 3/4 levemente inclinado para a direita, como um anúncio premium da Apple.
+- Insira o screenshot do app EXATAMENTE como aparece — sem modificar, cortar ou distorcer a interface.
+- Adicione reflexos sutis no vidro da tela e sombra realista embaixo do celular.
+- A mão segurando o celular (se solicitada) deve ser natural, com iluminação consistente.
+- O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
+- O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
+- NÃO gere uma interface genérica — use EXATAMENTE a imagem fornecida na tela do celular.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
       textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

@@ -20,7 +20,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, crop } = await req.json();
+    const { imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, cropMaskBase64, crop } = await req.json();
 
     if (!editPrompt || (!imageBase64 && !cropImageBase64)) {
       return new Response(JSON.stringify({ error: "editPrompt and imageBase64/cropImageBase64 are required" }), {
@@ -36,7 +36,7 @@ serve(async (req) => {
       typeof crop.width === "number" &&
       typeof crop.height === "number";
 
-    const isCropEdit = Boolean(cropImageBase64 && attachmentBase64 && hasValidCrop);
+    const isCropEdit = Boolean(cropImageBase64 && cropMaskBase64 && attachmentBase64 && hasValidCrop);
 
     if (!isCropEdit && !maskBase64) {
       return new Response(JSON.stringify({ error: "maskBase64 is required when crop mode is not used" }), {

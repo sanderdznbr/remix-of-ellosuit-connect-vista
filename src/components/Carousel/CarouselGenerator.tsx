@@ -291,6 +291,7 @@ const CarouselGenerator: React.FC = () => {
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
   const [regeneratingAll, setRegeneratingAll] = useState(false);
+  const [regenAllProgress, setRegenAllProgress] = useState<{ current: number; total: number } | null>(null);
    const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
    const [faceUploadMode, setFaceUploadMode] = useState(false);
    const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);
@@ -4044,7 +4045,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         }
       } else {
         // Non-continuous: regenerate each card sequentially
-        for (let i = 0; i < currentData.cards.length; i++) {
+        const total = currentData.cards.length;
+        for (let i = 0; i < total; i++) {
+          setRegenAllProgress({ current: i + 1, total });
           setRegeneratingCard(i);
           try {
             await regenerateCard(i);
@@ -4053,8 +4056,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           }
           setRegeneratingCard(null);
           // Small delay between cards
-          if (i < currentData.cards.length - 1) await new Promise(r => setTimeout(r, 500));
+          if (i < total - 1) await new Promise(r => setTimeout(r, 500));
         }
+        setRegenAllProgress(null);
         toast({ title: '✨ Todos os cards regenerados!' });
       }
       // Auto-save after regeneration
@@ -5734,7 +5738,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         }} disabled={regeneratingAll || regeneratingCard !== null}
                           className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-40 w-full">
                           {regeneratingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 text-orange-400" />}
-                          {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
+                          {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
                         </button>
                         {showRegenModeMenu && !regeneratingAll && (
                           <div className="mt-1 w-full rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
@@ -5986,7 +5990,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <div className="carousel-loader-wrapper" style={{ width: 100, height: 100 }}>
                             <div className="carousel-loader-spinner carousel-loader-spinner--orange" style={{ width: 100, height: 100 }} />
                           </div>
-                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...'}</p>
                         </div>
                       )}
                       {/* Guest lock overlay */}
@@ -6421,7 +6425,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
                     style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
                     {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                    {regeneratingAll ? 'Regenerando...' : 'Regenerar Tudo'}
+                    {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
                   </button>
                   {showRegenModeMenu && !regeneratingAll && (
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">

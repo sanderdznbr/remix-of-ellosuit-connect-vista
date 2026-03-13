@@ -2068,7 +2068,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       
       // ========== NORMAL (NON-CONTINUOUS) IMAGE GENERATION ==========
       const webImagePool = selectedImages.filter(isValidImageUrl).slice(0, 3);
-      const allFaceRefUrls = referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const allFaceRefUrls = [...referenceImages.filter(r => r.category === 'face').map(r => r.url), ...getExtremeFormPhotoRefs().filter(r => r.category === 'face').map(r => r.url)];
       const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
       const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());

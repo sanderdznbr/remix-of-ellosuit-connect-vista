@@ -11,7 +11,7 @@ interface Props {
   brandColors?: string[];
 }
 
-const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
+const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandColors = [] }) => {
   const [galleryFieldId, setGalleryFieldId] = useState<string | null>(null);
 
   const updateField = useCallback((id: string, value: any) => {

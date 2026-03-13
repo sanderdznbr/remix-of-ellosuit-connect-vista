@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
     while ((match = imgRegex.exec(html)) !== null && fonts.length < 20) {
       const [, imgSrc, altText] = match;
       if (altText && altText.length > 2 && altText.length < 100 && !altText.toLowerCase().includes('envato') && !altText.toLowerCase().includes('logo')) {
-        const cleanUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
+        const rawUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
+        const cleanUrl = rawUrl.replace(/&amp;/g, '&');
         fonts.push({
           name: altText.replace(/\s*-\s*(?:Fonts|Font Family|Typeface).*$/i, '').replace(/\s*Visualização:?\s*/i, '').trim(),
           previewUrl: cleanUrl,
@@ -81,7 +82,8 @@ Deno.serve(async (req) => {
       while ((match = imgRegex2.exec(html)) !== null && fonts.length < 20) {
         const [, altText, imgSrc] = match;
         if (altText && altText.length > 2 && altText.length < 100 && !altText.toLowerCase().includes('envato')) {
-          const cleanUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
+          const rawUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
+          const cleanUrl = rawUrl.replace(/&amp;/g, '&');
           fonts.push({
             name: altText.replace(/\s*-\s*(?:Fonts|Font Family|Typeface).*$/i, '').replace(/\s*Visualização:?\s*/i, '').trim(),
             previewUrl: cleanUrl,
@@ -104,7 +106,8 @@ Deno.serve(async (req) => {
           !imgSrc.includes('data:image/svg') &&
           (imgSrc.includes('http') || imgSrc.startsWith('//'))
         ) {
-          const cleanUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
+          const rawUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
+          const cleanUrl = rawUrl.replace(/&amp;/g, '&');
           fonts.push({
             name: altText.replace(/\s*-\s*(?:Fonts|Font Family|Typeface).*$/i, '').replace(/\s*Visualização:?\s*/i, '').trim(),
             previewUrl: cleanUrl,

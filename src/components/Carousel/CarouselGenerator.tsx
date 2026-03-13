@@ -4804,6 +4804,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               exactText ? `TEXTO EXATO OBRIGATÓRIO (NÃO ALTERAR, NÃO REESCREVER): "${exactText}"` : '',
                               photoContext || '',
                               'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição (ex: se enviou print de app, coloque na tela de um mockup de celular; se enviou logo, inclua no design).',
+                              'FORMATO OBRIGATÓRIO: Cada card do carrossel deve ser UMA ÚNICA imagem/composição visual completa (1080x1080). NUNCA crie grids, colagens, mosaicos ou sub-divisões dentro de um card. Cada card = 1 cena única.',
                             ].filter(Boolean).join('\n');
                             setTopic(enrichedTopic);
                           }

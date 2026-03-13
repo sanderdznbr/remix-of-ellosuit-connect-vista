@@ -26,6 +26,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
   const [publishCaption, setPublishCaption] = useState('');
+  const [visibleCount, setVisibleCount] = useState(9);
 
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 
@@ -152,7 +153,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f', WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
       {/* Header */}
       <div className="px-4 md:px-8 pt-6 md:pt-8 pb-4">
         <motion.h1
@@ -222,7 +223,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+      <div className="px-4 md:px-8 pb-8">
         <motion.div
           className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-4' : 'flex flex-col gap-2 mt-4'}
           initial={{ opacity: 0 }}
@@ -244,7 +245,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
           </div>
 
           {/* Project cards */}
-          {sorted.map((item) => {
+          {sorted.slice(0, visibleCount).map((item) => {
             // Skip base64 covers (they're too large and cause slowness)
             const cover = item.cover_url && !item.cover_url.startsWith('data:') ? item.cover_url : null;
 
@@ -381,6 +382,19 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             </div>
           )}
         </motion.div>
+
+        {/* Load more */}
+        {sorted.length > visibleCount && (
+          <div className="flex justify-center mt-6 pb-4">
+            <button
+              onClick={() => setVisibleCount(prev => prev + 9)}
+              className="px-6 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 transition-all cursor-pointer"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              Carregar mais
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Publish Dialog */}

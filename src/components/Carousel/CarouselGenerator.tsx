@@ -1186,6 +1186,19 @@ const CarouselGenerator: React.FC = () => {
       // Restore real estate property data
       if (sc.propertyList?.length) setPropertyList(sc.propertyList);
     }
+    // Restore extreme mode settings from generation_config
+    const gc = item.generation_config;
+    if (gc) {
+      if (gc.wizardMode === 'extreme') {
+        setWizardMode('extreme');
+        if (gc.extremeVision) setExtremeVision(gc.extremeVision);
+        if (gc.extremeAnalysis) setExtremeAnalysis(gc.extremeAnalysis);
+        if (gc.extremeFormValues) setExtremeFormValues(gc.extremeFormValues);
+        if (gc.extremeSelectedFont) setExtremeSelectedFont(gc.extremeSelectedFont);
+      } else {
+        setWizardMode(gc.wizardMode || 'simple');
+      }
+    }
     setShowHistory(false);
     setActiveCardIndex(0);
     

@@ -5419,7 +5419,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
                     >
-                      <div className="carousel-loader-spinner" />
+                      <div className={`carousel-loader-spinner ${wizardMode === 'extreme' ? 'carousel-loader-spinner--orange' : ''}`} />
                       <span className="text-white/60 text-3xl font-light z-[1]">
                         <AnimatedCounter target={100} />
                       </span>

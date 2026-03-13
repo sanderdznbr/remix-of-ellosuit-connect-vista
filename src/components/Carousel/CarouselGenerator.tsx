@@ -5130,7 +5130,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         logoBrandColors={logoBrandColors}
                         brandName={brandName} setBrandName={setBrandName}
                         userName={userName} setUserName={setUserName}
-                        dateLabel={dateLabel} setDateLabel={setDateLabel} />
+                        dateLabel={dateLabel} setDateLabel={setDateLabel}
+                        isExtreme={wizardMode === 'extreme'} />
                     )}
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed

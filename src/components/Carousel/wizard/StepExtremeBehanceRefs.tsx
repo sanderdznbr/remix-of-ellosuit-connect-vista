@@ -48,36 +48,29 @@ function visionToEnglishQuery(vision: string, suggestedStyle?: string): string[]
   const translated = new Set<string>();
   
   for (const word of words) {
-    // Check exact match
+    // Only exact match — no partial matching to avoid false positives
     if (PT_TO_EN[word]) {
       translated.add(PT_TO_EN[word]);
     }
-    // Check partial match
-    for (const [pt, en] of Object.entries(PT_TO_EN)) {
-      if (word.includes(pt) || pt.includes(word)) {
-        translated.add(en);
-        break;
-      }
-    }
   }
-
-  // Always add base design context
-  translated.add('social media');
-  translated.add('post design');
 
   if (suggestedStyle) {
     translated.add(suggestedStyle.toLowerCase());
   }
 
-  const mainQuery = Array.from(translated).slice(0, 6).join(' ');
+  // Build queries: user-specific terms first, then broad fallbacks
+  const userTerms = Array.from(translated).slice(0, 5);
+  
+  const fallbacks: string[] = [];
 
-  // Build fallback queries from broad to generic
-  const fallbacks: string[] = [
-    mainQuery,
-    `instagram post ${Array.from(translated).slice(0, 3).join(' ')}`,
-    'social media post design inspiration',
-    'instagram carousel design modern',
-  ];
+  if (userTerms.length > 0) {
+    fallbacks.push(`social media ${userTerms.join(' ')}`);
+    fallbacks.push(`instagram post ${userTerms.slice(0, 3).join(' ')}`);
+  }
+
+  // Always include broad generic fallbacks
+  fallbacks.push('social media post design inspiration');
+  fallbacks.push('instagram carousel design modern');
 
   return fallbacks;
 }

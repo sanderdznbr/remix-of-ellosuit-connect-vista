@@ -7242,7 +7242,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <button
                 onClick={() => { setShowGuestPaywall(false); navigate('/precos'); }}
                 className="w-full py-3.5 rounded-xl text-sm font-bold cursor-pointer transition-all"
-                style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)', color: '#fff' }}
+                style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #E84D1A 0%, #C43A0F 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)', color: '#fff' }}
               >
                 Ver planos e assinar
               </button>

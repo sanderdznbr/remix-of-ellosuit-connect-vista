@@ -1348,11 +1348,16 @@ const CarouselGenerator: React.FC = () => {
         const origin = window.location.origin;
         const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
-        // Limit to 8 style refs to maintain quality
         marketplaceRefUrls.push(...allPreviews.slice(0, 8));
       }
 
-      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+      // === EXTREME MODE: Extract photos from dynamic form and merge ===
+      const extremeRefs = getExtremeFormPhotoRefs();
+      const extremeProductRefs = extremeRefs.filter(r => r.category === 'product').map(r => r.url);
+      const extremeStyleRefs = extremeRefs.filter(r => r.category === 'style').map(r => r.url);
+      const mergedProductRefs = [...productRefUrls, ...extremeProductRefs];
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs];
+      console.log('[SINGLE_POST] Extreme refs:', { product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];

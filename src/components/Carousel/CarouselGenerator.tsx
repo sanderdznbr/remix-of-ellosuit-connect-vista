@@ -6139,7 +6139,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <div className="flex gap-2">
                         <button onClick={generateCaption} disabled={generatingCaption}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                          style={{ backgroundColor: 'rgba(139,92,246,0.12)', color: 'rgba(173,95,255,0.9)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                          style={{ backgroundColor: `rgba(${themeRgb},0.12)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.15)` }}>
                           {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                           {generatingCaption ? 'Gerando...' : 'Gerar com IA'}
                         </button>

@@ -6482,7 +6482,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       Cancelar
                     </button>
                     <button onClick={() => generateCarouselFromCover(carouselFromCoverCount)}
-                      className="flex-1 px-4 py-2.5 rounded-xl text-xs font-medium text-white bg-purple-600 hover:bg-purple-500 border border-purple-500/50 transition-colors">
+                      className="flex-1 px-4 py-2.5 rounded-xl text-xs font-medium text-white border transition-colors"
+                      style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})`, borderColor: `rgba(${themeRgb},0.5)` }}>
                       <Sparkles className="h-3.5 w-3.5 inline mr-1" /> Gerar
                     </button>
                   </div>

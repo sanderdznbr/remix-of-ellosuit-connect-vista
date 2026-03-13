@@ -291,6 +291,7 @@ const CarouselGenerator: React.FC = () => {
   const [regeneratingCard, setRegeneratingCard] = useState<number | null>(null);
   const [regeneratingFace, setRegeneratingFace] = useState<number | null>(null);
   const [regeneratingAll, setRegeneratingAll] = useState(false);
+  const [regenAllProgress, setRegenAllProgress] = useState<{ current: number; total: number } | null>(null);
    const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
    const [faceUploadMode, setFaceUploadMode] = useState(false);
    const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);

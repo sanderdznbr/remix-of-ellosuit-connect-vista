@@ -90,39 +90,41 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   const renderContent = () => {
     if (children) return <div className="flex-1 min-w-0 min-h-0 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>{children}</div>;
-    switch (activeTab) {
-      case 'projects':
-        return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
-      case 'starred':
-        return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
-      case 'gallery':
-        return <BrandGallery />;
-      case 'prompts':
-        return <PromptGallery />;
-      case 'marketplace':
-        return <MarketplaceContent />;
-      case 'face-generator':
-        return <FaceGenerator />;
-      case 'style-creator':
-        return <StyleCreator />;
-      case 'logo-remover':
-        return <LogoRemoverTool initialFiles={behanceFiles} onInitialFilesConsumed={() => setBehanceFiles(undefined)} />;
-      case 'logo-history':
-        return <LogoRemoverHistory />;
-      case 'behance-import':
-        return <BehanceImporter onSendToLogoRemover={(files) => {
-          setBehanceFiles(files);
-          setActiveTab('logo-remover');
-        }} />;
-      case 'instagram-import':
-        return <InstagramImporter onSendToLogoRemover={(files) => {
-          setBehanceFiles(files);
-          setActiveTab('logo-remover');
-        }} />;
-      default:
-        return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
-    }
-  };
+    const content = (() => {
+      switch (activeTab) {
+        case 'projects':
+          return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="all" searchQuery={searchQuery} />;
+        case 'starred':
+          return <DashboardProjects onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} filterMode="starred" searchQuery={searchQuery} />;
+        case 'gallery':
+          return <BrandGallery />;
+        case 'prompts':
+          return <PromptGallery />;
+        case 'marketplace':
+          return <MarketplaceContent />;
+        case 'face-generator':
+          return <FaceGenerator />;
+        case 'style-creator':
+          return <StyleCreator />;
+        case 'logo-remover':
+          return <LogoRemoverTool initialFiles={behanceFiles} onInitialFilesConsumed={() => setBehanceFiles(undefined)} />;
+        case 'logo-history':
+          return <LogoRemoverHistory />;
+        case 'behance-import':
+          return <BehanceImporter onSendToLogoRemover={(files) => {
+            setBehanceFiles(files);
+            setActiveTab('logo-remover');
+          }} />;
+        case 'instagram-import':
+          return <InstagramImporter onSendToLogoRemover={(files) => {
+            setBehanceFiles(files);
+            setActiveTab('logo-remover');
+          }} />;
+        default:
+          return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
+      }
+    })();
+    return <div className="flex-1 min-w-0 min-h-0 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>{content}</div>;
 
   if (isMobile) {
     return (

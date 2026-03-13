@@ -35,111 +35,62 @@ serve(async (req) => {
       model: IMAGE_MODEL,
     });
 
-    // Build prompt based on whether there's a reference attachment
-    const promptText = attachmentBase64
-      ? `You are a world-class photo retoucher and digital compositing expert. You will receive THREE images:
-
-IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Before making ANY edit, carefully study:
-- The person's EXACT body proportions, skin tone, clothing style, and posture
-- The sleeve/clothing that surrounds the area being edited — you must seamlessly continue it
-- Lighting direction (where highlights and shadows fall), color temperature, and depth of field
-- Background environment details (walls, textures, objects)
-
-IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = pixel-identical to IMAGE 1.
-IMAGE 3 (REFERENCE): Visual reference for the requested change.
-
-USER REQUEST: "${editPrompt}"
-
-COMPOSITING RULES (MANDATORY — VIOLATING ANY = FAILURE):
-
-1. DIMENSIONS: Output MUST be EXACTLY the same dimensions as IMAGE 1.
-
-2. PROPORTIONAL ANATOMY:
-   - The edited body part MUST match the person's real proportions in IMAGE 1.
-   - Study the person's build, bone structure, and size before generating.
-   - A hand must be proportional to the arm and body it belongs to — not too large, not too small.
-   - Fingers must have natural length, thickness, and curvature.
-
-3. CLOTHING & SKIN CONTINUITY:
-   - Where the edited area meets existing clothing (sleeves, collar, jacket), the fabric MUST continue seamlessly.
-   - Match the EXACT fabric texture, color, wrinkle pattern, and fold direction from IMAGE 1.
-   - Skin tone in the edited area must be IDENTICAL to the person's skin in IMAGE 1.
-   - Veins, hair, and skin texture must be consistent.
-
-4. ANATOMICAL CONNECTION:
-   - Edited limbs MUST connect naturally to the body: wrist→forearm→elbow→upper arm→shoulder.
-   - Joints must bend at realistic angles with proper muscle/tendon definition.
-   - No floating or detached body parts.
-
-5. ENVIRONMENTAL INTEGRATION:
-   - Fill the edited area with the ACTUAL background from IMAGE 1 (walls, light sources, objects) — NEVER white, blank, or generic fill.
-   - Shadows cast by the edited element must match the existing light direction.
-   - Depth of field and focus must match the surrounding area.
-
-6. SEAMLESS EDGES: The boundary between edited and non-edited areas must be INVISIBLE. No hard cuts, color shifts, or resolution differences.
-
-7. BLACK MASK = UNTOUCHED: Every pixel in the black mask area must be identical to IMAGE 1.
-
-8. PHOTOREALISM: The result must look like an ORIGINAL unedited photograph. No viewer should detect any manipulation.
-
-9. Return ONLY the final composited image.`
-      : `You are a world-class photo retoucher and digital compositing expert. You will receive TWO images:
-
-IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Before making ANY edit, carefully study:
-- The person's EXACT body proportions, skin tone, clothing style, and posture
-- The sleeve/clothing that surrounds the area being edited — you must seamlessly continue it
-- Lighting direction (where highlights and shadows fall), color temperature, and depth of field
-- Background environment details (walls, textures, objects)
-
-IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = pixel-identical to IMAGE 1.
-
-USER REQUEST: "${editPrompt}"
-
-COMPOSITING RULES (MANDATORY — VIOLATING ANY = FAILURE):
-
-1. DIMENSIONS: Output MUST be EXACTLY the same dimensions as IMAGE 1.
-
-2. PROPORTIONAL ANATOMY:
-   - The edited body part MUST match the person's real proportions in IMAGE 1.
-   - Study the person's build, bone structure, and size before generating.
-   - A hand must be proportional to the arm and body it belongs to — not too large, not too small.
-   - Fingers must have natural length, thickness, and curvature.
-
-3. CLOTHING & SKIN CONTINUITY:
-   - Where the edited area meets existing clothing (sleeves, collar, jacket), the fabric MUST continue seamlessly.
-   - Match the EXACT fabric texture, color, wrinkle pattern, and fold direction from IMAGE 1.
-   - Skin tone in the edited area must be IDENTICAL to the person's skin in IMAGE 1.
-   - Veins, hair, and skin texture must be consistent.
-
-4. ANATOMICAL CONNECTION:
-   - Edited limbs MUST connect naturally to the body: wrist→forearm→elbow→upper arm→shoulder.
-   - Joints must bend at realistic angles with proper muscle/tendon definition.
-   - No floating or detached body parts.
-
-5. ENVIRONMENTAL INTEGRATION:
-   - Fill the edited area with the ACTUAL background from IMAGE 1 (walls, light sources, objects) — NEVER white, blank, or generic fill.
-   - Shadows cast by the edited element must match the existing light direction.
-   - Depth of field and focus must match the surrounding area.
-
-6. SEAMLESS EDGES: The boundary between edited and non-edited areas must be INVISIBLE. No hard cuts, color shifts, or resolution differences.
-
-7. BLACK MASK = UNTOUCHED: Every pixel in the black mask area must be identical to IMAGE 1.
-
-8. PHOTOREALISM: The result must look like an ORIGINAL unedited photograph. No viewer should detect any manipulation.
-
-9. Return ONLY the final composited image.`;
-
-    const contentParts: any[] = [
-      { type: "text", text: promptText },
-      { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
-      { type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } },
-    ];
+    // Build prompt — always send FULL image, mask shows WHERE to edit
+    const contentParts: any[] = [];
 
     if (attachmentBase64) {
+      // WITH ATTACHMENT: 3 images
       contentParts.push({
-        type: "image_url",
-        image_url: { url: `data:image/png;base64,${attachmentBase64}` },
+        type: "text",
+        text: `Edit this image. I'm sending you THREE images:
+
+1. THE FULL POST/ARTWORK (first image below) — This is the COMPLETE image you must return edited. Study everything: the person, their clothing, skin tone, proportions, the background environment, lighting, colors, typography, and overall composition.
+
+2. A MASK (second image) — A black-and-white image the SAME SIZE as the post. The WHITE areas show EXACTLY where you should make changes. The BLACK areas must remain COMPLETELY UNCHANGED — copy them pixel-for-pixel from the original.
+
+3. A REFERENCE IMAGE (third image) — Use this as visual reference for what to place or change in the white mask area.
+
+WHAT THE USER WANTS: "${editPrompt}"
+
+YOUR TASK:
+- Return the COMPLETE image (same exact dimensions as image 1)
+- ONLY modify the WHITE areas of the mask
+- Keep EVERYTHING in the black areas identical to the original
+- The edit must blend PERFECTLY with the surrounding image — match lighting, shadows, color temperature, skin tone, clothing texture
+- If moving/changing body parts: maintain correct anatomy, proportions, and natural connections to the rest of the body
+- The background behind edited areas must match the original environment (walls, textures, objects) — NEVER use white, blank, or generic fills
+- The result must look like the original photograph, just with the requested change — completely photorealistic, no artifacts, no seams
+
+Return ONLY the edited image, nothing else.`
       });
+      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } });
+      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } });
+      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${attachmentBase64}` } });
+    } else {
+      // WITHOUT ATTACHMENT: 2 images
+      contentParts.push({
+        type: "text",
+        text: `Edit this image. I'm sending you TWO images:
+
+1. THE FULL POST/ARTWORK (first image below) — This is the COMPLETE image you must return edited. Study everything: the person, their clothing, skin tone, proportions, the background environment, lighting, colors, typography, and overall composition.
+
+2. A MASK (second image) — A black-and-white image the SAME SIZE as the post. The WHITE areas show EXACTLY where you should make changes. The BLACK areas must remain COMPLETELY UNCHANGED — copy them pixel-for-pixel from the original.
+
+WHAT THE USER WANTS: "${editPrompt}"
+
+YOUR TASK:
+- Return the COMPLETE image (same exact dimensions as image 1)
+- ONLY modify the WHITE areas of the mask
+- Keep EVERYTHING in the black areas identical to the original
+- The edit must blend PERFECTLY with the surrounding image — match lighting, shadows, color temperature, skin tone, clothing texture
+- If moving/changing body parts: maintain correct anatomy, proportions, and natural connections to the rest of the body
+- The background behind edited areas must match the original environment (walls, textures, objects) — NEVER use white, blank, or generic fills
+- The result must look like the original photograph, just with the requested change — completely photorealistic, no artifacts, no seams
+
+Return ONLY the edited image, nothing else.`
+      });
+      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } });
+      contentParts.push({ type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } });
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

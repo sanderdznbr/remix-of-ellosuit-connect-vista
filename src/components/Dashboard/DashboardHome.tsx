@@ -28,6 +28,7 @@ interface ActiveJob {
   status: string;
   progress_current: number;
   progress_total: number;
+  updated_at: string;
 }
 
 interface DashboardHomeProps {

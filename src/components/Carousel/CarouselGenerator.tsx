@@ -4602,6 +4602,39 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             setContentMode('carousel');
                             setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                           }
+                          // Inject extreme form photos as style reference images
+                          if (extremeAnalysis) {
+                            const extremePhotos: { url: string; category: string }[] = [];
+                            for (const field of extremeAnalysis.fields) {
+                              if (field.type === 'photo_upload') {
+                                const photos = extremeFormValues[field.id] as string[] | undefined;
+                                if (photos?.length) {
+                                  photos.forEach(url => {
+                                    extremePhotos.push({ url, category: 'style' });
+                                  });
+                                }
+                              }
+                            }
+                            if (extremePhotos.length > 0) {
+                              setReferenceImages(prev => [
+                                ...prev,
+                                ...extremePhotos.map(p => ({
+                                  url: p.url,
+                                  thumb: p.url,
+                                  label: 'extreme-ref',
+                                  source: 'upload' as const,
+                                  category: 'style' as const,
+                                })),
+                              ]);
+                            }
+                            // Enrich topic with extreme vision details
+                            const formSummary = extremeAnalysis.fields
+                              .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')
+                              .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
+                              .join('. ');
+                            const enrichedTopic = `${extremeVision}${formSummary ? `. Detalhes: ${formSummary}` : ''}`;
+                            setTopic(enrichedTopic);
+                          }
                           setTransitionToGenerate(true);
                           setTimeout(() => generateContent(), 1200);
                         }}

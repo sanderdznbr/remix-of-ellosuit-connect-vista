@@ -26,6 +26,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
   const [publishCaption, setPublishCaption] = useState('');
+  const [visibleCount, setVisibleCount] = useState(9);
 
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 

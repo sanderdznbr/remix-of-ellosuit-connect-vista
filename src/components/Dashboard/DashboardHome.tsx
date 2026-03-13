@@ -77,6 +77,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [user]);
 
+  // Wheel → horizontal scroll on recents container
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [recentCarousels.length]);
+
   // ===== ACTIVE JOBS: Check for pending cloud generation jobs =====
   useEffect(() => {
     if (!user) return;

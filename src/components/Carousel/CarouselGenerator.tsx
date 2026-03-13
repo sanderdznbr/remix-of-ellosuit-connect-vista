@@ -6428,7 +6428,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <div className="flex gap-1.5 justify-center flex-wrap">
                           {[4, 6, 8, 10, 15, 20].map(n => (
                             <button key={n} onClick={() => { setCarouselFromCoverCount(n); setCoverCardTexts(Array.from({ length: n }, (_, i) => coverCardTexts[i] || { title: '', body: '' })); }}
-                              className={`px-3.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${carouselFromCoverCount === n ? 'bg-purple-600 text-white border border-purple-500/50' : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'}`}>
+                              className="px-3.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all"
+                              style={carouselFromCoverCount === n ? { backgroundColor: themeHex, color: '#fff', border: `1px solid rgba(${themeRgb},0.5)` } : { backgroundColor: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
                               {n}
                             </button>
                           ))}

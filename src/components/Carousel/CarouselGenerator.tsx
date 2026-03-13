@@ -3446,12 +3446,13 @@ FORBIDDEN:
           action: 'generate-content',
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount: carouselData.cards.length, // Use actual card count for proper context
+          cardCount: carouselData.cards.length,
           imageCardIndices: [cardIndex],
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
-          regenerateCardIndex: cardIndex, // hint to backend
-          existingCardSummaries, // avoid repeating content from other cards
+          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual.' } : null })}` } : {}),
+          regenerateCardIndex: cardIndex,
+          existingCardSummaries,
         },
       });
       

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, X, Folder, Plus, User, ChevronDown, ChevronUp, Scan, Glasses, UserRound, UserRoundCheck } from 'lucide-react';
+import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
 import { ReferenceImage, FacePerson } from './types';
 import GalleryPicker from './GalleryPicker';
 import { useAuth } from '@/components/AuthProvider';

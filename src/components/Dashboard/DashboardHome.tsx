@@ -332,16 +332,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           </div>
         </motion.div>
 
-        <motion.button
-          onClick={() => onStartCarousel()}
-          className="mt-5 text-[11px] transition-colors cursor-pointer"
-          style={{ color: 'rgba(255,255,255,0.2)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7, duration: 0.3 }}
-        >
-          ou pular e configurar manualmente
-        </motion.button>
       </div>
 
       {/* Recent projects — pinned to bottom with horizontal slider */}

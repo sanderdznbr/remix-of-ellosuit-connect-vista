@@ -977,6 +977,7 @@ const CarouselGenerator: React.FC = () => {
         facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
+        ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
       },
     });
     

@@ -1469,7 +1469,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
 
       const imageUrl = await generateImage({
         prompt: finalPrompt,
-        faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
+        faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
         styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
         referenceImageUrls: effectiveProductRefs,
         negativePrompt: negPrompt,

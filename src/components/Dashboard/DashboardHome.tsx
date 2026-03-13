@@ -376,8 +376,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
           <div
             ref={scrollContainerRef}
-            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
           >
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};

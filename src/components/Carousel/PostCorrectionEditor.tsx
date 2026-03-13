@@ -13,7 +13,7 @@ interface Props {
   imageUrl: string;
   onClose: () => void;
   onImageEdited: (newImageUrl: string) => void;
-  editFn: (originalUrl: string, maskDataUrl: string, prompt: string) => Promise<string>;
+  editFn: (originalUrl: string, maskDataUrl: string, prompt: string, attachmentBase64?: string) => Promise<string>;
 }
 
 const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdited, editFn }) => {

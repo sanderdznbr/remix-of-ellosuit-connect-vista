@@ -7127,8 +7127,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             const aiResultDataUrl = `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
 
-            if (crop && cropImageBase64) {
-              return await pasteCropIntoOriginal(originalUrl, aiResultDataUrl, crop);
+            if (crop && cropImageBase64 && cropMaskDataUrl) {
+              return await pasteCropIntoOriginal(originalUrl, aiResultDataUrl, cropMaskDataUrl, crop);
             }
 
             // === COMPOSITE: paste only masked regions from AI result onto original ===

@@ -2263,7 +2263,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
               }
             }
           } else {
-            capturedProductRefs = productRefUrls.length > 0 ? [...productRefUrls] : undefined;
+            const mergedProductUrls = [...productRefUrls, ...carouselExtremeProductRefs];
+            capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
           }
           
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;

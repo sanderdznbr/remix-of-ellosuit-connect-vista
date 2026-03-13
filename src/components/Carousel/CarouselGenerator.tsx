@@ -433,7 +433,12 @@ const CarouselGenerator: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [carouselHistory, setCarouselHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [currentCarouselId, setCurrentCarouselId] = useState<string | null>(null);
+  const [currentCarouselId, _setCurrentCarouselId] = useState<string | null>(null);
+  const currentCarouselIdRef = useRef<string | null>(null);
+  const setCurrentCarouselId = useCallback((id: string | null) => {
+    currentCarouselIdRef.current = id;
+    _setCurrentCarouselId(id);
+  }, []);
 
   // Full reset for starting a brand-new carousel
   const resetWizardState = useCallback(() => {

@@ -31,6 +31,7 @@ const GeneratingAnimation: React.FC<Props> = ({
   brandName = '',
   logoUrl = null,
   skipWebSearch = false,
+  onGoHome,
 }) => {
   // Always use bright purple for loading, ignoring user's accentColor
   const loadingColor = LOADING_PURPLE;

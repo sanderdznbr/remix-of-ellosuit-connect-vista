@@ -6725,7 +6725,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
           }}
-          editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string) => {
+          editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string, attachmentBase64?: string) => {
             // Convert image and mask to base64
             const toBase64 = async (url: string): Promise<string> => {
               if (url.startsWith('data:')) {

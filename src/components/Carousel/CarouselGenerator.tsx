@@ -6871,7 +6871,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all border"
                     style={{ borderColor: wizardMode === 'extreme' ? 'rgba(232,77,26,0.2)' : 'rgba(139,92,246,0.2)', backgroundColor: wizardMode === 'extreme' ? 'rgba(232,77,26,0.06)' : 'rgba(139,92,246,0.06)' }}>
                     <div className="p-2 rounded-lg" style={{ backgroundColor: wizardMode === 'extreme' ? 'rgba(232,77,26,0.15)' : 'rgba(139,92,246,0.15)' }}>
-                      {addCardModal.generatingAutoText ? <Loader2 className="h-4 w-4 text-purple-400 animate-spin" /> : <Wand2 className="h-4 w-4 text-purple-400" />}
+                      {addCardModal.generatingAutoText ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: wizardMode === 'extreme' ? '#E84D1A' : '#A855F7' }} /> : <Wand2 className="h-4 w-4" style={{ color: wizardMode === 'extreme' ? '#E84D1A' : '#A855F7' }} />}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white/90">Texto automático</p>

@@ -46,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Instagram
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -5405,6 +5405,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
                     </button>
 
+                    {/* Publicar no Instagram */}
+                    {!isGuest && (
+                      <button onClick={() => setShowPublishDialog(true)}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-pink-300 hover:text-pink-200 hover:bg-white/[0.06] transition-all w-full"
+                        style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.1), rgba(225,48,108,0.1))' }}>
+                        <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
+                      </button>
+                    )}
+
                     <div className="h-px bg-white/[0.06] my-1" />
 
                     {/* Card-specific actions header */}
@@ -6121,6 +6130,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <button onClick={() => exportAllCards('webp')}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
                       <ImageIcon className="h-4 w-4" /> Baixar WEBP
+                    </button>
+                    <div className="h-px bg-white/10 my-1" />
+                    <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"
+                      style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.15), rgba(225,48,108,0.15))' }}>
+                      <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
                     </button>
                   </div>
                 </div>

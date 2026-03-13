@@ -4920,6 +4920,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setCardCount={setCardCount}
                         speed={imageSettings.model === 'nano-banana' ? 'pro' : 'flash'}
                         setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'pro' ? 'nano-banana' : 'gemini' }))}
+                        hideGenerateButton={contentMode === 'carousel' && cardCount > 1}
                         generating={generating || transitionToGenerate}
                         onGenerate={() => {
                           const nextIsSinglePost = cardCount === 1;

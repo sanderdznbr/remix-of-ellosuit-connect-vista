@@ -2574,6 +2574,54 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
     }
   };
 
+  // ===== HELPER: Extract Extreme form photo refs =====
+  const getExtremeFormPhotoRefs = useCallback((): ReferenceImage[] => {
+    if (wizardMode !== 'extreme' || !extremeAnalysis) return [];
+    return extremeAnalysis.fields
+      .filter((field) => field.type === 'photo_upload')
+      .flatMap((field) => {
+        const photos = extremeFormValues[field.id] as string[] | undefined;
+        if (!photos?.length) return [];
+        const normalized = `${field.label} ${field.id}`.toLowerCase();
+        const category: ReferenceImage['category'] = /print|screenshot|tela|app|produto|mockup|logo|marca|interface|screen/.test(normalized)
+          ? 'product'
+          : 'style';
+        return photos.map((url, idx) => ({
+          url,
+          thumb: url,
+          label: `${field.label} ${idx + 1}`,
+          source: 'upload' as const,
+          category,
+        }));
+      });
+  }, [wizardMode, extremeAnalysis, extremeFormValues]);
+
+  // ===== HELPER: Build Extreme vision context for prompt enrichment =====
+  const buildExtremePromptContext = useCallback((): string => {
+    if (wizardMode !== 'extreme' || !extremeAnalysis) return '';
+    const parts: string[] = [];
+    parts.push(`\n\n🔥 MODO EXTREME — VISÃO DO USUÁRIO (PRIORIDADE MÁXIMA):`);
+    parts.push(`DESCRIÇÃO DA VISÃO: "${extremeVision}"`);
+    parts.push(`RESUMO DA IA: ${extremeAnalysis.summary}`);
+    // Add all non-photo form values as context
+    for (const field of extremeAnalysis.fields) {
+      if (field.type === 'photo_upload') continue;
+      const val = extremeFormValues[field.id];
+      if (val && typeof val === 'string' && val.trim()) {
+        parts.push(`${field.label}: ${val}`);
+      }
+    }
+    // Smart detection
+    const visionLower = extremeVision.toLowerCase();
+    if (/app|aplicativo|celular|smartphone|tela|print|screenshot/i.test(visionLower)) {
+      parts.push(`📱 MOCKUP OBRIGATÓRIO: O usuário mencionou um aplicativo/tela. As imagens de referência são SCREENSHOTS REAIS. Crie um mockup PROFISSIONAL de iPhone com o screenshot EXATO na tela. Composição premium de lançamento de app.`);
+    }
+    if (/logo|marca|logotipo|logomarca/i.test(visionLower)) {
+      parts.push(`🏷️ LOGO OBRIGATÓRIO: O usuário forneceu seu logo. Ele DEVE aparecer no design final, posicionado de forma elegante e profissional.`);
+    }
+    return parts.join('\n');
+  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues]);
+
 
   // ===== FILL COVER MODAL TEXTS WITH AI =====
   const fillCoverTextsWithAI = async () => {

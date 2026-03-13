@@ -173,7 +173,7 @@ const CarouselGenerator: React.FC = () => {
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
 
   // Wizard mode: simple vs advanced
-  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
+  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme'>('simple');
   const [continuousMode, setContinuousMode] = useState(false);
 
   // Wizard state

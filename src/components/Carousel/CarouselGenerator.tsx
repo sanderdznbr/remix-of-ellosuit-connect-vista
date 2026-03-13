@@ -6207,12 +6207,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {isGuest && (
               <div className="flex items-center justify-center gap-3 mt-4 w-full relative z-10 px-4">
                 <div className="flex items-center gap-3 px-5 py-3 rounded-2xl w-full max-w-xl"
-                  style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))', border: '1px solid rgba(139,92,246,0.2)' }}>
-                  <Lock className="h-4 w-4 shrink-0" style={{ color: '#8B5CF6' }} />
+                  style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))`, border: `1px solid rgba(${themeRgb},0.2)` }}>
+                  <Lock className="h-4 w-4 shrink-0" style={{ color: themeHex }} />
                   <p className="text-xs text-white/60 flex-1">Cadastre-se para desbloquear todos os cards, salvar e exportar seus carrosséis.</p>
                   <button onClick={() => navigate('/checkout')}
                     className="px-4 py-2 rounded-xl text-xs font-bold text-white shrink-0 transition-all hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 100%)' }}>
+                    style={{ background: `linear-gradient(135deg, ${themeHex} 0%, ${themeHexDark} 100%)` }}>
                     Cadastrar
                   </button>
                 </div>

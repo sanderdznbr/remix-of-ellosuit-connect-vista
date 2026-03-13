@@ -84,7 +84,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         e.preventDefault();
-        el.scrollLeft += e.deltaY;
+        el.scrollBy({ left: e.deltaY, behavior: 'smooth' });
       }
     };
     el.addEventListener('wheel', onWheel, { passive: false });

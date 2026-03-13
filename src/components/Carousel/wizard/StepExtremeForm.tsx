@@ -156,7 +156,7 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandCol
         return (
           <input
             type="color"
-            value={(values[field.id] as string) || brandColors[0] || '#ff6600'}
+            value={(values[field.id] as string) || brandColors[0] || '#8B5CF6'}
             onChange={(e) => updateField(field.id, e.target.value)}
             className="w-12 h-10 rounded-lg border border-white/10 cursor-pointer bg-transparent"
           />

@@ -5405,6 +5405,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
                     </button>
 
+                    {/* Publicar no Instagram */}
+                    {!isGuest && (
+                      <button onClick={() => setShowPublishDialog(true)}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-pink-300 hover:text-pink-200 hover:bg-white/[0.06] transition-all w-full"
+                        style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.1), rgba(225,48,108,0.1))' }}>
+                        <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
+                      </button>
+                    )}
+
                     <div className="h-px bg-white/[0.06] my-1" />
 
                     {/* Card-specific actions header */}

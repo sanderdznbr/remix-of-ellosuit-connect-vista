@@ -2198,7 +2198,11 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
           const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
-          const allStyleRefs = [...styleRefUrls];
+          // === EXTREME MODE: Inject uploaded photos as product/style refs ===
+          const carouselExtremeRefs = getExtremeFormPhotoRefs();
+          const carouselExtremeProductRefs = carouselExtremeRefs.filter(r => r.category === 'product').map(r => r.url);
+          const carouselExtremeStyleRefs = carouselExtremeRefs.filter(r => r.category === 'style').map(r => r.url);
+          const allStyleRefs = [...styleRefUrls, ...carouselExtremeStyleRefs];
           
           const marketplaceRefUrls: string[] = [];
           if (activeMarketplaceStyleRef.current?._previewImages?.length) {

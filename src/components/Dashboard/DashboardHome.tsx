@@ -458,6 +458,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 </div>
               );
             })}
+            </div>
+            {/* Fade-out gradient on the right edge */}
+            <div className="pointer-events-none absolute top-0 right-0 w-20 h-full" style={{ background: 'linear-gradient(to right, transparent, #0a0a0f)' }} />
           </div>
         </div>
       </motion.div>

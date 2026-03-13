@@ -5431,7 +5431,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* Voice toggle — bottom-right corner */}
               <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
                 className={`fixed bottom-6 right-6 z-50 p-2.5 rounded-full transition-all shadow-lg backdrop-blur-sm ${
-                  voiceEnabled ? 'bg-purple-500/20 text-purple-400' : 'bg-white/[0.06] text-white/15 hover:text-white/30'
+                  voiceEnabled ? (wizardMode === 'extreme' ? 'bg-orange-500/20 text-orange-400' : 'bg-purple-500/20 text-purple-400') : 'bg-white/[0.06] text-white/15 hover:text-white/30'
                 }`}
                 title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

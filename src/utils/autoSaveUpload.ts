@@ -7,40 +7,71 @@ const UPLOADS_FOLDER_COLOR = '#3B82F6';
  * Ensures the "Uploads realizados" folder exists, creating it if needed.
  * Returns the folder ID.
  */
+// Module-level cache to avoid repeated queries and race-condition duplicates
+let cachedFolderId: string | null = null;
+let folderPromise: Promise<string | null> | null = null;
+
 async function ensureUploadsFolder(companyId: string, userId: string): Promise<string | null> {
-  try {
-    // Check if folder already exists
-    const { data: existing } = await supabase
-      .from('brand_asset_folders')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('name', UPLOADS_FOLDER_NAME)
-      .limit(1)
-      .maybeSingle();
+  // Return cached value if available
+  if (cachedFolderId) return cachedFolderId;
 
-    if (existing) return existing.id;
+  // If a lookup is already in flight, reuse it (prevents parallel creates)
+  if (folderPromise) return folderPromise;
 
-    // Create folder
-    const { data: created, error } = await supabase
-      .from('brand_asset_folders')
-      .insert({
-        company_id: companyId,
-        name: UPLOADS_FOLDER_NAME,
-        color: UPLOADS_FOLDER_COLOR,
-        created_by: userId,
-      })
-      .select('id')
-      .single();
+  folderPromise = (async () => {
+    try {
+      // Check if folder already exists (may be multiple from previous bug — pick first)
+      const { data: existing } = await supabase
+        .from('brand_asset_folders')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('name', UPLOADS_FOLDER_NAME)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Error creating uploads folder:', error);
+      if (existing) {
+        cachedFolderId = existing.id;
+        return existing.id;
+      }
+
+      // Create folder
+      const { data: created, error } = await supabase
+        .from('brand_asset_folders')
+        .insert({
+          company_id: companyId,
+          name: UPLOADS_FOLDER_NAME,
+          color: UPLOADS_FOLDER_COLOR,
+          created_by: userId,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        // Could be a unique-ish race; try fetching again
+        const { data: retry } = await supabase
+          .from('brand_asset_folders')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('name', UPLOADS_FOLDER_NAME)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (retry) { cachedFolderId = retry.id; return retry.id; }
+        console.error('Error creating uploads folder:', error);
+        return null;
+      }
+      cachedFolderId = created?.id || null;
+      return cachedFolderId;
+    } catch (err) {
+      console.error('ensureUploadsFolder error:', err);
       return null;
+    } finally {
+      folderPromise = null;
     }
-    return created?.id || null;
-  } catch (err) {
-    console.error('ensureUploadsFolder error:', err);
-    return null;
-  }
+  })();
+
+  return folderPromise;
 }
 
 /**

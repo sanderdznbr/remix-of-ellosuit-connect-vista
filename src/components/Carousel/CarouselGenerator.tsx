@@ -5975,7 +5975,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   }}>
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-2">
-                        <Palette className="h-5 w-5" style={{ color: '#8B5CF6' }} />
+                        <Palette className="h-5 w-5" style={{ color: themeHex }} />
                         <h3 className="font-bold text-white text-base">
                           {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
                         </h3>

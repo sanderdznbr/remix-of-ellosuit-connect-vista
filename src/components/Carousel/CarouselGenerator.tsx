@@ -7226,7 +7226,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="relative w-full max-w-md rounded-2xl overflow-hidden p-8 text-center"
-            style={{ backgroundColor: '#18181f', border: '1px solid rgba(139,92,246,0.3)' }}
+            style={{ backgroundColor: '#18181f', border: wizardMode === 'extreme' ? '1px solid rgba(232,77,26,0.3)' : '1px solid rgba(139,92,246,0.3)' }}
           >
             <button onClick={() => setShowGuestPaywall(false)} className="absolute top-3 right-3 p-1 text-white/30 hover:text-white/60 cursor-pointer">
               <X className="w-5 h-5" />

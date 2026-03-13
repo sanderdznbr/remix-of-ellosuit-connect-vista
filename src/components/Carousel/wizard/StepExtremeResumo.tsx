@@ -14,6 +14,7 @@ interface Props {
   setSpeed: (v: 'flash' | 'pro') => void;
   generating: boolean;
   onGenerate: () => void;
+  hideGenerateButton?: boolean;
 }
 
 const StepExtremeResumo: React.FC<Props> = ({
@@ -28,6 +29,7 @@ const StepExtremeResumo: React.FC<Props> = ({
   setSpeed,
   generating,
   onGenerate,
+  hideGenerateButton,
 }) => {
   const filledFields = analysis.fields.filter(f => {
     const v = formValues[f.id];
@@ -149,24 +151,26 @@ const StepExtremeResumo: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Generate button */}
-      <button
-        onClick={onGenerate}
-        disabled={generating}
-        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
-        style={{
-          background: generating
-            ? 'rgba(255,255,255,0.04)'
-            : 'linear-gradient(135deg, #f97316, #ea580c)',
-          color: generating ? 'rgba(255,255,255,0.3)' : 'white',
-        }}
-      >
-        {generating ? (
-          <><Loader2 className="w-4 h-4 animate-spin" /> Gerando...</>
-        ) : (
-          <><Sparkles className="w-4 h-4" /> Gerar com IA Extreme</>
-        )}
-      </button>
+      {/* Generate button — hidden when Roteiro step follows */}
+      {!hideGenerateButton && (
+        <button
+          onClick={onGenerate}
+          disabled={generating}
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+          style={{
+            background: generating
+              ? 'rgba(255,255,255,0.04)'
+              : 'linear-gradient(135deg, #f97316, #ea580c)',
+            color: generating ? 'rgba(255,255,255,0.3)' : 'white',
+          }}
+        >
+          {generating ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Gerando...</>
+          ) : (
+            <><Sparkles className="w-4 h-4" /> Gerar com IA Extreme</>
+          )}
+        </button>
+      )}
     </div>
   );
 };

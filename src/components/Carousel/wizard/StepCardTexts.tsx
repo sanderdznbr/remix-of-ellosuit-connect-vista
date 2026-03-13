@@ -14,10 +14,11 @@ interface Props {
   manualCardTexts: CardText[];
   setManualCardTexts: (v: CardText[]) => void;
   topic: string;
+  accentTheme?: 'purple' | 'orange';
 }
 
 const StepCardTexts: React.FC<Props> = ({
-  cardCount, contentMode, manualCardTexts, setManualCardTexts, topic,
+  cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
@@ -91,6 +92,13 @@ const StepCardTexts: React.FC<Props> = ({
   };
 
   const hasAnyText = texts.some(t => (t.title || '').trim() || (t.body || '').trim());
+  const isOrange = accentTheme === 'orange';
+  const accentBg = isOrange ? 'rgba(249,115,22,0.08)' : 'rgba(139,92,246,0.08)';
+  const accentBorder = isOrange ? 'rgba(249,115,22,0.2)' : 'rgba(139,92,246,0.2)';
+  const accentIconBg = isOrange ? 'rgba(249,115,22,0.15)' : 'rgba(139,92,246,0.15)';
+  const accentIconClass = isOrange ? 'text-orange-400' : 'text-purple-400';
+  const accentBadgeBg = isOrange ? 'bg-orange-500/20' : 'bg-purple-500/20';
+  const accentBadgeText = isOrange ? 'text-orange-300' : 'text-purple-300';
 
   return (
     <div className="space-y-5" style={{ minHeight: '300px' }}>
@@ -106,13 +114,10 @@ const StepCardTexts: React.FC<Props> = ({
         onClick={fillWithAI}
         disabled={filling || !topic.trim()}
         className="flex items-center gap-2 w-full p-3 rounded-xl transition-all text-left"
-        style={{
-          backgroundColor: 'rgba(139,92,246,0.08)',
-          border: '1px solid rgba(139,92,246,0.2)',
-        }}
+        style={{ backgroundColor: accentBg, border: `1px solid ${accentBorder}` }}
       >
-        <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-          {filling ? <Loader2 className="h-4 w-4 animate-spin text-purple-400" /> : <Wand2 className="h-4 w-4 text-purple-400" />}
+        <div className="p-2 rounded-lg" style={{ backgroundColor: accentIconBg }}>
+          {filling ? <Loader2 className={`h-4 w-4 animate-spin ${accentIconClass}`} /> : <Wand2 className={`h-4 w-4 ${accentIconClass}`} />}
         </div>
         <div className="flex-1">
           <p className="text-sm font-medium text-white/80">
@@ -135,7 +140,7 @@ const StepCardTexts: React.FC<Props> = ({
               className="rounded-xl transition-all"
               style={{
                 backgroundColor: isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${hasContent ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                border: `1px solid ${hasContent ? accentBorder : 'rgba(255,255,255,0.06)'}`,
               }}
             >
               <button
@@ -146,7 +151,7 @@ const StepCardTexts: React.FC<Props> = ({
                   <Type className="h-3.5 w-3.5 text-white/30" />
                   <span className="text-sm font-medium text-white/70">{getCardLabel(i)}</span>
                   {hasContent && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">editado</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${accentBadgeBg} ${accentBadgeText}`}>editado</span>
                   )}
                 </div>
                 {isExpanded ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}

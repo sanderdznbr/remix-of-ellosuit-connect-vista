@@ -327,7 +327,7 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Resumo']
+    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -1870,6 +1870,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
       } : undefined;
 
+      const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
@@ -1880,6 +1881,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           userName: userName || undefined,
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
+          ...(hasManualCardTexts ? { manualCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
           ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : productContext ? { productContext } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
@@ -4920,6 +4922,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setCardCount={setCardCount}
                         speed={imageSettings.model === 'nano-banana' ? 'pro' : 'flash'}
                         setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'pro' ? 'nano-banana' : 'gemini' }))}
+                        hideGenerateButton={contentMode === 'carousel' && cardCount > 1}
                         generating={generating || transitionToGenerate}
                         onGenerate={() => {
                           const nextIsSinglePost = cardCount === 1;
@@ -5163,7 +5166,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         contentMode={contentMode}
                         manualCardTexts={manualCardTexts}
                         setManualCardTexts={setManualCardTexts}
-                        topic={topic} />
+                        topic={topic}
+                        accentTheme={wizardMode === 'extreme' ? 'orange' : 'purple'} />
                     )}
                     {currentStepName === 'Logo' && (
                       <StepBranding
@@ -5204,7 +5208,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <ChevronLeft className="h-4 w-4" /> Voltar
                     </button>
 
-                    {(currentStepName === 'Visão' || currentStepName === 'Resumo') ? (
+                    {(currentStepName === 'Visão' || (currentStepName === 'Resumo' && !(contentMode === 'carousel' && cardCount > 1 && wizardMode === 'extreme'))) ? (
                       <div />
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
@@ -5260,6 +5264,71 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 setContentMode('carousel');
                                 setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                               }
+                            }
+                            // Extreme Resumo → Roteiro: set up context before advancing
+                            if (currentStepName === 'Resumo' && wizardMode === 'extreme' && contentMode === 'carousel' && cardCount > 1 && extremeAnalysis) {
+                              // Same setup as onGenerate but WITHOUT triggering generation
+                              const nextIsSinglePost = cardCount === 1;
+                              if (nextIsSinglePost) {
+                                setContentMode('single-post');
+                                setImageCardCount(1);
+                              } else {
+                                setContentMode('carousel');
+                                setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                              }
+
+                              const newRefs: Array<{ url: string; thumb: string; label: string; source: 'upload'; category: 'product' | 'style' }> = [];
+                              for (const field of extremeAnalysis.fields) {
+                                if (field.type === 'photo_upload') {
+                                  const photos = extremeFormValues[field.id] as string[] | undefined;
+                                  if (photos?.length) {
+                                    const fieldLabel = (field.label + ' ' + (field.id || '')).toLowerCase();
+                                    const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca/i.test(fieldLabel);
+                                    photos.forEach((url, idx) => {
+                                      newRefs.push({ url, thumb: url, label: `${field.label} ${idx + 1}`, source: 'upload' as const, category: isProduct ? 'product' : 'style' });
+                                    });
+                                  }
+                                }
+                              }
+                              if (extremeBehanceRefs.length > 0) {
+                                extremeBehanceRefs.forEach((url, idx) => {
+                                  newRefs.push({ url, thumb: url, label: `Behance Ref ${idx + 1}`, source: 'upload' as const, category: 'style' as const });
+                                });
+                              }
+                              if (extremeSelectedFont) {
+                                newRefs.push({ url: extremeSelectedFont.previewUrl, thumb: extremeSelectedFont.previewUrl, label: `Fonte: ${extremeSelectedFont.name}`, source: 'upload' as const, category: 'style' as const });
+                              }
+                              if (newRefs.length > 0) {
+                                setReferenceImages(prev => [...prev, ...newRefs]);
+                              }
+
+                              const exactText = getExtremeExactText();
+                              setManualPostText(exactText || '');
+
+                              const formSummary = extremeAnalysis.fields
+                                .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')
+                                .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
+                                .join('. ');
+                              const photoFields = extremeAnalysis.fields.filter(f => f.type === 'photo_upload' && (extremeFormValues[f.id] as string[])?.length > 0);
+                              const photoContext = photoFields.map(f => {
+                                const count = (extremeFormValues[f.id] as string[]).length;
+                                return `[${count} imagem(ns) de "${f.label}" fornecida(s) como referência obrigatória]`;
+                              }).join(' ');
+                              const fontContext = extremeSelectedFont
+                                ? `FONTE TIPOGRÁFICA OBRIGATÓRIA: Use EXATAMENTE a fonte "${extremeSelectedFont.name}" como referência visual.`
+                                : '';
+
+                              const enrichedTopic = [
+                                `MODO EXTREME — VISÃO DO USUÁRIO: ${extremeVision}`,
+                                formSummary ? `DETALHES: ${formSummary}` : '',
+                                exactText ? `TEXTO EXATO OBRIGATÓRIO (NÃO ALTERAR, NÃO REESCREVER): "${exactText}"` : '',
+                                photoContext || '',
+                                fontContext,
+                                'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição.',
+                                'FORMATO OBRIGATÓRIO: Cada card do carrossel deve ser UMA ÚNICA imagem/composição visual completa (1080x1080). NUNCA crie grids, colagens, mosaicos ou sub-divisões dentro de um card.',
+                                'DIFERENCIAÇÃO DE CARDS: Card 1 = CAPA impactante (hero/título grande). Cards intermediários = CONTEÚDO (slides informativos, NÃO capas). Último card = CTA (call-to-action). Cada card DEVE ter um visual DIFERENTE.',
+                              ].filter(Boolean).join('\n');
+                              setTopic(enrichedTopic);
                             }
                             // Roteiro step: auto-generate on first click, advance on second
                             if (currentStepName === 'Roteiro') {

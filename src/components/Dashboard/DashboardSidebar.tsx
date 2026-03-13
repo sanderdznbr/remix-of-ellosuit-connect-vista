@@ -329,8 +329,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       </div>{/* end scrollable nav area */}
 
 
-      {/* Bottom: Profile */}
-      <div className="mt-auto border-t border-white/[0.06]">
+      {/* Bottom: Profile — fixed at bottom */}
+      <div className="shrink-0 border-t border-white/[0.06]">
         {/* Credits */}
         <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors rounded-lg" onClick={() => navigate('/precos')}>
           <div className="flex items-center justify-between text-xs">

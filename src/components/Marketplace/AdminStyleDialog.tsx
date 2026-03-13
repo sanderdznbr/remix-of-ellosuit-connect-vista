@@ -140,7 +140,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
         });
         setExistingImages(editStyle.preview_images || []);
       } else {
-        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single' });
+        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single', is_beta: false });
         setExistingImages([]);
       }
       setRefFiles([]);

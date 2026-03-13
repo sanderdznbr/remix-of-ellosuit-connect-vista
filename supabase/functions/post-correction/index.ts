@@ -20,26 +20,10 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, maskBase64, editPrompt, attachmentBase64, cropImageBase64, cropMaskBase64, crop } = await req.json();
+    const { imageBase64, maskBase64, editPrompt, attachmentBase64 } = await req.json();
 
-    if (!editPrompt || (!imageBase64 && !cropImageBase64)) {
-      return new Response(JSON.stringify({ error: "editPrompt and imageBase64/cropImageBase64 are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const hasValidCrop =
-      !!crop &&
-      typeof crop.x === "number" &&
-      typeof crop.y === "number" &&
-      typeof crop.width === "number" &&
-      typeof crop.height === "number";
-
-    const isCropEdit = Boolean(cropImageBase64 && cropMaskBase64 && attachmentBase64 && hasValidCrop);
-
-    if (!isCropEdit && !maskBase64) {
-      return new Response(JSON.stringify({ error: "maskBase64 is required when crop mode is not used" }), {
+    if (!imageBase64 || !maskBase64 || !editPrompt) {
+      return new Response(JSON.stringify({ error: "imageBase64, maskBase64 and editPrompt are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -47,88 +31,54 @@ serve(async (req) => {
 
     console.log("Post correction request:", {
       promptLength: editPrompt.length,
-      hasMask: !!maskBase64,
       hasAttachment: !!attachmentBase64,
-      isCropEdit,
       model: IMAGE_MODEL,
     });
 
+    // Build prompt based on whether there's a reference attachment
+    const promptText = attachmentBase64
+      ? `You are an expert image editor. You will receive THREE images in order:
+
+IMAGE 1 (ORIGINAL): The complete artwork/post to edit. Study its colors, lighting, composition, typography and style carefully.
+IMAGE 2 (MASK): A black-and-white mask. WHITE pixels = areas to modify. BLACK pixels = areas that MUST remain pixel-identical to IMAGE 1.
+IMAGE 3 (REFERENCE): A reference image to use for the edit.
+
+USER REQUEST: "${editPrompt}"
+
+CRITICAL RULES:
+1. Output MUST have EXACTLY the same dimensions and aspect ratio as IMAGE 1.
+2. Modify ONLY the WHITE areas from the MASK. Every BLACK pixel must be identical to IMAGE 1.
+3. Use IMAGE 3 as visual reference for what to place/change in the white areas.
+4. Match the lighting, color temperature, and perspective of IMAGE 1 in the edited region.
+5. Blend edges naturally — no hard cuts, no white boxes, no floating elements.
+6. Preserve all text, logos, and graphic elements outside the mask.
+7. Return ONLY the final edited image, nothing else.`
+      : `You are an expert image editor. You will receive TWO images in order:
+
+IMAGE 1 (ORIGINAL): The complete artwork/post to edit. Study its colors, lighting, composition, typography and style carefully.
+IMAGE 2 (MASK): A black-and-white mask. WHITE pixels = areas to modify. BLACK pixels = areas that MUST remain pixel-identical to IMAGE 1.
+
+USER REQUEST: "${editPrompt}"
+
+CRITICAL RULES:
+1. Output MUST have EXACTLY the same dimensions and aspect ratio as IMAGE 1.
+2. Modify ONLY the WHITE areas from the MASK. Every BLACK pixel must be identical to IMAGE 1.
+3. Match the lighting, color temperature, and perspective of IMAGE 1 in the edited region.
+4. Blend edges naturally — no hard cuts, no white boxes, no floating elements.
+5. Preserve all text, logos, and graphic elements outside the mask.
+6. Return ONLY the final edited image, nothing else.`;
+
     const contentParts: any[] = [
-      {
-        type: "text",
-        text: isCropEdit
-          ? `You are an expert image retoucher. You will receive THREE images:
-
-IMAGE 1: A CROPPED region from the original image.
-IMAGE 2: A CROPPED MASK image where WHITE pixels are the ONLY editable area and BLACK pixels must remain unchanged.
-IMAGE 3: A REFERENCE image to guide the requested edit.
-
-TASK:
-${editPrompt}
-
-CRITICAL RULES:
-1. Keep the output with the EXACT SAME dimensions as IMAGE 1.
-2. Modify ONLY WHITE mask areas from IMAGE 2.
-3. Keep BLACK mask areas pixel-identical to IMAGE 1.
-4. Use IMAGE 3 only as visual reference for the requested change.
-5. Preserve perspective, hand anatomy, phone edges, reflections and local lighting.
-6. No blur, no white boxes, no floating overlays, no extra UI elements.
-7. Return ONLY one edited image.`
-          : attachmentBase64
-            ? `You are an expert image editor. You will receive THREE images:
-
-IMAGE 1: The ORIGINAL image.
-IMAGE 2: A MASK image where WHITE areas indicate the regions to EDIT and BLACK areas must remain UNCHANGED.
-IMAGE 3: A REFERENCE image that should be used as part of the edit.
-
-CRITICAL RULES:
-1. The output image MUST have the EXACT SAME dimensions and aspect ratio as IMAGE 1.
-2. Edit ONLY the WHITE mask areas from IMAGE 2.
-3. Apply this edit: "${editPrompt}".
-4. Use IMAGE 3 as reference without recreating unrelated parts.
-5. BLACK regions must remain untouched.
-6. Return ONLY the final edited image.`
-            : `You are an expert image editor. You will receive TWO images:
-
-IMAGE 1: The ORIGINAL image.
-IMAGE 2: A MASK image where WHITE areas indicate the regions to EDIT and BLACK areas must remain UNCHANGED.
-
-CRITICAL RULES:
-1. The output image MUST have the EXACT SAME dimensions and aspect ratio as IMAGE 1.
-2. Edit ONLY the WHITE mask areas from IMAGE 2.
-3. Apply this edit: "${editPrompt}".
-4. BLACK regions must remain untouched.
-5. Return ONLY the final edited image.`,
-      },
-      {
-        type: "image_url",
-        image_url: {
-          url: `data:image/png;base64,${isCropEdit ? cropImageBase64 : imageBase64}`,
-        },
-      },
+      { type: "text", text: promptText },
+      { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
+      { type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } },
     ];
 
-    if (isCropEdit) {
-      contentParts.push({
-        type: "image_url",
-        image_url: { url: `data:image/png;base64,${cropMaskBase64}` },
-      });
+    if (attachmentBase64) {
       contentParts.push({
         type: "image_url",
         image_url: { url: `data:image/png;base64,${attachmentBase64}` },
       });
-    } else {
-      contentParts.push({
-        type: "image_url",
-        image_url: { url: `data:image/png;base64,${maskBase64}` },
-      });
-
-      if (attachmentBase64) {
-        contentParts.push({
-          type: "image_url",
-          image_url: { url: `data:image/png;base64,${attachmentBase64}` },
-        });
-      }
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -152,21 +102,17 @@ CRITICAL RULES:
 
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em instantes." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       return new Response(JSON.stringify({ error: "Falha na geração de imagem", details: errText }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -175,16 +121,17 @@ CRITICAL RULES:
     try {
       data = JSON.parse(rawText);
     } catch {
-      console.error("JSON parse failed:", rawText);
+      console.error("JSON parse failed:", rawText.slice(0, 500));
       throw new Error("Resposta inválida da IA");
     }
 
     const extracted = extractBase64Image(data);
     if (!extracted) {
-      console.error("No image returned from AI:", rawText);
+      console.error("No image returned from AI:", rawText.slice(0, 500));
       throw new Error("No image returned from AI");
     }
 
+    console.log("✅ Post correction success");
     return new Response(
       JSON.stringify({ resultBase64: extracted.base64, mimeType: extracted.mimeType }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

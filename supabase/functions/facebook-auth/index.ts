@@ -353,6 +353,25 @@ Retorne APENAS a legenda pronta, sem explicações.`;
       });
     }
 
+    // === DEBUG: Test token ===
+    if (action === "debug_token") {
+      const accessToken = Deno.env.get("META_GRAPH_ACCESS_TOKEN");
+      if (!accessToken) throw new Error("META_GRAPH_ACCESS_TOKEN not configured");
+
+      const meRes = await fetch(`https://graph.facebook.com/v25.0/me?fields=id,name&access_token=${accessToken}`);
+      const meData = await meRes.json();
+
+      const permRes = await fetch(`https://graph.facebook.com/v25.0/me/permissions?access_token=${accessToken}`);
+      const permData = await permRes.json();
+
+      const pagesRes = await fetch(`https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${accessToken}`);
+      const pagesData = await pagesRes.json();
+
+      return new Response(JSON.stringify({ me: meData, permissions: permData, pages: pagesData }, null, 2), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // === PUBLISH INSTAGRAM DIRECT (using META_GRAPH_ACCESS_TOKEN secret) ===
     if (action === "publish_instagram_direct") {
       const { imageUrls, caption } = params;
@@ -360,12 +379,12 @@ Retorne APENAS a legenda pronta, sem explicações.`;
       if (!accessToken) throw new Error("META_GRAPH_ACCESS_TOKEN not configured");
 
       // 1. Discover Instagram Business Account via pages
-      const pagesRes = await fetch(`https://graph.facebook.com/v25.0/me/accounts?access_token=${accessToken}`);
+      const pagesRes = await fetch(`https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${accessToken}`);
       const pagesData = await pagesRes.json();
       if (pagesData.error) throw new Error(`Pages fetch failed: ${pagesData.error.message}`);
       
       const pages = pagesData.data || [];
-      if (pages.length === 0) throw new Error("No Facebook Pages found for this token");
+      if (pages.length === 0) throw new Error("No Facebook Pages found for this token. Debug: " + JSON.stringify(pagesData));
 
       // Find first page with an Instagram Business Account
       let igId: string | null = null;

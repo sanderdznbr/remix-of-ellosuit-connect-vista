@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Upload, X, Check, Folder } from 'lucide-react';
 import type { ExtremeAnalysis, ExtremeField } from './StepExtremeVision';
 import GalleryPicker from './GalleryPicker';
@@ -8,10 +8,30 @@ interface Props {
   analysis: ExtremeAnalysis;
   values: Record<string, any>;
   onChange: (values: Record<string, any>) => void;
+  brandColors?: string[];
 }
 
-const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
+const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandColors = [] }) => {
   const [galleryFieldId, setGalleryFieldId] = useState<string | null>(null);
+
+  // Auto-populate color fields with brand colors when they become available
+  useEffect(() => {
+    if (brandColors.length === 0) return;
+    const colorFields = analysis.fields.filter(f => f.type === 'color');
+    if (colorFields.length === 0) return;
+    
+    const updates: Record<string, any> = {};
+    let colorIdx = 0;
+    for (const field of colorFields) {
+      if (!values[field.id]) {
+        updates[field.id] = brandColors[colorIdx % brandColors.length];
+        colorIdx++;
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      onChange({ ...values, ...updates });
+    }
+  }, [brandColors, analysis.fields]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateField = useCallback((id: string, value: any) => {
     onChange({ ...values, [id]: value });
@@ -133,7 +153,7 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange }) => {
         return (
           <input
             type="color"
-            value={(values[field.id] as string) || '#ff6600'}
+            value={(values[field.id] as string) || brandColors[0] || '#ff6600'}
             onChange={(e) => updateField(field.id, e.target.value)}
             className="w-12 h-10 rounded-lg border border-white/10 cursor-pointer bg-transparent"
           />

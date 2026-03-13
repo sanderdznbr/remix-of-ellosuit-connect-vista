@@ -245,8 +245,8 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
           {/* Project cards */}
           {sorted.map((item) => {
-            const sc = item.style_config || {};
-            const cover = item.cover_url;
+            // Skip base64 covers (they're too large and cause slowness)
+            const cover = item.cover_url && !item.cover_url.startsWith('data:') ? item.cover_url : null;
 
             if (viewMode === 'list') {
               return (

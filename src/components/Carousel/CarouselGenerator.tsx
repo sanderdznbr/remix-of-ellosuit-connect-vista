@@ -5990,7 +5990,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <div className="carousel-loader-wrapper" style={{ width: 100, height: 100 }}>
                             <div className="carousel-loader-spinner carousel-loader-spinner--orange" style={{ width: 100, height: 100 }} />
                           </div>
-                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...'}</p>
                         </div>
                       )}
                       {/* Guest lock overlay */}

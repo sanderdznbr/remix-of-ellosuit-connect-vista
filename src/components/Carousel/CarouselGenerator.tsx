@@ -2629,14 +2629,16 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         parts.push(`${field.label}: ${val}`);
       }
     }
-    // Smart detection
+    // Smart detection for specific content types
     const visionLower = extremeVision.toLowerCase();
     if (/app|aplicativo|celular|smartphone|tela|print|screenshot/i.test(visionLower)) {
-      parts.push(`📱 MOCKUP OBRIGATÓRIO: O usuário mencionou um aplicativo/tela. As imagens de referência são SCREENSHOTS REAIS. Crie um mockup PROFISSIONAL de iPhone com o screenshot EXATO na tela. Composição premium de lançamento de app.`);
+      parts.push(`📱 MOCKUP OBRIGATÓRIO: O usuário mencionou um aplicativo/tela. As imagens de referência são SCREENSHOTS REAIS. Crie um mockup FOTORREALISTA de iPhone 15 Pro com o screenshot EXATO na tela. Ângulo 3/4 premium, sombras e reflexos realistas. Composição de anúncio profissional de app — como Apple ou Nubank fariam.`);
     }
     if (/logo|marca|logotipo|logomarca/i.test(visionLower)) {
       parts.push(`🏷️ LOGO OBRIGATÓRIO: O usuário forneceu seu logo. Ele DEVE aparecer no design final, posicionado de forma elegante e profissional.`);
     }
+    // Always inject quality baseline for Extreme
+    parts.push(`\n🎯 QUALIDADE OBRIGATÓRIA: O resultado deve parecer criado por uma agência de design premium. Tipografia elegante com hierarquia clara (título bold grande, subtítulo leve), composição limpa e respirada, paleta coesa de 3-4 cores, elementos gráficos sutis. Pense em posts de marcas como Apple, Nike, Nubank — design minimalista e impactante.`);
     return parts.join('\n');
   }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues]);
 

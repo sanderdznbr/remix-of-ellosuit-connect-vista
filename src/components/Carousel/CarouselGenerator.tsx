@@ -2614,6 +2614,27 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       });
   }, [wizardMode, extremeAnalysis, extremeFormValues]);
 
+
+  // ===== HELPER: Extract exact text from Extreme form =====
+  const getExtremeExactText = useCallback((): string => {
+    if (wizardMode !== 'extreme' || !extremeAnalysis) return '';
+
+    const textFields = extremeAnalysis.fields
+      .filter((field) => field.type === 'text' || field.type === 'textarea')
+      .map((field) => ({
+        field,
+        value: typeof extremeFormValues[field.id] === 'string' ? String(extremeFormValues[field.id]).trim() : '',
+      }))
+      .filter((item) => item.value.length > 0);
+
+    if (textFields.length === 0) return '';
+
+    const priorityRegex = /titulo|title|headline|texto.*(post|principal|exato)|chamada|frase|copy|slogan/i;
+    const prioritized = textFields.find((item) => priorityRegex.test(`${item.field.label} ${item.field.id}`));
+
+    return (prioritized?.value || textFields[0].value || '').trim();
+  }, [wizardMode, extremeAnalysis, extremeFormValues]);
+
   // ===== HELPER: Build Extreme vision context for prompt enrichment =====
   const buildExtremePromptContext = useCallback((): string => {
     if (wizardMode !== 'extreme' || !extremeAnalysis) return '';

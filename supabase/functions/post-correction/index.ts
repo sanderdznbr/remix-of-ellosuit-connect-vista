@@ -67,11 +67,12 @@ ${editPrompt}
 
 CRITICAL RULES:
 1. Keep the output with the EXACT SAME dimensions as IMAGE 1.
-2. Preserve lighting, perspective and edges from IMAGE 1.
-3. Use IMAGE 2 as the exact visual source for the requested replacement.
-4. Keep the result sharp and clean (no blur, no artifacts, no extra overlays).
-5. Do not add UI elements, logos or text that are not in the source images.
-6. Return ONLY one edited image.`
+2. Keep all non-target pixels from IMAGE 1 unchanged (hands, frame, reflections and background).
+3. Replace ONLY the intended display/content area in IMAGE 1 using IMAGE 2 as visual source.
+4. Place IMAGE 2 content edge-to-edge in the display area with correct perspective.
+5. Keep the result sharp and clean (no blur, no floating cards, no extra overlays, no new UI chrome).
+6. Do not add logos/text/elements not present in the provided images.
+7. Return ONLY one edited image.`
           : attachmentBase64
             ? `You are an expert image editor. You will receive THREE images:
 

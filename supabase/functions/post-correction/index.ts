@@ -37,55 +37,97 @@ serve(async (req) => {
 
     // Build prompt based on whether there's a reference attachment
     const promptText = attachmentBase64
-      ? `You are a world-class photo retoucher specializing in seamless compositing. You will receive THREE images:
+      ? `You are a world-class photo retoucher and digital compositing expert. You will receive THREE images:
 
-IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Analyze EVERY detail: background environment, lighting direction and intensity, color temperature, shadows, reflections, skin tones, clothing folds, body posture, and overall atmosphere.
-IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = must remain pixel-identical to IMAGE 1.
+IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Before making ANY edit, carefully study:
+- The person's EXACT body proportions, skin tone, clothing style, and posture
+- The sleeve/clothing that surrounds the area being edited — you must seamlessly continue it
+- Lighting direction (where highlights and shadows fall), color temperature, and depth of field
+- Background environment details (walls, textures, objects)
+
+IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = pixel-identical to IMAGE 1.
 IMAGE 3 (REFERENCE): Visual reference for the requested change.
 
 USER REQUEST: "${editPrompt}"
 
-COMPOSITING RULES (NON-NEGOTIABLE):
-1. Output = COMPLETE image, EXACTLY same dimensions as IMAGE 1. Not a crop, not a fragment.
-2. ANATOMICAL CONTINUITY: If the edit involves repositioning a body part (hand, arm, head, leg), you MUST:
-   - Connect it naturally to the existing body in IMAGE 1 (wrist connects to arm, arm connects to shoulder, etc.)
-   - Match skin tone, clothing texture, and body proportions from IMAGE 1
-   - Generate realistic shadows cast by the repositioned element onto the surrounding surfaces
-   - Ensure joints, folds, and muscle contours are anatomically correct
-3. ENVIRONMENTAL CONTINUITY: The edited area must inherit:
-   - The EXACT background that was behind it in IMAGE 1 (walls, objects, textures — NOT white/blank)
-   - Same lighting direction, intensity, and color temperature
-   - Same depth of field and focus level
-   - Natural shadow interaction between the edited element and its surroundings
-4. ZERO ARTIFACTS: No white patches, no blank areas, no hard edges, no floating elements, no color mismatches at boundaries.
-5. SEAMLESS BLENDING: The transition between edited and non-edited areas must be INVISIBLE. Use soft transitions matching the original image's characteristics.
-6. BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel.
-7. The final image must look like it was ORIGINALLY photographed this way — a viewer should not be able to tell any edit was made.
-8. Return ONLY the final composited image.`
-      : `You are a world-class photo retoucher specializing in seamless compositing. You will receive TWO images:
+COMPOSITING RULES (MANDATORY — VIOLATING ANY = FAILURE):
 
-IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Analyze EVERY detail: background environment, lighting direction and intensity, color temperature, shadows, reflections, skin tones, clothing folds, body posture, and overall atmosphere.
-IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = must remain pixel-identical to IMAGE 1.
+1. DIMENSIONS: Output MUST be EXACTLY the same dimensions as IMAGE 1.
+
+2. PROPORTIONAL ANATOMY:
+   - The edited body part MUST match the person's real proportions in IMAGE 1.
+   - Study the person's build, bone structure, and size before generating.
+   - A hand must be proportional to the arm and body it belongs to — not too large, not too small.
+   - Fingers must have natural length, thickness, and curvature.
+
+3. CLOTHING & SKIN CONTINUITY:
+   - Where the edited area meets existing clothing (sleeves, collar, jacket), the fabric MUST continue seamlessly.
+   - Match the EXACT fabric texture, color, wrinkle pattern, and fold direction from IMAGE 1.
+   - Skin tone in the edited area must be IDENTICAL to the person's skin in IMAGE 1.
+   - Veins, hair, and skin texture must be consistent.
+
+4. ANATOMICAL CONNECTION:
+   - Edited limbs MUST connect naturally to the body: wrist→forearm→elbow→upper arm→shoulder.
+   - Joints must bend at realistic angles with proper muscle/tendon definition.
+   - No floating or detached body parts.
+
+5. ENVIRONMENTAL INTEGRATION:
+   - Fill the edited area with the ACTUAL background from IMAGE 1 (walls, light sources, objects) — NEVER white, blank, or generic fill.
+   - Shadows cast by the edited element must match the existing light direction.
+   - Depth of field and focus must match the surrounding area.
+
+6. SEAMLESS EDGES: The boundary between edited and non-edited areas must be INVISIBLE. No hard cuts, color shifts, or resolution differences.
+
+7. BLACK MASK = UNTOUCHED: Every pixel in the black mask area must be identical to IMAGE 1.
+
+8. PHOTOREALISM: The result must look like an ORIGINAL unedited photograph. No viewer should detect any manipulation.
+
+9. Return ONLY the final composited image.`
+      : `You are a world-class photo retoucher and digital compositing expert. You will receive TWO images:
+
+IMAGE 1 (ORIGINAL): The complete artwork/post — your canvas. Before making ANY edit, carefully study:
+- The person's EXACT body proportions, skin tone, clothing style, and posture
+- The sleeve/clothing that surrounds the area being edited — you must seamlessly continue it
+- Lighting direction (where highlights and shadows fall), color temperature, and depth of field
+- Background environment details (walls, textures, objects)
+
+IMAGE 2 (MASK): Black-and-white mask. WHITE = editable zone. BLACK = pixel-identical to IMAGE 1.
 
 USER REQUEST: "${editPrompt}"
 
-COMPOSITING RULES (NON-NEGOTIABLE):
-1. Output = COMPLETE image, EXACTLY same dimensions as IMAGE 1. Not a crop, not a fragment.
-2. ANATOMICAL CONTINUITY: If the edit involves repositioning a body part (hand, arm, head, leg), you MUST:
-   - Connect it naturally to the existing body in IMAGE 1 (wrist connects to arm, arm connects to shoulder, etc.)
-   - Match skin tone, clothing texture, and body proportions from IMAGE 1
-   - Generate realistic shadows cast by the repositioned element onto the surrounding surfaces
-   - Ensure joints, folds, and muscle contours are anatomically correct
-3. ENVIRONMENTAL CONTINUITY: The edited area must inherit:
-   - The EXACT background that was behind it in IMAGE 1 (walls, objects, textures — NOT white/blank)
-   - Same lighting direction, intensity, and color temperature
-   - Same depth of field and focus level
-   - Natural shadow interaction between the edited element and its surroundings
-4. ZERO ARTIFACTS: No white patches, no blank areas, no hard edges, no floating elements, no color mismatches at boundaries.
-5. SEAMLESS BLENDING: The transition between edited and non-edited areas must be INVISIBLE. Use soft transitions matching the original image's characteristics.
-6. BLACK mask areas: reproduce IMAGE 1 pixel-for-pixel.
-7. The final image must look like it was ORIGINALLY photographed this way — a viewer should not be able to tell any edit was made.
-8. Return ONLY the final composited image.`;
+COMPOSITING RULES (MANDATORY — VIOLATING ANY = FAILURE):
+
+1. DIMENSIONS: Output MUST be EXACTLY the same dimensions as IMAGE 1.
+
+2. PROPORTIONAL ANATOMY:
+   - The edited body part MUST match the person's real proportions in IMAGE 1.
+   - Study the person's build, bone structure, and size before generating.
+   - A hand must be proportional to the arm and body it belongs to — not too large, not too small.
+   - Fingers must have natural length, thickness, and curvature.
+
+3. CLOTHING & SKIN CONTINUITY:
+   - Where the edited area meets existing clothing (sleeves, collar, jacket), the fabric MUST continue seamlessly.
+   - Match the EXACT fabric texture, color, wrinkle pattern, and fold direction from IMAGE 1.
+   - Skin tone in the edited area must be IDENTICAL to the person's skin in IMAGE 1.
+   - Veins, hair, and skin texture must be consistent.
+
+4. ANATOMICAL CONNECTION:
+   - Edited limbs MUST connect naturally to the body: wrist→forearm→elbow→upper arm→shoulder.
+   - Joints must bend at realistic angles with proper muscle/tendon definition.
+   - No floating or detached body parts.
+
+5. ENVIRONMENTAL INTEGRATION:
+   - Fill the edited area with the ACTUAL background from IMAGE 1 (walls, light sources, objects) — NEVER white, blank, or generic fill.
+   - Shadows cast by the edited element must match the existing light direction.
+   - Depth of field and focus must match the surrounding area.
+
+6. SEAMLESS EDGES: The boundary between edited and non-edited areas must be INVISIBLE. No hard cuts, color shifts, or resolution differences.
+
+7. BLACK MASK = UNTOUCHED: Every pixel in the black mask area must be identical to IMAGE 1.
+
+8. PHOTOREALISM: The result must look like an ORIGINAL unedited photograph. No viewer should detect any manipulation.
+
+9. Return ONLY the final composited image.`;
 
     const contentParts: any[] = [
       { type: "text", text: promptText },

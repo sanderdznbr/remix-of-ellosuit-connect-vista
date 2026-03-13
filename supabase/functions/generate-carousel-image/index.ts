@@ -412,8 +412,8 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       : requestedModel;
     const forcePremiumForPanorama = isPanoramicMode;
     const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
-    const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-2.5-flash-image';
-    const fallbackModel = 'google/gemini-2.5-flash-image';
+    const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview';
+    const fallbackModel = 'google/gemini-3.1-flash-image-preview';
     console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 
     async function tryGenerate(model: string, content: any[], attempt: number): Promise<string | null> {

@@ -5729,8 +5729,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           onClick={() => { setShowAddCardMenu(false); setAddCardModal({ open: true, cardType: 'solid', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' }); }}
                           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-white/10 transition-colors"
                         >
-                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                            <Type className="h-3.5 w-3.5 text-purple-400" />
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: `rgba(${themeRgb},0.15)` }}>
+                            <Type className="h-3.5 w-3.5" style={{ color: themeHex }} />
                           </div>
                           <div>
                             <p className="text-xs font-medium text-white/90">Sólido</p>

@@ -6396,7 +6396,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   style={{ backgroundColor: 'rgba(12,10,24,0.98)', border: `1px solid rgba(${themeRgb},0.25)`, boxShadow: `0 20px 50px rgba(${themeRgb},0.14)` }}
                   onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-base font-bold text-white text-center flex items-center justify-center gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-400" />
+                    <Sparkles className="h-4 w-4" style={{ color: themeHex }} />
                     Gerar carrossel a partir desta capa
                   </h3>
 

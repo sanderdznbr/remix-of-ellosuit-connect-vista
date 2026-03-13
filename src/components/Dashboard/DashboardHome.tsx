@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowUp, AtSign, ChevronLeft, ChevronRight, Loader2, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowUp, AtSign, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,6 +21,15 @@ interface MentionedPrompt {
   content: string;
 }
 
+interface ActiveJob {
+  id: string;
+  topic: string;
+  progress_message: string | null;
+  status: string;
+  progress_current: number;
+  progress_total: number;
+}
+
 interface DashboardHomeProps {
   onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[]) => void;
   onLoadCarousel?: (carouselItem: any) => void;
@@ -36,6 +45,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
+  const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
@@ -57,7 +67,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   useEffect(() => { fetchRecent(); }, [user]);
-  // Also re-fetch on every mount (component remounts when returning from editor)
   useEffect(() => { if (user) fetchRecent(); }, []);
   useEffect(() => { fetchRecent(); }, []);
 
@@ -67,6 +76,67 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [user]);
+
+  // ===== ACTIVE JOBS: Check for pending cloud generation jobs =====
+  useEffect(() => {
+    if (!user) return;
+    const checkActiveJobs = async () => {
+      try {
+        const { data } = await supabase
+          .from('carousel_generation_jobs')
+          .select('id, topic, progress_message, status, progress_current, progress_total, updated_at')
+          .eq('user_id', user.id)
+          .in('status', ['pending', 'generating_text', 'generating_images'])
+          .order('created_at', { ascending: false })
+          .limit(3);
+        if (data?.length) {
+          const now = Date.now();
+          const validJobs = data.filter(j => {
+            const updatedAt = new Date(j.updated_at).getTime();
+            return now - updatedAt < 5 * 60 * 1000; // 5 min timeout
+          });
+          setActiveJobs(validJobs as ActiveJob[]);
+        }
+      } catch (err) { console.error('Failed to check active jobs:', err); }
+    };
+    checkActiveJobs();
+  }, [user]);
+
+  // ===== REALTIME: Subscribe to active job updates =====
+  useEffect(() => {
+    if (!user || activeJobs.length === 0) return;
+    const channels = activeJobs.map(job => {
+      return supabase
+        .channel(`home-job-${job.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'carousel_generation_jobs',
+          filter: `id=eq.${job.id}`,
+        }, (payload: any) => {
+          const updated = payload.new;
+          if (!updated) return;
+          if (updated.status === 'completed') {
+            setActiveJobs(prev => prev.filter(j => j.id !== job.id));
+            toast.success('Post gerado com sucesso! 🎉');
+            fetchRecent(); // Refresh recents
+          } else if (updated.status === 'failed') {
+            setActiveJobs(prev => prev.filter(j => j.id !== job.id));
+            toast.error('Erro ao gerar post em segundo plano');
+          } else {
+            setActiveJobs(prev => prev.map(j => j.id === job.id ? {
+              ...j,
+              status: updated.status,
+              progress_message: updated.progress_message,
+              progress_current: updated.progress_current ?? j.progress_current,
+              progress_total: updated.progress_total ?? j.progress_total,
+            } : j));
+          }
+        })
+        .subscribe();
+    });
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+  }, [user, activeJobs.map(j => j.id).join(',')]);
 
   useEffect(() => {
     if (isUserTyping) { setAnimatedPlaceholder(''); return; }
@@ -142,6 +212,56 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           Desenvolva carrosséis com um prompt.
         </motion.p>
 
+        {/* === Active generation jobs indicator === */}
+        <AnimatePresence>
+          {activeJobs.length > 0 && (
+            <motion.div
+              className="w-full max-w-xl mb-4 space-y-2"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {activeJobs.map(job => {
+                const pct = job.progress_total > 0 ? Math.round((job.progress_current / job.progress_total) * 100) : 0;
+                const truncatedTopic = job.topic.length > 40 ? job.topic.substring(0, 40) + '...' : job.topic;
+                return (
+                  <div
+                    key={job.id}
+                    className="relative rounded-xl overflow-hidden px-4 py-3 flex items-center gap-3"
+                    style={{
+                      backgroundColor: 'rgba(139, 92, 246, 0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.2)',
+                    }}
+                  >
+                    <div className="shrink-0">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}>
+                        <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white/80 truncate">Gerando: {truncatedTopic}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                        {job.progress_message || 'Processando em segundo plano...'}
+                      </p>
+                      {job.progress_total > 0 && (
+                        <div className="w-full h-1 rounded-full mt-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: '#A855F7' }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.5 }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
+                  </div>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <motion.div
           className="w-full max-w-xl"

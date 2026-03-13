@@ -15,79 +15,81 @@ Deno.serve(async (req) => {
 
     // ====== ACTION: search Behance projects by query ======
     if (action === 'search' && query) {
-      const searchQuery = encodeURIComponent(query.trim());
-      const maxResults = Math.min(limit || 5, 10);
-      const searchUrl = `https://www.behance.net/search/projects?search=${searchQuery}&sort=appreciations&time=month`;
-
-      console.log('Searching Behance:', searchUrl);
-
-      const resp = await fetch(searchUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-        },
-      });
-
-      if (!resp.ok) {
-        console.error('Behance search failed:', resp.status);
-        return new Response(
-          JSON.stringify({ error: `Falha na busca (${resp.status})` }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const html = await resp.text();
-
-      // Extract project cover images from search results
-      const results: { imageUrl: string; title: string; projectUrl: string }[] = [];
-      const seen = new Set<string>();
-
-      // Pattern 1: project cover images
-      const coverRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project[s_]?[^"]*\/(404|808|max_[0-9]+|1400|disp|fs)\/[^"]+)"/g;
-      let match;
-      while ((match = coverRegex.exec(html)) !== null && results.length < maxResults) {
-        const imgUrl = match[1].split('?')[0];
-        const fileKey = imgUrl.split('/').pop() || imgUrl;
-        if (!seen.has(fileKey)) {
-          seen.add(fileKey);
-          results.push({ imageUrl: imgUrl, title: '', projectUrl: '' });
-        }
-      }
-
-      // Pattern 2: project_modules images (fallback)
-      if (results.length < maxResults) {
-        const moduleRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
-        while ((match = moduleRegex.exec(html)) !== null && results.length < maxResults) {
+      const maxResults = Math.min(limit || 8, 12);
+      
+      const extractImages = (html: string, max: number) => {
+        const results: { imageUrl: string; title: string; projectUrl: string }[] = [];
+        const seen = new Set<string>();
+        let match;
+        const coverRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project[s_]?[^"]*\/(404|808|max_[0-9]+|1400|disp|fs)\/[^"]+)"/g;
+        while ((match = coverRegex.exec(html)) !== null && results.length < max) {
           const imgUrl = match[1].split('?')[0];
           const fileKey = imgUrl.split('/').pop() || imgUrl;
-          if (!seen.has(fileKey)) {
-            seen.add(fileKey);
-            results.push({ imageUrl: imgUrl, title: '', projectUrl: '' });
+          if (!seen.has(fileKey)) { seen.add(fileKey); results.push({ imageUrl: imgUrl, title: '', projectUrl: '' }); }
+        }
+        if (results.length < max) {
+          const moduleRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/project_modules\/[^"]+)"/g;
+          while ((match = moduleRegex.exec(html)) !== null && results.length < max) {
+            const imgUrl = match[1].split('?')[0];
+            const fileKey = imgUrl.split('/').pop() || imgUrl;
+            if (!seen.has(fileKey)) { seen.add(fileKey); results.push({ imageUrl: imgUrl, title: '', projectUrl: '' }); }
           }
         }
-      }
-
-      // Pattern 3: srcset fallback
-      if (results.length < maxResults) {
-        const srcsetRegex = /srcset="([^"]*mir-s3-cdn-cf\.behance\.net[^"]+)"/g;
-        while ((match = srcsetRegex.exec(html)) !== null && results.length < maxResults) {
-          const parts = match[1].split(',').map((p: string) => p.trim().split(' ')[0]).filter((u: string) => u?.startsWith('https://'));
-          const bestUrl = parts[parts.length - 1];
-          if (bestUrl) {
-            const fileKey = bestUrl.split('/').pop() || bestUrl;
-            if (!seen.has(fileKey)) {
-              seen.add(fileKey);
-              results.push({ imageUrl: bestUrl, title: '', projectUrl: '' });
+        if (results.length < max) {
+          const srcsetRegex = /srcset="([^"]*mir-s3-cdn-cf\.behance\.net[^"]+)"/g;
+          while ((match = srcsetRegex.exec(html)) !== null && results.length < max) {
+            const parts = match[1].split(',').map((p: string) => p.trim().split(' ')[0]).filter((u: string) => u?.startsWith('https://'));
+            const bestUrl = parts[parts.length - 1];
+            if (bestUrl) {
+              const fileKey = bestUrl.split('/').pop() || bestUrl;
+              if (!seen.has(fileKey)) { seen.add(fileKey); results.push({ imageUrl: bestUrl, title: '', projectUrl: '' }); }
             }
           }
         }
+        if (results.length < max) {
+          const anyImgRegex = /src="(https:\/\/mir-s3-cdn-cf\.behance\.net\/[^"]+\.(jpg|jpeg|png|webp)[^"]*)"/gi;
+          while ((match = anyImgRegex.exec(html)) !== null && results.length < max) {
+            const imgUrl = match[1].split('?')[0];
+            const fileKey = imgUrl.split('/').pop() || imgUrl;
+            if (!seen.has(fileKey) && !imgUrl.includes('/avatars/') && !imgUrl.includes('/user/')) {
+              seen.add(fileKey); results.push({ imageUrl: imgUrl, title: '', projectUrl: '' });
+            }
+          }
+        }
+        return results;
+      };
+
+      const searchVariants = [
+        `https://www.behance.net/search/projects?search=${encodeURIComponent(query.trim())}&sort=appreciations&time=all`,
+        `https://www.behance.net/search/projects?search=${encodeURIComponent(query.trim())}&sort=recommended`,
+        `https://www.behance.net/search/images?search=${encodeURIComponent(query.trim())}&sort=appreciations`,
+      ];
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      };
+
+      let allResults: { imageUrl: string; title: string; projectUrl: string }[] = [];
+      for (const searchUrl of searchVariants) {
+        if (allResults.length >= maxResults) break;
+        console.log('Trying Behance search:', searchUrl);
+        try {
+          const resp = await fetch(searchUrl, { headers });
+          if (!resp.ok) { console.warn('Search variant failed:', resp.status); continue; }
+          const html = await resp.text();
+          const found = extractImages(html, maxResults - allResults.length);
+          const existingKeys = new Set(allResults.map(r => r.imageUrl.split('/').pop()));
+          for (const item of found) {
+            const key = item.imageUrl.split('/').pop();
+            if (!existingKeys.has(key)) { allResults.push(item); existingKeys.add(key); }
+          }
+        } catch (e) { console.warn('Search variant error:', e); }
       }
 
-      console.log(`Behance search found ${results.length} images for "${query}"`);
-
+      console.log(`Behance search found ${allResults.length} total images for "${query}"`);
       return new Response(
-        JSON.stringify({ results, count: results.length, query }),
+        JSON.stringify({ results: allResults.slice(0, maxResults), count: Math.min(allResults.length, maxResults), query }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

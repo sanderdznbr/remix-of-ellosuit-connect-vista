@@ -4580,6 +4580,31 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onChange={setExtremeFormValues}
                       />
                     )}
+                    {currentStepName === 'Resumo' && extremeAnalysis && (
+                      <StepExtremeResumo
+                        analysis={extremeAnalysis}
+                        vision={extremeVision}
+                        formValues={extremeFormValues}
+                        contentMode={contentMode}
+                        setContentMode={setContentMode}
+                        cardCount={cardCount}
+                        setCardCount={setCardCount}
+                        speed={imageSettings.model === 'nano-banana' ? 'flash' : 'pro'}
+                        setSpeed={(s) => setImageSettings(prev => ({ ...prev, model: s === 'flash' ? 'nano-banana' : 'gemini' }))}
+                        generating={generating || transitionToGenerate}
+                        onGenerate={() => {
+                          if (cardCount === 1) {
+                            setContentMode('single-post');
+                            setImageCardCount(1);
+                          } else {
+                            setContentMode('carousel');
+                            setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
+                          }
+                          setTransitionToGenerate(true);
+                          setTimeout(() => generateContent(), 1200);
+                        }}
+                      />
+                    )}
                     {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}
                         cardCount={cardCount} setCardCount={setCardCount} imageCardCount={imageCardCount} setImageCardCount={setImageCardCount}

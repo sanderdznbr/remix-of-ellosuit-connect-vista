@@ -238,11 +238,17 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
       textPrompt += `\n\nIDENTIDADE FACIAL OBRIGATÓRIA: A pessoa na imagem DEVE ser EXATAMENTE a pessoa das fotos de referência. ${singleGender} Copie com precisão cirúrgica: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo, formato do rosto. Rosto visível de frente ou 3/4, bem iluminado, sem obstruções.${anatomicalRules}`;
     }
 
-    // Detect real estate mode from prompt content
+    // Detect special modes from prompt content
     const isRealEstatePrompt = /FOTO DO IMÓVEL|FOTO REAL|imóvel|imovel|propriedade|property photo/i.test(imagePrompt);
+    const isExtremeMode = /MODO EXTREME|EXTREME_VISION|VISÃO DO USUÁRIO/i.test(imagePrompt);
+    const isAppMockup = /app|aplicativo|celular|smartphone|tela|mockup|print.*app|screenshot/i.test(imagePrompt);
 
     if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
       textPrompt += `\n\n📸 FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA): A imagem de referência fornecida é uma FOTOGRAFIA REAL do imóvel. Você DEVE usar esta foto como a imagem principal/de fundo do card. NÃO gere uma casa ou imóvel artificial — INCORPORE a foto real no design. A foto real deve ocupar pelo menos 60-80% da área visual do card. Aplique o estilo editorial (textos, badges, overlays, elementos gráficos) POR CIMA da foto real. Trate a foto como se fosse uma imagem de fundo editorializada.`;
+    } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
+      textPrompt += `\n\n📱 MOCKUP DE APP (PRIORIDADE MÁXIMA): As imagens de referência de produto contêm SCREENSHOTS REAIS do aplicativo do usuário. Você DEVE criar um mockup REALISTA de um smartphone (iPhone/Android) e inserir o screenshot do app EXATAMENTE como aparece na tela do celular. O mockup deve ser profissional, com reflexos sutis, sombras realistas, e o app visível na tela. A composição deve ser como um anúncio premium de lançamento de app. NÃO gere uma interface genérica — use EXATAMENTE a imagem fornecida na tela do celular.`;
+    } else if (validGeneralRefs.length > 0 && isExtremeMode) {
+      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
       textPrompt += `\n\nPRODUTO: Reproduza o produto das referências fielmente.`;
     }
@@ -329,10 +335,16 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
       messageContent.push({ type: 'text', text: textPrompt });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
+      } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone profissional. NÃO altere o conteúdo da tela:` });
+      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
+        messageContent.push({ type: 'text', text: `🎨 REFERÊNCIAS VISUAIS DO USUÁRIO ABAIXO — Use estas imagens como ELEMENTOS OBRIGATÓRIOS na composição final (logos, screenshots, produtos, etc.):` });
       }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. INCORPORE-A como imagem de fundo/principal do post.` });
+      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
+        messageContent.push({ type: 'text', text: `As imagens acima são CONTEÚDO OBRIGATÓRIO do usuário. Cada uma deve aparecer fielmente no resultado final. Para screenshots de app: coloque em mockup de celular. Para logos: inclua no design. Para produtos: destaque na composição.` });
       }
 
       if (validStyleRefs.length > 0) {

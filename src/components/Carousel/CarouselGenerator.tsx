@@ -4602,37 +4602,50 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             setContentMode('carousel');
                             setImageCardCount(Math.max(2, Math.round(cardCount * 0.7)));
                           }
-                          // Inject extreme form photos as style reference images
+                          // Inject extreme form photos as product/style reference images
                           if (extremeAnalysis) {
-                            const extremePhotos: { url: string; category: string }[] = [];
+                            const newRefs: Array<{ url: string; thumb: string; label: string; source: 'upload'; category: 'product' | 'style' }> = [];
                             for (const field of extremeAnalysis.fields) {
                               if (field.type === 'photo_upload') {
                                 const photos = extremeFormValues[field.id] as string[] | undefined;
                                 if (photos?.length) {
-                                  photos.forEach(url => {
-                                    extremePhotos.push({ url, category: 'style' });
+                                  // Determine category from field label/id
+                                  const fieldLabel = (field.label + ' ' + (field.id || '')).toLowerCase();
+                                  const isProduct = /print|screenshot|tela|app|produto|mockup|logo|marca/i.test(fieldLabel);
+                                  photos.forEach((url, idx) => {
+                                    newRefs.push({
+                                      url,
+                                      thumb: url,
+                                      label: `${field.label} ${idx + 1}`,
+                                      source: 'upload' as const,
+                                      category: isProduct ? 'product' : 'style',
+                                    });
                                   });
                                 }
                               }
                             }
-                            if (extremePhotos.length > 0) {
-                              setReferenceImages(prev => [
-                                ...prev,
-                                ...extremePhotos.map(p => ({
-                                  url: p.url,
-                                  thumb: p.url,
-                                  label: 'extreme-ref',
-                                  source: 'upload' as const,
-                                  category: 'style' as const,
-                                })),
-                              ]);
+                            if (newRefs.length > 0) {
+                              setReferenceImages(prev => [...prev, ...newRefs]);
                             }
-                            // Enrich topic with extreme vision details
+                            // Build rich topic with extreme context
                             const formSummary = extremeAnalysis.fields
                               .filter(f => extremeFormValues[f.id] && f.type !== 'photo_upload')
                               .map(f => `${f.label}: ${extremeFormValues[f.id]}`)
                               .join('. ');
-                            const enrichedTopic = `${extremeVision}${formSummary ? `. Detalhes: ${formSummary}` : ''}`;
+                            
+                            // Build smart image generation context
+                            const photoFields = extremeAnalysis.fields.filter(f => f.type === 'photo_upload' && (extremeFormValues[f.id] as string[])?.length > 0);
+                            const photoContext = photoFields.map(f => {
+                              const count = (extremeFormValues[f.id] as string[]).length;
+                              return `[${count} imagem(ns) de "${f.label}" fornecida(s) como referência obrigatória]`;
+                            }).join(' ');
+                            
+                            const enrichedTopic = [
+                              `MODO EXTREME — VISÃO DO USUÁRIO: ${extremeVision}`,
+                              formSummary ? `DETALHES: ${formSummary}` : '',
+                              photoContext || '',
+                              'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição (ex: se enviou print de app, coloque na tela de um mockup de celular; se enviou logo, inclua no design).',
+                            ].filter(Boolean).join('\n');
                             setTopic(enrichedTopic);
                           }
                           setTransitionToGenerate(true);

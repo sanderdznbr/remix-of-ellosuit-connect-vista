@@ -3576,10 +3576,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             parts.push(`FONTE OBRIGATÓRIA: Use a fonte "${extremeSelectedFont.name}" como referência visual.`);
           }
           // Add exact text instructions
-          const exactTexts = getExtremeExactText();
-          if (exactTexts.length > 0) {
-            parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere):`);
-            exactTexts.forEach(t => parts.push(`- ${t.label}: "${t.value}"`));
+          const exactText = getExtremeExactText();
+          if (exactText) {
+            parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere): ${exactText}`);
           }
         }
         if (isCover) {

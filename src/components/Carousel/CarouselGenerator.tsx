@@ -6959,9 +6959,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             const cropImageToBounds = async (sourceUrl: string, bounds: CropBounds): Promise<string> => {
               const sourceImg = await loadImageElement(sourceUrl);
+              const longestSide = Math.max(bounds.width, bounds.height);
+              const upscaleFactor = longestSide < 1024 ? Math.min(6, 1024 / Math.max(1, longestSide)) : 1;
+              const targetWidth = Math.max(1, Math.round(bounds.width * upscaleFactor));
+              const targetHeight = Math.max(1, Math.round(bounds.height * upscaleFactor));
+
               const canvas = document.createElement('canvas');
-              canvas.width = bounds.width;
-              canvas.height = bounds.height;
+              canvas.width = targetWidth;
+              canvas.height = targetHeight;
               const ctx = canvas.getContext('2d');
               if (!ctx) throw new Error('Falha ao preparar crop');
 
@@ -6975,8 +6980,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 bounds.height,
                 0,
                 0,
-                bounds.width,
-                bounds.height,
+                targetWidth,
+                targetHeight,
               );
 
               return canvas.toDataURL('image/png');

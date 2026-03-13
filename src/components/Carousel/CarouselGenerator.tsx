@@ -5758,8 +5758,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* Action buttons below */}
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap px-4">
+            {/* Action buttons below - mobile only */}
+            <div className="flex md:hidden items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap px-4">
               {/* Auto-save indicator */}
               <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 border border-white/5">
                 {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}

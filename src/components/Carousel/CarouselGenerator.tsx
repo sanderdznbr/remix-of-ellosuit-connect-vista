@@ -5557,8 +5557,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Export */}
                     <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium text-white border transition-all disabled:opacity-50 w-full"
-                      style={{ borderColor: 'rgba(139,92,246,0.3)', background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(139,92,246,0.04))' }}>
-                      {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4 text-purple-400" />}
+                      style={{ borderColor: `rgba(${themeRgb},0.3)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.12), rgba(${themeRgb},0.04))` }}>
+                      {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" style={{ color: themeHex }} />}
                       {isGuest ? 'Assine para baixar' : 'Exportar'}
                     </button>
 

@@ -4792,7 +4792,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
                           setExtremeFormValues({});
                           // Auto-advance: after analysis, Detalhes will be at index 2
-                          // (Modo=0, Visão=1, Detalhes=2)
+                          // After analysis, advance to Logo step (Modo=0, Visão=1, Logo=2, Detalhes=3)
                           setWizardStep(2);
                         }}
                       />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Home } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
   brandName?: string;
   logoUrl?: string | null;
   skipWebSearch?: boolean;
+  onGoHome?: () => void;
 }
 
 // Fixed bright purple for loading UI - never uses user's accent color

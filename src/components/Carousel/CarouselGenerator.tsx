@@ -5506,14 +5506,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;
               if (jobId) {
-                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-carousel-cloud`;
-                const body = JSON.stringify({ jobId });
-                if (navigator.sendBeacon) {
-                  const blob = new Blob([body], { type: 'application/json' });
-                  navigator.sendBeacon(url, blob);
-                } else {
-                  fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` }, keepalive: true }).catch(() => {});
-                }
+                triggerCloudFallback(jobId);
               }
               // Reset generation state and go to dashboard
               setGenerating(false);

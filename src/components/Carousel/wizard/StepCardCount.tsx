@@ -9,7 +9,7 @@ interface Props {
   hasFacePhotos?: boolean;
   faceCardCount?: number | null;
   setFaceCardCount?: (v: number | null) => void;
-  wizardMode?: 'simple' | 'advanced';
+  wizardMode?: 'simple' | 'advanced' | 'extreme';
   guestMode?: boolean;
   continuousMode?: boolean;
   setContinuousMode?: (v: boolean) => void;

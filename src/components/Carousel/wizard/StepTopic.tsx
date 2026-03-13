@@ -31,7 +31,7 @@ interface Props {
   contentMode?: 'carousel' | 'single-post';
   manualPostText?: string;
   setManualPostText?: (v: string) => void;
-  wizardMode?: 'simple' | 'advanced';
+  wizardMode?: 'simple' | 'advanced' | 'extreme';
   setContentMode?: (mode: 'carousel' | 'single-post') => void;
   guestMode?: boolean;
   webSearchSuggestion?: { classification: string; reason: string } | null;

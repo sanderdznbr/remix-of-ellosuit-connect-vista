@@ -66,6 +66,8 @@ import StepVisualStyle, { VisualCategory, PeopleMode } from './wizard/StepVisual
 import StepPeopleMode from './wizard/StepPeopleMode';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
+import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
+import StepExtremeForm from './wizard/StepExtremeForm';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
@@ -173,8 +175,11 @@ const CarouselGenerator: React.FC = () => {
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
 
   // Wizard mode: simple vs advanced
-  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
+  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme'>('simple');
   const [continuousMode, setContinuousMode] = useState(false);
+  const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
+  const [extremeVision, setExtremeVision] = useState('');
+  const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -316,7 +321,10 @@ const CarouselGenerator: React.FC = () => {
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
-  const WIZARD_STEPS = wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  const EXTREME_STEPS = extremeAnalysis
+    ? ['Modo', 'Visão', 'Detalhes', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    : ['Modo', 'Visão'];
+  const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -430,6 +438,9 @@ const CarouselGenerator: React.FC = () => {
     setManualPostText('');
     setManualCardTexts([]);
     setWizardMode('simple');
+    setExtremeAnalysis(null);
+    setExtremeVision('');
+    setExtremeFormValues({});
     setKeywords('');
     setCardCount(5);
     setImageCardCount(4);
@@ -4547,6 +4558,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     >
                     {currentStepName === 'Modo' && (
                       <StepMode wizardMode={wizardMode} setWizardMode={setWizardMode} />
+                    )}
+                    {currentStepName === 'Visão' && (
+                      <StepExtremeVision
+                        onAnalysisComplete={(analysis, vision) => {
+                          setExtremeAnalysis(analysis);
+                          setExtremeVision(vision);
+                          if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
+                          setExtremeFormValues({});
+                          // Auto-advance to Detalhes step
+                          const detalhesIdx = EXTREME_STEPS.indexOf('Detalhes');
+                          if (detalhesIdx >= 0) setWizardStep(detalhesIdx);
+                        }}
+                      />
+                    )}
+                    {currentStepName === 'Detalhes' && extremeAnalysis && (
+                      <StepExtremeForm
+                        analysis={extremeAnalysis}
+                        values={extremeFormValues}
+                        onChange={setExtremeFormValues}
+                      />
                     )}
                     {currentStepName === 'Tema' && (
                       <StepTopic topic={topic} setTopic={setTopic} keywords={keywords} setKeywords={setKeywords}

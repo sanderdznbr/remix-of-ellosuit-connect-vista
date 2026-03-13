@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { X, Trash2, Plus, Info, Pencil, Loader2, Send, Undo2 } from 'lucide-react';
+import { X, Trash2, Plus, Info, Pencil, Loader2, Send, Undo2, Paperclip, Image as ImageIcon } from 'lucide-react';
 
 interface Region {
   id: string;

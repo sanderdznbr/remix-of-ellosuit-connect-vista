@@ -23,6 +23,7 @@ interface Props {
 const StepBranding: React.FC<Props> = ({
   showHeader, setShowHeader, logoUrl, setLogoUrl, logoPosition, setLogoPosition,
   logoBrandColors = [], brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
+  isExtreme = false,
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);

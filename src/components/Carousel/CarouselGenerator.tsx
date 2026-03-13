@@ -5885,7 +5885,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       {/* Guest lock overlay */}
                       {isCardLocked(activeCardIndex) && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                          <Lock className="w-8 h-8 mb-3" style={{ color: '#8B5CF6' }} />
+                          <Lock className="w-8 h-8 mb-3" style={{ color: themeHex }} />
                           <p className="text-white font-semibold text-sm mb-1">Card bloqueado</p>
                           <p className="text-white/50 text-xs mb-4 text-center px-6">Cadastre-se para desbloquear todos os cards</p>
                           <button onClick={() => navigate('/checkout')}

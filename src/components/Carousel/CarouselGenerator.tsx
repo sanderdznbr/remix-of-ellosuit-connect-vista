@@ -46,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -284,7 +284,8 @@ const CarouselGenerator: React.FC = () => {
    const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
    const [faceUploadMode, setFaceUploadMode] = useState(false);
    const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);
-   const [correctionCardIndex, setCorrectionCardIndex] = useState<number | null>(null);
+    const [correctionCardIndex, setCorrectionCardIndex] = useState<number | null>(null);
+    const [correctionUndoStack, setCorrectionUndoStack] = useState<Array<{ cardIndex: number; imageUrl: string }>>([]);
    const [viewPromptCard, setViewPromptCard] = useState<number | null>(null);
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
@@ -5802,6 +5803,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Pencil className="h-3.5 w-3.5" /> Corrigir área
                 </button>
               )}
+              {/* Undo correction button */}
+              {correctionUndoStack.length > 0 && !isGuest && (
+                <button
+                  onClick={() => {
+                    const last = correctionUndoStack[correctionUndoStack.length - 1];
+                    setCardImage(last.cardIndex, last.imageUrl);
+                    setCorrectionUndoStack(prev => prev.slice(0, -1));
+                    toast({ title: 'Edição revertida!' });
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
+                  style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}
+                >
+                  <Undo2 className="h-3.5 w-3.5" /> Desfazer correção
+                </button>
+              )}
               <button onClick={() => { resetWizardState(); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
@@ -6732,16 +6748,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
           onClose={() => setCorrectionCardIndex(null)}
           onImageEdited={(newUrl) => {
+            // Store previous image for undo
+            const prevUrl = carouselData.cards[correctionCardIndex].imageUrl!;
+            setCorrectionUndoStack(prev => [...prev, { cardIndex: correctionCardIndex, imageUrl: prevUrl }]);
             setCardImage(correctionCardIndex, newUrl);
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
           }}
           editFn={async (originalUrl: string, maskDataUrl: string, editPrompt: string, attachmentBase64?: string) => {
-            // Convert image and mask to base64
             const toBase64 = async (url: string): Promise<string> => {
-              if (url.startsWith('data:')) {
-                return url.replace(/^data:[^;]+;base64,/, '');
-              }
+              if (url.startsWith('data:')) return url.replace(/^data:[^;]+;base64,/, '');
               const res = await fetch(url);
               const blob = await res.blob();
               return new Promise((resolve, reject) => {
@@ -6778,7 +6794,74 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             const result = await response.json();
             if (!result.resultBase64) throw new Error('Nenhuma imagem retornada');
 
-            return `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
+            const aiResultDataUrl = `data:${result.mimeType || 'image/png'};base64,${result.resultBase64}`;
+
+            // === COMPOSITE: paste only masked regions from AI result onto original ===
+            const compositeResult = await new Promise<string>((resolve, reject) => {
+              const origImg = new window.Image();
+              origImg.crossOrigin = 'anonymous';
+              const aiImg = new window.Image();
+              const maskImg = new window.Image();
+
+              let loaded = 0;
+              const onAllLoaded = () => {
+                loaded++;
+                if (loaded < 3) return;
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = origImg.naturalWidth;
+                  canvas.height = origImg.naturalHeight;
+                  const ctx = canvas.getContext('2d')!;
+
+                  // Draw original
+                  ctx.drawImage(origImg, 0, 0, canvas.width, canvas.height);
+
+                  // Draw AI result scaled to same size
+                  const tempCanvas = document.createElement('canvas');
+                  tempCanvas.width = canvas.width;
+                  tempCanvas.height = canvas.height;
+                  const tempCtx = tempCanvas.getContext('2d')!;
+                  tempCtx.drawImage(aiImg, 0, 0, canvas.width, canvas.height);
+
+                  // Use mask to copy only white regions from AI result
+                  const maskCanvas = document.createElement('canvas');
+                  maskCanvas.width = canvas.width;
+                  maskCanvas.height = canvas.height;
+                  const maskCtx = maskCanvas.getContext('2d')!;
+                  maskCtx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
+
+                  const maskData = maskCtx.getImageData(0, 0, canvas.width, canvas.height);
+                  const aiData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+                  const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                  for (let i = 0; i < maskData.data.length; i += 4) {
+                    // If mask pixel is white (edited region), use AI pixel
+                    if (maskData.data[i] > 128) {
+                      origData.data[i] = aiData.data[i];
+                      origData.data[i + 1] = aiData.data[i + 1];
+                      origData.data[i + 2] = aiData.data[i + 2];
+                      origData.data[i + 3] = aiData.data[i + 3];
+                    }
+                  }
+
+                  ctx.putImageData(origData, 0, 0);
+                  resolve(canvas.toDataURL('image/png'));
+                } catch (e) { reject(e); }
+              };
+
+              origImg.onload = onAllLoaded;
+              aiImg.onload = onAllLoaded;
+              maskImg.onload = onAllLoaded;
+              origImg.onerror = reject;
+              aiImg.onerror = reject;
+              maskImg.onerror = reject;
+
+              origImg.src = originalUrl.startsWith('data:') ? originalUrl : originalUrl;
+              aiImg.src = aiResultDataUrl;
+              maskImg.src = maskDataUrl;
+            });
+
+            return compositeResult;
           }}
         />
       )}

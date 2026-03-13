@@ -5141,6 +5141,44 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                     <div className="h-px bg-white/[0.06] my-1" />
 
+                    {/* Card-specific actions header */}
+                    {!isGuest && carouselData.cards.length > 0 && (
+                      <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/30">
+                        Card {activeCardIndex + 1} de {carouselData.cards.length}
+                      </p>
+                    )}
+
+                    {/* Regenerar foto completa */}
+                    {!isGuest && (
+                      <button
+                        onClick={() => regenerateCard(activeCardIndex)}
+                        disabled={regeneratingCard === activeCardIndex || !carouselData.cards[activeCardIndex]?.imageUrl}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                        {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
+                        Regenerar Foto
+                      </button>
+                    )}
+
+                    {/* Regenerar rosto */}
+                    {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                      <button
+                        onClick={() => { setModifyMenuCard(activeCardIndex); setFaceUploadMode(true); setTempFaceFiles(referenceImages.filter(r => r.category === 'face').map(r => r.url)); }}
+                        disabled={regeneratingFace === activeCardIndex}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-green-300 hover:text-green-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                        {regeneratingFace === activeCardIndex ? <Loader2 className="h-4 w-4 text-green-400 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-400" />}
+                        Regenerar Rosto
+                      </button>
+                    )}
+
+                    {/* Ver prompt usado */}
+                    {!isGuest && (() => { const c = carouselData.cards[activeCardIndex]; return c && (c.generatedPrompt || c.imagePrompt || c.isAiImage); })() && (
+                      <button
+                        onClick={() => setViewPromptCard(activeCardIndex)}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all w-full">
+                        <FileText className="h-4 w-4 text-yellow-400" /> Ver Prompt
+                      </button>
+                    )}
+
                     {/* Corrigir área */}
                     {!isGuest && (
                       <button

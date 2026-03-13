@@ -719,7 +719,7 @@ const CarouselGenerator: React.FC = () => {
   const lastSavedDataRef = useRef<string>('');
   
   useEffect(() => {
-    if (!carouselData || !user || generating || generatingAllImages || isGuest) return;
+    if (!carouselData || !user || generating || generatingAllImages || regeneratingAll || regeneratingCard !== null || isGuest) return;
     
     const dataHash = JSON.stringify({ cards: carouselData.cards.map(c => ({ ...c })), title: carouselData.title });
     if (dataHash === lastSavedDataRef.current) return;
@@ -772,7 +772,7 @@ const CarouselGenerator: React.FC = () => {
     }, 3000); // 3s debounce
     
     return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
-  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId]);
+  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId, regeneratingAll, regeneratingCard]);
 
   // Export dialog is now a centered modal, no outside-click handler needed
 

@@ -6543,7 +6543,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Regenerating overlay on thumbnail */}
                     {(regeneratingCard === i || regeneratingFace === i) && (
                       <div className="absolute inset-0 rounded-xl flex flex-col items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                        <div className="w-5 h-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+                        <div className="w-5 h-5 rounded-full border-2 animate-spin" style={{ borderColor: `rgba(${themeRgb},0.3)`, borderTopColor: themeHex }} />
                       </div>
                     )}
                     {/* Lock overlay for guest thumbnails */}

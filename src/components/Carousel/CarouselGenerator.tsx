@@ -6918,7 +6918,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   'Content-Type': 'application/json',
                   Authorization: `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify({ imageDataUrl, maskDataUrl: maskDataUrlFull, editPrompt, attachmentDataUrl: attachmentBase64 ? `data:image/png;base64,${attachmentBase64}` : undefined }),
+                body: JSON.stringify({
+                  imageDataUrl,
+                  maskDataUrl: maskDataUrlFull,
+                  editPrompt,
+                  attachmentDataUrl: attachmentBase64
+                    ? (attachmentBase64.startsWith('data:image/')
+                        ? attachmentBase64
+                        : `data:image/png;base64,${attachmentBase64}`)
+                    : undefined,
+                }),
               }
             );
 

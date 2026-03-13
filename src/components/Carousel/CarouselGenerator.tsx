@@ -5644,7 +5644,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             <div className="h-px bg-white/[0.06]" />
                             <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
                               className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                              <Layers className="h-3.5 w-3.5 text-purple-400" />
+                              <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
                               <div>
                                 <p className="font-semibold">Contínuo</p>
                                 <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Home } from 'lucide-react';
 import '@/styles/carousel-loader.css';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
   brandName?: string;
   logoUrl?: string | null;
   skipWebSearch?: boolean;
+  onGoHome?: () => void;
 }
 
 // Fixed bright purple for loading UI - never uses user's accent color
@@ -29,6 +31,7 @@ const GeneratingAnimation: React.FC<Props> = ({
   brandName = '',
   logoUrl = null,
   skipWebSearch = false,
+  onGoHome,
 }) => {
   // Always use bright purple for loading, ignoring user's accentColor
   const loadingColor = LOADING_PURPLE;
@@ -175,6 +178,17 @@ const GeneratingAnimation: React.FC<Props> = ({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Home button — continue in background */}
+      {onGoHome && (
+        <button
+          onClick={onGoHome}
+          className="absolute top-4 left-4 z-[70] flex items-center gap-2 px-3 py-2 rounded-xl transition-all cursor-pointer"
+          style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
+        >
+          <Home className="w-4 h-4" />
+          <span className="text-xs font-medium">Continuar em segundo plano</span>
+        </button>
+      )}
       {/* LEFT SIDE — Orb + Status */}
       <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden px-4">
         <div className="absolute w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"

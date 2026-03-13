@@ -142,6 +142,7 @@ const StepFaceRef: React.FC<Props> = ({
 
   const handlePhotoUpload = (personId: string, files: FileList | null) => {
     if (!files) return;
+    autoSaveFilesToGallery(files);
     const person = facePersons.find(p => p.id === personId);
     if (!person) return;
     const remaining = MAX_PHOTOS_PER_PERSON - person.photos.length;

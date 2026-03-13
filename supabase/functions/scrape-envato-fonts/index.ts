@@ -12,71 +12,102 @@ Deno.serve(async (req) => {
     const { page = 1 } = await req.json();
     const pageNum = Math.max(1, Math.min(page, 20));
 
+    const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Firecrawl not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const url = pageNum === 1
       ? 'https://elements.envato.com/pt-br/fonts'
       : `https://elements.envato.com/pt-br/fonts/pg-${pageNum}`;
 
-    console.log('Scraping Envato fonts page:', url);
+    console.log('Scraping Envato fonts page via Firecrawl:', url);
 
-    const res = await fetch(url, {
+    const scrapeRes = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        url,
+        formats: ['html'],
+        waitFor: 3000,
+        onlyMainContent: false,
+      }),
     });
 
-    if (!res.ok) {
-      throw new Error(`Envato returned ${res.status}`);
+    if (!scrapeRes.ok) {
+      const errData = await scrapeRes.json().catch(() => ({}));
+      console.error('Firecrawl error:', scrapeRes.status, errData);
+      throw new Error(errData.error || `Firecrawl returned ${scrapeRes.status}`);
     }
 
-    const html = await res.text();
+    const scrapeData = await scrapeRes.json();
+    const html = scrapeData?.data?.html || scrapeData?.html || '';
 
-    // Extract font card data from the HTML
-    // Envato Elements uses img tags with alt text for font names and src for previews
+    if (!html) {
+      console.error('No HTML returned from Firecrawl');
+      throw new Error('No HTML content returned');
+    }
+
+    console.log('Got HTML length:', html.length);
+
+    // Extract font cards from rendered HTML
     const fonts: { name: string; previewUrl: string; pageUrl: string }[] = [];
 
-    // Match image elements that are font previews
-    // Pattern: look for card items with image and title
-    const cardRegex = /<a[^>]*href="(\/pt-br\/[^"]*font[^"]*)"[^>]*>[\s\S]*?<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>[\s\S]*?<\/a>/gi;
+    // Pattern 1: img tags with src containing envato CDN and alt text
+    const imgRegex = /<img[^>]*src=["']([^"']*(?:imgix\.net|elements-cover-images|envatousercontent)[^"']*)["'][^>]*alt=["']([^"']*)["'][^>]*>/gi;
     let match;
-    
-    while ((match = cardRegex.exec(html)) !== null && fonts.length < 20) {
-      const [, href, imgSrc, altText] = match;
-      if (imgSrc && altText && !altText.includes('Envato') && imgSrc.includes('elements-cover-images')) {
+
+    while ((match = imgRegex.exec(html)) !== null && fonts.length < 20) {
+      const [, imgSrc, altText] = match;
+      if (altText && altText.length > 2 && altText.length < 100 && !altText.toLowerCase().includes('envato') && !altText.toLowerCase().includes('logo')) {
+        const cleanUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
         fonts.push({
-          name: altText.replace(/ - .*$/, '').trim(),
-          previewUrl: imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc,
-          pageUrl: `https://elements.envato.com${href}`,
+          name: altText.replace(/\s*-\s*(?:Fonts|Font Family|Typeface).*$/i, '').replace(/\s*Visualização:?\s*/i, '').trim(),
+          previewUrl: cleanUrl,
+          pageUrl: url,
         });
       }
     }
 
-    // Fallback: try broader image pattern if cards didn't match
+    // Pattern 2: Try reversed order (alt before src)
     if (fonts.length === 0) {
-      const imgRegex = /<img[^>]*src="(https?:\/\/[^"]*elements-cover-images[^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi;
-      while ((match = imgRegex.exec(html)) !== null && fonts.length < 20) {
-        const [, imgSrc, altText] = match;
-        if (altText && !altText.includes('Envato') && altText.length > 2) {
+      const imgRegex2 = /<img[^>]*alt=["']([^"']*)["'][^>]*src=["']([^"']*(?:imgix\.net|elements-cover-images|envatousercontent)[^"']*)["'][^>]*>/gi;
+      while ((match = imgRegex2.exec(html)) !== null && fonts.length < 20) {
+        const [, altText, imgSrc] = match;
+        if (altText && altText.length > 2 && altText.length < 100 && !altText.toLowerCase().includes('envato')) {
+          const cleanUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
           fonts.push({
-            name: altText.replace(/ - .*$/, '').trim(),
-            previewUrl: imgSrc,
+            name: altText.replace(/\s*-\s*(?:Fonts|Font Family|Typeface).*$/i, '').replace(/\s*Visualização:?\s*/i, '').trim(),
+            previewUrl: cleanUrl,
             pageUrl: url,
           });
         }
       }
     }
 
-    // Second fallback: extract from data attributes or JSON-LD
+    // Pattern 3: Look for any large images that could be font previews
     if (fonts.length === 0) {
-      // Try to find any preview images with reasonable patterns
-      const anyImgRegex = /<img[^>]*src="(https?:\/\/[^"]*(?:envato|imgix)[^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi;
+      const anyImgRegex = /<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']+)["'][^>]*>/gi;
       while ((match = anyImgRegex.exec(html)) !== null && fonts.length < 20) {
         const [, imgSrc, altText] = match;
-        if (altText && altText.length > 2 && altText.length < 100 && !altText.toLowerCase().includes('logo')) {
+        if (
+          imgSrc && altText && 
+          altText.length > 2 && altText.length < 100 &&
+          !altText.toLowerCase().includes('logo') &&
+          !altText.toLowerCase().includes('avatar') &&
+          !imgSrc.includes('data:image/svg') &&
+          (imgSrc.includes('http') || imgSrc.startsWith('//'))
+        ) {
+          const cleanUrl = imgSrc.startsWith('//') ? `https:${imgSrc}` : imgSrc;
           fonts.push({
-            name: altText.replace(/ - .*$/, '').trim(),
-            previewUrl: imgSrc,
+            name: altText.replace(/\s*-\s*(?:Fonts|Font Family|Typeface).*$/i, '').replace(/\s*Visualização:?\s*/i, '').trim(),
+            previewUrl: cleanUrl,
             pageUrl: url,
           });
         }
@@ -86,19 +117,20 @@ Deno.serve(async (req) => {
     // Deduplicate by name
     const seen = new Set<string>();
     const uniqueFonts = fonts.filter(f => {
-      if (seen.has(f.name)) return false;
-      seen.add(f.name);
+      const key = f.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     }).slice(0, 15);
 
     console.log(`Found ${uniqueFonts.length} fonts on page ${pageNum}`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        fonts: uniqueFonts, 
+      JSON.stringify({
+        success: true,
+        fonts: uniqueFonts,
         page: pageNum,
-        hasMore: uniqueFonts.length >= 10,
+        hasMore: uniqueFonts.length >= 5,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

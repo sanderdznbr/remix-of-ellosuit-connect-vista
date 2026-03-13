@@ -6755,7 +6755,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   'Content-Type': 'application/json',
                   Authorization: `Bearer ${session.session?.access_token}`,
                 },
-                body: JSON.stringify({ imageBase64, maskBase64, editPrompt }),
+                body: JSON.stringify({ imageBase64, maskBase64, editPrompt, attachmentBase64 }),
               }
             );
 

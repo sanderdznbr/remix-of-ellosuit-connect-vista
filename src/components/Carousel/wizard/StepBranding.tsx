@@ -49,7 +49,7 @@ const StepBranding: React.FC<Props> = ({
         <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] animate-in fade-in duration-200">
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-white/[0.04] accent-purple-500" />
+              className={`w-4 h-4 rounded border-white/20 bg-white/[0.04] ${isExtreme ? 'accent-orange-500' : 'accent-purple-500'}`} />
             <span className="text-xs font-medium text-white/60">Exibir cabeçalho nos cards (marca, @, data)</span>
           </label>
           {showHeader && (

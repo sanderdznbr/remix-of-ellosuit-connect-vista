@@ -69,6 +69,7 @@ import StepMode from './wizard/StepMode';
 import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
 import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
+import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
@@ -181,6 +182,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
   const [extremeVision, setExtremeVision] = useState('');
   const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
+  const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -323,7 +325,7 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Estilo', 'Resumo']
+    ? ['Modo', 'Visão', 'Detalhes', 'Referências', 'Estilo', 'Resumo']
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -4708,6 +4710,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onChange={setExtremeFormValues}
                       />
                     )}
+                    {currentStepName === 'Referências' && extremeAnalysis && (
+                      <StepExtremeBehanceRefs
+                        vision={extremeVision}
+                        suggestedStyle={extremeAnalysis.suggestedStyle}
+                        selectedImages={extremeBehanceRefs}
+                        onSelectionChange={setExtremeBehanceRefs}
+                      />
+                    )}
                     {currentStepName === 'Resumo' && extremeAnalysis && (
                       <StepExtremeResumo
                         analysis={extremeAnalysis}
@@ -4750,6 +4760,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   });
                                 }
                               }
+                            }
+
+                            // Add Behance style references
+                            if (extremeBehanceRefs.length > 0) {
+                              extremeBehanceRefs.forEach((url, idx) => {
+                                newRefs.push({
+                                  url,
+                                  thumb: url,
+                                  label: `Behance Ref ${idx + 1}`,
+                                  source: 'upload' as const,
+                                  category: 'style' as const,
+                                });
+                              });
                             }
 
                             if (newRefs.length > 0) {

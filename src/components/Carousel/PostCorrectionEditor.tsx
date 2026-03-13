@@ -38,7 +38,22 @@ const PostCorrectionEditor: React.FC<Props> = ({ imageUrl, onClose, onImageEdite
     setSelectedId(null);
     setDrawBox(null);
     setEditPrompt('');
+    setAttachmentPreview(null);
+    setAttachmentBase64(null);
   }, [imageUrl]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setAttachmentPreview(dataUrl);
+      setAttachmentBase64(dataUrl.replace(/^data:[^;]+;base64,/, ''));
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const getPercent = useCallback((clientX: number, clientY: number) => {
     const el = containerRef.current;

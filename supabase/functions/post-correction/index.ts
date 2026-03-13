@@ -37,30 +37,32 @@ serve(async (req) => {
         {
           type: "text",
           text: attachmentBase64
-            ? `You are an expert image editor. You will receive ${attachmentBase64 ? 'THREE' : 'TWO'} images:
+            ? `You are an expert image editor. You will receive THREE images:
 
 IMAGE 1: The ORIGINAL image.
 IMAGE 2: A MASK image where WHITE areas indicate the regions to EDIT and BLACK areas must remain UNCHANGED.
 IMAGE 3: A REFERENCE image that should be used as part of the edit.
 
-YOUR TASK:
-1. Look at the MASK (IMAGE 2) to identify the WHITE regions — these are the ONLY areas you should modify.
-2. Apply the following edit ONLY to the white regions: "${editPrompt}"
-3. Use IMAGE 3 (the reference image) as instructed in the edit prompt above.
-4. Everything in the BLACK regions of the mask must remain PIXEL-IDENTICAL to the original image.
-5. The result should look natural and seamless.
-6. Return ONLY the final edited image.`
+CRITICAL RULES:
+1. The output image MUST have the EXACT SAME dimensions and aspect ratio as IMAGE 1. Do NOT change the aspect ratio or resolution.
+2. Look at the MASK (IMAGE 2) to identify the WHITE regions — these are the ONLY areas you should modify.
+3. Apply the following edit ONLY to the white regions: "${editPrompt}"
+4. Use IMAGE 3 (the reference image) as instructed in the edit prompt above.
+5. Everything in the BLACK regions of the mask must remain PIXEL-IDENTICAL to the original image.
+6. The result should look natural and seamless.
+7. Return ONLY the final edited image with the same dimensions as the original.`
             : `You are an expert image editor. You will receive TWO images:
 
 IMAGE 1: The ORIGINAL image.
 IMAGE 2: A MASK image where WHITE areas indicate the regions to EDIT and BLACK areas must remain UNCHANGED.
 
-YOUR TASK:
-1. Look at the MASK (IMAGE 2) to identify the WHITE regions — these are the ONLY areas you should modify.
-2. Apply the following edit ONLY to the white regions: "${editPrompt}"
-3. Everything in the BLACK regions of the mask must remain PIXEL-IDENTICAL to the original image.
-4. The result should look natural and seamless.
-5. Return ONLY the final edited image.`,
+CRITICAL RULES:
+1. The output image MUST have the EXACT SAME dimensions and aspect ratio as IMAGE 1. Do NOT change the aspect ratio or resolution.
+2. Look at the MASK (IMAGE 2) to identify the WHITE regions — these are the ONLY areas you should modify.
+3. Apply the following edit ONLY to the white regions: "${editPrompt}"
+4. Everything in the BLACK regions of the mask must remain PIXEL-IDENTICAL to the original image.
+5. The result should look natural and seamless.
+6. Return ONLY the final edited image with the same dimensions as the original.`,
         },
         { type: "image_url", image_url: { url: `data:image/png;base64,${imageBase64}` } },
         { type: "image_url", image_url: { url: `data:image/png;base64,${maskBase64}` } },

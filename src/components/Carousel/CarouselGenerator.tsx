@@ -5803,6 +5803,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Pencil className="h-3.5 w-3.5" /> Corrigir área
                 </button>
               )}
+              {/* Undo correction button */}
+              {correctionUndoStack.length > 0 && !isGuest && (
+                <button
+                  onClick={() => {
+                    const last = correctionUndoStack[correctionUndoStack.length - 1];
+                    setCardImage(last.cardIndex, last.imageUrl);
+                    setCorrectionUndoStack(prev => prev.slice(0, -1));
+                    toast({ title: 'Edição revertida!' });
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
+                  style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}
+                >
+                  <Undo2 className="h-3.5 w-3.5" /> Desfazer correção
+                </button>
+              )}
               <button onClick={() => { resetWizardState(); }}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
                 style={{ borderColor: 'rgba(255,255,255,0.06)' }}>

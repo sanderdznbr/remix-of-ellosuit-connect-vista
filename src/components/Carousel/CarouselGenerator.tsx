@@ -1372,8 +1372,17 @@ const CarouselGenerator: React.FC = () => {
       const extremeStyleRefs = extremeRefs.filter(r => r.category === 'style').map(r => r.url);
       const mergedFaceRefs = [...faceRefUrls, ...extremeFaceRefs];
       const mergedProductRefs = [...productRefUrls, ...extremeProductRefs];
-      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs];
-      console.log('[SINGLE_POST] Extreme refs:', { face: extremeFaceRefs.length, product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length });
+      // Filter out font reference from style refs (it will be sent separately as fontReferenceImage)
+      const fontRefLabel = extremeSelectedFont ? `Fonte: ${extremeSelectedFont.name}` : null;
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls, ...extremeStyleRefs].filter(url => {
+        // Remove the font preview URL from style refs — it goes as a dedicated param
+        if (fontRefLabel && extremeSelectedFont) {
+          const fontUrl = extremeSelectedFont.previewUrl;
+          return url !== fontUrl;
+        }
+        return true;
+      });
+      console.log('[SINGLE_POST] Extreme refs:', { face: extremeFaceRefs.length, product: extremeProductRefs.length, style: extremeStyleRefs.length, total: extremeRefs.length, hasFont: !!extremeSelectedFont });
 
       // Build a rich prompt for single post with manual text
       const promptParts: string[] = [];

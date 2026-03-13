@@ -7166,6 +7166,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             const prevUrl = carouselData.cards[correctionCardIndex].imageUrl!;
             setCorrectionUndoStack(prev => [...prev, { cardIndex: correctionCardIndex, imageUrl: prevUrl }]);
             setCardImage(correctionCardIndex, newUrl);
+            // Update cover_url in DB if we edited the first card (cover)
+            if (correctionCardIndex === 0 && currentCarouselId) {
+              supabase.from('generated_carousels').update({ cover_url: `${newUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+            }
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
           }}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ExpiringCreditsBanner } from '@/components/ExpiringCreditsBanner';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import DashboardSidebar from './DashboardSidebar';
@@ -124,7 +125,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
       }
     })();
-    return <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>{content}</div>;
+    return (
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+        <ExpiringCreditsBanner />
+        {content}
+      </div>
+    );
   };
 
   if (isMobile) {

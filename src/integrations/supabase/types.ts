@@ -430,6 +430,9 @@ export type Database = {
           balance: number
           company_id: string
           created_at: string
+          expiration_warning_sent: boolean | null
+          extra_credits: number | null
+          extra_credits_expires_at: string | null
           id: string
           total_consumed: number
           total_purchased: number
@@ -439,6 +442,9 @@ export type Database = {
           balance?: number
           company_id: string
           created_at?: string
+          expiration_warning_sent?: boolean | null
+          extra_credits?: number | null
+          extra_credits_expires_at?: string | null
           id?: string
           total_consumed?: number
           total_purchased?: number
@@ -448,6 +454,9 @@ export type Database = {
           balance?: number
           company_id?: string
           created_at?: string
+          expiration_warning_sent?: boolean | null
+          extra_credits?: number | null
+          extra_credits_expires_at?: string | null
           id?: string
           total_consumed?: number
           total_purchased?: number
@@ -7212,10 +7221,15 @@ export type Database = {
         Args: { p_amount: number; p_company_id: string; p_description?: string }
         Returns: Json
       }
+      add_extra_credits: {
+        Args: { p_amount: number; p_company_id: string; p_description?: string }
+        Returns: Json
+      }
       associate_existing_users_with_companies: {
         Args: never
         Returns: undefined
       }
+      check_credit_expiration: { Args: never; Returns: undefined }
       cleanup_disconnected_whatsapp_sessions: {
         Args: never
         Returns: undefined

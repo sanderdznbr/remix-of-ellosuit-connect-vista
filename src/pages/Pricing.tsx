@@ -20,14 +20,24 @@ const PLAN_CONFIG: Record<string, {
   growth: { label: 'Growth', annualPrice: 219.90, monthlyPrice: 269.90, credits: 200 },
 };
 
-const CREDIT_TOPUPS = [
-  { credits: 10, price: 15 },
-  { credits: 25, price: 30 },
-  { credits: 50, price: 55 },
-  { credits: 100, price: 99 },
-  { credits: 250, price: 220 },
-  { credits: 500, price: 399 },
-];
+// Per-credit pricing by plan: Starter R$1.40, Pro R$1.30, Growth R$1.10
+const CREDIT_UNIT_PRICE: Record<string, number> = {
+  starter: 1.40,
+  pro: 1.30,
+  growth: 1.10,
+  enterprise: 1.10,
+  free: 1.50, // fallback
+};
+
+const CREDIT_PACKAGES = [10, 25, 50, 100, 250, 500];
+
+function getCreditTopups(planKey: string) {
+  const unitPrice = CREDIT_UNIT_PRICE[planKey] || CREDIT_UNIT_PRICE.free;
+  return CREDIT_PACKAGES.map(credits => ({
+    credits,
+    price: parseFloat((credits * unitPrice).toFixed(2)),
+  }));
+}
 
 const GIFT_PACKAGES = [
   { credits: 100, price: 129.90, label: '100 Créditos', description: '~10 carrosséis ou ~14 posts estáticos' },
@@ -236,11 +246,13 @@ interface TopUpModalProps {
 const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, companyId, initialTopup = 2 }) => {
   const navigate = useNavigate();
   const [selectedTopup, setSelectedTopup] = useState(initialTopup);
+  const topups = getCreditTopups(currentPlan || 'free');
+  const unitPrice = CREDIT_UNIT_PRICE[currentPlan || 'free'] || CREDIT_UNIT_PRICE.free;
 
   if (!open) return null;
 
   const handlePurchase = () => {
-    navigate(`/checkout?modo=creditos&creditos=${selectedTopup}`);
+    navigate(`/checkout?modo=creditos&creditos=${selectedTopup}&plano=${currentPlan}`);
     onClose();
   };
 
@@ -258,10 +270,13 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
             <Zap className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl font-bold text-white mb-1">Adicionar créditos</h2>
-          <p className="text-sm text-white/40 mb-6">Compre créditos avulsos para usar imediatamente.</p>
+          <p className="text-sm text-white/40 mb-2">Compre créditos avulsos para usar imediatamente.</p>
+          <p className="text-xs text-purple-300/60 mb-6">
+            Seu plano: <span className="font-semibold text-purple-300">{(currentPlan || 'free').charAt(0).toUpperCase() + (currentPlan || 'free').slice(1)}</span> — R${unitPrice.toFixed(2)}/crédito
+          </p>
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto mb-6">
-            {CREDIT_TOPUPS.map((opt, i) => (
+            {topups.map((opt, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedTopup(i)}
@@ -284,7 +299,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
             </button>
             <button onClick={handlePurchase}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-purple-600 text-white hover:bg-purple-500 transition-colors cursor-pointer">
-              {`Comprar R$${CREDIT_TOPUPS[selectedTopup].price.toFixed(2)}`}
+              {`Comprar R$${topups[selectedTopup]?.price.toFixed(2)}`}
             </button>
           </div>
         </div>
@@ -619,7 +634,7 @@ function LoggedInPricing() {
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setShowTopUpDropdown(false)} />
                           <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/[0.08] z-50 py-1 shadow-xl" style={{ backgroundColor: '#1a1a24' }}>
-                            {CREDIT_TOPUPS.map((opt, i) => (
+                            {getCreditTopups(currentPlanKey || 'free').map((opt, i) => (
                               <button
                                 key={i}
                                 onClick={() => { setSelectedTopup(i); setShowTopUpDropdown(false); setShowTopUp(true); }}

@@ -198,11 +198,6 @@ function AdminContent() {
       
       if (isEmailSearch) {
         // Search by email via edge function (emails are in auth.users)
-        const { data: fnData, error: fnError } = await supabase.functions.invoke('admin-impersonate', {
-          body: null,
-          headers: { 'Content-Type': 'application/json' },
-        });
-        // Use GET-style with query params
         const resp = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL || 'https://jwddiyuezqrpuakazvgg.supabase.co'}/functions/v1/admin-impersonate?action=search-users&q=${encodeURIComponent(actionSearch)}`,
           {

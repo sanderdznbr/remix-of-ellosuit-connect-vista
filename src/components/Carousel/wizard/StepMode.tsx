@@ -90,6 +90,8 @@ const StepMode: React.FC<Props> = ({
                   : selected
                   ? isExtreme
                     ? 'bg-orange-500/[0.08] border-orange-500/40'
+                    : m.key === 'advanced'
+                    ? 'bg-red-500/[0.08] border-red-500/40'
                     : 'bg-purple-500/[0.08] border-purple-500/40'
                   : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
               }`}
@@ -98,7 +100,7 @@ const StepMode: React.FC<Props> = ({
                 locked
                   ? 'bg-white/[0.03]'
                   : selected
-                  ? isExtreme ? 'bg-orange-500/20' : 'bg-purple-500/20'
+                  ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : 'bg-purple-500/20'
                   : 'bg-white/[0.04]'
               }`}>
                 {locked ? (
@@ -106,7 +108,7 @@ const StepMode: React.FC<Props> = ({
                 ) : (
                   <Icon className={`h-6 w-6 ${
                     selected
-                      ? isExtreme ? 'text-orange-400' : 'text-purple-400'
+                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : 'text-purple-400'
                       : 'text-white/30'
                   }`} />
                 )}

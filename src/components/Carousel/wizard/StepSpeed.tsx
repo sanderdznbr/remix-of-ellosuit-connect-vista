@@ -4,9 +4,17 @@ import { Zap, Sparkles } from 'lucide-react';
 interface Props {
   imageModel: 'gemini' | 'nano-banana';
   setImageModel: (v: 'gemini' | 'nano-banana') => void;
+  accentTheme?: 'purple' | 'red' | 'orange';
 }
 
-const StepSpeed: React.FC<Props> = ({ imageModel, setImageModel }) => {
+const themeClasses = {
+  purple: { bg: 'bg-purple-500/[0.08]', border: 'border-purple-500/40', iconBg: 'bg-purple-500/20', icon: 'text-purple-400' },
+  red: { bg: 'bg-red-500/[0.08]', border: 'border-red-500/40', iconBg: 'bg-red-500/20', icon: 'text-red-400' },
+  orange: { bg: 'bg-orange-500/[0.08]', border: 'border-orange-500/40', iconBg: 'bg-orange-500/20', icon: 'text-orange-400' },
+};
+
+const StepSpeed: React.FC<Props> = ({ imageModel, setImageModel, accentTheme = 'purple' }) => {
+  const t = themeClasses[accentTheme];
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
@@ -18,13 +26,13 @@ const StepSpeed: React.FC<Props> = ({ imageModel, setImageModel }) => {
         <button onClick={() => setImageModel('nano-banana')}
           className={`flex items-center gap-4 p-5 rounded-2xl text-left transition-all border ${
             imageModel === 'nano-banana'
-              ? 'bg-purple-500/[0.08] border-purple-500/40'
+              ? `${t.bg} ${t.border}`
               : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
           }`}>
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            imageModel === 'nano-banana' ? 'bg-purple-500/20' : 'bg-white/[0.04]'
+            imageModel === 'nano-banana' ? t.iconBg : 'bg-white/[0.04]'
           }`}>
-            <Sparkles className={`h-6 w-6 ${imageModel === 'nano-banana' ? 'text-purple-400' : 'text-white/30'}`} />
+            <Sparkles className={`h-6 w-6 ${imageModel === 'nano-banana' ? t.icon : 'text-white/30'}`} />
           </div>
           <div>
             <span className="text-base font-semibold text-white/90 block">Qualidade</span>

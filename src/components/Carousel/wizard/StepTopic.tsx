@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Loader2, Wand2, Globe, Search, Settings, Image as ImageIcon, Layers } from 'lucide-react';
+import { getAccentTheme, getThemeClasses } from './wizardTheme';
 import PromptMentionInput, { PromptMentionRef } from './PromptMention';
 
 interface MentionedPrompt {
@@ -52,6 +53,7 @@ const StepTopic: React.FC<Props> = ({
   webSearchSuggestion, onAcceptWebSearch, onDeclineWebSearch, classifyingTopic,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
+  const t = getThemeClasses(getAccentTheme(wizardMode));
   const [advancedMode, setAdvancedMode] = useState(false);
   const isSimple = wizardMode === 'simple';
 
@@ -113,7 +115,7 @@ const StepTopic: React.FC<Props> = ({
               {!guestMode && (
                 <button
                   onClick={() => mentionRef.current?.triggerMention()}
-                  className="h-8 px-2.5 rounded-lg bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-200 transition-all cursor-pointer text-sm font-semibold"
+                  className={`h-8 px-2.5 rounded-lg ${t.bgLight} border ${t.borderLight} hover:bg-opacity-30 ${t.textLighter} transition-all cursor-pointer text-sm font-semibold`}
                   title="Inserir menção de prompt"
                 >
                   @
@@ -175,12 +177,12 @@ const StepTopic: React.FC<Props> = ({
           {/* Smart web search suggestion */}
           {webSearchSuggestion && !webSearchResult && !searchingWeb && (
             <div className="p-4 rounded-xl space-y-3" style={{
-              backgroundColor: 'rgba(139,92,246,0.08)',
-              border: '1px solid rgba(139,92,246,0.25)',
+              backgroundColor: `rgba(${t.rgb},0.08)`,
+              border: `1px solid rgba(${t.rgb},0.25)`,
             }}>
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                  <Search className="h-4 w-4 text-purple-400" />
+                <div className="p-2 rounded-lg flex-shrink-0" style={{ backgroundColor: `rgba(${t.rgb},0.15)` }}>
+                  <Search className={`h-4 w-4 ${t.text}`} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-white/80 mb-1">
@@ -198,9 +200,9 @@ const StepTopic: React.FC<Props> = ({
                   onClick={onAcceptWebSearch}
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                   style={{
-                    backgroundColor: 'rgba(139,92,246,0.2)',
-                    border: '1px solid rgba(139,92,246,0.4)',
-                    color: '#C4B5FD',
+                    backgroundColor: `rgba(${t.rgb},0.2)`,
+                    border: `1px solid rgba(${t.rgb},0.4)`,
+                    color: t.hex,
                   }}
                 >
                   <span className="flex items-center gap-1.5">

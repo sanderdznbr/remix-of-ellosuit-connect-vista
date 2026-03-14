@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Upload, X, Settings2, Sun, Moon } from 'lucide-react';
 import { LogoPosition } from './StepStyle';
 import LogoPositionPicker from './LogoPositionPicker';
+import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
 
 interface Props {
   showHeader: boolean;
@@ -20,6 +21,7 @@ interface Props {
   dateLabel?: string;
   setDateLabel?: (v: string) => void;
   isExtreme?: boolean;
+  accentTheme?: WizardAccentTheme;
 }
 
 const StepBranding: React.FC<Props> = ({
@@ -27,7 +29,10 @@ const StepBranding: React.FC<Props> = ({
   logoPosition, setLogoPosition,
   logoBrandColors = [], brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   isExtreme = false,
+  accentTheme,
 }) => {
+  const theme = accentTheme || (isExtreme ? 'orange' : 'purple');
+  const t = getThemeClasses(theme);
   const logoLightInputRef = useRef<HTMLInputElement>(null);
   const logoDarkInputRef = useRef<HTMLInputElement>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -45,7 +50,7 @@ const StepBranding: React.FC<Props> = ({
         </div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`p-2.5 rounded-xl transition-all cursor-pointer ${showAdvanced ? (isExtreme ? 'bg-orange-500/20 text-orange-400' : 'bg-purple-500/20 text-purple-400') : 'bg-white/[0.04] text-white/30 hover:text-white/50 hover:bg-white/[0.08]'}`}
+          className={`p-2.5 rounded-xl transition-all cursor-pointer ${showAdvanced ? `${t.bgLight} ${t.text}` : 'bg-white/[0.04] text-white/30 hover:text-white/50 hover:bg-white/[0.08]'}`}
           title="Configurações avançadas de cabeçalho"
         >
           <Settings2 className="h-4 w-4" />
@@ -57,7 +62,7 @@ const StepBranding: React.FC<Props> = ({
         <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] animate-in fade-in duration-200">
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)}
-              className={`w-4 h-4 rounded border-white/20 bg-white/[0.04] ${isExtreme ? 'accent-orange-500' : 'accent-purple-500'}`} />
+              className={`w-4 h-4 rounded border-white/20 bg-white/[0.04] ${t.accent}`} />
             <span className="text-xs font-medium text-white/60">Exibir cabeçalho nos cards (marca, @, data)</span>
           </label>
           {showHeader && (
@@ -105,7 +110,7 @@ const StepBranding: React.FC<Props> = ({
             </div>
           ) : (
             <button onClick={() => logoLightInputRef.current?.click()}
-              className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed ${isExtreme ? 'border-orange-500/20 bg-orange-500/[0.02] hover:bg-orange-500/[0.06]' : 'border-purple-500/20 bg-purple-500/[0.02] hover:bg-purple-500/[0.06]'} text-white/40 hover:text-white/60 transition-all cursor-pointer`}>
+              className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed ${t.borderSubtle} ${t.bgFaint} hover:bg-opacity-[0.06] text-white/40 hover:text-white/60 transition-all cursor-pointer`}>
               <Upload className="h-5 w-5" />
               <div className="text-center">
                 <span className="text-xs font-semibold block">Logo clara</span>
@@ -147,7 +152,7 @@ const StepBranding: React.FC<Props> = ({
             </div>
           ) : (
             <button onClick={() => logoDarkInputRef.current?.click()}
-              className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed ${isExtreme ? 'border-orange-500/20 bg-orange-500/[0.02] hover:bg-orange-500/[0.06]' : 'border-purple-500/20 bg-purple-500/[0.02] hover:bg-purple-500/[0.06]'} text-white/40 hover:text-white/60 transition-all cursor-pointer`}>
+              className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed ${t.borderSubtle} ${t.bgFaint} hover:bg-opacity-[0.06] text-white/40 hover:text-white/60 transition-all cursor-pointer`}>
               <Upload className="h-5 w-5" />
               <div className="text-center">
                 <span className="text-xs font-semibold block">Logo escura</span>

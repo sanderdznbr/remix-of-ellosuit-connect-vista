@@ -30,6 +30,7 @@ interface Props {
   setSelectedFont: (v: number) => void;
   onApplyPreset?: (preset: StylePreset) => void;
   onApplyMarketplaceStyle?: (styleConfig: any) => void;
+  accentTheme?: WizardAccentTheme;
 }
 
 const StepStyleSelect: React.FC<Props> = ({

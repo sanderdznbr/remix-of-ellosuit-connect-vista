@@ -7122,7 +7122,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       {/* ===== CAPTION CONFIG DIALOG ===== */}
       <AnimatePresence>
-        {showCaptionConfigDialog && (
+        {showCaptionConfigDialog && (() => {
+          const cThemeHex = wizardMode === 'extreme' ? '#E84D1A' : '#8B5CF6';
+          const cThemeRgb = wizardMode === 'extreme' ? '232,77,26' : '139,92,246';
+          return (
           <motion.div
             key="caption-config"
             initial={{ opacity: 0 }}
@@ -7141,7 +7144,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               style={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" style={{ color: themeHex }} /> Configurar Legenda
+                  <Sparkles className="h-4 w-4" style={{ color: cThemeHex }} /> Configurar Legenda
                 </h3>
                 <button onClick={() => setShowCaptionConfigDialog(false)} className="text-white/50 hover:text-white/80 transition-colors cursor-pointer">
                   <X className="h-4 w-4" />
@@ -7154,7 +7157,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {['500', '1000', '1500', '2200'].map(v => (
                       <button key={v} onClick={() => setCaptionMaxChars(captionMaxChars === v ? '' : v)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${captionMaxChars === v ? 'text-white' : 'text-white/40 hover:text-white/60'}`}
-                        style={{ backgroundColor: captionMaxChars === v ? `rgba(${themeRgb},0.2)` : 'rgba(255,255,255,0.04)', border: `1px solid ${captionMaxChars === v ? `rgba(${themeRgb},0.4)` : 'rgba(255,255,255,0.06)'}` }}>
+                        style={{ backgroundColor: captionMaxChars === v ? `rgba(${cThemeRgb},0.2)` : 'rgba(255,255,255,0.04)', border: `1px solid ${captionMaxChars === v ? `rgba(${cThemeRgb},0.4)` : 'rgba(255,255,255,0.06)'}` }}>
                         {v}
                       </button>
                     ))}
@@ -7176,7 +7179,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 <button
                   onClick={() => { setShowCaptionConfigDialog(false); generateCaption(captionMaxChars, captionMentions); }}
                   className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all cursor-pointer"
-                  style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHex}cc)` }}>
+                  style={{ background: `linear-gradient(135deg, ${cThemeHex}, ${cThemeHex}cc)` }}>
                   <Sparkles className="h-3.5 w-3.5" /> Gerar Legenda
                 </button>
                 <button
@@ -7188,7 +7191,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             </motion.div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       <AnimatePresence>

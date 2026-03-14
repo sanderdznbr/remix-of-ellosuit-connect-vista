@@ -1235,6 +1235,7 @@ const CarouselGenerator: React.FC = () => {
     // Restore extreme mode settings from generation_config
     const gc = item.generation_config;
     if (gc) {
+      if (gc.contentMode) setContentMode(gc.contentMode);
       if (gc.wizardMode === 'extreme') {
         setWizardMode('extreme');
         if (gc.extremeVision) setExtremeVision(gc.extremeVision);

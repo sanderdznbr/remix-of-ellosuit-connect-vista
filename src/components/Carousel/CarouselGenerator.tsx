@@ -310,6 +310,9 @@ const CarouselGenerator: React.FC = () => {
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
+  const [showCaptionConfigDialog, setShowCaptionConfigDialog] = useState(false);
+  const [captionMaxChars, setCaptionMaxChars] = useState('');
+  const [captionMentions, setCaptionMentions] = useState('');
   const [activePresetId, setActivePresetId] = useState<string>('ellosuit-editorial');
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);

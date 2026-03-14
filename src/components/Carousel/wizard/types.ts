@@ -5,7 +5,7 @@ export interface ReferenceImage {
   thumb: string;
   label: string;
   source: 'upload' | 'web';
-  category: 'face' | 'style' | 'general' | 'product';
+  category: 'face' | 'style' | 'general' | 'product' | 'brand';
   personId?: string; // links face photo to a specific FacePerson
 }
 

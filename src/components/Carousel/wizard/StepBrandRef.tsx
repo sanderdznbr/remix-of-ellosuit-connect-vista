@@ -68,7 +68,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
                 if (ev.target?.result) {
                   setReferenceImages(prev => [...prev, {
                     url: ev.target!.result as string, thumb: ev.target!.result as string,
-                    label: file.name, source: 'upload', category: 'style',
+                    label: file.name, source: 'upload', category: 'brand',
                   }]);
                 }
               };

@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Loader2, X, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { ReferenceImage } from './types';
+
+import img3dObjects from '@/assets/visual-styles/3d-objects.jpg';
+import img2dIllustrations from '@/assets/visual-styles/2d-illustrations.jpg';
+import img3dScenes from '@/assets/visual-styles/3d-scenes.jpg';
+import imgLandscapes from '@/assets/visual-styles/landscapes.jpg';
+import imgAbstract from '@/assets/visual-styles/abstract.jpg';
+import imgManipulations from '@/assets/visual-styles/manipulations.jpg';
+import imgPatterns from '@/assets/visual-styles/patterns.jpg';
+import imgMinimalist from '@/assets/visual-styles/minimalist.jpg';
+import imgCollage from '@/assets/visual-styles/collage.jpg';
 
 export type VisualCategory = 
   | '3d-objects' | '2d-illustrations' | '3d-scenes' | 'landscapes' 
@@ -19,60 +29,15 @@ export interface VisualCategoryOption {
 }
 
 const VISUAL_CATEGORIES: VisualCategoryOption[] = [
-  { 
-    id: '3d-objects', label: 'Objetos 3D', 
-    description: 'Objetos renderizados em 3D',
-    searchHint: '3D rendered object',
-    previewUrl: 'https://images.unsplash.com/photo-1633899306328-c5e70574aaa2?w=400&h=500&fit=crop',
-  },
-  { 
-    id: '2d-illustrations', label: 'Ilustrações 2D', 
-    description: 'Flat, vetorial ou artístico',
-    searchHint: '2D illustration',
-    previewUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=500&fit=crop',
-  },
-  { 
-    id: '3d-scenes', label: 'Cenários 3D', 
-    description: 'Ambientes e cenas completas',
-    searchHint: '3D scene environment',
-    previewUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=500&fit=crop',
-  },
-  { 
-    id: 'landscapes', label: 'Paisagens', 
-    description: 'Naturais ou urbanas',
-    searchHint: 'landscape photography',
-    previewUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=500&fit=crop',
-  },
-  { 
-    id: 'abstract', label: 'Abstrato', 
-    description: 'Formas, gradientes e texturas',
-    searchHint: 'abstract art design',
-    previewUrl: 'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=500&fit=crop',
-  },
-  { 
-    id: 'manipulations', label: 'Manipulações', 
-    description: 'Composições digitais',
-    searchHint: 'digital manipulation art',
-    previewUrl: 'https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?w=400&h=500&fit=crop',
-  },
-  { 
-    id: 'patterns', label: 'Padrões', 
-    description: 'Geométricos e repetitivos',
-    searchHint: 'geometric pattern design',
-    previewUrl: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=500&fit=crop',
-  },
-  { 
-    id: 'minimalist', label: 'Minimalista', 
-    description: 'Clean, poucos elementos',
-    searchHint: 'minimalist design clean',
-    previewUrl: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=400&h=500&fit=crop',
-  },
-  { 
-    id: 'collage', label: 'Colagem', 
-    description: 'Mix de fotos e gráficos',
-    searchHint: 'collage art design',
-    previewUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=400&h=500&fit=crop',
-  },
+  { id: '3d-objects', label: 'Objetos 3D', description: 'Renderizados em 3D', searchHint: '3D rendered object', previewUrl: img3dObjects },
+  { id: '2d-illustrations', label: 'Ilustrações 2D', description: 'Flat, vetorial ou artístico', searchHint: '2D illustration', previewUrl: img2dIllustrations },
+  { id: '3d-scenes', label: 'Cenários 3D', description: 'Ambientes e cenas', searchHint: '3D scene environment', previewUrl: img3dScenes },
+  { id: 'landscapes', label: 'Paisagens', description: 'Naturais ou urbanas', searchHint: 'landscape photography', previewUrl: imgLandscapes },
+  { id: 'abstract', label: 'Abstrato', description: 'Formas e gradientes', searchHint: 'abstract art design', previewUrl: imgAbstract },
+  { id: 'manipulations', label: 'Manipulações', description: 'Composições digitais', searchHint: 'digital manipulation art', previewUrl: imgManipulations },
+  { id: 'patterns', label: 'Padrões', description: 'Geométricos e repetitivos', searchHint: 'geometric pattern design', previewUrl: imgPatterns },
+  { id: 'minimalist', label: 'Minimalista', description: 'Clean, poucos elementos', searchHint: 'minimalist design clean', previewUrl: imgMinimalist },
+  { id: 'collage', label: 'Colagem', description: 'Mix de fotos e gráficos', searchHint: 'collage art design', previewUrl: imgCollage },
 ];
 
 interface Props {
@@ -148,40 +113,33 @@ const StepVisualStyle: React.FC<Props> = ({
         <p className="text-sm text-white/40">Escolha o tipo de visual para as imagens do post.</p>
       </div>
 
-      {/* Category grid — photo-based */}
-      <div className="grid grid-cols-3 gap-2.5">
+      {/* Category grid */}
+      <div className="grid grid-cols-3 gap-3">
         {VISUAL_CATEGORIES.map(cat => {
           const isSelected = selectedCategory === cat.id;
           return (
             <button key={cat.id} onClick={() => handleSelectCategory(cat.id)}
-              className={`relative rounded-xl overflow-hidden transition-all group ${
+              className={`relative rounded-xl overflow-hidden transition-all group cursor-pointer ${
                 isSelected
-                  ? 'ring-2 ring-purple-500 shadow-[0_0_16px_rgba(139,92,246,0.3)]'
-                  : 'ring-1 ring-white/[0.08] hover:ring-white/[0.2]'
+                  ? 'ring-2 ring-purple-500 shadow-[0_0_16px_rgba(139,92,246,0.3)] scale-[1.02]'
+                  : 'ring-1 ring-white/[0.08] hover:ring-white/[0.2] hover:scale-[1.01]'
               }`}
             >
-              {/* Photo */}
               <div className="aspect-[4/5] relative">
                 <img
                   src={cat.previewUrl}
                   alt={cat.label}
                   className={`w-full h-full object-cover transition-all duration-300 ${
-                    isSelected ? 'brightness-90' : 'brightness-[0.6] group-hover:brightness-75'
+                    isSelected ? 'brightness-100' : 'brightness-[0.55] group-hover:brightness-75'
                   }`}
-                  loading="lazy"
                 />
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                
-                {/* Label */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                 <div className="absolute bottom-0 inset-x-0 p-2.5">
-                  <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-white/90'}`}>
+                  <p className={`text-[11px] font-bold leading-tight ${isSelected ? 'text-white' : 'text-white/90'}`}>
                     {cat.label}
                   </p>
                   <p className="text-[9px] text-white/50 leading-tight mt-0.5">{cat.description}</p>
                 </div>
-
-                {/* Selected indicator */}
                 {isSelected && (
                   <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
                     <Check className="h-3 w-3 text-white" />
@@ -211,7 +169,7 @@ const StepVisualStyle: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Manual search for any category */}
+      {/* Manual search refinement */}
       {selectedCategory && !showObjectSearch && (
         <div className="flex gap-2">
           <Input value={visualSearchQuery} onChange={(e) => setVisualSearchQuery(e.target.value)}
@@ -225,7 +183,6 @@ const StepVisualStyle: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Loading */}
       {searching && (
         <div className="py-8 text-center">
           <Loader2 className="h-6 w-6 animate-spin text-white/20 mx-auto mb-2" />
@@ -233,7 +190,6 @@ const StepVisualStyle: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Search results grid */}
       {searchResults.length > 0 && !searching && (
         <div className="space-y-2">
           <p className="text-xs text-white/40">Selecione as imagens que combinam com o estilo desejado:</p>
@@ -263,7 +219,6 @@ const StepVisualStyle: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Selected count */}
       {visualRefs.length > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-white/30">{visualRefs.length} referência(s) visual(is) selecionada(s)</p>

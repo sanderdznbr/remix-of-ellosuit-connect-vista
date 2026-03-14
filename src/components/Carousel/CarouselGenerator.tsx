@@ -6553,7 +6553,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 <button
                   onClick={() => {
                     const last = correctionUndoStack[correctionUndoStack.length - 1];
-                    setCardImage(last.cardIndex, last.imageUrl);
+                    setCardImage(last.cardIndex, last.imageUrl, true);
                     if (last.cardIndex === 0 && currentCarouselId) {
                       supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
                     }
@@ -6564,7 +6564,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}
                 >
-                  <Undo2 className="h-3.5 w-3.5" /> Retornar edição
+                  <Undo2 className="h-3.5 w-3.5" /> Retornar edição {correctionUndoStack.length > 0 && <span className="ml-1 text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
                 </button>
               )}
               <button onClick={() => { resetWizardState(); }}

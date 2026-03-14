@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserX, User } from 'lucide-react';
 import { PeopleMode } from './StepVisualStyle';
+import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
 
 interface Props {
   peopleMode: PeopleMode;
@@ -8,6 +9,7 @@ interface Props {
   randomFaceCount: number | null;
   setRandomFaceCount: (v: number | null) => void;
   cardCount: number;
+  accentTheme?: WizardAccentTheme;
 }
 
 const PEOPLE_OPTIONS: { value: PeopleMode; label: string; icon: React.ReactNode; desc: string }[] = [
@@ -21,7 +23,9 @@ const StepPeopleMode: React.FC<Props> = ({
   peopleMode, setPeopleMode,
   randomFaceCount, setRandomFaceCount,
   cardCount,
+  accentTheme = 'purple',
 }) => {
+  const t = getThemeClasses(accentTheme);
   const effectiveRandomFaceCount = randomFaceCount != null ? randomFaceCount : cardCount;
   const showRandomFaceCount = peopleMode !== 'none' && cardCount >= 2;
 
@@ -39,12 +43,12 @@ const StepPeopleMode: React.FC<Props> = ({
             <button key={opt.value} onClick={() => setPeopleMode(opt.value)}
               className={`p-4 rounded-xl text-left transition-all border ${
                 isSelected
-                  ? 'bg-purple-500/15 border-purple-500/40 shadow-[0_0_12px_rgba(139,92,246,0.15)]'
+                  ? `${t.bgLighter} ${t.border} ${t.shadow}`
                   : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.12]'
               }`}>
               <div className="flex items-center gap-2.5 mb-1.5">
-                <span className={isSelected ? 'text-purple-400' : 'text-white/40'}>{opt.icon}</span>
-                <span className={`text-sm font-semibold ${isSelected ? 'text-purple-300' : 'text-white/60'}`}>{opt.label}</span>
+                <span className={isSelected ? t.text : 'text-white/40'}>{opt.icon}</span>
+                <span className={`text-sm font-semibold ${isSelected ? t.textLight : 'text-white/60'}`}>{opt.label}</span>
               </div>
               <span className="text-[11px] text-white/30 leading-tight">{opt.desc}</span>
             </button>
@@ -53,16 +57,16 @@ const StepPeopleMode: React.FC<Props> = ({
       </div>
 
       {showRandomFaceCount && (
-        <div className="p-4 rounded-2xl border border-purple-500/20 bg-purple-500/[0.05] space-y-3">
+        <div className={`p-4 rounded-2xl border ${t.borderSubtle} ${t.bgFaint} space-y-3`}>
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-purple-400" />
+            <User className={`h-4 w-4 ${t.text}`} />
             <p className="text-sm font-semibold text-white/80">Cards com pessoa</p>
           </div>
           <p className="text-xs text-white/40">
             Quantos slides devem mostrar uma pessoa? O restante terá apenas elementos visuais.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <span className="text-3xl font-bold text-purple-300 tabular-nums">{effectiveRandomFaceCount}</span>
+            <span className={`text-3xl font-bold ${t.textLight} tabular-nums`}>{effectiveRandomFaceCount}</span>
             <span className="text-sm text-white/30">de {cardCount}</span>
           </div>
           <div className="px-2">
@@ -74,7 +78,7 @@ const StepPeopleMode: React.FC<Props> = ({
               onChange={(e) => setRandomFaceCount(Number(e.target.value))}
               className="w-full h-2 rounded-full appearance-none cursor-pointer"
               style={{
-                background: `linear-gradient(to right, #8B5CF6 0%, #A78BFA ${((effectiveRandomFaceCount - 1) / Math.max(cardCount - 1, 1)) * 100}%, rgba(255,255,255,0.06) ${((effectiveRandomFaceCount - 1) / Math.max(cardCount - 1, 1)) * 100}%, rgba(255,255,255,0.06) 100%)`,
+                background: `linear-gradient(to right, ${t.hex} 0%, ${t.hex} ${((effectiveRandomFaceCount - 1) / Math.max(cardCount - 1, 1)) * 100}%, rgba(255,255,255,0.06) ${((effectiveRandomFaceCount - 1) / Math.max(cardCount - 1, 1)) * 100}%, rgba(255,255,255,0.06) 100%)`,
               }}
             />
           </div>
@@ -83,7 +87,7 @@ const StepPeopleMode: React.FC<Props> = ({
               <button key={n} onClick={() => setRandomFaceCount(n)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   effectiveRandomFaceCount === n
-                    ? 'bg-purple-500/30 text-purple-200 border border-purple-500/40'
+                    ? `${t.bgLight} ${t.textLighter} border ${t.border}`
                     : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
                 }`}>
                 {n === cardCount ? `Todos (${n})` : n}
@@ -92,7 +96,7 @@ const StepPeopleMode: React.FC<Props> = ({
           </div>
           <div className="flex gap-3 text-[10px] text-white/30">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-purple-500/60" />
+              <div className={`w-2 h-2 rounded-full ${t.dotBg}`} />
               <span>{effectiveRandomFaceCount} com pessoa</span>
             </div>
             <div className="flex items-center gap-1">

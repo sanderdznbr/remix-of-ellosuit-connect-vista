@@ -3,15 +3,18 @@ import { Input } from '@/components/ui/input';
 import { Search, Loader2, ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ReferenceImage } from './types';
+import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
 
 interface Props {
   referenceImages: ReferenceImage[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
   webImages?: string[];
   onSkip?: () => void;
+  accentTheme?: WizardAccentTheme;
 }
 
-const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages, onSkip }) => {
+const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages, onSkip, accentTheme = 'purple' }) => {
+  const t = getThemeClasses(accentTheme);
   const [refSearchQuery, setRefSearchQuery] = useState('');
   const [searchingReferences, setSearchingReferences] = useState(false);
   const [refSearchResults, setRefSearchResults] = useState<any[]>([]);
@@ -63,13 +66,13 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
                 }}
                   className={`w-full rounded-lg overflow-hidden aspect-video transition-all ${
                     alreadyAdded
-                      ? 'ring-2 ring-purple-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]'
+                      ? `ring-2 ${t.ringFull} ${t.shadowStrong}`
                       : 'ring-1 ring-white/[0.06] hover:ring-white/20'
                   }`}>
                   <img src={img.thumb || ''} alt="" className="w-full h-full object-cover"
                     onError={(e) => { try { (e.target as HTMLImageElement).style.display = 'none'; } catch {} }} />
                   {alreadyAdded && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
+                    <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full ${t.bg} flex items-center justify-center shadow-lg`}>
                       <span className="text-white text-[10px] font-bold">✓</span>
                     </div>
                   )}

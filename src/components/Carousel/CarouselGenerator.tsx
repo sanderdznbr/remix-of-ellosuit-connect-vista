@@ -3100,6 +3100,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       } catch { /* ignore */ }
     }
 
+    if (generationInFlightRef.current) {
+      console.log('[GENERATE_GUARD] Duplicate cover-to-carousel trigger ignored');
+      return;
+    }
+    generationInFlightRef.current = true;
+
     setGenerating(true);
     setCarouselData(null);
     setCurrentCarouselId(null);

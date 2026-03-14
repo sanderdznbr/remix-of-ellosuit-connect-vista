@@ -212,7 +212,11 @@ Deno.serve(async (req) => {
       if (beehiveData.status === "paid") {
         const now = new Date();
         const expiresAt = new Date(now);
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
+        if (isAnnual) {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        } else {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        }
         updateData.status = "active";
         updateData.starts_at = now.toISOString();
         updateData.expires_at = expiresAt.toISOString();

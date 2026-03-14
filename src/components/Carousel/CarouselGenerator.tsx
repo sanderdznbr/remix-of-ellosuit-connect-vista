@@ -310,6 +310,9 @@ const CarouselGenerator: React.FC = () => {
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
+  const [showCaptionConfigDialog, setShowCaptionConfigDialog] = useState(false);
+  const [captionMaxChars, setCaptionMaxChars] = useState('');
+  const [captionMentions, setCaptionMentions] = useState('');
   const [activePresetId, setActivePresetId] = useState<string>('ellosuit-editorial');
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
@@ -1045,9 +1048,14 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== GENERATE CAPTION =====
-  const generateCaption = async () => {
+  const openCaptionConfigDialog = () => {
+    setShowCaptionConfigDialog(true);
+  };
+
+  const generateCaption = async (maxChars?: string, mentions?: string) => {
     if (generatingCaption) return;
     setGeneratingCaption(true);
+    setShowCaptionPanel(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
@@ -1055,6 +1063,8 @@ const CarouselGenerator: React.FC = () => {
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: carouselData?.cards?.length || 7,
+          ...(maxChars ? { maxChars: parseInt(maxChars) } : {}),
+          ...(mentions ? { mentions: mentions.trim() } : {}),
         },
       });
       if (!error && data?.caption) {
@@ -5810,6 +5820,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     )}
 
+                    {/* Gerar Legenda */}
+                    <button
+                      onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                      disabled={isGuest}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-purple-300 hover:text-purple-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                      <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
+                    </button>
+
                     <div className="h-px bg-white/[0.06] my-1" />
 
                     {/* Regenerar Tudo */}
@@ -6331,7 +6349,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       />
                       <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
                       <div className="flex gap-2">
-                        <button onClick={generateCaption} disabled={generatingCaption}
+                        <button onClick={openCaptionConfigDialog} disabled={generatingCaption}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                           style={{ backgroundColor: `rgba(${themeRgb},0.12)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.15)` }}>
                           {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
@@ -6376,7 +6394,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       />
                       <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
                       <div className="flex gap-2">
-                        <button onClick={generateCaption} disabled={generatingCaption}
+                        <button onClick={openCaptionConfigDialog} disabled={generatingCaption}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                           style={{ backgroundColor: `rgba(${themeRgb},0.12)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.15)` }}>
                           {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
@@ -6543,7 +6561,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Palette className="h-3.5 w-3.5" /> Mudar Estilo
                 </button>
               )}
-              <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
+              <button onClick={() => { if (!showCaptionPanel) { setShowCaptionPanel(true); if (!postCaption) openCaptionConfigDialog(); } else { setShowCaptionPanel(false); } }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: showCaptionPanel ? `rgba(${themeRgb},0.15)` : `rgba(${themeRgb},0.08)` }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda
@@ -7098,6 +7116,81 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
               </motion.div>
             </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* ===== CAPTION CONFIG DIALOG ===== */}
+      <AnimatePresence>
+        {showCaptionConfigDialog && (() => {
+          const cThemeHex = wizardMode === 'extreme' ? '#E84D1A' : '#8B5CF6';
+          const cThemeRgb = wizardMode === 'extreme' ? '232,77,26' : '139,92,246';
+          return (
+          <motion.div
+            key="caption-config"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center"
+            onClick={() => setShowCaptionConfigDialog(false)}>
+            <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-[90%] max-w-sm rounded-2xl p-5 space-y-4"
+              style={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" style={{ color: cThemeHex }} /> Configurar Legenda
+                </h3>
+                <button onClick={() => setShowCaptionConfigDialog(false)} className="text-white/50 hover:text-white/80 transition-colors cursor-pointer">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-white/50 block mb-1.5">Limite de caracteres (opcional)</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {['500', '1000', '1500', '2200'].map(v => (
+                      <button key={v} onClick={() => setCaptionMaxChars(captionMaxChars === v ? '' : v)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${captionMaxChars === v ? 'text-white' : 'text-white/40 hover:text-white/60'}`}
+                        style={{ backgroundColor: captionMaxChars === v ? `rgba(${cThemeRgb},0.2)` : 'rgba(255,255,255,0.04)', border: `1px solid ${captionMaxChars === v ? `rgba(${cThemeRgb},0.4)` : 'rgba(255,255,255,0.06)'}` }}>
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 block mb-1.5">Mencionar algo específico? (opcional)</label>
+                  <textarea
+                    value={captionMentions}
+                    onChange={(e) => setCaptionMentions(e.target.value)}
+                    placeholder="Ex: mencionar promoção de lançamento, @parceiro, link na bio..."
+                    rows={3}
+                    className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { setShowCaptionConfigDialog(false); generateCaption(captionMaxChars, captionMentions); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all cursor-pointer"
+                  style={{ background: `linear-gradient(135deg, ${cThemeHex}, ${cThemeHex}cc)` }}>
+                  <Sparkles className="h-3.5 w-3.5" /> Gerar Legenda
+                </button>
+                <button
+                  onClick={() => setShowCaptionConfigDialog(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-white/60 hover:text-white/80 transition-all cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
           );
         })()}
       </AnimatePresence>

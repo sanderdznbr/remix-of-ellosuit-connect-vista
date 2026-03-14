@@ -3606,8 +3606,14 @@ FORBIDDEN:
         }
       }
 
-      // 2. Regenerate image using AI with face/style references
-      let newImageUrl = card.imageUrl;
+      // 2. Check if user wants text-only (no image regeneration)
+      const textOnlyKeywords = ['sem foto', 'sem imagem', 'só texto', 'so texto', 'apenas texto', 'text only', 'no photo', 'no image', 'without image', 'without photo', 'remover foto', 'remover imagem', 'tirar foto', 'tirar imagem'];
+      const wantsTextOnly = customInstruction && textOnlyKeywords.some(kw => customInstruction.toLowerCase().includes(kw));
+
+      // 3. Regenerate image using AI with face/style references
+      let newImageUrl = wantsTextOnly ? '' : card.imageUrl;
+
+      if (!wantsTextOnly) {
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const activeFPRegen = facePersons.filter(p => p.photos.length > 0);
       const wizardFaceRefs = activeFPRegen.length > 0
@@ -3969,6 +3975,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           console.warn('[REGEN_LOGO] Failed:', logoErr);
         }
       }
+      } // end if (!wantsTextOnly)
 
       // 3. Push previous image to undo stack before overwriting
       {

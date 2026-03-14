@@ -28,6 +28,39 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishCaption, setPublishCaption] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
 
+  const recoverCover = async (item: any, companyId: string) => {
+    try {
+      const cards = item.carousel_data?.cards;
+      const firstImage = cards?.[0]?.imageUrl;
+      if (!firstImage || firstImage.startsWith('data:')) {
+        // Try server fallback
+        await supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: item.id } });
+        // Refetch cover_url
+        const { data: updated } = await supabase.from('generated_carousels').select('cover_url').eq('id', item.id).single();
+        if (updated?.cover_url) {
+          setCarousels(prev => prev.map(c => c.id === item.id ? { ...c, cover_url: updated.cover_url } : c));
+        }
+        return;
+      }
+      // Fetch the image and upload to covers bucket
+      const res = await fetch(firstImage);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const ext = blob.type.includes('png') ? 'png' : 'jpg';
+      const fileName = `${companyId}/${item.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
+      if (uploadError) return;
+      const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+      if (urlData?.publicUrl) {
+        const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+        await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', item.id);
+        setCarousels(prev => prev.map(c => c.id === item.id ? { ...c, cover_url: coverUrl } : c));
+      }
+    } catch (err) {
+      console.warn('Cover recovery failed for', item.id, err);
+    }
+  };
+
   const title = filterMode === 'starred' ? 'Favoritos' : 'Projetos';
 
   useEffect(() => {

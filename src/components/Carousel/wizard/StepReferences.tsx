@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, Search, X, Loader2, Instagram, UserPlus, BadgeCheck, ImageIcon } from 'lucide-react';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 import { ReferenceImage, FamousPerson } from './types';
 
 interface Props {
@@ -36,7 +36,6 @@ const StepReferences: React.FC<Props> = ({
 
   const handleFaceUpload = (files: FileList | null) => {
     if (!files) return;
-    autoSaveFilesToGallery(files);
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -220,7 +219,6 @@ const StepReferences: React.FC<Props> = ({
             <input type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => {
                 if (!e.target.files) return;
-                autoSaveFilesToGallery(e.target.files);
                 Array.from(e.target.files).forEach(file => {
                   const reader = new FileReader();
                   reader.onload = (ev) => {

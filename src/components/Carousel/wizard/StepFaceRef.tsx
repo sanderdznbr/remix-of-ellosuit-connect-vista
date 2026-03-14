@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, X, Folder, Plus, User, ChevronDown, ChevronUp, Scan, Glasses, UserRound, UserRoundCheck } from 'lucide-react';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 import { ReferenceImage, FacePerson } from './types';
 import GalleryPicker from './GalleryPicker';
 import { useAuth } from '@/components/AuthProvider';
@@ -142,7 +142,6 @@ const StepFaceRef: React.FC<Props> = ({
 
   const handlePhotoUpload = (personId: string, files: FileList | null) => {
     if (!files) return;
-    autoSaveFilesToGallery(files);
     const person = facePersons.find(p => p.id === personId);
     if (!person) return;
     const remaining = MAX_PHOTOS_PER_PERSON - person.photos.length;

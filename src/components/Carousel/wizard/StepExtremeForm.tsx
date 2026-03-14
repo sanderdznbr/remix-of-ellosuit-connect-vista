@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Upload, X, Check, Folder } from 'lucide-react';
 import type { ExtremeAnalysis, ExtremeField } from './StepExtremeVision';
 import GalleryPicker from './GalleryPicker';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 
 interface Props {
   analysis: ExtremeAnalysis;
@@ -43,9 +43,6 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandCol
   const handleFileUpload = useCallback((fieldId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
-
-    // Auto-save to gallery
-    autoSaveFilesToGallery(files);
 
     const existing = (values[fieldId] as string[] | undefined) || [];
     const readers: Promise<string>[] = [];

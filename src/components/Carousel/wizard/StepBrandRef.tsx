@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, X, Loader2, Folder } from 'lucide-react';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 import { ReferenceImage } from './types';
 import { extractColorsFromImage, isMonochromeImage, buildPaletteFromColors } from '@/utils/extractColorsFromImage';
 import GalleryPicker from './GalleryPicker';
@@ -61,7 +61,6 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         <input type="file" accept="image/*" multiple className="hidden"
           onChange={(e) => {
             if (!e.target.files) return;
-            autoSaveFilesToGallery(e.target.files);
             Array.from(e.target.files).forEach(file => {
               const reader = new FileReader();
               reader.onload = (ev) => {

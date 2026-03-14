@@ -3,7 +3,7 @@ import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw, Folder, Smartphone, 
 import { supabase } from '@/integrations/supabase/client';
 import GalleryPicker from './GalleryPicker';
 import { useAuth } from '@/components/AuthProvider';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 import { ImageSettings } from './types';
 
 export type ProductSize = 'tiny' | 'small' | 'medium' | 'large' | 'extra-large';
@@ -149,7 +149,6 @@ const StepProduct: React.FC<Props> = ({
 
   const handleUpload = (files: FileList | null) => {
     if (!files) return;
-    autoSaveFilesToGallery(files);
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {

@@ -69,7 +69,7 @@ function CheckoutContent() {
   const modoParam = searchParams.get('modo');
   const mode = modoParam === 'creditos' ? 'credits' : modoParam === 'style' ? 'style' : modoParam === 'presente' ? 'gift' : 'plan';
   const planKey = searchParams.get('plano') || 'starter';
-  const billingPeriod = searchParams.get('periodo') || 'annual';
+  const billingPeriod = searchParams.get('periodo') || searchParams.get('billing') || 'annual';
   const isAnnual = billingPeriod === 'annual';
   const creditIdx = parseInt(searchParams.get('creditos') || '2');
   const plan = PLANS[planKey] || PLANS.starter;

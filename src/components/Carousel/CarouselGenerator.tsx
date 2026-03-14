@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { calculateCreditCost } from '@/utils/creditCost';
 import '@/styles/carousel-loader.css';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';

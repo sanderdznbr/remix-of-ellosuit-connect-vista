@@ -1259,6 +1259,7 @@ const CarouselGenerator: React.FC = () => {
         if (styleData?.style_config) {
           const config = styleData.style_config as any;
           config.id = styleData.id;
+          config.name = styleData.name;
           config._previewImages = styleData.preview_images;
           config._strictInstructions = (styleData as any).strict_instructions || null;
           setActiveMarketplaceStyle(config);

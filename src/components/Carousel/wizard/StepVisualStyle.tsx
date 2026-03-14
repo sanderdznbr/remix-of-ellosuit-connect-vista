@@ -154,7 +154,7 @@ const StepVisualStyle: React.FC<Props> = ({
   const [aiSuggested, setAiSuggested] = useState(false);
   const hasAutoSuggested = useRef(false);
 
-  const suggestion = useMemo(() => detectVisualSuggestion(topic || '', mentionedPrompts), [topic, mentionedPrompts]);
+  const suggestion = useMemo(() => detectVisualSuggestion(topic || '', mentionedPrompts, productAnalysis), [topic, mentionedPrompts, productAnalysis]);
 
   // Auto-suggest on mount — ALWAYS suggests since fallback exists
   useEffect(() => {

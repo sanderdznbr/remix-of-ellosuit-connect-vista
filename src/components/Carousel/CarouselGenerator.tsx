@@ -2706,11 +2706,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
             try {
+              const creditAmount = calculateCreditCost({ cardCount: finalData.cards.length, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) });
               await supabase.rpc('consume_ai_credits', {
                 p_company_id: companyData.company_id,
                 p_agent_id: null,
-                p_amount: finalData.cards.length,
-                p_description: `Carrossel: ${finalData.title || topic} (${finalData.cards.length} cards)`,
+                p_amount: creditAmount,
+                p_description: `Carrossel (${wizardMode}): ${finalData.title || topic} (${finalData.cards.length} cards) — ${creditAmount} créditos`,
               });
             } catch { /* ignore */ }
 

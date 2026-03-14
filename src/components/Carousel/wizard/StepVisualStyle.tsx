@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Loader2, X, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Search, Loader2, X, Check, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { ReferenceImage } from './types';
@@ -40,6 +40,62 @@ const VISUAL_CATEGORIES: VisualCategoryOption[] = [
   { id: 'collage', label: 'Colagem', description: 'Mix de fotos e gráficos', searchHint: 'collage art design', previewUrl: imgCollage },
 ];
 
+/** Detect the best visual category + refined search query from the topic */
+function detectVisualSuggestion(topic: string, mentionedPrompts?: { title?: string; content?: string }[]): { category: VisualCategory; query: string } | null {
+  const parts = [topic || ''];
+  if (mentionedPrompts?.length) {
+    mentionedPrompts.forEach(m => { parts.push(m.title || '', m.content || ''); });
+  }
+  const t = parts.join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // App / Mobile / Digital product → 3D iPhone/device mockup
+  if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) || /lancamento.*(app|aplicativo|plataforma)/.test(t)) {
+    return { category: '3d-objects', query: '3D iPhone mockup app screen floating' };
+  }
+  // Website / Landing page → Macbook/laptop mockup
+  if (/\b(site|website|landing page|pagina|plataforma web|dashboard|painel)\b/.test(t)) {
+    return { category: '3d-objects', query: '3D MacBook laptop mockup website screen' };
+  }
+  // E-commerce / Product → 3D product
+  if (/\b(produto|ecommerce|e-commerce|loja online|dropshipping|embalagem|packaging)\b/.test(t)) {
+    return { category: '3d-objects', query: '3D product packaging mockup floating' };
+  }
+  // Food / Restaurant
+  if (/\b(comida|food|restaurante|receita|culinaria|gastronomia|delivery|cardapio|hamburguer|pizza|sushi)\b/.test(t)) {
+    return { category: 'manipulations', query: 'food photography dramatic lighting' };
+  }
+  // Travel / Nature
+  if (/\b(viagem|travel|turismo|destino|praia|montanha|aventura|natureza)\b/.test(t)) {
+    return { category: 'landscapes', query: 'travel destination landscape cinematic' };
+  }
+  // Finance / Business
+  if (/\b(financ|investimento|dinheiro|negocio|business|empreend|startup|empresa|marketing)\b/.test(t)) {
+    return { category: 'abstract', query: 'abstract business gradient dark premium' };
+  }
+  // Education / Course
+  if (/\b(curso|educacao|aprender|aula|treinamento|mentoria|coaching|workshop)\b/.test(t)) {
+    return { category: '3d-objects', query: '3D books study objects floating' };
+  }
+  // Fitness / Health
+  if (/\b(fitness|treino|academia|saude|health|exercicio|musculacao|gym|crossfit|yoga)\b/.test(t)) {
+    return { category: 'manipulations', query: 'fitness gym dramatic dark lighting' };
+  }
+  // Beauty / Fashion
+  if (/\b(beleza|beauty|moda|fashion|roupa|maquiagem|skincare|cosmetico)\b/.test(t)) {
+    return { category: 'minimalist', query: 'beauty cosmetics minimalist elegant' };
+  }
+  // Technology / AI
+  if (/\b(tecnologia|tech|ia\b|inteligencia artificial|ai\b|machine learning|automacao|codigo|programacao|software)\b/.test(t)) {
+    return { category: 'abstract', query: 'futuristic technology abstract neon gradient' };
+  }
+  // Music / Entertainment
+  if (/\b(musica|music|podcast|entretenimento|show|festival|evento)\b/.test(t)) {
+    return { category: 'abstract', query: 'music neon lights abstract colorful' };
+  }
+
+  return null;
+}
+
 interface Props {
   selectedCategory: VisualCategory | null;
   setSelectedCategory: (cat: VisualCategory | null) => void;
@@ -47,19 +103,41 @@ interface Props {
   setVisualSearchQuery: (q: string) => void;
   referenceImages: ReferenceImage[];
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
+  topic?: string;
+  mentionedPrompts?: { title?: string; content?: string }[];
 }
 
 const StepVisualStyle: React.FC<Props> = ({
   selectedCategory, setSelectedCategory,
   visualSearchQuery, setVisualSearchQuery,
   referenceImages, setReferenceImages,
+  topic, mentionedPrompts,
 }) => {
   const [searchResults, setSearchResults] = useState<{ url: string; thumb: string; alt: string }[]>([]);
   const [searching, setSearching] = useState(false);
   const [showObjectSearch, setShowObjectSearch] = useState(false);
   const [objectQuery, setObjectQuery] = useState('');
+  const [aiSuggested, setAiSuggested] = useState(false);
+  const hasAutoSuggested = useRef(false);
+
+  const suggestion = useMemo(() => detectVisualSuggestion(topic || '', mentionedPrompts), [topic, mentionedPrompts]);
+
+  // Auto-suggest on mount if no category selected yet
+  useEffect(() => {
+    if (hasAutoSuggested.current || selectedCategory) return;
+    if (!suggestion) return;
+    hasAutoSuggested.current = true;
+    setAiSuggested(true);
+    setSelectedCategory(suggestion.category);
+    setVisualSearchQuery(suggestion.query);
+    if (suggestion.category === '3d-objects') {
+      setShowObjectSearch(false); // Already has specific query, skip object input
+    }
+    searchWeb(suggestion.query);
+  }, [suggestion, selectedCategory]);
 
   const handleSelectCategory = (cat: VisualCategory) => {
+    setAiSuggested(false);
     setSelectedCategory(cat);
     setVisualSearchQuery(VISUAL_CATEGORIES.find(c => c.id === cat)?.searchHint || '');
     if (cat === '3d-objects') {
@@ -112,6 +190,21 @@ const StepVisualStyle: React.FC<Props> = ({
         <h2 className="text-2xl font-bold text-white mb-2">Estilo visual</h2>
         <p className="text-sm text-white/40">Escolha o tipo de visual para as imagens do post.</p>
       </div>
+
+      {/* AI suggestion banner */}
+      {aiSuggested && suggestion && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+          <Sparkles className="h-4 w-4 text-purple-400 flex-shrink-0" />
+          <p className="text-xs text-purple-300 flex-1">
+            Sugestão automática baseada no tema: <span className="font-semibold text-purple-200">{VISUAL_CATEGORIES.find(c => c.id === suggestion.category)?.label}</span>
+          </p>
+          <button 
+            onClick={() => { setAiSuggested(false); setSelectedCategory(null); setSearchResults([]); setVisualSearchQuery(''); }}
+            className="text-[10px] text-white/40 hover:text-white/60 underline cursor-pointer whitespace-nowrap">
+            Escolher outro
+          </button>
+        </div>
+      )}
 
       {/* Category grid */}
       <div className="grid grid-cols-3 gap-3">

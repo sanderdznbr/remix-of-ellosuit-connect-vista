@@ -137,7 +137,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
         )}
 
         {/* Continuous mode toggle (advanced only, carousel only) */}
-        {wizardMode === 'advanced' && contentMode === 'carousel' && cardCount >= 2 && setContinuousMode && (
+        {wizardMode === 'advanced' && contentMode === 'carousel' && cardCount >= 2 && setContinuousMode && allowContinuousMode && (
           <button
             onClick={() => {
               const newVal = !continuousMode;

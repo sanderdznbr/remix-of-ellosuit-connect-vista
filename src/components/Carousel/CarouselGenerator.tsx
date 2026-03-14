@@ -3962,7 +3962,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         }
       }
 
-      // 3. Update card
+      // 3. Push previous image to undo stack before overwriting
+      {
+        const prevCards = carouselDataRef.current?.cards;
+        const prevUrl = prevCards?.[cardIndex]?.imageUrl;
+        if (prevUrl) {
+          setCorrectionUndoStack(prev => [...prev, { cardIndex, imageUrl: prevUrl }]);
+        }
+      }
+
+      // 4. Update card
       let updatedData: CarouselData | null = null;
       setCarouselData((prev) => {
         if (!prev || !prev.cards[cardIndex]) return prev;

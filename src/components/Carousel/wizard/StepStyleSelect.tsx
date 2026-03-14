@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
+import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
+import { STYLE_PRESETS, StylePreset } from './StepStyle';
 
 interface MarketplaceStyle {
   id: string;

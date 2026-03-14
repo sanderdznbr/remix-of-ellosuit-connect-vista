@@ -50,10 +50,13 @@ export type Database = {
           commission_amount: number
           commission_percent: number
           created_at: string
+          expires_at: string | null
           id: string
+          months_remaining: number | null
           order_amount: number
           order_type: string
           referral_id: string | null
+          referral_subscription_id: string | null
           status: string
         }
         Insert: {
@@ -61,10 +64,13 @@ export type Database = {
           commission_amount: number
           commission_percent: number
           created_at?: string
+          expires_at?: string | null
           id?: string
+          months_remaining?: number | null
           order_amount: number
           order_type: string
           referral_id?: string | null
+          referral_subscription_id?: string | null
           status?: string
         }
         Update: {
@@ -72,10 +78,13 @@ export type Database = {
           commission_amount?: number
           commission_percent?: number
           created_at?: string
+          expires_at?: string | null
           id?: string
+          months_remaining?: number | null
           order_amount?: number
           order_type?: string
           referral_id?: string | null
+          referral_subscription_id?: string | null
           status?: string
         }
         Relationships: [
@@ -149,6 +158,7 @@ export type Database = {
         Row: {
           affiliate_id: string
           converted: boolean
+          converted_at: string | null
           created_at: string
           id: string
           ip_address: string | null
@@ -158,6 +168,7 @@ export type Database = {
         Insert: {
           affiliate_id: string
           converted?: boolean
+          converted_at?: string | null
           created_at?: string
           id?: string
           ip_address?: string | null
@@ -167,6 +178,7 @@ export type Database = {
         Update: {
           affiliate_id?: string
           converted?: boolean
+          converted_at?: string | null
           created_at?: string
           id?: string
           ip_address?: string | null

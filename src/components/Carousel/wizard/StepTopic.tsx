@@ -200,9 +200,9 @@ const StepTopic: React.FC<Props> = ({
                   onClick={onAcceptWebSearch}
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                   style={{
-                    backgroundColor: 'rgba(139,92,246,0.2)',
-                    border: '1px solid rgba(139,92,246,0.4)',
-                    color: '#C4B5FD',
+                    backgroundColor: `rgba(${t.rgb},0.2)`,
+                    border: `1px solid rgba(${t.rgb},0.4)`,
+                    color: t.hex,
                   }}
                 >
                   <span className="flex items-center gap-1.5">

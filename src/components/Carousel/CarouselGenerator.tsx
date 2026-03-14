@@ -3376,8 +3376,15 @@ FORBIDDEN:
     finally { setSearchingImages(false); setLoadingMoreImages(false); }
   };
 
-  const setCardImage = (cardIndex: number, imageUrl: string) => {
+  const setCardImage = (cardIndex: number, imageUrl: string, skipUndo = false) => {
     if (!carouselData) return;
+    // Push previous image to undo stack (if card had an image and not already tracked)
+    if (!skipUndo) {
+      const prevUrl = carouselData.cards[cardIndex]?.imageUrl;
+      if (prevUrl) {
+        setCorrectionUndoStack(prev => [...prev, { cardIndex, imageUrl: prevUrl }]);
+      }
+    }
     const newCards = [...carouselData.cards];
     newCards[cardIndex] = { ...newCards[cardIndex], imageUrl };
     setCarouselData({ ...carouselData, cards: newCards });

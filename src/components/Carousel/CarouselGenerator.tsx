@@ -6553,7 +6553,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Palette className="h-3.5 w-3.5" /> Mudar Estilo
                 </button>
               )}
-              <button onClick={() => { setShowCaptionPanel(!showCaptionPanel); if (!postCaption && !showCaptionPanel) generateCaption(); }} disabled={isGuest}
+              <button onClick={() => { if (!showCaptionPanel) { setShowCaptionPanel(true); if (!postCaption) openCaptionConfigDialog(); } else { setShowCaptionPanel(false); } }} disabled={isGuest}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
                 style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: showCaptionPanel ? `rgba(${themeRgb},0.15)` : `rgba(${themeRgb},0.08)` }}>
                 <FileText className="h-3.5 w-3.5" /> Legenda

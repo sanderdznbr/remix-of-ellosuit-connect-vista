@@ -5746,9 +5746,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                     {/* Style used */}
                     {(activeMarketplaceStyle?.name || loadedMarketplaceStyleId) && (
-                      <div className="px-3 py-2.5 rounded-xl text-xs border border-white/5 mb-1" style={{ backgroundColor: 'rgba(139,92,246,0.06)' }}>
+                      <div className="px-3 py-2.5 rounded-xl text-xs border border-white/5 mb-1" style={{ backgroundColor: `rgba(${themeRgb},0.06)` }}>
                         <span className="text-white/40">Estilo: </span>
-                        <span className="text-purple-300 font-medium">{activeMarketplaceStyle?.name || 'Estilo carregado'}</span>
+                        <span className="font-medium" style={{ color: themeHex }}>{activeMarketplaceStyle?.name || 'Estilo carregado'}</span>
                       </div>
                     )}
 

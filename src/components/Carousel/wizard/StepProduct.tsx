@@ -127,12 +127,13 @@ const StepProduct: React.FC<Props> = ({
   topic = '',
   imageSettings,
   onUpdateImageSettings,
+  mentionedPrompts = [],
 }) => {
   const { user } = useAuth();
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [contextApplied, setContextApplied] = useState(false);
 
-  const detectedContext = useMemo(() => detectContext(topic), [topic]);
+  const detectedContext = useMemo(() => detectContext(topic, mentionedPrompts), [topic, mentionedPrompts]);
   const hint = detectedContext ? CONTEXT_HINTS[detectedContext] : null;
 
   // Auto-apply hand object setting when context is detected and user uploads

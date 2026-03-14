@@ -5173,7 +5173,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         productSize={productSize} setProductSize={setProductSize}
                         topic={topic}
                         imageSettings={imageSettings}
-                        onUpdateImageSettings={setImageSettings} />
+                        onUpdateImageSettings={setImageSettings}
+                        mentionedPrompts={mentionedPrompts} />
                     )}
                     {currentStepName === 'Marca' && (
                       <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}

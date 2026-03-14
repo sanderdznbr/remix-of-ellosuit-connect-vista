@@ -7589,9 +7589,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           imageUrl={carouselData.cards[correctionCardIndex].imageUrl!}
           onClose={() => setCorrectionCardIndex(null)}
           onImageEdited={async (newUrl) => {
-            // Store previous image for undo
-            const prevUrl = carouselData.cards[correctionCardIndex].imageUrl!;
-            setCorrectionUndoStack(prev => [...prev, { cardIndex: correctionCardIndex, imageUrl: prevUrl }]);
+            // setCardImage already handles undo stack
             setCardImage(correctionCardIndex, newUrl);
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });

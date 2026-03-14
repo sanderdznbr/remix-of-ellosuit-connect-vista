@@ -3539,7 +3539,7 @@ FORBIDDEN:
     if (activeCardIndex >= cards.length) setActiveCardIndex(cards.length - 1);
   };
 
-  const regenerateCard = async (cardIndex: number, forceImageRequired = false, disallowPeople = false): Promise<boolean> => {
+  const regenerateCard = async (cardIndex: number, forceImageRequired = false, disallowPeople = false, customInstruction?: string, customImageUrl?: string | null): Promise<boolean> => {
     const currentData = carouselDataRef.current;
     if (!currentData) return false;
     const carouselData = currentData;

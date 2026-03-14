@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw, Folder } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Upload, X, Loader2, ShoppingBag, Check, RefreshCw, Folder, Smartphone, Monitor, Utensils, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import GalleryPicker from './GalleryPicker';
 import { useAuth } from '@/components/AuthProvider';
 import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+import { ImageSettings } from './types';
 
 export type ProductSize = 'tiny' | 'small' | 'medium' | 'large' | 'extra-large';
 
@@ -22,6 +23,8 @@ export interface ProductAnalysis {
   confirmed: boolean;
 }
 
+type DetectedContext = 'app' | 'website' | 'food' | 'physical' | null;
+
 interface Props {
   productImages: { url: string; thumb: string; file: File }[];
   setProductImages: React.Dispatch<React.SetStateAction<{ url: string; thumb: string; file: File }[]>>;
@@ -31,6 +34,9 @@ interface Props {
   setAnalyzingProduct: React.Dispatch<React.SetStateAction<boolean>>;
   productSize: ProductSize;
   setProductSize: (v: ProductSize) => void;
+  topic?: string;
+  imageSettings?: ImageSettings;
+  onUpdateImageSettings?: (s: ImageSettings) => void;
 }
 
 const TYPE_LABELS: Record<string, { label: string; emoji: string; desc: string }> = {
@@ -40,14 +46,84 @@ const TYPE_LABELS: Record<string, { label: string; emoji: string; desc: string }
   unknown: { label: 'Outro Produto', emoji: '🏷️', desc: 'A IA usará o produto como referência e criará variações contextuais.' },
 };
 
+const CONTEXT_HINTS: Record<string, { icon: React.ElementType; title: string; subtitle: string; uploadLabel: string; uploadHint: string; autoHandObject?: string }> = {
+  app: {
+    icon: Smartphone,
+    title: 'Detectamos que seu post é sobre um app',
+    subtitle: 'Envie screenshots das telas do app — a IA vai colocá-las em mockups de celular automaticamente.',
+    uploadLabel: 'Subir screenshots do app',
+    uploadHint: 'PNG ou JPG — prints das telas principais do app',
+    autoHandObject: 'smartphone',
+  },
+  website: {
+    icon: Monitor,
+    title: 'Detectamos que seu post é sobre um site ou sistema',
+    subtitle: 'Envie screenshots das páginas — a IA vai renderizá-las em mockups de notebook/desktop.',
+    uploadLabel: 'Subir screenshots do site',
+    uploadHint: 'PNG ou JPG — prints das páginas ou dashboards',
+    autoHandObject: 'laptop',
+  },
+  food: {
+    icon: Utensils,
+    title: 'Detectamos que seu post é sobre alimento/bebida',
+    subtitle: 'Envie fotos do prato ou produto — a IA criará composições food-styling.',
+    uploadLabel: 'Subir fotos do alimento',
+    uploadHint: 'JPG, PNG — fotos do prato, embalagem ou ingredientes',
+  },
+  physical: {
+    icon: Package,
+    title: 'Detectamos que seu post é sobre um produto',
+    subtitle: 'Envie fotos do produto em diferentes ângulos para melhores resultados.',
+    uploadLabel: 'Subir fotos do produto',
+    uploadHint: 'JPG, PNG — várias fotos de ângulos diferentes',
+  },
+};
+
+function detectContext(topic: string): DetectedContext {
+  if (!topic) return null;
+  const t = topic.toLowerCase();
+  
+  // App / mobile
+  if (/\b(app|aplicativo|mobile|ios|android|tela do app|funcionalidade|download na|baixe o|play store|app store|saas|plataforma digital)\b/i.test(t)) return 'app';
+  
+  // Website / system / dashboard
+  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|portal|web app|ferramenta online|software)\b/i.test(t)) return 'website';
+  
+  // Food
+  if (/\b(receita|prato|comida|alimento|restaurante|lanche|pizza|hambúrguer|bolo|doce|bebida|suco|café|cardápio|menu|delivery)\b/i.test(t)) return 'food';
+  
+  // Physical product
+  if (/\b(lançamento|produto|coleção|nova linha|embalagem|kit|unboxing|showcase|vitrine)\b/i.test(t)) return 'physical';
+  
+  return null;
+}
+
 const StepProduct: React.FC<Props> = ({
   productImages, setProductImages,
   productAnalysis, setProductAnalysis,
   analyzingProduct, setAnalyzingProduct,
   productSize, setProductSize,
+  topic = '',
+  imageSettings,
+  onUpdateImageSettings,
 }) => {
   const { user } = useAuth();
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [contextApplied, setContextApplied] = useState(false);
+
+  const detectedContext = useMemo(() => detectContext(topic), [topic]);
+  const hint = detectedContext ? CONTEXT_HINTS[detectedContext] : null;
+
+  // Auto-apply hand object setting when context is detected and user uploads
+  const applyContextSettings = () => {
+    if (hint?.autoHandObject && imageSettings && onUpdateImageSettings && !contextApplied) {
+      onUpdateImageSettings({
+        ...imageSettings,
+        handObject: hint.autoHandObject,
+      });
+      setContextApplied(true);
+    }
+  };
 
   const handleUpload = (files: FileList | null) => {
     if (!files) return;
@@ -65,16 +141,17 @@ const StepProduct: React.FC<Props> = ({
       };
       reader.readAsDataURL(file);
     });
+    applyContextSettings();
   };
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
-    // For gallery files, we create a dummy File object since we have URLs
     const newImages = files.map(f => ({
       url: f.url,
       thumb: f.url,
-      file: new File([], f.name), // placeholder file
+      file: new File([], f.name),
     }));
     setProductImages(prev => [...prev, ...newImages]);
+    applyContextSettings();
   };
 
   const analyzeProduct = async () => {
@@ -109,22 +186,56 @@ const StepProduct: React.FC<Props> = ({
     }
   };
 
+  const HintIcon = hint?.icon || ShoppingBag;
+
   return (
     <div className="space-y-4" style={{ minHeight: '300px' }}>
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Seu post é sobre algum produto?</h2>
-        <p className="text-sm text-white/40">Se sim, envie fotos do produto para a IA recriá-lo no carrossel.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          {hint ? hint.title : 'Seu post é sobre algum produto?'}
+        </h2>
+        <p className="text-sm text-white/40">
+          {hint ? hint.subtitle : 'Se sim, envie fotos do produto para a IA recriá-lo no carrossel.'}
+        </p>
       </div>
+
+      {/* Smart context hint banner */}
+      {hint && productImages.length === 0 && (
+        <div className="p-4 rounded-xl space-y-2" style={{
+          backgroundColor: 'rgba(139,92,246,0.08)',
+          border: '1px solid rgba(139,92,246,0.2)',
+        }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+              <HintIcon className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white/70">
+                {detectedContext === 'app' && 'Envie os prints da tela do app aqui'}
+                {detectedContext === 'website' && 'Envie os prints do site/dashboard aqui'}
+                {detectedContext === 'food' && 'Envie fotos do prato ou embalagem aqui'}
+                {detectedContext === 'physical' && 'Envie fotos do produto aqui'}
+              </p>
+              <p className="text-xs text-white/35 mt-0.5">
+                {detectedContext === 'app' && 'A IA colocará automaticamente em mockup de celular'}
+                {detectedContext === 'website' && 'A IA renderizará em mockup de notebook/desktop'}
+                {detectedContext === 'food' && 'A IA criará composições profissionais de food-styling'}
+                {detectedContext === 'physical' && 'A IA usará as fotos como referência para mockups e cenas'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload area */}
       <label className="flex flex-col items-center justify-center gap-2 py-6 rounded-xl border border-dashed border-white/[0.08] cursor-pointer hover:bg-white/[0.02] transition-colors">
-        <ShoppingBag className="h-5 w-5 text-white/20" />
-        <span className="text-sm font-medium text-white/50">Subir fotos do produto</span>
-        <span className="text-xs text-white/20">JPG, PNG — várias fotos de ângulos diferentes</span>
+        <HintIcon className="h-5 w-5 text-white/20" />
+        <span className="text-sm font-medium text-white/50">{hint?.uploadLabel || 'Subir fotos do produto'}</span>
+        <span className="text-xs text-white/20">{hint?.uploadHint || 'JPG, PNG — várias fotos de ângulos diferentes'}</span>
         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleUpload(e.target.files)} />
       </label>
 
-      {/* Gallery picker button - only for logged in users */}
+      {/* Gallery picker button */}
       {user && (
         <button onClick={() => setGalleryOpen(true)}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] transition-all cursor-pointer">
@@ -156,19 +267,34 @@ const StepProduct: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Compact size selector */}
-          <div className="flex flex-wrap gap-1.5">
-            {PRODUCT_SIZE_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => setProductSize(opt.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  productSize === opt.value
-                    ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
-                    : 'bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'
-                }`}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {/* Auto-applied context badge */}
+          {contextApplied && hint?.autoHandObject && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{
+              backgroundColor: 'rgba(34,197,94,0.08)',
+              border: '1px solid rgba(34,197,94,0.15)',
+            }}>
+              <Check className="h-3.5 w-3.5 text-green-400" />
+              <span className="text-green-300/80">
+                Mockup de {hint.autoHandObject === 'smartphone' ? 'celular' : 'notebook'} configurado automaticamente
+              </span>
+            </div>
+          )}
+
+          {/* Compact size selector — hide for digital products */}
+          {detectedContext !== 'app' && detectedContext !== 'website' && (
+            <div className="flex flex-wrap gap-1.5">
+              {PRODUCT_SIZE_OPTIONS.map(opt => (
+                <button key={opt.value} onClick={() => setProductSize(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    productSize === opt.value
+                      ? 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30'
+                      : 'bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'
+                  }`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

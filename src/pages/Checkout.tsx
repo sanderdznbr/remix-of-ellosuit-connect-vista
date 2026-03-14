@@ -8,18 +8,18 @@ import { getAffiliateRef } from '@/hooks/useAffiliateTracking';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { toast } from '@/hooks/use-toast';
 
-const PLANS: Record<string, { name: string; price: number; credits: number; extraPrice: string; features: string[] }> = {
+const PLANS: Record<string, { name: string; annualPrice: number; monthlyPrice: number; credits: number; extraPrice: string; features: string[] }> = {
   starter: {
-    name: 'Starter', price: 64.50, credits: 50, extraPrice: 'R$1,50',
-    features: ['~5 carrosséis/mês (até 10 slides)', '~7 posts estáticos/mês', 'Imagens IA em cada slide', 'Exportação PNG/JPG', 'Galeria de marca'],
+    name: 'Starter', annualPrice: 69.90, monthlyPrice: 89.90, credits: 50, extraPrice: 'R$1,50',
+    features: ['~7 carrosséis simples de 6 cards', '~25 posts estáticos simples', 'Modo Simples', 'Exportação PNG/JPG', 'Galeria de marca — 1GB'],
   },
   pro: {
-    name: 'Pro', price: 124.90, credits: 120, extraPrice: 'R$1,20',
-    features: ['12 carrosséis/mês (até 10 slides)', '16 posts estáticos/mês', 'Estilos do Marketplace', 'Publicação em redes sociais', 'Suporte prioritário'],
+    name: 'Pro', annualPrice: 129.90, monthlyPrice: 159.90, credits: 100, extraPrice: 'R$1,20',
+    features: ['~14 carrosséis simples ou ~7 avançados', '~50 posts simples ou ~33 avançados', 'Modo Avançado', 'Estilos do Marketplace', 'Suporte prioritário'],
   },
   growth: {
-    name: 'Growth', price: 189.90, credits: 240, extraPrice: 'R$0,90',
-    features: ['24 carrosséis/mês (até 15 slides)', '32 posts estáticos/mês', 'Templates personalizados', 'Workspace de equipe', 'Projetos privados'],
+    name: 'Growth', annualPrice: 219.90, monthlyPrice: 269.90, credits: 200, extraPrice: 'R$0,90',
+    features: ['~28 carrosséis simples ou ~15 avançados/Extreme', '~100 posts simples ou ~66 avançados', 'Modo Extreme', 'Templates personalizados', 'Workspace de equipe'],
   },
 };
 
@@ -69,8 +69,11 @@ function CheckoutContent() {
   const modoParam = searchParams.get('modo');
   const mode = modoParam === 'creditos' ? 'credits' : modoParam === 'style' ? 'style' : modoParam === 'presente' ? 'gift' : 'plan';
   const planKey = searchParams.get('plano') || 'starter';
+  const billingPeriod = searchParams.get('periodo') || searchParams.get('billing') || 'annual';
+  const isAnnual = billingPeriod === 'annual';
   const creditIdx = parseInt(searchParams.get('creditos') || '2');
   const plan = PLANS[planKey] || PLANS.starter;
+  const planPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
   const creditPack = CREDIT_TOPUPS[creditIdx] || CREDIT_TOPUPS[2];
 
   // Gift params
@@ -183,7 +186,7 @@ function CheckoutContent() {
           company_id: cu.company_id,
           plan_type: planKey as any,
           status: 'active' as any,
-          monthly_price: planConfig.price,
+          monthly_price: isAnnual ? planConfig.annualPrice : planConfig.monthlyPrice,
           current_period_start: new Date().toISOString(),
           current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
         }, { onConflict: 'company_id' });
@@ -335,14 +338,14 @@ function CheckoutContent() {
     return <Navigate to="/auth" replace />;
   }
 
-  const basePrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
+  const basePrice = mode === 'plan' ? planPrice : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
   const discount = appliedCoupon
     ? appliedCoupon.discount_percent > 0
       ? basePrice * (appliedCoupon.discount_percent / 100)
       : appliedCoupon.discount_fixed
     : 0;
   const displayPrice = Math.max(0, basePrice - discount);
-  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : mode === 'gift' ? `Presente: ${giftCredits} créditos` : `+${creditPack.credits} créditos`;
+  const displayTitle = mode === 'plan' ? `Plano ${plan.name} (${isAnnual ? 'Anual' : 'Mensal'})` : mode === 'style' ? `Estilo: ${styleName}` : mode === 'gift' ? `Presente: ${giftCredits} créditos` : `+${creditPack.credits} créditos`;
   const displaySubtitle = mode === 'plan'
     ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`
     : mode === 'style'

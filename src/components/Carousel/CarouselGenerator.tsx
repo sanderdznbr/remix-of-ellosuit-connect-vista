@@ -757,7 +757,7 @@ const CarouselGenerator: React.FC = () => {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
         if (!companyData) return;
         
-        const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
+        const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
         const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
         
         if (currentCarouselIdRef.current) {
@@ -1141,7 +1141,7 @@ const CarouselGenerator: React.FC = () => {
       if (!userData.user) throw new Error('Não autenticado');
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
-      const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId;
+      const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover, continuousMode };
       const effectiveId = currentCarouselIdRef.current;
       if (effectiveId) {
@@ -1181,8 +1181,8 @@ const CarouselGenerator: React.FC = () => {
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
-    // Detect full-bleed: trust explicit marketplace_style_id or persisted isFullBleed flag
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
+    // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme';
     setIsLoadedFullBleed(hasMarketplaceStyle);
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
     if (item.style_config) {

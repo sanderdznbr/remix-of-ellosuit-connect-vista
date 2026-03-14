@@ -8,10 +8,11 @@ const corsHeaders = {
 const BEEHIVE_API_URL = "https://api.conta.paybeehive.com.br/v1";
 
 // Ellocontent plan definitions (prices in cents)
-const PLANS: Record<string, { label: string; price: number; credits: number; extraCreditPrice: number }> = {
-  starter:  { label: "Starter",  price: 4900,  credits: 40,  extraCreditPrice: 2.50 },
-  pro:      { label: "Pro",      price: 9700,  credits: 100, extraCreditPrice: 2.00 },
-  growth:   { label: "Growth",   price: 19700, credits: 250, extraCreditPrice: 1.50 },
+// Annual = billed yearly (price per month * 12), Monthly = billed monthly
+const PLANS: Record<string, { label: string; annualPrice: number; monthlyPrice: number; credits: number }> = {
+  starter:  { label: "Starter",  annualPrice: 6990,  monthlyPrice: 8990,  credits: 50 },
+  pro:      { label: "Pro",      annualPrice: 12990, monthlyPrice: 15990, credits: 100 },
+  growth:   { label: "Growth",   annualPrice: 21990, monthlyPrice: 26990, credits: 200 },
 };
 
 function getBeehiveAuth(): string {

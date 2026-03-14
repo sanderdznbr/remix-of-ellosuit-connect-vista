@@ -199,7 +199,7 @@ const StepStyleSelect: React.FC<Props> = ({
                     isLocked
                       ? 'border-white/[0.04] opacity-70'
                       : isActive
-                        ? 'border-purple-500 ring-1 ring-purple-500/50'
+                        ? `border-current ${t.ringFull} ring-1 ${t.ring}`
                         : 'border-white/[0.06] hover:border-white/15'
                   }`}>
                   {currentImg && (

@@ -766,6 +766,7 @@ const CarouselGenerator: React.FC = () => {
     
     autoSaveTimeoutRef.current = setTimeout(async () => {
       if (isSavingRef.current) return; // Re-check mutex inside timeout
+      try {
         setAutoSaveStatus('saving');
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;

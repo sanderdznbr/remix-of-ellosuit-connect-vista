@@ -24,6 +24,7 @@ import PostPublic from './pages/PostPublic';
 import Presentear from './pages/Presentear';
 import Parceiros from './pages/Parceiros';
 import Admin from './pages/Admin';
+import AreaParceiros from './pages/AreaParceiros';
 import Comunidade from './pages/Comunidade';
 
 const queryClient = new QueryClient();

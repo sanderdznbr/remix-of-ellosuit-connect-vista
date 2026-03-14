@@ -5719,11 +5719,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div className="w-[320px] h-full overflow-y-auto rounded-2xl p-4 flex flex-col gap-1"
                     style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)' }}>
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center justify-between mb-1 px-1">
                       <h3 className="text-sm font-semibold text-white/80">Ferramentas</h3>
                       <button onClick={() => setShowInlineEditor(false)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors cursor-pointer">
                         <X className="w-4 h-4" />
                       </button>
+                    </div>
+                    {/* Mode & Topic badge */}
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 text-[11px]" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.12)` }}>
+                      <span className="font-bold uppercase tracking-wider" style={{ color: themeHex }}>
+                        {wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
+                      </span>
+                      <span className="text-white/20">•</span>
+                      <span className="text-white/50 truncate flex-1">{topic || 'Sem tema'}</span>
                     </div>
 
                     {/* Auto-save status */}

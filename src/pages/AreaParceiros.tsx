@@ -294,9 +294,7 @@ export default function AreaParceiros() {
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between bg-[#0a0a12]/90 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
+          <img src={ellocontentIcon} alt="Logo" className="w-7 h-7 rounded-lg" />
           <p className="text-white font-bold text-sm">Parceiro</p>
         </div>
         <button onClick={() => setMobileNav(true)} className="text-white/40 hover:text-white/60 cursor-pointer p-1">

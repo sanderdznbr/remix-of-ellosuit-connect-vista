@@ -7530,7 +7530,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         style={{
                           width: i === validIndex ? 8 : 5,
                           height: i === validIndex ? 8 : 5,
-                          backgroundColor: i === validIndex ? (wizardMode === 'extreme' ? '#E84D1A' : '#8B5CF6') : 'rgba(255,255,255,0.2)',
+                          backgroundColor: i === validIndex ? modeTheme.hex : 'rgba(255,255,255,0.2)',
                           transform: i === validIndex ? 'scale(1.2)' : 'scale(1)',
                         }} />
                     ))}

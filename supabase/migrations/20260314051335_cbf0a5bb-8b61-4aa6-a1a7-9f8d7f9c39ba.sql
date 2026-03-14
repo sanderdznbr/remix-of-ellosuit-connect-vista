@@ -1,0 +1,1 @@
+ALTER TABLE public.brand_asset_folders ADD COLUMN parent_folder_id UUID REFERENCES public.brand_asset_folders(id) ON DELETE SET NULL DEFAULT NULL;

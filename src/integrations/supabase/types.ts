@@ -929,6 +929,7 @@ export type Database = {
           created_by: string
           id: string
           name: string
+          parent_folder_id: string | null
           updated_at: string
         }
         Insert: {
@@ -938,6 +939,7 @@ export type Database = {
           created_by: string
           id?: string
           name: string
+          parent_folder_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -947,6 +949,7 @@ export type Database = {
           created_by?: string
           id?: string
           name?: string
+          parent_folder_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -955,6 +958,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_asset_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "brand_asset_folders"
             referencedColumns: ["id"]
           },
         ]

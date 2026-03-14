@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FolderPlus, Upload, ArrowLeft, Trash2, Loader2, 
-  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check
+  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check, ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -13,7 +13,9 @@ interface BrandFolder {
   name: string;
   color: string;
   created_at: string;
+  parent_folder_id: string | null;
   fileCount?: number;
+  subfolderCount?: number;
 }
 
 interface BrandFile {
@@ -118,7 +120,7 @@ const BrandGallery: React.FC = () => {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [folders, setFolders] = useState<BrandFolder[]>([]);
   const [files, setFiles] = useState<BrandFile[]>([]);
-  const [currentFolder, setCurrentFolder] = useState<BrandFolder | null>(null);
+  const [folderPath, setFolderPath] = useState<BrandFolder[]>([]); // breadcrumb
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -131,8 +133,12 @@ const BrandGallery: React.FC = () => {
   const [previewFile, setPreviewFile] = useState<BrandFile | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [draggingFiles, setDraggingFiles] = useState<string[]>([]);
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
   const [dropTargetFolder, setDropTargetFolder] = useState<string | null>(null);
   const dragCounter = useRef(0);
+
+  const currentFolder = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
+  const currentFolderId = currentFolder?.id || null;
 
   useEffect(() => {
     const fetch = async () => {
@@ -149,9 +155,14 @@ const BrandGallery: React.FC = () => {
     try {
       const { data: foldersData } = await supabase.from('brand_asset_folders').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
       const { data: filesData } = await supabase.from('brand_assets').select('id, name, file_url, file_type, category, folder_id').eq('company_id', companyId);
-      const foldersWithCount = (foldersData || []).map(f => ({
-        ...f,
-        fileCount: (filesData || []).filter(file => file.folder_id === f.id).length,
+      const foldersWithCount = (foldersData || []).map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        color: f.color || '#7B50DC',
+        created_at: f.created_at,
+        parent_folder_id: f.parent_folder_id || null,
+        fileCount: (filesData || []).filter((file: any) => file.folder_id === f.id).length,
+        subfolderCount: (foldersData || []).filter((sf: any) => sf.parent_folder_id === f.id).length,
       }));
       setFolders(foldersWithCount);
       setFiles(filesData || []);
@@ -164,11 +175,31 @@ const BrandGallery: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const navigateIntoFolder = (folder: BrandFolder) => {
+    setFolderPath(prev => [...prev, folder]);
+    setSelectedFiles(new Set());
+  };
+
+  const navigateToIndex = (index: number) => {
+    setFolderPath(prev => prev.slice(0, index + 1));
+    setSelectedFiles(new Set());
+  };
+
+  const navigateBack = () => {
+    setFolderPath(prev => prev.slice(0, -1));
+    setSelectedFiles(new Set());
+  };
+
   const createFolder = async () => {
     if (!newFolderName.trim() || !companyId || !user) return;
-    const { error } = await supabase.from('brand_asset_folders').insert({
-      company_id: companyId, name: newFolderName.trim(), color: newFolderColor, created_by: user.id,
-    });
+    const insertData: Record<string, any> = {
+      company_id: companyId,
+      name: newFolderName.trim(),
+      color: newFolderColor,
+      created_by: user.id,
+    };
+    if (currentFolderId) insertData.parent_folder_id = currentFolderId;
+    const { error } = await supabase.from('brand_asset_folders').insert(insertData as any);
     if (error) { toast.error('Erro ao criar pasta'); return; }
     setNewFolderName('');
     setShowNewFolder(false);
@@ -179,8 +210,15 @@ const BrandGallery: React.FC = () => {
   const deleteFolder = async (id: string) => {
     if (!confirm('Excluir pasta e todos os arquivos?')) return;
     await supabase.from('brand_assets').delete().eq('folder_id', id);
+    // Move subfolders to parent
+    const folder = folders.find(f => f.id === id);
+    // Move subfolders up to parent level
+    const subfolders = folders.filter(f => f.parent_folder_id === id);
+    for (const sf of subfolders) {
+      await supabase.from('brand_asset_folders').update({ parent_folder_id: folder?.parent_folder_id || null } as Record<string, any>).eq('id', sf.id);
+    }
     await supabase.from('brand_asset_folders').delete().eq('id', id);
-    if (currentFolder?.id === id) setCurrentFolder(null);
+    if (currentFolder?.id === id) navigateBack();
     fetchData();
     toast.success('Pasta excluída');
   };
@@ -205,7 +243,7 @@ const BrandGallery: React.FC = () => {
         await supabase.from('brand_assets').insert({
           company_id: companyId, name: file.name, file_url: publicUrl,
           file_type: file.type.startsWith('image/') ? 'image' : 'file',
-          category: 'gallery', folder_id: currentFolder?.id || null,
+          category: 'gallery', folder_id: currentFolderId || null,
         });
       }
       fetchData();
@@ -223,7 +261,6 @@ const BrandGallery: React.FC = () => {
     toast.success('Arquivo excluído');
   };
 
-  // Move files to folder
   const moveFilesToFolder = async (fileIds: string[], folderId: string) => {
     try {
       for (const id of fileIds) {
@@ -238,7 +275,28 @@ const BrandGallery: React.FC = () => {
     }
   };
 
-  // Toggle file selection
+  const moveFolderIntoFolder = async (sourceFolderId: string, targetFolderId: string) => {
+    if (sourceFolderId === targetFolderId) return;
+    // Prevent moving a folder into its own descendant
+    const isDescendant = (parentId: string, checkId: string): boolean => {
+      const children = folders.filter(f => f.parent_folder_id === parentId);
+      return children.some(c => c.id === checkId || isDescendant(c.id, checkId));
+    };
+    if (isDescendant(sourceFolderId, targetFolderId)) {
+      toast.error('Não é possível mover uma pasta para dentro de si mesma');
+      return;
+    }
+    try {
+      await supabase.from('brand_asset_folders').update({ parent_folder_id: targetFolderId } as Record<string, any>).eq('id', sourceFolderId);
+      fetchData();
+      const source = folders.find(f => f.id === sourceFolderId);
+      const target = folders.find(f => f.id === targetFolderId);
+      toast.success(`"${source?.name}" movida para "${target?.name}"`);
+    } catch {
+      toast.error('Erro ao mover pasta');
+    }
+  };
+
   const toggleSelect = (fileId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedFiles(prev => {
@@ -249,16 +307,30 @@ const BrandGallery: React.FC = () => {
     });
   };
 
-  // Internal drag: start
+  // File drag
   const handleFileDragStart = (e: React.DragEvent, fileId: string) => {
     e.stopPropagation();
     const ids = selectedFiles.has(fileId) ? Array.from(selectedFiles) : [fileId];
     setDraggingFiles(ids);
-    e.dataTransfer.setData('text/plain', JSON.stringify(ids));
+    e.dataTransfer.setData('application/file-ids', JSON.stringify(ids));
     e.dataTransfer.effectAllowed = 'move';
-    // Ghost image
     const ghost = document.createElement('div');
     ghost.textContent = `${ids.length} arquivo(s)`;
+    ghost.style.cssText = 'position:absolute;top:-999px;padding:6px 14px;background:#7B50DC;color:white;border-radius:8px;font-size:12px;font-weight:600;';
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 40, 16);
+    setTimeout(() => document.body.removeChild(ghost), 0);
+  };
+
+  // Folder drag
+  const handleFolderDragStart = (e: React.DragEvent, folderId: string) => {
+    e.stopPropagation();
+    setDraggingFolderId(folderId);
+    e.dataTransfer.setData('application/folder-id', folderId);
+    e.dataTransfer.effectAllowed = 'move';
+    const folder = folders.find(f => f.id === folderId);
+    const ghost = document.createElement('div');
+    ghost.textContent = folder?.name || 'Pasta';
     ghost.style.cssText = 'position:absolute;top:-999px;padding:6px 14px;background:#7B50DC;color:white;border-radius:8px;font-size:12px;font-weight:600;';
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 40, 16);
@@ -268,7 +340,7 @@ const BrandGallery: React.FC = () => {
   const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (draggingFiles.length > 0) {
+    if (draggingFiles.length > 0 || draggingFolderId) {
       e.dataTransfer.dropEffect = 'move';
       setDropTargetFolder(folderId);
     }
@@ -283,26 +355,33 @@ const BrandGallery: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setDropTargetFolder(null);
+
+    // Handle folder drop
+    const droppedFolderId = e.dataTransfer.getData('application/folder-id');
+    if (droppedFolderId) {
+      moveFolderIntoFolder(droppedFolderId, folderId);
+      setDraggingFolderId(null);
+      return;
+    }
+
+    // Handle file drop
     if (draggingFiles.length > 0) {
       moveFilesToFolder(draggingFiles, folderId);
       setDraggingFiles([]);
     } else {
-      // Maybe external file drop onto folder
       try {
-        const raw = e.dataTransfer.getData('text/plain');
+        const raw = e.dataTransfer.getData('application/file-ids');
         const ids = JSON.parse(raw);
         if (Array.isArray(ids) && ids.length) moveFilesToFolder(ids, folderId);
       } catch {
-        // External files dropped on folder
-        if (e.dataTransfer.files?.length) {
-          // Upload directly to this folder - handled via normal upload with folder context
-        }
+        // External files
       }
     }
   };
 
-  const handleFileDragEnd = () => {
+  const handleDragEnd = () => {
     setDraggingFiles([]);
+    setDraggingFolderId(null);
     setDropTargetFolder(null);
   };
 
@@ -310,7 +389,7 @@ const BrandGallery: React.FC = () => {
   const handleExternalDragEnter = (e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation();
     dragCounter.current++;
-    if (e.dataTransfer.types.includes('Files') && draggingFiles.length === 0) setIsDraggingExternal(true);
+    if (e.dataTransfer.types.includes('Files') && draggingFiles.length === 0 && !draggingFolderId) setIsDraggingExternal(true);
   };
   const handleExternalDragLeave = (e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation();
@@ -322,7 +401,7 @@ const BrandGallery: React.FC = () => {
     e.preventDefault(); e.stopPropagation();
     setIsDraggingExternal(false);
     dragCounter.current = 0;
-    if (e.dataTransfer.files?.length && draggingFiles.length === 0) uploadFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files?.length && draggingFiles.length === 0 && !draggingFolderId) uploadFiles(e.dataTransfer.files);
   };
 
   // Context menus
@@ -354,20 +433,21 @@ const BrandGallery: React.FC = () => {
     setContextMenu({
       x: e.clientX, y: e.clientY,
       items: [
-        { label: 'Abrir', icon: <Folder className="w-4 h-4" />, onClick: () => setCurrentFolder(folder) },
+        { label: 'Abrir', icon: <Folder className="w-4 h-4" />, onClick: () => navigateIntoFolder(folder) },
         { label: 'Renomear', icon: <Pencil className="w-4 h-4" />, onClick: () => { setEditingFolder(folder.id); setEditName(folder.name); } },
         { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => deleteFolder(folder.id), danger: true },
       ],
     });
   };
 
-  // Clear selection on background click
   const handleBackgroundClick = () => {
     if (selectedFiles.size > 0) setSelectedFiles(new Set());
   };
 
-  const currentFiles = currentFolder
-    ? files.filter(f => f.folder_id === currentFolder.id)
+  // Current-level folders and files
+  const currentFolders = folders.filter(f => f.parent_folder_id === currentFolderId);
+  const currentFiles = currentFolderId
+    ? files.filter(f => f.folder_id === currentFolderId)
     : files.filter(f => !f.folder_id);
 
   const hasSelection = selectedFiles.size > 0;
@@ -395,10 +475,10 @@ const BrandGallery: React.FC = () => {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 shrink-0">
+      <div className="px-6 pt-6 pb-2 shrink-0">
         <div className="flex items-center gap-3 mb-1">
-          {currentFolder && (
-            <button onClick={() => { setCurrentFolder(null); setSelectedFiles(new Set()); }}
+          {folderPath.length > 0 && (
+            <button onClick={navigateBack}
               className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-colors cursor-pointer">
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -412,8 +492,31 @@ const BrandGallery: React.FC = () => {
             </span>
           )}
         </div>
+
+        {/* Breadcrumb */}
+        {folderPath.length > 0 && (
+          <div className="flex items-center gap-1 text-xs text-white/30 mb-2 flex-wrap">
+            <button onClick={() => setFolderPath([])} className="hover:text-white/60 cursor-pointer transition-colors">
+              Galeria
+            </button>
+            {folderPath.map((f, i) => (
+              <React.Fragment key={f.id}>
+                <ChevronRight className="w-3 h-3 text-white/15" />
+                <button
+                  onClick={() => navigateToIndex(i)}
+                  className={`hover:text-white/60 cursor-pointer transition-colors ${i === folderPath.length - 1 ? 'text-white/50 font-medium' : ''}`}
+                >
+                  {f.name}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+
         <p className="text-sm text-white/30">
-          {currentFolder ? `${currentFiles.length} arquivo(s)` : `${folders.length} pasta(s) · ${files.length} arquivo(s)`}
+          {currentFolder
+            ? `${currentFolders.length} subpasta(s) · ${currentFiles.length} arquivo(s)`
+            : `${currentFolders.length} pasta(s) · ${files.length} arquivo(s)`}
         </p>
         {hasSelection && !currentFolder && (
           <p className="text-xs text-purple-400/70 mt-1">Arraste os arquivos selecionados para uma pasta</p>
@@ -422,12 +525,10 @@ const BrandGallery: React.FC = () => {
 
       {/* Actions bar */}
       <div className="px-6 pb-4 flex gap-2 shrink-0">
-        {!currentFolder && (
-          <button onClick={() => setShowNewFolder(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all cursor-pointer">
-            <FolderPlus className="w-4 h-4" /> Nova pasta
-          </button>
-        )}
+        <button onClick={() => setShowNewFolder(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all cursor-pointer">
+          <FolderPlus className="w-4 h-4" /> Nova pasta
+        </button>
         <label className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all cursor-pointer">
           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
           Upload
@@ -453,7 +554,7 @@ const BrandGallery: React.FC = () => {
             <div className="flex gap-1.5">
               {FOLDER_COLORS.map(c => (
                 <button key={c} onClick={() => setNewFolderColor(c)}
-                  className={`w-6 h-6 rounded-full transition-all ${newFolderColor === c ? 'ring-2 ring-white/40 scale-110' : ''}`}
+                  className={`w-6 h-6 rounded-full transition-all cursor-pointer ${newFolderColor === c ? 'ring-2 ring-white/40 scale-110' : ''}`}
                   style={{ backgroundColor: c }} />
               ))}
             </div>
@@ -483,18 +584,25 @@ const BrandGallery: React.FC = () => {
         ) : (
           <>
             {/* Folders grid */}
-            {!currentFolder && folders.length > 0 && (
+            {currentFolders.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
-                {folders.map(folder => (
+                {currentFolders.map(folder => (
                   <div key={folder.id}
+                    draggable
+                    onDragStart={e => handleFolderDragStart(e, folder.id)}
+                    onDragEnd={handleDragEnd}
                     className={`group relative rounded-xl p-4 cursor-pointer transition-all border ${
-                      dropTargetFolder === folder.id
+                      draggingFolderId === folder.id
+                        ? 'opacity-40 scale-95'
+                        : dropTargetFolder === folder.id
                         ? 'bg-purple-500/10 border-purple-500/40 scale-[1.02]'
                         : 'border-white/[0.04] hover:border-white/[0.08] hover:bg-white/[0.04]'
                     }`}
-                    onClick={(e) => { e.stopPropagation(); setCurrentFolder(folder); }}
+                    onClick={(e) => { e.stopPropagation(); navigateIntoFolder(folder); }}
                     onContextMenu={e => handleFolderContextMenu(e, folder)}
-                    onDragOver={e => handleFolderDragOver(e, folder.id)}
+                    onDragOver={e => {
+                      if (draggingFolderId !== folder.id) handleFolderDragOver(e, folder.id);
+                    }}
                     onDragLeave={handleFolderDragLeave}
                     onDrop={e => handleFolderDrop(e, folder.id)}
                   >
@@ -508,7 +616,10 @@ const BrandGallery: React.FC = () => {
                     ) : (
                       <p className="text-sm font-medium text-white/80 truncate">{folder.name}</p>
                     )}
-                    <p className="text-[10px] text-white/30 mt-0.5">{folder.fileCount || 0} arquivos</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">
+                      {folder.fileCount || 0} arquivos
+                      {(folder.subfolderCount || 0) > 0 && ` · ${folder.subfolderCount} subpasta(s)`}
+                    </p>
                     {dropTargetFolder === folder.id && (
                       <div className="absolute inset-0 rounded-xl border-2 border-dashed border-purple-400/50 pointer-events-none" />
                     )}
@@ -537,7 +648,7 @@ const BrandGallery: React.FC = () => {
                     <div key={file.id}
                       draggable
                       onDragStart={e => handleFileDragStart(e, file.id)}
-                      onDragEnd={handleFileDragEnd}
+                      onDragEnd={handleDragEnd}
                       className={`group relative rounded-xl overflow-hidden transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-purple-500/10 border-2 border-purple-500/40 ring-1 ring-purple-500/20'
@@ -553,7 +664,6 @@ const BrandGallery: React.FC = () => {
                       }}
                       onContextMenu={e => handleFileContextMenu(e, file)}
                     >
-                      {/* Selection checkbox */}
                       {(!currentFolder || hasSelection) && (
                         <button
                           onClick={e => toggleSelect(file.id, e)}
@@ -587,7 +697,7 @@ const BrandGallery: React.FC = () => {
                 })}
               </div>
             ) : (
-              !loading && (
+              !loading && currentFolders.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <ImageIcon className="w-12 h-12 text-white/10 mb-3" />
                   <p className="text-sm text-white/30">

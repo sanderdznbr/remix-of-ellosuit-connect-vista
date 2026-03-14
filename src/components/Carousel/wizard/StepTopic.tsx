@@ -177,12 +177,12 @@ const StepTopic: React.FC<Props> = ({
           {/* Smart web search suggestion */}
           {webSearchSuggestion && !webSearchResult && !searchingWeb && (
             <div className="p-4 rounded-xl space-y-3" style={{
-              backgroundColor: 'rgba(139,92,246,0.08)',
-              border: '1px solid rgba(139,92,246,0.25)',
+              backgroundColor: `rgba(${t.rgb},0.08)`,
+              border: `1px solid rgba(${t.rgb},0.25)`,
             }}>
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-                  <Search className="h-4 w-4 text-purple-400" />
+                <div className="p-2 rounded-lg flex-shrink-0" style={{ backgroundColor: `rgba(${t.rgb},0.15)` }}>
+                  <Search className={`h-4 w-4 ${t.text}`} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-white/80 mb-1">

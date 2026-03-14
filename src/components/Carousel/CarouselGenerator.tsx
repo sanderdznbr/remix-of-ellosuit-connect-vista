@@ -5786,7 +5786,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <button
                         onClick={() => {
                           const last = correctionUndoStack[correctionUndoStack.length - 1];
-                          setCardImage(last.cardIndex, last.imageUrl);
+                          setCardImage(last.cardIndex, last.imageUrl, true);
                           if (last.cardIndex === 0 && currentCarouselId) {
                             supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
                           }

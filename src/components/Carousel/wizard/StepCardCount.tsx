@@ -71,7 +71,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
             <div>
               <p className={`text-sm font-semibold ${contentMode === 'carousel' && !guestMode ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
               <p className="text-xs text-white/30 mt-0.5">
-                {guestMode ? 'Recurso PRO' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : '2–10 slides'}
+                {guestMode ? 'Recurso PRO' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : `2–${maxSlides} slides`}
               </p>
             </div>
             {guestMode && (

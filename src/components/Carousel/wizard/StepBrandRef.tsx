@@ -15,33 +15,33 @@ interface Props {
 
 const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, brandAssets, onSuggestColors }) => {
   const { user } = useAuth();
-  const styleRefs = referenceImages.filter(r => r.category === 'style');
+  const brandRefs = referenceImages.filter(r => r.category === 'brand');
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [extracting, setExtracting] = useState(false);
-  const latestStyleRef = styleRefs[styleRefs.length - 1];
+  const latestBrandRef = brandRefs[brandRefs.length - 1];
   const [lastAnalyzedUrl, setLastAnalyzedUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!latestStyleRef || latestStyleRef.url === lastAnalyzedUrl) return;
+    if (!latestBrandRef || latestBrandRef.url === lastAnalyzedUrl) return;
     const analyze = async () => {
       setExtracting(true);
       try {
-        const mono = await isMonochromeImage(latestStyleRef.url);
-        if (mono) { setExtracting(false); setLastAnalyzedUrl(latestStyleRef.url); return; }
-        const colors = await extractColorsFromImage(latestStyleRef.url, 5);
+        const mono = await isMonochromeImage(latestBrandRef.url);
+        if (mono) { setExtracting(false); setLastAnalyzedUrl(latestBrandRef.url); return; }
+        const colors = await extractColorsFromImage(latestBrandRef.url, 5);
         const palette = buildPaletteFromColors(colors);
         if (palette && onSuggestColors) onSuggestColors(palette);
-        setLastAnalyzedUrl(latestStyleRef.url);
+        setLastAnalyzedUrl(latestBrandRef.url);
       } catch (err) { console.error('Color extraction error:', err); }
       finally { setExtracting(false); }
     };
     analyze();
-  }, [latestStyleRef?.url, lastAnalyzedUrl]);
+  }, [latestBrandRef?.url, lastAnalyzedUrl]);
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
     const newRefs: ReferenceImage[] = files.map(f => ({
-      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const,
+      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'brand' as const,
     }));
     setReferenceImages(prev => [...prev, ...newRefs]);
   };
@@ -68,7 +68,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
                 if (ev.target?.result) {
                   setReferenceImages(prev => [...prev, {
                     url: ev.target!.result as string, thumb: ev.target!.result as string,
-                    label: file.name, source: 'upload', category: 'style',
+                    label: file.name, source: 'upload', category: 'brand',
                   }]);
                 }
               };
@@ -95,11 +95,11 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         </div>
       )}
 
-      {styleRefs.length > 0 && (
+      {brandRefs.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-white/40 mb-3">Referências ({styleRefs.length})</p>
+          <p className="text-xs font-medium text-white/40 mb-3">Referências ({brandRefs.length})</p>
           <div className="flex gap-2 flex-wrap">
-            {styleRefs.map((ref, i) => {
+            {brandRefs.map((ref, i) => {
               const globalIdx = referenceImages.indexOf(ref);
               return (
                 <div key={i} className="relative group">

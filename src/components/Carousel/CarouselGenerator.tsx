@@ -6306,7 +6306,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <div className="flex items-center gap-2">
                         <Palette className="h-5 w-5" style={{ color: themeHex }} />
                         <h3 className="font-bold text-white text-base">
-                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
+                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : styleChangeSource === 'recreate' ? 'Escolha um estilo' : 'Estilo'}
                         </h3>
                       </div>
                       <button onClick={() => setShowStylePanel(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
@@ -6321,6 +6321,31 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setStyleChangeSource('toolbar');
                           setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                         }} />
+                      ) : styleChangeSource === 'recreate' ? (
+                        <StepStyleSelect
+                          bgColor={bgColor} setBgColor={setBgColor}
+                          accentColor={accentColor} setAccentColor={setAccentColor}
+                          textColor={textColor} setTextColor={setTextColor}
+                          selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                          onApplyMarketplaceStyle={(config) => {
+                            setActiveMarketplaceStyle(config);
+                            setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                            setShowStylePanel(false);
+                            setStyleChangeSource('toolbar');
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = config;
+                            generationSnapshotRef.current = {
+                              isRealEstate: !!config?.is_real_estate,
+                              realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                              propertyList: JSON.parse(JSON.stringify(propertyList)),
+                              marketplaceStyle: config ? { ...config } : null,
+                            };
+                            setTransitionToGenerate(true);
+                            setCurrentCarouselId(null);
+                            const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                            setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          }}
+                        />
                       ) : (
                         <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                           textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}

@@ -339,6 +339,13 @@ const CarouselGenerator: React.FC = () => {
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  
+  // Theme colors per wizard mode
+  const modeTheme = wizardMode === 'extreme'
+    ? { hex: '#E84D1A', hexDark: '#C43A0F', rgb: '232,77,26', rgb2: '200,60,20', gradient: 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)', tailwind: 'orange', loadingColor: '#F97316' }
+    : wizardMode === 'advanced'
+    ? { hex: '#DC2626', hexDark: '#B91C1C', rgb: '220,38,38', rgb2: '185,28,28', gradient: 'linear-gradient(135deg, #B91C1C 0%, #EF4444 50%, #DC2626 100%)', tailwind: 'red', loadingColor: '#EF4444' }
+    : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -4905,7 +4912,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               width: realIndex === wizardStep ? 24 : 6,
                               height: 6,
                               borderRadius: 3,
-                              backgroundColor: realIndex === wizardStep ? (wizardMode === 'extreme' ? '#F97316' : '#9B6BFF') : realIndex < wizardStep ? (wizardMode === 'extreme' ? 'rgba(249,115,22,0.5)' : 'rgba(155,107,255,0.5)') : 'rgba(255,255,255,0.08)',
+                              backgroundColor: realIndex === wizardStep ? modeTheme.loadingColor : realIndex < wizardStep ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.08)',
                               cursor: realIndex <= wizardStep ? 'pointer' : 'default',
                             }}
                           />
@@ -5231,7 +5238,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         manualCardTexts={manualCardTexts}
                         setManualCardTexts={setManualCardTexts}
                         topic={topic}
-                        accentTheme={wizardMode === 'extreme' ? 'orange' : 'purple'} />
+                        accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'} />
                     )}
                     {currentStepName === 'Logo' && (
                       <StepBranding
@@ -5459,7 +5466,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             setWizardStep(next);
                           }} disabled={!canProceed || searchingWeb || generatingRoteiro || !!webSearchSuggestion}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
-                          style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
+                          style={{ background: modeTheme.gradient }}>
                           {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
                         </button>
                       </div>
@@ -5562,7 +5569,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           }
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
-                        style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
+                        style={{ background: modeTheme.gradient }}>
                         {isGuest ? <><Sparkles className="h-4 w-4" /> Gerar Post Grátis</> : <><Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}</>}
                       </button>
                     )}
@@ -5573,7 +5580,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
                 <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
-                  <div className={`carousel-loader-spinner ${wizardMode === 'extreme' ? 'carousel-loader-spinner--orange' : ''}`} />
+                  <div className={`carousel-loader-spinner ${wizardMode === 'extreme' ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={Math.round((wizardStep / Math.max(WIZARD_STEPS.length - 1, 1)) * 99)} />
                   </span>
@@ -5608,7 +5615,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* Voice toggle — bottom-right corner */}
               <button onClick={() => { setVoiceEnabled(!voiceEnabled); if (isSpeaking) stopSpeaking(); }}
                 className={`fixed bottom-6 right-6 z-50 p-2.5 rounded-full transition-all shadow-lg backdrop-blur-sm ${
-                  voiceEnabled ? (wizardMode === 'extreme' ? 'bg-orange-500/20 text-orange-400' : 'bg-purple-500/20 text-purple-400') : 'bg-white/[0.06] text-white/15 hover:text-white/30'
+                  voiceEnabled ? (wizardMode === 'extreme' ? 'bg-orange-500/20 text-orange-400' : wizardMode === 'advanced' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400') : 'bg-white/[0.06] text-white/15 hover:text-white/30'
                 }`}
                 title={voiceEnabled ? 'Desativar voz' : 'Ativar voz'}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -5645,6 +5652,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             logoUrl={logoUrl}
             skipWebSearch={skipWebSearch}
             isExtreme={wizardMode === 'extreme'}
+            wizardMode={wizardMode}
             onGoHome={user ? () => {
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;
@@ -5665,11 +5673,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (() => {
-          const isExtreme = wizardMode === 'extreme';
-          const themeHex = isExtreme ? '#E84D1A' : '#8B5CF6';
-          const themeHexDark = isExtreme ? '#C43A0F' : '#6D28D9';
-          const themeRgb = isExtreme ? '232,77,26' : '139,92,246';
-          const themeRgb2 = isExtreme ? '200,60,20' : '99,102,241';
+           const isExtreme = wizardMode === 'extreme';
+          const themeHex = modeTheme.hex;
+          const themeHexDark = modeTheme.hexDark;
+          const themeRgb = modeTheme.rgb;
+          const themeRgb2 = modeTheme.rgb2;
           return (
           <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Header bar */}
@@ -5738,9 +5746,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                     {/* Style used */}
                     {(activeMarketplaceStyle?.name || loadedMarketplaceStyleId) && (
-                      <div className="px-3 py-2.5 rounded-xl text-xs border border-white/5 mb-1" style={{ backgroundColor: 'rgba(139,92,246,0.06)' }}>
+                      <div className="px-3 py-2.5 rounded-xl text-xs border border-white/5 mb-1" style={{ backgroundColor: `rgba(${themeRgb},0.06)` }}>
                         <span className="text-white/40">Estilo: </span>
-                        <span className="text-purple-300 font-medium">{activeMarketplaceStyle?.name || 'Estilo carregado'}</span>
+                        <span className="font-medium" style={{ color: themeHex }}>{activeMarketplaceStyle?.name || 'Estilo carregado'}</span>
                       </div>
                     )}
 
@@ -7123,8 +7131,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       {/* ===== CAPTION CONFIG DIALOG ===== */}
       <AnimatePresence>
         {showCaptionConfigDialog && (() => {
-          const cThemeHex = wizardMode === 'extreme' ? '#E84D1A' : '#8B5CF6';
-          const cThemeRgb = wizardMode === 'extreme' ? '232,77,26' : '139,92,246';
+          const cThemeHex = modeTheme.hex;
+          const cThemeRgb = modeTheme.rgb;
           return (
           <motion.div
             key="caption-config"
@@ -7249,8 +7257,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           onClick={() => setAddCardModal(prev => ({ ...prev, textSize: opt.value }))}
                           className="flex flex-col items-center py-2.5 px-2 rounded-xl border transition-all"
                           style={{
-                            borderColor: addCardModal.textSize === opt.value ? (wizardMode === 'extreme' ? 'rgba(232,77,26,0.5)' : 'rgba(139,92,246,0.5)') : 'rgba(255,255,255,0.08)',
-                            backgroundColor: addCardModal.textSize === opt.value ? (wizardMode === 'extreme' ? 'rgba(232,77,26,0.12)' : 'rgba(139,92,246,0.12)') : 'rgba(255,255,255,0.02)',
+                            borderColor: addCardModal.textSize === opt.value ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.08)',
+                            backgroundColor: addCardModal.textSize === opt.value ? `rgba(${modeTheme.rgb},0.12)` : 'rgba(255,255,255,0.02)',
                           }}
                         >
                           <span className="text-[13px] font-medium text-white/80">{opt.label}</span>
@@ -7263,9 +7271,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     onClick={() => { generateAddCardAutoText(); }}
                     disabled={addCardModal.generatingAutoText}
                     className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all border"
-                    style={{ borderColor: wizardMode === 'extreme' ? 'rgba(232,77,26,0.2)' : 'rgba(139,92,246,0.2)', backgroundColor: wizardMode === 'extreme' ? 'rgba(232,77,26,0.06)' : 'rgba(139,92,246,0.06)' }}>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: wizardMode === 'extreme' ? 'rgba(232,77,26,0.15)' : 'rgba(139,92,246,0.15)' }}>
-                      {addCardModal.generatingAutoText ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: wizardMode === 'extreme' ? '#E84D1A' : '#A855F7' }} /> : <Wand2 className="h-4 w-4" style={{ color: wizardMode === 'extreme' ? '#E84D1A' : '#A855F7' }} />}
+                    style={{ borderColor: `rgba(${modeTheme.rgb},0.2)`, backgroundColor: `rgba(${modeTheme.rgb},0.06)` }}>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: `rgba(${modeTheme.rgb},0.15)` }}>
+                      {addCardModal.generatingAutoText ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: modeTheme.hex }} /> : <Wand2 className="h-4 w-4" style={{ color: modeTheme.hex }} />}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white/90">Texto automático</p>
@@ -7318,7 +7326,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.manualText)}
                       disabled={!addCardModal.manualText.title.trim() && !addCardModal.manualText.body.trim()}
                       className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors disabled:opacity-40"
-                      style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, rgba(232,77,26,0.9), rgba(196,58,15,0.9))' : 'linear-gradient(135deg, rgba(139,92,246,0.8), rgba(99,102,241,0.8))' }}>
+                      style={{ background: `linear-gradient(135deg, rgba(${modeTheme.rgb},0.9), rgba(${modeTheme.rgb2},0.9))` }}>
                       Gerar card
                     </button>
                   </div>
@@ -7342,7 +7350,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <button
                       onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.autoText!)}
                       className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors"
-                      style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, rgba(232,77,26,0.9), rgba(196,58,15,0.9))' : 'linear-gradient(135deg, rgba(139,92,246,0.8), rgba(99,102,241,0.8))' }}>
+                      style={{ background: `linear-gradient(135deg, rgba(${modeTheme.rgb},0.9), rgba(${modeTheme.rgb2},0.9))` }}>
                       Aprovar e gerar
                     </button>
                   </div>
@@ -7394,7 +7402,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
                 <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all disabled:opacity-50 relative"
-                  style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #E84D1A, #C43A0F)' : 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }}>
+                  style={{ background: `linear-gradient(135deg, ${modeTheme.hex}, ${modeTheme.hexDark})` }}>
                   {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
                   <span className="hidden sm:inline">{isGuest ? 'Assine' : 'Exportar'}</span>
                 </button>
@@ -7523,7 +7531,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         style={{
                           width: i === validIndex ? 8 : 5,
                           height: i === validIndex ? 8 : 5,
-                          backgroundColor: i === validIndex ? (wizardMode === 'extreme' ? '#E84D1A' : '#8B5CF6') : 'rgba(255,255,255,0.2)',
+                          backgroundColor: i === validIndex ? modeTheme.hex : 'rgba(255,255,255,0.2)',
                           transform: i === validIndex ? 'scale(1.2)' : 'scale(1)',
                         }} />
                     ))}

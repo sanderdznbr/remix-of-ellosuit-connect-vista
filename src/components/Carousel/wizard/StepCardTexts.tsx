@@ -14,7 +14,7 @@ interface Props {
   manualCardTexts: CardText[];
   setManualCardTexts: (v: CardText[]) => void;
   topic: string;
-  accentTheme?: 'purple' | 'orange';
+  accentTheme?: 'purple' | 'orange' | 'red';
 }
 
 const StepCardTexts: React.FC<Props> = ({
@@ -93,12 +93,13 @@ const StepCardTexts: React.FC<Props> = ({
 
   const hasAnyText = texts.some(t => (t.title || '').trim() || (t.body || '').trim());
   const isOrange = accentTheme === 'orange';
-  const accentBg = isOrange ? 'rgba(249,115,22,0.08)' : 'rgba(139,92,246,0.08)';
-  const accentBorder = isOrange ? 'rgba(249,115,22,0.2)' : 'rgba(139,92,246,0.2)';
-  const accentIconBg = isOrange ? 'rgba(249,115,22,0.15)' : 'rgba(139,92,246,0.15)';
-  const accentIconClass = isOrange ? 'text-orange-400' : 'text-purple-400';
-  const accentBadgeBg = isOrange ? 'bg-orange-500/20' : 'bg-purple-500/20';
-  const accentBadgeText = isOrange ? 'text-orange-300' : 'text-purple-300';
+  const isRed = accentTheme === 'red';
+  const accentBg = isOrange ? 'rgba(249,115,22,0.08)' : isRed ? 'rgba(220,38,38,0.08)' : 'rgba(139,92,246,0.08)';
+  const accentBorder = isOrange ? 'rgba(249,115,22,0.2)' : isRed ? 'rgba(220,38,38,0.2)' : 'rgba(139,92,246,0.2)';
+  const accentIconBg = isOrange ? 'rgba(249,115,22,0.15)' : isRed ? 'rgba(220,38,38,0.15)' : 'rgba(139,92,246,0.15)';
+  const accentIconClass = isOrange ? 'text-orange-400' : isRed ? 'text-red-400' : 'text-purple-400';
+  const accentBadgeBg = isOrange ? 'bg-orange-500/20' : isRed ? 'bg-red-500/20' : 'bg-purple-500/20';
+  const accentBadgeText = isOrange ? 'text-orange-300' : isRed ? 'text-red-300' : 'text-purple-300';
 
   return (
     <div className="space-y-5" style={{ minHeight: '300px' }}>

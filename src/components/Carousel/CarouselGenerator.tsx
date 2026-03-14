@@ -469,6 +469,7 @@ const CarouselGenerator: React.FC = () => {
   const [currentCarouselId, _setCurrentCarouselId] = useState<string | null>(null);
   const currentCarouselIdRef = useRef<string | null>(null);
   const isSavingRef = useRef(false);
+  const generationInFlightRef = useRef(false);
   const setCurrentCarouselId = useCallback((id: string | null) => {
     currentCarouselIdRef.current = id;
     _setCurrentCarouselId(id);

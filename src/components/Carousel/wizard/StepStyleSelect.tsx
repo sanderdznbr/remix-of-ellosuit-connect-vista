@@ -240,7 +240,7 @@ const StepStyleSelect: React.FC<Props> = ({
                     )}
                   </div>
                   {isActive && !isLocked && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                    <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full ${t.bg} flex items-center justify-center`}>
                       <Check className="w-3 h-3 text-white" />
                     </div>
                   )}

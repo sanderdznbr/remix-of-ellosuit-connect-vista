@@ -13,6 +13,8 @@ interface Props {
   guestMode?: boolean;
   continuousMode?: boolean;
   setContinuousMode?: (v: boolean) => void;
+  maxSlides?: number;
+  allowContinuousMode?: boolean;
 }
 
 const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode, continuousMode, setContinuousMode }) => {

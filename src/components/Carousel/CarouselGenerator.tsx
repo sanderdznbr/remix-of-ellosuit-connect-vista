@@ -7130,8 +7130,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       {/* ===== CAPTION CONFIG DIALOG ===== */}
       <AnimatePresence>
         {showCaptionConfigDialog && (() => {
-          const cThemeHex = wizardMode === 'extreme' ? '#E84D1A' : '#8B5CF6';
-          const cThemeRgb = wizardMode === 'extreme' ? '232,77,26' : '139,92,246';
+          const cThemeHex = modeTheme.hex;
+          const cThemeRgb = modeTheme.rgb;
           return (
           <motion.div
             key="caption-config"

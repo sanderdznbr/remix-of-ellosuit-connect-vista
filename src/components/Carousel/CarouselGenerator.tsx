@@ -1402,6 +1402,12 @@ const CarouselGenerator: React.FC = () => {
 
   // ===== GENERATE SINGLE POST (1080x1350) =====
   const generateSinglePost = async () => {
+    if (generationInFlightRef.current) {
+      console.log('[GENERATE_GUARD] Duplicate single-post trigger ignored');
+      return;
+    }
+    generationInFlightRef.current = true;
+
     setGenerating(true);
     setCarouselData(null);
     setCurrentCarouselId(null);

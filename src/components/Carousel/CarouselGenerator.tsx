@@ -5790,8 +5790,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {!isGuest && (
                       <button
                         onClick={() => {
+                          if (correctionUndoStack.length === 0) return;
                           const last = correctionUndoStack[correctionUndoStack.length - 1];
-                          setCardImage(last.cardIndex, last.imageUrl, true);
+                          if (!last) return;
+                          const newCards = carouselData ? [...carouselData.cards] : [];
+                          if (newCards[last.cardIndex]) {
+                            newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
+                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                          }
                           if (last.cardIndex === 0 && currentCarouselId) {
                             supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
                           }
@@ -6557,8 +6563,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {!isGuest && (
                 <button
                   onClick={() => {
+                    if (correctionUndoStack.length === 0) return;
                     const last = correctionUndoStack[correctionUndoStack.length - 1];
-                    setCardImage(last.cardIndex, last.imageUrl, true);
+                    if (!last) return;
+                    const newCards = carouselData ? [...carouselData.cards] : [];
+                    if (newCards[last.cardIndex]) {
+                      newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
+                      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                    }
                     if (last.cardIndex === 0 && currentCarouselId) {
                       supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
                     }

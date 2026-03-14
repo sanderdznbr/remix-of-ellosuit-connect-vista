@@ -588,9 +588,9 @@ function AdminContent() {
                       <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-[10px] font-bold">
                         {(u.display_name || u.username || '?')[0]?.toUpperCase()}
                       </div>
-                      <div className="text-left">
-                        <p className="text-sm">{u.display_name || '—'}</p>
-                        <p className="text-[11px] text-white/30">@{u.username}</p>
+                       <div className="text-left min-w-0">
+                        <p className="text-sm truncate">{u.display_name || '—'}</p>
+                        <p className="text-[11px] text-white/30 truncate">{u.email || `@${u.username}`}</p>
                       </div>
                     </button>
                   ))}

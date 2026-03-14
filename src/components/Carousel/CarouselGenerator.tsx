@@ -1728,7 +1728,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
             try {
-              await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: 1, p_description: `Post único: ${topic}` });
+              const creditAmount = calculateCreditCost({ cardCount: 1, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) });
+              await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: creditAmount, p_description: `Post único (${wizardMode}): ${topic} — ${creditAmount} créditos` });
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };

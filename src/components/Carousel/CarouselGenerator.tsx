@@ -3649,6 +3649,9 @@ FORBIDDEN:
         parts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
         parts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+        if (customInstruction) {
+          parts.push(`\n🎯 INSTRUÇÃO ESPECIAL DO USUÁRIO (PRIORIDADE MÁXIMA): ${customInstruction}`);
+        }
 
         // Real estate: force black BG for screen blend
         if (regenHasPhotos) {

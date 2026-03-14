@@ -256,9 +256,7 @@ export default function AreaParceiros() {
         {/* Logo area */}
         <div className="p-6 pb-4">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
+            <img src={ellocontentIcon} alt="Logo" className="w-8 h-8 rounded-xl" />
             <div>
               <p className="text-white font-bold text-sm tracking-tight">Parceiro</p>
               <p className="text-purple-400/60 text-[10px] font-mono">{affiliate.affiliate_code}</p>

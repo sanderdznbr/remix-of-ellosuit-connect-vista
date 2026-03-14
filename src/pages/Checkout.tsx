@@ -345,7 +345,7 @@ function CheckoutContent() {
       : appliedCoupon.discount_fixed
     : 0;
   const displayPrice = Math.max(0, basePrice - discount);
-  const displayTitle = mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? `Estilo: ${styleName}` : mode === 'gift' ? `Presente: ${giftCredits} créditos` : `+${creditPack.credits} créditos`;
+  const displayTitle = mode === 'plan' ? `Plano ${plan.name} (${isAnnual ? 'Anual' : 'Mensal'})` : mode === 'style' ? `Estilo: ${styleName}` : mode === 'gift' ? `Presente: ${giftCredits} créditos` : `+${creditPack.credits} créditos`;
   const displaySubtitle = mode === 'plan'
     ? `${plan.credits} créditos/mês • Crédito extra: ${plan.extraPrice}`
     : mode === 'style'

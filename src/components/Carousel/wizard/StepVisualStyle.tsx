@@ -138,13 +138,14 @@ interface Props {
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
   topic?: string;
   mentionedPrompts?: { title?: string; content?: string }[];
+  productAnalysis?: { type?: string; description?: string; confirmed?: boolean } | null;
 }
 
 const StepVisualStyle: React.FC<Props> = ({
   selectedCategory, setSelectedCategory,
   visualSearchQuery, setVisualSearchQuery,
   referenceImages, setReferenceImages,
-  topic, mentionedPrompts,
+  topic, mentionedPrompts, productAnalysis,
 }) => {
   const [searchResults, setSearchResults] = useState<{ url: string; thumb: string; alt: string }[]>([]);
   const [searching, setSearching] = useState(false);

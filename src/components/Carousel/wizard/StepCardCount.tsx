@@ -25,7 +25,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Qual formato você quer?</h2>
-        <p className="text-sm text-white/40">Post único ou carrossel com até 10 slides.</p>
+        <p className="text-sm text-white/40">Post único ou carrossel com até {maxSlides} slides.</p>
       </div>
 
       {/* Single post option */}

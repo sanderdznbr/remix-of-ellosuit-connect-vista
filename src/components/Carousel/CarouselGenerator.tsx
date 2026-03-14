@@ -5853,7 +5853,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Regenerar foto completa */}
                     {!isGuest && (
                       <button
-                        onClick={() => regenerateCard(activeCardIndex)}
+                        onClick={() => setRegenDialogCard(activeCardIndex)}
                         disabled={regeneratingCard === activeCardIndex || !carouselData.cards[activeCardIndex]?.imageUrl}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
                         {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}

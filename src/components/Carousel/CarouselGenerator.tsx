@@ -6951,7 +6951,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {!faceUploadMode ? (
                   <div className="flex flex-col px-2 pb-3 gap-0.5">
                     <button
-                      onClick={() => { setModifyMenuCard(null); regenerateCard(cardIdx); }}
+                      onClick={() => { setModifyMenuCard(null); setRegenDialogCard(cardIdx); }}
                       disabled={regeneratingCard === cardIdx}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
                       {regeneratingCard === cardIdx ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}

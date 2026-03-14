@@ -5672,11 +5672,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         {/* ===== INSTAGRAM MOCKUP PREVIEW ===== */}
         {carouselData && editingCard === null && (() => {
-          const isExtreme = wizardMode === 'extreme';
-          const themeHex = isExtreme ? '#E84D1A' : '#8B5CF6';
-          const themeHexDark = isExtreme ? '#C43A0F' : '#6D28D9';
-          const themeRgb = isExtreme ? '232,77,26' : '139,92,246';
-          const themeRgb2 = isExtreme ? '200,60,20' : '99,102,241';
+           const isExtreme = wizardMode === 'extreme';
+          const themeHex = modeTheme.hex;
+          const themeHexDark = modeTheme.hexDark;
+          const themeRgb = modeTheme.rgb;
+          const themeRgb2 = modeTheme.rgb2;
           return (
           <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Header bar */}

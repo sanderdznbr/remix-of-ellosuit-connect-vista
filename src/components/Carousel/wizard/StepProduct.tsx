@@ -81,19 +81,23 @@ const CONTEXT_HINTS: Record<string, { icon: React.ElementType; title: string; su
 
 function detectContext(topic: string): DetectedContext {
   if (!topic) return null;
-  const t = topic.toLowerCase();
+  const t = topic.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents for matching
   
-  // App / mobile
-  if (/\b(app|aplicativo|mobile|ios|android|tela do app|funcionalidade|download na|baixe o|play store|app store|saas|plataforma digital)\b/i.test(t)) return 'app';
+  // App / mobile — check first (most specific)
+  if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) ||
+      /tela do app|funcionalidade do app|download|baixe o/.test(t) ||
+      /lancamento.*(app|aplicativo)|app.*(lancamento|lancar|divulgar)/.test(t) ||
+      /divulgar.*(app|aplicativo|plataforma)/.test(t)) return 'app';
   
   // Website / system / dashboard
-  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|portal|web app|ferramenta online|software)\b/i.test(t)) return 'website';
+  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|portal|web app|ferramenta online|software)\b/.test(t)) return 'website';
   
   // Food
-  if (/\b(receita|prato|comida|alimento|restaurante|lanche|pizza|hambúrguer|bolo|doce|bebida|suco|café|cardápio|menu|delivery)\b/i.test(t)) return 'food';
+  if (/\b(receita|prato|comida|alimento|restaurante|lanche|pizza|hamburguer|bolo|doce|bebida|suco|cafe|cardapio|menu|delivery)\b/.test(t)) return 'food';
   
-  // Physical product
-  if (/\b(lançamento|produto|coleção|nova linha|embalagem|kit|unboxing|showcase|vitrine)\b/i.test(t)) return 'physical';
+  // Physical product (broader, checked last)
+  if (/\b(produto|colecao|nova linha|embalagem|kit|unboxing|showcase|vitrine)\b/.test(t) ||
+      /lancamento.*(produto|colecao|linha)/.test(t)) return 'physical';
   
   return null;
 }

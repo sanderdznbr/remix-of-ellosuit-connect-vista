@@ -264,6 +264,7 @@ const CarouselGenerator: React.FC = () => {
   const [brandSuggestedPalette, setBrandSuggestedPalette] = useState<{ bg: string; accent: string; text: string } | null>(null);
   const [selectedFont, setSelectedFont] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
 

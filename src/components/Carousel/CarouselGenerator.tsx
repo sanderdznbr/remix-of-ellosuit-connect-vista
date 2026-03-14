@@ -1181,8 +1181,8 @@ const CarouselGenerator: React.FC = () => {
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
-    // Detect full-bleed: trust explicit marketplace_style_id or persisted isFullBleed flag
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed;
+    // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme';
     setIsLoadedFullBleed(hasMarketplaceStyle);
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
     if (item.style_config) {

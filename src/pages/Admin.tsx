@@ -565,7 +565,7 @@ function AdminContent() {
                     value={actionSearch}
                     onChange={e => setActionSearch(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && searchUsers()}
-                    placeholder="Nome ou username..."
+                    placeholder="Email, nome ou username..."
                     className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm text-white placeholder-white/20 outline-none"
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                   />

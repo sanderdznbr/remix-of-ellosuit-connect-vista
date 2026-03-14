@@ -125,13 +125,14 @@ Deno.serve(async (req) => {
       const postbackUrl = `${supabaseUrl}/functions/v1/ellocontent-webhook`;
 
       const txPayload: Record<string, unknown> = {
-        amount: plan.price,
+        amount: priceInCents,
         paymentMethod: payment_method === "pix" ? "pix" : "credit_card",
         postbackUrl,
         metadata: JSON.stringify({
           subscription_id: sub.id,
           company_id: companyId,
           plan_name,
+          billing_period: isAnnual ? "annual" : "monthly",
           action: "subscribe",
           credits: plan.credits,
         }),
@@ -158,8 +159,8 @@ Deno.serve(async (req) => {
           } : {}),
         },
         items: [{
-          title: `elloContent - Plano ${plan.label} (Mensal)`,
-          unitPrice: plan.price,
+          title: `elloContent - Plano ${plan.label} (${isAnnual ? "Anual" : "Mensal"})`,
+          unitPrice: priceInCents,
           quantity: 1,
           tangible: false,
         }],

@@ -85,6 +85,7 @@ import SocialPublishDialog from './SocialPublishDialog';
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import PostCorrectionEditor from './PostCorrectionEditor';
+import RegeneratePhotoDialog from './RegeneratePhotoDialog';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
@@ -298,6 +299,7 @@ const CarouselGenerator: React.FC = () => {
   const [regenAllProgress, setRegenAllProgress] = useState<{ current: number; total: number } | null>(null);
    const [modifyMenuCard, setModifyMenuCard] = useState<number | null>(null);
    const [faceUploadMode, setFaceUploadMode] = useState(false);
+   const [regenDialogCard, setRegenDialogCard] = useState<number | null>(null);
    const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);
     const [correctionCardIndex, setCorrectionCardIndex] = useState<number | null>(null);
     const [correctionUndoStack, setCorrectionUndoStack] = useState<Array<{ cardIndex: number; imageUrl: string }>>([]);
@@ -3537,7 +3539,7 @@ FORBIDDEN:
     if (activeCardIndex >= cards.length) setActiveCardIndex(cards.length - 1);
   };
 
-  const regenerateCard = async (cardIndex: number, forceImageRequired = false, disallowPeople = false): Promise<boolean> => {
+  const regenerateCard = async (cardIndex: number, forceImageRequired = false, disallowPeople = false, customInstruction?: string, customImageUrl?: string | null): Promise<boolean> => {
     const currentData = carouselDataRef.current;
     if (!currentData) return false;
     const carouselData = currentData;
@@ -3647,6 +3649,9 @@ FORBIDDEN:
         parts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);
         parts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
+        if (customInstruction) {
+          parts.push(`\n🎯 INSTRUÇÃO ESPECIAL DO USUÁRIO (PRIORIDADE MÁXIMA): ${customInstruction}`);
+        }
 
         // Real estate: force black BG for screen blend
         if (regenHasPhotos) {
@@ -3726,8 +3731,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         // For standard styles, build a richer prompt that maintains consistency
         const cardType = card.type === 'cover' ? 'capa editorial' : card.type === 'cta' ? 'card final de chamada para ação' : 'slide de conteúdo informativo';
         imgPrompt = disallowPeople
-          ? `Fundo gráfico editorial para ${cardType} sobre "${cleanTopic}". Visual tipográfico/abstrato com formas, textura e luz; sem pessoas, sem retratos e sem silhuetas humanas.`
-          : `${cardType} sobre "${cleanTopic}". ${newImagePrompt || newBody.slice(0, 150)}. Manter o mesmo estilo visual, cores e atmosfera dos outros cards do carrossel.`;
+          ? `Fundo gráfico editorial para ${cardType} sobre "${cleanTopic}". Visual tipográfico/abstrato com formas, textura e luz; sem pessoas, sem retratos e sem silhuetas humanas.${customInstruction ? ` INSTRUÇÃO ESPECIAL: ${customInstruction}` : ''}`
+          : `${cardType} sobre "${cleanTopic}". ${newImagePrompt || newBody.slice(0, 150)}. Manter o mesmo estilo visual, cores e atmosfera dos outros cards do carrossel.${customInstruction ? ` INSTRUÇÃO ESPECIAL: ${customInstruction}` : ''}`;
         negPrompt = imageSettings.negativePrompt || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
       }
       
@@ -3753,6 +3758,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const regenReferenceImages: string[] = [...allProductRefs];
       if (logoUrl && logoUrl.startsWith('http')) {
         regenReferenceImages.push(logoUrl);
+      }
+      if (customImageUrl) {
+        regenReferenceImages.push(customImageUrl);
       }
       
       try {
@@ -5845,7 +5853,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Regenerar foto completa */}
                     {!isGuest && (
                       <button
-                        onClick={() => regenerateCard(activeCardIndex)}
+                        onClick={() => setRegenDialogCard(activeCardIndex)}
                         disabled={regeneratingCard === activeCardIndex || !carouselData.cards[activeCardIndex]?.imageUrl}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
                         {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
@@ -6943,7 +6951,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {!faceUploadMode ? (
                   <div className="flex flex-col px-2 pb-3 gap-0.5">
                     <button
-                      onClick={() => { setModifyMenuCard(null); regenerateCard(cardIdx); }}
+                      onClick={() => { setModifyMenuCard(null); setRegenDialogCard(cardIdx); }}
                       disabled={regeneratingCard === cardIdx}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
                       {regeneratingCard === cardIdx ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
@@ -8006,6 +8014,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           }}
         />
       )}
+      
+      {/* Regenerate Photo Dialog */}
+      <RegeneratePhotoDialog
+        open={regenDialogCard !== null}
+        onClose={() => setRegenDialogCard(null)}
+        cardIndex={regenDialogCard ?? 0}
+        loading={regeneratingCard !== null}
+        onConfirm={(instruction, imageUrl) => {
+          const idx = regenDialogCard;
+          setRegenDialogCard(null);
+          if (idx !== null) {
+            regenerateCard(idx, false, false, instruction || undefined, imageUrl);
+          }
+        }}
+      />
     </div>
   );
 };

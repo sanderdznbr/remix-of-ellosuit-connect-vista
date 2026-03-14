@@ -1336,6 +1336,7 @@ const CarouselGenerator: React.FC = () => {
         user_name: userName,
         date_label: dateLabel,
         logo_url: logoUrl,
+        logo_dark_url: logoDarkUrl,
         logo_position: logoPosition,
         show_header: showHeader,
         image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined, facePersonsMetadata: facePersons.filter(p => p.photos.length > 0).length > 1 ? facePersons.filter(p => p.photos.length > 0).map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined, allPeopleOnCover } as any,

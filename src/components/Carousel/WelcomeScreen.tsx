@@ -147,7 +147,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
       </motion.nav>
 
       {/* Orb */}
-      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
+      <div className="absolute bottom-[-500px] md:bottom-[-650px] lg:bottom-[-850px] left-1/2 -translate-x-1/2 pointer-events-none" style={{ filter: 'blur(6px)' }}>
         <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
           <div className="carousel-loader-spinner" />
         </div>
@@ -238,15 +238,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           </div>
         </motion.div>
 
-        <motion.button
-          onClick={() => onStart()}
-          className="mt-4 text-white/20 hover:text-white/40 text-[11px] transition-colors cursor-pointer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.1, duration: 0.4 }}
-        >
-          ou pular e configurar manualmente
-        </motion.button>
+        {user && (
+          <motion.button
+            onClick={() => onStart()}
+            className="mt-4 text-white/20 hover:text-white/40 text-[11px] transition-colors cursor-pointer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1, duration: 0.4 }}
+          >
+            ou pular e configurar manualmente
+          </motion.button>
+        )}
       </div>
     </motion.div>
   );

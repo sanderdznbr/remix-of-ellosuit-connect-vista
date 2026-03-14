@@ -305,6 +305,85 @@ function AdminContent() {
     }
   };
 
+  // Change user plan inline
+  const changeUserPlan = async (targetUser: any, newPlan: string) => {
+    if (!targetUser?.company_id) { toast.error('Usuário sem empresa vinculada'); return; }
+    setChangingPlan(true);
+    try {
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + 1);
+
+      if (newPlan === 'free') {
+        // Cancel subscription
+        await supabase.from('ellocontent_subscriptions')
+          .update({ status: 'canceled' } as any)
+          .eq('user_id', targetUser.id);
+        await supabase.from('subscriptions')
+          .update({ plan_type: 'free' as any, status: 'free' as any, monthly_price: 0 } as any)
+          .eq('company_id', targetUser.company_id);
+      } else {
+        const creditMap: Record<string, number> = { starter: 50, pro: 120, growth: 240 };
+        const priceMap: Record<string, number> = { starter: 1.5, pro: 1.2, growth: 0.9 };
+        
+        await supabase.from('ellocontent_subscriptions').upsert({
+          user_id: targetUser.id,
+          company_id: targetUser.company_id,
+          plan_name: newPlan,
+          status: 'active',
+          monthly_price: 0,
+          monthly_credits: creditMap[newPlan] || 50,
+          extra_credit_price: priceMap[newPlan] || 1.5,
+          current_period_start: now.toISOString(),
+          current_period_end: endDate.toISOString(),
+          payment_method: 'manual_admin',
+        } as any, { onConflict: 'user_id' });
+
+        await supabase.from('subscriptions').upsert({
+          company_id: targetUser.company_id,
+          plan_type: newPlan as any,
+          status: 'active' as any,
+          monthly_price: 0,
+          current_period_start: now.toISOString(),
+          current_period_end: endDate.toISOString(),
+        } as any, { onConflict: 'company_id' });
+      }
+
+      toast.success(`Plano alterado para ${newPlan.toUpperCase()}!`);
+      // Update local state
+      setUsers(prev => prev.map(u => u.id === targetUser.id ? { ...u, plan: newPlan, sub_status: newPlan === 'free' ? 'free' : 'active' } : u));
+      setSelectedUser((prev: any) => prev ? { ...prev, plan: newPlan, sub_status: newPlan === 'free' ? 'free' : 'active' } : null);
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
+  // Give credits inline from user panel
+  const giveInlineCredits = async () => {
+    if (!selectedUser?.company_id) { toast.error('Usuário sem empresa vinculada'); return; }
+    const amount = parseInt(inlineCredits);
+    if (!amount || amount <= 0) { toast.error('Informe um valor válido'); return; }
+    setAddingCredits(true);
+    try {
+      const { error } = await supabase.rpc('add_ai_credits', {
+        p_company_id: selectedUser.company_id,
+        p_amount: amount,
+        p_description: 'Créditos adicionados pelo admin',
+      });
+      if (error) throw error;
+      toast.success(`${amount} créditos adicionados!`);
+      setInlineCredits('');
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, credits: u.credits + amount } : u));
+      setSelectedUser((prev: any) => prev ? { ...prev, credits: prev.credits + amount } : null);
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
+    } finally {
+      setAddingCredits(false);
+    }
+  };
+
   const filteredUsers = userSearch
     ? users.filter(u => 
         (u.display_name || '').toLowerCase().includes(userSearch.toLowerCase()) ||

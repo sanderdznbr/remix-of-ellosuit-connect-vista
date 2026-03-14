@@ -5102,6 +5102,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         guestMode={isGuest}
                         continuousMode={continuousMode}
                         setContinuousMode={setContinuousMode}
+                        maxSlides={planLimits.maxSlidesPerCarousel}
+                        allowContinuousMode={planLimits.allowContinuousMode}
                       />
                     )}
                     {currentStepName === 'Fotos' && (

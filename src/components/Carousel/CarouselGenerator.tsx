@@ -5795,7 +5795,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         }}
                         disabled={correctionUndoStack.length === 0}
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                        <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição
+                        <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
                       </button>
                     )}
 

@@ -469,6 +469,7 @@ const CarouselGenerator: React.FC = () => {
   const [currentCarouselId, _setCurrentCarouselId] = useState<string | null>(null);
   const currentCarouselIdRef = useRef<string | null>(null);
   const isSavingRef = useRef(false);
+  const generationInFlightRef = useRef(false);
   const setCurrentCarouselId = useCallback((id: string | null) => {
     currentCarouselIdRef.current = id;
     _setCurrentCarouselId(id);
@@ -1401,6 +1402,12 @@ const CarouselGenerator: React.FC = () => {
 
   // ===== GENERATE SINGLE POST (1080x1350) =====
   const generateSinglePost = async () => {
+    if (generationInFlightRef.current) {
+      console.log('[GENERATE_GUARD] Duplicate single-post trigger ignored');
+      return;
+    }
+    generationInFlightRef.current = true;
+
     setGenerating(true);
     setCarouselData(null);
     setCurrentCarouselId(null);
@@ -1783,6 +1790,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       setGeneratingAllImages(false);
       setImageGenProgress('');
       setCloudJobId(null);
+      generationInFlightRef.current = false;
     }
   };
 
@@ -1832,6 +1840,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         setTransitionToGenerate(false); return;
       }
     }
+
+    if (generationInFlightRef.current) {
+      console.log('[GENERATE_GUARD] Duplicate carousel trigger ignored');
+      return;
+    }
+    generationInFlightRef.current = true;
 
     setGenerating(true);
     setCarouselData(null);
@@ -2763,6 +2777,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       setGeneratingAllImages(false);
       setImageGenProgress('');
       setCloudJobId(null);
+      generationInFlightRef.current = false;
     }
   };
 
@@ -3085,6 +3100,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       } catch { /* ignore */ }
     }
 
+    if (generationInFlightRef.current) {
+      console.log('[GENERATE_GUARD] Duplicate cover-to-carousel trigger ignored');
+      return;
+    }
+    generationInFlightRef.current = true;
+
     setGenerating(true);
     setCarouselData(null);
     setCurrentCarouselId(null);
@@ -3281,6 +3302,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       setGenerating(false);
       setGeneratingAllImages(false);
       setImageGenProgress('');
+      generationInFlightRef.current = false;
     }
   };
 

@@ -27,12 +27,12 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
     const analyze = async () => {
       setExtracting(true);
       try {
-        const mono = await isMonochromeImage(latestStyleRef.url);
-        if (mono) { setExtracting(false); setLastAnalyzedUrl(latestStyleRef.url); return; }
-        const colors = await extractColorsFromImage(latestStyleRef.url, 5);
+        const mono = await isMonochromeImage(latestBrandRef.url);
+        if (mono) { setExtracting(false); setLastAnalyzedUrl(latestBrandRef.url); return; }
+        const colors = await extractColorsFromImage(latestBrandRef.url, 5);
         const palette = buildPaletteFromColors(colors);
         if (palette && onSuggestColors) onSuggestColors(palette);
-        setLastAnalyzedUrl(latestStyleRef.url);
+        setLastAnalyzedUrl(latestBrandRef.url);
       } catch (err) { console.error('Color extraction error:', err); }
       finally { setExtracting(false); }
     };

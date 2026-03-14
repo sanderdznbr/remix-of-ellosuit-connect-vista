@@ -33,6 +33,10 @@ function AdminContent() {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [inlineCredits, setInlineCredits] = useState('');
+  const [addingCredits, setAddingCredits] = useState(false);
 
   // Subscriptions
   const [subscriptions, setSubscriptions] = useState<any[]>([]);

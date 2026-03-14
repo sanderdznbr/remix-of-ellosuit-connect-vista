@@ -95,8 +95,8 @@ const themeMap = {
   },
 } as const;
 
-export type ThemeClasses = typeof themeMap['purple'];
+export type ThemeClasses = (typeof themeMap)[WizardAccentTheme];
 
 export function getThemeClasses(theme: WizardAccentTheme): ThemeClasses {
-  return themeMap[theme];
+  return themeMap[theme] as ThemeClasses;
 }

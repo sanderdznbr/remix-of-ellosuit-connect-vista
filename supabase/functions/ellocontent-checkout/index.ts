@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     const {
       action, // 'subscribe' or 'buy_credits'
       plan_name,
+      billing_period, // 'annual' or 'monthly'
       payment_method, // 'credit_card' or 'pix'
       card_token,
       credit_package_id,

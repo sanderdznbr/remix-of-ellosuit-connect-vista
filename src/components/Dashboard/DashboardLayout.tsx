@@ -128,7 +128,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
     return (
       <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
         <ExpiringCreditsBanner />
-        <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
           {content}
         </div>
       </div>

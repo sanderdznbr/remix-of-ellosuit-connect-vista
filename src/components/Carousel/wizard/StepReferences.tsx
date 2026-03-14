@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, Search, X, Loader2, Instagram, UserPlus, BadgeCheck, ImageIcon } from 'lucide-react';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 import { ReferenceImage, FamousPerson } from './types';
 
 interface Props {

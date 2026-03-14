@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, X, Loader2, Folder } from 'lucide-react';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 import { ReferenceImage } from './types';
 import { extractColorsFromImage, isMonochromeImage, buildPaletteFromColors } from '@/utils/extractColorsFromImage';
 import GalleryPicker from './GalleryPicker';

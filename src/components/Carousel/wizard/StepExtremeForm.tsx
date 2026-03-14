@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Upload, X, Check, Folder } from 'lucide-react';
 import type { ExtremeAnalysis, ExtremeField } from './StepExtremeVision';
 import GalleryPicker from './GalleryPicker';
-import { autoSaveFilesToGallery } from '@/utils/autoSaveUpload';
+
 
 interface Props {
   analysis: ExtremeAnalysis;

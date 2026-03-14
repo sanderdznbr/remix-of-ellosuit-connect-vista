@@ -6341,7 +6341,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       />
                       <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
                       <div className="flex gap-2">
-                        <button onClick={generateCaption} disabled={generatingCaption}
+                        <button onClick={openCaptionConfigDialog} disabled={generatingCaption}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                           style={{ backgroundColor: `rgba(${themeRgb},0.12)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.15)` }}>
                           {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}

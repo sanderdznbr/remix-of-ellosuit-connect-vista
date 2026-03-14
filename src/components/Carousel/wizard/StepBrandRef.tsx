@@ -23,7 +23,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
   const [lastAnalyzedUrl, setLastAnalyzedUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!latestStyleRef || latestStyleRef.url === lastAnalyzedUrl) return;
+    if (!latestBrandRef || latestBrandRef.url === lastAnalyzedUrl) return;
     const analyze = async () => {
       setExtracting(true);
       try {

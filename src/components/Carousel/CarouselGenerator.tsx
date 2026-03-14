@@ -4799,8 +4799,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               onLoadCarousel={async (item: any) => {
                 setLoadingCarousel(true);
                 try {
-                  // If the caller already has full carousel payload, load directly (faster, avoids extra fetch)
-                  if (item?.carousel_data) {
+                  // Load directly only when payload is truly complete (includes generation_config for mode/theme restore)
+                  if (item?.carousel_data && item?.generation_config) {
                     loadCarousel(item);
                     setShowWelcome(false);
                     return;

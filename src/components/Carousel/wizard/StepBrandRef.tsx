@@ -19,7 +19,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [extracting, setExtracting] = useState(false);
-  const latestStyleRef = styleRefs[styleRefs.length - 1];
+  const latestBrandRef = brandRefs[brandRefs.length - 1];
   const [lastAnalyzedUrl, setLastAnalyzedUrl] = useState<string | null>(null);
 
   useEffect(() => {

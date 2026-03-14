@@ -44,9 +44,6 @@ const StepExtremeForm: React.FC<Props> = ({ analysis, values, onChange, brandCol
     const files = e.target.files;
     if (!files?.length) return;
 
-    // Auto-save to gallery
-    autoSaveFilesToGallery(files);
-
     const existing = (values[fieldId] as string[] | undefined) || [];
     const readers: Promise<string>[] = [];
 

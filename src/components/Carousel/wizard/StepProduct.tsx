@@ -87,9 +87,18 @@ const CONTEXT_HINTS: Record<string, { icon: React.ElementType; title: string; su
   },
 };
 
-function detectContext(topic: string): DetectedContext {
-  if (!topic) return null;
-  const t = topic.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents for matching
+function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[]): DetectedContext {
+  // Combine topic + all mentioned prompt titles and content for analysis
+  const parts = [topic || ''];
+  if (mentionedPrompts?.length) {
+    mentionedPrompts.forEach(m => {
+      parts.push(m.title || '');
+      parts.push(m.content || '');
+    });
+  }
+  const t = parts.join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  if (!t.trim()) return null;
   
   // App / mobile — check first (most specific)
   if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) ||

@@ -5711,6 +5711,36 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                     {/* Generate carousel from cover */}
 
+                    {/* Style used */}
+                    {(activeMarketplaceStyle?.name || loadedMarketplaceStyleId) && (
+                      <div className="px-3 py-2.5 rounded-xl text-xs border border-white/5 mb-1" style={{ backgroundColor: 'rgba(139,92,246,0.06)' }}>
+                        <span className="text-white/40">Estilo: </span>
+                        <span className="text-purple-300 font-medium">{activeMarketplaceStyle?.name || 'Estilo carregado'}</span>
+                      </div>
+                    )}
+
+                    <div className="h-px bg-white/[0.06] my-1" />
+
+                    {/* Ver Prompt (full generation config) */}
+                    <button
+                      onClick={() => setShowFullConfigModal(true)}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all w-full">
+                      <FileText className="h-4 w-4 text-yellow-400" />
+                      Ver Prompt
+                    </button>
+
+                    {/* Criar novo usando mesmo prompt */}
+                    <button
+                      onClick={() => {
+                        // Keep all current settings but open style panel to pick a new style
+                        setShowStylePanel(true);
+                        setStyleChangeSource('toolbar');
+                      }}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-green-300 hover:text-green-200 hover:bg-white/[0.06] transition-all w-full">
+                      <RotateCcw className="h-4 w-4 text-green-400" />
+                      Criar novo (mesmo prompt)
+                    </button>
+
                     <div className="h-px bg-white/[0.06] my-1" />
 
                     {/* Card-specific actions header */}
@@ -5730,10 +5760,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         Regenerar Foto
                       </button>
                     )}
-
-                    {/* Regenerar rosto - hidden */}
-
-                    {/* Ver prompt usado - hidden */}
 
                     {/* Corrigir área */}
                     {!isGuest && (

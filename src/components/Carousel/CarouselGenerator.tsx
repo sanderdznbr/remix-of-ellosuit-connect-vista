@@ -5580,7 +5580,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">
                 <div className="carousel-loader-wrapper" style={{ width: '240px', height: '240px' }}>
-                  <div className={`carousel-loader-spinner ${wizardMode === 'extreme' ? 'carousel-loader-spinner--orange' : ''}`} />
+                  <div className={`carousel-loader-spinner ${wizardMode === 'extreme' ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
                   <span className="text-white/60 text-3xl font-light z-[1]">
                     <AnimatedCounter target={Math.round((wizardStep / Math.max(WIZARD_STEPS.length - 1, 1)) * 99)} />
                   </span>

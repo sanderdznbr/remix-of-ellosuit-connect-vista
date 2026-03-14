@@ -192,13 +192,14 @@ const BrandGallery: React.FC = () => {
 
   const createFolder = async () => {
     if (!newFolderName.trim() || !companyId || !user) return;
-    const { error } = await supabase.from('brand_asset_folders').insert({
+    const insertData: Record<string, any> = {
       company_id: companyId,
       name: newFolderName.trim(),
       color: newFolderColor,
       created_by: user.id,
-      parent_folder_id: currentFolderId,
-    } as any);
+    };
+    if (currentFolderId) insertData.parent_folder_id = currentFolderId;
+    const { error } = await supabase.from('brand_asset_folders').insert(insertData);
     if (error) { toast.error('Erro ao criar pasta'); return; }
     setNewFolderName('');
     setShowNewFolder(false);

@@ -88,6 +88,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const CARD_W = 1080;
 const CARD_H = 1350;

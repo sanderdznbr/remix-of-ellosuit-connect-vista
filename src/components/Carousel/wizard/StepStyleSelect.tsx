@@ -260,7 +260,7 @@ const StepStyleSelect: React.FC<Props> = ({
       {user && (
         <button
           onClick={() => setShowMarketplace(true)}
-          className="shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-purple-500/30 bg-purple-500/[0.05] text-purple-300 hover:bg-purple-500/[0.1] transition-all text-xs font-medium cursor-pointer"
+          className={`shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed ${t.borderLight} ${t.bgFaint} ${t.textLight} hover:bg-opacity-10 transition-all text-xs font-medium cursor-pointer`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
           Explorar Marketplace

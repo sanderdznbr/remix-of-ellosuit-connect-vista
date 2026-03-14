@@ -238,15 +238,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
           </div>
         </motion.div>
 
-        <motion.button
-          onClick={() => onStart()}
-          className="mt-4 text-white/20 hover:text-white/40 text-[11px] transition-colors cursor-pointer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.1, duration: 0.4 }}
-        >
-          ou pular e configurar manualmente
-        </motion.button>
+        {user && (
+          <motion.button
+            onClick={() => onStart()}
+            className="mt-4 text-white/20 hover:text-white/40 text-[11px] transition-colors cursor-pointer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1, duration: 0.4 }}
+          >
+            ou pular e configurar manualmente
+          </motion.button>
+        )}
       </div>
     </motion.div>
   );

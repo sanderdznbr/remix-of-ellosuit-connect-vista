@@ -8,10 +8,11 @@ const corsHeaders = {
 const BEEHIVE_API_URL = "https://api.conta.paybeehive.com.br/v1";
 
 // Ellocontent plan definitions (prices in cents)
-const PLANS: Record<string, { label: string; price: number; credits: number; extraCreditPrice: number }> = {
-  starter:  { label: "Starter",  price: 4900,  credits: 40,  extraCreditPrice: 2.50 },
-  pro:      { label: "Pro",      price: 9700,  credits: 100, extraCreditPrice: 2.00 },
-  growth:   { label: "Growth",   price: 19700, credits: 250, extraCreditPrice: 1.50 },
+// Annual = billed yearly (price per month * 12), Monthly = billed monthly
+const PLANS: Record<string, { label: string; annualPrice: number; monthlyPrice: number; credits: number }> = {
+  starter:  { label: "Starter",  annualPrice: 6990,  monthlyPrice: 8990,  credits: 50 },
+  pro:      { label: "Pro",      annualPrice: 12990, monthlyPrice: 15990, credits: 100 },
+  growth:   { label: "Growth",   annualPrice: 21990, monthlyPrice: 26990, credits: 200 },
 };
 
 function getBeehiveAuth(): string {
@@ -55,6 +56,7 @@ Deno.serve(async (req) => {
     const {
       action, // 'subscribe' or 'buy_credits'
       plan_name,
+      billing_period, // 'annual' or 'monthly'
       payment_method, // 'credit_card' or 'pix'
       card_token,
       credit_package_id,
@@ -89,6 +91,11 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Determine price based on billing period
+      const isAnnual = billing_period === "annual";
+      const priceInCents = isAnnual ? plan.annualPrice * 12 : plan.monthlyPrice;
+      const monthlyPriceValue = isAnnual ? plan.annualPrice / 100 : plan.monthlyPrice / 100;
+
       // Create subscription record
       const { data: sub, error: subErr } = await adminClient
         .from("ellocontent_subscriptions")
@@ -97,8 +104,7 @@ Deno.serve(async (req) => {
           user_id: userId,
           plan_name,
           monthly_credits: plan.credits,
-          extra_credit_price: plan.extraCreditPrice,
-          monthly_price: plan.price / 100,
+          monthly_price: monthlyPriceValue,
           status: "pending",
           payment_method: payment_method || "credit_card",
           customer_name: customer_name || userEmail.split("@")[0],
@@ -119,13 +125,14 @@ Deno.serve(async (req) => {
       const postbackUrl = `${supabaseUrl}/functions/v1/ellocontent-webhook`;
 
       const txPayload: Record<string, unknown> = {
-        amount: plan.price,
+        amount: priceInCents,
         paymentMethod: payment_method === "pix" ? "pix" : "credit_card",
         postbackUrl,
         metadata: JSON.stringify({
           subscription_id: sub.id,
           company_id: companyId,
           plan_name,
+          billing_period: isAnnual ? "annual" : "monthly",
           action: "subscribe",
           credits: plan.credits,
         }),
@@ -152,8 +159,8 @@ Deno.serve(async (req) => {
           } : {}),
         },
         items: [{
-          title: `elloContent - Plano ${plan.label} (Mensal)`,
-          unitPrice: plan.price,
+          title: `elloContent - Plano ${plan.label} (${isAnnual ? "Anual" : "Mensal"})`,
+          unitPrice: priceInCents,
           quantity: 1,
           tangible: false,
         }],
@@ -205,7 +212,11 @@ Deno.serve(async (req) => {
       if (beehiveData.status === "paid") {
         const now = new Date();
         const expiresAt = new Date(now);
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
+        if (isAnnual) {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        } else {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        }
         updateData.status = "active";
         updateData.starts_at = now.toISOString();
         updateData.expires_at = expiresAt.toISOString();

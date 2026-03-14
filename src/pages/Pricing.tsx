@@ -8,10 +8,16 @@ import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
 
-const PLAN_CONFIG: Record<string, { label: string; price: number; credits: number; extraCredit: number }> = {
-  starter: { label: 'Starter', price: 64.50, credits: 50, extraCredit: 1.50 },
-  pro: { label: 'Pro', price: 124.90, credits: 120, extraCredit: 1.20 },
-  growth: { label: 'Growth', price: 189.90, credits: 240, extraCredit: 0.90 },
+// Prices: annual = billed yearly (per month), monthly = billed monthly
+const PLAN_CONFIG: Record<string, {
+  label: string;
+  annualPrice: number;
+  monthlyPrice: number;
+  credits: number;
+}> = {
+  starter: { label: 'Starter', annualPrice: 69.90, monthlyPrice: 89.90, credits: 50 },
+  pro: { label: 'Pro', annualPrice: 129.90, monthlyPrice: 159.90, credits: 100 },
+  growth: { label: 'Growth', annualPrice: 219.90, monthlyPrice: 269.90, credits: 200 },
 };
 
 const CREDIT_TOPUPS = [
@@ -29,84 +35,194 @@ const GIFT_PACKAGES = [
   { credits: 300, price: 239.90, label: '300 Créditos', description: '~30 carrosséis ou ~42 posts estáticos' },
 ];
 
-const plans = [
+interface PlanDef {
+  key: string;
+  name: string;
+  description: string;
+  annualPrice: string;
+  monthlyPrice: string;
+  credits: string;
+  badge: string | null;
+  includedLabel: string;
+  features: (string | { text: string; tags?: string[] })[];
+  isEnterprise?: boolean;
+  enterpriseSubtitle?: string;
+  enterpriseSections?: { title: string; items: string[] }[];
+}
+
+const plans: PlanDef[] = [
   {
     key: 'starter',
     name: 'Starter',
     description: 'Ideal para quem está começando a criar conteúdo com IA.',
-    price: 'R$64,50',
-    period: '/mês',
-    subtitle: '50 créditos/mês',
+    annualPrice: 'R$69,90',
+    monthlyPrice: 'R$89,90',
+    credits: '50 créditos/mês',
     badge: null,
     includedLabel: 'O que está incluso:',
     features: [
       '50 créditos mensais',
-      '~5 carrosséis (até 10 slides) ou ~7 posts estáticos',
-      'Imagens geradas por IA em cada slide',
-      'Exportação em PNG/JPG',
-      'Galeria de marca e prompts',
+      '~7 carrosséis simples de 6 cards',
+      '~25 posts estáticos simples',
+      'Modo **Simples** — rápido e direto',
+      'ElloIA Flash',
+      'Galeria de marca — 1GB',
+      '3 prompts salvos',
+      'Templates gratuitos',
+      'Exportação PNG, JPG e ZIP',
       'Suporte por e-mail',
-      'Crédito extra: R$1,50/un',
     ],
   },
   {
     key: 'pro',
     name: 'Pro',
     description: 'Para criadores que publicam conteúdo visual com frequência.',
-    price: 'R$124,90',
-    period: '/mês',
-    subtitle: '120 créditos/mês',
+    annualPrice: 'R$129,90',
+    monthlyPrice: 'R$159,90',
+    credits: '100 créditos/mês',
     badge: 'Mais popular',
     includedLabel: 'Tudo do Starter, mais:',
     features: [
-      '120 créditos mensais',
-      '~12 carrosséis (até 10 slides) ou ~16 posts estáticos',
-      'IA avançada + imagens de referência',
-      'Estilos do Marketplace inclusos',
-      'Publicação direta em redes sociais',
-      'Sem badge elloContent nos cards',
+      '100 créditos mensais',
+      '~14 carrosséis simples ou ~7 avançados de 6 cards',
+      '~50 posts simples ou ~33 posts avançados',
+      'Modo **Avançado** — controle total sobre cores, fontes, roteiro e mais',
+      'ElloIA Pro',
+      'ElloIA Pro + Rosto Pessoal',
+      'Carrossel contínuo panorâmico',
+      'Galeria de marca — 5GB',
+      'Prompts ilimitados',
+      'Compra de templates premium',
+      'Exportação PNG, JPG, ZIP e WebP',
       'Suporte prioritário',
-      'Crédito extra: R$1,20/un',
     ],
   },
   {
     key: 'growth',
     name: 'Growth',
-    description: 'Escale sua produção com volume, equipe e slides extras.',
-    price: 'R$189,90',
-    period: '/mês',
-    subtitle: '240 créditos/mês',
+    description: 'Para quem produz com consistência e quer sempre o melhor resultado.',
+    annualPrice: 'R$219,90',
+    monthlyPrice: 'R$269,90',
+    credits: '200 créditos/mês',
     badge: null,
     includedLabel: 'Tudo do Pro, mais:',
     features: [
-      '240 créditos mensais',
-      '~24 carrosséis (até 15 slides) ou ~32 posts estáticos',
-      'Templates de design personalizados',
-      'Workspace de equipe (multi-usuários)',
-      'Projetos e galeria privada',
-      'Controle de acesso por papéis',
-      'Crédito extra: R$0,90/un',
+      '200 créditos mensais',
+      '~28 carrosséis simples ou ~15 avançados/Extreme de 6 cards',
+      '~100 posts simples ou ~66 avançados/Extreme',
+      'Modo **Extreme** — descreva sua visão, a IA entrega designs modernos e virais do mercado',
+      'Galeria de marca — 10GB',
+      { text: 'Carrossel com animação e inserção de vídeos', tags: ['Exclusivo', 'Em breve'] },
+      { text: 'Geração de fotos realistas com IA', tags: ['Exclusivo', 'Em breve'] },
+      'Acesso a ferramentas e funcionalidades exclusivas',
+      'Suporte via chat',
     ],
   },
   {
     key: 'enterprise',
     name: 'Enterprise',
-    description: 'Para agências e equipes que precisam de escala e personalização total.',
-    price: 'Sob consulta',
-    period: '',
-    subtitle: 'Créditos ilimitados',
+    description: 'Para empresas, franquias e agências que precisam de escala e personalização total.',
+    annualPrice: 'Sob consulta',
+    monthlyPrice: 'Sob consulta',
+    credits: 'Volume e créditos sob medida',
     badge: null,
     includedLabel: 'Tudo do Growth, mais:',
-    features: [
-      'Créditos sob medida (ilimitados)',
-      'Suporte dedicado com SLA',
-      'Onboarding e treinamento',
-      'SSO (Single Sign-On)',
-      'API de integração',
-      'Relatórios e auditoria',
+    isEnterprise: true,
+    features: [],
+    enterpriseSections: [
+      {
+        title: 'Volume e Acesso',
+        items: [
+          'Créditos sob medida — configurados conforme o volume de uso',
+          'Usuários ilimitados na conta',
+          'Múltiplos workspaces por unidade, cliente ou departamento',
+        ],
+      },
+      {
+        title: 'Identidade e Marca',
+        items: [
+          'Galeria de marca separada por workspace',
+          'Templates personalizados por workspace',
+          'Identidade visual em escala — cada workspace com sua própria marca',
+        ],
+      },
+      {
+        title: 'Controle e Gestão',
+        items: [
+          'Controle de acesso por papéis — criador, aprovador, gestor',
+          'Painel de gestão de uso por workspace ou usuário',
+          'Histórico completo de criações com auditoria',
+        ],
+      },
+      {
+        title: 'Suporte e Onboarding',
+        items: [
+          'Suporte dedicado',
+          'Onboarding guiado e treinamento da equipe',
+          'Contrato personalizado com SLA garantido',
+        ],
+      },
+      {
+        title: 'Integração',
+        items: [
+          'API de integração com sistemas internos',
+          'SSO — Single Sign-On corporativo',
+        ],
+      },
     ],
   },
 ];
+
+function renderFeatureText(text: string) {
+  // Bold text between ** **
+  const parts = text.split(/\*\*(.*?)\*\*/g);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i} className="text-white/80 font-semibold">{part}</strong> : part
+  );
+}
+
+function FeatureItem({ feat, iconColor = 'text-purple-400' }: { feat: string | { text: string; tags?: string[] }; iconColor?: string }) {
+  const isObj = typeof feat === 'object';
+  const text = isObj ? feat.text : feat;
+  const tags = isObj ? feat.tags : undefined;
+
+  return (
+    <li className="flex items-start gap-1.5 text-white/50 text-[11px] leading-relaxed">
+      <Check className={`w-3 h-3 ${iconColor} mt-0.5 shrink-0`} />
+      <span>
+        {renderFeatureText(text)}
+        {tags?.map((tag, i) => (
+          <span key={i} className={`ml-1 inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+            tag === 'Exclusivo' ? 'bg-purple-500/20 text-purple-300' : 'bg-amber-500/15 text-amber-400'
+          }`}>
+            {tag}
+          </span>
+        ))}
+      </span>
+    </li>
+  );
+}
+
+// ---- Toggle Component ----
+function BillingToggle({ isAnnual, onChange }: { isAnnual: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-center gap-3 mb-10">
+      <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-white' : 'text-white/40'}`}>Anual</span>
+      <button
+        onClick={() => onChange(!isAnnual)}
+        className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${isAnnual ? 'bg-purple-600' : 'bg-white/20'}`}
+      >
+        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${isAnnual ? 'left-1' : 'left-7'}`} />
+      </button>
+      <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-white' : 'text-white/40'}`}>Mensal</span>
+      {isAnnual && (
+        <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-green-500/15 text-green-400 border border-green-500/20">
+          Economize até 29% no anual
+        </span>
+      )}
+    </div>
+  );
+}
 
 // ---- Top-up Modal ----
 interface TopUpModalProps {
@@ -124,7 +240,6 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
   if (!open) return null;
 
   const handlePurchase = () => {
-    // Redirect to checkout with credit purchase mode
     navigate(`/checkout?modo=creditos&creditos=${selectedTopup}`);
     onClose();
   };
@@ -139,14 +254,12 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
-          {/* Logo */}
           <div className="w-10 h-10 rounded-xl bg-purple-600 mb-4 flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl font-bold text-white mb-1">Adicionar créditos</h2>
           <p className="text-sm text-white/40 mb-6">Compre créditos avulsos para usar imediatamente.</p>
 
-          {/* Credit options */}
           <div className="space-y-2 max-h-[300px] overflow-y-auto mb-6">
             {CREDIT_TOPUPS.map((opt, i) => (
               <button
@@ -164,7 +277,6 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
             ))}
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3">
             <button onClick={onClose}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] text-white/60 hover:bg-white/[0.04] transition-colors cursor-pointer">
@@ -181,7 +293,108 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
   );
 };
 
-// ---- Logged-in Pricing (Lovable-style) ----
+// ---- Plan Card Component ----
+function PlanCard({
+  plan,
+  isAnnual,
+  isCurrent,
+  onSelect,
+}: {
+  plan: PlanDef;
+  isAnnual: boolean;
+  isCurrent?: boolean;
+  onSelect: () => void;
+}) {
+  const price = plan.isEnterprise
+    ? 'Sob consulta'
+    : isAnnual ? plan.annualPrice : plan.monthlyPrice;
+
+  return (
+    <motion.div
+      className="relative rounded-2xl p-5 flex flex-col"
+      style={{
+        backgroundColor: 'rgba(20, 20, 28, 0.8)',
+        border: isCurrent
+          ? '1px solid rgba(123, 80, 220, 0.5)'
+          : plan.badge
+          ? '1px solid rgba(123, 80, 220, 0.3)'
+          : '1px solid rgba(255,255,255,0.06)',
+      }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      {isCurrent && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-semibold text-white bg-purple-600 uppercase tracking-wider">
+          Seu plano
+        </div>
+      )}
+      {!isCurrent && plan.badge && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-semibold text-white bg-purple-600 uppercase tracking-wider">
+          {plan.badge}
+        </div>
+      )}
+
+      <h3 className="text-white text-base font-semibold mb-1">{plan.name}</h3>
+      <p className="text-white/40 text-xs leading-relaxed mb-4 min-h-[32px]">{plan.description}</p>
+
+      <div className="mb-1">
+        {plan.isEnterprise ? (
+          <span className="text-white text-2xl font-bold">Sob consulta</span>
+        ) : (
+          <>
+            <span className="text-white text-2xl font-bold">{price}</span>
+            <span className="text-white/40 text-xs ml-1">/mês</span>
+          </>
+        )}
+      </div>
+      <p className="text-white/25 text-[11px] mb-4">{plan.credits}</p>
+
+      <button
+        onClick={onSelect}
+        disabled={isCurrent}
+        className={`w-full py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer mb-4 ${
+          isCurrent
+            ? 'bg-white/[0.06] text-white/30 cursor-default'
+            : plan.badge || isCurrent
+            ? 'bg-purple-600 text-white hover:bg-purple-500'
+            : 'border border-white/[0.12] text-white/70 hover:bg-white/[0.06]'
+        }`}
+      >
+        {isCurrent ? 'Plano atual' : plan.isEnterprise ? 'Falar com vendas' : 'Assinar'}
+      </button>
+
+      <p className="text-white/40 text-[11px] font-medium mb-2 uppercase tracking-wider">{plan.includedLabel}</p>
+
+      {/* Regular features */}
+      {plan.features.length > 0 && (
+        <ul className="space-y-1.5 flex-1">
+          {plan.features.map((feat, i) => (
+            <FeatureItem key={i} feat={feat} />
+          ))}
+        </ul>
+      )}
+
+      {/* Enterprise sections */}
+      {plan.enterpriseSections && (
+        <div className="space-y-4 flex-1">
+          {plan.enterpriseSections.map((section, si) => (
+            <div key={si}>
+              <p className="text-purple-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">{section.title}</p>
+              <ul className="space-y-1.5">
+                {section.items.map((item, ii) => (
+                  <FeatureItem key={ii} feat={item} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ---- Logged-in Pricing ----
 function LoggedInPricing() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -196,6 +409,7 @@ function LoggedInPricing() {
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<'none' | 'redeem'>('none');
+  const [isAnnual, setIsAnnual] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -238,7 +452,6 @@ function LoggedInPricing() {
     try {
       const code = redeemCode.trim().toUpperCase();
 
-      // First check if it's a gift key
       if (code.startsWith('GIFT-')) {
         const { data: giftKey, error: giftErr } = await supabase
           .from('gift_keys' as any)
@@ -254,7 +467,6 @@ function LoggedInPricing() {
 
         const gk = giftKey as any;
 
-        // Add credits
         const { error: rpcErr } = await supabase.rpc('add_ai_credits', {
           p_company_id: companyId,
           p_amount: gk.credits,
@@ -262,7 +474,6 @@ function LoggedInPricing() {
         });
         if (rpcErr) throw rpcErr;
 
-        // Mark key as redeemed
         await supabase.from('gift_keys' as any).update({
           status: 'redeemed',
           redeemed_by: user.id,
@@ -276,7 +487,6 @@ function LoggedInPricing() {
         return;
       }
 
-      // Otherwise check coupons table
       const { data: coupon, error } = await supabase
         .from('coupons')
         .select('*')
@@ -363,7 +573,6 @@ function LoggedInPricing() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-          {/* Page header */}
           <h1 className="text-2xl font-bold text-white mb-1">Plano & Créditos</h1>
           <p className="text-sm text-white/40 mb-8">Gerencie seu plano e saldo de créditos.</p>
 
@@ -373,9 +582,8 @@ function LoggedInPricing() {
             <>
               {/* Top cards: Plan + Credits */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {/* Current plan card */}
                 <div className="rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
-                 <p className="text-white font-semibold text-sm">Você está no plano {planLabel}</p>
+                  <p className="text-white font-semibold text-sm">Você está no plano {planLabel}</p>
                   {isActive && subscription?.current_period_end && (
                     <p className="text-white/30 text-xs mt-1">
                       Renova em {new Date(subscription.current_period_end).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -383,7 +591,6 @@ function LoggedInPricing() {
                   )}
                 </div>
 
-                {/* Credits remaining */}
                 <div className="rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-white/70 text-sm font-medium">Créditos restantes</p>
@@ -392,7 +599,7 @@ function LoggedInPricing() {
                   <div className="w-full h-2 rounded-full bg-white/[0.06] mb-3">
                     <div
                       className="h-full rounded-full bg-purple-500 transition-all"
-                      style={{ width: `${Math.min(100, (creditBalance / maxCredits) * 100)}%` }}
+                      style={{ width: `${maxCredits > 0 ? Math.min(100, (creditBalance / maxCredits) * 100) : 0}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -400,7 +607,6 @@ function LoggedInPricing() {
                       <Check className="w-3 h-3" /> {maxCredits} créditos mensais inclusos
                     </div>
 
-                    {/* Dropdown de créditos */}
                     <div className="relative">
                       <button
                         onClick={() => setShowTopUpDropdown(!showTopUpDropdown)}
@@ -431,76 +637,27 @@ function LoggedInPricing() {
                 </div>
               </div>
 
+              {/* Billing toggle */}
+              <BillingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
+
               {/* Plans grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {plans.map((plan, i) => {
+                {plans.map((plan) => {
                   const isCurrent = isActive && currentPlanKey ? plan.key === currentPlanKey : false;
                   return (
-                    <motion.div
+                    <PlanCard
                       key={plan.key}
-                      className="relative rounded-2xl p-5 flex flex-col"
-                      style={{
-                        backgroundColor: 'rgba(20, 20, 28, 0.8)',
-                        border: isCurrent
-                          ? '1px solid rgba(123, 80, 220, 0.5)'
-                          : plan.badge
-                          ? '1px solid rgba(123, 80, 220, 0.3)'
-                          : '1px solid rgba(255,255,255,0.06)',
+                      plan={plan}
+                      isAnnual={isAnnual}
+                      isCurrent={isCurrent}
+                      onSelect={() => {
+                        if (plan.isEnterprise) {
+                          window.open('mailto:contato@ellocontent.com?subject=Plano Enterprise', '_blank');
+                        } else if (!isCurrent) {
+                          navigate(`/checkout?plano=${plan.key}&billing=${isAnnual ? 'annual' : 'monthly'}`);
+                        }
                       }}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * i, duration: 0.4 }}
-                    >
-                      {isCurrent && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-semibold text-white bg-purple-600">
-                          Seu plano
-                        </div>
-                      )}
-                      {!isCurrent && plan.badge && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-semibold text-white bg-purple-600/70">
-                          {plan.badge}
-                        </div>
-                      )}
-
-                      <h3 className="text-white text-base font-semibold mb-1">{plan.name}</h3>
-                      <p className="text-white/40 text-xs leading-relaxed mb-4 min-h-[32px]">{plan.description}</p>
-
-                      <div className="mb-1">
-                        <span className="text-white text-2xl font-bold">{plan.price}</span>
-                        {plan.period && <span className="text-white/40 text-xs ml-1">{plan.period}</span>}
-                      </div>
-                      <p className="text-white/25 text-[11px] mb-4">{plan.subtitle}</p>
-
-                      <button
-                        onClick={() => {
-                          if (plan.key === 'enterprise') {
-                            window.open('mailto:contato@ellocontent.com?subject=Plano Enterprise', '_blank');
-                          } else if (!isCurrent) {
-                            navigate(`/checkout?plano=${plan.key}`);
-                          }
-                        }}
-                        disabled={isCurrent}
-                        className={`w-full py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer mb-4 ${
-                          isCurrent
-                            ? 'bg-white/[0.06] text-white/30 cursor-default'
-                            : plan.badge || plan.key === currentPlanKey
-                            ? 'bg-purple-600 text-white hover:bg-purple-500'
-                            : 'border border-white/[0.12] text-white/70 hover:bg-white/[0.06]'
-                        }`}
-                      >
-                        {isCurrent ? 'Plano atual' : plan.key === 'enterprise' ? 'Falar com vendas' : 'Assinar'}
-                      </button>
-
-                      <p className="text-white/40 text-[11px] font-medium mb-2">{plan.includedLabel}</p>
-                      <ul className="space-y-1.5 flex-1">
-                        {plan.features.map(feat => (
-                          <li key={feat} className="flex items-start gap-1.5 text-white/50 text-[11px] leading-relaxed">
-                            <Check className="w-3 h-3 text-purple-400 mt-0.5 shrink-0" />
-                            {feat}
-                          </li>
-                        ))}
-                      </ul>
-                    </motion.div>
+                    />
                   );
                 })}
               </div>
@@ -570,6 +727,7 @@ function LoggedInPricing() {
 // ---- Public Pricing ----
 function PublicPricing() {
   const navigate = useNavigate();
+  const [isAnnual, setIsAnnual] = useState(true);
 
   return (
     <div className="fixed inset-0 overflow-y-auto z-50" style={{ backgroundColor: '#0a0a0f' }}>
@@ -595,55 +753,26 @@ function PublicPricing() {
         </div>
       </nav>
 
-      <motion.div className="text-center pt-12 pb-16 px-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">Preços</h1>
-        <p className="text-white/40 text-sm md:text-base max-w-md mx-auto">Escolha o plano ideal para escalar sua produção de conteúdo.</p>
+      <motion.div className="text-center pt-12 pb-8 px-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">Planos e Preços</h1>
+        <p className="text-white/40 text-sm md:text-base max-w-md mx-auto mb-8">Rápido, fácil e profissional. Sem precisar de designer, sem perder tempo.</p>
       </motion.div>
 
+      <div className="max-w-6xl mx-auto px-4">
+        <BillingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
+      </div>
+
       <div className="max-w-6xl mx-auto px-4 pb-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {plans.map((plan, i) => (
-          <motion.div
-            key={plan.name}
-            className="relative rounded-2xl p-6 flex flex-col"
-            style={{
-              backgroundColor: 'rgba(20, 20, 28, 0.8)',
-              border: plan.badge ? '1px solid rgba(123, 80, 220, 0.4)' : '1px solid rgba(255,255,255,0.07)',
+        {plans.map((plan) => (
+          <PlanCard
+            key={plan.key}
+            plan={plan}
+            isAnnual={isAnnual}
+            onSelect={() => {
+              if (plan.isEnterprise) window.open('mailto:contato@ellocontent.com?subject=Plano Enterprise', '_blank');
+              else navigate('/auth');
             }}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 * i, duration: 0.5 }}
-          >
-            {plan.badge && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold text-white bg-[#7B50DC]">{plan.badge}</div>
-            )}
-            <h3 className="text-white text-lg font-semibold mb-1">{plan.name}</h3>
-            <p className="text-white/40 text-xs leading-relaxed mb-5 min-h-[36px]">{plan.description}</p>
-            <div className="mb-1">
-              <span className="text-white text-3xl font-bold">{plan.price}</span>
-              {plan.period && <span className="text-white/40 text-sm ml-1.5">{plan.period}</span>}
-            </div>
-            <p className="text-white/30 text-xs mb-6">{plan.subtitle}</p>
-            <button
-              onClick={() => {
-                if (plan.key === 'enterprise') window.open('mailto:contato@ellocontent.com?subject=Plano Enterprise', '_blank');
-                else navigate('/auth');
-              }}
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer mb-6 ${
-                plan.badge ? 'bg-[#7B50DC] text-white hover:bg-[#6a42c4]' : 'border border-white/20 text-white hover:bg-white/10'
-              }`}
-            >
-              {plan.key === 'enterprise' ? 'Falar com vendas' : 'Começar agora'}
-            </button>
-            <p className="text-white/50 text-xs font-medium mb-3">{plan.includedLabel}</p>
-            <ul className="space-y-2.5 flex-1">
-              {plan.features.map(feat => (
-                <li key={feat} className="flex items-start gap-2 text-white/60 text-xs leading-relaxed">
-                  <Check className="w-3.5 h-3.5 text-[#7B50DC] mt-0.5 flex-shrink-0" />
-                  {feat}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
+          />
         ))}
       </div>
     </div>

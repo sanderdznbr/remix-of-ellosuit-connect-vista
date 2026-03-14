@@ -190,24 +190,47 @@ function AdminContent() {
     else if (tab === 'payments') loadPayments();
   }, [tab, loadUsers, loadSubscriptions, loadPayments]);
 
-  // Search action users
+  // Search action users (by email via edge function, or by name/username locally)
   const searchUsers = async () => {
     if (!actionSearch.trim()) return;
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, display_name, username')
-        .or(`display_name.ilike.%${actionSearch}%,username.ilike.%${actionSearch}%`)
-        .limit(10);
+      const isEmailSearch = actionSearch.includes('@');
       
-      if (data && data.length > 0) {
-        const userIds = data.map((u: any) => u.id);
-        const { data: companyUsers } = await supabase.from('company_users').select('user_id, company_id').in('user_id', userIds);
-        const cuMap = new Map((companyUsers || []).map((cu: any) => [cu.user_id, cu.company_id]));
-        setActionResults(data.map((u: any) => ({ ...u, company_id: cuMap.get(u.id) || null })));
+      if (isEmailSearch) {
+        // Search by email via edge function (emails are in auth.users)
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL || 'https://jwddiyuezqrpuakazvgg.supabase.co'}/functions/v1/admin-impersonate?action=search-users&q=${encodeURIComponent(actionSearch)}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3ZGRpeXVlenFycHVha2F6dmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNDIzNTgsImV4cCI6MjA2NjkxODM1OH0.CrUu3HGCfWh6cPfGsbDXGQNG5AWOsi9X2GGix1-7izg',
+            },
+          }
+        );
+        const results = await resp.json();
+        if (Array.isArray(results) && results.length > 0) {
+          setActionResults(results);
+        } else {
+          setActionResults([]);
+          toast.error('Nenhum usuário encontrado com esse email');
+        }
       } else {
-        setActionResults([]);
-        toast.error('Nenhum usuário encontrado');
+        // Search by name/username in profiles
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, display_name, username')
+          .or(`display_name.ilike.%${actionSearch}%,username.ilike.%${actionSearch}%`)
+          .limit(10);
+        
+        if (data && data.length > 0) {
+          const userIds = data.map((u: any) => u.id);
+          const { data: companyUsers } = await supabase.from('company_users').select('user_id, company_id').in('user_id', userIds);
+          const cuMap = new Map((companyUsers || []).map((cu: any) => [cu.user_id, cu.company_id]));
+          setActionResults(data.map((u: any) => ({ ...u, company_id: cuMap.get(u.id) || null })));
+        } else {
+          setActionResults([]);
+          toast.error('Nenhum usuário encontrado');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -537,7 +560,7 @@ function AdminContent() {
                     value={actionSearch}
                     onChange={e => setActionSearch(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && searchUsers()}
-                    placeholder="Nome ou username..."
+                    placeholder="Email, nome ou username..."
                     className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm text-white placeholder-white/20 outline-none"
                     style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                   />
@@ -560,9 +583,9 @@ function AdminContent() {
                       <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-[10px] font-bold">
                         {(u.display_name || u.username || '?')[0]?.toUpperCase()}
                       </div>
-                      <div className="text-left">
-                        <p className="text-sm">{u.display_name || '—'}</p>
-                        <p className="text-[11px] text-white/30">@{u.username}</p>
+                       <div className="text-left min-w-0">
+                        <p className="text-sm truncate">{u.display_name || '—'}</p>
+                        <p className="text-[11px] text-white/30 truncate">{u.email || `@${u.username}`}</p>
                       </div>
                     </button>
                   ))}

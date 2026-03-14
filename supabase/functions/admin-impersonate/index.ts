@@ -319,6 +319,48 @@ Deno.serve(async (req) => {
       })
     }
 
+    // ── SEARCH USERS BY EMAIL ──
+    if (action === 'search-users') {
+      const searchTerm = url.searchParams.get('q') || ''
+      if (!searchTerm || searchTerm.length < 3) {
+        return new Response(JSON.stringify({ error: 'Search term too short' }), { status: 400, headers: corsHeaders })
+      }
+
+      // Search in auth.users by email
+      const { data: authUsers, error: listError } = await serviceClient.auth.admin.listUsers({ perPage: 1000 })
+      if (listError) {
+        return new Response(JSON.stringify({ error: listError.message }), { status: 500, headers: corsHeaders })
+      }
+
+      const matches = (authUsers?.users || []).filter(u => 
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      ).slice(0, 10)
+
+      // Get company_ids and profiles for matches
+      const matchIds = matches.map(u => u.id)
+      const [{ data: companyUsers }, { data: profiles }] = await Promise.all([
+        serviceClient.from('company_users').select('user_id, company_id').in('user_id', matchIds),
+        serviceClient.from('profiles').select('id, display_name, username').in('id', matchIds),
+      ])
+
+      const cuMap: Record<string, string> = {}
+      ;(companyUsers || []).forEach((cu: any) => { cuMap[cu.user_id] = cu.company_id })
+      const profileMap: Record<string, any> = {}
+      ;(profiles || []).forEach((p: any) => { profileMap[p.id] = p })
+
+      const results = matches.map(u => ({
+        id: u.id,
+        email: u.email,
+        display_name: profileMap[u.id]?.display_name || null,
+        username: profileMap[u.id]?.username || null,
+        company_id: cuMap[u.id] || null,
+      }))
+
+      return new Response(JSON.stringify(results), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: corsHeaders })
 
   } catch (error) {

@@ -7120,6 +7120,77 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         })()}
       </AnimatePresence>
 
+      {/* ===== CAPTION CONFIG DIALOG ===== */}
+      <AnimatePresence>
+        {showCaptionConfigDialog && (
+          <motion.div
+            key="caption-config"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center"
+            onClick={() => setShowCaptionConfigDialog(false)}>
+            <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-[90%] max-w-sm rounded-2xl p-5 space-y-4"
+              style={{ backgroundColor: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" style={{ color: themeHex }} /> Configurar Legenda
+                </h3>
+                <button onClick={() => setShowCaptionConfigDialog(false)} className="text-white/50 hover:text-white/80 transition-colors cursor-pointer">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-white/50 block mb-1.5">Limite de caracteres (opcional)</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {['500', '1000', '1500', '2200'].map(v => (
+                      <button key={v} onClick={() => setCaptionMaxChars(captionMaxChars === v ? '' : v)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${captionMaxChars === v ? 'text-white' : 'text-white/40 hover:text-white/60'}`}
+                        style={{ backgroundColor: captionMaxChars === v ? `rgba(${themeRgb},0.2)` : 'rgba(255,255,255,0.04)', border: `1px solid ${captionMaxChars === v ? `rgba(${themeRgb},0.4)` : 'rgba(255,255,255,0.06)'}` }}>
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-white/50 block mb-1.5">Mencionar algo específico? (opcional)</label>
+                  <textarea
+                    value={captionMentions}
+                    onChange={(e) => setCaptionMentions(e.target.value)}
+                    placeholder="Ex: mencionar promoção de lançamento, @parceiro, link na bio..."
+                    rows={3}
+                    className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { setShowCaptionConfigDialog(false); generateCaption(captionMaxChars, captionMentions); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all cursor-pointer"
+                  style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHex}cc)` }}>
+                  <Sparkles className="h-3.5 w-3.5" /> Gerar Legenda
+                </button>
+                <button
+                  onClick={() => setShowCaptionConfigDialog(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-medium text-white/60 hover:text-white/80 transition-all cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {addCardModal.open && (
           <motion.div

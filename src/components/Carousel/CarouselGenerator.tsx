@@ -8014,6 +8014,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           }}
         />
       )}
+      
+      {/* Regenerate Photo Dialog */}
+      <RegeneratePhotoDialog
+        open={regenDialogCard !== null}
+        onClose={() => setRegenDialogCard(null)}
+        cardIndex={regenDialogCard ?? 0}
+        loading={regeneratingCard !== null}
+        onConfirm={(instruction, imageUrl) => {
+          const idx = regenDialogCard;
+          setRegenDialogCard(null);
+          if (idx !== null) {
+            regenerateCard(idx, false, false, instruction || undefined, imageUrl);
+          }
+        }}
+      />
     </div>
   );
 };

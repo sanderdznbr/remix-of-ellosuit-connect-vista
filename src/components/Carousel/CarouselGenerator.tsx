@@ -769,6 +769,13 @@ const CarouselGenerator: React.FC = () => {
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
             generation_config: buildGenerationConfig(),
           } as any).eq('id', currentCarouselIdRef.current);
+          // Retry cover capture if missing
+          try {
+            const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselIdRef.current).single();
+            if (!existing?.cover_url) {
+              captureCoverImage(currentCarouselIdRef.current, companyData.company_id, carouselData).catch(() => {});
+            }
+          } catch { /* ignore */ }
         } else {
           const { data: inserted } = await supabase.from('generated_carousels').insert({ 
             company_id: companyData.company_id, user_id: userData.user.id, 

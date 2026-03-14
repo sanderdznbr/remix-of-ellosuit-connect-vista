@@ -13,9 +13,11 @@ interface Props {
   guestMode?: boolean;
   continuousMode?: boolean;
   setContinuousMode?: (v: boolean) => void;
+  maxSlides?: number;
+  allowContinuousMode?: boolean;
 }
 
-const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode, continuousMode, setContinuousMode }) => {
+const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode, continuousMode, setContinuousMode, maxSlides = 10, allowContinuousMode = true }) => {
   const showFaceSelector = wizardMode === 'advanced' && hasFacePhotos && contentMode === 'carousel' && cardCount >= 2;
   const effectiveFaceCount = faceCardCount != null ? faceCardCount : cardCount;
 
@@ -23,7 +25,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Qual formato você quer?</h2>
-        <p className="text-sm text-white/40">Post único ou carrossel com até 10 slides.</p>
+        <p className="text-sm text-white/40">Post único ou carrossel com até {maxSlides} slides.</p>
       </div>
 
       {/* Single post option */}
@@ -69,7 +71,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
             <div>
               <p className={`text-sm font-semibold ${contentMode === 'carousel' && !guestMode ? 'text-purple-300' : 'text-white/60'}`}>Carrossel</p>
               <p className="text-xs text-white/30 mt-0.5">
-                {guestMode ? 'Recurso PRO' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : '2–10 slides'}
+                {guestMode ? 'Recurso PRO' : contentMode === 'carousel' && cardCount >= 2 ? `${cardCount} slides` : `2–${maxSlides} slides`}
               </p>
             </div>
             {guestMode && (
@@ -91,7 +93,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
                   <input
                     type="range"
                     min={2}
-                    max={10}
+                    max={maxSlides}
                     value={cardCount}
                     onChange={(e) => {
                       const v = Number(e.target.value);
@@ -102,19 +104,18 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
                     }}
                     className="w-full h-2 rounded-full appearance-none cursor-pointer"
                     style={{
-                      background: `linear-gradient(to right, #7B50DC 0%, #9B6BFF ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) ${((cardCount - 2) / 8) * 100}%, rgba(255,255,255,0.08) 100%)`,
+                      background: `linear-gradient(to right, #7B50DC 0%, #9B6BFF ${((cardCount - 2) / (maxSlides - 2)) * 100}%, rgba(255,255,255,0.08) ${((cardCount - 2) / (maxSlides - 2)) * 100}%, rgba(255,255,255,0.08) 100%)`,
                     }}
                   />
                   <div className="flex justify-between mt-2 text-[10px] text-white/20 font-medium">
-                    <span>2</span>
-                    <span>4</span>
-                    <span>6</span>
-                    <span>8</span>
-                    <span>10</span>
+                    {Array.from({ length: Math.min(5, maxSlides - 1) }, (_, i) => {
+                      const v = Math.round(2 + (i * (maxSlides - 2)) / Math.min(4, maxSlides - 2));
+                      return <span key={i}>{v}</span>;
+                    })}
                   </div>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  {[2, 3, 5, 7, 10].map(n => (
+                  {[2, 3, 5, 7, maxSlides].filter((n, i, arr) => arr.indexOf(n) === i && n <= maxSlides).map(n => (
                     <button key={n} onClick={() => {
                       setCardCount(n);
                       if (setFaceCardCount && faceCardCount != null && faceCardCount > n) {
@@ -136,7 +137,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
         )}
 
         {/* Continuous mode toggle (advanced only, carousel only) */}
-        {wizardMode === 'advanced' && contentMode === 'carousel' && cardCount >= 2 && setContinuousMode && (
+        {wizardMode === 'advanced' && contentMode === 'carousel' && cardCount >= 2 && setContinuousMode && allowContinuousMode && (
           <button
             onClick={() => {
               const newVal = !continuousMode;

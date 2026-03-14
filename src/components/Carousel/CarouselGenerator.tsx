@@ -88,6 +88,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const CARD_W = 1080;
 const CARD_H = 1350;
@@ -159,6 +160,7 @@ const CarouselGenerator: React.FC = () => {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
+  const planLimits = usePlanLimits();
   const isCardLocked = (index: number) => isGuest && index > 0 && !!carouselData;
   const [showLoginGate, setShowLoginGate] = useState(false);
   const [showGuestPaywall, setShowGuestPaywall] = useState(false);
@@ -4898,7 +4900,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                     >
                     {currentStepName === 'Modo' && (
-                      <StepMode wizardMode={wizardMode} setWizardMode={setWizardMode} />
+                      <StepMode 
+                        wizardMode={wizardMode} 
+                        setWizardMode={setWizardMode}
+                        allowAdvanced={planLimits.allowAdvanced}
+                        allowExtreme={planLimits.allowExtreme}
+                        requiredPlanForAdvanced="Pro"
+                        requiredPlanForExtreme="Growth"
+                      />
                     )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
@@ -5093,6 +5102,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         guestMode={isGuest}
                         continuousMode={continuousMode}
                         setContinuousMode={setContinuousMode}
+                        maxSlides={planLimits.maxSlidesPerCarousel}
+                        allowContinuousMode={planLimits.allowContinuousMode}
                       />
                     )}
                     {currentStepName === 'Fotos' && (
@@ -6383,7 +6394,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <h3 className="text-sm font-semibold text-white text-center mb-1">
                       {contentMode === 'single-post' ? 'Exportar Post' : 'Exportar Carrossel'}
                     </h3>
-                    {contentMode !== 'single-post' && (
+                    {contentMode !== 'single-post' && planLimits.allowedExportFormats.includes('zip') && (
                       <button onClick={() => exportAllCards('png', true)}
                         className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
                         <FileText className="h-4 w-4" style={{ color: themeHex }} /> Baixar ZIP
@@ -6397,10 +6408,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
                       <ImageIcon className="h-4 w-4" /> Baixar JPG
                     </button>
-                    <button onClick={() => exportAllCards('webp')}
-                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
-                      <ImageIcon className="h-4 w-4" /> Baixar WEBP
-                    </button>
+                    {planLimits.allowedExportFormats.includes('webp') && (
+                      <button onClick={() => exportAllCards('webp')}
+                        className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
+                        <ImageIcon className="h-4 w-4" /> Baixar WEBP
+                      </button>
+                    )}
                     <div className="h-px bg-white/10 my-1" />
                     <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"

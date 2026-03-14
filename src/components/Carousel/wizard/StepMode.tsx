@@ -1,9 +1,14 @@
 import React from 'react';
-import { Zap, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Zap, SlidersHorizontal, Sparkles, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
   wizardMode: 'simple' | 'advanced' | 'extreme';
   setWizardMode: (v: 'simple' | 'advanced' | 'extreme') => void;
+  allowAdvanced?: boolean;
+  allowExtreme?: boolean;
+  requiredPlanForAdvanced?: string;
+  requiredPlanForExtreme?: string;
 }
 
 const modes = [
@@ -13,6 +18,7 @@ const modes = [
     label: 'Simples',
     steps: '6 etapas · Rápido e direto',
     desc: 'Ideal para quem quer resultados rápidos',
+    requiredPlan: null,
   },
   {
     key: 'advanced' as const,
@@ -20,6 +26,7 @@ const modes = [
     label: 'Avançado',
     steps: '12 etapas · Controle total',
     desc: 'Cores, fontes, roteiro, produto e mais',
+    requiredPlan: 'Pro',
   },
   {
     key: 'extreme' as const,
@@ -28,10 +35,32 @@ const modes = [
     steps: 'IA guiada · Criação única',
     desc: 'Descreva sua visão e a IA monta tudo para você',
     badge: 'NOVO',
+    requiredPlan: 'Growth',
   },
 ] as const;
 
-const StepMode: React.FC<Props> = ({ wizardMode, setWizardMode }) => {
+const StepMode: React.FC<Props> = ({ 
+  wizardMode, 
+  setWizardMode, 
+  allowAdvanced = true, 
+  allowExtreme = true,
+  requiredPlanForAdvanced = 'Pro',
+  requiredPlanForExtreme = 'Growth',
+}) => {
+  const navigate = useNavigate();
+
+  const isLocked = (key: string) => {
+    if (key === 'advanced') return !allowAdvanced;
+    if (key === 'extreme') return !allowExtreme;
+    return false;
+  };
+
+  const getRequiredPlan = (key: string) => {
+    if (key === 'advanced') return requiredPlanForAdvanced;
+    if (key === 'extreme') return requiredPlanForExtreme;
+    return '';
+  };
+
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
@@ -44,12 +73,21 @@ const StepMode: React.FC<Props> = ({ wizardMode, setWizardMode }) => {
           const Icon = m.icon;
           const selected = wizardMode === m.key;
           const isExtreme = m.key === 'extreme';
+          const locked = isLocked(m.key);
           return (
             <button
               key={m.key}
-              onClick={() => setWizardMode(m.key)}
+              onClick={() => {
+                if (locked) {
+                  navigate('/precos');
+                  return;
+                }
+                setWizardMode(m.key);
+              }}
               className={`flex items-center gap-4 p-5 rounded-2xl text-left transition-all border relative ${
-                selected
+                locked
+                  ? 'bg-white/[0.01] border-white/[0.04] opacity-60 cursor-pointer'
+                  : selected
                   ? isExtreme
                     ? 'bg-orange-500/[0.08] border-orange-500/40'
                     : 'bg-purple-500/[0.08] border-purple-500/40'
@@ -57,27 +95,40 @@ const StepMode: React.FC<Props> = ({ wizardMode, setWizardMode }) => {
               }`}
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                selected
+                locked
+                  ? 'bg-white/[0.03]'
+                  : selected
                   ? isExtreme ? 'bg-orange-500/20' : 'bg-purple-500/20'
                   : 'bg-white/[0.04]'
               }`}>
-                <Icon className={`h-6 w-6 ${
-                  selected
-                    ? isExtreme ? 'text-orange-400' : 'text-purple-400'
-                    : 'text-white/30'
-                }`} />
+                {locked ? (
+                  <Lock className="h-5 w-5 text-white/20" />
+                ) : (
+                  <Icon className={`h-6 w-6 ${
+                    selected
+                      ? isExtreme ? 'text-orange-400' : 'text-purple-400'
+                      : 'text-white/30'
+                  }`} />
+                )}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-white/90">{m.label}</span>
-                  {'badge' in m && m.badge && (
+                  {'badge' in m && m.badge && !locked && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-orange-500/20 text-orange-400 tracking-wider">
                       {m.badge}
                     </span>
                   )}
+                  {locked && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-yellow-500/15 text-yellow-400 tracking-wider">
+                      {getRequiredPlan(m.key)}+
+                    </span>
+                  )}
                 </div>
                 <span className="text-xs text-white/40 block mt-0.5">{m.steps}</span>
-                <span className="text-[10px] text-white/25 block mt-0.5">{m.desc}</span>
+                <span className="text-[10px] text-white/25 block mt-0.5">
+                  {locked ? `Disponível a partir do plano ${getRequiredPlan(m.key)}` : m.desc}
+                </span>
               </div>
             </button>
           );

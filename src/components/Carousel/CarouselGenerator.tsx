@@ -1259,6 +1259,7 @@ const CarouselGenerator: React.FC = () => {
         if (styleData?.style_config) {
           const config = styleData.style_config as any;
           config.id = styleData.id;
+          config.name = styleData.name;
           config._previewImages = styleData.preview_images;
           config._strictInstructions = (styleData as any).strict_instructions || null;
           setActiveMarketplaceStyle(config);
@@ -5682,12 +5683,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Header bar */}
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
-              <button
-                onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
-                className="p-2 rounded-xl hover:bg-white/10 transition-colors"
-              >
-                <Home className="w-5 h-5 text-white/60" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
+                  className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  <Home className="w-5 h-5 text-white/60" />
+                </button>
+                <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: themeHex, backgroundColor: `rgba(${themeRgb},0.12)`, border: `1px solid rgba(${themeRgb},0.25)` }}>
+                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : 'Modo Simples'}
+                  {activeMarketplaceStyle?.name && (
+                    <>, tema {activeMarketplaceStyle.name}</>
+                  )}
+                </span>
+              </div>
               <button
                 onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { exportAllCards('png'); } }}
                 disabled={exporting}

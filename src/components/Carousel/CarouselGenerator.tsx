@@ -2777,6 +2777,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       setGeneratingAllImages(false);
       setImageGenProgress('');
       setCloudJobId(null);
+      generationInFlightRef.current = false;
     }
   };
 

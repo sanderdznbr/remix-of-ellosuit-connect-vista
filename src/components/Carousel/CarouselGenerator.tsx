@@ -1192,7 +1192,7 @@ const CarouselGenerator: React.FC = () => {
       if (!userData.user) return;
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) return;
-      const { data } = await supabase.from('generated_carousels').select('id, title, topic, keywords, created_at, card_count, style_config, cover_url, marketplace_style_id').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(50);
+      const { data } = await supabase.from('generated_carousels').select('id, title, topic, keywords, created_at, card_count, style_config, cover_url, marketplace_style_id, generation_config').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(50);
       setCarouselHistory(data || []);
     } catch (err) { console.error(err); }
     finally { setLoadingHistory(false); }
@@ -4808,7 +4808,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                   const { data, error } = await supabase
                     .from('generated_carousels')
-                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config')
+                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config, generation_config')
                     .eq('id', item.id)
                     .maybeSingle();
 

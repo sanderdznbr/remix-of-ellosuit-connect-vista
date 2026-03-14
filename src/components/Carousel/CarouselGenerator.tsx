@@ -7256,8 +7256,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           onClick={() => setAddCardModal(prev => ({ ...prev, textSize: opt.value }))}
                           className="flex flex-col items-center py-2.5 px-2 rounded-xl border transition-all"
                           style={{
-                            borderColor: addCardModal.textSize === opt.value ? (wizardMode === 'extreme' ? 'rgba(232,77,26,0.5)' : 'rgba(139,92,246,0.5)') : 'rgba(255,255,255,0.08)',
-                            backgroundColor: addCardModal.textSize === opt.value ? (wizardMode === 'extreme' ? 'rgba(232,77,26,0.12)' : 'rgba(139,92,246,0.12)') : 'rgba(255,255,255,0.02)',
+                            borderColor: addCardModal.textSize === opt.value ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.08)',
+                            backgroundColor: addCardModal.textSize === opt.value ? `rgba(${modeTheme.rgb},0.12)` : 'rgba(255,255,255,0.02)',
                           }}
                         >
                           <span className="text-[13px] font-medium text-white/80">{opt.label}</span>

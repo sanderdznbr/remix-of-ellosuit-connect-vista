@@ -62,6 +62,7 @@ const App = () => (
               <Route path="/post/:postId" element={<PostPublic />} />
               <Route path="/presentear" element={<Presentear />} />
               <Route path="/parceiros" element={<Parceiros />} />
+              <Route path="/area/parceiros" element={<AreaParceiros />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/comunidade" element={<Comunidade />} />
               <Route path="*" element={<NotFound />} />

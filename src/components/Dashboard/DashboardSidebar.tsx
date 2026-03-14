@@ -283,9 +283,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       <div className="px-2 mt-5">
         <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Parceiros</p>
         <button
-          onClick={() => { navigate('/parceiros'); closeSearch(); }}
+          onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            location.pathname === '/parceiros'
+            location.pathname === '/area/parceiros'
               ? 'bg-white/[0.08] text-white font-medium'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}

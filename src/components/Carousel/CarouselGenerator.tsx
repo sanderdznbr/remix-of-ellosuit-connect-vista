@@ -1841,6 +1841,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       }
     }
 
+    if (generationInFlightRef.current) {
+      console.log('[GENERATE_GUARD] Duplicate carousel trigger ignored');
+      return;
+    }
+    generationInFlightRef.current = true;
+
     setGenerating(true);
     setCarouselData(null);
     setCurrentCarouselId(null);

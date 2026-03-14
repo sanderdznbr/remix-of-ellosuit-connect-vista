@@ -4900,7 +4900,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       transition={{ duration: 0.3, ease: 'easeOut' }}
                     >
                     {currentStepName === 'Modo' && (
-                      <StepMode wizardMode={wizardMode} setWizardMode={setWizardMode} />
+                      <StepMode 
+                        wizardMode={wizardMode} 
+                        setWizardMode={setWizardMode}
+                        allowAdvanced={planLimits.allowAdvanced}
+                        allowExtreme={planLimits.allowExtreme}
+                        requiredPlanForAdvanced="Pro"
+                        requiredPlanForExtreme="Growth"
+                      />
                     )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision

@@ -1048,9 +1048,14 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== GENERATE CAPTION =====
-  const generateCaption = async () => {
+  const openCaptionConfigDialog = () => {
+    setShowCaptionConfigDialog(true);
+  };
+
+  const generateCaption = async (maxChars?: string, mentions?: string) => {
     if (generatingCaption) return;
     setGeneratingCaption(true);
+    setShowCaptionPanel(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
@@ -1058,6 +1063,8 @@ const CarouselGenerator: React.FC = () => {
           topic: topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: carouselData?.cards?.length || 7,
+          ...(maxChars ? { maxChars: parseInt(maxChars) } : {}),
+          ...(mentions ? { mentions: mentions.trim() } : {}),
         },
       });
       if (!error && data?.caption) {

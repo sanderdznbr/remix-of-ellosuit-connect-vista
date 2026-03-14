@@ -160,6 +160,7 @@ const CarouselGenerator: React.FC = () => {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
+  const planLimits = usePlanLimits();
   const isCardLocked = (index: number) => isGuest && index > 0 && !!carouselData;
   const [showLoginGate, setShowLoginGate] = useState(false);
   const [showGuestPaywall, setShowGuestPaywall] = useState(false);

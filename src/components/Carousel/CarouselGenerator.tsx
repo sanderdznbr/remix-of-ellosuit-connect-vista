@@ -6975,7 +6975,106 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         })()}
       </AnimatePresence>
 
-      {/* ===== ADD CARD TEXT MODE MODAL ===== */}
+      {/* ===== FULL GENERATION CONFIG MODAL ===== */}
+      <AnimatePresence>
+        {showFullConfigModal && (() => {
+          const config = buildGenerationConfig();
+          const modeLabels: Record<string, string> = { simple: 'Simples', advanced: 'Avançado', extreme: 'Extreme' };
+          const configItems = [
+            { label: 'Tema/Tópico', value: config.topic || '—' },
+            { label: 'Palavras-chave', value: config.keywords || '—' },
+            { label: 'Modo', value: modeLabels[config.wizardMode] || config.wizardMode },
+            { label: 'Tipo de conteúdo', value: config.contentMode === 'single-post' ? 'Post único' : 'Carrossel' },
+            { label: 'Quantidade de cards', value: String(config.cardCount) },
+            { label: 'Cards com imagem', value: String(config.imageCardCount) },
+            { label: 'Estilo', value: config.marketplaceStyleName || 'Padrão' },
+            { label: 'Modelo de IA', value: config.imageSettings?.model || 'auto' },
+            { label: 'Fidelidade', value: config.imageSettings?.fidelity || 'balanced' },
+            { label: 'Tipo de imagem', value: config.imageSettings?.imageType || 'photo' },
+            { label: 'Cor de fundo', value: config.bgColor },
+            { label: 'Cor de destaque', value: config.accentColor },
+            { label: 'Cor do texto', value: config.textColor },
+            { label: 'Marca', value: config.brandName || '—' },
+            { label: 'Usuário', value: config.userName || '—' },
+            { label: 'Referências de rosto', value: config.facePersons?.filter((p: any) => p.photos?.length > 0).length ? `${config.facePersons.filter((p: any) => p.photos?.length > 0).length} pessoa(s)` : 'Nenhum' },
+            { label: 'Referências de imagem', value: config.referenceImages?.length ? `${config.referenceImages.length} imagem(ns)` : 'Nenhum' },
+            { label: 'Logo', value: config.logoUrl ? 'Sim' : 'Não' },
+            { label: 'Cabeçalho', value: config.showHeader ? 'Visível' : 'Oculto' },
+          ];
+          if (config.wizardMode === 'extreme' && config.extremeVision) {
+            configItems.splice(3, 0, { label: 'Visão Extreme', value: config.extremeVision });
+          }
+          if (config.manualPostText) {
+            configItems.splice(2, 0, { label: 'Texto manual', value: config.manualPostText });
+          }
+          const fullText = configItems.map(i => `${i.label}: ${i.value}`).join('\n');
+          return (
+            <motion.div
+              key="full-config-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[200] flex items-center justify-center"
+              onClick={() => setShowFullConfigModal(false)}>
+              <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="relative rounded-2xl overflow-hidden shadow-2xl w-[560px] max-w-[95vw] max-h-[85vh] flex flex-col"
+                style={{ backgroundColor: '#1a1a2e' }}
+                onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-yellow-400" />
+                    Configurações da geração
+                  </h3>
+                  <button onClick={() => setShowFullConfigModal(false)} className="text-white/50 hover:text-white/80 transition-colors cursor-pointer">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-5 py-4">
+                  <div className="space-y-2">
+                    {configItems.map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 py-1.5" style={{ borderBottom: i < configItems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                        <span className="text-[11px] font-medium text-white/40 w-[140px] shrink-0 pt-0.5">{item.label}</span>
+                        <span className="text-[12px] text-white/80 break-all flex-1">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-5 py-3 flex justify-between gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(fullText); sonnerToast.success('Configurações copiadas!'); }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+                    <Copy className="h-3.5 w-3.5" /> Copiar
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowFullConfigModal(false);
+                        setShowStylePanel(true);
+                        setStyleChangeSource('toolbar');
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                      style={{ backgroundColor: 'rgba(34,197,94,0.15)', color: '#86efac' }}>
+                      <RotateCcw className="h-3.5 w-3.5" /> Criar novo (mesmo prompt)
+                    </button>
+                    <button
+                      onClick={() => setShowFullConfigModal(false)}
+                      className="px-4 py-2 rounded-lg text-xs font-medium text-white/90 transition-colors cursor-pointer" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
       <AnimatePresence>
         {addCardModal.open && (
           <motion.div

@@ -287,7 +287,7 @@ const BrandGallery: React.FC = () => {
       return;
     }
     try {
-      await supabase.from('brand_asset_folders').update({ parent_folder_id: targetFolderId } as any).eq('id', sourceFolderId);
+      await supabase.from('brand_asset_folders').update({ parent_folder_id: targetFolderId } as Record<string, any>).eq('id', sourceFolderId);
       fetchData();
       const source = folders.find(f => f.id === sourceFolderId);
       const target = folders.find(f => f.id === targetFolderId);

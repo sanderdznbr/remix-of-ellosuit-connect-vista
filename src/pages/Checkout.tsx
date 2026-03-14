@@ -338,7 +338,7 @@ function CheckoutContent() {
     return <Navigate to="/auth" replace />;
   }
 
-  const basePrice = mode === 'plan' ? plan.price : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
+  const basePrice = mode === 'plan' ? planPrice : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
   const discount = appliedCoupon
     ? appliedCoupon.discount_percent > 0
       ? basePrice * (appliedCoupon.discount_percent / 100)

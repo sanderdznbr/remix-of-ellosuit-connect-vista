@@ -33,6 +33,10 @@ function AdminContent() {
   const [users, setUsers] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [inlineCredits, setInlineCredits] = useState('');
+  const [addingCredits, setAddingCredits] = useState(false);
 
   // Subscriptions
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -301,6 +305,85 @@ function AdminContent() {
     }
   };
 
+  // Change user plan inline
+  const changeUserPlan = async (targetUser: any, newPlan: string) => {
+    if (!targetUser?.company_id) { toast.error('Usuário sem empresa vinculada'); return; }
+    setChangingPlan(true);
+    try {
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + 1);
+
+      if (newPlan === 'free') {
+        // Cancel subscription
+        await supabase.from('ellocontent_subscriptions')
+          .update({ status: 'canceled' } as any)
+          .eq('user_id', targetUser.id);
+        await supabase.from('subscriptions')
+          .update({ plan_type: 'free' as any, status: 'free' as any, monthly_price: 0 } as any)
+          .eq('company_id', targetUser.company_id);
+      } else {
+        const creditMap: Record<string, number> = { starter: 50, pro: 120, growth: 240 };
+        const priceMap: Record<string, number> = { starter: 1.5, pro: 1.2, growth: 0.9 };
+        
+        await supabase.from('ellocontent_subscriptions').upsert({
+          user_id: targetUser.id,
+          company_id: targetUser.company_id,
+          plan_name: newPlan,
+          status: 'active',
+          monthly_price: 0,
+          monthly_credits: creditMap[newPlan] || 50,
+          extra_credit_price: priceMap[newPlan] || 1.5,
+          current_period_start: now.toISOString(),
+          current_period_end: endDate.toISOString(),
+          payment_method: 'manual_admin',
+        } as any, { onConflict: 'user_id' });
+
+        await supabase.from('subscriptions').upsert({
+          company_id: targetUser.company_id,
+          plan_type: newPlan as any,
+          status: 'active' as any,
+          monthly_price: 0,
+          current_period_start: now.toISOString(),
+          current_period_end: endDate.toISOString(),
+        } as any, { onConflict: 'company_id' });
+      }
+
+      toast.success(`Plano alterado para ${newPlan.toUpperCase()}!`);
+      // Update local state
+      setUsers(prev => prev.map(u => u.id === targetUser.id ? { ...u, plan: newPlan, sub_status: newPlan === 'free' ? 'free' : 'active' } : u));
+      setSelectedUser((prev: any) => prev ? { ...prev, plan: newPlan, sub_status: newPlan === 'free' ? 'free' : 'active' } : null);
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
+  // Give credits inline from user panel
+  const giveInlineCredits = async () => {
+    if (!selectedUser?.company_id) { toast.error('Usuário sem empresa vinculada'); return; }
+    const amount = parseInt(inlineCredits);
+    if (!amount || amount <= 0) { toast.error('Informe um valor válido'); return; }
+    setAddingCredits(true);
+    try {
+      const { error } = await supabase.rpc('add_ai_credits', {
+        p_company_id: selectedUser.company_id,
+        p_amount: amount,
+        p_description: 'Créditos adicionados pelo admin',
+      });
+      if (error) throw error;
+      toast.success(`${amount} créditos adicionados!`);
+      setInlineCredits('');
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, credits: u.credits + amount } : u));
+      setSelectedUser((prev: any) => prev ? { ...prev, credits: prev.credits + amount } : null);
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
+    } finally {
+      setAddingCredits(false);
+    }
+  };
+
   const filteredUsers = userSearch
     ? users.filter(u => 
         (u.display_name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -421,7 +504,7 @@ function AdminContent() {
                     </thead>
                     <tbody>
                       {filteredUsers.map(u => (
-                        <tr key={u.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                        <tr key={u.id} onClick={() => setSelectedUser(selectedUser?.id === u.id ? null : u)} className="border-t border-white/[0.04] hover:bg-white/[0.04] transition-colors cursor-pointer">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">
@@ -452,6 +535,70 @@ function AdminContent() {
                   {filteredUsers.length} usuário(s)
                 </div>
               </div>
+            )}
+
+            {/* ── User Management Panel ── */}
+            {selectedUser && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-xl p-5" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-sm font-bold">
+                      {(selectedUser.display_name || selectedUser.username || '?')[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{selectedUser.display_name || '—'}</p>
+                      <p className="text-white/30 text-[11px]">@{selectedUser.username} · {Math.floor(selectedUser.credits)} créditos</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedUser(null)} className="text-white/30 hover:text-white/60 text-xs cursor-pointer">✕</button>
+                </div>
+
+                {/* Plan switcher */}
+                <div className="mb-4">
+                  <p className="text-white/40 text-[11px] uppercase font-medium mb-2">Alterar Plano</p>
+                  <div className="flex gap-1.5">
+                    {['free', 'starter', 'pro', 'growth'].map(plan => {
+                      const isCurrent = (selectedUser.plan || 'free').toLowerCase() === plan;
+                      return (
+                        <button
+                          key={plan}
+                          disabled={changingPlan || isCurrent}
+                          onClick={() => changeUserPlan(selectedUser, plan)}
+                          className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:cursor-default ${
+                            isCurrent
+                              ? 'bg-purple-500/30 text-purple-300 ring-1 ring-purple-500/50'
+                              : 'text-white/40 hover:text-white hover:bg-white/[0.06]'
+                          }`}
+                          style={!isCurrent ? { backgroundColor: 'rgba(255,255,255,0.03)' } : undefined}
+                        >
+                          {changingPlan ? '...' : plan.charAt(0).toUpperCase() + plan.slice(1)}
+                          {isCurrent && <span className="block text-[9px] text-purple-400/60 mt-0.5">atual</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Quick credits */}
+                <div>
+                  <p className="text-white/40 text-[11px] uppercase font-medium mb-2">Adicionar Créditos</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={inlineCredits}
+                      onChange={e => setInlineCredits(e.target.value)}
+                      placeholder="Qtd créditos"
+                      className="flex-1 px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                    />
+                    <button onClick={giveInlineCredits} disabled={addingCredits}
+                      className="px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      style={{ backgroundColor: '#7B50DC' }}>
+                      {addingCredits ? '...' : 'Adicionar'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
             )}
           </div>
         )}

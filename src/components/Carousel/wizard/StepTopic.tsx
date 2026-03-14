@@ -115,7 +115,7 @@ const StepTopic: React.FC<Props> = ({
               {!guestMode && (
                 <button
                   onClick={() => mentionRef.current?.triggerMention()}
-                  className="h-8 px-2.5 rounded-lg bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 text-purple-200 transition-all cursor-pointer text-sm font-semibold"
+                  className={`h-8 px-2.5 rounded-lg ${t.bgLight} border ${t.borderLight} hover:bg-opacity-30 ${t.textLighter} transition-all cursor-pointer text-sm font-semibold`}
                   title="Inserir menção de prompt"
                 >
                   @

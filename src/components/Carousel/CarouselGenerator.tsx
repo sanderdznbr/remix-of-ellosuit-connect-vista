@@ -453,6 +453,7 @@ const CarouselGenerator: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [currentCarouselId, _setCurrentCarouselId] = useState<string | null>(null);
   const currentCarouselIdRef = useRef<string | null>(null);
+  const isSavingRef = useRef(false);
   const setCurrentCarouselId = useCallback((id: string | null) => {
     currentCarouselIdRef.current = id;
     _setCurrentCarouselId(id);
@@ -741,7 +742,7 @@ const CarouselGenerator: React.FC = () => {
   const lastSavedDataRef = useRef<string>('');
   
   useEffect(() => {
-    if (!carouselData || !user || generating || generatingAllImages || regeneratingAll || regeneratingCard !== null || isGuest) return;
+    if (!carouselData || !user || generating || generatingAllImages || regeneratingAll || regeneratingCard !== null || isGuest || isSavingRef.current) return;
     
     const dataHash = JSON.stringify({ cards: carouselData.cards.map(c => ({ ...c })), title: carouselData.title });
     if (dataHash === lastSavedDataRef.current) return;
@@ -768,6 +769,13 @@ const CarouselGenerator: React.FC = () => {
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
             generation_config: buildGenerationConfig(),
           } as any).eq('id', currentCarouselIdRef.current);
+          // Retry cover capture if missing
+          try {
+            const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselIdRef.current).single();
+            if (!existing?.cover_url) {
+              captureCoverImage(currentCarouselIdRef.current, companyData.company_id, carouselData).catch(() => {});
+            }
+          } catch { /* ignore */ }
         } else {
           const { data: inserted } = await supabase.from('generated_carousels').insert({ 
             company_id: companyData.company_id, user_id: userData.user.id, 
@@ -1721,21 +1729,24 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
-            if (currentCarouselIdRef.current) {
-              await supabase.from('generated_carousels').update({ title: finalData.title, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
-              captureCoverImage(currentCarouselIdRef.current, companyData.company_id, finalData).catch(() => {});
-              if (jobId) completeCloudJob(jobId, currentCarouselIdRef.current);
-            } else {
-              const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
-              if (insertErr) {
-                console.error('Single post save failed:', insertErr);
+            isSavingRef.current = true;
+            try {
+              if (currentCarouselIdRef.current) {
+                await supabase.from('generated_carousels').update({ title: finalData.title, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
+                captureCoverImage(currentCarouselIdRef.current, companyData.company_id, finalData).catch(() => {});
+                if (jobId) completeCloudJob(jobId, currentCarouselIdRef.current);
+              } else {
+                const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                if (insertErr) {
+                  console.error('Single post save failed:', insertErr);
+                }
+                if (inserted) {
+                  setCurrentCarouselId(inserted.id);
+                  captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
+                  if (jobId) completeCloudJob(jobId, inserted.id);
+                }
               }
-              if (inserted) {
-                setCurrentCarouselId(inserted.id);
-                captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
-                if (jobId) completeCloudJob(jobId, inserted.id);
-              }
-            }
+            } finally { isSavingRef.current = false; }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
@@ -2109,18 +2120,21 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
                   });
                 } catch { /* ignore */ }
                 const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, continuousMode: true };
-                if (currentCarouselIdRef.current) {
-                  await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
-                  setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
-                  if (localJobId) completeCloudJob(localJobId, currentCarouselIdRef.current);
-                } else {
-                  const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
-                  if (inserted) {
-                    setCurrentCarouselId(inserted.id);
-                    setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
-                    if (localJobId) completeCloudJob(localJobId, inserted.id);
+                isSavingRef.current = true;
+                try {
+                  if (currentCarouselIdRef.current) {
+                    await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
+                    setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
+                    if (localJobId) completeCloudJob(localJobId, currentCarouselIdRef.current);
+                  } else {
+                    const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                    if (inserted) {
+                      setCurrentCarouselId(inserted.id);
+                      setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+                      if (localJobId) completeCloudJob(localJobId, inserted.id);
+                    }
                   }
-                }
+                } finally { isSavingRef.current = false; }
               }
             }
           } catch (saveErr) { console.error('Auto-save error:', saveErr); }
@@ -2696,18 +2710,21 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             } catch { /* ignore */ }
 
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-            if (currentCarouselIdRef.current) {
-              await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
-              setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
-              if (localJobId) completeCloudJob(localJobId, currentCarouselIdRef.current);
-            } else {
-              const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
-              if (inserted) {
-                setCurrentCarouselId(inserted.id);
-                setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
-                if (localJobId) completeCloudJob(localJobId, inserted.id);
+            isSavingRef.current = true;
+            try {
+              if (currentCarouselIdRef.current) {
+                await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
+                setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
+                if (localJobId) completeCloudJob(localJobId, currentCarouselIdRef.current);
+              } else {
+                const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                if (inserted) {
+                  setCurrentCarouselId(inserted.id);
+                  setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+                  if (localJobId) completeCloudJob(localJobId, inserted.id);
+                }
               }
-            }
+            } finally { isSavingRef.current = false; }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
@@ -3220,16 +3237,19 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           if (companyData) {
             try { await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: totalCards - 1, p_description: `Carrossel da capa: ${topic} (${totalCards} cards)` }); } catch { /* ignore */ }
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
-            if (currentCarouselIdRef.current) {
-              await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
-              setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
-            } else {
-              const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
-              if (inserted) {
-                setCurrentCarouselId(inserted.id);
-                setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+            isSavingRef.current = true;
+            try {
+              if (currentCarouselIdRef.current) {
+                await supabase.from('generated_carousels').update({ title: finalData.title || topic, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
+                setTimeout(() => captureCoverImage(currentCarouselIdRef.current!, companyData.company_id, finalData).catch(() => {}), 2000);
+              } else {
+                const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                if (inserted) {
+                  setCurrentCarouselId(inserted.id);
+                  setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
+                }
               }
-            }
+            } finally { isSavingRef.current = false; }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }

@@ -20,14 +20,24 @@ const PLAN_CONFIG: Record<string, {
   growth: { label: 'Growth', annualPrice: 219.90, monthlyPrice: 269.90, credits: 200 },
 };
 
-const CREDIT_TOPUPS = [
-  { credits: 10, price: 15 },
-  { credits: 25, price: 30 },
-  { credits: 50, price: 55 },
-  { credits: 100, price: 99 },
-  { credits: 250, price: 220 },
-  { credits: 500, price: 399 },
-];
+// Per-credit pricing by plan: Starter R$1.40, Pro R$1.30, Growth R$1.10
+const CREDIT_UNIT_PRICE: Record<string, number> = {
+  starter: 1.40,
+  pro: 1.30,
+  growth: 1.10,
+  enterprise: 1.10,
+  free: 1.50, // fallback
+};
+
+const CREDIT_PACKAGES = [10, 25, 50, 100, 250, 500];
+
+function getCreditTopups(planKey: string) {
+  const unitPrice = CREDIT_UNIT_PRICE[planKey] || CREDIT_UNIT_PRICE.free;
+  return CREDIT_PACKAGES.map(credits => ({
+    credits,
+    price: parseFloat((credits * unitPrice).toFixed(2)),
+  }));
+}
 
 const GIFT_PACKAGES = [
   { credits: 100, price: 129.90, label: '100 Créditos', description: '~10 carrosséis ou ~14 posts estáticos' },

@@ -246,11 +246,13 @@ interface TopUpModalProps {
 const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, companyId, initialTopup = 2 }) => {
   const navigate = useNavigate();
   const [selectedTopup, setSelectedTopup] = useState(initialTopup);
+  const topups = getCreditTopups(currentPlan || 'free');
+  const unitPrice = CREDIT_UNIT_PRICE[currentPlan || 'free'] || CREDIT_UNIT_PRICE.free;
 
   if (!open) return null;
 
   const handlePurchase = () => {
-    navigate(`/checkout?modo=creditos&creditos=${selectedTopup}`);
+    navigate(`/checkout?modo=creditos&creditos=${selectedTopup}&plano=${currentPlan}`);
     onClose();
   };
 
@@ -268,10 +270,13 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
             <Zap className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl font-bold text-white mb-1">Adicionar créditos</h2>
-          <p className="text-sm text-white/40 mb-6">Compre créditos avulsos para usar imediatamente.</p>
+          <p className="text-sm text-white/40 mb-2">Compre créditos avulsos para usar imediatamente.</p>
+          <p className="text-xs text-purple-300/60 mb-6">
+            Seu plano: <span className="font-semibold text-purple-300">{(currentPlan || 'free').charAt(0).toUpperCase() + (currentPlan || 'free').slice(1)}</span> — R${unitPrice.toFixed(2)}/crédito
+          </p>
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto mb-6">
-            {CREDIT_TOPUPS.map((opt, i) => (
+            {topups.map((opt, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedTopup(i)}
@@ -294,7 +299,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
             </button>
             <button onClick={handlePurchase}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-purple-600 text-white hover:bg-purple-500 transition-colors cursor-pointer">
-              {`Comprar R$${CREDIT_TOPUPS[selectedTopup].price.toFixed(2)}`}
+              {`Comprar R$${topups[selectedTopup]?.price.toFixed(2)}`}
             </button>
           </div>
         </div>

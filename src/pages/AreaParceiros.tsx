@@ -244,9 +244,12 @@ export default function AreaParceiros() {
 
   return (
     <div className="min-h-screen flex bg-[#08080e] relative overflow-hidden">
-      {/* Background glow effects */}
-      <div className="fixed top-0 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.04] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
-      <div className="fixed bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.03] blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, #a855f7, transparent)' }} />
+      {/* Background blurred glow effects - 70% opacity */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ opacity: 0.7 }}>
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full blur-[150px]" style={{ background: 'radial-gradient(circle, #7c3aed, transparent 70%)' }} />
+        <div className="absolute bottom-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full blur-[130px]" style={{ background: 'radial-gradient(circle, #9333ea, transparent 70%)' }} />
+        <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] rounded-full blur-[160px]" style={{ background: 'radial-gradient(circle, #6d28d9, transparent 70%)' }} />
+      </div>
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-[260px] shrink-0 h-screen sticky top-0 border-r border-white/[0.06] bg-[#0a0a12]/80 backdrop-blur-xl">

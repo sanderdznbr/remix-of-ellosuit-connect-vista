@@ -91,6 +91,11 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Determine price based on billing period
+      const isAnnual = billing_period === "annual";
+      const priceInCents = isAnnual ? plan.annualPrice * 12 : plan.monthlyPrice;
+      const monthlyPriceValue = isAnnual ? plan.annualPrice / 100 : plan.monthlyPrice / 100;
+
       // Create subscription record
       const { data: sub, error: subErr } = await adminClient
         .from("ellocontent_subscriptions")
@@ -99,8 +104,7 @@ Deno.serve(async (req) => {
           user_id: userId,
           plan_name,
           monthly_credits: plan.credits,
-          extra_credit_price: plan.extraCreditPrice,
-          monthly_price: plan.price / 100,
+          monthly_price: monthlyPriceValue,
           status: "pending",
           payment_method: payment_method || "credit_card",
           customer_name: customer_name || userEmail.split("@")[0],

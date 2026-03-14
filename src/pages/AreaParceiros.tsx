@@ -323,9 +323,7 @@ export default function AreaParceiros() {
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
-                  </div>
+                  <img src={ellocontentIcon} alt="Logo" className="w-7 h-7 rounded-lg" />
                   <p className="text-white font-bold text-sm">Menu</p>
                 </div>
                 <button onClick={() => setMobileNav(false)} className="text-white/30 hover:text-white/50 cursor-pointer p-1"><X className="w-5 h-5" /></button>

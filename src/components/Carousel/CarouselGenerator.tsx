@@ -3975,6 +3975,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           console.warn('[REGEN_LOGO] Failed:', logoErr);
         }
       }
+      } // end if (!wantsTextOnly)
 
       // 3. Push previous image to undo stack before overwriting
       {

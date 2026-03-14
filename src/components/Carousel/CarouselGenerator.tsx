@@ -1729,21 +1729,24 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
-            if (currentCarouselIdRef.current) {
-              await supabase.from('generated_carousels').update({ title: finalData.title, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
-              captureCoverImage(currentCarouselIdRef.current, companyData.company_id, finalData).catch(() => {});
-              if (jobId) completeCloudJob(jobId, currentCarouselIdRef.current);
-            } else {
-              const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
-              if (insertErr) {
-                console.error('Single post save failed:', insertErr);
+            isSavingRef.current = true;
+            try {
+              if (currentCarouselIdRef.current) {
+                await supabase.from('generated_carousels').update({ title: finalData.title, topic, carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, generation_config: buildGenerationConfig() } as any).eq('id', currentCarouselIdRef.current);
+                captureCoverImage(currentCarouselIdRef.current, companyData.company_id, finalData).catch(() => {});
+                if (jobId) completeCloudJob(jobId, currentCarouselIdRef.current);
+              } else {
+                const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                if (insertErr) {
+                  console.error('Single post save failed:', insertErr);
+                }
+                if (inserted) {
+                  setCurrentCarouselId(inserted.id);
+                  captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
+                  if (jobId) completeCloudJob(jobId, inserted.id);
+                }
               }
-              if (inserted) {
-                setCurrentCarouselId(inserted.id);
-                captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
-                if (jobId) completeCloudJob(jobId, inserted.id);
-              }
-            }
+            } finally { isSavingRef.current = false; }
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }

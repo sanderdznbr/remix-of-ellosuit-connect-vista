@@ -95,11 +95,11 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
         </div>
       )}
 
-      {styleRefs.length > 0 && (
+      {brandRefs.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-white/40 mb-3">Referências ({styleRefs.length})</p>
+          <p className="text-xs font-medium text-white/40 mb-3">Referências ({brandRefs.length})</p>
           <div className="flex gap-2 flex-wrap">
-            {styleRefs.map((ref, i) => {
+            {brandRefs.map((ref, i) => {
               const globalIdx = referenceImages.indexOf(ref);
               return (
                 <div key={i} className="relative group">

@@ -17,7 +17,7 @@ interface Props {
   allowContinuousMode?: boolean;
 }
 
-const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode, continuousMode, setContinuousMode }) => {
+const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, setContentMode, hasFacePhotos, faceCardCount, setFaceCardCount, wizardMode, guestMode, continuousMode, setContinuousMode, maxSlides = 10, allowContinuousMode = true }) => {
   const showFaceSelector = wizardMode === 'advanced' && hasFacePhotos && contentMode === 'carousel' && cardCount >= 2;
   const effectiveFaceCount = faceCardCount != null ? faceCardCount : cardCount;
 

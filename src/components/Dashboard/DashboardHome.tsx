@@ -68,8 +68,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   useEffect(() => { fetchRecent(); }, [user]);
-  useEffect(() => { if (user) fetchRecent(); }, []);
-  useEffect(() => { fetchRecent(); }, []);
 
   // Refetch when tab/window becomes visible (user navigated back)
   useEffect(() => {

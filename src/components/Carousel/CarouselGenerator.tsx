@@ -6394,7 +6394,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <h3 className="text-sm font-semibold text-white text-center mb-1">
                       {contentMode === 'single-post' ? 'Exportar Post' : 'Exportar Carrossel'}
                     </h3>
-                    {contentMode !== 'single-post' && (
+                    {contentMode !== 'single-post' && planLimits.allowedExportFormats.includes('zip') && (
                       <button onClick={() => exportAllCards('png', true)}
                         className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
                         <FileText className="h-4 w-4" style={{ color: themeHex }} /> Baixar ZIP

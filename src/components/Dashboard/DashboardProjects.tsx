@@ -44,7 +44,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
         let query = supabase
           .from('generated_carousels')
-          .select('id, title, topic, created_at, card_count, cover_url, is_starred')
+          .select('id, title, topic, created_at, card_count, cover_url, is_starred, carousel_data')
           .eq('company_id', companyData.company_id);
 
         if (filterMode === 'starred') {
@@ -53,6 +53,14 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
         const { data } = await query.order('created_at', { ascending: false }).limit(100);
         setCarousels(data || []);
+
+        // Auto-recover missing covers in background
+        if (data) {
+          const missing = data.filter(c => !c.cover_url && c.carousel_data);
+          for (const item of missing.slice(0, 5)) {
+            recoverCover(item, companyData.company_id);
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {

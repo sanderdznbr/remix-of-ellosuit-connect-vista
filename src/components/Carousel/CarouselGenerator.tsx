@@ -7349,7 +7349,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <button
                       onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.autoText!)}
                       className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors"
-                      style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, rgba(232,77,26,0.9), rgba(196,58,15,0.9))' : 'linear-gradient(135deg, rgba(139,92,246,0.8), rgba(99,102,241,0.8))' }}>
+                      style={{ background: `linear-gradient(135deg, rgba(${modeTheme.rgb},0.9), rgba(${modeTheme.rgb2},0.9))` }}>
                       Aprovar e gerar
                     </button>
                   </div>

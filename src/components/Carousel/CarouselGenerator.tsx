@@ -1098,7 +1098,7 @@ const CarouselGenerator: React.FC = () => {
   };
 
   // ===== SAVE COVER FROM AI-GENERATED IMAGE (no html2canvas) =====
-  const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null) => {
+  const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
     try {
       // Use explicit data (passed directly) or fall back to state
       const dataSource = explicitData || carouselData;
@@ -1110,7 +1110,14 @@ const CarouselGenerator: React.FC = () => {
       }
       
       if (!firstCardImage) {
-        console.warn('Cover: no AI image on first card, using server fallback');
+        // Retry up to 3 times with increasing delay (image may still be generating)
+        if (retryCount < 3) {
+          const delay = (retryCount + 1) * 3000;
+          console.warn(`Cover: no image yet, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
+          setTimeout(() => captureCoverImage(carouselId, companyId, null, retryCount + 1), delay);
+          return;
+        }
+        console.warn('Cover: no AI image on first card after retries, using server fallback');
         await serverFallbackCover(carouselId);
         return;
       }
@@ -1130,6 +1137,12 @@ const CarouselGenerator: React.FC = () => {
       }
 
       if (!blob) {
+        // Retry if blob fetch failed (CORS might resolve after a moment)
+        if (retryCount < 2) {
+          console.warn(`Cover: blob fetch failed, retrying in 3s (attempt ${retryCount + 1}/2)`);
+          setTimeout(() => captureCoverImage(carouselId, companyId, explicitData, retryCount + 1), 3000);
+          return;
+        }
         console.warn('Cover: could not get image blob, using server fallback');
         await serverFallbackCover(carouselId);
         return;

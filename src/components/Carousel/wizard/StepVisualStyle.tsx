@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Loader2, X, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,21 +13,66 @@ export type PeopleMode = 'none' | 'random-female' | 'random-male' | 'random-auto
 export interface VisualCategoryOption {
   id: VisualCategory;
   label: string;
-  emoji: string;
   description: string;
   searchHint: string;
+  previewUrl: string;
 }
 
 const VISUAL_CATEGORIES: VisualCategoryOption[] = [
-  { id: '3d-objects', label: 'Objetos 3D', emoji: '🎲', description: 'Objetos renderizados em 3D realista', searchHint: '3D rendered object' },
-  { id: '2d-illustrations', label: 'Ilustrações 2D', emoji: '🎨', description: 'Ilustrações flat, vetoriais ou artísticas', searchHint: '2D illustration' },
-  { id: '3d-scenes', label: 'Cenários 3D', emoji: '🏙️', description: 'Ambientes e cenas em 3D completas', searchHint: '3D scene environment' },
-  { id: 'landscapes', label: 'Paisagens', emoji: '🌄', description: 'Fotos de paisagens naturais ou urbanas', searchHint: 'landscape photography' },
-  { id: 'abstract', label: 'Abstrato', emoji: '🌀', description: 'Formas abstratas, gradientes e texturas', searchHint: 'abstract art design' },
-  { id: 'manipulations', label: 'Manipulações', emoji: '✨', description: 'Composições e manipulações digitais', searchHint: 'digital manipulation art' },
-  { id: 'patterns', label: 'Padrões', emoji: '🔲', description: 'Padrões geométricos e repetitivos', searchHint: 'geometric pattern design' },
-  { id: 'minimalist', label: 'Minimalista', emoji: '◻️', description: 'Visual limpo, com poucos elementos', searchHint: 'minimalist design clean' },
-  { id: 'collage', label: 'Colagem', emoji: '📐', description: 'Mix de fotos e gráficos sobrepostos', searchHint: 'collage art design' },
+  { 
+    id: '3d-objects', label: 'Objetos 3D', 
+    description: 'Objetos renderizados em 3D',
+    searchHint: '3D rendered object',
+    previewUrl: 'https://images.unsplash.com/photo-1633899306328-c5e70574aaa2?w=400&h=500&fit=crop',
+  },
+  { 
+    id: '2d-illustrations', label: 'Ilustrações 2D', 
+    description: 'Flat, vetorial ou artístico',
+    searchHint: '2D illustration',
+    previewUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=500&fit=crop',
+  },
+  { 
+    id: '3d-scenes', label: 'Cenários 3D', 
+    description: 'Ambientes e cenas completas',
+    searchHint: '3D scene environment',
+    previewUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=500&fit=crop',
+  },
+  { 
+    id: 'landscapes', label: 'Paisagens', 
+    description: 'Naturais ou urbanas',
+    searchHint: 'landscape photography',
+    previewUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=500&fit=crop',
+  },
+  { 
+    id: 'abstract', label: 'Abstrato', 
+    description: 'Formas, gradientes e texturas',
+    searchHint: 'abstract art design',
+    previewUrl: 'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=500&fit=crop',
+  },
+  { 
+    id: 'manipulations', label: 'Manipulações', 
+    description: 'Composições digitais',
+    searchHint: 'digital manipulation art',
+    previewUrl: 'https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?w=400&h=500&fit=crop',
+  },
+  { 
+    id: 'patterns', label: 'Padrões', 
+    description: 'Geométricos e repetitivos',
+    searchHint: 'geometric pattern design',
+    previewUrl: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=500&fit=crop',
+  },
+  { 
+    id: 'minimalist', label: 'Minimalista', 
+    description: 'Clean, poucos elementos',
+    searchHint: 'minimalist design clean',
+    previewUrl: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=400&h=500&fit=crop',
+  },
+  { 
+    id: 'collage', label: 'Colagem', 
+    description: 'Mix de fotos e gráficos',
+    searchHint: 'collage art design',
+    previewUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=400&h=500&fit=crop',
+  },
 ];
 
 interface Props {
@@ -103,25 +148,46 @@ const StepVisualStyle: React.FC<Props> = ({
         <p className="text-sm text-white/40">Escolha o tipo de visual para as imagens do post.</p>
       </div>
 
-      {/* Category grid */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* Category grid — photo-based */}
+      <div className="grid grid-cols-3 gap-2.5">
         {VISUAL_CATEGORIES.map(cat => {
           const isSelected = selectedCategory === cat.id;
           return (
             <button key={cat.id} onClick={() => handleSelectCategory(cat.id)}
-              className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-center ${
+              className={`relative rounded-xl overflow-hidden transition-all group ${
                 isSelected
-                  ? 'border-purple-500/60 bg-purple-500/10 shadow-[0_0_12px_rgba(139,92,246,0.2)]'
-                  : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12]'
-              }`}>
-              <span className="text-2xl">{cat.emoji}</span>
-              <span className={`text-[11px] font-semibold leading-tight ${isSelected ? 'text-white' : 'text-white/60'}`}>{cat.label}</span>
-              <span className="text-[9px] text-white/30 leading-tight">{cat.description}</span>
-              {isSelected && (
-                <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-purple-500 flex items-center justify-center">
-                  <Check className="h-2.5 w-2.5 text-white" />
+                  ? 'ring-2 ring-purple-500 shadow-[0_0_16px_rgba(139,92,246,0.3)]'
+                  : 'ring-1 ring-white/[0.08] hover:ring-white/[0.2]'
+              }`}
+            >
+              {/* Photo */}
+              <div className="aspect-[4/5] relative">
+                <img
+                  src={cat.previewUrl}
+                  alt={cat.label}
+                  className={`w-full h-full object-cover transition-all duration-300 ${
+                    isSelected ? 'brightness-90' : 'brightness-[0.6] group-hover:brightness-75'
+                  }`}
+                  loading="lazy"
+                />
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                
+                {/* Label */}
+                <div className="absolute bottom-0 inset-x-0 p-2.5">
+                  <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-white/90'}`}>
+                    {cat.label}
+                  </p>
+                  <p className="text-[9px] text-white/50 leading-tight mt-0.5">{cat.description}</p>
                 </div>
-              )}
+
+                {/* Selected indicator */}
+                {isSelected && (
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                )}
+              </div>
             </button>
           );
         })}
@@ -138,7 +204,7 @@ const StepVisualStyle: React.FC<Props> = ({
               className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-lg flex-1 text-sm h-10 focus:!border-white/20 focus:!ring-0"
               onKeyDown={(e) => e.key === 'Enter' && handleObjectSearch()} />
             <button onClick={handleObjectSearch} disabled={searching || !objectQuery.trim()}
-              className="px-4 h-10 rounded-lg bg-white/[0.06] hover:bg-white/10 text-white/60 transition-all disabled:opacity-30">
+              className="px-4 h-10 rounded-lg bg-white/[0.06] hover:bg-white/10 text-white/60 transition-all disabled:opacity-30 cursor-pointer">
               {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             </button>
           </div>
@@ -153,7 +219,7 @@ const StepVisualStyle: React.FC<Props> = ({
             className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-lg flex-1 text-sm h-10 focus:!border-white/20 focus:!ring-0"
             onKeyDown={(e) => e.key === 'Enter' && searchWeb(visualSearchQuery)} />
           <button onClick={() => searchWeb(visualSearchQuery)} disabled={searching || !visualSearchQuery.trim()}
-            className="px-4 h-10 rounded-lg bg-white/[0.06] hover:bg-white/10 text-white/60 transition-all disabled:opacity-30">
+            className="px-4 h-10 rounded-lg bg-white/[0.06] hover:bg-white/10 text-white/60 transition-all disabled:opacity-30 cursor-pointer">
             {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           </button>
         </div>
@@ -177,7 +243,7 @@ const StepVisualStyle: React.FC<Props> = ({
               return (
                 <div key={i} className="relative group">
                   <button onClick={() => toggleImage(img)}
-                    className={`w-full rounded-lg overflow-hidden aspect-square transition-all ${
+                    className={`w-full rounded-lg overflow-hidden aspect-square transition-all cursor-pointer ${
                       alreadyAdded
                         ? 'ring-2 ring-purple-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]'
                         : 'ring-1 ring-white/[0.06] hover:ring-white/20'
@@ -202,7 +268,7 @@ const StepVisualStyle: React.FC<Props> = ({
         <div className="flex items-center justify-between">
           <p className="text-xs text-white/30">{visualRefs.length} referência(s) visual(is) selecionada(s)</p>
           <button onClick={() => setReferenceImages(prev => prev.filter(r => r.category !== 'style'))}
-            className="text-xs text-white/20 hover:text-white/40 transition-colors flex items-center gap-1">
+            className="text-xs text-white/20 hover:text-white/40 transition-colors flex items-center gap-1 cursor-pointer">
             <X className="h-3 w-3" /> Limpar
           </button>
         </div>

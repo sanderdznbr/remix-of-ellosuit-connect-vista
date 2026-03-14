@@ -158,15 +158,16 @@ const StepVisualStyle: React.FC<Props> = ({
 
   // Auto-suggest on mount — ALWAYS suggests since fallback exists
   useEffect(() => {
-    if (hasAutoSuggested.current || selectedCategory) return;
+    if (hasAutoSuggested.current) return;
     if (!suggestion) return;
     hasAutoSuggested.current = true;
     setAiSuggested(true);
     setSelectedCategory(suggestion.category);
     setVisualSearchQuery(suggestion.query);
     setShowObjectSearch(false);
-    searchWeb(suggestion.query);
-  }, [suggestion, selectedCategory]);
+    // Small delay to ensure state is settled before firing search
+    setTimeout(() => searchWeb(suggestion.query), 50);
+  }, [suggestion]);
 
   const handleSelectCategory = (cat: VisualCategory) => {
     setAiSuggested(false);

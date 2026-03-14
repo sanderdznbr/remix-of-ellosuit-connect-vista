@@ -7,16 +7,13 @@ import { ReferenceImage } from './types';
 import img3dObjects from '@/assets/visual-styles/3d-objects.jpg';
 import img2dIllustrations from '@/assets/visual-styles/2d-illustrations.jpg';
 import img3dScenes from '@/assets/visual-styles/3d-scenes.jpg';
-import imgLandscapes from '@/assets/visual-styles/landscapes.jpg';
 import imgAbstract from '@/assets/visual-styles/abstract.jpg';
 import imgManipulations from '@/assets/visual-styles/manipulations.jpg';
-import imgPatterns from '@/assets/visual-styles/patterns.jpg';
 import imgMinimalist from '@/assets/visual-styles/minimalist.jpg';
-import imgCollage from '@/assets/visual-styles/collage.jpg';
 
 export type VisualCategory = 
-  | '3d-objects' | '2d-illustrations' | '3d-scenes' | 'landscapes' 
-  | 'abstract' | 'manipulations' | 'patterns' | 'minimalist' | 'collage';
+  | '3d-objects' | '2d-illustrations' | '3d-scenes'
+  | 'abstract' | 'manipulations' | 'minimalist';
 
 export type PeopleMode = 'none' | 'random-female' | 'random-male' | 'random-auto';
 
@@ -29,15 +26,12 @@ export interface VisualCategoryOption {
 }
 
 const VISUAL_CATEGORIES: VisualCategoryOption[] = [
-  { id: '3d-objects', label: 'Objetos 3D', description: 'Renderizados em 3D', searchHint: '3D rendered object', previewUrl: img3dObjects },
+  { id: '3d-objects', label: 'Objetos 3D', description: 'Mockups e renderizados', searchHint: '3D rendered object', previewUrl: img3dObjects },
   { id: '2d-illustrations', label: 'Ilustrações 2D', description: 'Flat, vetorial ou artístico', searchHint: '2D illustration', previewUrl: img2dIllustrations },
-  { id: '3d-scenes', label: 'Cenários 3D', description: 'Ambientes e cenas', searchHint: '3D scene environment', previewUrl: img3dScenes },
-  { id: 'landscapes', label: 'Paisagens', description: 'Naturais ou urbanas', searchHint: 'landscape photography', previewUrl: imgLandscapes },
-  { id: 'abstract', label: 'Abstrato', description: 'Formas e gradientes', searchHint: 'abstract art design', previewUrl: imgAbstract },
-  { id: 'manipulations', label: 'Manipulações', description: 'Composições digitais', searchHint: 'digital manipulation art', previewUrl: imgManipulations },
-  { id: 'patterns', label: 'Padrões', description: 'Geométricos e repetitivos', searchHint: 'geometric pattern design', previewUrl: imgPatterns },
+  { id: '3d-scenes', label: 'Cenários 3D', description: 'Ambientes e cenas completas', searchHint: '3D scene environment', previewUrl: img3dScenes },
+  { id: 'abstract', label: 'Abstrato', description: 'Formas, gradientes e texturas', searchHint: 'abstract art design', previewUrl: imgAbstract },
+  { id: 'manipulations', label: 'Manipulações', description: 'Composições e foto-arte', searchHint: 'digital manipulation art', previewUrl: imgManipulations },
   { id: 'minimalist', label: 'Minimalista', description: 'Clean, poucos elementos', searchHint: 'minimalist design clean', previewUrl: imgMinimalist },
-  { id: 'collage', label: 'Colagem', description: 'Mix de fotos e gráficos', searchHint: 'collage art design', previewUrl: imgCollage },
 ];
 
 /** Detect the best visual category + refined search query from the topic */
@@ -50,50 +44,75 @@ function detectVisualSuggestion(topic: string, mentionedPrompts?: { title?: stri
 
   // App / Mobile / Digital product → 3D iPhone/device mockup
   if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) || /lancamento.*(app|aplicativo|plataforma)/.test(t)) {
-    return { category: '3d-objects', query: '3D iPhone mockup app screen floating' };
+    return { category: '3d-objects', query: '3D iPhone mockup app screen floating dark background' };
   }
   // Website / Landing page → Macbook/laptop mockup
   if (/\b(site|website|landing page|pagina|plataforma web|dashboard|painel)\b/.test(t)) {
-    return { category: '3d-objects', query: '3D MacBook laptop mockup website screen' };
+    return { category: '3d-objects', query: '3D MacBook laptop mockup website screen floating' };
   }
   // E-commerce / Product → 3D product
   if (/\b(produto|ecommerce|e-commerce|loja online|dropshipping|embalagem|packaging)\b/.test(t)) {
-    return { category: '3d-objects', query: '3D product packaging mockup floating' };
+    return { category: '3d-objects', query: '3D product packaging mockup floating studio' };
   }
   // Food / Restaurant
   if (/\b(comida|food|restaurante|receita|culinaria|gastronomia|delivery|cardapio|hamburguer|pizza|sushi)\b/.test(t)) {
-    return { category: 'manipulations', query: 'food photography dramatic lighting' };
+    return { category: 'manipulations', query: 'food photography dramatic lighting dark background' };
   }
-  // Travel / Nature
-  if (/\b(viagem|travel|turismo|destino|praia|montanha|aventura|natureza)\b/.test(t)) {
-    return { category: 'landscapes', query: 'travel destination landscape cinematic' };
+  // Travel / Nature / Landscape
+  if (/\b(viagem|travel|turismo|destino|praia|montanha|aventura|natureza|paisagem)\b/.test(t)) {
+    return { category: 'manipulations', query: 'travel destination cinematic photo manipulation' };
   }
-  // Finance / Business
-  if (/\b(financ|investimento|dinheiro|negocio|business|empreend|startup|empresa|marketing)\b/.test(t)) {
-    return { category: 'abstract', query: 'abstract business gradient dark premium' };
+  // Finance / Business / Marketing
+  if (/\b(financ|investimento|dinheiro|negocio|business|empreend|startup|empresa|marketing|vendas|lucro)\b/.test(t)) {
+    return { category: 'abstract', query: 'abstract business dark gradient premium luxury' };
   }
   // Education / Course
-  if (/\b(curso|educacao|aprender|aula|treinamento|mentoria|coaching|workshop)\b/.test(t)) {
-    return { category: '3d-objects', query: '3D books study objects floating' };
+  if (/\b(curso|educacao|aprender|aula|treinamento|mentoria|coaching|workshop|ebook|e-book)\b/.test(t)) {
+    return { category: '3d-objects', query: '3D books study education objects floating' };
   }
   // Fitness / Health
-  if (/\b(fitness|treino|academia|saude|health|exercicio|musculacao|gym|crossfit|yoga)\b/.test(t)) {
-    return { category: 'manipulations', query: 'fitness gym dramatic dark lighting' };
+  if (/\b(fitness|treino|academia|saude|health|exercicio|musculacao|gym|crossfit|yoga|dieta)\b/.test(t)) {
+    return { category: 'manipulations', query: 'fitness gym dramatic dark lighting energy' };
   }
   // Beauty / Fashion
-  if (/\b(beleza|beauty|moda|fashion|roupa|maquiagem|skincare|cosmetico)\b/.test(t)) {
-    return { category: 'minimalist', query: 'beauty cosmetics minimalist elegant' };
+  if (/\b(beleza|beauty|moda|fashion|roupa|maquiagem|skincare|cosmetico|perfume)\b/.test(t)) {
+    return { category: 'minimalist', query: 'beauty cosmetics minimalist elegant product' };
   }
-  // Technology / AI
-  if (/\b(tecnologia|tech|ia\b|inteligencia artificial|ai\b|machine learning|automacao|codigo|programacao|software)\b/.test(t)) {
-    return { category: 'abstract', query: 'futuristic technology abstract neon gradient' };
+  // Technology / AI / Software
+  if (/\b(tecnologia|tech|ia\b|inteligencia artificial|ai\b|machine learning|automacao|codigo|programacao|software|devops|cloud)\b/.test(t)) {
+    return { category: 'abstract', query: 'futuristic technology abstract neon gradient dark' };
   }
-  // Music / Entertainment
-  if (/\b(musica|music|podcast|entretenimento|show|festival|evento)\b/.test(t)) {
-    return { category: 'abstract', query: 'music neon lights abstract colorful' };
+  // Music / Entertainment / Events
+  if (/\b(musica|music|podcast|entretenimento|show|festival|evento|festa|dj)\b/.test(t)) {
+    return { category: 'abstract', query: 'music neon lights abstract colorful dark' };
+  }
+  // Real estate / Architecture
+  if (/\b(imovel|imobiliaria|casa|apartamento|arquitetura|decoracao|interior|construcao)\b/.test(t)) {
+    return { category: '3d-scenes', query: '3D luxury interior architecture visualization' };
+  }
+  // Gaming
+  if (/\b(game|jogo|gamer|esport|gaming|streamer)\b/.test(t)) {
+    return { category: '3d-scenes', query: '3D gaming neon futuristic scene environment' };
+  }
+  // Pets / Animals
+  if (/\b(pet|animal|cachorro|gato|veterinario|petshop)\b/.test(t)) {
+    return { category: 'minimalist', query: 'pet animal minimalist clean photography' };
+  }
+  // Motivation / Mindset / Self-help
+  if (/\b(motivacao|motivacional|mindset|produtividade|habito|autoconhecimento|crescimento pessoal|disciplina|foco)\b/.test(t)) {
+    return { category: 'abstract', query: 'motivational abstract dark gradient inspirational' };
+  }
+  // Kids / Education infantil
+  if (/\b(crianca|infantil|bebe|maternidade|brinquedo|escola)\b/.test(t)) {
+    return { category: '2d-illustrations', query: '2D illustration colorful kids playful cartoon' };
+  }
+  // Design / Creative
+  if (/\b(design|criativo|arte|grafico|branding|identidade visual|logo)\b/.test(t)) {
+    return { category: '2d-illustrations', query: 'graphic design creative illustration editorial' };
   }
 
-  return null;
+  // Fallback: abstract for any topic
+  return { category: 'abstract', query: 'abstract dark gradient premium social media' };
 }
 
 interface Props {
@@ -122,7 +141,7 @@ const StepVisualStyle: React.FC<Props> = ({
 
   const suggestion = useMemo(() => detectVisualSuggestion(topic || '', mentionedPrompts), [topic, mentionedPrompts]);
 
-  // Auto-suggest on mount if no category selected yet
+  // Auto-suggest on mount — ALWAYS suggests since fallback exists
   useEffect(() => {
     if (hasAutoSuggested.current || selectedCategory) return;
     if (!suggestion) return;
@@ -130,9 +149,7 @@ const StepVisualStyle: React.FC<Props> = ({
     setAiSuggested(true);
     setSelectedCategory(suggestion.category);
     setVisualSearchQuery(suggestion.query);
-    if (suggestion.category === '3d-objects') {
-      setShowObjectSearch(false); // Already has specific query, skip object input
-    }
+    setShowObjectSearch(false);
     searchWeb(suggestion.query);
   }, [suggestion, selectedCategory]);
 
@@ -196,18 +213,18 @@ const StepVisualStyle: React.FC<Props> = ({
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
           <Sparkles className="h-4 w-4 text-purple-400 flex-shrink-0" />
           <p className="text-xs text-purple-300 flex-1">
-            Sugestão automática baseada no tema: <span className="font-semibold text-purple-200">{VISUAL_CATEGORIES.find(c => c.id === suggestion.category)?.label}</span>
+            Sugestão automática: <span className="font-semibold text-purple-200">{VISUAL_CATEGORIES.find(c => c.id === suggestion.category)?.label}</span>
           </p>
           <button 
-            onClick={() => { setAiSuggested(false); setSelectedCategory(null); setSearchResults([]); setVisualSearchQuery(''); }}
+            onClick={() => { setAiSuggested(false); setSelectedCategory(null); setSearchResults([]); setVisualSearchQuery(''); hasAutoSuggested.current = false; }}
             className="text-[10px] text-white/40 hover:text-white/60 underline cursor-pointer whitespace-nowrap">
             Escolher outro
           </button>
         </div>
       )}
 
-      {/* Category grid */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Category grid — 2 cols x 3 rows */}
+      <div className="grid grid-cols-2 gap-3">
         {VISUAL_CATEGORIES.map(cat => {
           const isSelected = selectedCategory === cat.id;
           return (
@@ -218,7 +235,7 @@ const StepVisualStyle: React.FC<Props> = ({
                   : 'ring-1 ring-white/[0.08] hover:ring-white/[0.2] hover:scale-[1.01]'
               }`}
             >
-              <div className="aspect-[4/5] relative">
+              <div className="aspect-[4/3] relative">
                 <img
                   src={cat.previewUrl}
                   alt={cat.label}

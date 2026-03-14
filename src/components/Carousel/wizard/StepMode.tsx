@@ -108,7 +108,7 @@ const StepMode: React.FC<Props> = ({
                 ) : (
                   <Icon className={`h-6 w-6 ${
                     selected
-                      ? isExtreme ? 'text-orange-400' : 'text-purple-400'
+                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : 'text-purple-400'
                       : 'text-white/30'
                   }`} />
                 )}

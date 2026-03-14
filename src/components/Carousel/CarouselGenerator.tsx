@@ -742,7 +742,7 @@ const CarouselGenerator: React.FC = () => {
   const lastSavedDataRef = useRef<string>('');
   
   useEffect(() => {
-    if (!carouselData || !user || generating || generatingAllImages || regeneratingAll || regeneratingCard !== null || isGuest) return;
+    if (!carouselData || !user || generating || generatingAllImages || regeneratingAll || regeneratingCard !== null || isGuest || isSavingRef.current) return;
     
     const dataHash = JSON.stringify({ cards: carouselData.cards.map(c => ({ ...c })), title: carouselData.title });
     if (dataHash === lastSavedDataRef.current) return;

@@ -15,7 +15,7 @@ interface Props {
 
 const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, brandAssets, onSuggestColors }) => {
   const { user } = useAuth();
-  const styleRefs = referenceImages.filter(r => r.category === 'style');
+  const brandRefs = referenceImages.filter(r => r.category === 'brand');
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [extracting, setExtracting] = useState(false);

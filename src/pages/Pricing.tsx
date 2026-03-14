@@ -634,7 +634,7 @@ function LoggedInPricing() {
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setShowTopUpDropdown(false)} />
                           <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/[0.08] z-50 py-1 shadow-xl" style={{ backgroundColor: '#1a1a24' }}>
-                            {CREDIT_TOPUPS.map((opt, i) => (
+                            {getCreditTopups(currentPlanKey || 'free').map((opt, i) => (
                               <button
                                 key={i}
                                 onClick={() => { setSelectedTopup(i); setShowTopUpDropdown(false); setShowTopUp(true); }}

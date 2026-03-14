@@ -35,72 +35,86 @@ const VISUAL_CATEGORIES: VisualCategoryOption[] = [
 ];
 
 /** Detect the best visual category + refined search query from the topic */
-function detectVisualSuggestion(topic: string, mentionedPrompts?: { title?: string; content?: string }[]): { category: VisualCategory; query: string } | null {
+function detectVisualSuggestion(
+  topic: string,
+  mentionedPrompts?: { title?: string; content?: string }[],
+  productAnalysis?: { type?: string; description?: string; confirmed?: boolean } | null,
+): { category: VisualCategory; query: string } {
   const parts = [topic || ''];
   if (mentionedPrompts?.length) {
     mentionedPrompts.forEach(m => { parts.push(m.title || '', m.content || ''); });
   }
+  if (productAnalysis?.description) parts.push(productAnalysis.description);
+  if (productAnalysis?.type) parts.push(productAnalysis.type);
   const t = parts.join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Product analysis type takes priority
+  const pType = (productAnalysis?.type || '').toLowerCase();
+  if (pType === 'app' || pType === 'aplicativo' || pType === 'mobile') {
+    return { category: '3d-objects', query: '3D iPhone smartphone mockup floating dark background' };
+  }
+  if (pType === 'website' || pType === 'landing page' || pType === 'saas' || pType === 'plataforma') {
+    return { category: '3d-objects', query: '3D MacBook laptop mockup floating dark background' };
+  }
+  if (pType === 'produto fisico' || pType === 'produto' || pType === 'ecommerce') {
+    return { category: '3d-objects', query: '3D product render floating dark studio background' };
+  }
 
   // App / Mobile / Digital product → 3D iPhone/device mockup
   if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) || /lancamento.*(app|aplicativo|plataforma)/.test(t)) {
-    return { category: '3d-objects', query: '3D iPhone mockup app screen floating dark background' };
+    return { category: '3d-objects', query: '3D iPhone smartphone mockup floating dark background' };
   }
   // Website / Landing page → Macbook/laptop mockup
   if (/\b(site|website|landing page|pagina|plataforma web|dashboard|painel)\b/.test(t)) {
-    return { category: '3d-objects', query: '3D MacBook laptop mockup website screen floating' };
+    return { category: '3d-objects', query: '3D MacBook laptop mockup floating dark background' };
   }
-  // E-commerce / Product → 3D product
-  if (/\b(produto|ecommerce|e-commerce|loja online|dropshipping|embalagem|packaging)\b/.test(t)) {
-    return { category: '3d-objects', query: '3D product packaging mockup floating studio' };
+  // E-commerce / Product
+  if (/\b(produto|ecommerce|e-commerce|loja virtual|shopify|dropshipping|embalagem|unboxing)\b/.test(t)) {
+    return { category: '3d-objects', query: '3D product render floating dark studio background' };
   }
-  // Food / Restaurant
-  if (/\b(comida|food|restaurante|receita|culinaria|gastronomia|delivery|cardapio|hamburguer|pizza|sushi)\b/.test(t)) {
-    return { category: 'manipulations', query: 'food photography dramatic lighting dark background' };
+  // Real estate
+  if (/\b(imovel|imoveis|imobiliaria|apartamento|casa|condominio|corretor)\b/.test(t)) {
+    return { category: '3d-scenes', query: '3D architectural interior luxury modern apartment' };
   }
-  // Travel / Nature / Landscape
-  if (/\b(viagem|travel|turismo|destino|praia|montanha|aventura|natureza|paisagem)\b/.test(t)) {
-    return { category: 'manipulations', query: 'travel destination cinematic photo manipulation' };
+  // Food / Gastronomy
+  if (/\b(comida|food|gastronomia|restaurante|receita|chef|culinaria|delivery|hamburguer|pizza|doce|confeitaria)\b/.test(t)) {
+    return { category: '3d-objects', query: '3D food render dark studio gourmet' };
   }
-  // Finance / Business / Marketing
-  if (/\b(financ|investimento|dinheiro|negocio|business|empreend|startup|empresa|marketing|vendas|lucro)\b/.test(t)) {
-    return { category: 'abstract', query: 'abstract business dark gradient premium luxury' };
-  }
-  // Education / Course
-  if (/\b(curso|educacao|aprender|aula|treinamento|mentoria|coaching|workshop|ebook|e-book)\b/.test(t)) {
-    return { category: '3d-objects', query: '3D books study education objects floating' };
+  // Finance / Investment
+  if (/\b(financ|investimento|cripto|bitcoin|trading|bolsa|acoes|renda|economia|banco)\b/.test(t)) {
+    return { category: 'abstract', query: 'abstract dark gradient gold luxury finance' };
   }
   // Fitness / Health
-  if (/\b(fitness|treino|academia|saude|health|exercicio|musculacao|gym|crossfit|yoga|dieta)\b/.test(t)) {
-    return { category: 'manipulations', query: 'fitness gym dramatic dark lighting energy' };
+  if (/\b(fitness|academia|treino|musculacao|saude|nutricao|dieta|emagrecimento|crossfit|yoga)\b/.test(t)) {
+    return { category: 'manipulations', query: 'fitness athlete dark dramatic studio lighting' };
   }
   // Beauty / Fashion
-  if (/\b(beleza|beauty|moda|fashion|roupa|maquiagem|skincare|cosmetico|perfume)\b/.test(t)) {
-    return { category: 'minimalist', query: 'beauty cosmetics minimalist elegant product' };
+  if (/\b(beleza|beauty|moda|fashion|maquiagem|cosmetico|skincare|cabelo|estetica)\b/.test(t)) {
+    return { category: 'minimalist', query: 'minimalist beauty cosmetics elegant studio' };
   }
-  // Technology / AI / Software
-  if (/\b(tecnologia|tech|ia\b|inteligencia artificial|ai\b|machine learning|automacao|codigo|programacao|software|devops|cloud)\b/.test(t)) {
-    return { category: 'abstract', query: 'futuristic technology abstract neon gradient dark' };
+  // Pet
+  if (/\b(pet|cachorro|gato|animal|veterinario|petshop|racao)\b/.test(t)) {
+    return { category: '2d-illustrations', query: '2D cute pet illustration colorful flat design' };
   }
-  // Music / Entertainment / Events
-  if (/\b(musica|music|podcast|entretenimento|show|festival|evento|festa|dj)\b/.test(t)) {
-    return { category: 'abstract', query: 'music neon lights abstract colorful dark' };
+  // Music / Entertainment
+  if (/\b(musica|music|podcast|spotify|show|festival|dj|artista|album|playlist)\b/.test(t)) {
+    return { category: 'abstract', query: 'abstract neon music sound wave dark gradient' };
   }
-  // Real estate / Architecture
-  if (/\b(imovel|imobiliaria|casa|apartamento|arquitetura|decoracao|interior|construcao)\b/.test(t)) {
-    return { category: '3d-scenes', query: '3D luxury interior architecture visualization' };
+  // Marketing / Business
+  if (/\b(marketing|negocio|empreendedorismo|vendas|lead|funil|estrategia|lancamento|empresa|startup)\b/.test(t)) {
+    return { category: 'abstract', query: 'abstract dark gradient business premium corporate' };
   }
-  // Gaming
-  if (/\b(game|jogo|gamer|esport|gaming|streamer)\b/.test(t)) {
-    return { category: '3d-scenes', query: '3D gaming neon futuristic scene environment' };
+  // Education
+  if (/\b(educacao|curso|aula|professor|escola|universidade|estudo|aprendizado|ead|mentoria)\b/.test(t)) {
+    return { category: '2d-illustrations', query: '2D illustration education learning modern flat' };
   }
-  // Pets / Animals
-  if (/\b(pet|animal|cachorro|gato|veterinario|petshop)\b/.test(t)) {
-    return { category: 'minimalist', query: 'pet animal minimalist clean photography' };
+  // Travel / Tourism
+  if (/\b(viagem|turismo|destino|hotel|voo|passagem|mochilao|aventura)\b/.test(t)) {
+    return { category: '3d-scenes', query: '3D travel scene paradise tropical aerial' };
   }
   // Motivation / Mindset / Self-help
   if (/\b(motivacao|motivacional|mindset|produtividade|habito|autoconhecimento|crescimento pessoal|disciplina|foco)\b/.test(t)) {
-    return { category: 'abstract', query: 'motivational abstract dark gradient inspirational' };
+    return { category: 'abstract', query: 'abstract inspirational dark gradient cosmos' };
   }
   // Kids / Education infantil
   if (/\b(crianca|infantil|bebe|maternidade|brinquedo|escola)\b/.test(t)) {

@@ -53,6 +53,7 @@ const StepTopic: React.FC<Props> = ({
   webSearchSuggestion, onAcceptWebSearch, onDeclineWebSearch, classifyingTopic,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
+  const t = getThemeClasses(getAccentTheme(wizardMode));
   const [advancedMode, setAdvancedMode] = useState(false);
   const isSimple = wizardMode === 'simple';
 

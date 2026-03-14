@@ -95,7 +95,7 @@ const PLAN_CONFIGS: Record<PlanKey, Omit<PlanLimits, 'isActive'>> = {
     allowSimple: true,
     allowAdvanced: true,
     allowExtreme: false,
-    maxSlidesPerCarousel: 10,
+    maxSlidesPerCarousel: 6,
     allowContinuousMode: true,
     allowElloIAPro: true,
     allowElloIAFace: true,

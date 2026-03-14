@@ -41,7 +41,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
     const newRefs: ReferenceImage[] = files.map(f => ({
-      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const,
+      url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'brand' as const,
     }));
     setReferenceImages(prev => [...prev, ...newRefs]);
   };

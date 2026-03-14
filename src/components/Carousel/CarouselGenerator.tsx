@@ -1236,6 +1236,9 @@ const CarouselGenerator: React.FC = () => {
     const gc = item.generation_config;
     if (gc) {
       if (gc.contentMode) setContentMode(gc.contentMode);
+      if (gc.cardCount) setCardCount(gc.cardCount);
+      if (gc.imageCardCount !== undefined) setImageCardCount(gc.imageCardCount);
+      if (gc.manualPostText) setManualPostText(gc.manualPostText);
       if (gc.wizardMode === 'extreme') {
         setWizardMode('extreme');
         if (gc.extremeVision) setExtremeVision(gc.extremeVision);

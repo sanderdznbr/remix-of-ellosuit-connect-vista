@@ -35,8 +35,9 @@ interface Props {
 
 const StepStyleSelect: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
-  selectedFont, setSelectedFont, onApplyPreset, onApplyMarketplaceStyle,
+  selectedFont, setSelectedFont, onApplyPreset, onApplyMarketplaceStyle, accentTheme = 'purple',
 }) => {
+  const t = getThemeClasses(accentTheme);
   const { user } = useAuth();
   const [purchasedStyles, setPurchasedStyles] = useState<MarketplaceStyle[]>([]);
   const [loading, setLoading] = useState(true);

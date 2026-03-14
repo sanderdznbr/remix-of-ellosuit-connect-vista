@@ -264,6 +264,7 @@ const CarouselGenerator: React.FC = () => {
   const [brandSuggestedPalette, setBrandSuggestedPalette] = useState<{ bg: string; accent: string; text: string } | null>(null);
   const [selectedFont, setSelectedFont] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
 
@@ -1335,6 +1336,7 @@ const CarouselGenerator: React.FC = () => {
         user_name: userName,
         date_label: dateLabel,
         logo_url: logoUrl,
+        logo_dark_url: logoDarkUrl,
         logo_position: logoPosition,
         show_header: showHeader,
         image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined, facePersonsMetadata: facePersons.filter(p => p.photos.length > 0).length > 1 ? facePersons.filter(p => p.photos.length > 0).map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined, allPeopleOnCover } as any,
@@ -5225,6 +5227,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <StepBranding
                         showHeader={showHeader} setShowHeader={setShowHeader}
                         logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                        logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
                         logoPosition={logoPosition} setLogoPosition={setLogoPosition}
                         logoBrandColors={logoBrandColors}
                         brandName={brandName} setBrandName={setBrandName}

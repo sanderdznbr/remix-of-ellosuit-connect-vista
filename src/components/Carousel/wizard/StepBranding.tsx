@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, X, Settings2 } from 'lucide-react';
+import { Upload, X, Settings2, Sun, Moon } from 'lucide-react';
 import { LogoPosition } from './StepStyle';
 import LogoPositionPicker from './LogoPositionPicker';
 
@@ -8,6 +8,8 @@ interface Props {
   setShowHeader: (v: boolean) => void;
   logoUrl: string | null;
   setLogoUrl: (v: string | null) => void;
+  logoDarkUrl?: string | null;
+  setLogoDarkUrl?: (v: string | null) => void;
   logoPosition: LogoPosition;
   setLogoPosition: (v: LogoPosition) => void;
   logoBrandColors?: string[];
@@ -21,19 +23,25 @@ interface Props {
 }
 
 const StepBranding: React.FC<Props> = ({
-  showHeader, setShowHeader, logoUrl, setLogoUrl, logoPosition, setLogoPosition,
+  showHeader, setShowHeader, logoUrl, setLogoUrl, logoDarkUrl, setLogoDarkUrl,
+  logoPosition, setLogoPosition,
   logoBrandColors = [], brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   isExtreme = false,
 }) => {
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  const logoLightInputRef = useRef<HTMLInputElement>(null);
+  const logoDarkInputRef = useRef<HTMLInputElement>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const hasAnyLogo = !!logoUrl || !!logoDarkUrl;
 
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">Sua logomarca</h2>
-          <p className="text-sm text-white/40">Envie a logomarca que aparecerá nos cards.</p>
+          <p className="text-sm text-white/40">
+            Envie duas versões da logo — a IA escolhe automaticamente a melhor para cada fundo.
+          </p>
         </div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
@@ -71,53 +79,108 @@ const StepBranding: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Logo upload */}
-      <div className="space-y-4">
-        {logoUrl ? (
-          <div className="flex flex-col items-center gap-4 py-6 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
-            <div className="w-24 h-24 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center overflow-hidden">
-              <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => logoInputRef.current?.click()}
-                className="px-4 py-2 rounded-lg text-xs font-medium text-white/50 hover:text-white/70 bg-white/[0.04] hover:bg-white/[0.08] transition-all">
-                Trocar logo
-              </button>
-              <button onClick={() => setLogoUrl(null)}
-                className="p-2 rounded-lg bg-white/[0.04] hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* Dual logo upload */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Light logo (for dark backgrounds) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Moon className="h-3.5 w-3.5 text-white/30" />
+            <p className="text-xs font-medium text-white/40">Para fundo escuro</p>
           </div>
-        ) : (
-          <button onClick={() => logoInputRef.current?.click()}
-            className={`w-full flex flex-col items-center justify-center gap-3 py-12 rounded-2xl border-2 border-dashed ${isExtreme ? 'border-orange-500/30 bg-orange-500/[0.04] hover:bg-orange-500/[0.08]' : 'border-purple-500/30 bg-purple-500/[0.04] hover:bg-purple-500/[0.08]'} text-white/50 hover:text-white/70 transition-all cursor-pointer`}>
-            <div className={`w-14 h-14 rounded-xl ${isExtreme ? 'bg-orange-500/10' : 'bg-purple-500/10'} flex items-center justify-center`}>
-              <Upload className={`h-6 w-6 ${isExtreme ? 'text-orange-400' : 'text-purple-400'}`} />
+          {logoUrl ? (
+            <div className="flex flex-col items-center gap-3 py-5 rounded-xl bg-[#111]/80 border border-white/[0.08]">
+              <div className="w-20 h-20 rounded-lg bg-[#0a0a0a] border border-white/[0.08] flex items-center justify-center overflow-hidden p-2">
+                <img src={logoUrl} alt="Logo clara" className="max-w-full max-h-full object-contain" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => logoLightInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-medium text-white/50 hover:text-white/70 bg-white/[0.04] hover:bg-white/[0.08] transition-all">
+                  Trocar
+                </button>
+                <button onClick={() => setLogoUrl(null)}
+                  className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             </div>
-            <div className="text-center">
-              <span className="text-sm font-semibold block">Enviar logomarca</span>
-              <span className="text-xs text-white/30 mt-1 block">PNG ou JPG com fundo transparente</span>
+          ) : (
+            <button onClick={() => logoLightInputRef.current?.click()}
+              className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed ${isExtreme ? 'border-orange-500/20 bg-orange-500/[0.02] hover:bg-orange-500/[0.06]' : 'border-purple-500/20 bg-purple-500/[0.02] hover:bg-purple-500/[0.06]'} text-white/40 hover:text-white/60 transition-all cursor-pointer`}>
+              <Upload className="h-5 w-5" />
+              <div className="text-center">
+                <span className="text-xs font-semibold block">Logo clara</span>
+                <span className="text-[10px] text-white/20 mt-0.5 block">Branca / cores claras</span>
+              </div>
+            </button>
+          )}
+          <input ref={logoLightInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setLogoUrl(URL.createObjectURL(file));
+              setShowHeader(false);
+            }
+            e.target.value = '';
+          }} />
+        </div>
+
+        {/* Dark logo (for light backgrounds) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Sun className="h-3.5 w-3.5 text-white/30" />
+            <p className="text-xs font-medium text-white/40">Para fundo claro</p>
+          </div>
+          {logoDarkUrl && setLogoDarkUrl ? (
+            <div className="flex flex-col items-center gap-3 py-5 rounded-xl bg-white/[0.7] border border-white/[0.15]">
+              <div className="w-20 h-20 rounded-lg bg-white border border-black/10 flex items-center justify-center overflow-hidden p-2">
+                <img src={logoDarkUrl} alt="Logo escura" className="max-w-full max-h-full object-contain" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => logoDarkInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-medium text-black/40 hover:text-black/60 bg-black/[0.06] hover:bg-black/10 transition-all">
+                  Trocar
+                </button>
+                <button onClick={() => setLogoDarkUrl(null)}
+                  className="p-1.5 rounded-lg bg-black/[0.06] hover:bg-red-500/20 text-black/30 hover:text-red-400 transition-colors">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             </div>
-          </button>
-        )}
-        <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            setLogoUrl(URL.createObjectURL(file));
-            setShowHeader(false);
-          }
-          e.target.value = '';
-        }} />
+          ) : (
+            <button onClick={() => logoDarkInputRef.current?.click()}
+              className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed ${isExtreme ? 'border-orange-500/20 bg-orange-500/[0.02] hover:bg-orange-500/[0.06]' : 'border-purple-500/20 bg-purple-500/[0.02] hover:bg-purple-500/[0.06]'} text-white/40 hover:text-white/60 transition-all cursor-pointer`}>
+              <Upload className="h-5 w-5" />
+              <div className="text-center">
+                <span className="text-xs font-semibold block">Logo escura</span>
+                <span className="text-[10px] text-white/20 mt-0.5 block">Preta / cores escuras</span>
+              </div>
+            </button>
+          )}
+          {setLogoDarkUrl && (
+            <input ref={logoDarkInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setLogoDarkUrl(URL.createObjectURL(file));
+              }
+              e.target.value = '';
+            }} />
+          )}
+        </div>
       </div>
 
+      {/* Hint */}
+      {!hasAnyLogo && (
+        <p className="text-[10px] text-white/20 text-center">
+          💡 Envie ao menos uma versão. O ideal é ter as duas para contraste perfeito.
+        </p>
+      )}
+
       {/* Logo position picker */}
-      {logoUrl && (
+      {hasAnyLogo && (
         <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
       )}
 
       {/* Brand colors extracted */}
-      {logoUrl && logoBrandColors.length > 0 && (
+      {hasAnyLogo && logoBrandColors.length > 0 && (
         <div>
           <p className="text-[10px] text-white/30 mb-1.5">Cores extraídas da logo (usadas na geração IA)</p>
           <div className="flex gap-1.5">

@@ -6408,10 +6408,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
                       <ImageIcon className="h-4 w-4" /> Baixar JPG
                     </button>
-                    <button onClick={() => exportAllCards('webp')}
-                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
-                      <ImageIcon className="h-4 w-4" /> Baixar WEBP
-                    </button>
+                    {planLimits.allowedExportFormats.includes('webp') && (
+                      <button onClick={() => exportAllCards('webp')}
+                        className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
+                        <ImageIcon className="h-4 w-4" /> Baixar WEBP
+                      </button>
+                    )}
                     <div className="h-px bg-white/10 my-1" />
                     <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"

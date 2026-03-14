@@ -186,7 +186,7 @@ function CheckoutContent() {
           company_id: cu.company_id,
           plan_type: planKey as any,
           status: 'active' as any,
-          monthly_price: planConfig.price,
+          monthly_price: isAnnual ? planConfig.annualPrice : planConfig.monthlyPrice,
           current_period_start: new Date().toISOString(),
           current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
         }, { onConflict: 'company_id' });

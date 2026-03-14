@@ -100,7 +100,7 @@ const StepMode: React.FC<Props> = ({
                 locked
                   ? 'bg-white/[0.03]'
                   : selected
-                  ? isExtreme ? 'bg-orange-500/20' : 'bg-purple-500/20'
+                  ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : 'bg-purple-500/20'
                   : 'bg-white/[0.04]'
               }`}>
                 {locked ? (

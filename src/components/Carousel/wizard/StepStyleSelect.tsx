@@ -159,7 +159,7 @@ const StepStyleSelect: React.FC<Props> = ({
               <button key={cat} onClick={() => setSelectedCategory(cat)}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    ? `${t.bgLight} ${t.textLight} border ${t.borderLight}`
                     : 'bg-white/[0.04] text-white/40 hover:text-white/60 border border-transparent'
                 }`}>
                 {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}

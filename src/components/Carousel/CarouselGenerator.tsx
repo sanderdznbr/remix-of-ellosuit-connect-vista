@@ -5569,7 +5569,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           }
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"
-                        style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)' : 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)' }}>
+                        style={{ background: modeTheme.gradient }}>
                         {isGuest ? <><Sparkles className="h-4 w-4" /> Gerar Post Grátis</> : <><Sparkles className="h-4 w-4" /> {contentMode === 'single-post' ? 'Gerar Post' : 'Gerar Carrossel'}</>}
                       </button>
                     )}

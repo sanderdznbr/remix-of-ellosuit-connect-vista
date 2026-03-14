@@ -7167,7 +7167,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       onClick={() => {
                         setShowFullConfigModal(false);
                         setShowStylePanel(true);
-                        setStyleChangeSource('toolbar');
+                        setStyleChangeSource('recreate');
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                       style={{ backgroundColor: 'rgba(34,197,94,0.15)', color: '#86efac' }}>

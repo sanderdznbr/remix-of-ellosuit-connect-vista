@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Loader2, Wand2, Globe, Search, Settings, Image as ImageIcon, Layers } from 'lucide-react';
+import { getAccentTheme, getThemeClasses } from './wizardTheme';
 import PromptMentionInput, { PromptMentionRef } from './PromptMention';
 
 interface MentionedPrompt {

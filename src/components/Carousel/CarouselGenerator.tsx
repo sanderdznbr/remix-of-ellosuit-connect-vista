@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { calculateCreditCost } from '@/utils/creditCost';
 import '@/styles/carousel-loader.css';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';
@@ -1727,7 +1728,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
             try {
-              await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: 1, p_description: `Post único: ${topic}` });
+              const creditAmount = calculateCreditCost({ cardCount: 1, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) });
+              await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: creditAmount, p_description: `Post único (${wizardMode}): ${topic} — ${creditAmount} créditos` });
             } catch { /* ignore */ }
             const isFullBleed = true;
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
@@ -2115,10 +2117,11 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
               const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
               if (companyData) {
                 try {
+                  const creditAmount = calculateCreditCost({ cardCount: finalData.cards.length, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) });
                   await supabase.rpc('consume_ai_credits', {
                     p_company_id: companyData.company_id, p_agent_id: null,
-                    p_amount: finalData.cards.length,
-                    p_description: `Carrossel Contínuo: ${finalData.title || topic} (${finalData.cards.length} cards)`,
+                    p_amount: creditAmount,
+                    p_description: `Carrossel Contínuo (${wizardMode}): ${finalData.title || topic} (${finalData.cards.length} cards) — ${creditAmount} créditos`,
                   });
                 } catch { /* ignore */ }
                 const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, continuousMode: true };
@@ -2703,11 +2706,12 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
             try {
+              const creditAmount = calculateCreditCost({ cardCount: finalData.cards.length, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) });
               await supabase.rpc('consume_ai_credits', {
                 p_company_id: companyData.company_id,
                 p_agent_id: null,
-                p_amount: finalData.cards.length,
-                p_description: `Carrossel: ${finalData.title || topic} (${finalData.cards.length} cards)`,
+                p_amount: creditAmount,
+                p_description: `Carrossel (${wizardMode}): ${finalData.title || topic} (${finalData.cards.length} cards) — ${creditAmount} créditos`,
               });
             } catch { /* ignore */ }
 
@@ -3237,7 +3241,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         if (userData.user) {
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
-            try { await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: totalCards - 1, p_description: `Carrossel da capa: ${topic} (${totalCards} cards)` }); } catch { /* ignore */ }
+            try { const creditAmount = calculateCreditCost({ cardCount: totalCards, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) }); await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: creditAmount, p_description: `Carrossel da capa (${wizardMode}): ${topic} (${totalCards} cards) — ${creditAmount} créditos` }); } catch { /* ignore */ }
             const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
             isSavingRef.current = true;
             try {

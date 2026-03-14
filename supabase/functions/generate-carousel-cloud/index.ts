@@ -745,13 +745,18 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
       }
     }
 
-    // Consume credits
+    // Consume credits based on generation rules
+    // Simples = 1 cr/card, Avançado = 2 cr/card, Avançado+Rosto = 4 cr/card, +1 pesquisa
     try {
+      const wizardMode = job.image_settings?.wizardMode || 'simple';
+      const hasFace = (job.face_ref_urls && Array.isArray(job.face_ref_urls) && job.face_ref_urls.length > 0);
+      const perCard = wizardMode === 'simple' ? 1 : (hasFace ? 4 : 2);
+      const creditAmount = (cards.length * perCard) + 1; // +1 for web search
       await sb.rpc('consume_ai_credits', {
         p_company_id: job.company_id,
         p_agent_id: null,
-        p_amount: cards.length,
-        p_description: `Carrossel: ${finalCarouselData.title || job.topic} (${cards.length} cards)`,
+        p_amount: creditAmount,
+        p_description: `Carrossel (${wizardMode}): ${finalCarouselData.title || job.topic} (${cards.length} cards) — ${creditAmount} créditos`,
       });
     } catch (creditErr) {
       console.error('Credit consumption failed:', creditErr);

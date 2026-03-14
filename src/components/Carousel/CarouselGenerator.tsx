@@ -305,7 +305,7 @@ const CarouselGenerator: React.FC = () => {
    const [showFullConfigModal, setShowFullConfigModal] = useState(false);
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
-  const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card'>('toolbar');
+  const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card' | 'recreate'>('toolbar');
   const [pendingAddCardStyle, setPendingAddCardStyle] = useState<any>(null);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');
@@ -5773,9 +5773,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Criar novo usando mesmo prompt */}
                     <button
                       onClick={() => {
-                        // Keep all current settings but open style panel to pick a new style
+                        setShowInlineEditor(false);
+                        setStyleChangeSource('recreate');
                         setShowStylePanel(true);
-                        setStyleChangeSource('toolbar');
                       }}
                       className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-green-300 hover:text-green-200 hover:bg-white/[0.06] transition-all w-full">
                       <RotateCcw className="h-4 w-4 text-green-400" />
@@ -6205,7 +6205,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <div className="flex items-center gap-2">
                         <Palette className="h-5 w-5" style={{ color: themeHex }} />
                         <h3 className="font-bold text-white text-base">
-                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
+                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : styleChangeSource === 'recreate' ? 'Escolha um estilo' : 'Estilo'}
                         </h3>
                       </div>
                       <button onClick={() => setShowStylePanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -6219,6 +6219,31 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setStyleChangeSource('toolbar');
                         setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                       }} />
+                    ) : styleChangeSource === 'recreate' ? (
+                      <StepStyleSelect
+                        bgColor={bgColor} setBgColor={setBgColor}
+                        accentColor={accentColor} setAccentColor={setAccentColor}
+                        textColor={textColor} setTextColor={setTextColor}
+                        selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                        onApplyMarketplaceStyle={(config) => {
+                          setActiveMarketplaceStyle(config);
+                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                          setShowStylePanel(false);
+                          setStyleChangeSource('toolbar');
+                          propertyListRef.current = propertyList;
+                          activeMarketplaceStyleRef.current = config;
+                          generationSnapshotRef.current = {
+                            isRealEstate: !!config?.is_real_estate,
+                            realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                            propertyList: JSON.parse(JSON.stringify(propertyList)),
+                            marketplaceStyle: config ? { ...config } : null,
+                          };
+                          setTransitionToGenerate(true);
+                          setCurrentCarouselId(null);
+                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                        }}
+                      />
                     ) : (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                         textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
@@ -6281,7 +6306,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <div className="flex items-center gap-2">
                         <Palette className="h-5 w-5" style={{ color: themeHex }} />
                         <h3 className="font-bold text-white text-base">
-                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : 'Estilo'}
+                          {styleChangeSource === 'add-card' ? 'Escolha o estilo do novo card' : styleChangeSource === 'recreate' ? 'Escolha um estilo' : 'Estilo'}
                         </h3>
                       </div>
                       <button onClick={() => setShowStylePanel(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
@@ -6296,6 +6321,31 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setStyleChangeSource('toolbar');
                           setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' });
                         }} />
+                      ) : styleChangeSource === 'recreate' ? (
+                        <StepStyleSelect
+                          bgColor={bgColor} setBgColor={setBgColor}
+                          accentColor={accentColor} setAccentColor={setAccentColor}
+                          textColor={textColor} setTextColor={setTextColor}
+                          selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                          onApplyMarketplaceStyle={(config) => {
+                            setActiveMarketplaceStyle(config);
+                            setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                            setShowStylePanel(false);
+                            setStyleChangeSource('toolbar');
+                            propertyListRef.current = propertyList;
+                            activeMarketplaceStyleRef.current = config;
+                            generationSnapshotRef.current = {
+                              isRealEstate: !!config?.is_real_estate,
+                              realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                              propertyList: JSON.parse(JSON.stringify(propertyList)),
+                              marketplaceStyle: config ? { ...config } : null,
+                            };
+                            setTransitionToGenerate(true);
+                            setCurrentCarouselId(null);
+                            const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                            setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          }}
+                        />
                       ) : (
                         <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
                           textColor={textColor} setTextColor={setTextColor} selectedFont={selectedFont} setSelectedFont={setSelectedFont}
@@ -7117,7 +7167,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       onClick={() => {
                         setShowFullConfigModal(false);
                         setShowStylePanel(true);
-                        setStyleChangeSource('toolbar');
+                        setStyleChangeSource('recreate');
                       }}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                       style={{ backgroundColor: 'rgba(34,197,94,0.15)', color: '#86efac' }}>

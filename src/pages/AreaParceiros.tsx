@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Copy, DollarSign, Users, TrendingUp, Link2, Loader2, Wallet,
   BarChart3, Clock, Percent, Shield, CalendarDays, XCircle, CheckCircle2,
-  ArrowUpRight, X, Home, LinkIcon, CreditCard, Menu, Sparkles
+  ArrowUpRight, X, Home, LinkIcon, CreditCard, Menu
 } from 'lucide-react';
+import ellocontentIcon from '@/assets/ellocontent_icon.png';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';

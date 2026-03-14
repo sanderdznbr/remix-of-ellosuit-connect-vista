@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import {
   Copy, DollarSign, Users, TrendingUp, Link2, Loader2, Wallet,
   BarChart3, Clock, Percent, Shield, CalendarDays, XCircle, CheckCircle2,
-  ArrowUpRight, X, Home, LinkIcon, CreditCard, Menu, Sparkles
+  ArrowUpRight, X, Home, LinkIcon, CreditCard, Menu
 } from 'lucide-react';
+import ellocontentIcon from '@/assets/ellocontent_icon.png';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -243,18 +244,19 @@ export default function AreaParceiros() {
 
   return (
     <div className="min-h-screen flex bg-[#08080e] relative overflow-hidden">
-      {/* Background glow effects */}
-      <div className="fixed top-0 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.04] blur-[120px] pointer-events-none" style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
-      <div className="fixed bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.03] blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, #a855f7, transparent)' }} />
+      {/* Background blurred glow effects - 70% opacity */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ opacity: 0.7 }}>
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full blur-[150px]" style={{ background: 'radial-gradient(circle, #7c3aed, transparent 70%)' }} />
+        <div className="absolute bottom-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full blur-[130px]" style={{ background: 'radial-gradient(circle, #9333ea, transparent 70%)' }} />
+        <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] rounded-full blur-[160px]" style={{ background: 'radial-gradient(circle, #6d28d9, transparent 70%)' }} />
+      </div>
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-[260px] shrink-0 h-screen sticky top-0 border-r border-white/[0.06] bg-[#0a0a12]/80 backdrop-blur-xl">
         {/* Logo area */}
         <div className="p-6 pb-4">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
+            <img src={ellocontentIcon} alt="Logo" className="w-8 h-8 rounded-xl" />
             <div>
               <p className="text-white font-bold text-sm tracking-tight">Parceiro</p>
               <p className="text-purple-400/60 text-[10px] font-mono">{affiliate.affiliate_code}</p>
@@ -292,9 +294,7 @@ export default function AreaParceiros() {
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between bg-[#0a0a12]/90 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
+          <img src={ellocontentIcon} alt="Logo" className="w-7 h-7 rounded-lg" />
           <p className="text-white font-bold text-sm">Parceiro</p>
         </div>
         <button onClick={() => setMobileNav(true)} className="text-white/40 hover:text-white/60 cursor-pointer p-1">
@@ -323,9 +323,7 @@ export default function AreaParceiros() {
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)' }}>
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
-                  </div>
+                  <img src={ellocontentIcon} alt="Logo" className="w-7 h-7 rounded-lg" />
                   <p className="text-white font-bold text-sm">Menu</p>
                 </div>
                 <button onClick={() => setMobileNav(false)} className="text-white/30 hover:text-white/50 cursor-pointer p-1"><X className="w-5 h-5" /></button>

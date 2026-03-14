@@ -37,7 +37,7 @@ const StepBrandRef: React.FC<Props> = ({ referenceImages, setReferenceImages, br
       finally { setExtracting(false); }
     };
     analyze();
-  }, [latestStyleRef?.url, lastAnalyzedUrl]);
+  }, [latestBrandRef?.url, lastAnalyzedUrl]);
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
     const newRefs: ReferenceImage[] = files.map(f => ({

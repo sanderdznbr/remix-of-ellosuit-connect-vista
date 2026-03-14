@@ -212,7 +212,11 @@ const BrandGallery: React.FC = () => {
     await supabase.from('brand_assets').delete().eq('folder_id', id);
     // Move subfolders to parent
     const folder = folders.find(f => f.id === id);
-    await supabase.from('brand_asset_folders').update({ parent_folder_id: folder?.parent_folder_id || null } as any).eq('parent_folder_id' as any, id);
+    // Move subfolders up to parent level
+    const subfolders = folders.filter(f => f.parent_folder_id === id);
+    for (const sf of subfolders) {
+      await supabase.from('brand_asset_folders').update({ parent_folder_id: folder?.parent_folder_id || null } as Record<string, any>).eq('id', sf.id);
+    }
     await supabase.from('brand_asset_folders').delete().eq('id', id);
     if (currentFolder?.id === id) navigateBack();
     fetchData();

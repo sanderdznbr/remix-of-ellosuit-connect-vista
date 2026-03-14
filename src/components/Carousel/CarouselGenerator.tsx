@@ -5238,7 +5238,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         manualCardTexts={manualCardTexts}
                         setManualCardTexts={setManualCardTexts}
                         topic={topic}
-                        accentTheme={wizardMode === 'extreme' ? 'orange' : 'purple'} />
+                        accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'} />
                     )}
                     {currentStepName === 'Logo' && (
                       <StepBranding

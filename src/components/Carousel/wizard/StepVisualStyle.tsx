@@ -224,7 +224,7 @@ const StepVisualStyle: React.FC<Props> = ({
       )}
 
       {/* Category grid — 2 cols x 3 rows */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {VISUAL_CATEGORIES.map(cat => {
           const isSelected = selectedCategory === cat.id;
           return (

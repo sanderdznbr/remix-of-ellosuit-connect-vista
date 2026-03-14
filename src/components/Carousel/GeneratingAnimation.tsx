@@ -201,7 +201,7 @@ const GeneratingAnimation: React.FC<Props> = ({
           style={{ background: `radial-gradient(circle, ${loadingColor}99 0%, transparent 70%)` }} />
 
         <div className="carousel-loader-wrapper" style={{ width: 200, height: 200 }}>
-          <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : ''}`} />
+          <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
         </div>
 
         {imageGenProgress && (

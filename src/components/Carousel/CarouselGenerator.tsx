@@ -3612,6 +3612,8 @@ FORBIDDEN:
 
       // 3. Regenerate image using AI with face/style references
       let newImageUrl = wantsTextOnly ? '' : card.imageUrl;
+
+      if (!wantsTextOnly) {
       const cleanTopic = webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim();
       const activeFPRegen = facePersons.filter(p => p.photos.length > 0);
       const wizardFaceRefs = activeFPRegen.length > 0

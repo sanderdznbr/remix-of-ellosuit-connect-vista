@@ -25,6 +25,13 @@ export interface ProductAnalysis {
 
 type DetectedContext = 'app' | 'website' | 'food' | 'physical' | null;
 
+interface MentionedPrompt {
+  id: string;
+  title: string;
+  content: string;
+  avatar_url: string | null;
+}
+
 interface Props {
   productImages: { url: string; thumb: string; file: File }[];
   setProductImages: React.Dispatch<React.SetStateAction<{ url: string; thumb: string; file: File }[]>>;
@@ -37,6 +44,7 @@ interface Props {
   topic?: string;
   imageSettings?: ImageSettings;
   onUpdateImageSettings?: (s: ImageSettings) => void;
+  mentionedPrompts?: MentionedPrompt[];
 }
 
 const TYPE_LABELS: Record<string, { label: string; emoji: string; desc: string }> = {
@@ -79,9 +87,18 @@ const CONTEXT_HINTS: Record<string, { icon: React.ElementType; title: string; su
   },
 };
 
-function detectContext(topic: string): DetectedContext {
-  if (!topic) return null;
-  const t = topic.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents for matching
+function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[]): DetectedContext {
+  // Combine topic + all mentioned prompt titles and content for analysis
+  const parts = [topic || ''];
+  if (mentionedPrompts?.length) {
+    mentionedPrompts.forEach(m => {
+      parts.push(m.title || '');
+      parts.push(m.content || '');
+    });
+  }
+  const t = parts.join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  if (!t.trim()) return null;
   
   // App / mobile — check first (most specific)
   if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) ||
@@ -110,12 +127,13 @@ const StepProduct: React.FC<Props> = ({
   topic = '',
   imageSettings,
   onUpdateImageSettings,
+  mentionedPrompts = [],
 }) => {
   const { user } = useAuth();
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [contextApplied, setContextApplied] = useState(false);
 
-  const detectedContext = useMemo(() => detectContext(topic), [topic]);
+  const detectedContext = useMemo(() => detectContext(topic, mentionedPrompts), [topic, mentionedPrompts]);
   const hint = detectedContext ? CONTEXT_HINTS[detectedContext] : null;
 
   // Auto-apply hand object setting when context is detected and user uploads

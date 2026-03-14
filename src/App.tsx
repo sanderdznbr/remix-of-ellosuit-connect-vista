@@ -24,6 +24,7 @@ import PostPublic from './pages/PostPublic';
 import Presentear from './pages/Presentear';
 import Parceiros from './pages/Parceiros';
 import Admin from './pages/Admin';
+import AreaParceiros from './pages/AreaParceiros';
 import Comunidade from './pages/Comunidade';
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/post/:postId" element={<PostPublic />} />
               <Route path="/presentear" element={<Presentear />} />
               <Route path="/parceiros" element={<Parceiros />} />
+              <Route path="/area/parceiros" element={<AreaParceiros />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/comunidade" element={<Comunidade />} />
               <Route path="*" element={<NotFound />} />

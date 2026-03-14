@@ -5144,7 +5144,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
                         visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        topic={topic} mentionedPrompts={mentionedPrompts} />
+                        topic={topic} mentionedPrompts={mentionedPrompts} productAnalysis={productAnalysis} />
                     )}
                     {currentStepName === 'Fotos Imóvel' && (
                       <StepPropertyPhotos

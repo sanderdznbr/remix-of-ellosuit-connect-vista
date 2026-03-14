@@ -25,6 +25,13 @@ export interface ProductAnalysis {
 
 type DetectedContext = 'app' | 'website' | 'food' | 'physical' | null;
 
+interface MentionedPrompt {
+  id: string;
+  title: string;
+  content: string;
+  avatar_url: string | null;
+}
+
 interface Props {
   productImages: { url: string; thumb: string; file: File }[];
   setProductImages: React.Dispatch<React.SetStateAction<{ url: string; thumb: string; file: File }[]>>;
@@ -37,6 +44,7 @@ interface Props {
   topic?: string;
   imageSettings?: ImageSettings;
   onUpdateImageSettings?: (s: ImageSettings) => void;
+  mentionedPrompts?: MentionedPrompt[];
 }
 
 const TYPE_LABELS: Record<string, { label: string; emoji: string; desc: string }> = {

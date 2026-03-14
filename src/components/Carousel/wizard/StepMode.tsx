@@ -90,6 +90,8 @@ const StepMode: React.FC<Props> = ({
                   : selected
                   ? isExtreme
                     ? 'bg-orange-500/[0.08] border-orange-500/40'
+                    : m.key === 'advanced'
+                    ? 'bg-red-500/[0.08] border-red-500/40'
                     : 'bg-purple-500/[0.08] border-purple-500/40'
                   : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
               }`}

@@ -14,7 +14,7 @@ interface Props {
   manualCardTexts: CardText[];
   setManualCardTexts: (v: CardText[]) => void;
   topic: string;
-  accentTheme?: 'purple' | 'orange';
+  accentTheme?: 'purple' | 'orange' | 'red';
 }
 
 const StepCardTexts: React.FC<Props> = ({

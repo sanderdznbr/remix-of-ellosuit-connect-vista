@@ -5692,8 +5692,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </button>
                 <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: themeHex, backgroundColor: `rgba(${themeRgb},0.12)`, border: `1px solid rgba(${themeRgb},0.25)` }}>
                   {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : 'Modo Simples'}
-                  {(activeMarketplaceStyle?.name || (carouselData as any)?.generation_config?.marketplaceStyleName) && (
-                    <>, tema {activeMarketplaceStyle?.name || (carouselData as any)?.generation_config?.marketplaceStyleName}</>
+                  {activeMarketplaceStyle?.name && (
+                    <>, tema {activeMarketplaceStyle.name}</>
                   )}
                 </span>
               </div>

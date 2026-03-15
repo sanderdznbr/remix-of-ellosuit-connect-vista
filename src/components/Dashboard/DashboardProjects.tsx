@@ -79,7 +79,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
         let query = supabase
           .from('generated_carousels')
-          .select('id, title, topic, created_at, card_count, cover_url, is_starred, carousel_data')
+          .select('id, title, topic, created_at, card_count, cover_url, is_starred')
           .eq('company_id', companyData.company_id);
 
         if (filterMode === 'starred') {

@@ -60,10 +60,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     try {
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
       if (!companyData) return;
-      const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, style_config, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(10);
+      const { data } = await supabase.from('generated_carousels').select('id, title, topic, created_at, card_count, cover_url').eq('company_id', companyData.company_id).order('created_at', { ascending: false }).limit(10);
       setRecentCarousels(data || []);
-      const { data: balanceData } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', companyData.company_id).single();
-      setCreditBalance(balanceData?.balance || 0);
+      const { data: balanceData } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', companyData.company_id).maybeSingle();
+      setCreditBalance(balanceData?.balance ?? 0);
     } catch (err) { console.error(err); }
   };
 

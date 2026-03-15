@@ -89,11 +89,11 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
         const { data } = await query.order('created_at', { ascending: false }).limit(100);
         setCarousels(data || []);
 
-        // Auto-recover missing covers in background
+        // Auto-recover missing covers in background (lazy, max 3)
         if (data) {
-          const missing = data.filter(c => !c.cover_url && c.carousel_data);
-          for (const item of missing.slice(0, 5)) {
-            recoverCover(item, companyData.company_id);
+          const missing = data.filter(c => !c.cover_url);
+          for (const item of missing.slice(0, 3)) {
+            recoverCover(item.id, companyData.company_id);
           }
         }
       } catch (err) {

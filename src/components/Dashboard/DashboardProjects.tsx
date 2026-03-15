@@ -28,36 +28,38 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishCaption, setPublishCaption] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
 
-  const recoverCover = async (item: any, companyId: string) => {
+  const recoverCover = async (itemId: string, companyId: string) => {
     try {
-      const cards = item.carousel_data?.cards;
-      const firstImage = cards?.[0]?.imageUrl;
+      // Fetch only the first card image lazily (avoid loading full carousel_data in listing)
+      const { data: carouselRow } = await supabase
+        .from('generated_carousels')
+        .select('carousel_data')
+        .eq('id', itemId)
+        .single();
+      const firstImage = (carouselRow?.carousel_data as any)?.cards?.[0]?.imageUrl;
       if (!firstImage || firstImage.startsWith('data:')) {
-        // Try server fallback
-        await supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: item.id } });
-        // Refetch cover_url
-        const { data: updated } = await supabase.from('generated_carousels').select('cover_url').eq('id', item.id).single();
+        await supabase.functions.invoke('generate-cover-thumbnail', { body: { carousel_id: itemId } });
+        const { data: updated } = await supabase.from('generated_carousels').select('cover_url').eq('id', itemId).single();
         if (updated?.cover_url) {
-          setCarousels(prev => prev.map(c => c.id === item.id ? { ...c, cover_url: updated.cover_url } : c));
+          setCarousels(prev => prev.map(c => c.id === itemId ? { ...c, cover_url: updated.cover_url } : c));
         }
         return;
       }
-      // Fetch the image and upload to covers bucket
       const res = await fetch(firstImage);
       if (!res.ok) return;
       const blob = await res.blob();
       const ext = blob.type.includes('png') ? 'png' : 'jpg';
-      const fileName = `${companyId}/${item.id}.${ext}`;
+      const fileName = `${companyId}/${itemId}.${ext}`;
       const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
       if (uploadError) return;
       const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
       if (urlData?.publicUrl) {
         const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-        await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', item.id);
-        setCarousels(prev => prev.map(c => c.id === item.id ? { ...c, cover_url: coverUrl } : c));
+        await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', itemId);
+        setCarousels(prev => prev.map(c => c.id === itemId ? { ...c, cover_url: coverUrl } : c));
       }
     } catch (err) {
-      console.warn('Cover recovery failed for', item.id, err);
+      console.warn('Cover recovery failed for', itemId, err);
     }
   };
 
@@ -77,7 +79,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
         let query = supabase
           .from('generated_carousels')
-          .select('id, title, topic, created_at, card_count, cover_url, is_starred, carousel_data')
+          .select('id, title, topic, created_at, card_count, cover_url, is_starred')
           .eq('company_id', companyData.company_id);
 
         if (filterMode === 'starred') {
@@ -87,11 +89,11 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
         const { data } = await query.order('created_at', { ascending: false }).limit(100);
         setCarousels(data || []);
 
-        // Auto-recover missing covers in background
+        // Auto-recover missing covers in background (lazy, max 3)
         if (data) {
-          const missing = data.filter(c => !c.cover_url && c.carousel_data);
-          for (const item of missing.slice(0, 5)) {
-            recoverCover(item, companyData.company_id);
+          const missing = data.filter(c => !c.cover_url);
+          for (const item of missing.slice(0, 3)) {
+            recoverCover(item.id, companyData.company_id);
           }
         }
       } catch (err) {

@@ -45,6 +45,7 @@ interface DashboardHomeProps {
   onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[], postFormat?: PostFormat) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   onViewAllProjects?: () => void;
+  onResumeJob?: (jobId: string) => void;
 }
 
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects }) => {

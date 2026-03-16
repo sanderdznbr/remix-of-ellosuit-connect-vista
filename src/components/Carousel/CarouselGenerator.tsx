@@ -4508,9 +4508,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   // ===== BETA TEST 3 — Magazine editorial with sidebar accent strip =====
   const renderBetaTest3Card = (card: CarouselCard, index: number, isExport = false) => {
-    const w = isExport ? CARD_W : PREVIEW_W;
-    const h = isExport ? CARD_H : PREVIEW_H;
-    const s = isExport ? 1 : PREVIEW_W / CARD_W;
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
+    const s = isExport ? 1 : previewW / cardW;
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
     const bg = bgColor;

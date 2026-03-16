@@ -5706,6 +5706,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   body: { action: 'classify-topic', topic: topic.trim() },
                                 });
                                 if (!error && data) {
+                                  // Always set AI-extracted keywords if available
+                                  if (data.keywords?.length > 0 && !keywords.trim()) {
+                                    setKeywords(data.keywords.join(', '));
+                                  }
                                   if (data.shouldSearch) {
                                     // Auto-search and let useEffect advance to Pesquisa step
                                     setWebSearchDecisionMade(true);

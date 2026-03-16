@@ -12,11 +12,13 @@ const BLOCKED_DOMAINS = [
   'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', '9gag.com',
   'tenor.com', 'giphy.com', 'img.youtube.com', 'youtube.com', 'ytimg.com',
   'venngage.com', 'slidechef.net', 'dexerto.com', 'termometrooscar.com', 'techtudo.com',
+  'twitter.com', 'x.com', 'pbs.twimg.com', 'twimg.com', 'nitter.net',
+  'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
+  'tiktok.com', 'tiktokcdn.com', 'threads.net',
   'cnnbrasil.com.br', 'uol.com.br', 'globo.com', 'r7.com', 'ig.com.br',
   'eonline.com', 'usmagazine.com', 'tmz.com', 'dailymail.co.uk',
   'pagesix.com', 'insider.com', 'screenrant.com', 'cbr.com',
-  'goldderby.com', 'awardswatch.com', 'deadline.com', 'variety.com',
-  'entertainmentweekly.com', 'hollywoodreporter.com',
+  'goldderby.com', 'awardswatch.com',
 ];
 
 function isCleanImageCandidate(url: string, metadata = ''): boolean {

@@ -19,13 +19,14 @@ interface Props {
   accentTheme?: 'purple' | 'orange' | 'red';
   webImages?: string[];
   cardPhotoAssignments?: Record<number, string>;
+  cardPhotoOptions?: Record<number, string[]>;
   setCardPhotoAssignments?: (v: Record<number, string>) => void;
   onOutlineGenerated?: (outline: CardText[]) => Promise<void> | void;
 }
 
 const StepCardTexts: React.FC<Props> = ({
   cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
-  webImages, cardPhotoAssignments, setCardPhotoAssignments, onOutlineGenerated,
+  webImages, cardPhotoAssignments, cardPhotoOptions, setCardPhotoAssignments, onOutlineGenerated,
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);

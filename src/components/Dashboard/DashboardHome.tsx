@@ -473,12 +473,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
               const cover = item.cover_url;
+              const format = item.post_format || 'portrait';
+              const isStory = format === 'story';
+              const cardCount = item.card_count || 1;
+              const typeLabel = isStory ? 'Stories' : cardCount > 1 ? 'Carrossel' : 'Estático';
               return (
                 <div
                   key={item.id}
                   className="rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group shrink-0"
                   style={{
-                    width: '160px',
+                    width: isStory ? '112px' : '160px',
                     height: '200px',
                     background: !cover
                       ? sc.bgColor
@@ -498,18 +502,34 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                     <img
                       src={cover}
                       alt={item.title || item.topic}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className={`absolute inset-0 w-full h-full ${isStory ? 'object-contain bg-black' : 'object-cover'}`}
                       loading="lazy"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   )}
+                  {/* Type badge */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <span
+                      className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                      style={{
+                        backgroundColor: 'rgba(0,0,0,0.6)',
+                        color: 'rgba(255,255,255,0.7)',
+                        backdropFilter: 'blur(4px)',
+                      }}
+                    >
+                      {typeLabel}
+                    </span>
+                  </div>
                   {loadingId === item.id && (
                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
                       <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
                     </div>
                   )}
+                </div>
+              );
+            })}
                 </div>
               );
             })}

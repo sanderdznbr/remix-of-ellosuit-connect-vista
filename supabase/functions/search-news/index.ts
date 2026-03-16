@@ -245,7 +245,7 @@ CRITICAL for image_search_terms: Each term MUST be a precise literal search quer
 - For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"
 - For "CS2": "Counter-Strike 2 tournament player photo", "CS2 championship stage photo"
 - For "Tesla": "Tesla Model 3 driving road photo"
-NEVER use vague generic terms like "technology", "business", "news", or "update" by themselves. Each term must describe the exact event/person/object/scene the user asked for.
+NEVER use vague generic terms like "technology", "business", "news", or "update" by themselves. Each term must describe the exact event/person/object/scene the user asked for.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 

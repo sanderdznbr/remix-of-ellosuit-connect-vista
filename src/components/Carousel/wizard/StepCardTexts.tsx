@@ -73,25 +73,6 @@ const StepCardTexts: React.FC<Props> = ({
     setCardPhotoAssignments(updated);
   };
 
-  const autoAssignPhotos = () => {
-    if (!setCardPhotoAssignments || availableWebImages.length === 0) return;
-    const assignments: Record<number, string> = {};
-    const usedUrls = new Set<string>();
-    for (let i = 0; i < totalCards; i++) {
-      let bestImg = '';
-      for (const url of availableWebImages) {
-        if (usedUrls.has(url)) continue;
-        bestImg = url;
-        break;
-      }
-      if (!bestImg && availableWebImages.length > 0) {
-        bestImg = availableWebImages[i % availableWebImages.length];
-      }
-      if (bestImg) { assignments[i] = bestImg; usedUrls.add(bestImg); }
-    }
-    setCardPhotoAssignments(assignments);
-    toast.success(`${Object.keys(assignments).length} fotos atribuídas automaticamente`);
-  };
 
   const fillWithAI = async () => {
     if (filling) return;

@@ -446,10 +446,8 @@ const CarouselGenerator: React.FC = () => {
     setEditorRefImage(url);
   };
 
-  // Web search state
-  const [searchingWeb, setSearchingWeb] = useState(false);
-  const [skipWebSearch, setSkipWebSearch] = useState(false);
-  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+  // Web search state (moved up, referenced by WIZARD_STEPS computation above)
+  // NOTE: declarations are at line ~349 — these are kept here as secondary references
   const [classifyingTopic, setClassifyingTopic] = useState(false);
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);

@@ -157,7 +157,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           </button>
 
           {/* Center: logo */}
-          <img src={ellocontentLogo} alt="elloContent" className="h-5" />
+          <img src={ellocontentLogo} alt="elloContent" className="h-7 cursor-pointer" onClick={() => { setActiveTab('home'); }} />
 
           {/* Right: profile avatar */}
           <button onClick={() => setProfileOpen(!profileOpen)} className="relative cursor-pointer">

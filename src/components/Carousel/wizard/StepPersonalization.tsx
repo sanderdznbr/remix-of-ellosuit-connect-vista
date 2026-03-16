@@ -74,6 +74,31 @@ const StepPersonalization: React.FC<Props> = ({
   const fileRef = useRef<HTMLInputElement>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
 
+  // Auto-detect pre-filled data from prompt media and skip gate
+  useEffect(() => {
+    const hasFace = facePersons.some(p => p.photos.length > 0);
+    const hasLogoData = !!logoUrl;
+    const hasProductData = !!hasProduct;
+
+    if (hasFace || hasLogoData || hasProductData) {
+      if (hasFace) {
+        setWantsPerson(true);
+        setExpandedSection('face');
+      }
+      if (hasLogoData) {
+        setWantsBrand(true);
+        if (!hasFace) setExpandedSection('brand');
+      }
+      // If only product, skip the gate entirely
+      if (hasProductData && !hasFace && !hasLogoData) {
+        setWantsPerson(false);
+        setWantsBrand(false);
+      }
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasLogo = !!logoUrl;
   const hasBrandInfo = !!brandName || hasLogo;

@@ -345,7 +345,12 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
       });
     }
 
-    const cleanTopic = textData?.clean_topic || job.topic.split('\n')[0].trim();
+    const rawCleanTopic = textData?.clean_topic || job.topic.split('\n')[0].trim();
+    // Strip brand name from topic used in image prompts to prevent AI from rendering it as text
+    const brandNameToStrip = job.brand_name?.trim();
+    const cleanTopic = brandNameToStrip 
+      ? rawCleanTopic.replace(new RegExp(`\\(?@?${brandNameToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?`, 'gi'), '').replace(/\s{2,}/g, ' ').trim()
+      : rawCleanTopic;
     // Assign layouts
     const cards = textData.cards.map((c: any, i: number) => {
       if (c.type === 'cover') return { ...c, layout: 'dark' };

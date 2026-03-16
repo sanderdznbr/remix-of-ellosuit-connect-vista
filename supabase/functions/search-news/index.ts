@@ -21,7 +21,7 @@ function isCleanImageUrl(url: string): boolean {
     if (lower.includes(domain)) return false;
   }
   // Block URLs that hint at infographics, quotes, memes
-  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail'];
+  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail', 'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault', 'vi_webp', 'vi/', 'embed', 'watch', 'shorts', 'video-thumbnail', 'video_thumbnail', 'cover_image', 'og-image', 'opengraph'];
   for (const pat of badPatterns) {
     if (lower.includes(pat)) return false;
   }

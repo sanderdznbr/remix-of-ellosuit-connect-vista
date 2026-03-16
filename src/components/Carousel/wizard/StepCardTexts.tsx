@@ -22,11 +22,14 @@ interface Props {
   cardPhotoOptions?: Record<number, string[]>;
   setCardPhotoAssignments?: (v: Record<number, string>) => void;
   onOutlineGenerated?: (outline: CardText[]) => Promise<void> | void;
+  activeCardIndex?: number;
+  setActiveCardIndex?: (i: number) => void;
 }
 
 const StepCardTexts: React.FC<Props> = ({
   cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
   webImages, cardPhotoAssignments, cardPhotoOptions, setCardPhotoAssignments, onOutlineGenerated,
+  activeCardIndex, setActiveCardIndex,
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);

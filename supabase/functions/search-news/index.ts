@@ -85,22 +85,24 @@ Deno.serve(async (req) => {
             body: q.body || '',
           }));
 
-          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS (not memes, not graphics, not quotes, not templates, not screenshots).
+          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
 
 TOPIC: "${mainTopic}"
 
 CARDS:
 ${cardsForAI.map((c: any) => `Card ${c.index}: Title="${c.title}" Body="${c.body}"`).join('\n')}
 
-RULES:
-1. Each query must find a REAL PHOTOGRAPH of the actual subject mentioned in the card
-2. If the card mentions a PERSON (actor, athlete, politician), the query MUST include the person's FULL NAME
-3. If the card mentions an EVENT (Oscar ceremony, award show), search for real photos FROM that event
-4. NEVER use the editorial/catchy title directly - extract the REAL SUBJECT
-5. Add "photo" or "real photo" to each query
-6. Each card should have 2 alternative queries (primary and fallback)
-7. Queries must be in the language that will return the best photo results (usually English for international topics)
-8. NEVER include years like 2026 in queries unless the event already happened - for future events, search for the most recent edition
+CRITICAL RULES:
+1. Each query MUST find a REAL, EDITORIAL PHOTOGRAPH — like from a news agency (Reuters, AP, AFP, Getty editorial)
+2. If the card mentions a PERSON by name, the PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Cillian Murphy Oscar ceremony red carpet photo")
+3. If no person name is mentioned but the card is about a specific subject, search for that subject specifically
+4. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
+5. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
+6. Add "real photo" or "editorial photo" to each query
+7. Each card should have 2 alternative queries (primary: very specific, fallback: slightly broader but still specific)
+8. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
+9. For future events (2026+), search for the most recent past edition instead
+10. For cover/capa cards: search for the most iconic/dramatic photo of the main subject
 
 Return a JSON object: { "queries": { "0": ["query1", "query2"], "1": ["query1", "query2"], ... } }
 Only return the JSON, nothing else.`;

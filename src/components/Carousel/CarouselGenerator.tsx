@@ -2801,7 +2801,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           await new Promise(r => setTimeout(r, batchDelay));
           const lastUrl = await lastFactory.factory();
           completed++;
-          setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+          setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
           if (lastUrl) updatedCards[lastFactory.index] = { ...updatedCards[lastFactory.index], imageUrl: lastUrl, isAiImage: true, generatedPrompt: lastFactory.prompt };
         }
 

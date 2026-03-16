@@ -409,18 +409,14 @@ const CarouselGenerator: React.FC = () => {
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;
   const hasWebImages = !skipWebSearch && Object.keys(cardPhotoAssignments).length > 0;
-  // When web research is active, skip Pessoas and Visual steps (photos will be searched after the roteiro exists)
-  const skipPeopleVisual = hasFacePhotos || hasWebResearch;
-  // Show 'Posição' step only when user uploaded face AND web research is active
-  const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const showPesquisaStep = hasWebResearch;
   const showProductStep = wantsProduct;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -5227,12 +5223,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return;
     }
 
-    if (!searchingWeb && hasWebResearch) {
-      if (currentName === 'Pessoas' || currentName === 'Visual') {
-        const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
-        if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
-      }
-    }
   }, [WIZARD_STEPS, wizardStep, searchingWeb, hasWebResearch]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
@@ -5298,12 +5288,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
 
   useEffect(() => {
-    if ((wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) ||
-        (!searchingWeb && !skipWebSearch && hasWebImages && (currentStepName === 'Pessoas' || currentStepName === 'Visual'))) {
+    if (wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) {
       const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
       if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
     }
-  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName, searchingWeb, skipWebSearch, hasWebImages, WIZARD_STEPS]);
+  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName, WIZARD_STEPS]);
 
   return (
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
@@ -5749,19 +5738,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         }}
                       />
                     )}
-                    {currentStepName === 'Pessoas' && (
-                      <StepPeopleMode
-                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
-                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
-                        cardCount={cardCount} />
-                    )}
-                    {currentStepName === 'Visual' && (
-                      <StepVisualStyle
-                        selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
-                        visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
-                        referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        topic={topic} mentionedPrompts={mentionedPrompts} productAnalysis={productAnalysis} />
-                    )}
                     {currentStepName === 'Fotos Imóvel' && (
                       <StepPropertyPhotos
                         properties={propertyList}
@@ -5877,7 +5853,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Personalização' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Imóvel') && (
+                        {(currentStepName === 'Personalização' || currentStepName === 'Produto' || currentStepName === 'Imóvel') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

@@ -4552,7 +4552,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         const newCards = [...carouselData.cards];
         newCards[cardIndex] = { ...newCards[cardIndex], imageUrl: data.imageUrl };
         setCarouselData({ ...carouselData, cards: newCards });
-        toast({ title: '✨ Rosto regenerado!' });
+        toast({ title: 'Rosto regenerado!' });
       } else {
         throw new Error('Não foi possível regenerar o rosto');
       }

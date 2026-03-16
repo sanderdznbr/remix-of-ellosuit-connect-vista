@@ -164,7 +164,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           fetchRecent();
         }
 
-        const validJobs = rows.filter((job) => !staleIds.includes(job.id));
+        // Filter out jobs that already have carousel_id (local generation already saved them)
+        const validJobs = rows.filter((job) => !staleIds.includes(job.id) && !job.carousel_id);
         setActiveJobs(validJobs as ActiveJob[]);
       } catch (err) {
         console.error('Failed to check active jobs:', err);

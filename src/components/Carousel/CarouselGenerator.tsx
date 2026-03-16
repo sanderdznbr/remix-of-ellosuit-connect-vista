@@ -1620,9 +1620,13 @@ const CarouselGenerator: React.FC = () => {
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
 
-    // Create cloud job for fallback
+    // Create cloud job for fallback — immediately mark as generating so dashboard doesn't show duplicate
     const jobId = await createCloudJob('single-post');
-    if (jobId) setCloudJobId(jobId);
+    if (jobId) {
+      setCloudJobId(jobId);
+      // Mark as generating_images immediately so it's not picked up as "pending" by dashboard
+      supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', jobId).then(() => {});
+    }
 
     try {
       setGeneratingAllImages(true);
@@ -2088,7 +2092,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     let localJobId: string | null = null;
     if (userId && companyId && !skipCloudRef.current) {
       localJobId = await createCloudJob('carousel');
-      if (localJobId) setCloudJobId(localJobId);
+      if (localJobId) {
+        setCloudJobId(localJobId);
+        // Mark as generating immediately so dashboard doesn't show as "pending" duplicate
+        supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', localJobId).then(() => {});
+      }
       console.log('[GENERATE_FLOW] Cloud job created:', localJobId);
     }
     skipCloudRef.current = false;

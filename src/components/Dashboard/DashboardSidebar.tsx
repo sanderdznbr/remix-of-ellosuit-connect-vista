@@ -298,16 +298,73 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
       {/* Bottom: Profile — fixed at bottom */}
       <div className="shrink-0 border-t border-white/[0.06]">
-        {/* Credits */}
-        <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors rounded-lg" onClick={() => navigate('/precos')}>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-white/40">Créditos</span>
-            <span className="text-white/70 font-medium">{displayBalance !== null ? `${Math.floor(displayBalance)} restantes` : '...'}</span>
-          </div>
-          <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-            <div className="h-full rounded-full bg-purple-500/60 transition-all duration-700" style={{ width: `${Math.min(100, ((displayBalance ?? 0) / 100) * 100)}%` }} />
-          </div>
-        </div>
+        {/* Credits with gradient bar and plan marker */}
+        {(() => {
+          const balance = displayBalance ?? 0;
+          const planNameLower = planName.toLowerCase();
+          const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
+          const planColor = planNameLower.includes('growth') ? '#10B981' : planNameLower.includes('pro') ? '#8B5CF6' : planNameLower.includes('starter') ? '#3B82F6' : '#6B7280';
+          // Total bar represents max(balance, monthlyCredits) + some headroom
+          const maxBar = Math.max(balance, monthlyCredits, 50);
+          const balancePct = Math.min(100, (balance / maxBar) * 100);
+          const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
+          const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
+
+          return (
+            <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
+              {/* Plan badge + balance */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                    style={{ backgroundColor: `${planColor}20`, color: planColor }}
+                  >
+                    {planLabel}
+                  </span>
+                </div>
+                <span className="text-white/70 text-xs font-medium">
+                  {Math.floor(balance)} restantes
+                </span>
+              </div>
+
+              {/* Gradient progress bar with monthly marker */}
+              <div className="relative w-full h-2 rounded-full overflow-visible" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${balancePct}%`,
+                    background: `linear-gradient(90deg, ${planColor}, ${planColor}AA)`,
+                  }}
+                />
+                {/* Monthly credits marker line */}
+                {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
+                  <div
+                    className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full"
+                    style={{
+                      left: `${monthlyMarkerPct}%`,
+                      backgroundColor: 'rgba(255,255,255,0.5)',
+                    }}
+                    title={`${monthlyCredits} créditos mensais`}
+                  />
+                )}
+              </div>
+
+              {/* Monthly credits label */}
+              {monthlyCredits > 0 && (
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[10px] text-white/25">
+                    {monthlyCredits} mensais
+                  </span>
+                  {bonusCredits > 0 && (
+                    <span className="text-[10px]" style={{ color: `${planColor}99` }}>
+                      +{Math.floor(bonusCredits)} bônus
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Profile button */}
         <div className="relative px-2 pb-3">

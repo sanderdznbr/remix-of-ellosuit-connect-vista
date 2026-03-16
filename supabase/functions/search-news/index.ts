@@ -12,11 +12,13 @@ const BLOCKED_DOMAINS = [
   'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', '9gag.com',
   'tenor.com', 'giphy.com', 'img.youtube.com', 'youtube.com', 'ytimg.com',
   'venngage.com', 'slidechef.net', 'dexerto.com', 'termometrooscar.com', 'techtudo.com',
+  'twitter.com', 'x.com', 'pbs.twimg.com', 'twimg.com', 'nitter.net',
+  'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
+  'tiktok.com', 'tiktokcdn.com', 'threads.net',
   'cnnbrasil.com.br', 'uol.com.br', 'globo.com', 'r7.com', 'ig.com.br',
   'eonline.com', 'usmagazine.com', 'tmz.com', 'dailymail.co.uk',
   'pagesix.com', 'insider.com', 'screenrant.com', 'cbr.com',
-  'goldderby.com', 'awardswatch.com', 'deadline.com', 'variety.com',
-  'entertainmentweekly.com', 'hollywoodreporter.com',
+  'goldderby.com', 'awardswatch.com',
 ];
 
 function isCleanImageCandidate(url: string, metadata = ''): boolean {
@@ -38,7 +40,9 @@ function isCleanImageCandidate(url: string, metadata = ''): boolean {
     'predictions', 'nominees', 'nomination', 'snubs',
     'promo', 'promotional', 'advertisement', 'ad-', 'sponsored',
     'thumbnail', 'thumb_', 'hqdefault', 'sddefault', 'mqdefault',
-    'collage', 'grid', 'montage', 'compilation', 'roundup'
+    'collage', 'grid', 'montage', 'compilation', 'roundup',
+    'tweet', 'tweetdeck', 'social-media-post', 'thread', 'retweet',
+    'print-screen', 'captura', 'tela'
   ];
   for (const pat of badPatterns) {
     if (combined.includes(pat)) return false;
@@ -382,10 +386,9 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
 
     // Search for images - preserve the literal topic when qualifiers like year/event matter
     let images: string[] = [];
-    const literalTopic = String(topic || '').trim();
-    const cleanTopic = (parsedContent.clean_topic || literalTopic).trim();
-    const hasCriticalQualifier = /\b(19|20)\d{2}\b/.test(literalTopic) || /(oscar|bbb|grammy|cannes|copa do mundo|world cup|champions league|emmy|golden globe|festival|eleiç|olimp|formula 1|f1)/i.test(literalTopic);
-    const baseTopicForSearch = hasCriticalQualifier ? literalTopic : cleanTopic;
+    const cleanTopic = (parsedContent.clean_topic || String(topic || '')).trim();
+    // ALWAYS use clean_topic for image search - never the raw user prompt
+    const baseTopicForSearch = cleanTopic;
     const rawSearchTerms: string[] = parsedContent.image_search_terms || [`${baseTopicForSearch} photo`, `${baseTopicForSearch} fotografia`];
     const searchTerms = rawSearchTerms
       .map((term) => String(term || '').trim())
@@ -393,11 +396,11 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
       .map((term) => {
         const normalized = term.toLowerCase();
         const baseNormalized = baseTopicForSearch.toLowerCase();
+        // Only prepend clean topic if the search term doesn't already contain it
         return normalized.includes(baseNormalized) ? term : `${baseTopicForSearch} ${term}`;
       })
       .slice(0, 5);
-    console.log('[IMAGES] Literal topic:', literalTopic);
-    console.log('[IMAGES] Clean topic:', cleanTopic);
+    console.log('[IMAGES] Clean topic (base for search):', baseTopicForSearch);
     console.log('[IMAGES] Search terms:', searchTerms);
 
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');

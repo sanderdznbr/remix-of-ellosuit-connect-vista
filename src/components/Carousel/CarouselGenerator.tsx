@@ -2246,7 +2246,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           try {
             setImageGenProgress(`🌄 Gerando panorama contínuo... (tentativa ${attempt + 1})`);
             const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
-            const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
+            const resolvedModel = imageSettings.model === 'auto' ? 'nano-banana' : imageSettings.model;
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
               body: {

@@ -181,6 +181,14 @@ const CarouselGenerator: React.FC = () => {
   // Keep ref in sync
   useEffect(() => { showWelcomeRef.current = showWelcome; }, [showWelcome]);
   const [loadingCarousel, setLoadingCarousel] = useState(false);
+
+  // Post format state
+  const [postFormat, setPostFormat] = useState<PostFormatType>('portrait');
+  const formatDims = FORMAT_DIMENSIONS[postFormat];
+  const cardW = formatDims.w;
+  const cardH = formatDims.h;
+  const previewW = PREVIEW_W;
+  const previewH = previewW * (cardH / cardW);
   
   // Content mode: carousel vs single-post
   const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');

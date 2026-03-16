@@ -92,6 +92,14 @@ import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
+// Format dimensions lookup
+const FORMAT_DIMENSIONS = {
+  portrait: { w: 1080, h: 1350 },
+  square: { w: 1080, h: 1080 },
+  story: { w: 1080, h: 1920 },
+} as const;
+type PostFormatType = keyof typeof FORMAT_DIMENSIONS;
+
 const CARD_W = 1080;
 const CARD_H = 1350;
 const PREVIEW_W = 300;

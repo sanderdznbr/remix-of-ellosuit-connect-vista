@@ -39,12 +39,9 @@ const AnimatedCounter = ({ target }: { target: number }) => {
 import { supabase } from '@/integrations/supabase/client';
 
 // Resilient edge function invoke — falls back to direct HTTP fetch if SDK times out
-const resilientInvoke = async (fnName: string, body: Record<string, unknown>, timeoutMs = 30000) => {
+const resilientInvoke = async (fnName: string, body: Record<string, unknown>) => {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const { data, error } = await supabase.functions.invoke(fnName, { body });
-    clearTimeout(timer);
     if (error) throw error;
     return data;
   } catch (sdkErr) {
@@ -61,7 +58,10 @@ const resilientInvoke = async (fnName: string, body: Record<string, unknown>, ti
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`Direct fetch failed: ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Direct fetch failed: ${res.status} ${text}`);
+    }
     return await res.json();
   }
 };
@@ -493,26 +493,37 @@ const CarouselGenerator: React.FC = () => {
     if (!topic.trim()) return;
     setSearchingWeb(true);
     try {
-      const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { topic: topic.trim(), language: 'pt-BR' },
-      });
-      if (error) throw error;
+      const data = await resilientInvoke('search-news', { topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
       
       const content = data.content || {};
+      const images = Array.isArray(data.images) ? data.images.filter((u: string) => typeof u === 'string' && u.startsWith('http')) : [];
       setWebSearchResult({
         summary: content?.summary || 'Conteúdo encontrado com sucesso',
         citations: data.citations || [],
         content,
-        images: data.images || [],
+        images,
       });
 
-      // Auto-fill keywords from image search terms (do NOT overwrite the user's topic)
+      if (images.length > 0) {
+        const totalCards = contentMode === 'single-post' ? 1 : cardCount;
+        const assignments: Record<number, string> = {};
+        const usedUrls = new Set<string>();
+        for (let ci = 0; ci < totalCards; ci++) {
+          const bestImg = images.find((u: string) => !usedUrls.has(u)) || images[ci % images.length];
+          if (bestImg) {
+            assignments[ci] = bestImg;
+            usedUrls.add(bestImg);
+          }
+        }
+        setCardPhotoAssignments(assignments);
+      }
+
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
-      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
+      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas e fotos carregadas.` });
     } catch (err: any) {
       console.error('Web search error:', err);
       toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });
@@ -5017,8 +5028,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   useEffect(() => {
     if (wizardStep >= WIZARD_STEPS.length && WIZARD_STEPS.length > 0) {
       setWizardStep(WIZARD_STEPS.length - 1);
+      return;
     }
-  }, [WIZARD_STEPS.length, wizardStep]);
+
+    if (!searchingWeb && !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0) {
+      const currentName = WIZARD_STEPS[wizardStep];
+      if (currentName === 'Pessoas' || currentName === 'Visual') {
+        const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
+        if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
+      }
+    }
+  }, [WIZARD_STEPS, wizardStep, searchingWeb, skipWebSearch, webSearchResult?.images?.length]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
@@ -5167,11 +5187,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
 
   useEffect(() => {
-    if (wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) {
+    if ((wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) ||
+        (!searchingWeb && !skipWebSearch && hasWebImages && (currentStepName === 'Pessoas' || currentStepName === 'Visual'))) {
       const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
       if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
     }
-  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName]);
+  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName, searchingWeb, skipWebSearch, hasWebImages, WIZARD_STEPS]);
 
   return (
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>

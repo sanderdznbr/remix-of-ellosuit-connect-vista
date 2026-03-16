@@ -1612,7 +1612,7 @@ const CarouselGenerator: React.FC = () => {
 
     try {
       setGeneratingAllImages(true);
-      setImageGenProgress('🎨 Gerando post único...');
+      setImageGenProgress('Gerando post único...');
 
       const activeFP = facePersons.filter(p => p.photos.length > 0);
       const faceRefUrls = activeFP.length > 0 ? activeFP.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url);

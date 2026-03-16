@@ -465,15 +465,41 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
+  const invokeSearchNews = useCallback(async (payload: Record<string, any>) => {
+    const { data, error } = await supabase.functions.invoke('search-news', {
+      body: payload,
+    });
+
+    if (!error) return data;
+
+    console.warn('[search-news] supabase.functions.invoke failed, trying direct fetch fallback:', error);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(text || `search-news failed with status ${response.status}`);
+    }
+
+    return await response.json();
+  }, []);
+
   const handleSearchWeb = async () => {
     if (!topic.trim()) return false;
     setSearchingWeb(true);
     setWebSearchDecisionMade(true);
     try {
-      const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { topic: topic.trim(), language: 'pt-BR' },
-      });
-      if (error) throw error;
+      const data = await invokeSearchNews({ topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
       
       const content = data.content || {};

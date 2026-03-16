@@ -127,7 +127,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       try {
         const { data } = await supabase
           .from('carousel_generation_jobs')
-          .select('id, topic, progress_message, status, progress_current, progress_total, updated_at')
+          .select('id, topic, progress_message, status, progress_current, progress_total, updated_at, product_context, marketplace_style_id')
           .eq('user_id', user.id)
           .in('status', ['pending', 'generating_text', 'generating_images'])
           .order('created_at', { ascending: false })

@@ -1521,7 +1521,8 @@ const CarouselGenerator: React.FC = () => {
         promptParts.push(`TEMA: "${topic.trim()}"`);
         promptParts.push('REGRA DE TEXTO: Crie um título CURTO e IMPACTANTE (máximo 8 palavras) baseado no tema. Pode adicionar um subtítulo curto (máximo 12 palavras). NÃO escreva parágrafos, descrições longas, explicações ou blocos de texto extensos. O post deve ser majoritariamente VISUAL com texto mínimo e editorial.');
       }
-      promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA ÚNICA composição editorial completa — como uma CAPA de revista ou de carrossel. NÃO divida a imagem em múltiplos quadros, slides ou seções. Apenas UMA imagem unificada e impactante.');
+      const fmtLabel = postFormat === 'square' ? '1:1 quadrado (1080x1080)' : postFormat === 'story' ? '9:16 vertical stories (1080x1920)' : '4:5 retrato (1080x1350)';
+      promptParts.push(`POST ÚNICO para Instagram (${formatDims.w}x${formatDims.h}, formato ${fmtLabel}). UMA ÚNICA composição editorial completa — como uma CAPA de revista ou de carrossel. NÃO divida a imagem em múltiplos quadros, slides ou seções. Apenas UMA imagem unificada e impactante.`);
       promptParts.push('LIMITE DE TEXTO (CRÍTICO): A imagem deve ter NO MÁXIMO 3 blocos de texto curtos: 1) Um TÍTULO principal (máximo 8 palavras, impactante e grande), 2) Um SUBTÍTULO opcional (máximo 15 palavras, menor), 3) Um CTA opcional curto (ex: "Saiba mais", máximo 4 palavras). NÃO adicione parágrafos longos, descrições extensas, bullet points, listas ou blocos de texto explicativo. A imagem deve ser VISUAL e LIMPA, com o texto servindo como destaque editorial, NÃO como artigo. Menos é mais.');
       promptParts.push('COMPOSIÇÃO OBRIGATÓRIA: Full bleed total, a imagem DEVE preencher 100% do espaço de ponta a ponta. ZERO bordas, ZERO barras, ZERO margens brancas ou coloridas no topo, base, esquerda ou direita. NENHUM espaço vazio nas bordas.');
 

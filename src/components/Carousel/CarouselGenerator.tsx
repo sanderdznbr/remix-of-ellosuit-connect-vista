@@ -2620,21 +2620,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             const mergedProductUrls = [...productRefUrls, ...carouselExtremeProductRefs];
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
             
-            // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS ===
-            // Use card-specific photo assignment if available, otherwise fall back to round-robin
-            if (!capturedProductRefs && !skipWebSearch && webSearchResult?.images?.length) {
-              const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-              if (webImgs.length > 0) {
-                // Priority: use manual cardPhotoAssignments from Roteiro step
-                if (cardPhotoAssignments[i]) {
-                  capturedProductRefs = [cardPhotoAssignments[i]];
-                  console.log(`[WEB_PHOTO] Card ${i}: using manual assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
-                } else {
-                  const webImgIdx = i % webImgs.length;
-                  capturedProductRefs = [webImgs[webImgIdx]];
-                  console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
-                }
-              }
+            // === AUTO-ASSIGN WEB SEARCH REAL PHOTO ===
+            // Only use the card-specific assignment generated from the roteiro text
+            if (!capturedProductRefs && !skipWebSearch && cardPhotoAssignments[i]) {
+              capturedProductRefs = [cardPhotoAssignments[i]];
+              console.log(`[WEB_PHOTO] Card ${i}: using card-specific assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
             }
           }
           

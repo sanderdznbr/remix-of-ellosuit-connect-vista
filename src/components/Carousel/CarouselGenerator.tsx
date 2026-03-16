@@ -556,11 +556,11 @@ const CarouselGenerator: React.FC = () => {
 
       // Prioritize URLs not yet shown in any other card's options
       const freshUrls = uniqueRankedUrls.filter((url: string) => !usedInOptionsUrls.has(url));
-      const options = freshUrls.slice(0, 3);
+      const options = freshUrls.slice(0, 6);
       // If not enough fresh ones, fill from remaining pool (allow some overlap)
-      if (options.length < 3) {
+      if (options.length < 6) {
         const remaining = uniqueRankedUrls.filter((url: string) => !options.includes(url));
-        options.push(...remaining.slice(0, 3 - options.length));
+        options.push(...remaining.slice(0, 6 - options.length));
       }
 
       if (options.length > 0) {

@@ -436,18 +436,49 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
 
     // Search for images - use clean topic from AI, not raw user input
     let images: string[] = [];
-    const cleanTopic = parsedContent.clean_topic || topic;
-    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} photo`, `${cleanTopic} fotografia`];
+    let cleanTopic = parsedContent.clean_topic || topic;
+    // If AI failed to extract clean_topic and it still looks like a full sentence, extract the key subject
+    if (cleanTopic.length > 40 || /\b(crie|sobre|post|explique|faça|fale)\b/i.test(cleanTopic)) {
+      // Try to extract a name or subject from the prompt
+      const nameMatch = cleanTopic.match(/(?:sobre|de|quem é)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)+)/i);
+      if (nameMatch) {
+        cleanTopic = nameMatch[1].trim();
+      } else {
+        // Remove common filler words
+        cleanTopic = cleanTopic
+          .replace(/\b(crie|criar|um|uma|post|sobre|explique|faça|fale|conte|o que|e|ele|ela|fez|quem é)\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+      console.log('[IMAGES] Cleaned topic from prompt:', cleanTopic);
+    }
+    // Store cleaned topic back so per-card search uses it too
+    parsedContent.clean_topic = cleanTopic;
+
+    // Build search terms: always include the clean name/topic directly
+    const keyEntities: string[] = parsedContent.key_entities || [];
+    const searchTerms: string[] = [];
+    // Primary: just the name/topic
+    searchTerms.push(cleanTopic);
+    // Secondary: key entities (people names)
+    for (const entity of keyEntities.slice(0, 3)) {
+      if (entity !== cleanTopic) searchTerms.push(entity);
+    }
+    // Tertiary: AI-suggested terms
+    const aiTerms: string[] = parsedContent.image_search_terms || [];
+    for (const term of aiTerms) {
+      if (!searchTerms.includes(term)) searchTerms.push(term);
+    }
     console.log('[IMAGES] Clean topic:', cleanTopic);
-    console.log('[IMAGES] Search terms:', searchTerms);
+    console.log('[IMAGES] Search terms:', searchTerms.slice(0, 5));
 
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      for (const term of searchTerms.slice(0, 3)) {
+      for (const term of searchTerms.slice(0, 4)) {
         if (images.length >= 20) break;
         const results = await searchBravePhotos(term, braveApiKey, 50);
         images = [...images, ...results];
-        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length + ' after strict filter');
+        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length);
       }
     }
 

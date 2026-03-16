@@ -37,7 +37,7 @@ const StepWebSearch: React.FC<Props> = ({ webSearchResult, searchingWeb, onResea
           <span className="text-sm font-medium text-emerald-400">Pesquisa concluída</span>
         </div>
         <p className="text-sm text-white/60 leading-relaxed">
-          {webSearchResult.summary}
+          {summaryText}
         </p>
       </div>
 

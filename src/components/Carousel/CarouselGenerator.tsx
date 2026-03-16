@@ -6241,7 +6241,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Next card */}
                     <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden' }}>
                       {activeCardIndex < carouselData.cards.length - 1 ? (
-                        <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                        <div style={{ width: previewW, height: previewH, transform: `scale(${(postFormat === 'story' ? 276 : 369) / previewW})`, transformOrigin: 'top left' }}>
                           {renderCardPreview(carouselData.cards[activeCardIndex + 1], activeCardIndex + 1, false)}
                         </div>
                       ) : null}

@@ -218,67 +218,18 @@ Only return the JSON, nothing else.`;
         }
       }
 
-      const searchBraveImages = async (query: string, braveKey: string): Promise<string[]> => {
-        const images: string[] = [];
-        try {
-          const cleanQuery = `${query} -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -fan-art`;
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=30&safesearch=strict&type=photo`;
-          const res = await fetch(url, {
-            headers: { 'X-Subscription-Token': braveKey },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            for (const item of (data.results || [])) {
-              const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                const w = item.properties?.width || item.width || 0;
-                const h = item.properties?.height || item.height || 0;
-                // Prefer larger images (real photos are typically bigger)
-                if (w >= 600 && h >= 400) {
-                  images.push(imgUrl);
-                }
-              }
-              // Also accept slightly smaller if from known good news sources
-              else if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                const w = item.properties?.width || item.width || 0;
-                const h = item.properties?.height || item.height || 0;
-                const isNewsSource = /reuters|apnews|afp|getty|variety|hollywoodreporter|deadline|ew\.com|people\.com|bbc|cnn|nytimes/.test(imgUrl.toLowerCase());
-                if (isNewsSource && w >= 400 && h >= 300) {
-                  images.push(imgUrl);
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error('[PER_CARD] Brave search error:', e);
-        }
-        return images;
-      };
-
       const searchCard = async (cardIndex: number, originalQuery: string) => {
-        // Use AI-generated queries if available, otherwise fall back to original
         const queries = aiQueries[String(cardIndex)] || aiQueries[cardIndex] || [originalQuery];
         let images: string[] = [];
 
         for (const query of queries) {
           if (images.length >= 5) break;
-          const results = await searchBraveImages(query, braveApiKey);
+          const results = await searchBravePhotos(query, braveApiKey, 30);
           images = [...images, ...results];
           console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 50)}": ${results.length} images`);
         }
 
-        // Final fallback: if still too few, try just the topic + card index context
-        if (images.length < 3) {
-          const topicOnly = mainTopic.replace(/\b(20\d{2})\b/g, '').trim();
-          if (topicOnly) {
-            console.log(`[PER_CARD] Card ${cardIndex} topic-only fallback: "${topicOnly}"`);
-            const fallbackImages = await searchBraveImages(`${topicOnly} photo`, braveApiKey);
-            images = [...images, ...fallbackImages];
-          }
-        }
-
-        // Deduplicate
-        cardImages[cardIndex] = [...new Set(images)];
+        cardImages[cardIndex] = [...new Set(images)].slice(0, 8);
       };
 
       for (let i = 0; i < per_card_queries.length; i += 3) {

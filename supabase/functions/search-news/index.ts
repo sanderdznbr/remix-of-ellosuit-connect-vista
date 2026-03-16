@@ -46,13 +46,75 @@ Deno.serve(async (req) => {
         );
       }
 
-      console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards');
+      const mainTopic = per_card_queries[0]?.topic || '';
+      console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards, topic:', mainTopic);
       const cardImages: Record<number, string[]> = {};
+
+      // === STEP 1: Use AI to generate proper image search queries from editorial card titles ===
+      let aiQueries: Record<number, string[]> = {};
+      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+      if (lovableKey) {
+        try {
+          const cardsForAI = per_card_queries.map((q: any) => ({
+            index: q.index,
+            title: q.title || q.query,
+            body: q.body || '',
+          }));
+
+          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS (not memes, not graphics, not quotes, not templates, not screenshots).
+
+TOPIC: "${mainTopic}"
+
+CARDS:
+${cardsForAI.map((c: any) => `Card ${c.index}: Title="${c.title}" Body="${c.body}"`).join('\n')}
+
+RULES:
+1. Each query must find a REAL PHOTOGRAPH of the actual subject mentioned in the card
+2. If the card mentions a PERSON (actor, athlete, politician), the query MUST include the person's FULL NAME
+3. If the card mentions an EVENT (Oscar ceremony, award show), search for real photos FROM that event
+4. NEVER use the editorial/catchy title directly - extract the REAL SUBJECT
+5. Add "photo" or "real photo" to each query
+6. Each card should have 2 alternative queries (primary and fallback)
+7. Queries must be in the language that will return the best photo results (usually English for international topics)
+8. NEVER include years like 2026 in queries unless the event already happened - for future events, search for the most recent edition
+
+Return a JSON object: { "queries": { "0": ["query1", "query2"], "1": ["query1", "query2"], ... } }
+Only return the JSON, nothing else.`;
+
+          const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${lovableKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash-lite',
+              messages: [{ role: 'user', content: aiPrompt }],
+              temperature: 0.2,
+            }),
+          });
+
+          if (aiRes.ok) {
+            const aiData = await aiRes.json();
+            const aiContent = aiData.choices?.[0]?.message?.content || '';
+            const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              aiQueries = parsed.queries || {};
+              console.log('[PER_CARD] AI generated queries:', JSON.stringify(aiQueries));
+            }
+          } else {
+            console.error('[PER_CARD] AI query generation failed:', aiRes.status);
+          }
+        } catch (e) {
+          console.error('[PER_CARD] AI query generation error:', e);
+        }
+      }
 
       const searchBraveImages = async (query: string, braveKey: string): Promise<string[]> => {
         const images: string[] = [];
         try {
-          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography -youtube -thumbnail -video photo`;
+          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography -youtube -thumbnail -video -screenshot -presentation`;
           const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict&type=photo`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveKey },
@@ -76,26 +138,25 @@ Deno.serve(async (req) => {
         return images;
       };
 
-      const searchCard = async (cardIndex: number, query: string) => {
-        // First attempt: full query
-        let images = await searchBraveImages(query, braveApiKey);
-        console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} images (attempt 1)`);
+      const searchCard = async (cardIndex: number, originalQuery: string) => {
+        // Use AI-generated queries if available, otherwise fall back to original
+        const queries = aiQueries[String(cardIndex)] || aiQueries[cardIndex] || [originalQuery];
+        let images: string[] = [];
 
-        // Fallback: if too few results, simplify the query by removing year/numbers and using fewer words
+        for (const query of queries) {
+          if (images.length >= 5) break;
+          const results = await searchBraveImages(query, braveApiKey);
+          images = [...images, ...results];
+          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 50)}": ${results.length} images`);
+        }
+
+        // Final fallback: if still too few, try just the topic + card index context
         if (images.length < 3) {
-          const simplified = query
-            .replace(/\b(20\d{2})\b/g, '') // remove years like 2024, 2025, 2026
-            .replace(/\b\d+\b/g, '') // remove other numbers
-            .replace(/\s+/g, ' ')
-            .trim()
-            .split(' ')
-            .slice(0, 3) // keep only first 3 words
-            .join(' ');
-          if (simplified && simplified !== query.trim()) {
-            console.log(`[PER_CARD] Card ${cardIndex} fallback query: "${simplified}"`);
-            const fallbackImages = await searchBraveImages(simplified + ' photo', braveApiKey);
+          const topicOnly = mainTopic.replace(/\b(20\d{2})\b/g, '').trim();
+          if (topicOnly) {
+            console.log(`[PER_CARD] Card ${cardIndex} topic-only fallback: "${topicOnly}"`);
+            const fallbackImages = await searchBraveImages(`${topicOnly} photo`, braveApiKey);
             images = [...images, ...fallbackImages];
-            console.log(`[PER_CARD] Card ${cardIndex} after fallback: ${images.length} total`);
           }
         }
 

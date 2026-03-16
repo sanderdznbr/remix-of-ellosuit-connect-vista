@@ -5947,10 +5947,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 return; // Stay on step to review
                               }
 
-                              // Card-by-card: advance to next card if current has a photo
+                              // Card-by-card: advance to next card if current has a photo (only enforce when web photos exist)
                               const hasPhotoForCurrent = !!cardPhotoAssignments[roteiroCardIndex];
-                              if (!hasPhotoForCurrent && Object.keys(cardPhotoOptions).length > 0) {
-                                // Photo is mandatory — show warning
+                              const hasPhotoOptions = Object.keys(cardPhotoOptions).length > 0;
+                              if (!hasPhotoForCurrent && hasPhotoOptions && !skipWebSearch) {
+                                // Photo is mandatory only when we have web images
                                 sonnerToast.error('Selecione uma foto para este card antes de continuar');
                                 return;
                               }

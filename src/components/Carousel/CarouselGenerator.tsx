@@ -5536,10 +5536,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 });
                                 if (!error && data) {
                                   if (data.shouldSearch) {
-                                    // Show suggestion to user - don't advance yet
-                                    setWebSearchSuggestion({ classification: data.classification, reason: data.reason || '' });
+                                    // Auto-search immediately without asking
+                                    setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
-                                    return; // Wait for user decision
+                                    await handleSearchWeb();
+                                    // Don't advance — let user see results and click Continue again
+                                    return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically
                                     setSkipWebSearch(true);

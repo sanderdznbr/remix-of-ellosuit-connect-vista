@@ -3814,6 +3814,42 @@ FORBIDDEN:
     if (!card) return false;
     setRegeneratingCard(cardIndex);
     try {
+      const shouldSwapWithExistingWebPhoto = !customInstruction && !customImageUrl && !!webSearchResult?.imageCandidates?.length;
+      if (shouldSwapWithExistingWebPhoto) {
+        const normalize = (value: string) => value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        const stopwords = new Set(['de','da','do','das','dos','e','o','a','os','as','um','uma','para','com','no','na','em','por','sobre','ao','aos','que','como','mais','melhor','pior','card','capa']);
+        const extractTerms = (text: string) => Array.from(new Set(normalize(text).split(' ').filter(t => t.length > 2 && !stopwords.has(t))));
+        const scoreCandidate = (candidate: any, cardText: string) => {
+          const haystack = normalize(`${candidate.title || ''} ${candidate.desc || ''} ${candidate.source || ''} ${candidate.url || ''}`);
+          const cardTerms = extractTerms(cardText);
+          const topicTerms = extractTerms(String(webSearchResult?.content?.clean_topic || topic || ''));
+          let score = 0;
+          for (const term of topicTerms) if (haystack.includes(term)) score += 2;
+          for (const term of cardTerms) if (haystack.includes(term)) score += 5;
+          if (/(actor|atriz|diretor|director|winner|vencedor|red carpet|ceremony|premiere|portrait|press)/i.test(haystack)) score += 2;
+          if (/(tweet|twitter|x.com|pbs.twimg|youtube|ytimg|thumbnail|poster|meme|quote|text|caption|screenshot)/i.test(haystack)) score -= 10;
+          return score;
+        };
+
+        const cardText = `${card.title || card.bodyTop || ''} ${card.body || card.bodyBottom || ''}`.trim();
+        const ranked = [...(webSearchResult?.imageCandidates || [])].sort((a: any, b: any) => scoreCandidate(b, cardText) - scoreCandidate(a, cardText));
+        const usedUrls = new Set(Object.values(cardPhotoAssignments || {}));
+        const currentUrl = cardPhotoAssignments?.[cardIndex] || card.imageUrl;
+        const nextCandidate = ranked.find((candidate: any) => candidate.url !== currentUrl && !usedUrls.has(candidate.url))
+          || ranked.find((candidate: any) => candidate.url !== currentUrl);
+
+        if (nextCandidate?.url) {
+          setCardPhotoAssignments((prev: any) => ({ ...(prev || {}), [cardIndex]: nextCandidate.url }));
+          setCarouselData((prev) => {
+            if (!prev || !prev.cards[cardIndex]) return prev;
+            const newCards = [...prev.cards];
+            newCards[cardIndex] = { ...newCards[cardIndex], imageUrl: nextCandidate.url, isAiImage: false, needsImage: true };
+            return { ...prev, cards: newCards };
+          });
+          toast({ title: '📸 Foto atualizada!', description: 'Troquei por outra foto relevante da mesma pesquisa.' });
+          return true;
+        }
+      }
       // Gather existing card summaries so the AI avoids repeating content
       const existingCardSummaries = carouselData.cards
         .map((c, i) => {

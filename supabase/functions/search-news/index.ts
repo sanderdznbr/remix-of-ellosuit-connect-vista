@@ -549,12 +549,21 @@ Return ONLY a JSON array of the indices of ACCEPTED (clean) images. Example: [0,
     }
     console.log('[IMAGES] Total clean images after filter:', images.length);
 
+    const seenCandidateUrls = new Set<string>();
+    const imageCandidates = rawImageCandidates.filter((candidate) => {
+      if (!images.includes(candidate.url)) return false;
+      if (seenCandidateUrls.has(candidate.url)) return false;
+      seenCandidateUrls.add(candidate.url);
+      return true;
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         content: parsedContent,
         citations,
         images: images.slice(0, 50),
+        image_candidates: imageCandidates.slice(0, 50),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

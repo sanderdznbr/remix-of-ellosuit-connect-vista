@@ -384,7 +384,7 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
         const baseNormalized = baseTopicForSearch.toLowerCase();
         return normalized.includes(baseNormalized) ? term : `${baseTopicForSearch} ${term}`;
       })
-      .slice(0, 3);
+      .slice(0, 5);
     console.log('[IMAGES] Literal topic:', literalTopic);
     console.log('[IMAGES] Clean topic:', cleanTopic);
     console.log('[IMAGES] Search terms:', searchTerms);

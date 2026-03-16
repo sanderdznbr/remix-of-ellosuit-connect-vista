@@ -194,6 +194,7 @@ const CarouselGenerator: React.FC = () => {
   const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
   const [manualPostText, setManualPostText] = useState('');
   const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
+  const [cardPhotoAssignments, setCardPhotoAssignments] = useState<Record<number, string>>({});
   const [roteiroGenerated, setRoteiroGenerated] = useState(false);
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
 
@@ -500,6 +501,7 @@ const CarouselGenerator: React.FC = () => {
     setContentMode('carousel');
     setManualPostText('');
     setManualCardTexts([]);
+    setCardPhotoAssignments({});
     setWizardMode('simple');
     setExtremeAnalysis(null);
     setExtremeVision('');
@@ -2517,13 +2519,19 @@ MANTENHA a foto real reconhecível e fiel.`);
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
             
             // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS ===
-            // If web search found real images and no product refs exist, use them as high-priority references
+            // Use card-specific photo assignment if available, otherwise fall back to round-robin
             if (!capturedProductRefs && !skipWebSearch && webSearchResult?.images?.length) {
               const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
               if (webImgs.length > 0) {
-                const webImgIdx = i % webImgs.length;
-                capturedProductRefs = [webImgs[webImgIdx]];
-                console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
+                // Priority: use manual cardPhotoAssignments from Roteiro step
+                if (cardPhotoAssignments[i]) {
+                  capturedProductRefs = [cardPhotoAssignments[i]];
+                  console.log(`[WEB_PHOTO] Card ${i}: using manual assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
+                } else {
+                  const webImgIdx = i % webImgs.length;
+                  capturedProductRefs = [webImgs[webImgIdx]];
+                  console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
+                }
               }
             }
           }
@@ -5401,7 +5409,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         manualCardTexts={manualCardTexts}
                         setManualCardTexts={setManualCardTexts}
                         topic={topic}
-                        accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'} />
+                        accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'}
+                        webImages={webSearchResult?.images}
+                        cardPhotoAssignments={cardPhotoAssignments}
+                        setCardPhotoAssignments={setCardPhotoAssignments} />
                     )}
                     {currentStepName === 'Logo' && (
                       <StepBranding
@@ -5612,6 +5623,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 }
                                 
                                 setRoteiroGenerated(true);
+                                // Auto-assign web photos to cards after outline is generated
+                                if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
+                                  const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+                                  if (webImgs.length > 0) {
+                                    const assignments: Record<number, string> = {};
+                                    const usedUrls = new Set<string>();
+                                    for (let ci = 0; ci < totalCards; ci++) {
+                                      let bestImg = '';
+                                      for (const url of webImgs) {
+                                        if (!usedUrls.has(url)) { bestImg = url; break; }
+                                      }
+                                      if (!bestImg) bestImg = webImgs[ci % webImgs.length];
+                                      if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                                    }
+                                    setCardPhotoAssignments(assignments);
+                                  }
+                                }
                                 generated = true;
                                 setGeneratingRoteiro(false);
 

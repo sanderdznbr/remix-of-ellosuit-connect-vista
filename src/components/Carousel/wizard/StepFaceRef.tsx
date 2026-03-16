@@ -26,6 +26,10 @@ interface Props {
   famousImages: any[];
   setFamousImages: React.Dispatch<React.SetStateAction<any[]>>;
   activeMarketplaceStyle?: any;
+  // Web search face position
+  hasWebImages?: boolean;
+  webFacePosition?: 'cover' | 'last' | 'none';
+  setWebFacePosition?: (v: 'cover' | 'last' | 'none') => void;
 }
 
 const Chip = ({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) => (

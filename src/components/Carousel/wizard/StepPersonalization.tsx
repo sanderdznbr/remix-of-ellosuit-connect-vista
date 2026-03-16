@@ -28,8 +28,8 @@ interface Props {
   setLogoUrl: (v: string) => void;
   logoDarkUrl: string;
   setLogoDarkUrl: (v: string) => void;
-  logoPosition: string;
-  setLogoPosition: (v: string) => void;
+  logoPosition: LogoPosition;
+  setLogoPosition: (v: LogoPosition) => void;
   logoBrandColors: any;
   useBrandColors: boolean;
   setUseBrandColors: (v: boolean) => void;

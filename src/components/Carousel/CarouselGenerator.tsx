@@ -543,7 +543,7 @@ const CarouselGenerator: React.FC = () => {
 
     const assignments: Record<number, string> = {};
     const optionsByCard: Record<number, string[]> = {};
-    const usedUrls = new Set<string>();
+    const usedInOptionsUrls = new Set<string>();
 
     for (let ci = 0; ci < totalCards; ci++) {
       const card = outline[ci] || {};
@@ -553,14 +553,20 @@ const CarouselGenerator: React.FC = () => {
         .map((candidate: any) => candidate.url)
         .filter((url: string, index: number, arr: string[]) => arr.indexOf(url) === index);
 
-      const preferredOptions = uniqueRankedUrls.filter((url: string) => !usedUrls.has(url)).slice(0, 3);
-      const fallbackOptions = uniqueRankedUrls.filter((url: string) => !preferredOptions.includes(url)).slice(0, Math.max(0, 3 - preferredOptions.length));
-      const options = [...preferredOptions, ...fallbackOptions].slice(0, 3);
+      // Prioritize URLs not yet shown in any other card's options
+      const freshUrls = uniqueRankedUrls.filter((url: string) => !usedInOptionsUrls.has(url));
+      const options = freshUrls.slice(0, 3);
+      // If not enough fresh ones, fill from remaining pool (allow some overlap)
+      if (options.length < 3) {
+        const remaining = uniqueRankedUrls.filter((url: string) => !options.includes(url));
+        options.push(...remaining.slice(0, 3 - options.length));
+      }
 
       if (options.length > 0) {
         optionsByCard[ci] = options;
         assignments[ci] = options[0];
-        usedUrls.add(options[0]);
+        // Track ALL options shown, not just the assigned one
+        options.forEach(url => usedInOptionsUrls.add(url));
       }
     }
 
@@ -5179,10 +5185,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       let generatedOutline: { title?: string; body?: string }[] = [];
       try {
         console.log('[AutoRoteiro] Auto-generating outline on step entry');
-        const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
-          body: { action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode },
+        const webContext = webSearchResult?.content?.summary || webSearchResult?.content?.clean_topic || '';
+        const outlineData = await resilientInvoke('generate-carousel', {
+          action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode,
+          ...(webContext ? { webContext } : {}),
         });
-        if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+        if (outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
           generatedOutline = outlineData.outline;
           setManualCardTexts(outlineData.outline);
         } else {

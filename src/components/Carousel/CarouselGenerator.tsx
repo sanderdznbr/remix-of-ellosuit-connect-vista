@@ -6264,7 +6264,32 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   )}
                 </div>
 
-                {/* Instagram dots + actions */}
+                {/* Instagram dots + actions — hide full IG UI for stories, show minimal dots */}
+                {postFormat === 'story' ? (
+                  <div style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+                    {/* Stories progress bars */}
+                    <div className="flex items-center gap-1 px-3 py-2.5">
+                      {carouselData.cards.map((_, i) => (
+                        <button key={i} onClick={() => { if (!isCardLocked(i)) setActiveCardIndex(i); }}
+                          className="flex-1 h-[3px] rounded-full transition-all"
+                          style={{
+                            backgroundColor: i <= activeCardIndex ? themeHex : 'rgba(255,255,255,0.2)',
+                          }} />
+                      ))}
+                    </div>
+                    {/* Stories header overlay */}
+                    <div className="flex items-center gap-2.5 px-4 py-2">
+                      <img src={ellocontentProfile} alt="ellocontent" className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                      <p className="text-white text-[11px] font-semibold flex-1">{userName || brandName || 'ellocontent'}</p>
+                      <span className="text-white/40 text-xs">·</span>
+                      <span className="text-white/40 text-[10px]">agora</span>
+                    </div>
+                    {/* Bottom bar */}
+                    <div className="flex justify-center pb-2 pt-1">
+                      <div className="w-32 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                    </div>
+                  </div>
+                ) : (
                 <div style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
                   {/* Dots */}
                   <div className="flex items-center justify-center gap-1 py-2.5">
@@ -6297,6 +6322,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div className="w-32 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
                   </div>
                 </div>
+                )}
               </div>
             </motion.div>
 

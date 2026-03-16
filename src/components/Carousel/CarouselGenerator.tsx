@@ -1610,11 +1610,26 @@ A composição final deve ser como um overlay/HUD elegante sobre fundo escuro.
 PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENAS fundo preto com overlay gráfico.`);
       }
 
+      // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
+      let effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
+
+      // === AUTO-ASSIGN WEB SEARCH REAL PHOTO (Single Post) ===
+      if (!effectiveProductRefs && !skipWebSearch && webSearchResult?.images?.length && productImages.length === 0 && !useRealEstateBlend) {
+        const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+        if (webImgs.length > 0) {
+          effectiveProductRefs = [webImgs[0]];
+          promptParts.push(`\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+A imagem de referência enviada é uma FOTO REAL do tema "${topic}". 
+INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do post.
+USE a foto real como elemento visual principal/fundo.
+Sobreponha textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
+MANTENHA a foto real reconhecível e fiel.`);
+          console.log('[SINGLE_POST_WEB_PHOTO] Assigned web image:', webImgs[0]?.substring(0, 80));
+        }
+      }
+
       const finalPrompt = buildImagePrompt(promptParts.join('\n'));
       const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
-
-      // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
-      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
 
       // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
       let fontBase64: string | undefined;
@@ -2500,6 +2515,17 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           } else {
             const mergedProductUrls = [...productRefUrls, ...carouselExtremeProductRefs];
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
+            
+            // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS ===
+            // If web search found real images and no product refs exist, use them as high-priority references
+            if (!capturedProductRefs && !skipWebSearch && webSearchResult?.images?.length) {
+              const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+              if (webImgs.length > 0) {
+                const webImgIdx = i % webImgs.length;
+                capturedProductRefs = [webImgs[webImgIdx]];
+                console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
+              }
+            }
           }
           
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
@@ -2519,6 +2545,19 @@ A composição final deve ser como um overlay/HUD elegante sobre fundo escuro.
 PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENAS fundo preto com overlay gráfico.`;
             // Don't send property photos as reference - we blend them later
             capturedProductRefs = undefined;
+          }
+
+          // === WEB PHOTO FIDELITY: instruct AI to incorporate real photo ===
+          const hasWebPhoto = !skipWebSearch && webSearchResult?.images?.length && capturedProductRefs?.length === 1
+            && capturedProductRefs[0].startsWith('http') && !useRealEstateBlend && productImages.length === 0;
+          if (hasWebPhoto) {
+            cardPrompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+A imagem de referência enviada é uma FOTO REAL do tema "${cleanTopic}". 
+Você DEVE incorporar esta foto real com MÁXIMA FIDELIDADE na composição do card.
+USE a foto real como elemento visual principal/fundo do card.
+Sobreponha os textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
+MANTENHA a foto real reconhecível e fiel — NÃO substitua por uma imagem genérica.
+A composição final deve ser: foto real de fundo + overlay editorial com textos e gráficos do estilo visual.`;
           }
 
           imageFactories.push({
@@ -3294,14 +3333,36 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
 
+        // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS (Loop 2) ===
+        let loop2ProductRefs = mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined;
+        if (!loop2ProductRefs && !skipWebSearch && webSearchResult?.images?.length && productImages.length === 0) {
+          const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+          if (webImgs.length > 0) {
+            const webImgIdx = i % webImgs.length;
+            loop2ProductRefs = [webImgs[webImgIdx]];
+          }
+        }
+
         const loop2ExtremeCtx = buildExtremePromptContext();
+        const hasWebPhotoL2 = !skipWebSearch && webSearchResult?.images?.length && loop2ProductRefs?.length === 1
+          && loop2ProductRefs[0].startsWith('http') && productImages.length === 0;
+        let loop2Prompt = buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+        if (hasWebPhotoL2) {
+          loop2Prompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+A imagem de referência enviada é uma FOTO REAL do tema. 
+INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do card.
+USE a foto real como elemento visual principal/fundo.
+Sobreponha textos editoriais e tipografia POR CIMA da foto real.
+MANTENHA a foto real reconhecível.`;
+        }
+
         imageFactories.push({
           index: i,
           factory: () => generateImage({
-            prompt: buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            prompt: loop2Prompt,
             faceReferenceUrls: cardFaceRefs,
             styleReferenceUrls: capturedStyleRefs,
-            referenceImageUrls: mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined,
+            referenceImageUrls: loop2ProductRefs,
             negativePrompt: finalNegative + (!showPerson && faceRefUrls.length > 0 ? ', no people, no faces, no portraits' : ''),
             facePersonsMetadata: showPerson ? facePersonsMeta : undefined,
           }).catch(err => { console.error('Image gen error for card', i, err); return null; }),

@@ -498,26 +498,55 @@ const CarouselGenerator: React.FC = () => {
   ) => {
     if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
 
-    // Use images from the INITIAL web search — no per-card API call
+    const candidates = (webSearchResult?.imageCandidates || [])
+      .filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'));
     const webImgs = (webSearchResult?.images || []).filter((u: string) => typeof u === 'string' && u.startsWith('http'));
-    if (webImgs.length === 0) {
+    if (candidates.length === 0 && webImgs.length === 0) {
       setCardPhotoAssignments({});
       return;
     }
 
+    const normalize = (value: string) => value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const stopwords = new Set(['de','da','do','das','dos','e','o','a','os','as','um','uma','para','com','no','na','em','por','sobre','ao','aos','que','como','mais','melhor','pior','card','capa']);
+    const extractTerms = (text: string) => Array.from(new Set(normalize(text).split(' ').filter(t => t.length > 2 && !stopwords.has(t))));
+    const topicTerms = extractTerms(String(webSearchResult?.content?.clean_topic || topic || ''));
+
+    const scoreCandidate = (candidate: any, cardText: string) => {
+      const haystack = normalize(`${candidate.title || ''} ${candidate.desc || ''} ${candidate.source || ''} ${candidate.url || ''}`);
+      const cardTerms = extractTerms(cardText);
+      let score = 0;
+      for (const term of topicTerms) if (haystack.includes(term)) score += 2;
+      for (const term of cardTerms) if (haystack.includes(term)) score += 5;
+      if (/(actor|atriz|diretor|director|winner|vencedor|red carpet|ceremony|premiere|portrait|press)/i.test(haystack)) score += 2;
+      if (/(tweet|twitter|x.com|pbs.twimg|youtube|ytimg|thumbnail|poster|meme|quote|text|caption|screenshot)/i.test(haystack)) score -= 10;
+      return score;
+    };
+
     const assignments: Record<number, string> = {};
     const usedUrls = new Set<string>();
+
     for (let ci = 0; ci < totalCards; ci++) {
-      // Distribute images round-robin, avoiding duplicates when possible
-      let bestImg = webImgs.find((url: string) => !usedUrls.has(url));
-      if (!bestImg) bestImg = webImgs[ci % webImgs.length];
-      if (bestImg) {
-        assignments[ci] = bestImg;
-        usedUrls.add(bestImg);
+      const card = outline[ci] || {};
+      const cardText = `${card.title || ''} ${card.body || ''}`.trim();
+      const ranked = candidates.length > 0
+        ? [...candidates].sort((a, b) => scoreCandidate(b, cardText) - scoreCandidate(a, cardText))
+        : webImgs.map((url) => ({ url }));
+      let picked = ranked.find((candidate: any) => !usedUrls.has(candidate.url)) || ranked[0];
+      if (picked?.url) {
+        assignments[ci] = picked.url;
+        usedUrls.add(picked.url);
       }
     }
+
     setCardPhotoAssignments(assignments);
-  }, [skipWebSearch, webSearchResult?.content, webSearchResult?.images]);
+  }, [skipWebSearch, webSearchResult?.content, webSearchResult?.images, webSearchResult?.imageCandidates, topic]);
 
   const handleSearchWeb = async () => {
     if (!topic.trim()) return;

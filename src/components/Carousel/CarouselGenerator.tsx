@@ -5071,20 +5071,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           .map((f: any) => f.person_name)
           .filter(Boolean);
         const allEntities = [...new Set([...keyEntities, ...factsPersonNames])];
-        const perCardQueries: { index: number; query: string; title: string; body: string; topic: string; key_entities?: string[] }[] = [];
+        const perCardQueries: { index: number; query: string; title: string; body: string; topic: string; key_entities?: string[]; is_cover?: boolean }[] = [];
         for (let ci = 0; ci < totalCards; ci++) {
           const cardText = outlineToUse[ci];
           const cardTitle = cardText?.title || '';
           const cardBody = cardText?.body || '';
-          let searchQuery: string;
-          if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
-            searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
-          } else if (cardBody) {
-            searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
-          } else {
-            searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
-          }
-          perCardQueries.push({ index: ci, query: searchQuery, title: cardTitle, body: cardBody, topic: cleanTopicForSearch, key_entities: allEntities });
+          // Don't build query from editorial titles — let the AI in edge function handle it
+          perCardQueries.push({ index: ci, query: cleanTopicForSearch, title: cardTitle, body: cardBody, topic: cleanTopicForSearch, key_entities: allEntities, is_cover: ci === 0 });
         }
 
         if (perCardQueries.length > 0) {

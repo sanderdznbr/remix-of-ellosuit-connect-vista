@@ -58,9 +58,8 @@ Deno.serve(async (req) => {
       const searchCard = async (cardIndex: number, query: string) => {
         const images: string[] = [];
         try {
-          // Use only the first ~60 chars of query + simple negative filters to avoid over-constraining
-          const shortQuery = query.split('.')[0].slice(0, 80).trim();
-          const cleanQuery = `${shortQuery} photo -meme -infographic -template -screenshot`;
+          const shortQuery = query.slice(0, 120).trim();
+          const cleanQuery = `${shortQuery} -meme -infographic -template -screenshot -reaction`;
           const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
@@ -69,17 +68,24 @@ Deno.serve(async (req) => {
             const data = await res.json();
             for (const item of (data.results || [])) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
+              const metadata = [
+                item.title,
+                item.description,
+                item.source,
+                item.page_fetched?.title,
+                item.page_fetched?.description,
+              ].filter(Boolean).join(' ');
+
+              if (imgUrl && imgUrl.startsWith('http') && isCleanImageCandidate(imgUrl, metadata)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                // Accept images without dimensions (many Brave results omit them)
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
                 }
               }
             }
           }
-          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 40)}": ${images.length} clean images`);
+          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 60)}": ${images.length} clean images`);
         } catch (e) {
           console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
         }

@@ -388,16 +388,26 @@ const PromptGallery: React.FC = () => {
 
                           {/* Upload area */}
                           <div className="flex items-center gap-2">
-                            <select
-                              value={selectedMediaType}
-                              onChange={e => setSelectedMediaType(e.target.value)}
-                              className="text-[11px] bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-white/60 outline-none cursor-pointer"
+                            <div className="relative">
+                              <select
+                                value={selectedMediaType}
+                                onChange={e => setSelectedMediaType(e.target.value)}
+                                className="text-[11px] rounded-lg px-2 py-1.5 outline-none cursor-pointer appearance-none pr-6"
+                                style={{ backgroundColor: '#1a1a24', color: '#ccc', border: '1px solid rgba(255,255,255,0.1)' }}
+                              >
+                                {MEDIA_TYPES.map(t => (
+                                  <option key={t.value} value={t.value} style={{ backgroundColor: '#1a1a24', color: '#ccc' }}>{t.label}</option>
+                                ))}
+                              </select>
+                              <ChevronDown className="w-3 h-3 text-white/40 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+                            <label
+                              className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed transition-colors cursor-pointer"
+                              style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+                              onDragOver={e => { e.preventDefault(); e.stopPropagation(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.5)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(168,85,247,0.05)'; }}
+                              onDragLeave={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+                              onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; if (e.dataTransfer.files?.length) handleUploadMedia(e.dataTransfer.files, p.id); }}
                             >
-                              {MEDIA_TYPES.map(t => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                              ))}
-                            </select>
-                            <label className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-white/[0.1] hover:border-white/[0.2] cursor-pointer transition-colors">
                               {uploadingMedia ? (
                                 <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />
                               ) : (

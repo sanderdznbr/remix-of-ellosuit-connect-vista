@@ -4319,7 +4319,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const el = cardRefs.current[i];
           if (!el) continue;
           const canvas = await html2canvas(el, {
-            width: CARD_W, height: CARD_H, scale: 1, useCORS: true, allowTaint: false,
+            width: cardW, height: cardH, scale: 1, useCORS: true, allowTaint: false,
             backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
             onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
           });

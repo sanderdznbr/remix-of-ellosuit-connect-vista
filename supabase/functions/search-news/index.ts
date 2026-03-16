@@ -56,8 +56,8 @@ Deno.serve(async (req) => {
       const searchCard = async (cardIndex: number, query: string) => {
         const images: string[] = [];
         try {
-          // Append anti-text filter keywords to the query
-          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography photo`;
+          // Append strict anti-text / anti-social-post filter keywords to the query
+          const cleanQuery = `${query} real person portrait event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
           const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=15&safesearch=strict&type=photo`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
@@ -67,10 +67,9 @@ Deno.serve(async (req) => {
             for (const item of (data.results || [])) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
               if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                // Prefer larger images (likely photos, not graphics with text)
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
+                if (w >= 600 && h >= 400) {
                   images.push(imgUrl);
                 }
               }

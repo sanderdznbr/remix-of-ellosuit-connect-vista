@@ -19,7 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import ellocontentLogo from '@/assets/ellocontent2.svg';
 
 interface DashboardLayoutProps {
   onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string) => void;

@@ -558,11 +558,15 @@ const CarouselGenerator: React.FC = () => {
       
       const content = data.content || {};
       const images = Array.isArray(data.images) ? data.images.filter((u: string) => typeof u === 'string' && u.startsWith('http')) : [];
+      const imageCandidates = Array.isArray(data.image_candidates)
+        ? data.image_candidates.filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
+        : [];
       setWebSearchResult({
         summary: content?.summary || 'Conteúdo encontrado com sucesso',
         citations: data.citations || [],
         content,
         images,
+        imageCandidates,
       });
 
       if (content?.image_search_terms?.length > 0) {

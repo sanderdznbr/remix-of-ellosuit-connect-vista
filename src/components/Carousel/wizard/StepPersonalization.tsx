@@ -153,7 +153,7 @@ const StepPersonalization: React.FC<Props> = ({
           setFacePersons(prev => {
             const updated = [...prev];
             if (updated.length === 0) {
-              updated.push({ id: crypto.randomUUID(), name: '', gender: 'auto', photos: [] });
+              updated.push({ id: crypto.randomUUID(), label: 'Pessoa 1', gender: 'auto', wearsGlasses: false, photos: [] });
             }
             updated[0] = {
               ...updated[0],

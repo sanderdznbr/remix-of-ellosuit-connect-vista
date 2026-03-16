@@ -404,8 +404,52 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
     console.log('[IMAGES] Clean topic (base for search):', baseTopicForSearch);
     console.log('[IMAGES] Search terms:', searchTerms);
 
+    // === Strategy 1: ScrapingDog Google Images API (higher quality, real Google results) ===
+    const scrapingDogKey = Deno.env.get('SCRAPINGDOG_API_KEY');
+    if (scrapingDogKey) {
+      for (const term of searchTerms) {
+        if (images.length >= 25) break;
+        try {
+          const query = encodeURIComponent(`${term} photograph`);
+          const sdUrl = `https://api.scrapingdog.com/google_images/?api_key=${scrapingDogKey}&query=${query}&results=20&country=us&safe=active&image_type=photo&imgsz=l`;
+          console.log('[IMAGES] ScrapingDog query:', term);
+          const sdResponse = await fetch(sdUrl);
+          if (sdResponse.ok) {
+            const sdData = await sdResponse.json();
+            const results = sdData.images_results || [];
+            for (const item of results) {
+              const imgUrl = item.original || item.image;
+              if (!imgUrl) continue;
+              const metadata = [item.title, item.source, item.link].filter(Boolean).join(' ');
+              if (isCleanImageCandidate(imgUrl, metadata)) {
+                const w = item.original_width || 0;
+                const h = item.original_height || 0;
+                if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
+                  images.push(imgUrl);
+                  rawImageCandidates.push({
+                    url: imgUrl,
+                    title: item.title || '',
+                    desc: '',
+                    source: item.source || '',
+                  });
+                }
+              }
+            }
+            console.log('[IMAGES] ScrapingDog images for "' + term + '":', results.length, 'raw, ' + images.length + ' after filter');
+          } else {
+            const errText = await sdResponse.text();
+            console.error('[IMAGES] ScrapingDog error status:', sdResponse.status, errText);
+          }
+        } catch (e) {
+          console.error('[IMAGES] ScrapingDog error:', e);
+        }
+      }
+    }
+
+    // === Strategy 2: Brave Search fallback (if ScrapingDog returned too few) ===
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
-    if (braveApiKey) {
+    if (braveApiKey && images.length < 8) {
+      console.log('[IMAGES] ScrapingDog returned only', images.length, '— falling back to Brave Search');
       for (const term of searchTerms) {
         if (images.length >= 20) break;
         try {
@@ -421,11 +465,8 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
               const metadata = [
-                item.title,
-                item.description,
-                item.source,
-                item.page_fetched?.title,
-                item.page_fetched?.description,
+                item.title, item.description, item.source,
+                item.page_fetched?.title, item.page_fetched?.description,
               ].filter(Boolean).join(' ');
               if (imgUrl && isCleanImageCandidate(imgUrl, metadata)) {
                 const w = item.properties?.width || item.width || 0;

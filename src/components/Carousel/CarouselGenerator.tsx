@@ -8604,12 +8604,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           <PromptMediaConfirmDialog
             promptTitle={pendingPromptMedia.promptTitle}
             media={pendingPromptMedia.media}
-            onCancel={() => setPendingPromptMedia(null)}
+            onCancel={openNextPendingPromptMedia}
             onConfirm={(selectedMedia) => {
               const screenshots = selectedMedia.filter(m => m.media_type === 'screenshot');
               const logos = selectedMedia.filter(m => m.media_type === 'logo');
               const faces = selectedMedia.filter(m => m.media_type === 'face');
               const refs = selectedMedia.filter(m => m.media_type === 'reference');
+
+              if (selectedMedia.length > 0 && pendingPromptMedia.promptTitle) {
+                setBrandName(prev => prev || pendingPromptMedia.promptTitle);
+              }
 
               if (screenshots.length > 0) {
                 setWantsProduct(true);
@@ -8625,7 +8629,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               if (logos.length > 0) {
                 const primaryLogo = logos[0];
                 setLogoUrl(primaryLogo.file_url);
-                setBrandName(prev => prev || pendingPromptMedia?.promptTitle || '');
               }
 
               if (faces.length > 0) {
@@ -8656,7 +8659,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 });
               }
 
-              setPendingPromptMedia(null);
+              openNextPendingPromptMedia();
               if (selectedMedia.length > 0) {
                 toast({ title: `${selectedMedia.length} mídia(s) aplicada(s) do prompt` });
               }

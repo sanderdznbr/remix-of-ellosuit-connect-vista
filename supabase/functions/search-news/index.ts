@@ -7,26 +7,28 @@ const corsHeaders = {
 const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
-  'dreamstime.com', 'alamy.com', 'pinterest.com', 'boredpanda.com',
-  'buzzfeed.com', 'chzbgr.com', 'imgflip.com', 'knowyourmeme.com',
-  'venngage.com', 'slidechef.net', 'img.youtube.com', 'youtube.com',
-  'dexerto.com', 'termometrooscar.com', 'techtudo.com'
+  'dreamstime.com', 'alamy.com', 'pinterest.com', 'pinimg.com',
+  'boredpanda.com', 'buzzfeed.com', 'chzbgr.com', 'imgflip.com',
+  'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', '9gag.com',
+  'tenor.com', 'giphy.com', 'img.youtube.com', 'youtube.com',
+  'venngage.com', 'slidechef.net', 'dexerto.com', 'termometrooscar.com', 'techtudo.com'
 ];
 
-// Filter out images that likely contain text overlays, screenshots, memes, or social post captures
-function isCleanImageUrl(url: string): boolean {
-  const lower = url.toLowerCase();
+function isCleanImageCandidate(url: string, metadata = ''): boolean {
+  const combined = `${url} ${metadata}`.toLowerCase();
+
   for (const domain of BLOCKED_DOMAINS) {
-    if (lower.includes(domain)) return false;
+    if (combined.includes(domain)) return false;
   }
 
   const badPatterns = [
-    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer',
-    'captura-de-tela', 'screenshot', 'screen-shot',
+    'infographic', 'quote', 'meme', 'funny', 'joke', 'viral', 'shitpost', 'reaction',
+    'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer',
+    'captura-de-tela', 'screenshot', 'screen-shot', 'tutorial', 'interface', 'ui', 'editor',
     'maxresdefault', 'winners-list', 'imgflip', '.svg'
   ];
   for (const pat of badPatterns) {
-    if (lower.includes(pat)) return false;
+    if (combined.includes(pat)) return false;
   }
 
   return true;
@@ -56,9 +58,8 @@ Deno.serve(async (req) => {
       const searchCard = async (cardIndex: number, query: string) => {
         const images: string[] = [];
         try {
-          // Use only the first ~60 chars of query + simple negative filters to avoid over-constraining
-          const shortQuery = query.split('.')[0].slice(0, 80).trim();
-          const cleanQuery = `${shortQuery} photo -meme -infographic -template -screenshot`;
+          const shortQuery = query.slice(0, 120).trim();
+          const cleanQuery = `${shortQuery} -meme -infographic -template -screenshot -reaction`;
           const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
@@ -67,17 +68,24 @@ Deno.serve(async (req) => {
             const data = await res.json();
             for (const item of (data.results || [])) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
+              const metadata = [
+                item.title,
+                item.description,
+                item.source,
+                item.page_fetched?.title,
+                item.page_fetched?.description,
+              ].filter(Boolean).join(' ');
+
+              if (imgUrl && imgUrl.startsWith('http') && isCleanImageCandidate(imgUrl, metadata)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                // Accept images without dimensions (many Brave results omit them)
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
                 }
               }
             }
           }
-          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 40)}": ${images.length} clean images`);
+          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 60)}": ${images.length} clean images`);
         } catch (e) {
           console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
         }
@@ -277,10 +285,17 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
             const results = (imgData.results || []);
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && isCleanImageUrl(imgUrl)) {
+              const metadata = [
+                item.title,
+                item.description,
+                item.source,
+                item.page_fetched?.title,
+                item.page_fetched?.description,
+              ].filter(Boolean).join(' ');
+              if (imgUrl && isCleanImageCandidate(imgUrl, metadata)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 600 && h >= 400) {
+                if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
                 }
               }

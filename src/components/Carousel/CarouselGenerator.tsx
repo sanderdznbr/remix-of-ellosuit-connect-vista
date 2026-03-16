@@ -4293,7 +4293,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const el = cardRefs.current[i];
           if (!el) continue;
           const canvas = await html2canvas(el, {
-            width: CARD_W, height: CARD_H, scale: 2, useCORS: true, allowTaint: true,
+            width: cardW, height: cardH, scale: 2, useCORS: true, allowTaint: true,
             backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 30000,
           });
           const blob = await new Promise<Blob>((resolve, reject) => {

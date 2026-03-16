@@ -5017,7 +5017,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let ci = 0; ci < totalCards; ci++) {
           const cardText = outlineToUse[ci];
           const cardTitle = cardText?.title || '';
-          const searchQuery = cardTitle ? `${cleanTopicForSearch} ${cardTitle}`.trim() : `${cleanTopicForSearch} card ${ci + 1}`;
+          const cardBody = cardText?.body || '';
+          // Build a specific search query: prioritize card-specific content
+          // If the card mentions a specific subject (film, person, product), search for THAT subject
+          const cardContent = `${cardTitle} ${cardBody}`.trim();
+          let searchQuery: string;
+          if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
+            // Card has a distinct title — search specifically for that subject WITH context
+            searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
+          } else if (cardBody) {
+            searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
+          } else {
+            searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
+          }
           perCardQueries.push({ index: ci, query: searchQuery });
         }
 

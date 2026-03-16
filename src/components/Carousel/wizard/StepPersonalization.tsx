@@ -13,8 +13,8 @@ interface Props {
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
   allPeopleOnCover: boolean;
   setAllPeopleOnCover: (v: boolean) => void;
-  faceGender: string;
-  setFaceGender: (v: string) => void;
+  faceGender: 'male' | 'female' | 'auto';
+  setFaceGender: (v: 'male' | 'female' | 'auto') => void;
   wearsGlasses: boolean;
   setWearsGlasses: (v: boolean) => void;
   // Brand

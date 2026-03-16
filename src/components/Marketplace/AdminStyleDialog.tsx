@@ -244,7 +244,14 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
         uploadedUrls.push(refUrl);
       }
 
-      const styleConfig = buildStyleConfig();
+      // Upload cover if new file provided
+      let coverUrl = existingCover;
+      if (coverFile) {
+        const coverPath = `styles/${slug}/cover-${timestamp}.${coverFile.name.split('.').pop()}`;
+        coverUrl = await uploadImage(coverFile, coverPath);
+      }
+
+      const styleConfig = buildStyleConfig(coverUrl || undefined);
       const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean);
 
       if (editStyle) {

@@ -312,6 +312,11 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       textPrompt += `\n\nCORES DA MARCA (PRIORIDADE MÁXIMA): A paleta da marca do usuário é: ${brandColors.join(', ')}. Você DEVE adaptar a composição para usar estas cores predominantemente. Substitua as cores do estilo original pelas cores da marca. O fundo, elementos decorativos, acentos e tipografia devem refletir esta paleta. Mantenha o layout e a estrutura editorial do estilo, apenas TROQUE as cores.`;
     }
 
+    // Custom colors — user-selected palette overrides everything
+    if (customColors && Array.isArray(customColors) && customColors.length > 0) {
+      textPrompt += `\n\nCORES PERSONALIZADAS (PRIORIDADE ABSOLUTA - ACIMA DE TUDO): O usuário selecionou estas cores específicas: ${customColors.join(', ')}. Você DEVE usar EXCLUSIVAMENTE estas cores como a paleta principal. IGNORE COMPLETAMENTE as cores do estilo/template original. Todos os fundos, gradientes, elementos decorativos, tipografia e acentos visuais DEVEM ser baseados nestas cores. Mantenha o layout e a estrutura, mas SUBSTITUA 100% da paleta por estas cores.`;
+    }
+
     // === 2-STAGE APPROACH: Stage 1 generates WITH face refs (best effort),
     // Stage 2 REFINES facial fidelity using the generated image + face refs again.
     // This is better than generating a generic face and trying to swap.

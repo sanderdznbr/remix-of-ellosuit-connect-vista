@@ -243,6 +243,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
+  const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

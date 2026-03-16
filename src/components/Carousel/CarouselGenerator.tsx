@@ -498,32 +498,31 @@ const CarouselGenerator: React.FC = () => {
   ) => {
     if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
 
-    const cleanTopicForSearch = webSearchResult.content.clean_topic || topic.trim();
+    const literalTopicForSearch = topic.trim();
+    const cleanTopicForSearch = webSearchResult.content.clean_topic || literalTopicForSearch;
+    const baseTopicForSearch = /\b(19|20)\d{2}\b/.test(literalTopicForSearch)
+      ? literalTopicForSearch
+      : cleanTopicForSearch;
+
     const perCardQueries = Array.from({ length: totalCards }, (_, ci) => {
       const cardText = outline[ci] || {};
       const cardTitle = (cardText.title || '').trim();
       const cardBody = (cardText.body || '').trim();
-      
-      // Build query from card's OWN content — extract key entities
-      // Priority: card title + body keywords, fallback to clean topic
-      let query = '';
-      if (cardTitle && cardBody) {
-        // Use title + first meaningful part of body (names, places, events)
-        query = `${cardTitle} ${cardBody.split(/[.,;!?]/).slice(0, 2).join(' ')}`.trim();
-      } else if (cardTitle) {
-        query = cardTitle;
-      } else if (cardBody) {
-        query = cardBody.slice(0, 120);
+
+      const titleCore = cardTitle.replace(/^\d+[.)-]?\s*/, '').trim();
+      const bodyCore = cardBody
+        .split(/[.,;!?]/)
+        .map((part: string) => part.trim())
+        .find((part: string) => part.length > 24 && !/saiba mais|arraste|confira|veja|descubra/i.test(part)) || '';
+
+      let query = titleCore ? `${baseTopicForSearch} ${titleCore}` : baseTopicForSearch;
+
+      if (!titleCore && bodyCore) {
+        query = `${baseTopicForSearch} ${bodyCore}`;
       }
-      
-      // If card text is too short/generic, add the main topic for context
-      if (query.length < 15) {
-        query = `${cleanTopicForSearch} ${query}`.trim();
-      }
-      
-      // Append "photo" to bias toward real photographs
-      query = `${query} photo`.slice(0, 180);
-      
+
+      query = query.replace(/\s+/g, ' ').trim().slice(0, 160);
+
       return { index: ci, query };
     });
 

@@ -238,13 +238,14 @@ Return ONLY a JSON object mapping card index to the chosen option index. Example
 }
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
-CRITICAL for clean_topic: Extract ONLY the core subject name from the user request. If user says "Crie um post sobre CS2" the clean_topic is "CS2". If user says "Novidades do Bitcoin" the clean_topic is "Bitcoin". Just the subject, no verbs or filler words.
+CRITICAL for clean_topic: Preserve the REAL searchable subject exactly when qualifiers are essential. Keep year, edition, award category, event name, franchise name, person name, movie title, or location whenever they are important to identify the correct subject. Example: if user says "Crie um post sobre Oscar 2026", the clean_topic should be "Oscar 2026". If user says "Melhor ator no Oscar 2026", the clean_topic should be "Oscar 2026 melhor ator". Remove only filler verbs/instructions.
 
-CRITICAL for image_search_terms: Each term MUST be a search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Think about what a photographer would capture. Add the word "photo" or "fotografia" to each term. Examples:
+CRITICAL for image_search_terms: Each term MUST be a precise literal search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Preserve the exact event/topic wording when it matters, especially years like 2026 and named events like Oscar, BBB, Copa do Mundo, Grammy, etc. Build searches close to what a user would type in Brave Images. Examples:
+- For "Oscar 2026": "Oscar 2026 red carpet photo", "Oscar 2026 ceremony photo", "Oscar 2026 winner photo"
 - For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"
-- For CS2: "Counter-Strike 2 gameplay screenshot", "CS2 tournament player photo"
-- For Tesla: "Tesla Model 3 driving road photo"
-NEVER use abstract terms like "technology", "update", "2026". NEVER suggest terms that would return infographics, charts, text-heavy images, or memes. Each term must describe a VISUAL SCENE or REAL OBJECT.`;
+- For "CS2": "Counter-Strike 2 tournament player photo", "CS2 championship stage photo"
+- For "Tesla": "Tesla Model 3 driving road photo"
+NEVER use vague generic terms like "technology", "business", "news", or "update" by themselves. Each term must describe the exact event/person/object/scene the user asked for.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 
@@ -357,20 +358,32 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
       };
     }
 
-    // Search for images - use clean topic from AI, not raw user input
+    // Search for images - preserve the literal topic when qualifiers like year/event matter
     let images: string[] = [];
-    const cleanTopic = parsedContent.clean_topic || topic;
-    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} photo`, `${cleanTopic} fotografia`];
+    const literalTopic = String(topic || '').trim();
+    const cleanTopic = (parsedContent.clean_topic || literalTopic).trim();
+    const hasCriticalQualifier = /\b(19|20)\d{2}\b/.test(literalTopic) || /(oscar|bbb|grammy|cannes|copa do mundo|world cup|champions league|emmy|golden globe|festival|eleiç|olimp|formula 1|f1)/i.test(literalTopic);
+    const baseTopicForSearch = hasCriticalQualifier ? literalTopic : cleanTopic;
+    const rawSearchTerms: string[] = parsedContent.image_search_terms || [`${baseTopicForSearch} photo`, `${baseTopicForSearch} fotografia`];
+    const searchTerms = rawSearchTerms
+      .map((term) => String(term || '').trim())
+      .filter(Boolean)
+      .map((term) => {
+        const normalized = term.toLowerCase();
+        const baseNormalized = baseTopicForSearch.toLowerCase();
+        return normalized.includes(baseNormalized) ? term : `${baseTopicForSearch} ${term}`;
+      })
+      .slice(0, 3);
+    console.log('[IMAGES] Literal topic:', literalTopic);
     console.log('[IMAGES] Clean topic:', cleanTopic);
     console.log('[IMAGES] Search terms:', searchTerms);
 
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      for (const term of searchTerms.slice(0, 3)) {
+      for (const term of searchTerms) {
         if (images.length >= 20) break;
         try {
-          // Append strict anti-text / anti-social-post filter keywords and request photo type
-          const cleanQuery = `${term} real event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
+          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
           const query = encodeURIComponent(cleanQuery);
           const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {

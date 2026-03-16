@@ -178,6 +178,8 @@ interface CarouselCard {
   layout?: 'dark' | 'light' | 'accent';
   fontScale?: number;
   paddingScale?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  cardFontIndex?: number;
 }
 
 interface CarouselData {
@@ -5078,6 +5080,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
     const layout = card.layout || 'dark';
+    const cardAlign = card.textAlign || 'left';
+    const cardSerif = card.cardFontIndex !== undefined ? FONT_OPTIONS[card.cardFontIndex]?.value || serif : serif;
     const isLight = layout === 'light';
     const isAccent = layout === 'accent';
     const bg = isAccent ? accentColor : bgColor;
@@ -5138,8 +5142,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 0, backgroundColor: bg }}>
           {card.imageUrl && <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
           <div style={{ position: 'absolute', inset: 0, background: card.imageUrl ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.25) 100%)' : `linear-gradient(180deg, ${bgColor} 0%, ${accentColor}44 100%)` }} />
-          <div style={{ position: 'absolute', bottom: `${40 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10, textAlign: 'center' }}>
-            <h1 style={{ fontFamily: serif, fontSize: `${96 * s * fs}px`, fontWeight: 900, lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `-${1 * s}px`, textShadow: '0 4px 40px rgba(0,0,0,0.7)' }}>
+          <div style={{ position: 'absolute', bottom: `${40 * s * ps}px`, left: `${48 * s * ps}px`, right: `${48 * s * ps}px`, zIndex: 10, textAlign: cardAlign }}>
+            <h1 style={{ fontFamily: cardSerif, fontSize: `${96 * s * fs}px`, fontWeight: 900, lineHeight: 1.0, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: `-${1 * s}px`, textShadow: '0 4px 40px rgba(0,0,0,0.7)' }}>
               {renderAccentText(card.title || '', accentColor, '#FFFFFF', 76, s)}
             </h1>
             {card.subtitle && <p style={{ fontFamily: sans, fontSize: `${22 * s * fs}px`, fontWeight: 600, color: '#FFFFFF', opacity: 0.85, marginTop: `${16 * s}px`, lineHeight: 1.4, textTransform: 'uppercase', letterSpacing: `${3 * s}px` }}>→ {card.subtitle}</p>}
@@ -5163,11 +5167,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           {ctaHasImage && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
           {!ctaHasImage && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}
           {renderHeader()}
-          <div style={{ position: 'absolute', inset: `${80 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', zIndex: 10 }}>
+          <div style={{ position: 'absolute', inset: `${80 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: cardAlign === 'center' ? 'center' : cardAlign === 'right' ? 'flex-end' : 'flex-start', textAlign: cardAlign, zIndex: 10 }}>
             {/* Decorative line */}
             <div style={{ width: `${60 * s}px`, height: `${4 * s}px`, backgroundColor: accentColor, borderRadius: `${4 * s}px`, marginBottom: `${40 * s}px` }} />
-            <h2 style={{ fontFamily: serif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: ctaTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
-            {card.body && <p style={{ fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: ctaTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
+            <h2 style={{ fontFamily: cardSerif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: ctaTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
+            {card.body && <p style={{ fontFamily: cardSerif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: ctaTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
             {/* CTA button-like element */}
             <div style={{ padding: `${20 * s}px ${56 * s}px`, backgroundColor: accentColor, borderRadius: `${12 * s}px`, display: 'inline-flex', alignItems: 'center', gap: `${12 * s}px` }}>
               <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 800, color: ctaBtnTxt, textTransform: 'uppercase', letterSpacing: `${2.5 * s}px` }}>SAIBA MAIS →</p>
@@ -5189,9 +5193,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
           {renderHeader()}
-           <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px`, gap: `${24 * s}px` }}>
-            <p style={{ fontFamily: serif, fontSize: `${58 * s * fs}px`, fontWeight: 700, lineHeight: 1.2, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 58, s)}</p>
-            {bottomText && <p style={{ fontFamily: serif, fontSize: `${38 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
+           <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px`, gap: `${24 * s}px`, textAlign: cardAlign }}>
+            <p style={{ fontFamily: cardSerif, fontSize: `${58 * s * fs}px`, fontWeight: 700, lineHeight: 1.2, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, 58, s)}</p>
+            {bottomText && <p style={{ fontFamily: cardSerif, fontSize: `${38 * s * fs}px`, fontWeight: 400, lineHeight: 1.5, color: secondaryTxt, marginTop: 'auto', textDecoration: 'underline', textDecorationColor: `${secondaryTxt}55`, textUnderlineOffset: `${6 * s}px` }}>{bottomText}</p>}
           </div>
           {renderLogo()}
         </div>
@@ -5206,9 +5210,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.25) 100%)' }} />
           {renderHeader()}
-          <div style={{ position: 'absolute', bottom: `${48 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, zIndex: 5, display: 'flex', flexDirection: 'column', gap: `${16 * s}px` }}>
-            <p style={{ fontFamily: serif, fontSize: `${42 * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: '#FFFFFF', wordBreak: 'break-word' }}>{renderAccentText(topText, accentColor, '#FFFFFF', 42 * fs, s)}</p>
-            {bottomText && <p style={{ fontFamily: serif, fontSize: `${28 * s * fs}px`, fontWeight: 400, lineHeight: 1.4, color: 'rgba(255,255,255,0.75)', wordBreak: 'break-word' }}>{bottomText}</p>}
+          <div style={{ position: 'absolute', bottom: `${48 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, zIndex: 5, display: 'flex', flexDirection: 'column', gap: `${16 * s}px`, textAlign: cardAlign }}>
+            <p style={{ fontFamily: cardSerif, fontSize: `${42 * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: '#FFFFFF', wordBreak: 'break-word' }}>{renderAccentText(topText, accentColor, '#FFFFFF', 42 * fs, s)}</p>
+            {bottomText && <p style={{ fontFamily: cardSerif, fontSize: `${28 * s * fs}px`, fontWeight: 400, lineHeight: 1.4, color: 'rgba(255,255,255,0.75)', wordBreak: 'break-word' }}>{bottomText}</p>}
           </div>
           {renderLogo()}
         </div>
@@ -5219,15 +5223,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
         {renderHeader()}
-        <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, gap: `${24 * s}px` }}>
+        <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, gap: `${24 * s}px`, textAlign: cardAlign }}>
           {/* Top text area */}
           <div style={{ flex: hasImage ? '0 0 auto' : '1', display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
-            <p style={{ fontFamily: serif, fontSize: `${(hasImage ? 42 : 56) * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 42 : 56) * fs, s)}</p>
+            <p style={{ fontFamily: cardSerif, fontSize: `${(hasImage ? 42 : 56) * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 42 : 56) * fs, s)}</p>
           </div>
           {/* Image area with margin/gap */}
           {hasImage && <div style={{ flex: '1 1 auto', minHeight: 0, borderRadius: `${20 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; if (el.parentElement) el.parentElement.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
           {/* Bottom text */}
-          {bottomText && <div style={{ flex: '0 0 auto' }}><p style={{ fontFamily: serif, fontSize: `${(hasImage ? 32 : 42) * s * fs}px`, fontWeight: 500, lineHeight: 1.35, color: hasImage ? mainTxt : secondaryTxt, opacity: 0.85 }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 32 : 42) * fs, s)}</p></div>}
+          {bottomText && <div style={{ flex: '0 0 auto' }}><p style={{ fontFamily: cardSerif, fontSize: `${(hasImage ? 32 : 42) * s * fs}px`, fontWeight: 500, lineHeight: 1.35, color: hasImage ? mainTxt : secondaryTxt, opacity: 0.85 }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 32 : 42) * fs, s)}</p></div>}
         </div>
         {renderLogo()}
       </div>
@@ -8143,6 +8147,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   referenceImageUrl={editorRefImage}
                   onUploadReferenceImage={handleEditorRefImageUpload}
                   onRemoveReferenceImage={() => setEditorRefImage(null)}
+                  isContentStyle={!isFullBleedMarketplace && wizardMode !== 'extreme' && !isRealEstateStyle}
                   isRealEstate={isRealEstateStyle && propertyList.length > 0}
                   propertyData={isRealEstateStyle && propertyList.length > 0 ? (() => {
                     const propIdx = realEstateMode === 'multiple' ? (validIndex % propertyList.length) : 0;

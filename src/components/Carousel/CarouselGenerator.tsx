@@ -3356,7 +3356,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         return { ...prev, cards: newCards };
       });
 
-      toast({ title: '✨ Card de texto criado!' });
+      toast({ title: 'Card de texto criado!' });
     } catch (err: any) {
       toast({ title: 'Erro ao gerar card', description: err.message, variant: 'destructive' });
     } finally {

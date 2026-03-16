@@ -5356,8 +5356,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
             <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
               {/* LEFT column: centered content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <div className="w-full max-w-[520px] space-y-6">
+              <div className="flex-1 flex flex-col items-center px-6 lg:px-16 py-8 lg:justify-center overflow-y-auto pb-[120px] lg:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="w-full max-w-[520px] space-y-6 flex-shrink-0">
                   {/* Step dots (hide on Modo step) */}
                   {currentStepName !== 'Modo' && (
                   <div className="flex items-center justify-center gap-2">

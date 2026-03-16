@@ -8248,7 +8248,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, rgba(232,77,26,0.2), rgba(232,77,26,0.05))' : 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
               <Sparkles className="w-8 h-8" style={{ color: wizardMode === 'extreme' ? '#E84D1A' : '#9B6BFF' }} />
             </div>
-            <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>
+            <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado?</h2>
             <p className="text-white/50 text-sm mb-6 leading-relaxed">
               Para baixar, editar e criar conteúdos ilimitados com IA, crie sua conta.
             </p>

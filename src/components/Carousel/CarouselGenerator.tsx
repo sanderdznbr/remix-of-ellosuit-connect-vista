@@ -5080,8 +5080,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return;
     }
 
+    // Auto-advance to Pesquisa step when web search completes while on Tema
+    const currentName = WIZARD_STEPS[wizardStep];
+    if (currentName === 'Tema' && !searchingWeb && hasWebResearch) {
+      const pesquisaIdx = WIZARD_STEPS.indexOf('Pesquisa');
+      if (pesquisaIdx >= 0) setWizardStep(pesquisaIdx);
+      return;
+    }
+
     if (!searchingWeb && hasWebResearch) {
-      const currentName = WIZARD_STEPS[wizardStep];
       if (currentName === 'Pessoas' || currentName === 'Visual') {
         const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
         if (roteiroIdx >= 0) setWizardStep(roteiroIdx);

@@ -665,6 +665,7 @@ const CarouselGenerator: React.FC = () => {
     setFaceCardCount(null);
     setEnhancingPrompt(false);
     setMentionedPrompts([]);
+    setPendingPromptMedia(null);
     setReferenceImages([]);
     setFamousList([]);
     setFamousImages([]);
@@ -711,7 +712,56 @@ const CarouselGenerator: React.FC = () => {
     setFaceGender('auto');
     setWearsGlasses(false);
     setAllPeopleOnCover(true);
+    promptMediaQueueRef.current = [];
+    promptMediaLoadingIdsRef.current.clear();
+    promptMediaResolvedIdsRef.current.clear();
   }, []);
+
+  const openNextPendingPromptMedia = useCallback(() => {
+    setPendingPromptMedia(promptMediaQueueRef.current.shift() ?? null);
+  }, []);
+
+  const queuePromptMediaDialog = useCallback((payload: { promptId: string; promptTitle: string; media: any[] }) => {
+    setPendingPromptMedia((current) => {
+      if (!current) return payload;
+      const alreadyQueued = promptMediaQueueRef.current.some(item => item.promptId === payload.promptId);
+      if (current.promptId !== payload.promptId && !alreadyQueued) {
+        promptMediaQueueRef.current.push(payload);
+      }
+      return current;
+    });
+  }, []);
+
+  const fetchMentionPromptMedia = useCallback(async (prompt: { id: string; title: string }) => {
+    if (!prompt?.id) return;
+    if (promptMediaResolvedIdsRef.current.has(prompt.id) || promptMediaLoadingIdsRef.current.has(prompt.id)) return;
+
+    promptMediaLoadingIdsRef.current.add(prompt.id);
+    try {
+      const { data: media, error } = await supabase
+        .from('saved_prompt_media')
+        .select('*')
+        .eq('prompt_id', prompt.id)
+        .order('sort_order');
+
+      if (error) throw error;
+
+      promptMediaResolvedIdsRef.current.add(prompt.id);
+      if (media && media.length > 0) {
+        queuePromptMediaDialog({ promptId: prompt.id, promptTitle: prompt.title, media });
+      }
+    } catch (err) {
+      console.error('Failed to fetch prompt media:', err);
+    } finally {
+      promptMediaLoadingIdsRef.current.delete(prompt.id);
+    }
+  }, [queuePromptMediaDialog]);
+
+  useEffect(() => {
+    mentionedPrompts.forEach((prompt) => {
+      void fetchMentionPromptMedia(prompt);
+    });
+  }, [mentionedPrompts, fetchMentionPromptMedia]);
 
   const currentFont = FONT_OPTIONS[selectedFont];
   const serif = currentFont.value;

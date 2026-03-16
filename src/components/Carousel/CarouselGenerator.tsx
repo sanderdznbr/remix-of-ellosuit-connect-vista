@@ -6177,7 +6177,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const themeRgb = modeTheme.rgb;
           const themeRgb2 = modeTheme.rgb2;
           return (
-          <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+          <motion.div
+            className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden"
+            style={{ backgroundColor: '#0A0A0A' }}
+            initial={resultEntrance ? { opacity: 0, y: 40, scale: 0.97 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
             {/* Header bar */}
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
               <div className="flex items-center gap-3">

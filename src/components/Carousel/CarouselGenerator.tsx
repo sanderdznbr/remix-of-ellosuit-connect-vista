@@ -4994,6 +4994,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     }
   }, [WIZARD_STEPS.length, wizardStep]);
 
+  // Auto-advance from Tema to Pesquisa when web search result arrives
+  const prevWebSearchResult = useRef(webSearchResult);
+  useEffect(() => {
+    if (webSearchResult && !prevWebSearchResult.current) {
+      // Web search just completed — if we're on Tema, advance to Pesquisa
+      const currentName = WIZARD_STEPS[wizardStep] || '';
+      if (currentName === 'Tema') {
+        const pesquisaIdx = WIZARD_STEPS.indexOf('Pesquisa');
+        if (pesquisaIdx > 0) {
+          setWizardStep(pesquisaIdx);
+        }
+      }
+    }
+    prevWebSearchResult.current = webSearchResult;
+  }, [webSearchResult, WIZARD_STEPS, wizardStep]);
+
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 

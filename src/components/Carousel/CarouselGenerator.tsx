@@ -4505,7 +4505,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           if (i < total - 1) await new Promise(r => setTimeout(r, 500));
         }
         setRegenAllProgress(null);
-        toast({ title: '✨ Todos os cards regenerados!' });
+        toast({ title: 'Todos os cards regenerados!' });
       }
       // Auto-save after regeneration
       setTimeout(() => saveCarousel(), 500);

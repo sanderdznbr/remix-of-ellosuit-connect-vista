@@ -85,7 +85,7 @@ import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
 import StepFacePosition from './wizard/StepFacePosition';
-import StepProduct, { ProductAnalysis, ProductSize, PRODUCT_SIZE_OPTIONS } from './wizard/StepProduct';
+import StepProduct, { ProductAnalysis, ProductSize, PRODUCT_SIZE_OPTIONS, detectContext } from './wizard/StepProduct';
 import GalleryPicker from './wizard/GalleryPicker';
 import StepBrandRef from './wizard/StepBrandRef';
 import StepColors from './wizard/StepColors';
@@ -278,6 +278,7 @@ const CarouselGenerator: React.FC = () => {
   const [analyzingProduct, setAnalyzingProduct] = useState(false);
   const [productSize, setProductSize] = useState<ProductSize>('medium');
   const [wantsProduct, setWantsProduct] = useState(false);
+  const [autoProductDetected, setAutoProductDetected] = useState(false);
 
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
@@ -389,6 +390,16 @@ const CarouselGenerator: React.FC = () => {
   const [skipWebSearch, setSkipWebSearch] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[] } | null>(null);
 
+  // Auto-detect product context from topic to show Produto step
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const detectedProductContext = React.useMemo(() => detectContext(topic, mentionedPrompts), [topic, mentionedPrompts]);
+  React.useEffect(() => {
+    if (detectedProductContext && !autoProductDetected && !wantsProduct) {
+      setWantsProduct(true);
+      setAutoProductDetected(true);
+    }
+  }, [detectedProductContext, autoProductDetected, wantsProduct]);
+
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;
@@ -398,10 +409,10 @@ const CarouselGenerator: React.FC = () => {
   // Show 'Posição' step only when user uploaded face AND web research is active
   const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const showPesquisaStep = hasWebResearch;
+  const showProductStep = wantsProduct;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Velocidade'];
-  const showProductStep = wantsProduct;
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
@@ -649,6 +660,7 @@ const CarouselGenerator: React.FC = () => {
     setFamousImages([]);
     setProductImages([]);
     setWantsProduct(false);
+    setAutoProductDetected(false);
     setProductAnalysis(null);
     setAnalyzingProduct(false);
     setImageSettings(DEFAULT_IMAGE_SETTINGS);
@@ -5947,10 +5959,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 return; // Stay on step to review
                               }
 
-                              // Card-by-card: advance to next card if current has a photo
+                              // Card-by-card: advance to next card if current has a photo (only enforce when web photos exist)
                               const hasPhotoForCurrent = !!cardPhotoAssignments[roteiroCardIndex];
-                              if (!hasPhotoForCurrent && Object.keys(cardPhotoOptions).length > 0) {
-                                // Photo is mandatory — show warning
+                              const hasPhotoOptions = Object.keys(cardPhotoOptions).length > 0;
+                              if (!hasPhotoForCurrent && hasPhotoOptions && !skipWebSearch) {
+                                // Photo is mandatory only when we have web images
                                 sonnerToast.error('Selecione uma foto para este card antes de continuar');
                                 return;
                               }

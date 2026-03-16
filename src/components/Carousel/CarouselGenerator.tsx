@@ -6905,7 +6905,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   </div>
                   {/* Likes */}
                   <div className="px-4 pb-4">
-                    <p className="text-white text-[11px] line-clamp-2"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{carouselData.title || originalTopic || (topic.length > 100 ? '' : topic)}</span></p>
+                    <p className="text-white text-[11px] line-clamp-2"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{cleanMentionsFromTopic(carouselData.title || originalTopic || (topic.length > 100 ? '' : topic))}</span></p>
                   </div>
                   {/* Bottom bar */}
                   <div className="flex justify-center pb-2">

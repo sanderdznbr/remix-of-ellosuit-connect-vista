@@ -1955,19 +1955,28 @@ MANTENHA a foto real reconhecível e fiel.`);
       // DEFAULT: ~25% of cards get faces (cover + ~25% of remaining), user can override
       const faceCardIndices = new Set<number>();
       if (hasFaceRefsForGen) {
-        const defaultFaceCount = faceCardCount != null ? faceCardCount : Math.max(1, Math.round(cardCount * 0.25));
-        const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
-        // Always include cover (0) and distribute face cards evenly
-        faceCardIndices.add(0);
-        if (effectiveFaceCount >= cardCount) {
-          for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
-        } else {
-          const remaining = effectiveFaceCount - 1;
-          if (remaining > 0) {
-            const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
-            const step = middleIndices.length / remaining;
-            for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
-              faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+        // When web search is active with images, only apply face to cover or last card
+        if (hasWebImages && webFacePosition !== 'none') {
+          if (webFacePosition === 'cover') {
+            faceCardIndices.add(0);
+          } else if (webFacePosition === 'last') {
+            faceCardIndices.add(cardCount - 1);
+          }
+        } else if (!hasWebImages) {
+          // Normal face distribution: ~25% of cards get faces
+          const defaultFaceCount = faceCardCount != null ? faceCardCount : Math.max(1, Math.round(cardCount * 0.25));
+          const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
+          faceCardIndices.add(0);
+          if (effectiveFaceCount >= cardCount) {
+            for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
+          } else {
+            const remaining = effectiveFaceCount - 1;
+            if (remaining > 0) {
+              const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+              const step = middleIndices.length / remaining;
+              for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+                faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+              }
             }
           }
         }

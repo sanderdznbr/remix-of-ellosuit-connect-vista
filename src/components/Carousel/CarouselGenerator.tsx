@@ -5632,6 +5632,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
                                   
                                   const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
+                                  const perCardQueries: { index: number; query: string }[] = [];
                                   
                                   for (let ci = 0; ci < totalCards; ci++) {
                                     const cardText = outlineToUse[ci];

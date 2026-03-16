@@ -19,13 +19,14 @@ interface Props {
   accentTheme?: 'purple' | 'orange' | 'red';
   webImages?: string[];
   cardPhotoAssignments?: Record<number, string>;
+  cardPhotoOptions?: Record<number, string[]>;
   setCardPhotoAssignments?: (v: Record<number, string>) => void;
   onOutlineGenerated?: (outline: CardText[]) => Promise<void> | void;
 }
 
 const StepCardTexts: React.FC<Props> = ({
   cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
-  webImages, cardPhotoAssignments, setCardPhotoAssignments, onOutlineGenerated,
+  webImages, cardPhotoAssignments, cardPhotoOptions, setCardPhotoAssignments, onOutlineGenerated,
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
@@ -47,6 +48,7 @@ const StepCardTexts: React.FC<Props> = ({
   const totalCards = contentMode === 'single-post' ? 1 : cardCount;
   const texts = Array.from({ length: totalCards }, (_, i) => manualCardTexts[i] || { title: '', body: '' });
   const availableWebImages = (webImages || []).filter(url => typeof url === 'string' && url.startsWith('http'));
+  const getSuggestedOptions = (cardIndex: number) => (cardPhotoOptions?.[cardIndex] || []).filter(url => typeof url === 'string' && url.startsWith('http'));
 
   const updateCard = (index: number, field: 'title' | 'body', value: string) => {
     const updated = [...texts];
@@ -296,25 +298,31 @@ const StepCardTexts: React.FC<Props> = ({
         )}
 
         {/* Existing web images */}
-        {hasWebPhotos && (
-          <div className="px-4 py-3">
-            <p className="text-[11px] text-white/30 mb-2">Fotos encontradas ({availableWebImages.length})</p>
-            <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[35vh]">
-              {availableWebImages.map((url, idx) => {
-                const isUsedByOther = Object.entries(cardPhotoAssignments || {}).some(([k, v]) => v === url && Number(k) !== pickingPhotoFor);
-                const isCurrentlyAssigned = cardPhotoAssignments?.[pickingPhotoFor] === url;
-                return (
-                  <button key={idx} onClick={() => assignPhoto(pickingPhotoFor, url)}
-                    className={`relative rounded-lg overflow-hidden transition-all h-24 ${isCurrentlyAssigned ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : isUsedByOther ? 'ring-1 ring-yellow-500/30 opacity-60' : 'ring-1 ring-white/[0.06] hover:ring-white/20'}`}>
-                    <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    {isCurrentlyAssigned && <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[10px] font-bold">✓</span></div>}
-                    {isUsedByOther && <div className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-yellow-300 px-1.5 py-0.5 rounded">em uso</div>}
-                  </button>
-                );
-              })}
+        {(() => {
+          const suggestedOptions = getSuggestedOptions(pickingPhotoFor);
+          const galleryImages = suggestedOptions.length > 0 ? suggestedOptions : availableWebImages;
+          return galleryImages.length > 0 ? (
+            <div className="px-4 py-3">
+              <p className="text-[11px] text-white/30 mb-2">
+                {suggestedOptions.length > 0 ? `3 sugestões para este card` : `Fotos encontradas (${availableWebImages.length})`}
+              </p>
+              <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[35vh]">
+                {galleryImages.map((url, idx) => {
+                  const isUsedByOther = Object.entries(cardPhotoAssignments || {}).some(([k, v]) => v === url && Number(k) !== pickingPhotoFor);
+                  const isCurrentlyAssigned = cardPhotoAssignments?.[pickingPhotoFor] === url;
+                  return (
+                    <button key={idx} onClick={() => assignPhoto(pickingPhotoFor, url)}
+                      className={`relative rounded-lg overflow-hidden transition-all h-24 ${isCurrentlyAssigned ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : isUsedByOther ? 'ring-1 ring-yellow-500/30 opacity-60' : 'ring-1 ring-white/[0.06] hover:ring-white/20'}`}>
+                      <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      {isCurrentlyAssigned && <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[10px] font-bold">✓</span></div>}
+                      {isUsedByOther && <div className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-yellow-300 px-1.5 py-0.5 rounded">em uso</div>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          ) : null;
+        })()}
 
         <div className="h-[env(safe-area-inset-bottom,0px)]" />
       </div>
@@ -325,6 +333,7 @@ const StepCardTexts: React.FC<Props> = ({
   if (isMobile) {
     const card = texts[currentSlide] || { title: '', body: '' };
     const assignedPhoto = cardPhotoAssignments?.[currentSlide];
+    const suggestedOptions = getSuggestedOptions(currentSlide);
 
     return (
       <div className="space-y-3" style={{ minHeight: '300px' }}>
@@ -396,6 +405,28 @@ const StepCardTexts: React.FC<Props> = ({
                         <span className="text-xs">Toque para adicionar foto</span>
                         <span className="text-[10px] text-white/15">Web, busca ou do dispositivo</span>
                       </button>
+                    )}
+
+                    {suggestedOptions.length > 0 && (
+                      <div className="px-4 pt-3">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 mb-2">Escolha 1 de 3 fotos</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {suggestedOptions.map((url, optionIndex) => {
+                            const isSelected = assignedPhoto === url;
+                            return (
+                              <button
+                                key={`${i}-${optionIndex}-${url}`}
+                                type="button"
+                                onClick={() => assignPhoto(i, url)}
+                                className={`relative overflow-hidden rounded-xl h-20 transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : 'ring-1 ring-white/[0.08] hover:ring-white/20'}`}
+                              >
+                                <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                {isSelected && <div className="absolute inset-x-0 bottom-0 text-[9px] font-medium text-white bg-black/60 py-1">selecionada</div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
 
                     {/* Card text content */}
@@ -487,6 +518,7 @@ const StepCardTexts: React.FC<Props> = ({
           const isExpanded = expandedCard === i;
           const hasContent = (card.title || '').trim() || (card.body || '').trim();
           const assignedPhoto = cardPhotoAssignments?.[i];
+          const suggestedOptions = getSuggestedOptions(i);
           return (
             <div key={i} className="rounded-xl transition-all"
               style={{ backgroundColor: isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasContent ? accentBorder : 'rgba(255,255,255,0.06)'}` }}>
@@ -509,6 +541,24 @@ const StepCardTexts: React.FC<Props> = ({
                   {setCardPhotoAssignments && (
                     <div>
                       <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Foto do card</label>
+                      {suggestedOptions.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {suggestedOptions.map((url, optionIndex) => {
+                            const isSelected = assignedPhoto === url;
+                            return (
+                              <button
+                                key={`${i}-${optionIndex}-${url}`}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); assignPhoto(i, url); }}
+                                className={`relative rounded-lg overflow-hidden h-20 transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : 'ring-1 ring-white/[0.06] hover:ring-white/20'}`}
+                              >
+                                <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                {isSelected && <div className="absolute inset-x-0 bottom-0 text-[9px] font-medium text-white bg-black/60 py-1">selecionada</div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                       {assignedPhoto ? (
                         <div className="flex items-center gap-2">
                           <div className="relative w-20 h-14 rounded-lg overflow-hidden ring-1 ring-blue-500/30 flex-shrink-0">
@@ -519,6 +569,10 @@ const StepCardTexts: React.FC<Props> = ({
                               disabled={refreshingCard === i}
                               className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors disabled:opacity-50" title="Buscar nova foto">
                               {refreshingCard === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setPickingPhotoFor(i); }}
+                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Escolher outra foto">
+                              <ImageIcon className="h-3.5 w-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); handleManualUpload(i); }}
                               className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Enviar foto">

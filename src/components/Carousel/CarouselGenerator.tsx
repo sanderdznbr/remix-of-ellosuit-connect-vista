@@ -225,6 +225,7 @@ const CarouselGenerator: React.FC = () => {
   const [manualPostText, setManualPostText] = useState('');
   const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
   const [cardPhotoAssignments, setCardPhotoAssignments] = useState<Record<number, string>>({});
+  const [cardPhotoOptions, setCardPhotoOptions] = useState<Record<number, string[]>>({});
   const [roteiroGenerated, setRoteiroGenerated] = useState(false);
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
   const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
@@ -503,6 +504,7 @@ const CarouselGenerator: React.FC = () => {
     const webImgs = (webSearchResult?.images || []).filter((u: string) => typeof u === 'string' && u.startsWith('http'));
     if (candidates.length === 0 && webImgs.length === 0) {
       setCardPhotoAssignments({});
+      setCardPhotoOptions({});
       return;
     }
 
@@ -522,29 +524,46 @@ const CarouselGenerator: React.FC = () => {
       const haystack = normalize(`${candidate.title || ''} ${candidate.desc || ''} ${candidate.source || ''} ${candidate.url || ''}`);
       const cardTerms = extractTerms(cardText);
       let score = 0;
-      for (const term of topicTerms) if (haystack.includes(term)) score += 2;
-      for (const term of cardTerms) if (haystack.includes(term)) score += 5;
-      if (/(actor|atriz|diretor|director|winner|vencedor|red carpet|ceremony|premiere|portrait|press)/i.test(haystack)) score += 2;
-      if (/(tweet|twitter|x.com|pbs.twimg|youtube|ytimg|thumbnail|poster|meme|quote|text|caption|screenshot)/i.test(haystack)) score -= 10;
+
+      for (const term of topicTerms) if (haystack.includes(term)) score += 3;
+      for (const term of cardTerms) if (haystack.includes(term)) score += 6;
+
+      if (/(portrait|headshot|press|premiere|red carpet|ceremony|festival|event|actor|atriz|celebrity|director|diretor|producer|cantor|singer)/i.test(haystack)) score += 4;
+      if (/(poster|thumbnail|wallpaper|cover|banner|flyer|promo|promotional|advertisement|template|mockup|collage|montage|quote|caption|text|typography|screenshot|tweet|twitter|x.com|youtube|ytimg|pbs.twimg|meme)/i.test(haystack)) score -= 18;
+      if (/(oscars?|academy awards?|award statue|trophy|logo)/i.test(haystack) && !/(actor|atriz|celebrity|portrait|press|red carpet)/i.test(haystack)) score -= 8;
+      if (/getty|shutterstock|alamy|depositphotos|istock|freepik|vecteezy/.test(haystack)) score -= 8;
+
       return score;
     };
 
+    const fallbackCandidates = webImgs.map((url) => ({ url, title: '', desc: '', source: '' }));
+    const candidatePool = (candidates.length > 0 ? candidates : fallbackCandidates)
+      .filter((candidate: any, index: number, arr: any[]) => arr.findIndex((item) => item.url === candidate.url) === index);
+
     const assignments: Record<number, string> = {};
+    const optionsByCard: Record<number, string[]> = {};
     const usedUrls = new Set<string>();
 
     for (let ci = 0; ci < totalCards; ci++) {
       const card = outline[ci] || {};
       const cardText = `${card.title || ''} ${card.body || ''}`.trim();
-      const ranked = candidates.length > 0
-        ? [...candidates].sort((a, b) => scoreCandidate(b, cardText) - scoreCandidate(a, cardText))
-        : webImgs.map((url) => ({ url }));
-      let picked = ranked.find((candidate: any) => !usedUrls.has(candidate.url)) || ranked[0];
-      if (picked?.url) {
-        assignments[ci] = picked.url;
-        usedUrls.add(picked.url);
+      const ranked = [...candidatePool].sort((a, b) => scoreCandidate(b, cardText) - scoreCandidate(a, cardText));
+      const uniqueRankedUrls = ranked
+        .map((candidate: any) => candidate.url)
+        .filter((url: string, index: number, arr: string[]) => arr.indexOf(url) === index);
+
+      const preferredOptions = uniqueRankedUrls.filter((url: string) => !usedUrls.has(url)).slice(0, 3);
+      const fallbackOptions = uniqueRankedUrls.filter((url: string) => !preferredOptions.includes(url)).slice(0, Math.max(0, 3 - preferredOptions.length));
+      const options = [...preferredOptions, ...fallbackOptions].slice(0, 3);
+
+      if (options.length > 0) {
+        optionsByCard[ci] = options;
+        assignments[ci] = options[0];
+        usedUrls.add(options[0]);
       }
     }
 
+    setCardPhotoOptions(optionsByCard);
     setCardPhotoAssignments(assignments);
   }, [skipWebSearch, webSearchResult?.content, webSearchResult?.images, webSearchResult?.imageCandidates, topic]);
 
@@ -552,6 +571,7 @@ const CarouselGenerator: React.FC = () => {
     if (!topic.trim()) return;
     setSearchingWeb(true);
     setCardPhotoAssignments({});
+    setCardPhotoOptions({});
     try {
       const data = await resilientInvoke('search-news', { topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
@@ -602,6 +622,7 @@ const CarouselGenerator: React.FC = () => {
     setManualPostText('');
     setManualCardTexts([]);
     setCardPhotoAssignments({});
+    setCardPhotoOptions({});
     setWizardMode('simple');
     setExtremeAnalysis(null);
     setExtremeVision('');
@@ -5143,6 +5164,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     (async () => {
       setGeneratingRoteiro(true);
       setCardPhotoAssignments({});
+      setCardPhotoOptions({});
       const totalCards = contentMode === 'single-post' ? 1 : cardCount;
       const localFallback = () => {
         if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
@@ -5696,6 +5718,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'}
                         webImages={webSearchResult?.images}
                         cardPhotoAssignments={cardPhotoAssignments}
+                        cardPhotoOptions={cardPhotoOptions}
                         setCardPhotoAssignments={setCardPhotoAssignments}
                         onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
                     )}

@@ -493,26 +493,37 @@ const CarouselGenerator: React.FC = () => {
     if (!topic.trim()) return;
     setSearchingWeb(true);
     try {
-      const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { topic: topic.trim(), language: 'pt-BR' },
-      });
-      if (error) throw error;
+      const data = await resilientInvoke('search-news', { topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
       
       const content = data.content || {};
+      const images = Array.isArray(data.images) ? data.images.filter((u: string) => typeof u === 'string' && u.startsWith('http')) : [];
       setWebSearchResult({
         summary: content?.summary || 'Conteúdo encontrado com sucesso',
         citations: data.citations || [],
         content,
-        images: data.images || [],
+        images,
       });
 
-      // Auto-fill keywords from image search terms (do NOT overwrite the user's topic)
+      if (images.length > 0) {
+        const totalCards = contentMode === 'single-post' ? 1 : cardCount;
+        const assignments: Record<number, string> = {};
+        const usedUrls = new Set<string>();
+        for (let ci = 0; ci < totalCards; ci++) {
+          const bestImg = images.find((u: string) => !usedUrls.has(u)) || images[ci % images.length];
+          if (bestImg) {
+            assignments[ci] = bestImg;
+            usedUrls.add(bestImg);
+          }
+        }
+        setCardPhotoAssignments(assignments);
+      }
+
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
-      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
+      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas e fotos carregadas.` });
     } catch (err: any) {
       console.error('Web search error:', err);
       toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });

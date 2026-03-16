@@ -343,10 +343,13 @@ const StepCardTexts: React.FC<Props> = ({
     const suggestedOptions = getSuggestedOptions(currentSlide);
 
     return (
-      <div className="space-y-3" style={{ minHeight: '300px' }}>
+      <div className="space-y-4" style={{ minHeight: '300px' }}>
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">Roteiro</h2>
+          <div>
+            <h2 className="text-lg font-bold text-white">Roteiro</h2>
+            <p className="text-xs text-white/30 mt-0.5">Card {currentSlide + 1} de {totalCards}</p>
+          </div>
           <button onClick={fillWithAI} disabled={filling || !topic.trim()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{ backgroundColor: accentBg, border: `1px solid ${accentBorder}`, color: accentColor }}>
@@ -355,145 +358,99 @@ const StepCardTexts: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Swipeable slider container */}
-        <div
-          ref={containerRef}
-          className="relative overflow-hidden rounded-2xl"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div
-            className="flex"
-            style={{
-              transform: `translateX(calc(-${currentSlide * 100}% + ${swipeOffset}px))`,
-              transition: swipeOffset === 0 ? 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none',
-              willChange: 'transform',
-            }}
-          >
-            {texts.map((cardData, i) => {
-              const photo = cardPhotoAssignments?.[i];
+        {/* Card label */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accentColor + '99' }}>
+            {getCardLabel(currentSlide)}
+          </span>
+          {/* Progress dots */}
+          <div className="flex items-center gap-1">
+            {texts.map((_, i) => {
+              const hasPhoto = !!cardPhotoAssignments?.[i];
               return (
-                <div key={i} className="w-full flex-shrink-0">
-                  <div className="border border-white/[0.08] rounded-2xl overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-                    {/* Photo — full width, no crop (contain) */}
-                    {photo ? (
-                      <div className="relative w-full bg-black/40" style={{ minHeight: 180 }}>
-                        <img
-                          src={photo}
-                          alt=""
-                          className="w-full max-h-[220px] object-contain mx-auto"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
-                        <div className="absolute top-2 right-2 flex gap-1.5">
-                          <button onClick={() => refreshPhoto(i)}
-                            disabled={refreshingCard === i}
-                            className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform disabled:opacity-50">
-                            {refreshingCard === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                          </button>
-                          <button onClick={() => removePhoto(i)}
-                            className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform">
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                        <div className="absolute bottom-2 left-2">
-                          <span className="text-[10px] px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white/70 font-medium">
-                            📷 {photo.startsWith('data:') ? 'Foto manual' : 'Foto da web'}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={() => setPickingPhotoFor(i)}
-                        className="w-full bg-white/[0.02] flex flex-col items-center justify-center gap-2 text-white/25 active:bg-white/[0.05] transition-colors"
-                        style={{ minHeight: 140 }}>
-                        <div className="w-12 h-12 rounded-xl bg-white/[0.04] flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6" />
-                        </div>
-                        <span className="text-xs">Toque para adicionar foto</span>
-                        <span className="text-[10px] text-white/15">Web, busca ou do dispositivo</span>
-                      </button>
-                    )}
-
-                    {suggestedOptions.length > 0 && (
-                      <div className="px-4 pt-3">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 mb-2">Escolha 1 de 3 fotos</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {suggestedOptions.map((url, optionIndex) => {
-                            const isSelected = assignedPhoto === url;
-                            return (
-                              <button
-                                key={`${i}-${optionIndex}-${url}`}
-                                type="button"
-                                onClick={() => assignPhoto(i, url)}
-                                className={`relative overflow-hidden rounded-xl h-20 transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : 'ring-1 ring-white/[0.08] hover:ring-white/20'}`}
-                              >
-                                <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                {isSelected && <div className="absolute inset-x-0 bottom-0 text-[9px] font-medium text-white bg-black/60 py-1">selecionada</div>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Card text content */}
-                    <div className="p-4 space-y-2.5">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: accentColor + '99' }}>
-                          {getCardLabel(i)}
-                        </span>
-                        {((cardData.title || '').trim() || (cardData.body || '').trim()) && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${accentBadgeBg} ${accentBadgeText}`}>✓</span>
-                        )}
-                      </div>
-                      <input
-                        value={cardData.title || ''}
-                        onChange={(e) => updateCard(i, 'title', e.target.value)}
-                        placeholder={i === 0 ? 'Título da capa...' : 'Título do card...'}
-                        className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl outline-none focus:border-white/15 transition-colors"
-                      />
-                      <textarea
-                        value={cardData.body || ''}
-                        onChange={(e) => updateCard(i, 'body', e.target.value)}
-                        placeholder={i === 0 ? 'Subtítulo descritivo...' : 'Conteúdo do card...'}
-                        className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none focus:border-white/15 transition-colors"
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <div key={i}
+                  className="rounded-full transition-all"
+                  style={{
+                    width: currentSlide === i ? 16 : 6,
+                    height: 6,
+                    backgroundColor: currentSlide === i ? accentColor : hasPhoto ? `${accentColor}66` : 'rgba(255,255,255,0.08)',
+                  }} />
               );
             })}
           </div>
         </div>
 
-        {/* Navigation dots + arrows */}
-        <div className="flex items-center justify-between px-1">
-          <button onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}
-            className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50 disabled:opacity-20 active:scale-90 transition-all">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+        {/* Photo selection — mandatory */}
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-white/40 mb-2.5 flex items-center gap-1.5">
+            <ImageIcon className="h-3 w-3" />
+            {assignedPhoto ? 'Foto selecionada — toque para trocar' : 'Selecione uma foto para este card'}
+          </p>
+          
+          {suggestedOptions.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {suggestedOptions.map((url, optionIndex) => {
+                const isSelected = assignedPhoto === url;
+                return (
+                  <button
+                    key={`${currentSlide}-${optionIndex}-${url}`}
+                    type="button"
+                    onClick={() => assignPhoto(currentSlide, url)}
+                    className={`relative overflow-hidden rounded-xl transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : 'ring-1 ring-white/[0.08] hover:ring-white/20'}`}
+                    style={{ aspectRatio: '4/3' }}
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-8 flex flex-col items-center justify-center gap-2 text-white/20 border border-dashed border-white/[0.08] rounded-xl">
+              <ImageIcon className="h-6 w-6" />
+              <span className="text-xs">Carregando sugestões...</span>
+            </div>
+          )}
 
-          <div className="flex items-center gap-1.5">
-            {texts.map((_, i) => (
-              <button key={i} onClick={() => setCurrentSlide(i)}
-                className="transition-all rounded-full"
-                style={{
-                  width: currentSlide === i ? 22 : 7,
-                  height: 7,
-                  backgroundColor: currentSlide === i ? accentColor : 'rgba(255,255,255,0.12)',
-                }} />
-            ))}
+          {/* Extra actions: upload + search */}
+          <div className="flex gap-2 mt-2.5">
+            <button onClick={() => handleManualUpload(currentSlide)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] text-white/40 hover:bg-white/[0.08] transition-colors">
+              <Upload className="h-3 w-3" /> Enviar foto
+            </button>
+            <button onClick={() => setPickingPhotoFor(currentSlide)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-[11px] text-white/40 hover:bg-white/[0.08] transition-colors">
+              <Search className="h-3 w-3" /> Buscar na web
+            </button>
           </div>
-
-          <button onClick={() => setCurrentSlide(Math.min(totalCards - 1, currentSlide + 1))} disabled={currentSlide === totalCards - 1}
-            className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center text-white/50 disabled:opacity-20 active:scale-90 transition-all">
-            <ChevronRight className="h-5 w-5" />
-          </button>
         </div>
 
-        {/* Hint */}
-        <p className="text-center text-[10px] text-white/15">← Deslize para navegar entre cards →</p>
+        {/* Card text content */}
+        <div className="space-y-2.5">
+          <input
+            value={card.title || ''}
+            onChange={(e) => updateCard(currentSlide, 'title', e.target.value)}
+            placeholder={currentSlide === 0 ? 'Título da capa...' : 'Título do card...'}
+            className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl outline-none focus:border-white/15 transition-colors"
+          />
+          <textarea
+            value={card.body || ''}
+            onChange={(e) => updateCard(currentSlide, 'body', e.target.value)}
+            placeholder={currentSlide === 0 ? 'Subtítulo descritivo...' : 'Conteúdo do card...'}
+            className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl resize-none outline-none focus:border-white/15 transition-colors"
+            rows={2}
+          />
+        </div>
+
+        {!assignedPhoto && suggestedOptions.length > 0 && (
+          <p className="text-[11px] text-amber-400/70 text-center">⚠ Selecione uma foto para continuar</p>
+        )}
 
         {photoPickerModal}
       </div>

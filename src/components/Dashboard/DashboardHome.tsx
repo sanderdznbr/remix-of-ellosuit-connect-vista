@@ -446,13 +446,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               return (
                 <div
                   key={`job-${job.id}`}
-                  className="rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center"
+                  className="rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-all duration-200"
                   style={{
                     width: '160px',
                     height: '200px',
                     background: '#0A0A0F',
                     border: `1px solid ${modeColor}33`,
                   }}
+                  onClick={() => onResumeJob?.(job.id)}
                 >
                   {/* Glow background */}
                   <div

@@ -383,7 +383,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, tipografia, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. Renderize APENAS os textos fornecidos no prompt.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, TIPOGRAFIA/FONTES exatas, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. A FONTE usada nos textos DEVE ser a MESMA família tipográfica das referências. Renderize APENAS os textos fornecidos no prompt.` });
       }
       if (validFaceRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência.` });

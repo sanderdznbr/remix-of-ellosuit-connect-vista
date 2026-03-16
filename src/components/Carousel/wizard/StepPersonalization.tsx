@@ -74,30 +74,29 @@ const StepPersonalization: React.FC<Props> = ({
   const fileRef = useRef<HTMLInputElement>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
 
-  // Auto-detect pre-filled data from prompt media and skip gate
+  // Auto-detect pre-filled data from prompt media and react whenever it changes
   useEffect(() => {
     const hasFace = facePersons.some(p => p.photos.length > 0);
     const hasLogoData = !!logoUrl;
     const hasProductData = !!hasProduct;
 
-    if (hasFace || hasLogoData || hasProductData) {
-      if (hasFace) {
-        setWantsPerson(true);
-        setExpandedSection('face');
-      }
-      if (hasLogoData) {
-        setWantsBrand(true);
-        if (!hasFace) setExpandedSection('brand');
-      }
-      // If only product, skip the gate entirely
-      if (hasProductData && !hasFace && !hasLogoData) {
-        setWantsPerson(false);
-        setWantsBrand(false);
-      }
+    if (!hasFace && !hasLogoData && !hasProductData) return;
+
+    if (hasFace) {
+      setWantsPerson(true);
+      setExpandedSection(prev => prev ?? 'face');
     }
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    if (hasLogoData) {
+      setWantsBrand(true);
+      setExpandedSection(prev => prev ?? (hasFace ? 'face' : 'brand'));
+    }
+
+    if (hasProductData && !hasFace && !hasLogoData) {
+      setWantsPerson(false);
+      setWantsBrand(false);
+    }
+  }, [facePersons, logoUrl, hasProduct]);
 
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasLogo = !!logoUrl;

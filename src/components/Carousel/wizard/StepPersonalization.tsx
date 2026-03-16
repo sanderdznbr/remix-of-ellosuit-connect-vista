@@ -358,7 +358,7 @@ const StepPersonalization: React.FC<Props> = ({
                     ].map(pos => (
                       <button
                         key={pos.value}
-                        onClick={() => setLogoPosition(pos.value)}
+                        onClick={() => setLogoPosition(pos.value as LogoPosition)}
                         className={`py-2 rounded-lg text-sm font-medium transition-all ${logoPosition === pos.value ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
                       >
                         {pos.label}

@@ -8550,7 +8550,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 setLogoUrl(logos[0].file_url);
               }
               if (faces.length > 0) {
-                setReferenceImages(prev => [...prev, ...faces.map(f => ({ url: f.file_url, thumb: f.file_url, label: f.file_name, source: 'upload' as const, category: 'face' as const }))]);
+                const facePhotos = faces.map(f => ({ url: f.file_url, thumb: f.file_url, label: f.file_name, source: 'upload' as const, category: 'face' as const }));
+                setReferenceImages(prev => [...prev, ...facePhotos]);
+                setFacePersons(prev => {
+                  const updated = [...prev];
+                  if (updated.length === 0) {
+                    updated.push({ id: crypto.randomUUID(), label: 'Pessoa 1', gender: 'auto', wearsGlasses: false, photos: [] });
+                  }
+                  updated[0] = { ...updated[0], photos: [...updated[0].photos, ...facePhotos] };
+                  return updated;
+                });
               }
               if (refs.length > 0) {
                 setReferenceImages(prev => [...prev, ...refs.map(r => ({ url: r.file_url, thumb: r.file_url, label: r.file_name, source: 'upload' as const, category: 'style' as const }))]);

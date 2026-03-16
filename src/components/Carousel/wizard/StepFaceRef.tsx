@@ -26,6 +26,10 @@ interface Props {
   famousImages: any[];
   setFamousImages: React.Dispatch<React.SetStateAction<any[]>>;
   activeMarketplaceStyle?: any;
+  // Web search face position
+  hasWebImages?: boolean;
+  webFacePosition?: 'cover' | 'last' | 'none';
+  setWebFacePosition?: (v: 'cover' | 'last' | 'none') => void;
 }
 
 const Chip = ({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) => (
@@ -56,6 +60,7 @@ const StepFaceRef: React.FC<Props> = ({
   faceGender, setFaceGender,
   wearsGlasses, setWearsGlasses,
   activeMarketplaceStyle,
+  hasWebImages, webFacePosition, setWebFacePosition,
 }) => {
   const { user } = useAuth();
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
@@ -213,6 +218,39 @@ const StepFaceRef: React.FC<Props> = ({
               {styleRecommendationReason || 'Este estilo é predominantemente tipográfico/gráfico e funciona melhor sem fotos de rostos.'}
               {' '}Para máxima fidelidade ao estilo, recomendamos <strong>pular esta etapa</strong>.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Web search: face position selector */}
+      {hasWebImages && setWebFacePosition && (
+        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <span className="text-blue-400 text-lg shrink-0 mt-0.5">🌐</span>
+            <div>
+              <p className="text-sm font-semibold text-blue-300">Post com fotos da Web</p>
+              <p className="text-xs text-blue-300/70 mt-0.5">
+                As fotos reais do tema serão usadas nos cards. Seu rosto será recriado com um corpo gerado pela IA para combinar com o post.
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-white/50 font-medium">Onde aplicar seu rosto?</p>
+          <div className="flex gap-2">
+            {([
+              { value: 'cover' as const, label: '📸 Na Capa', desc: 'Primeiro card' },
+              { value: 'last' as const, label: '🎬 No Último', desc: 'Card final (CTA)' },
+              { value: 'none' as const, label: '❌ Nenhum', desc: 'Só fotos da web' },
+            ]).map(opt => (
+              <button key={opt.value} onClick={() => setWebFacePosition(opt.value)}
+                className={`flex-1 p-3 rounded-xl text-center transition-all border ${
+                  webFacePosition === opt.value
+                    ? 'bg-blue-500/20 border-blue-500/40 text-white'
+                    : 'bg-white/[0.03] border-white/[0.06] text-white/40 hover:bg-white/[0.06] hover:text-white/60'
+                }`}>
+                <span className="text-sm font-semibold block">{opt.label}</span>
+                <span className="text-[10px] opacity-60 block mt-0.5">{opt.desc}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}

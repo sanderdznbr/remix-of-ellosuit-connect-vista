@@ -197,6 +197,7 @@ const CarouselGenerator: React.FC = () => {
   const [cardPhotoAssignments, setCardPhotoAssignments] = useState<Record<number, string>>({});
   const [roteiroGenerated, setRoteiroGenerated] = useState(false);
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
+  const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
 
   // Wizard mode: simple vs advanced
   const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme'>('simple');
@@ -347,14 +348,22 @@ const CarouselGenerator: React.FC = () => {
   const isRealEstateStyle = !!activeMarketplaceStyle?.is_real_estate;
   const realEstateMode = (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single';
 
+  // Web search state (declared early for WIZARD_STEPS computation)
+  const [searchingWeb, setSearchingWeb] = useState(false);
+  const [skipWebSearch, setSkipWebSearch] = useState(false);
+  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
+  const hasWebImages = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
+  // When web search has images, skip Pessoas and Visual steps (AI selects real photos per card)
+  const skipPeopleVisual = hasFacePhotos || hasWebImages;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(hasFacePhotos ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -442,10 +451,7 @@ const CarouselGenerator: React.FC = () => {
     setEditorRefImage(url);
   };
 
-  // Web search state
-  const [searchingWeb, setSearchingWeb] = useState(false);
-  const [skipWebSearch, setSkipWebSearch] = useState(false);
-  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+  // Web search state (additional)
   const [classifyingTopic, setClassifyingTopic] = useState(false);
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
@@ -1949,19 +1955,28 @@ MANTENHA a foto real reconhecível e fiel.`);
       // DEFAULT: ~25% of cards get faces (cover + ~25% of remaining), user can override
       const faceCardIndices = new Set<number>();
       if (hasFaceRefsForGen) {
-        const defaultFaceCount = faceCardCount != null ? faceCardCount : Math.max(1, Math.round(cardCount * 0.25));
-        const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
-        // Always include cover (0) and distribute face cards evenly
-        faceCardIndices.add(0);
-        if (effectiveFaceCount >= cardCount) {
-          for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
-        } else {
-          const remaining = effectiveFaceCount - 1;
-          if (remaining > 0) {
-            const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
-            const step = middleIndices.length / remaining;
-            for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
-              faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+        // When web search is active with images, only apply face to cover or last card
+        if (hasWebImages && webFacePosition !== 'none') {
+          if (webFacePosition === 'cover') {
+            faceCardIndices.add(0);
+          } else if (webFacePosition === 'last') {
+            faceCardIndices.add(cardCount - 1);
+          }
+        } else if (!hasWebImages) {
+          // Normal face distribution: ~25% of cards get faces
+          const defaultFaceCount = faceCardCount != null ? faceCardCount : Math.max(1, Math.round(cardCount * 0.25));
+          const effectiveFaceCount = Math.min(defaultFaceCount, cardCount);
+          faceCardIndices.add(0);
+          if (effectiveFaceCount >= cardCount) {
+            for (let fi = 0; fi < cardCount; fi++) faceCardIndices.add(fi);
+          } else {
+            const remaining = effectiveFaceCount - 1;
+            if (remaining > 0) {
+              const middleIndices = Array.from({ length: cardCount - 1 }, (_, fi) => fi + 1);
+              const step = middleIndices.length / remaining;
+              for (let fi = 0; fi < remaining && fi < middleIndices.length; fi++) {
+                faceCardIndices.add(middleIndices[Math.min(Math.floor(fi * step), middleIndices.length - 1)]);
+              }
             }
           }
         }
@@ -2567,6 +2582,20 @@ USE a foto real como elemento visual principal/fundo do card.
 Sobreponha os textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
 MANTENHA a foto real reconhecível e fiel — NÃO substitua por uma imagem genérica.
 A composição final deve ser: foto real de fundo + overlay editorial com textos e gráficos do estilo visual.`;
+          }
+
+          // === WEB SEARCH + FACE: create professional portrait matching post theme ===
+          if (hasWebImages && hasFaceRefsForGen && faceCardIndices.has(i) && capturedFaceRefs?.length) {
+            const personGender = activeFacePersonsForGen[0]?.gender || faceGender || 'auto';
+            const genderLabel = personGender === 'male' ? 'masculino' : personGender === 'female' ? 'feminino' : '';
+            // For face cards in web mode: don't use web photo, create a portrait instead
+            capturedProductRefs = undefined;
+            cardPrompt += `\n\n👤 INSTRUÇÃO CRÍTICA — RETRATO COM ROSTO:
+Este card deve apresentar a PESSOA da referência facial. Crie uma foto profissional ${genderLabel ? `de corpo ${genderLabel}` : ''} 
+com o ROSTO da referência em um corpo completo gerado, vestido de forma elegante e adequada ao tema "${cleanTopic}".
+A composição deve ser um retrato editorial premium que combine com a estética do post.
+NÃO use foto da web neste card — crie uma foto original com o rosto fornecido.
+Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`;
           }
 
           imageFactories.push({
@@ -5322,7 +5351,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         famousImages={famousImages} setFamousImages={setFamousImages}
                         faceGender={faceGender} setFaceGender={setFaceGender}
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
-                        activeMarketplaceStyle={activeMarketplaceStyle} />
+                        activeMarketplaceStyle={activeMarketplaceStyle}
+                        hasWebImages={hasWebImages}
+                        webFacePosition={webFacePosition}
+                        setWebFacePosition={setWebFacePosition} />
                     )}
                     {currentStepName === 'Pessoas' && (
                       <StepPeopleMode

@@ -2733,10 +2733,15 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const totalAi = imageFactories.length;
         setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
 
+        // When using marketplace styles with heavy refs, go fully sequential to avoid 429
+        const hasHeavyRefs = !!activeMarketplaceStyleRef.current || styleRefUrls.length > 0;
+        const effectiveBatchSize = hasHeavyRefs ? 1 : 2;
+        const batchDelay = hasHeavyRefs ? 4000 : 1500;
+        
         const generateBatch = async (factories: typeof imageFactories, batchSize: number) => {
           for (let i = 0; i < factories.length; i += batchSize) {
             const batch = factories.slice(i, i + batchSize);
-            if (i > 0) await new Promise(r => setTimeout(r, 1500));
+            if (i > 0) await new Promise(r => setTimeout(r, batchDelay));
             await Promise.all(
               batch.map(f =>
                 f.factory().then(url => {
@@ -2763,11 +2768,11 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         }
 
         if (middleFactories.length > 0) {
-          await generateBatch(middleFactories, 2);
+          await generateBatch(middleFactories, effectiveBatchSize);
         }
 
         if (lastFactory) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, batchDelay));
           const lastUrl = await lastFactory.factory();
           completed++;
           setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
@@ -2778,7 +2783,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         if (failedFactories.length > 0) {
           setImageGenProgress(`🔄 Regenerando ${failedFactories.length} imagens que falharam...`);
           for (const target of failedFactories) {
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 5000));
             try {
               const retryUrl = await target.factory();
               if (retryUrl) updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true, generatedPrompt: target.prompt };
@@ -2789,7 +2794,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const stillFailed = imageFactories.filter(f => !updatedCards[f.index]?.imageUrl);
         if (stillFailed.length > 0) {
           for (const target of stillFailed) {
-            await new Promise(r => setTimeout(r, 4000));
+            await new Promise(r => setTimeout(r, 6000));
             try {
               const retryUrl = await target.factory();
               if (retryUrl) updatedCards[target.index] = { ...updatedCards[target.index], imageUrl: retryUrl, isAiImage: true, generatedPrompt: target.prompt };

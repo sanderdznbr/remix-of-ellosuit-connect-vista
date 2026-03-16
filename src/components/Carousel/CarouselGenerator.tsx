@@ -5223,15 +5223,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
         {renderHeader()}
-        <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, gap: `${24 * s}px` }}>
+        <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, gap: `${24 * s}px`, textAlign: cardAlign }}>
           {/* Top text area */}
           <div style={{ flex: hasImage ? '0 0 auto' : '1', display: hasImage ? undefined : 'flex', flexDirection: hasImage ? undefined : 'column', justifyContent: hasImage ? undefined : 'center' }}>
-            <p style={{ fontFamily: serif, fontSize: `${(hasImage ? 42 : 56) * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 42 : 56) * fs, s)}</p>
+            <p style={{ fontFamily: cardSerif, fontSize: `${(hasImage ? 42 : 56) * s * fs}px`, fontWeight: 700, lineHeight: 1.22, color: mainTxt }}>{renderAccentText(topText, accentTxt, mainTxt, (hasImage ? 42 : 56) * fs, s)}</p>
           </div>
           {/* Image area with margin/gap */}
           {hasImage && <div style={{ flex: '1 1 auto', minHeight: 0, borderRadius: `${20 * s}px`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' }}><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; if (el.parentElement) el.parentElement.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>}
           {/* Bottom text */}
-          {bottomText && <div style={{ flex: '0 0 auto' }}><p style={{ fontFamily: serif, fontSize: `${(hasImage ? 32 : 42) * s * fs}px`, fontWeight: 500, lineHeight: 1.35, color: hasImage ? mainTxt : secondaryTxt, opacity: 0.85 }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 32 : 42) * fs, s)}</p></div>}
+          {bottomText && <div style={{ flex: '0 0 auto' }}><p style={{ fontFamily: cardSerif, fontSize: `${(hasImage ? 32 : 42) * s * fs}px`, fontWeight: 500, lineHeight: 1.35, color: hasImage ? mainTxt : secondaryTxt, opacity: 0.85 }}>{renderAccentText(bottomText, accentTxt, hasImage ? mainTxt : secondaryTxt, (hasImage ? 32 : 42) * fs, s)}</p></div>}
         </div>
         {renderLogo()}
       </div>

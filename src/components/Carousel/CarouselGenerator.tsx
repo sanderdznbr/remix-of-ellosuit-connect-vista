@@ -52,6 +52,7 @@ import {
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
+import StepWebSearch from './wizard/StepWebSearch';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
@@ -363,12 +364,13 @@ const CarouselGenerator: React.FC = () => {
   const skipPeopleVisual = hasFacePhotos || hasWebImages;
   // Show 'Posição' step only when user uploaded face AND web images exist
   const showFacePositionStep = hasFacePhotos && hasWebImages;
+  const hasWebSearch = !skipWebSearch && !!webSearchResult;
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -4992,6 +4994,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     }
   }, [WIZARD_STEPS.length, wizardStep]);
 
+  // Auto-advance from Tema to Pesquisa when web search result arrives
+  const prevWebSearchResult = useRef(webSearchResult);
+  useEffect(() => {
+    if (webSearchResult && !prevWebSearchResult.current) {
+      // Web search just completed — if we're on Tema, advance to Pesquisa
+      const currentName = WIZARD_STEPS[wizardStep] || '';
+      if (currentName === 'Tema') {
+        const pesquisaIdx = WIZARD_STEPS.indexOf('Pesquisa');
+        if (pesquisaIdx > 0) {
+          setWizardStep(pesquisaIdx);
+        }
+      }
+    }
+    prevWebSearchResult.current = webSearchResult;
+  }, [webSearchResult, WIZARD_STEPS, wizardStep]);
+
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
@@ -5502,6 +5520,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           else if (cardCount < 2) { setCardCount(5); }
                         }} />
                     )}
+                    {currentStepName === 'Pesquisa' && webSearchResult && (
+                      <StepWebSearch
+                        webSearchResult={webSearchResult}
+                        searchingWeb={searchingWeb}
+                        onResearch={handleSearchWeb}
+                        topic={topic}
+                      />
+                    )}
                     {currentStepName === 'Formato' && (
                       <StepCardCount
                         cardCount={cardCount}
@@ -5702,11 +5728,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 });
                                 if (!error && data) {
                                   if (data.shouldSearch) {
-                                    // Auto-search immediately without asking
+                                    // Auto-search and let useEffect advance to Pesquisa step
                                     setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
                                     await handleSearchWeb();
-                                    // Don't advance — let user see results and click Continue again
+                                    // webSearchResult is now set → WIZARD_STEPS will include 'Pesquisa' on next render
+                                    // We need to advance after re-render, so just return — useEffect below handles it
                                     return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically

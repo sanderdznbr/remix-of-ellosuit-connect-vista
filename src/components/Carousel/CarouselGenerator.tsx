@@ -5902,33 +5902,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {
                                           const cardImgs = perCardData.card_images[ci] || [];
-                                          // Pick the best unused image for this card
-                                          let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+                                          const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
                                           if (bestImg) {
                                             assignments[ci] = bestImg;
                                             usedUrls.add(bestImg);
-                                          } else {
-                                            // Fallback to general web images
-                                            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-                                            const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                                            if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
                                           }
                                         }
                                         setCardPhotoAssignments(assignments);
                                         console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
                                       } else {
-                                        console.warn('[PER_CARD_SEARCH] Failed, falling back to round-robin');
-                                        // Fallback: round-robin from general images
-                                        const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-                                        if (webImgs.length > 0) {
-                                          const assignments: Record<number, string> = {};
-                                          const usedUrls = new Set<string>();
-                                          for (let ci = 0; ci < totalCards; ci++) {
-                                            let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                                            if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                                          }
-                                          setCardPhotoAssignments(assignments);
-                                        }
+                                        console.warn('[PER_CARD_SEARCH] Failed, clearing assignments');
+                                        setCardPhotoAssignments({});
                                       }
                                     } catch (searchErr) {
                                       console.error('[PER_CARD_SEARCH] Error:', searchErr);

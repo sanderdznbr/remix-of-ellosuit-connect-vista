@@ -2079,8 +2079,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
-      // Clear cloud job on success
-      if (jobId) { setCloudJobId(null); }
+      // Always complete the cloud job on success (even if save failed)
+      if (jobId) {
+        completeCloudJob(jobId, currentCarouselIdRef.current || undefined);
+        setCloudJobId(null);
+      }
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message || 'Não foi possível gerar o post', variant: 'destructive' });
       if (jobId) {
@@ -2091,7 +2094,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       setGenerating(false);
       setGeneratingAllImages(false);
       setImageGenProgress('');
-      setCloudJobId(null);
+      // Safety net: ensure cloud job is always resolved
+      if (jobId && cloudJobId === jobId) setCloudJobId(null);
       generationInFlightRef.current = false;
     }
   };
@@ -3138,19 +3142,23 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           }
         }
       } catch (saveErr) { console.error('Auto-save error:', saveErr); }
-      // Clear cloud job on success
-      if (localJobId) { setCloudJobId(null); }
+      // Always complete the cloud job on success
+      if (localJobId) {
+        completeCloudJob(localJobId, currentCarouselIdRef.current || undefined);
+        setCloudJobId(null);
+      }
     } catch (err: any) {
       console.error('Generation error:', err);
       sonnerToast.error(err.message || 'Não foi possível gerar o carrossel. Tente novamente.');
       if (localJobId) {
         failCloudJob(localJobId, err.message || 'Falha na geração local do carrossel');
+        setCloudJobId(null);
       }
     } finally {
       setGenerating(false);
       setGeneratingAllImages(false);
       setImageGenProgress('');
-      setCloudJobId(null);
+      if (localJobId && cloudJobId === localJobId) setCloudJobId(null);
       generationInFlightRef.current = false;
     }
   };

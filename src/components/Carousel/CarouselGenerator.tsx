@@ -5680,13 +5680,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onUpdateImageSettings={setImageSettings}
                         mentionedPrompts={mentionedPrompts} />
                     )}
-                    {currentStepName === 'Marca' && (
-                      <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        brandAssets={brandAssets}
-                        onSuggestColors={(palette) => {
-                          setBrandSuggestedPalette(palette);
-                        }} />
-                    )}
+                    {/* Marca step removed — merged into Personalização */}
                     {currentStepName === 'Estilo' && (
                       <StepStyleSelect
                         bgColor={bgColor} setBgColor={setBgColor}

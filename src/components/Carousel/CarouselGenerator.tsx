@@ -5892,20 +5892,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               ].filter(Boolean).join('\n');
                               setTopic(enrichedTopic);
                             }
-                            // Roteiro step: auto-generate on first click, advance on second
+                            // Roteiro step: card-by-card advancement with mandatory photo
                             if (currentStepName === 'Roteiro') {
+                              const totalCards = contentMode === 'single-post' ? 1 : cardCount;
                               const hasAnyCardText = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
                               if (!hasAnyCardText && !roteiroGenerated) {
                                 // First click: generate the outline
                                 setGeneratingRoteiro(true);
-                                let generated = false;
-                                const totalCards = contentMode === 'single-post' ? 1 : cardCount;
                                 
-                                // Local fallback generator
                                 const localFallback = () => {
-                                  if (contentMode === 'single-post') {
-                                    return [{ title: topic.trim().slice(0, 60), body: '' }];
-                                  }
+                                  if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
                                   return Array.from({ length: totalCards }, (_, i) => {
                                     if (i === 0) return { title: topic.trim().slice(0, 60), body: 'Descubra tudo sobre este assunto' };
                                     if (i === totalCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
@@ -5915,59 +5911,46 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                                 let generatedOutline: { title?: string; body?: string }[] = [];
                                 try {
-                                  console.log('[Wizard] Auto-generating outline, topic:', topic.trim(), 'cards:', totalCards);
-                                  const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
-                                    body: {
-                                      action: 'generate-outline',
-                                      topic: topic.trim(),
-                                      cardCount: totalCards,
-                                      contentMode,
-                                    },
+                                  const outlineData = await resilientInvoke('generate-carousel', {
+                                    action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode,
+                                    ...(webSearchResult?.content?.summary ? { webContext: webSearchResult.content.summary } : {}),
                                   });
-                                  console.log('[Wizard] Outline response:', { outlineData, outlineErr });
-                                  if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+                                  if (outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
                                     generatedOutline = outlineData.outline;
                                     setManualCardTexts(outlineData.outline);
                                   } else {
-                                    // Edge function returned empty — use local fallback
-                                    console.warn('Outline API returned empty, using local fallback');
                                     generatedOutline = localFallback();
                                     setManualCardTexts(generatedOutline);
                                   }
                                 } catch (err) {
-                                  console.error('Auto roteiro error, using local fallback:', err);
+                                  console.error('Auto roteiro error:', err);
                                   generatedOutline = localFallback();
                                   setManualCardTexts(generatedOutline);
                                 }
                                 
                                 setRoteiroGenerated(true);
+                                setRoteiroCardIndex(0);
                                 if (webSearchResult?.images?.length && !skipWebSearch) {
-                                  const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
-                                  await assignPerCardWebPhotos(outlineToUse, totalCards);
-                                } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
-                                  // No per-card search possible, fallback to round-robin
-                                  const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-                                  if (webImgs.length > 0) {
-                                    const assignments: Record<number, string> = {};
-                                    const usedUrls = new Set<string>();
-                                    for (let ci = 0; ci < totalCards; ci++) {
-                                      let bestImg = '';
-                                      for (const url of webImgs) {
-                                        if (!usedUrls.has(url)) { bestImg = url; break; }
-                                      }
-                                      if (!bestImg) bestImg = webImgs[ci % webImgs.length];
-                                      if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                                    }
-                                    setCardPhotoAssignments(assignments);
-                                  }
+                                  await assignPerCardWebPhotos(generatedOutline.length > 0 ? generatedOutline : manualCardTexts, totalCards);
                                 }
-                                generated = true;
                                 setGeneratingRoteiro(false);
-
-                                if (generated) {
-                                  return; // Stay on step to review generated outline
-                                }
+                                return; // Stay on step to review
                               }
+
+                              // Card-by-card: advance to next card if current has a photo
+                              const hasPhotoForCurrent = !!cardPhotoAssignments[roteiroCardIndex];
+                              if (!hasPhotoForCurrent && Object.keys(cardPhotoOptions).length > 0) {
+                                // Photo is mandatory — show warning
+                                sonnerToast.error('Selecione uma foto para este card antes de continuar');
+                                return;
+                              }
+                              if (roteiroCardIndex < totalCards - 1) {
+                                // Advance to next card
+                                setRoteiroCardIndex(roteiroCardIndex + 1);
+                                return;
+                              }
+                              // All cards reviewed — advance wizard
+                              setRoteiroCardIndex(0);
                             }
                             let next = wizardStep + 1;
                             const nextName = WIZARD_STEPS[next];

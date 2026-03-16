@@ -301,6 +301,8 @@ const CarouselGenerator: React.FC = () => {
   // Generation state
   const [generating, setGenerating] = useState(false);
   const [transitionToGenerate, setTransitionToGenerate] = useState(false);
+  const [completingGeneration, setCompletingGeneration] = useState(false);
+  const [resultEntrance, setResultEntrance] = useState(false);
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [exporting, setExporting] = useState(false);

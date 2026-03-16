@@ -5731,9 +5731,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                     setClassifyingTopic(false);
                                     await handleSearchWeb();
                                     return;
-                                  }
-                                    // We need to advance after re-render, so just return — useEffect below handles it
-                                    return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically
                                     setSkipWebSearch(true);

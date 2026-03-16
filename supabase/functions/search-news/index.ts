@@ -432,6 +432,12 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
                 const h = item.properties?.height || item.height || 0;
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
+                  rawImageCandidates.push({
+                    url: imgUrl,
+                    title: item.title || item.page_fetched?.title || '',
+                    desc: item.description || item.page_fetched?.description || '',
+                    source: item.source || '',
+                  });
                 }
               }
             }

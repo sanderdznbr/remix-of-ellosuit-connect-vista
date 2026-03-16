@@ -112,6 +112,7 @@ import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import { PropertyCardData } from './RealEstateCardTemplates';
 import SocialPublishDialog from './SocialPublishDialog';
 // CarouselTour removed
+import StepPersonalization from './wizard/StepPersonalization';
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import PostCorrectionEditor from './PostCorrectionEditor';
@@ -396,13 +397,13 @@ const CarouselGenerator: React.FC = () => {
   const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const showPesquisaStep = hasWebResearch;
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
+    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
@@ -5355,8 +5356,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
             <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
               {/* LEFT column: centered content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <div className="w-full max-w-[520px] space-y-6">
+              <div className="flex-1 flex flex-col items-center px-6 lg:px-16 py-8 lg:justify-center overflow-y-auto pb-[120px] lg:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="w-full max-w-[520px] space-y-6 flex-shrink-0">
                   {/* Step dots (hide on Modo step) */}
                   {currentStepName !== 'Modo' && (
                   <div className="flex items-center justify-center gap-2">
@@ -5610,24 +5611,30 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         webImages={webSearchResult?.images} onSkip={() => setWizardStep(wizardStep + 1)} />
                     )}
-                    {currentStepName === 'Rosto' && (
-                      <StepFaceRef
+                    {currentStepName === 'Personalização' && (
+                      <StepPersonalization
                         facePersons={facePersons} setFacePersons={setFacePersons}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         allPeopleOnCover={allPeopleOnCover} setAllPeopleOnCover={setAllPeopleOnCover}
-                        famousList={famousList} setFamousList={setFamousList}
-                        famousImages={famousImages} setFamousImages={setFamousImages}
                         faceGender={faceGender} setFaceGender={setFaceGender}
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
-                        activeMarketplaceStyle={activeMarketplaceStyle}
+                        brandAssets={brandAssets}
+                        onSuggestColors={(palette) => setBrandSuggestedPalette(palette)}
+                        showHeader={showHeader} setShowHeader={setShowHeader}
+                        logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                        logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
+                        logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+                        logoBrandColors={logoBrandColors}
+                        useBrandColors={useBrandColors} setUseBrandColors={setUseBrandColors}
+                        brandName={brandName} setBrandName={setBrandName}
+                        userName={userName} setUserName={setUserName}
+                        dateLabel={dateLabel} setDateLabel={setDateLabel}
                         hasWebImages={hasWebImages}
-                        webFacePosition={webFacePosition}
-                        setWebFacePosition={setWebFacePosition} />
-                    )}
-                    {currentStepName === 'Posição' && (
-                      <StepFacePosition
-                        webFacePosition={webFacePosition}
-                        setWebFacePosition={setWebFacePosition} />
+                        webFacePosition={webFacePosition} setWebFacePosition={setWebFacePosition}
+                        onSkipAll={() => setWizardStep(wizardStep + 1)}
+                        activeMarketplaceStyle={activeMarketplaceStyle}
+                        isExtreme={wizardMode === 'extreme'}
+                      />
                     )}
                     {currentStepName === 'Pessoas' && (
                       <StepPeopleMode
@@ -5673,13 +5680,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onUpdateImageSettings={setImageSettings}
                         mentionedPrompts={mentionedPrompts} />
                     )}
-                    {currentStepName === 'Marca' && (
-                      <StepBrandRef referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        brandAssets={brandAssets}
-                        onSuggestColors={(palette) => {
-                          setBrandSuggestedPalette(palette);
-                        }} />
-                    )}
+                    {/* Marca step removed — merged into Personalização */}
                     {currentStepName === 'Estilo' && (
                       <StepStyleSelect
                         bgColor={bgColor} setBgColor={setBgColor}
@@ -5722,20 +5723,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setCardPhotoAssignments={setCardPhotoAssignments}
                         onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
                     )}
-                    {currentStepName === 'Logo' && (
-                      <StepBranding
-                        showHeader={showHeader} setShowHeader={setShowHeader}
-                        logoUrl={logoUrl} setLogoUrl={setLogoUrl}
-                        logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
-                        logoPosition={logoPosition} setLogoPosition={setLogoPosition}
-                        logoBrandColors={logoBrandColors}
-                        useBrandColors={useBrandColors}
-                        setUseBrandColors={setUseBrandColors}
-                        brandName={brandName} setBrandName={setBrandName}
-                        userName={userName} setUserName={setUserName}
-                        dateLabel={dateLabel} setDateLabel={setDateLabel}
-                        isExtreme={wizardMode === 'extreme'} />
-                    )}
+                    {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
@@ -5744,8 +5732,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </motion.div>
                   </AnimatePresence>
 
-                  {/* Navigation buttons */}
-                  <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  {/* Navigation buttons — sticky on mobile */}
+                  <div className="fixed bottom-0 left-0 right-0 z-30 lg:relative lg:bottom-auto lg:left-auto lg:right-auto flex items-center justify-between pt-4 px-5 pb-[calc(env(safe-area-inset-bottom,12px)+12px)] lg:px-0 lg:pb-0" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                     <button onClick={() => {
                       if (currentStepName === 'Modo') { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
                       else {
@@ -5769,7 +5757,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Rosto' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Marca' || currentStepName === 'Roteiro' || currentStepName === 'Imóvel') && (
+                        {(currentStepName === 'Personalização' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Roteiro' || currentStepName === 'Imóvel') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

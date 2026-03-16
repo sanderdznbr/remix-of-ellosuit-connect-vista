@@ -2575,10 +2575,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       // === FONT REFERENCE: Convert Envato preview to base64 for carousel AI ===
       let carouselFontBase64: string | undefined;
       let carouselFontName: string | undefined;
-      if (extremeSelectedFont?.previewUrl) {
+      const carouselFontRef = extremeSelectedFont || advancedEnvatoFont;
+      if (carouselFontRef?.previewUrl) {
         try {
-          setImageGenProgress('🔤 Processando referência de fonte...');
-          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          setImageGenProgress('Processando referencia de fonte...');
+          const fontResp = await fetch(carouselFontRef.previewUrl);
           if (fontResp.ok) {
             const blob = await fontResp.blob();
             if (!blob.type.includes('text/html')) {
@@ -2588,7 +2589,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
               });
-              carouselFontName = extremeSelectedFont.name;
+              carouselFontName = carouselFontRef.name;
               console.log('[CAROUSEL] Font reference converted to base64:', carouselFontName);
             }
           }

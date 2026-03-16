@@ -6016,7 +6016,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               className="relative flex-shrink-0"
               layout
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{ width: 375, maxWidth: '95vw' }}
+              style={{ width: postFormat === 'story' ? 280 : 375, maxWidth: '95vw' }}
             >
               {!isGuest && carouselData.cards.length > 0 && (
                 <>

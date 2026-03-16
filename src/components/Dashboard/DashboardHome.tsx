@@ -237,7 +237,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       {/* Orb — centered on screen */}
       <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none top-[85%] -translate-y-1/2 md:top-[60%]" style={{ opacity: 0.85 }}>
         <div className="carousel-loader-wrapper w-[250vw] h-[250vw] md:w-[1200px] md:h-[1200px]">
-          <div className="carousel-loader-spinner" />
+          <div className="carousel-loader-spinner carousel-loader-spinner--tricolor" />
         </div>
       </div>
 

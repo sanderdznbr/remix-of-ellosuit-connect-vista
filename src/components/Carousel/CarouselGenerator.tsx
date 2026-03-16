@@ -277,6 +277,7 @@ const CarouselGenerator: React.FC = () => {
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [analyzingProduct, setAnalyzingProduct] = useState(false);
   const [productSize, setProductSize] = useState<ProductSize>('medium');
+  const [wantsProduct, setWantsProduct] = useState(false);
 
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);

@@ -64,6 +64,7 @@ const StepPersonalization: React.FC<Props> = ({
   brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   hasWebImages, webFacePosition, setWebFacePosition,
   onSkipAll, activeMarketplaceStyle, isExtreme,
+  hasProduct, setHasProduct, onOpenProductStep,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();

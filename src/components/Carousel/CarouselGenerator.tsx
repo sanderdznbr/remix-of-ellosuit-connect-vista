@@ -5744,19 +5744,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         }}
                       />
                     )}
-                    {currentStepName === 'Pessoas' && (
-                      <StepPeopleMode
-                        peopleMode={peopleMode} setPeopleMode={setPeopleMode}
-                        randomFaceCount={randomFaceCount} setRandomFaceCount={setRandomFaceCount}
-                        cardCount={cardCount} />
-                    )}
-                    {currentStepName === 'Visual' && (
-                      <StepVisualStyle
-                        selectedCategory={visualCategory} setSelectedCategory={setVisualCategory}
-                        visualSearchQuery={visualSearchQuery} setVisualSearchQuery={setVisualSearchQuery}
-                        referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        topic={topic} mentionedPrompts={mentionedPrompts} productAnalysis={productAnalysis} />
-                    )}
                     {currentStepName === 'Fotos Imóvel' && (
                       <StepPropertyPhotos
                         properties={propertyList}

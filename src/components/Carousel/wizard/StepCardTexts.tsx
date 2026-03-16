@@ -74,6 +74,39 @@ const StepCardTexts: React.FC<Props> = ({
     setCardPhotoAssignments(updated);
   };
 
+  // ── Refresh: auto-search a new photo for a card ──
+  const refreshPhoto = async (cardIndex: number) => {
+    if (refreshingCard !== null) return;
+    const cardData = texts[cardIndex];
+    const query = (cardData?.title || topic || '').trim();
+    if (!query) { toast.error('Sem texto para buscar foto'); return; }
+    setRefreshingCard(cardIndex);
+    try {
+      const currentUrl = cardPhotoAssignments?.[cardIndex];
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'web-search', query: `${query} photo` },
+      });
+      if (error) throw error;
+      const urls: string[] = (data?.images || [])
+        .map((img: any) => img.url || img)
+        .filter((u: string) => typeof u === 'string' && u.startsWith('http') && u !== currentUrl);
+      if (urls.length > 0) {
+        // Pick a random one that's not already used by another card
+        const usedUrls = new Set(Object.values(cardPhotoAssignments || {}));
+        const unused = urls.filter(u => !usedUrls.has(u));
+        const pick = unused.length > 0 ? unused[Math.floor(Math.random() * unused.length)] : urls[0];
+        assignPhoto(cardIndex, pick);
+        toast.success('Foto atualizada!');
+      } else {
+        toast.info('Nenhuma foto diferente encontrada. Tente buscar manualmente.');
+        setPickingPhotoFor(cardIndex);
+      }
+    } catch {
+      toast.error('Erro ao buscar nova foto');
+    } finally {
+      setRefreshingCard(null);
+    }
+  };
 
   const fillWithAI = async () => {
     if (filling) return;

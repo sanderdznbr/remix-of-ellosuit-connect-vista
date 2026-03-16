@@ -582,9 +582,6 @@ const CarouselGenerator: React.FC = () => {
       }
 
       toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. As fotos serão buscadas por card após gerar o roteiro.` });
-      // Auto-advance to Pesquisa step (it'll be inserted after Tema dynamically)
-      const temaIdx = WIZARD_STEPS.indexOf('Tema');
-      if (temaIdx >= 0) setWizardStep(temaIdx + 1);
     } catch (err: any) {
       console.error('Web search error:', err);
       toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });

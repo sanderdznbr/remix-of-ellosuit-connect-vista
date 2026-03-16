@@ -229,6 +229,7 @@ const CarouselGenerator: React.FC = () => {
   const [cardPhotoOptions, setCardPhotoOptions] = useState<Record<number, string[]>>({});
   const [roteiroGenerated, setRoteiroGenerated] = useState(false);
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
+  const [roteiroCardIndex, setRoteiroCardIndex] = useState(0);
   const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
 
   // Wizard mode: simple vs advanced

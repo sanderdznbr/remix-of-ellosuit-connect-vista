@@ -353,7 +353,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     let perplexityOk = false;
     try {
       console.log('[AI] Trying Perplexity...');
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      const response = await fetchWithTimeout('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -368,7 +368,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
           temperature: 0.3,
           search_recency_filter: 'month',
         }),
-      });
+      }, 12000);
 
       if (response.ok) {
         const data = await response.json();

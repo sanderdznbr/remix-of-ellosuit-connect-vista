@@ -25,7 +25,7 @@ interface Props {
 
 const StepCardTexts: React.FC<Props> = ({
   cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
-  webImages, cardPhotoAssignments, setCardPhotoAssignments,
+  webImages, cardPhotoAssignments, setCardPhotoAssignments, onOutlineGenerated,
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);

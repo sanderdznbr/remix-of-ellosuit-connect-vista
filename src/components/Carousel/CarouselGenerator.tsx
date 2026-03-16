@@ -360,8 +360,10 @@ const CarouselGenerator: React.FC = () => {
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebImages = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
-  // When web search has images, skip Pessoas and Visual steps (AI selects real photos per card)
-  const skipPeopleVisual = hasFacePhotos || hasWebImages;
+  // When web search found content (even without initial images), skip Pessoas and Visual steps
+  // because per-card image search will find real photos later in the Roteiro step
+  const hasWebContent = !skipWebSearch && !!webSearchResult?.content;
+  const skipPeopleVisual = hasFacePhotos || hasWebImages || hasWebContent;
   // Show 'Posição' step only when user uploaded face AND web images exist
   const showFacePositionStep = hasFacePhotos && hasWebImages;
   const hasWebSearch = !skipWebSearch && !!webSearchResult;

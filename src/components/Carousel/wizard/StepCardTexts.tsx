@@ -298,25 +298,31 @@ const StepCardTexts: React.FC<Props> = ({
         )}
 
         {/* Existing web images */}
-        {hasWebPhotos && (
-          <div className="px-4 py-3">
-            <p className="text-[11px] text-white/30 mb-2">Fotos encontradas ({availableWebImages.length})</p>
-            <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[35vh]">
-              {availableWebImages.map((url, idx) => {
-                const isUsedByOther = Object.entries(cardPhotoAssignments || {}).some(([k, v]) => v === url && Number(k) !== pickingPhotoFor);
-                const isCurrentlyAssigned = cardPhotoAssignments?.[pickingPhotoFor] === url;
-                return (
-                  <button key={idx} onClick={() => assignPhoto(pickingPhotoFor, url)}
-                    className={`relative rounded-lg overflow-hidden transition-all h-24 ${isCurrentlyAssigned ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : isUsedByOther ? 'ring-1 ring-yellow-500/30 opacity-60' : 'ring-1 ring-white/[0.06] hover:ring-white/20'}`}>
-                    <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    {isCurrentlyAssigned && <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[10px] font-bold">✓</span></div>}
-                    {isUsedByOther && <div className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-yellow-300 px-1.5 py-0.5 rounded">em uso</div>}
-                  </button>
-                );
-              })}
+        {(() => {
+          const suggestedOptions = getSuggestedOptions(pickingPhotoFor);
+          const galleryImages = suggestedOptions.length > 0 ? suggestedOptions : availableWebImages;
+          return galleryImages.length > 0 ? (
+            <div className="px-4 py-3">
+              <p className="text-[11px] text-white/30 mb-2">
+                {suggestedOptions.length > 0 ? `3 sugestões para este card` : `Fotos encontradas (${availableWebImages.length})`}
+              </p>
+              <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-[35vh]">
+                {galleryImages.map((url, idx) => {
+                  const isUsedByOther = Object.entries(cardPhotoAssignments || {}).some(([k, v]) => v === url && Number(k) !== pickingPhotoFor);
+                  const isCurrentlyAssigned = cardPhotoAssignments?.[pickingPhotoFor] === url;
+                  return (
+                    <button key={idx} onClick={() => assignPhoto(pickingPhotoFor, url)}
+                      className={`relative rounded-lg overflow-hidden transition-all h-24 ${isCurrentlyAssigned ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : isUsedByOther ? 'ring-1 ring-yellow-500/30 opacity-60' : 'ring-1 ring-white/[0.06] hover:ring-white/20'}`}>
+                      <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      {isCurrentlyAssigned && <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white text-[10px] font-bold">✓</span></div>}
+                      {isUsedByOther && <div className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-yellow-300 px-1.5 py-0.5 rounded">em uso</div>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          ) : null;
+        })()}
 
         <div className="h-[env(safe-area-inset-bottom,0px)]" />
       </div>

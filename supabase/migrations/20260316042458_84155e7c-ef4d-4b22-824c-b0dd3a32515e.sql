@@ -1,0 +1,1 @@
+ALTER TABLE public.carousel_generation_jobs ADD COLUMN IF NOT EXISTS logo_dark_url text;

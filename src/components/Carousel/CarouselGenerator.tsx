@@ -1433,7 +1433,7 @@ const CarouselGenerator: React.FC = () => {
       } as any).select('id').single();
 
       if (jobError || !jobData?.id) {
-        console.warn('Failed to create cloud job:', jobError);
+        console.error('[CLOUD_JOB] Failed to create cloud job:', jobError?.message, jobError?.details, jobError?.hint);
         return null;
       }
       return jobData.id;

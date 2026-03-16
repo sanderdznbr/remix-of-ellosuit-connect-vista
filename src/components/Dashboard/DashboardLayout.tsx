@@ -125,6 +125,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
       }
     })();
+    const isHome = activeTab === 'home';
     return (
       <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
         <ExpiringCreditsBanner />
@@ -134,6 +135,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             WebkitOverflowScrolling: 'touch' as any,
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
+            ...(isMobile && !isHome ? { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' } : {}),
           }}
         >
           {content}

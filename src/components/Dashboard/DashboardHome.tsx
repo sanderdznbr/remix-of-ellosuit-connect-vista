@@ -37,6 +37,8 @@ interface ActiveJob {
   progress_current: number;
   progress_total: number;
   updated_at: string;
+  product_context: string | null;
+  marketplace_style_id: string | null;
 }
 
 interface DashboardHomeProps {
@@ -125,7 +127,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       try {
         const { data } = await supabase
           .from('carousel_generation_jobs')
-          .select('id, topic, progress_message, status, progress_current, progress_total, updated_at')
+          .select('id, topic, progress_message, status, progress_current, progress_total, updated_at, product_context, marketplace_style_id')
           .eq('user_id', user.id)
           .in('status', ['pending', 'generating_text', 'generating_images'])
           .order('created_at', { ascending: false })
@@ -417,7 +419,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
       <AnimatePresence>
-        {recentCarousels.length > 0 && (
+        {(recentCarousels.length > 0 || activeJobs.length > 0) && (
       <motion.div
         className="relative z-[1] px-4 md:px-8 shrink-0"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
@@ -470,6 +472,51 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
             >
+            {/* Placeholder cards for active generation jobs */}
+            {activeJobs.map((job) => {
+              const isExtreme = job.product_context?.startsWith('EXTREME_VISION:');
+              const isAdvanced = !isExtreme && !!job.marketplace_style_id;
+              const modeColor = isExtreme ? '#F97316' : isAdvanced ? '#EF4444' : '#A855F7';
+              const pct = job.progress_total > 0 ? Math.round((job.progress_current / job.progress_total) * 100) : 0;
+              return (
+                <div
+                  key={`job-${job.id}`}
+                  className="rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center"
+                  style={{
+                    width: '160px',
+                    height: '200px',
+                    background: '#0A0A0F',
+                    border: `1px solid ${modeColor}33`,
+                  }}
+                >
+                  {/* Glow background */}
+                  <div
+                    className="absolute inset-0 opacity-20"
+                    style={{ background: `radial-gradient(circle at center, ${modeColor}60 0%, transparent 70%)` }}
+                  />
+                  <div className="relative z-10 flex flex-col items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full border-2 animate-spin"
+                      style={{
+                        borderColor: `${modeColor}30`,
+                        borderTopColor: modeColor,
+                      }}
+                    />
+                    <p className="text-[10px] font-medium text-white/50 text-center px-3 line-clamp-2">
+                      {job.topic.length > 30 ? job.topic.substring(0, 30) + '...' : job.topic}
+                    </p>
+                    {job.progress_total > 0 && (
+                      <div className="w-20 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ backgroundColor: modeColor, width: `${pct}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
             {recentCarousels.map((item) => {
               const sc = item.style_config || {};
               const cover = item.cover_url;

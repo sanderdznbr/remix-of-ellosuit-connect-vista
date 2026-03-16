@@ -2772,7 +2772,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               batch.map(f =>
                 f.factory().then(url => {
                   completed++;
-                  setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+                  setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
                   if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true, generatedPrompt: f.prompt };
                   return url;
                 })

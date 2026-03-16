@@ -413,6 +413,21 @@ const StepPersonalization: React.FC<Props> = ({
                   </div>
                 </div>
               )}
+
+              {/* Use brand colors toggle */}
+              {logoUrl && (
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-white/60">Usar cores da marca no post</span>
+                  <button
+                    onClick={() => setUseBrandColors(!useBrandColors)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -408,7 +408,7 @@ const PromptGallery: React.FC = () => {
                               onDragLeave={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
                               onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; if (e.dataTransfer.files?.length) handleUploadMedia(e.dataTransfer.files, p.id); }}
                             >
-                              {uploadingMedia ? (
+                              {uploadingMediaFor === p.id ? (
                                 <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />
                               ) : (
                                 <Upload className="w-3.5 h-3.5 text-white/25" />

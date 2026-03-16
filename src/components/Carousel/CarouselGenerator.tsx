@@ -5223,12 +5223,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return;
     }
 
-    if (!searchingWeb && hasWebResearch) {
-      if (currentName === 'Pessoas' || currentName === 'Visual') {
-        const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
-        if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
-      }
-    }
   }, [WIZARD_STEPS, wizardStep, searchingWeb, hasWebResearch]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)

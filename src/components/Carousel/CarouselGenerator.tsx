@@ -5370,9 +5370,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {currentStepName !== 'Modo' && (
                 <div className="sticky top-0 z-20 w-full flex justify-center pt-[calc(env(safe-area-inset-top,16px)+8px)] pb-3 lg:pt-4" style={{ backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                   <div className="w-full max-w-[520px] px-6 lg:px-16">
-                <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2">
                       {WIZARD_STEPS.filter(s => s !== 'Modo').map((stepName, i) => {
-                        const realIndex = i + 1; // offset by 1 since Modo is index 0
+                        const realIndex = i + 1;
                         if ((stepName === 'Cores' || stepName === 'Fontes') && isFullBleedMarketplace) return null;
                         return (
                           <button key={realIndex} onClick={() => {
@@ -5389,8 +5389,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           />
                         );
                       })}
+                    </div>
                   </div>
-                  )}
+                </div>
+                )}
+
+                {/* Scrollable content area */}
+                <div className="flex-1 overflow-y-auto px-6 lg:px-16 py-6 lg:py-8 pb-[120px] lg:pb-8 flex flex-col justify-center" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="w-full max-w-[520px] space-y-6 flex-shrink-0 mx-auto">
 
                    {/* Step content with entrance animation */}
                   <AnimatePresence mode="wait">

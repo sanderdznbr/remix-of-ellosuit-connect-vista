@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
         return `CRITICAL PANORAMIC IMAGE: Generate ONE SINGLE ultra-wide panoramic image. Exact dimensions: ${totalWidth}x1350 pixels (aspect ratio ${outputAspectRatio}). The image MUST be MUCH WIDER than it is tall — approximately ${panoramicSections}x wider. This is a HORIZONTAL LANDSCAPE panorama, NOT a portrait. The entire scene must flow continuously from left edge to right edge as ONE unified composition — no divisions, no panels, no separators. Visual elements (backgrounds, scenery, objects, people, gradients) must span seamlessly across the full width. This panorama will be sliced into ${panoramicSections} equal vertical strips, so ensure visual continuity at every potential cut point.`;
       }
       if (outputAspectRatio === '9:16') {
-        return 'Formato retrato 9:16 (1080x1920), imagem alta vertical, preenchendo todo o quadro.';
+        return 'FORMATO OBRIGATÓRIO 9:16 STORIES (1080x1920): Você DEVE gerar uma imagem VERTICAL ALTA no formato 9:16 — a altura (1920px) DEVE ser aproximadamente 1.78x a largura (1080px). A imagem DEVE parecer uma tela de celular em pé (RETRATO VERTICAL EXTREMO). NÃO gere imagem quadrada, NÃO gere 4:5, NÃO gere paisagem. A imagem deve ser SIGNIFICATIVAMENTE mais alta do que larga. Preencha TODO o canvas vertical — ZERO barras pretas, ZERO letterboxing, ZERO espaço vazio no topo ou na base. Expanda a cena para CIMA e para BAIXO para preencher naturalmente todo o frame vertical 9:16.';
       }
       if (outputAspectRatio === '21:9' || outputAspectRatio === '16:9') {
         return `Formato horizontal ${outputAspectRatio}, ocupando todo o quadro.`;
@@ -194,6 +194,10 @@ Deno.serve(async (req) => {
 
     if (!isPanoramicMode && !isVisualCloneMode) {
       textPrompt += `\n\nFORMATO: ${formatInstruction}`;
+    }
+    // For 9:16 Stories, ALWAYS reinforce the format even in visual clone mode
+    if (outputAspectRatio === '9:16' && isVisualCloneMode) {
+      textPrompt += `\n\nFORMATO OBRIGATÓRIO 9:16 STORIES: ${formatInstruction}`;
     }
 
     // Anti-border + anti-text-copy + anti-grid instruction for ALL modes

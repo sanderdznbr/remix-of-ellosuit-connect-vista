@@ -98,6 +98,7 @@ import StepPeopleMode from './wizard/StepPeopleMode';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
+import StepVisualIdea from './wizard/StepVisualIdea';
 import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';

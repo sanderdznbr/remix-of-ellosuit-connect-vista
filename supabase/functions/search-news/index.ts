@@ -7,26 +7,28 @@ const corsHeaders = {
 const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
-  'dreamstime.com', 'alamy.com', 'pinterest.com', 'boredpanda.com',
-  'buzzfeed.com', 'chzbgr.com', 'imgflip.com', 'knowyourmeme.com',
-  'venngage.com', 'slidechef.net', 'img.youtube.com', 'youtube.com',
-  'dexerto.com', 'termometrooscar.com', 'techtudo.com'
+  'dreamstime.com', 'alamy.com', 'pinterest.com', 'pinimg.com',
+  'boredpanda.com', 'buzzfeed.com', 'chzbgr.com', 'imgflip.com',
+  'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', '9gag.com',
+  'tenor.com', 'giphy.com', 'img.youtube.com', 'youtube.com',
+  'venngage.com', 'slidechef.net', 'dexerto.com', 'termometrooscar.com', 'techtudo.com'
 ];
 
-// Filter out images that likely contain text overlays, screenshots, memes, or social post captures
-function isCleanImageUrl(url: string): boolean {
-  const lower = url.toLowerCase();
+function isCleanImageCandidate(url: string, metadata = ''): boolean {
+  const combined = `${url} ${metadata}`.toLowerCase();
+
   for (const domain of BLOCKED_DOMAINS) {
-    if (lower.includes(domain)) return false;
+    if (combined.includes(domain)) return false;
   }
 
   const badPatterns = [
-    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer',
-    'captura-de-tela', 'screenshot', 'screen-shot',
+    'infographic', 'quote', 'meme', 'funny', 'joke', 'viral', 'shitpost', 'reaction',
+    'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer',
+    'captura-de-tela', 'screenshot', 'screen-shot', 'tutorial', 'interface', 'ui', 'editor',
     'maxresdefault', 'winners-list', 'imgflip', '.svg'
   ];
   for (const pat of badPatterns) {
-    if (lower.includes(pat)) return false;
+    if (combined.includes(pat)) return false;
   }
 
   return true;

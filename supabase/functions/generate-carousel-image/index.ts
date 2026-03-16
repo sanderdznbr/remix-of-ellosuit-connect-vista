@@ -416,57 +416,69 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     const fallbackModel = 'google/gemini-3.1-flash-image-preview';
     console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 
-    async function tryGenerate(model: string, content: any[], attempt: number): Promise<string | null> {
-      console.log(`Attempt ${attempt} model=${model} parts=${content.length}`);
-      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content }],
-          modalities: ['image', 'text'],
-          // Lower temperature = higher fidelity to references (even lower for faces)
-          ...(validFaceRefs.length > 0 ? { temperature: 0.1 } : validStyleRefs.length > 0 ? { temperature: 0.15 } : {}),
-        }),
-      });
+    async function tryGenerate(model: string, content: any[], attempt: number, maxRetries = 2): Promise<string | null> {
+      for (let retry = 0; retry <= maxRetries; retry++) {
+        const label = retry === 0 ? `Attempt ${attempt}` : `Attempt ${attempt} retry ${retry}`;
+        console.log(`${label} model=${model} parts=${content.length}`);
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content }],
+            modalities: ['image', 'text'],
+            ...(validFaceRefs.length > 0 ? { temperature: 0.1 } : validStyleRefs.length > 0 ? { temperature: 0.15 } : {}),
+          }),
+        });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`Attempt ${attempt} error:`, res.status, errText.slice(0, 500));
-        if (res.status === 429 || res.status === 402) throw { status: res.status };
-        const lowerErr = errText.toLowerCase();
-        if (lowerErr.includes('safety') || lowerErr.includes('block') || lowerErr.includes('prohibited') || lowerErr.includes('harmful') || lowerErr.includes('sexual') || lowerErr.includes('nsfw') || lowerErr.includes('policy')) {
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error(`${label} error:`, res.status, errText.slice(0, 500));
+          
+          // Rate limit: wait and retry instead of failing immediately
+          if (res.status === 429 && retry < maxRetries) {
+            const waitSec = 3 + retry * 4; // 3s, 7s
+            console.log(`${label}: Rate limited, waiting ${waitSec}s before retry...`);
+            await new Promise(r => setTimeout(r, waitSec * 1000));
+            continue;
+          }
+          if (res.status === 429 || res.status === 402) throw { status: res.status };
+          
+          const lowerErr = errText.toLowerCase();
+          if (lowerErr.includes('safety') || lowerErr.includes('block') || lowerErr.includes('prohibited') || lowerErr.includes('harmful') || lowerErr.includes('sexual') || lowerErr.includes('nsfw') || lowerErr.includes('policy')) {
+            throw { status: 451, reason: 'nsfw' };
+          }
+          const fetchErrorMatch = errText.match(/Received 403 status code when fetching image from URL:\s*(https?:\/\/[^\s\"]+)/);
+          if (fetchErrorMatch) {
+            throw { status: 400, reason: 'blocked_url', blockedUrl: fetchErrorMatch[1] };
+          }
+          return null;
+        }
+
+        const raw = await res.text();
+        const lowerRaw = raw.toLowerCase();
+        if (lowerRaw.includes('"blockreason"') || lowerRaw.includes('"safety"') && (lowerRaw.includes('"blocked"') || lowerRaw.includes('"block_reason"'))) {
+          console.log(`${label}: content blocked by safety filters`);
           throw { status: 451, reason: 'nsfw' };
         }
-        const fetchErrorMatch = errText.match(/Received 403 status code when fetching image from URL:\s*(https?:\/\/[^\s\"]+)/);
-        if (fetchErrorMatch) {
-          throw { status: 400, reason: 'blocked_url', blockedUrl: fetchErrorMatch[1] };
+        
+        const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+        for (const pattern of extractPatterns) {
+          const idx = raw.indexOf(pattern);
+          if (idx === -1) continue;
+          const urlStart = raw.indexOf('"', idx + 5) + 1;
+          const urlEnd = raw.indexOf('"', urlStart);
+          if (urlEnd === -1) continue;
+          const url = raw.slice(urlStart, urlEnd);
+          console.log(`${label}: image extracted (${url.length} chars)`);
+          return url;
         }
+        console.log(`${label}: no image in response (${raw.length} chars)`);
         return null;
       }
-
-      const raw = await res.text();
-      const lowerRaw = raw.toLowerCase();
-      if (lowerRaw.includes('"blockreason"') || lowerRaw.includes('"safety"') && (lowerRaw.includes('"blocked"') || lowerRaw.includes('"block_reason"'))) {
-        console.log(`Attempt ${attempt}: content blocked by safety filters`);
-        throw { status: 451, reason: 'nsfw' };
-      }
-      
-      const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
-      for (const pattern of extractPatterns) {
-        const idx = raw.indexOf(pattern);
-        if (idx === -1) continue;
-        const urlStart = raw.indexOf('"', idx + 5) + 1;
-        const urlEnd = raw.indexOf('"', urlStart);
-        if (urlEnd === -1) continue;
-        const url = raw.slice(urlStart, urlEnd);
-        console.log(`Attempt ${attempt}: image extracted (${url.length} chars)`);
-        return url;
-      }
-      console.log(`Attempt ${attempt}: no image in response (${raw.length} chars)`);
       return null;
     }
 

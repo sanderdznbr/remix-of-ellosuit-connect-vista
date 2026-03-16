@@ -5185,10 +5185,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       let generatedOutline: { title?: string; body?: string }[] = [];
       try {
         console.log('[AutoRoteiro] Auto-generating outline on step entry');
-        const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
-          body: { action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode },
+        const webContext = webSearchResult?.content?.summary || webSearchResult?.content?.clean_topic || '';
+        const outlineData = await resilientInvoke('generate-carousel', {
+          action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode,
+          ...(webContext ? { webContext } : {}),
         });
-        if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+        if (outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
           generatedOutline = outlineData.outline;
           setManualCardTexts(outlineData.outline);
         } else {

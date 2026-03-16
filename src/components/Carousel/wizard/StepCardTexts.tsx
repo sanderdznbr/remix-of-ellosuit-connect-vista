@@ -503,9 +503,10 @@ const StepCardTexts: React.FC<Props> = ({
                             <img src={assignedPhoto} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           </div>
                           <div className="flex gap-1.5">
-                            <button onClick={(e) => { e.stopPropagation(); setPickingPhotoFor(i); }}
-                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Trocar foto">
-                              <RefreshCw className="h-3.5 w-3.5" />
+                            <button onClick={(e) => { e.stopPropagation(); refreshPhoto(i); }}
+                              disabled={refreshingCard === i}
+                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors disabled:opacity-50" title="Buscar nova foto">
+                              {refreshingCard === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); handleManualUpload(i); }}
                               className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Enviar foto">

@@ -117,6 +117,7 @@ import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import PostCorrectionEditor from './PostCorrectionEditor';
 import RegeneratePhotoDialog from './RegeneratePhotoDialog';
+import PromptMediaConfirmDialog from './wizard/PromptMediaConfirmDialog';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
@@ -255,6 +256,7 @@ const CarouselGenerator: React.FC = () => {
   const [faceCardCount, setFaceCardCount] = useState<number | null>(null); // null = all image cards get faces
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
+  const [pendingPromptMedia, setPendingPromptMedia] = useState<{ promptTitle: string; media: any[] } | null>(null);
 
   // Step 2: References
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
@@ -3109,7 +3111,6 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     setTimeout(() => setResultEntrance(false), 800);
   }, []);
 
-
   // ===== HELPER: Extract exact text from Extreme form =====
   const getExtremeExactText = useCallback((): string => {
     if (wizardMode !== 'extreme' || !extremeAnalysis) return '';
@@ -5583,7 +5584,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         skipWebSearch={wizardMode === 'simple' ? false : skipWebSearch}
                         onToggleSkipWebSearch={wizardMode === 'simple' ? undefined : () => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
                         mentionedPrompts={mentionedPrompts}
-                        onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
+                        onMentionAdd={async (p) => {
+                          setMentionedPrompts(prev => [...prev, p]);
+                          // Fetch linked media for this prompt
+                          try {
+                            const { data: media } = await supabase.from('saved_prompt_media').select('*').eq('prompt_id', p.id).order('sort_order');
+                            if (media && media.length > 0) {
+                              setPendingPromptMedia({ promptTitle: p.title, media });
+                            }
+                          } catch (err) { console.error('Failed to fetch prompt media:', err); }
+                        }}
                         onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
                         contentMode={contentMode}
                         manualPostText={manualPostText}
@@ -8544,6 +8554,43 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           }
         }}
       />
+
+      {/* Prompt Media Confirm Dialog */}
+      <AnimatePresence>
+        {pendingPromptMedia && (
+          <PromptMediaConfirmDialog
+            promptTitle={pendingPromptMedia.promptTitle}
+            media={pendingPromptMedia.media}
+            onCancel={() => setPendingPromptMedia(null)}
+            onConfirm={(selectedMedia) => {
+              // Apply media by type
+              const screenshots = selectedMedia.filter(m => m.media_type === 'screenshot');
+              const logos = selectedMedia.filter(m => m.media_type === 'logo');
+              const faces = selectedMedia.filter(m => m.media_type === 'face');
+              const refs = selectedMedia.filter(m => m.media_type === 'reference');
+
+              if (screenshots.length > 0) {
+                setWantsProduct(true);
+                setProductImages(prev => [...prev, ...screenshots.map(s => ({ url: s.file_url, thumb: s.file_url, file: null as any }))]);
+              }
+              if (logos.length > 0) {
+                setLogoUrl(logos[0].file_url);
+              }
+              if (faces.length > 0) {
+                setReferenceImages(prev => [...prev, ...faces.map(f => ({ url: f.file_url, thumb: f.file_url, label: f.file_name, source: 'upload' as const, category: 'face' as const }))]);
+              }
+              if (refs.length > 0) {
+                setReferenceImages(prev => [...prev, ...refs.map(r => ({ url: r.file_url, thumb: r.file_url, label: r.file_name, source: 'upload' as const, category: 'style' as const }))]);
+              }
+
+              setPendingPromptMedia(null);
+              if (selectedMedia.length > 0) {
+                toast({ title: `${selectedMedia.length} mídia(s) aplicada(s) do prompt` });
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

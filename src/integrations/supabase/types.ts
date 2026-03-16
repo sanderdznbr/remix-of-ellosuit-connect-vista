@@ -5162,6 +5162,54 @@ export type Database = {
           },
         ]
       }
+      saved_prompt_media: {
+        Row: {
+          company_id: string
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          media_type: string
+          prompt_id: string
+          sort_order: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          media_type?: string
+          prompt_id: string
+          sort_order?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          media_type?: string
+          prompt_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_prompt_media_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_prompt_media_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "saved_prompts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_prompts: {
         Row: {
           avatar_url: string | null

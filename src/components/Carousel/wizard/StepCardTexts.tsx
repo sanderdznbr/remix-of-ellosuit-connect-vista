@@ -34,6 +34,7 @@ const StepCardTexts: React.FC<Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [refreshingCard, setRefreshingCard] = useState<number | null>(null);
   const isMobile = useIsMobile();
 
   // Swipe state
@@ -73,6 +74,39 @@ const StepCardTexts: React.FC<Props> = ({
     setCardPhotoAssignments(updated);
   };
 
+  // ── Refresh: auto-search a new photo for a card ──
+  const refreshPhoto = async (cardIndex: number) => {
+    if (refreshingCard !== null) return;
+    const cardData = texts[cardIndex];
+    const query = (cardData?.title || topic || '').trim();
+    if (!query) { toast.error('Sem texto para buscar foto'); return; }
+    setRefreshingCard(cardIndex);
+    try {
+      const currentUrl = cardPhotoAssignments?.[cardIndex];
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'web-search', query: `${query} photo` },
+      });
+      if (error) throw error;
+      const urls: string[] = (data?.images || [])
+        .map((img: any) => img.url || img)
+        .filter((u: string) => typeof u === 'string' && u.startsWith('http') && u !== currentUrl);
+      if (urls.length > 0) {
+        // Pick a random one that's not already used by another card
+        const usedUrls = new Set(Object.values(cardPhotoAssignments || {}));
+        const unused = urls.filter(u => !usedUrls.has(u));
+        const pick = unused.length > 0 ? unused[Math.floor(Math.random() * unused.length)] : urls[0];
+        assignPhoto(cardIndex, pick);
+        toast.success('Foto atualizada!');
+      } else {
+        toast.info('Nenhuma foto diferente encontrada. Tente buscar manualmente.');
+        setPickingPhotoFor(cardIndex);
+      }
+    } catch {
+      toast.error('Erro ao buscar nova foto');
+    } finally {
+      setRefreshingCard(null);
+    }
+  };
 
   const fillWithAI = async () => {
     if (filling) return;
@@ -324,9 +358,10 @@ const StepCardTexts: React.FC<Props> = ({
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <div className="absolute top-2 right-2 flex gap-1.5">
-                          <button onClick={() => setPickingPhotoFor(i)}
-                            className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform">
-                            <RefreshCw className="h-4 w-4" />
+                          <button onClick={() => refreshPhoto(i)}
+                            disabled={refreshingCard === i}
+                            className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform disabled:opacity-50">
+                            {refreshingCard === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                           </button>
                           <button onClick={() => removePhoto(i)}
                             className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform">
@@ -468,9 +503,10 @@ const StepCardTexts: React.FC<Props> = ({
                             <img src={assignedPhoto} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           </div>
                           <div className="flex gap-1.5">
-                            <button onClick={(e) => { e.stopPropagation(); setPickingPhotoFor(i); }}
-                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Trocar foto">
-                              <RefreshCw className="h-3.5 w-3.5" />
+                            <button onClick={(e) => { e.stopPropagation(); refreshPhoto(i); }}
+                              disabled={refreshingCard === i}
+                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors disabled:opacity-50" title="Buscar nova foto">
+                              {refreshingCard === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); handleManualUpload(i); }}
                               className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Enviar foto">

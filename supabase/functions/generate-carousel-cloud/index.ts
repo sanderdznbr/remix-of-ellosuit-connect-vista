@@ -107,15 +107,65 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (job.status !== 'pending' && job.status !== 'failed') {
-      return new Response(JSON.stringify({ error: 'Job already started', status: job.status }), {
-        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     // Check if this is a single-post job
     const styleConfig = job.style_config || {};
     const isSinglePost = styleConfig.contentMode === 'single-post' || job.card_count === 1;
+
+    // Idempotency: if another invocation already finished this job, return success instead of 409
+    if (job.status === 'completed') {
+      return new Response(JSON.stringify({
+        success: true,
+        alreadyCompleted: true,
+        carouselId: job.carousel_id || null,
+        jobId,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Atomic claim to prevent two concurrent invocations from processing the same job
+    const claimedStatus = isSinglePost ? 'generating_images' : 'generating_text';
+    const claimedMessage = isSinglePost ? '🎨 Gerando post único...' : 'Gerando conteúdo do carrossel...';
+    const { data: claimedJob, error: claimErr } = await sb
+      .from('carousel_generation_jobs')
+      .update({ status: claimedStatus, progress_message: claimedMessage })
+      .eq('id', jobId)
+      .in('status', ['pending', 'failed'])
+      .select('id')
+      .maybeSingle();
+
+    if (claimErr) {
+      throw claimErr;
+    }
+
+    if (!claimedJob) {
+      const { data: currentJob } = await sb
+        .from('carousel_generation_jobs')
+        .select('status, carousel_id, error_message')
+        .eq('id', jobId)
+        .single();
+
+      if (currentJob?.status === 'completed') {
+        return new Response(JSON.stringify({
+          success: true,
+          alreadyCompleted: true,
+          carouselId: currentJob.carousel_id || null,
+          jobId,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        success: false,
+        alreadyStarted: true,
+        status: currentJob?.status || job.status,
+        error: 'Job already started',
+      }), {
+        status: 202,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (isSinglePost) {
       // === SINGLE POST MODE: Generate one image directly ===

@@ -486,6 +486,11 @@ const CarouselGenerator: React.FC = () => {
     supabase.functions.invoke('generate-carousel-cloud', {
       body: { jobId },
     }).catch((err) => {
+      const message = String(err?.message || err || '');
+      if (message.includes('Job already started')) {
+        console.info('Cloud fallback already claimed for job:', jobId);
+        return;
+      }
       console.warn('Cloud fallback trigger failed:', err);
     });
   }, []);

@@ -45,7 +45,7 @@ const StepTopic: React.FC<Props> = ({
   topic, setTopic,
   cardCount, setCardCount,
   enhancingPrompt, onEnhance,
-  searchingWeb, webSearchResult,
+  searchingWeb, onSearchWeb, webSearchResult,
   skipWebSearch, onToggleSkipWebSearch,
   mentionedPrompts = [], onMentionAdd, onMentionRemove,
   contentMode, manualPostText, setManualPostText,

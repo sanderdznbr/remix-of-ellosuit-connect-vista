@@ -368,11 +368,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               </div>
               <button
                 onClick={handleSubmit}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isGenerating}
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
-                style={{ backgroundColor: inputValue.trim() ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
+                style={{ backgroundColor: inputValue.trim() && !isGenerating ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
+                title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
               >
-                <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() ? '#0a0a0f' : '#ffffff' }} />
+                <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() && !isGenerating ? '#0a0a0f' : '#ffffff' }} />
               </button>
             </div>
           </div>

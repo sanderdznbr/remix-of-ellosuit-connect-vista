@@ -5907,10 +5907,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   if (perCardQueries.length > 0) {
                                     console.log('[PER_CARD_SEARCH] Searching images per card:', perCardQueries.map(q => q.query));
                                     try {
-                                      const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-                                        body: { per_card_queries: perCardQueries },
-                                      });
-                                      if (!perCardErr && perCardData?.card_images) {
+                                      const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
+                                      if (perCardData?.card_images) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {

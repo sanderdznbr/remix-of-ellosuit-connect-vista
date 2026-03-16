@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, AtSign, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, Square, RectangleVertical, Smartphone } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
 import PromptMentionInput, { PromptMentionRef } from '@/components/Carousel/wizard/PromptMention';
+
+export type PostFormat = 'portrait' | 'square' | 'story';
+
+export const POST_FORMAT_OPTIONS = [
+  { value: 'portrait' as PostFormat, label: 'Post Retrato', sublabel: '4:5 (1080×1350)', icon: RectangleVertical, w: 1080, h: 1350 },
+  { value: 'square' as PostFormat, label: 'Post Quadrado', sublabel: '1:1 (1080×1080)', icon: Square, w: 1080, h: 1080 },
+  { value: 'story' as PostFormat, label: 'Stories', sublabel: '9:16 (1080×1920)', icon: Smartphone, w: 1080, h: 1920 },
+];
 
 const PLACEHOLDER_SUGGESTIONS = [
   'Crie um post sobre facetas e resinas...',

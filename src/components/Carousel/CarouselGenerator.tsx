@@ -194,6 +194,7 @@ const CarouselGenerator: React.FC = () => {
   const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
   const [manualPostText, setManualPostText] = useState('');
   const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
+  const [cardPhotoAssignments, setCardPhotoAssignments] = useState<Record<number, string>>({});
   const [roteiroGenerated, setRoteiroGenerated] = useState(false);
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
 

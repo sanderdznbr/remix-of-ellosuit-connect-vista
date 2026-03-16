@@ -4355,7 +4355,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             const styleImageGen = activeMarketplaceStyle?.imageGeneration;
-            const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
+            const resolvedModel = imageSettings.model === 'auto' ? 'nano-banana' : imageSettings.model;
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
               body: {

@@ -363,7 +363,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, tipografia, layout). NÃO copie textos visíveis nas referências:` });
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout). Analise e replique EXATAMENTE a mesma família de fonte das referências. NÃO copie textos visíveis nas referências:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 

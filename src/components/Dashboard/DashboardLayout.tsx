@@ -148,8 +148,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         {/* Mobile Header */}
         <header className="flex items-center justify-between px-4 h-14 shrink-0 relative z-50" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Left: hamburger to open sidebar */}
-          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/70 cursor-pointer">
-            <Menu className="w-5 h-5" />
+          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/60 cursor-pointer">
+            <div className="w-5 h-4 flex flex-col justify-between">
+              <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
+              <span className="block w-3.5 h-[1.5px] bg-white/60 rounded-full" />
+              <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
+            </div>
+          </button>
           </button>
 
           {/* Center: logo */}

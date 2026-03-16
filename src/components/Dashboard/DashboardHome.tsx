@@ -218,7 +218,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     return () => { cancelled = true; if (timeoutRef.current) clearTimeout(timeoutRef.current); };
   }, [isUserTyping]);
 
+  const isGenerating = activeJobs.length > 0;
+
   const handleSubmit = () => {
+    if (isGenerating) {
+      toast.error('Aguarde o post atual terminar antes de criar outro.');
+      return;
+    }
     if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts, postFormat);
   };
 

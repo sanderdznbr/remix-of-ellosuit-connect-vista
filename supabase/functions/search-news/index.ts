@@ -110,49 +110,42 @@ function buildQueryVariants(query: string): string[] {
 
 async function searchBravePhotos(query: string, braveKey: string, count = 30): Promise<string[]> {
   try {
-    const queryLower = query.toLowerCase();
-    const requiresEditorialSource = /(oscar|academy awards|red carpet|premiere|ceremony|actor|atriz|actress|director|winner|vencedor|best picture|film|filme|movie)/i.test(queryLower);
-    const queryVariants = buildQueryVariants(query);
-    const candidates: { url: string; score: number }[] = [];
-
-    for (const rawQuery of queryVariants) {
-      const cleanQuery = `${rawQuery} -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -poster -fan-art -fanart -edit -edits -drawing -illustration -render`;
-      const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
-      const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
-      if (!res.ok) continue;
-
-      const data = await res.json();
-      for (const item of (data.results || [])) {
-        const imgUrl = item.properties?.url || item.thumbnail?.src;
-        if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
-
-        const itemText = JSON.stringify(item).toLowerCase();
-        if (['meme', 'memes', 'wallpaper', 'poster', 'fanart', 'fan-art', 'quote', 'quotes', 'feature image'].some((pat) => itemText.includes(pat))) continue;
-
-        const width = item.properties?.width || item.width || 0;
-        const height = item.properties?.height || item.height || 0;
-        if (!hasPhotoLikeAspectRatio(width, height)) continue;
-
-        const trusted = isTrustedPhotoDomain(imgUrl);
-        const hostname = getHostname(imgUrl);
-        const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
-        if (looksAggregator) continue;
-        if (requiresEditorialSource && !trusted && (width < 420 || height < 280)) continue;
-        if (!requiresEditorialSource && !trusted && (width < 640 || height < 420)) continue;
-        if (trusted && (width < 300 || height < 200)) continue;
-
-        let score = trusted ? 140 : 40;
-        score += Math.min(width, 2400) / 100;
-        score += Math.min(height, 1800) / 100;
-        if (/(red carpet|premiere|ceremony|oscar|academy awards)/i.test(rawQuery.toLowerCase()) && trusted) score += 30;
-        if (/photo|editorial/.test(rawQuery.toLowerCase())) score += 10;
-        candidates.push({ url: imgUrl, score });
-      }
-
-      if (candidates.length >= 8) break;
+    // Simple search: just the query + minimal exclusions. Let Brave handle relevance.
+    const cleanQuery = `${query} -meme -funny -template -wallpaper -fanart`;
+    const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
+    console.log('[BRAVE] Searching:', cleanQuery.slice(0, 80));
+    const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
+    if (!res.ok) {
+      console.error('[BRAVE] HTTP error:', res.status);
+      return [];
     }
 
-    return [...new Set(candidates.sort((a, b) => b.score - a.score).map((candidate) => candidate.url))].slice(0, 8);
+    const data = await res.json();
+    const candidates: { url: string; score: number }[] = [];
+
+    for (const item of (data.results || [])) {
+      const imgUrl = item.properties?.url || item.thumbnail?.src;
+      if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
+
+      const width = item.properties?.width || item.width || 0;
+      const height = item.properties?.height || item.height || 0;
+      // Minimum 300x200 for any image
+      if (width > 0 && height > 0 && (width < 300 || height < 200)) continue;
+      if (width > 0 && height > 0 && !hasPhotoLikeAspectRatio(width, height)) continue;
+
+      const hostname = getHostname(imgUrl);
+      const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
+      if (looksAggregator) continue;
+
+      const trusted = isTrustedPhotoDomain(imgUrl);
+      let score = trusted ? 140 : 40;
+      score += Math.min(width || 800, 2400) / 100;
+      score += Math.min(height || 600, 1800) / 100;
+      candidates.push({ url: imgUrl, score });
+    }
+
+    console.log('[BRAVE] Found', candidates.length, 'candidates for:', query.slice(0, 50));
+    return [...new Set(candidates.sort((a, b) => b.score - a.score).map((c) => c.url))].slice(0, 8);
   } catch (e) {
     console.error('[IMAGES] Brave search error:', e);
     return [];

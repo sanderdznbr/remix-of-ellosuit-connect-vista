@@ -518,6 +518,7 @@ const StepCardTexts: React.FC<Props> = ({
           const isExpanded = expandedCard === i;
           const hasContent = (card.title || '').trim() || (card.body || '').trim();
           const assignedPhoto = cardPhotoAssignments?.[i];
+          const suggestedOptions = getSuggestedOptions(i);
           return (
             <div key={i} className="rounded-xl transition-all"
               style={{ backgroundColor: isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasContent ? accentBorder : 'rgba(255,255,255,0.06)'}` }}>

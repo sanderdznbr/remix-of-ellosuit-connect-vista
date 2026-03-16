@@ -196,8 +196,8 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nFORMATO: ${formatInstruction}`;
     }
 
-    // Anti-border + anti-text-copy instruction for ALL modes
-    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.`;
+    // Anti-border + anti-text-copy + anti-grid instruction for ALL modes
+    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM: Cada card DEVE ser UMA ÚNICA composição visual contínua. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens ou sub-quadros. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. A imagem deve ser UMA CENA ÚNICA e UNIFICADA que preenche todo o canvas.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity

@@ -4957,6 +4957,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     }
   }, [WIZARD_STEPS.length, wizardStep]);
 
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' ? true : !!activeMarketplaceStyle) : true;
 
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)

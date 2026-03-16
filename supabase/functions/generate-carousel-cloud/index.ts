@@ -4,6 +4,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const INTERNAL_BRAND_PATTERN = /\b(?:ello\s*content|ellocontent|ello\s*suit|ellosuit|@ellocontent|@ellosuit)\b/gi;
+const stripInternalBrands = (value: string = '') =>
+  value
+    .replace(INTERNAL_BRAND_PATTERN, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',

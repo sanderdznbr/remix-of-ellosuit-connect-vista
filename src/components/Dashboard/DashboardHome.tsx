@@ -79,6 +79,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   useEffect(() => { fetchRecent(); }, [user]);
 
+  // Refetch every time the component mounts (e.g., returning from generator)
+  useEffect(() => {
+    fetchRecent();
+  }, []);
+
   // Refetch when tab/window becomes visible (user navigated back)
   useEffect(() => {
     const handleVisibility = () => { if (document.visibilityState === 'visible') fetchRecent(); };

@@ -3,6 +3,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// Domains known to have text overlays, infographics, or watermarks
+const BLOCKED_DOMAINS = [
+  'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
+  'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
+  'dreamstime.com', 'alamy.com', 'pinterest.com',
+];
+
+// Filter out images that likely contain text overlays
+function isCleanImageUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  // Block known stock/design sites that watermark or overlay text
+  for (const domain of BLOCKED_DOMAINS) {
+    if (lower.includes(domain)) return false;
+  }
+  // Block URLs that hint at infographics, quotes, memes
+  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail'];
+  for (const pat of badPatterns) {
+    if (lower.includes(pat)) return false;
+  }
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,7 +34,6 @@ Deno.serve(async (req) => {
     const { topic, language = 'pt-BR', per_card_queries } = await req.json();
 
     // === PER-CARD IMAGE SEARCH MODE ===
-    // When per_card_queries is provided, do individual Brave image searches per card
     if (per_card_queries && Array.isArray(per_card_queries) && per_card_queries.length > 0) {
       const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
       if (!braveApiKey) {
@@ -25,11 +46,12 @@ Deno.serve(async (req) => {
       console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards');
       const cardImages: Record<number, string[]> = {};
 
-      // Process all card queries in parallel (max 3 concurrent)
       const searchCard = async (cardIndex: number, query: string) => {
         const images: string[] = [];
         try {
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(query)}&count=10&safesearch=strict`;
+          // Append anti-text filter keywords to the query
+          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography photo`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=15&safesearch=strict&type=photo`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });
@@ -37,17 +59,23 @@ Deno.serve(async (req) => {
             const data = await res.json();
             for (const item of (data.results || [])) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && imgUrl.startsWith('http')) images.push(imgUrl);
+              if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
+                // Prefer larger images (likely photos, not graphics with text)
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                if (w >= 400 && h >= 400) {
+                  images.push(imgUrl);
+                }
+              }
             }
           }
-          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} images`);
+          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} clean images`);
         } catch (e) {
           console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
         }
         cardImages[cardIndex] = images;
       };
 
-      // Execute in batches of 3 to avoid rate limits
       for (let i = 0; i < per_card_queries.length; i += 3) {
         const batch = per_card_queries.slice(i, i + 3).map((q: { index: number; query: string }) =>
           searchCard(q.index, q.query)
@@ -79,7 +107,6 @@ Deno.serve(async (req) => {
 
     console.log('Searching news for topic:', topic);
 
-    // Search for real news using Perplexity
     const systemPrompt = `You are a content researcher. Search for the latest real news and information about the given topic. Return a JSON object with the following structure:
 {
   "title": "A compelling carousel title about the topic (max 80 chars)",
@@ -101,14 +128,17 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
 
 CRITICAL for clean_topic: Extract ONLY the core subject name from the user request. If user says "Crie um post sobre CS2" the clean_topic is "CS2". If user says "Novidades do Bitcoin" the clean_topic is "Bitcoin". Just the subject, no verbs or filler words.
 
-CRITICAL for image_search_terms: Each term should be a specific, visual search query that will return relevant images for the topic. Use the SAME LANGUAGE as the topic when the subject is culturally specific (e.g. Brazilian topics like MEI, CNPJ, Receita Federal should use Portuguese terms). For universal topics (games, brands, tech) use English. Be VERY specific and visual. Examples: For "MEI": "microempreendedor individual pessoa trabalhando", "MEI empreendedor brasileiro escritório", "empreendedorismo pequeno negócio". For CS2: "Counter-Strike 2 gameplay Dust2", "CS2 weapon skins". For Tesla: "Tesla Model 3 photo". NEVER use abstract/generic terms like "technology", "update", "performance", "2026", "office furniture". Each term must visually represent the ACTUAL topic.`;
+CRITICAL for image_search_terms: Each term MUST be a search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Think about what a photographer would capture. Add the word "photo" or "fotografia" to each term. Examples:
+- For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"
+- For CS2: "Counter-Strike 2 gameplay screenshot", "CS2 tournament player photo"
+- For Tesla: "Tesla Model 3 driving road photo"
+NEVER use abstract terms like "technology", "update", "2026". NEVER suggest terms that would return infographics, charts, text-heavy images, or memes. Each term must describe a VISUAL SCENE or REAL OBJECT.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 
     let content = '';
     let citations: string[] = [];
 
-    // Try Perplexity first, fallback to OpenAI
     let perplexityOk = false;
     try {
       console.log('[AI] Trying Perplexity...');
@@ -143,7 +173,6 @@ CRITICAL for image_search_terms: Each term should be a specific, visual search q
       console.error('[AI] Perplexity exception:', perplexityErr);
     }
 
-    // Fallback to OpenAI if Perplexity failed
     if (!perplexityOk) {
       const openaiKey = Deno.env.get('OPENAI_API_KEY');
       if (openaiKey) {
@@ -195,7 +224,6 @@ CRITICAL for image_search_terms: Each term should be a specific, visual search q
 
     console.log('Perplexity response received, citations:', citations.length);
 
-    // Parse the JSON from the response
     let parsedContent;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -220,20 +248,19 @@ CRITICAL for image_search_terms: Each term should be a specific, visual search q
     // Search for images - use clean topic from AI, not raw user input
     let images: string[] = [];
     const cleanTopic = parsedContent.clean_topic || topic;
-    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} screenshot`, `${cleanTopic} photo`];
+    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} photo`, `${cleanTopic} fotografia`];
     console.log('[IMAGES] Clean topic:', cleanTopic);
     console.log('[IMAGES] Search terms:', searchTerms);
 
-    // Strategy 1: Brave Web Search (better for niche topics like games)
-    // Search on relevant sites and extract images from results
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      // First try image search with clean terms
       for (const term of searchTerms.slice(0, 3)) {
         if (images.length >= 20) break;
         try {
-          const query = encodeURIComponent(term);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict`;
+          // Append anti-text keywords and request photo type
+          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography`;
+          const query = encodeURIComponent(cleanQuery);
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });
@@ -242,9 +269,16 @@ CRITICAL for image_search_terms: Each term should be a specific, visual search q
             const results = (imgData.results || []);
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl) images.push(imgUrl);
+              if (imgUrl && isCleanImageUrl(imgUrl)) {
+                // Only accept reasonably sized images (photos tend to be larger)
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                if (w >= 400 && h >= 400) {
+                  images.push(imgUrl);
+                }
+              }
             }
-            console.log('[IMAGES] Brave images for "' + term + '":', results.length, 'results, total:', images.length);
+            console.log('[IMAGES] Brave images for "' + term + '":', results.length, 'raw, ' + images.length + ' after filter');
           }
         } catch (e) {
           console.error('[IMAGES] Brave error:', e);
@@ -260,7 +294,7 @@ CRITICAL for image_search_terms: Each term should be a specific, visual search q
         try {
           for (const term of searchTerms.slice(0, 3)) {
             if (images.length >= 4) break;
-            const aiPrompt = `Create a high-quality, photorealistic image of: ${term}. Make it visually stunning and suitable for a social media carousel post. No text or watermarks.`;
+            const aiPrompt = `Create a high-quality, photorealistic image of: ${term}. Make it visually stunning and suitable for a social media carousel post. No text, no watermarks, no overlays, no typography — pure photography only.`;
             const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
               method: 'POST',
               headers: {
@@ -290,7 +324,7 @@ CRITICAL for image_search_terms: Each term should be a specific, visual search q
 
     // Deduplicate
     images = [...new Set(images)];
-    console.log('[IMAGES] Total images found:', images.length);
+    console.log('[IMAGES] Total clean images found:', images.length);
 
     return new Response(
       JSON.stringify({

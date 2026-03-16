@@ -2143,7 +2143,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
   // ===== GENERATE (CLOUD-BASED) =====
   // Strip mention tags from topic: (@Title) → Title
-  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1');
+  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1').replace(/@(\w+)/g, '$1');
 
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');

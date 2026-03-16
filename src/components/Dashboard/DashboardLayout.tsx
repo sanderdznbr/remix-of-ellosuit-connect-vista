@@ -155,7 +155,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
               <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
             </div>
           </button>
-          </button>
 
           {/* Center: logo */}
           <img src={ellocontentLogo} alt="elloContent" className="h-5" />

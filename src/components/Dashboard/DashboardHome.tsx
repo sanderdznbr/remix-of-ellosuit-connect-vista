@@ -416,12 +416,16 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       </motion.div>
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
+      <AnimatePresence>
+        {recentCarousels.length > 0 && (
       <motion.div
         className="relative z-[1] px-4 md:px-8 shrink-0"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: recentCarousels.length > 0 ? 1 : 0, y: recentCarousels.length > 0 ? 0 : 40 }}
-        transition={{ delay: 0.6, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
+        transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+        layout
       >
         {recentCarousels.length > 0 && (
         <div className="max-w-[1200px] mx-auto">

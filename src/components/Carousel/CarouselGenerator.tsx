@@ -1853,12 +1853,14 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 captureCoverImage(currentCarouselIdRef.current, companyData.company_id, finalData).catch(() => {});
                 if (jobId) completeCloudJob(jobId, currentCarouselIdRef.current);
               } else {
-                const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+                const { data: inserted, error: insertErr } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title, topic, keywords: [], carousel_data: finalData as any, style_config: styleConfig as any, card_count: 1, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig(), post_format: postFormat } as any).select('id').single();
                 if (insertErr) {
                   console.error('Single post save failed:', insertErr);
                 }
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
+                  // Prevent auto-save from duplicating this INSERT
+                  lastSavedDataRef.current = JSON.stringify({ cards: finalData.cards.map(c => ({ ...c })), title: finalData.title });
                   captureCoverImage(inserted.id, companyData.company_id, finalData).catch((e) => console.error('Cover capture failed:', e));
                   if (jobId) completeCloudJob(jobId, inserted.id);
                 }
@@ -2272,6 +2274,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                     const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
                     if (inserted) {
                       setCurrentCarouselId(inserted.id);
+                      lastSavedDataRef.current = JSON.stringify({ cards: finalData.cards.map(c => ({ ...c })), title: finalData.title });
                       setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
                       if (localJobId) completeCloudJob(localJobId, inserted.id);
                     }
@@ -2916,6 +2919,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
                 const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyleRef.current?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
+                  lastSavedDataRef.current = JSON.stringify({ cards: finalData.cards.map(c => ({ ...c })), title: finalData.title });
                   setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
                   if (localJobId) completeCloudJob(localJobId, inserted.id);
                 }
@@ -3489,6 +3493,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
+                  lastSavedDataRef.current = JSON.stringify({ cards: finalData.cards.map(c => ({ ...c })), title: finalData.title });
                   setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
                 }
               }

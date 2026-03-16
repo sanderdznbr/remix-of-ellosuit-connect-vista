@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
             ? `\nKNOWN ENTITIES FROM RESEARCH: ${keyEntities.join(', ')}` 
             : '';
 
-          const aiPrompt = `You are an image search expert. Given a post topic, card contents, and known entities from research, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
+          const aiPrompt = `You are an image search expert. Generate search queries to find REAL PHOTOGRAPHS of the people/places mentioned in each card.
 
 TOPIC: "${mainTopic}"
 ${entityContext}
@@ -205,19 +205,16 @@ CARDS:
 ${cardsForAI.map((c: any) => `Card ${c.index}${c.is_cover ? ' (COVER)' : ''}: Title="${c.title}" Body="${c.body}"`).join('\n')}
 
 CRITICAL RULES:
-1. You MUST cross-reference each card's title and body with the KNOWN ENTITIES list to figure out WHO or WHAT each card is about
-2. For the COVER card (Card 0): Find the MAIN person or subject. If topic is "Oscar 2026" and "Michael B. Jordan" is in entities, the cover query MUST be "Michael B. Jordan Oscar red carpet photo"
-3. For cards with titles like "O GRANDE VENCEDOR", "MELHOR ATOR", "BEST ACTOR": Look at the body text AND the entities list to find the actual person name. ALWAYS use the person's REAL NAME in the query
-4. For cards about films/movies: Use the film's actual name from entities. "Sinners movie premiere photo" not "best picture oscar"
-5. For cards with NO specific person (generic titles like "POR QUE ESTE FILME?", "ATUAÇÕES MEMORÁVEIS"): Search for the TOPIC itself. E.g. "Oscar 2026 ceremony photo", "Oscar 2026 stage photo"
-6. For CTA/closing cards: Use a general topic photo. "Oscar 2026 red carpet photo"
-7. NEVER search for: memes, quotes, fan art, screenshots, infographics, templates, collages
-8. ALL queries MUST be in ENGLISH for international topics — English returns better photo results from news agencies
-9. Add "photo" to every query
-10. Each card: 3 queries (primary: specific person/film + context, secondary: person/film name alone, fallback: topic + context)
+1. If the topic is about a SPECIFIC PERSON (e.g. "Daniel Vorcaro", "Elon Musk"), the PRIMARY query for EVERY card must be just that person's name. Example: "Daniel Vorcaro". Do NOT add random context words like "business", "investment", "entrepreneur" — these pollute search results with stock photos.
+2. The SECONDARY query can add ONE specific keyword from the card (e.g. "Daniel Vorcaro Banco Master" or "Daniel Vorcaro Atletico").
+3. The FALLBACK query should be just the person's name again or a very specific entity from the card (company name, place name).
+4. For cards about specific PLACES or COMPANIES (Hotel Fasano, Banco Master), search for the place/company name directly.
+5. Keep queries SHORT (2-4 words max). Long queries return irrelevant results.
+6. Use the SAME LANGUAGE as the topic. If topic is in Portuguese, queries should be in Portuguese.
+7. NEVER add words like "photo", "portrait", "image", "business", "success", "entrepreneur", "investment" — these return stock photos instead of real editorial photos.
 
-Return a JSON object: { "queries": { "0": ["query1", "query2", "query3"], "1": ["query1", "query2", "query3"], ... } }
-Only return the JSON, nothing else.`;
+Return JSON: { "queries": { "0": ["query1", "query2", "query3"], "1": [...], ... } }
+Only return the JSON.`;
 
           const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',

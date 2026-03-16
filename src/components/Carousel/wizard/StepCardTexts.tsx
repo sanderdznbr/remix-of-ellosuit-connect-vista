@@ -20,11 +20,12 @@ interface Props {
   webImages?: string[];
   cardPhotoAssignments?: Record<number, string>;
   setCardPhotoAssignments?: (v: Record<number, string>) => void;
+  onOutlineGenerated?: (outline: CardText[]) => Promise<void> | void;
 }
 
 const StepCardTexts: React.FC<Props> = ({
   cardCount, contentMode, manualCardTexts, setManualCardTexts, topic, accentTheme = 'purple',
-  webImages, cardPhotoAssignments, setCardPhotoAssignments,
+  webImages, cardPhotoAssignments, setCardPhotoAssignments, onOutlineGenerated,
 }) => {
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
@@ -72,25 +73,6 @@ const StepCardTexts: React.FC<Props> = ({
     setCardPhotoAssignments(updated);
   };
 
-  const autoAssignPhotos = () => {
-    if (!setCardPhotoAssignments || availableWebImages.length === 0) return;
-    const assignments: Record<number, string> = {};
-    const usedUrls = new Set<string>();
-    for (let i = 0; i < totalCards; i++) {
-      let bestImg = '';
-      for (const url of availableWebImages) {
-        if (usedUrls.has(url)) continue;
-        bestImg = url;
-        break;
-      }
-      if (!bestImg && availableWebImages.length > 0) {
-        bestImg = availableWebImages[i % availableWebImages.length];
-      }
-      if (bestImg) { assignments[i] = bestImg; usedUrls.add(bestImg); }
-    }
-    setCardPhotoAssignments(assignments);
-    toast.success(`${Object.keys(assignments).length} fotos atribuídas automaticamente`);
-  };
 
   const fillWithAI = async () => {
     if (filling) return;
@@ -103,10 +85,8 @@ const StepCardTexts: React.FC<Props> = ({
       if (error) throw error;
       if (data?.outline && Array.isArray(data.outline) && data.outline.length > 0) {
         setManualCardTexts(data.outline);
+        await onOutlineGenerated?.(data.outline);
         toast.success('Roteiro gerado com sucesso!');
-        if (availableWebImages.length > 0 && setCardPhotoAssignments) {
-          setTimeout(() => autoAssignPhotos(), 300);
-        }
       } else {
         const fallback = Array.from({ length: totalCards }, (_, i) => {
           if (contentMode === 'single-post') return { title: topic.trim().slice(0, 60), body: '' };
@@ -115,6 +95,7 @@ const StepCardTexts: React.FC<Props> = ({
           return { title: `Ponto ${i}`, body: '' };
         });
         setManualCardTexts(fallback);
+        await onOutlineGenerated?.(fallback);
         toast.info('Roteiro gerado com modelo local.');
       }
     } catch (err) {
@@ -127,6 +108,7 @@ const StepCardTexts: React.FC<Props> = ({
         return { title: `Ponto ${i}`, body: '' };
       });
       setManualCardTexts(fallback);
+      await onOutlineGenerated?.(fallback);
     } finally { setFilling(false); }
   };
 
@@ -452,16 +434,6 @@ const StepCardTexts: React.FC<Props> = ({
         </div>
       </button>
 
-      {hasWebPhotos && setCardPhotoAssignments && (
-        <button onClick={autoAssignPhotos}
-          className="flex items-center gap-2 w-full p-3 rounded-xl transition-all text-left bg-blue-500/[0.08] border border-blue-500/20 hover:bg-blue-500/[0.12]">
-          <div className="p-2 rounded-lg bg-blue-500/15"><ImageIcon className="h-4 w-4 text-blue-400" /></div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white/80">Atribuir fotos da web automaticamente</p>
-            <p className="text-xs text-white/30 mt-0.5">{availableWebImages.length} fotos encontradas — distribuir nos cards evitando repetições.</p>
-          </div>
-        </button>
-      )}
 
       <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
         {texts.map((card, i) => {

@@ -386,11 +386,12 @@ const CarouselGenerator: React.FC = () => {
 
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
-  const hasWebImages = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
-  // When web search has images, skip Pessoas and Visual steps (AI selects real photos per card)
-  const skipPeopleVisual = hasFacePhotos || hasWebImages;
-  // Show 'Posição' step only when user uploaded face AND web images exist
-  const showFacePositionStep = hasFacePhotos && hasWebImages;
+  const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;
+  const hasWebImages = !skipWebSearch && Object.keys(cardPhotoAssignments).length > 0;
+  // When web research is active, skip Pessoas and Visual steps (photos will be searched after the roteiro exists)
+  const skipPeopleVisual = hasFacePhotos || hasWebResearch;
+  // Show 'Posição' step only when user uploaded face AND web research is active
+  const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
     : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
@@ -489,9 +490,50 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
+  const assignPerCardWebPhotos = useCallback(async (
+    outline: { title?: string; body?: string }[],
+    totalCards: number
+  ) => {
+    if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
+
+    const cleanTopicForSearch = webSearchResult.content.clean_topic || topic.trim();
+    const perCardQueries = Array.from({ length: totalCards }, (_, ci) => {
+      const cardText = outline[ci] || {};
+      const cardTitle = (cardText.title || '').trim();
+      const cardBody = (cardText.body || '').trim();
+      const queryBase = [cardTitle, cardBody].filter(Boolean).join('. ').replace(/\s+/g, ' ').trim();
+      const query = (queryBase ? `${queryBase} ${cleanTopicForSearch}` : `${cleanTopicForSearch} card ${ci + 1}`).slice(0, 180);
+      return { index: ci, query };
+    });
+
+    try {
+      const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
+      if (!perCardData?.card_images) {
+        setCardPhotoAssignments({});
+        return;
+      }
+
+      const assignments: Record<number, string> = {};
+      const usedUrls = new Set<string>();
+      for (let ci = 0; ci < totalCards; ci++) {
+        const cardImgs = (perCardData.card_images[ci] || []).filter((url: string) => typeof url === 'string' && url.startsWith('http'));
+        const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+        if (bestImg) {
+          assignments[ci] = bestImg;
+          usedUrls.add(bestImg);
+        }
+      }
+      setCardPhotoAssignments(assignments);
+    } catch (searchErr) {
+      console.error('[WebPhotos] Per-card search error:', searchErr);
+      setCardPhotoAssignments({});
+    }
+  }, [skipWebSearch, webSearchResult?.content, topic]);
+
   const handleSearchWeb = async () => {
     if (!topic.trim()) return;
     setSearchingWeb(true);
+    setCardPhotoAssignments({});
     try {
       const data = await resilientInvoke('search-news', { topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
@@ -505,25 +547,11 @@ const CarouselGenerator: React.FC = () => {
         images,
       });
 
-      if (images.length > 0) {
-        const totalCards = contentMode === 'single-post' ? 1 : cardCount;
-        const assignments: Record<number, string> = {};
-        const usedUrls = new Set<string>();
-        for (let ci = 0; ci < totalCards; ci++) {
-          const bestImg = images.find((u: string) => !usedUrls.has(u)) || images[ci % images.length];
-          if (bestImg) {
-            assignments[ci] = bestImg;
-            usedUrls.add(bestImg);
-          }
-        }
-        setCardPhotoAssignments(assignments);
-      }
-
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
-      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas e fotos carregadas.` });
+      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. As fotos serão buscadas por card após gerar o roteiro.` });
     } catch (err: any) {
       console.error('Web search error:', err);
       toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });
@@ -2592,21 +2620,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             const mergedProductUrls = [...productRefUrls, ...carouselExtremeProductRefs];
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
             
-            // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS ===
-            // Use card-specific photo assignment if available, otherwise fall back to round-robin
-            if (!capturedProductRefs && !skipWebSearch && webSearchResult?.images?.length) {
-              const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-              if (webImgs.length > 0) {
-                // Priority: use manual cardPhotoAssignments from Roteiro step
-                if (cardPhotoAssignments[i]) {
-                  capturedProductRefs = [cardPhotoAssignments[i]];
-                  console.log(`[WEB_PHOTO] Card ${i}: using manual assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
-                } else {
-                  const webImgIdx = i % webImgs.length;
-                  capturedProductRefs = [webImgs[webImgIdx]];
-                  console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
-                }
-              }
+            // === AUTO-ASSIGN WEB SEARCH REAL PHOTO ===
+            // Only use the card-specific assignment generated from the roteiro text
+            if (!capturedProductRefs && !skipWebSearch && cardPhotoAssignments[i]) {
+              capturedProductRefs = [cardPhotoAssignments[i]];
+              console.log(`[WEB_PHOTO] Card ${i}: using card-specific assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
             }
           }
           
@@ -3452,14 +3470,10 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
 
-        // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS (Loop 2) ===
+        // === AUTO-ASSIGN WEB SEARCH REAL PHOTO (Loop 2) ===
         let loop2ProductRefs = mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined;
-        if (!loop2ProductRefs && !skipWebSearch && webSearchResult?.images?.length && productImages.length === 0) {
-          const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-          if (webImgs.length > 0) {
-            const webImgIdx = i % webImgs.length;
-            loop2ProductRefs = [webImgs[webImgIdx]];
-          }
+        if (!loop2ProductRefs && !skipWebSearch && cardPhotoAssignments[i]) {
+          loop2ProductRefs = [cardPhotoAssignments[i]];
         }
 
         const loop2ExtremeCtx = buildExtremePromptContext();
@@ -5031,20 +5045,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return;
     }
 
-    if (!searchingWeb && !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0) {
+    if (!searchingWeb && hasWebResearch) {
       const currentName = WIZARD_STEPS[wizardStep];
       if (currentName === 'Pessoas' || currentName === 'Visual') {
         const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
         if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
       }
     }
-  }, [WIZARD_STEPS, wizardStep, searchingWeb, skipWebSearch, webSearchResult?.images?.length]);
+  }, [WIZARD_STEPS, wizardStep, searchingWeb, hasWebResearch]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
   const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' ? true : !!activeMarketplaceStyle) : true;
-
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);
@@ -5059,6 +5072,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     autoRoteiroTriggered.current = true;
     (async () => {
       setGeneratingRoteiro(true);
+      setCardPhotoAssignments({});
       const totalCards = contentMode === 'single-post' ? 1 : cardCount;
       const localFallback = () => {
         if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
@@ -5089,92 +5103,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       }
 
       setRoteiroGenerated(true);
-
-      // Per-card web image search
-      if (webSearchResult?.images?.length && !skipWebSearch) {
-        const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
-        const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
-        const perCardQueries: { index: number; query: string }[] = [];
-        for (let ci = 0; ci < totalCards; ci++) {
-          const cardText = outlineToUse[ci];
-          const cardTitle = cardText?.title || '';
-          const cardBody = cardText?.body || '';
-          // Build a specific search query: prioritize card-specific content
-          // If the card mentions a specific subject (film, person, product), search for THAT subject
-          const cardContent = `${cardTitle} ${cardBody}`.trim();
-          let searchQuery: string;
-          if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
-            // Card has a distinct title — search specifically for that subject WITH context
-            searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
-          } else if (cardBody) {
-            searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
-          } else {
-            searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
-          }
-          perCardQueries.push({ index: ci, query: searchQuery });
-        }
-
-        if (perCardQueries.length > 0) {
-          try {
-            const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
-            if (perCardData?.card_images) {
-              const assignments: Record<number, string> = {};
-              const usedUrls = new Set<string>();
-              for (let ci = 0; ci < totalCards; ci++) {
-                const cardImgs = perCardData.card_images[ci] || [];
-                let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
-                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                else {
-                  const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-                  const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                  if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
-                }
-              }
-              setCardPhotoAssignments(assignments);
-            } else {
-              const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-              if (webImgs.length > 0) {
-                const assignments: Record<number, string> = {};
-                const usedUrls = new Set<string>();
-                for (let ci = 0; ci < totalCards; ci++) {
-                  let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                  if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                }
-                setCardPhotoAssignments(assignments);
-              }
-            }
-          } catch (searchErr) {
-            console.error('[AutoRoteiro] Per-card search error:', searchErr);
-            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-            if (webImgs.length > 0) {
-              const assignments: Record<number, string> = {};
-              const usedUrls = new Set<string>();
-              for (let ci = 0; ci < totalCards; ci++) {
-                let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-              }
-              setCardPhotoAssignments(assignments);
-            }
-          }
-        }
-      } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
-        const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-        if (webImgs.length > 0) {
-          const assignments: Record<number, string> = {};
-          const usedUrls = new Set<string>();
-          for (let ci = 0; ci < totalCards; ci++) {
-            let bestImg = '';
-            for (const url of webImgs) { if (!usedUrls.has(url)) { bestImg = url; break; } }
-            if (!bestImg) bestImg = webImgs[ci % webImgs.length];
-            if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-          }
-          setCardPhotoAssignments(assignments);
-        }
-      }
-
+      await assignPerCardWebPhotos(generatedOutline, totalCards);
       setGeneratingRoteiro(false);
     })();
-  }, [currentStepName]);
+  }, [currentStepName, generatingRoteiro, topic, contentMode, cardCount, assignPerCardWebPhotos]);
 
 
   // Voice guide: speak on step change (only after welcome is dismissed)
@@ -5685,7 +5617,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'}
                         webImages={webSearchResult?.images}
                         cardPhotoAssignments={cardPhotoAssignments}
-                        setCardPhotoAssignments={setCardPhotoAssignments} />
+                        setCardPhotoAssignments={setCardPhotoAssignments}
+                        onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
                     )}
                     {currentStepName === 'Logo' && (
                       <StepBranding

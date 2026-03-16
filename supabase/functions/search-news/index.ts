@@ -3,25 +3,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Domains known to have text overlays, infographics, or watermarks
+// Domains known to return memes, screenshots, infographics, social posts, or watermarked assets
 const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
-  'dreamstime.com', 'alamy.com', 'pinterest.com',
+  'dreamstime.com', 'alamy.com', 'pinterest.com', 'boredpanda.com',
+  'buzzfeed.com', 'chzbgr.com', 'imgflip.com', 'knowyourmeme.com',
+  'venngage.com', 'slidechef.net', 'img.youtube.com', 'youtube.com',
+  'dexerto.com', 'termometrooscar.com', 'techtudo.com'
 ];
 
-// Filter out images that likely contain text overlays
+// Filter out images that likely contain text overlays, screenshots, memes, or social post captures
 function isCleanImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
-  // Block known stock/design sites that watermark or overlay text
   for (const domain of BLOCKED_DOMAINS) {
     if (lower.includes(domain)) return false;
   }
-  // Block URLs that hint at infographics, quotes, memes
-  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail'];
+
+  const badPatterns = [
+    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail',
+    'tweet', 'twitter', 'instagram', 'tiktok', 'facebook', 'reddit', 'reaction', 'captura-de-tela', 'screenshot', 'screen-shot',
+    'maxresdefault', 'winners-list', 'feature-image', 'featured-image', 'nominados', 'perdedores', 'thumb800', '.png', '.svg'
+  ];
   for (const pat of badPatterns) {
     if (lower.includes(pat)) return false;
   }
+
   return true;
 }
 
@@ -49,8 +56,8 @@ Deno.serve(async (req) => {
       const searchCard = async (cardIndex: number, query: string) => {
         const images: string[] = [];
         try {
-          // Append anti-text filter keywords to the query
-          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography photo`;
+          // Append strict anti-text / anti-social-post filter keywords to the query
+          const cleanQuery = `${query} real person portrait event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
           const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=15&safesearch=strict&type=photo`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
@@ -60,10 +67,9 @@ Deno.serve(async (req) => {
             for (const item of (data.results || [])) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
               if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                // Prefer larger images (likely photos, not graphics with text)
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
+                if (w >= 600 && h >= 400) {
                   images.push(imgUrl);
                 }
               }
@@ -257,8 +263,8 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
       for (const term of searchTerms.slice(0, 3)) {
         if (images.length >= 20) break;
         try {
-          // Append anti-text keywords and request photo type
-          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography`;
+          // Append strict anti-text / anti-social-post filter keywords and request photo type
+          const cleanQuery = `${term} real event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
           const query = encodeURIComponent(cleanQuery);
           const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {
@@ -270,10 +276,9 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
               if (imgUrl && isCleanImageUrl(imgUrl)) {
-                // Only accept reasonably sized images (photos tend to be larger)
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
+                if (w >= 600 && h >= 400) {
                   images.push(imgUrl);
                 }
               }

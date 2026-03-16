@@ -2499,7 +2499,8 @@ MANTENHA a foto real reconhecível e fiel.`);
               capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
             }
           } else if (!hasFaceRefsForGen && peopleMode === 'none') {
-            capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
+            // Will be overridden below if card has a web photo with people
+            capturedPrompt += '\n\n__NO_HUMANS_PLACEHOLDER__';
           } else if (hasFaceRefsForGen && !faceCardIndices.has(i)) {
             // Card has face refs available but this specific card should NOT show a face
             capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS. Focus on the topic, objects, scenery, or editorial design elements only.';

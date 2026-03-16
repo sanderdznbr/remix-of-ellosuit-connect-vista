@@ -5645,6 +5645,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onSkipAll={() => setWizardStep(wizardStep + 1)}
                         activeMarketplaceStyle={activeMarketplaceStyle}
                         isExtreme={wizardMode === 'extreme'}
+                        hasProduct={wantsProduct}
+                        setHasProduct={wizardMode === 'advanced' ? setWantsProduct : undefined}
+                        onOpenProductStep={() => {
+                          setWantsProduct(true);
+                          // Jump to next step which will now be 'Produto'
+                          setTimeout(() => setWizardStep(wizardStep + 1), 100);
+                        }}
                       />
                     )}
                     {currentStepName === 'Pessoas' && (

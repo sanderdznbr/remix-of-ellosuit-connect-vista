@@ -226,8 +226,8 @@ const GeneratingAnimation: React.FC<Props> = ({
         </motion.div>
 
         <motion.div
-          animate={completionPhase ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          animate={completionPhase ? { opacity: 0, y: 30 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
         >
         {imageGenProgress && (
           <motion.div className="md:hidden mt-6 flex flex-col items-center gap-2 w-full max-w-[260px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

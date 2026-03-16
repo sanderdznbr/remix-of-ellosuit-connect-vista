@@ -1338,7 +1338,7 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
-  // ===== SAVE COVER FROM AI-GENERATED IMAGE (no html2canvas) =====
+  // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
     try {
       // Use explicit data (passed directly) or fall back to state
@@ -1351,7 +1351,44 @@ const CarouselGenerator: React.FC = () => {
       }
       
       if (!firstCardImage) {
-        // Retry up to 3 times with increasing delay (image may still be generating)
+        // For non-full-bleed styles (Content/layered), card 0 may have no imageUrl
+        // Use html2canvas to capture the rendered preview card as cover
+        const isNonFullBleed = !activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style && !isLoadedFullBleed && wizardMode !== 'extreme';
+        if (isNonFullBleed) {
+          // Try html2canvas on the preview card element
+          const previewCard = document.querySelector('[data-cover-capture="true"]') as HTMLElement;
+          if (previewCard) {
+            try {
+              const canvas = await html2canvas(previewCard, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: null,
+                logging: false,
+              });
+              const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+              if (blob) {
+                const fileName = `${companyId}/${carouselId}.jpg`;
+                const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+                if (!uploadError) {
+                  const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+                  if (urlData?.publicUrl) {
+                    const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                    await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
+                    return;
+                  }
+                }
+              }
+            } catch (canvasErr) {
+              console.warn('html2canvas cover fallback failed:', canvasErr);
+            }
+          }
+          // If html2canvas also failed, try server fallback
+          await serverFallbackCover(carouselId);
+          return;
+        }
+
+        // For full-bleed styles, retry waiting for image generation
         if (retryCount < 3) {
           const delay = (retryCount + 1) * 3000;
           console.warn(`Cover: no image yet, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);
@@ -5139,6 +5176,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     if (card.type === 'cover') {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? "true" : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: isExport ? 0 : 0, backgroundColor: bg }}>
           {card.imageUrl && <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
           <div style={{ position: 'absolute', inset: 0, background: card.imageUrl ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.25) 100%)' : `linear-gradient(180deg, ${bgColor} 0%, ${accentColor}44 100%)` }} />
@@ -5163,6 +5201,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const ctaBtnTxt = accentLum > 0.35 ? '#1A1A1A' : '#FFFFFF';
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? "true" : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
           {ctaHasImage && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
           {!ctaHasImage && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}
@@ -5191,6 +5230,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     if (!hasImage && isAccent) {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? "true" : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
           {renderHeader()}
            <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', zIndex: 5, paddingTop: `${30 * s * ps}px`, gap: `${24 * s}px`, textAlign: cardAlign }}>
@@ -5206,6 +5246,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     if (continuousMode && hasImage) {
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? "true" : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
           <img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 70%, rgba(0,0,0,0.25) 100%)' }} />
@@ -5221,6 +5262,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+        data-cover-capture={index === 0 ? "true" : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
         {renderHeader()}
         <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, gap: `${24 * s}px`, textAlign: cardAlign }}>

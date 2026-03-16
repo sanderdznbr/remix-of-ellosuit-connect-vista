@@ -2909,7 +2909,7 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
     parts.push(`\n🎯 QUALIDADE OBRIGATÓRIA: O resultado deve parecer criado por uma agência de design premium. Tipografia elegante com hierarquia clara (título bold grande, subtítulo leve), composição limpa e respirada, paleta coesa de 3-4 cores, elementos gráficos sutis. Pense em posts de marcas como Apple, Nike, Nubank — design minimalista e impactante.`);
     parts.push(`\n🚫 REGRA CRÍTICA DE FORMATO — CARD ÚNICO: Cada imagem gerada é UM ÚNICO CARD de um carrossel do Instagram. Cada card deve ser UMA ÚNICA COMPOSIÇÃO VISUAL que ocupa 100% do espaço (${cardW}x${cardH}). NUNCA crie grids, colagens, mosaicos ou múltiplas imagens dentro de um card. NUNCA divida o card em 2x2, 2x1 ou qualquer grade. O card deve ter UMA ÚNICA CENA/COMPOSIÇÃO por imagem. Se o carrossel tem 3 cards, são 3 imagens SEPARADAS, cada uma com sua própria composição única e completa.`);
     return parts.join('\n');
-  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues]);
+  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues, cardW, cardH]);
 
 
   // ===== FILL COVER MODAL TEXTS WITH AI =====

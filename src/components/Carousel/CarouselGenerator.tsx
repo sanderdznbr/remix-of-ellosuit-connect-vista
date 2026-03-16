@@ -5201,6 +5201,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const ctaBtnTxt = accentLum > 0.35 ? '#1A1A1A' : '#FFFFFF';
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? "true" : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
           {ctaHasImage && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
           {!ctaHasImage && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}

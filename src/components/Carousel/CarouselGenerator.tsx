@@ -1245,6 +1245,9 @@ const CarouselGenerator: React.FC = () => {
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
+    // Restore post format from DB column or generation_config
+    const savedFormat = item.post_format || item.generation_config?.postFormat;
+    if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);
     // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
     const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme';
     setIsLoadedFullBleed(hasMarketplaceStyle);

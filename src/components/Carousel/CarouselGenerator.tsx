@@ -6122,7 +6122,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
 
             {/* Carousel viewport */}
-                <div className="relative overflow-hidden select-none" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000', cursor: 'grab' }}
+                <div className="relative overflow-hidden select-none" style={{ aspectRatio: `${cardW}/${cardH}`, backgroundColor: '#000', cursor: 'grab' }}
                   onMouseDown={(e) => {
                     const el = e.currentTarget as any;
                     el._dragStartX = e.clientX;

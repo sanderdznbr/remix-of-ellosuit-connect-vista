@@ -244,8 +244,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Background gradient */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.18] blur-[130px]" style={{ background: '#8B5CF6', top: '15%', left: '50%', transform: 'translateX(-50%)' }} />
-        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.10] blur-[100px]" style={{ background: '#7C3AED', bottom: '10%', left: '20%' }} />
+        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.12] blur-[130px]" style={{ background: '#3f3f46', top: '15%', left: '50%', transform: 'translateX(-50%)' }} />
+        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.08] blur-[100px]" style={{ background: '#27272a', bottom: '10%', left: '20%' }} />
       </div>
 
       {/* Center content — title + input */}

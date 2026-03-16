@@ -5167,11 +5167,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           {ctaHasImage && (<><img src={card.imageUrl} alt="" {...(isExport ? { crossOrigin: "anonymous" } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /><div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.75) 100%)` }} /></>)}
           {!ctaHasImage && <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 30%, ${accentColor}33 0%, transparent 70%)` }} />}
           {renderHeader()}
-          <div style={{ position: 'absolute', inset: `${80 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', zIndex: 10 }}>
+          <div style={{ position: 'absolute', inset: `${80 * s * ps}px ${48 * s * ps}px ${60 * s * ps}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: cardAlign === 'center' ? 'center' : cardAlign === 'right' ? 'flex-end' : 'flex-start', textAlign: cardAlign, zIndex: 10 }}>
             {/* Decorative line */}
             <div style={{ width: `${60 * s}px`, height: `${4 * s}px`, backgroundColor: accentColor, borderRadius: `${4 * s}px`, marginBottom: `${40 * s}px` }} />
-            <h2 style={{ fontFamily: serif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: ctaTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
-            {card.body && <p style={{ fontFamily: serif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: ctaTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
+            <h2 style={{ fontFamily: cardSerif, fontSize: `${72 * s * fs}px`, fontWeight: 900, lineHeight: 1.05, color: ctaTxt, marginBottom: `${24 * s}px`, textTransform: 'uppercase', letterSpacing: `-${1 * s}px` }}>{card.title}</h2>
+            {card.body && <p style={{ fontFamily: cardSerif, fontSize: `${32 * s * fs}px`, fontWeight: 400, lineHeight: 1.6, color: ctaTxt, opacity: 0.75, maxWidth: `${850 * s}px`, marginBottom: `${40 * s}px` }}>{card.body}</p>}
             {/* CTA button-like element */}
             <div style={{ padding: `${20 * s}px ${56 * s}px`, backgroundColor: accentColor, borderRadius: `${12 * s}px`, display: 'inline-flex', alignItems: 'center', gap: `${12 * s}px` }}>
               <p style={{ fontFamily: sans, fontSize: `${24 * s * fs}px`, fontWeight: 800, color: ctaBtnTxt, textTransform: 'uppercase', letterSpacing: `${2.5 * s}px` }}>SAIBA MAIS →</p>

@@ -5504,6 +5504,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           else if (cardCount < 2) { setCardCount(5); }
                         }} />
                     )}
+                    {currentStepName === 'Pesquisa' && webSearchResult && (
+                      <StepWebSearch
+                        webSearchResult={webSearchResult}
+                        searchingWeb={searchingWeb}
+                        onResearch={handleSearchWeb}
+                        topic={topic}
+                      />
+                    )}
                     {currentStepName === 'Formato' && (
                       <StepCardCount
                         cardCount={cardCount}

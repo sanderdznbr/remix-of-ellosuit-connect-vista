@@ -46,6 +46,16 @@ function getHostname(url: string): string {
   }
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function matchesDomain(url: string, domains: string[]): boolean {
   const hostname = getHostname(url);
   const lower = url.toLowerCase();

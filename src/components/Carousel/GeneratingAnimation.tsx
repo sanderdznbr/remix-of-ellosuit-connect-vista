@@ -48,6 +48,18 @@ const GeneratingAnimation: React.FC<Props> = ({
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);
+  const [completionPhase, setCompletionPhase] = useState(false);
+
+  // When isCompleting becomes true, trigger zoom animation
+  useEffect(() => {
+    if (isCompleting && !completionPhase) {
+      setCompletionPhase(true);
+      const timer = setTimeout(() => {
+        onCompleteAnimationDone?.();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isCompleting]);
 
   // Build real code lines from actual params
   const CODE_LINES = useMemo(() => {

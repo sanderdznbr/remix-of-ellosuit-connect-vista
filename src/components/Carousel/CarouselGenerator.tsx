@@ -348,6 +348,11 @@ const CarouselGenerator: React.FC = () => {
   const isRealEstateStyle = !!activeMarketplaceStyle?.is_real_estate;
   const realEstateMode = (activeMarketplaceStyle?.real_estate_mode as 'single' | 'multiple') || 'single';
 
+  // Web search state (declared early for WIZARD_STEPS computation)
+  const [searchingWeb, setSearchingWeb] = useState(false);
+  const [skipWebSearch, setSkipWebSearch] = useState(false);
+  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[] } | null>(null);
+
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebImages = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;

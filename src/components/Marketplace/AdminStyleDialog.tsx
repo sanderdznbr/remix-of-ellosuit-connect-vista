@@ -90,6 +90,9 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>('');
+  const [existingCover, setExistingCover] = useState<string>('');
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -139,12 +142,16 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
           is_beta: !!sc.is_beta,
         });
         setExistingImages(editStyle.preview_images || []);
+        setExistingCover(sc.cover_image || '');
       } else {
         setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single', is_beta: false });
         setExistingImages([]);
+        setExistingCover('');
       }
       setRefFiles([]);
       setRefPreviews([]);
+      setCoverFile(null);
+      setCoverPreview('');
     }
   }, [open, editStyle]);
 
@@ -173,7 +180,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const buildStyleConfig = () => {
+  const buildStyleConfig = (coverUrl?: string) => {
     let promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
 1. COPY THE EXACT VISUAL DNA: Replicate the same color palette, typography style, layout composition, decorative elements, and overall aesthetic from the reference images.
 2. TYPOGRAPHY: Match the exact font styles, sizes, weights, and placement patterns from the references.
@@ -200,6 +207,7 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
       is_real_estate: form.is_real_estate,
       is_beta: form.is_beta,
       real_estate_mode: form.is_real_estate ? form.real_estate_mode : undefined,
+      cover_image: coverUrl || existingCover || undefined,
       colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
       imageGeneration: {
         prompt_style: promptStyle,
@@ -236,7 +244,14 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
         uploadedUrls.push(refUrl);
       }
 
-      const styleConfig = buildStyleConfig();
+      // Upload cover if new file provided
+      let coverUrl = existingCover;
+      if (coverFile) {
+        const coverPath = `styles/${slug}/cover-${timestamp}.${coverFile.name.split('.').pop()}`;
+        coverUrl = await uploadImage(coverFile, coverPath);
+      }
+
+      const styleConfig = buildStyleConfig(coverUrl || undefined);
       const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean);
 
       if (editStyle) {
@@ -352,7 +367,38 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             </div>
           </div>
 
-          {/* Description */}
+          {/* Cover Image */}
+          <div>
+            <label className="text-[10px] text-white/40 mb-1 block">Capa do Estilo (opcional)</label>
+            <p className="text-[9px] text-white/15 mb-2">Imagem usada apenas para exibição no Marketplace. Não é usada como referência na geração.</p>
+            <div className="flex items-center gap-3">
+              {(coverPreview || existingCover) ? (
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 group">
+                  <img src={coverPreview || existingCover} alt="Capa" className="w-full h-full object-cover" />
+                  <button onClick={() => { setCoverFile(null); setCoverPreview(''); setExistingCover(''); }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
+                  <div className="text-center">
+                    <Upload className="w-4 h-4 text-white/20 mx-auto mb-1" />
+                    <span className="text-[9px] text-white/20">Upload Capa</span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setCoverFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[10px] text-white/40">Descrição</label>

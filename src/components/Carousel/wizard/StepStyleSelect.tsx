@@ -180,9 +180,10 @@ const StepStyleSelect: React.FC<Props> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {filteredStyles.map(style => {
               const isActive = activeStyleId === style.id;
+              const coverImage = (style as any).style_config?.cover_image;
               const images = style.preview_images || [];
               const currentIdx = previewIndex[style.id] || 0;
-              const currentImg = images[currentIdx] || images[0];
+              const currentImg = coverImage || images[currentIdx] || images[0];
               const isFree = (style as any).is_free;
               const isLocked = !user && !isFree;
               const hasMultiple = images.length > 1;
@@ -419,7 +420,7 @@ const MarketplacePopup: React.FC<{
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {filtered.map(style => {
                 const owned = purchasedIds.has(style.id);
-                const previewImg = style.preview_images?.[0];
+                const previewImg = (style as any).style_config?.cover_image || style.preview_images?.[0];
                 return (
                   <div key={style.id} className={`relative rounded-xl overflow-hidden border transition-all ${
                     owned ? 'border-green-500/30' : 'border-white/[0.06] hover:border-white/15'

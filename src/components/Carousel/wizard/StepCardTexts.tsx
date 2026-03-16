@@ -237,9 +237,9 @@ const StepCardTexts: React.FC<Props> = ({
   const handleTouchEnd = useCallback(() => {
     const threshold = 60;
     if (touchDeltaX.current < -threshold && currentSlide < totalCards - 1) {
-      setCurrentSlide(prev => prev + 1);
+      setCurrentSlide(currentSlide + 1);
     } else if (touchDeltaX.current > threshold && currentSlide > 0) {
-      setCurrentSlide(prev => prev - 1);
+      setCurrentSlide(currentSlide - 1);
     }
     setSwipeOffset(0);
     isSwiping.current = false;

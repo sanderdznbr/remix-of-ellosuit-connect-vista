@@ -134,7 +134,14 @@ const StepTopic: React.FC<Props> = ({
 
           {/* Manual toggle removed from advanced mode — AI classifies and suggests automatically */}
 
-          {/* Web search loading indicator */}
+          {/* Web search loading indicators */}
+          {classifyingTopic && (
+            <div className="flex items-center gap-3 py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+              <span className="text-sm text-white/40">Analisando seu tema...</span>
+            </div>
+          )}
+
           {searchingWeb && !webSearchResult && (
             <div className="flex items-center gap-3 py-4">
               <Loader2 className="h-5 w-5 animate-spin text-white/40" />

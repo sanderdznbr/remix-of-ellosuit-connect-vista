@@ -3569,7 +3569,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       // Generate images in batches
       let completed = 0;
       const totalAi = imageFactories.length;
-      setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
+      setImageGenProgress(`0/${totalAi} imagens geradas...`);
 
       for (let i = 0; i < imageFactories.length; i += 2) {
         const batch = imageFactories.slice(i, i + 2);

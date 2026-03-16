@@ -5083,7 +5083,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           } else {
             searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
           }
-          perCardQueries.push({ index: ci, query: searchQuery, title: cardTitle, body: cardBody, topic: cleanTopicForSearch });
+          perCardQueries.push({ index: ci, query: searchQuery, title: cardTitle, body: cardBody, topic: cleanTopicForSearch, key_entities: allEntities });
         }
 
         if (perCardQueries.length > 0) {

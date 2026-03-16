@@ -5262,6 +5262,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+        data-cover-capture={index === 0 ? "true" : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: bg }}>
         {renderHeader()}
         <div style={{ position: 'absolute', top: `${80 * s * ps}px`, left: `${56 * s * ps}px`, right: `${56 * s * ps}px`, bottom: `${48 * s * ps}px`, display: 'flex', flexDirection: 'column', zIndex: 5, gap: `${24 * s}px`, textAlign: cardAlign }}>

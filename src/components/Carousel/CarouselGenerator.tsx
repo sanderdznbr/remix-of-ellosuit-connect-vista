@@ -5327,11 +5327,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
 
-            {/* Home button — fixed top left */}
+            {/* Home button to return to dashboard */}
             {user && (
               <button
                 onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
-                className="fixed top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors lg:absolute"
+                className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
               >
                 <Home className="w-5 h-5 text-white/60" />
               </button>
@@ -5363,14 +5363,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             )}
 
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
-            <div className="flex-1 flex flex-row relative z-10 w-full overflow-hidden">
-              {/* LEFT column: fixed top dots + scrollable content + fixed bottom nav */}
-              <div className="flex-1 flex flex-col items-center relative">
-                {/* Fixed top bar: step dots */}
-                {currentStepName !== 'Modo' && (
-                <div className="sticky top-0 z-20 w-full flex justify-center pt-[calc(env(safe-area-inset-top,16px)+8px)] pb-3 lg:pt-4" style={{ backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                  <div className="w-full max-w-[520px] px-6 lg:px-16">
-                    <div className="flex items-center justify-center gap-2">
+            <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
+              {/* LEFT column: centered content */}
+              <div className="flex-1 flex flex-col items-center px-6 lg:px-16 py-8 lg:justify-center overflow-y-auto pb-[120px] lg:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="w-full max-w-[520px] space-y-6 flex-shrink-0">
+                  {/* Step dots (hide on Modo step) */}
+                  {currentStepName !== 'Modo' && (
+                  <div className="flex items-center justify-center gap-2">
                       {WIZARD_STEPS.filter(s => s !== 'Modo').map((stepName, i) => {
                         const realIndex = i + 1;
                         if ((stepName === 'Cores' || stepName === 'Fontes') && isFullBleedMarketplace) return null;
@@ -5389,14 +5388,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           />
                         );
                       })}
-                    </div>
                   </div>
-                </div>
-                )}
-
-                {/* Scrollable content area */}
-                <div className="flex-1 overflow-y-auto px-6 lg:px-16 py-6 lg:py-8 pb-[120px] lg:pb-8 flex flex-col justify-center" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <div className="w-full max-w-[520px] space-y-6 flex-shrink-0 mx-auto">
+                  )}
 
                    {/* Step content with entrance animation */}
                   <AnimatePresence mode="wait">

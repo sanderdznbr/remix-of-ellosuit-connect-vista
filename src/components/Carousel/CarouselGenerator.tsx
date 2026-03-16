@@ -622,6 +622,7 @@ const CarouselGenerator: React.FC = () => {
     setManualPostText('');
     setManualCardTexts([]);
     setCardPhotoAssignments({});
+    setCardPhotoOptions({});
     setWizardMode('simple');
     setExtremeAnalysis(null);
     setExtremeVision('');

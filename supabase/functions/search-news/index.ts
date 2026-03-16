@@ -9,7 +9,58 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { topic, language = 'pt-BR' } = await req.json();
+    const { topic, language = 'pt-BR', per_card_queries } = await req.json();
+
+    // === PER-CARD IMAGE SEARCH MODE ===
+    // When per_card_queries is provided, do individual Brave image searches per card
+    if (per_card_queries && Array.isArray(per_card_queries) && per_card_queries.length > 0) {
+      const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
+      if (!braveApiKey) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Brave API key not configured' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards');
+      const cardImages: Record<number, string[]> = {};
+
+      // Process all card queries in parallel (max 3 concurrent)
+      const searchCard = async (cardIndex: number, query: string) => {
+        const images: string[] = [];
+        try {
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(query)}&count=10&safesearch=strict`;
+          const res = await fetch(url, {
+            headers: { 'X-Subscription-Token': braveApiKey },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            for (const item of (data.results || [])) {
+              const imgUrl = item.properties?.url || item.thumbnail?.src;
+              if (imgUrl && imgUrl.startsWith('http')) images.push(imgUrl);
+            }
+          }
+          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} images`);
+        } catch (e) {
+          console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
+        }
+        cardImages[cardIndex] = images;
+      };
+
+      // Execute in batches of 3 to avoid rate limits
+      for (let i = 0; i < per_card_queries.length; i += 3) {
+        const batch = per_card_queries.slice(i, i + 3).map((q: { index: number; query: string }) =>
+          searchCard(q.index, q.query)
+        );
+        await Promise.all(batch);
+        if (i + 3 < per_card_queries.length) await new Promise(r => setTimeout(r, 200));
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, card_images: cardImages }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!topic) {
       return new Response(

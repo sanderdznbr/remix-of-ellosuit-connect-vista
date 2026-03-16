@@ -46,6 +46,16 @@ function getHostname(url: string): string {
   }
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function matchesDomain(url: string, domains: string[]): boolean {
   const hostname = getHostname(url);
   const lower = url.toLowerCase();
@@ -118,7 +128,7 @@ async function searchBravePhotos(query: string, braveKey: string, count = 30): P
     const cleanQuery = query;
     const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
     console.log('[BRAVE] Searching:', cleanQuery.slice(0, 80));
-    const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
+    const res = await fetchWithTimeout(url, { headers: { 'X-Subscription-Token': braveKey } }, 8000);
     if (!res.ok) {
       console.error('[BRAVE] HTTP error:', res.status);
       return [];
@@ -343,7 +353,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     let perplexityOk = false;
     try {
       console.log('[AI] Trying Perplexity...');
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      const response = await fetchWithTimeout('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -358,7 +368,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
           temperature: 0.3,
           search_recency_filter: 'month',
         }),
-      });
+      }, 12000);
 
       if (response.ok) {
         const data = await response.json();
@@ -379,7 +389,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
       if (openaiKey) {
         console.log('[AI] Falling back to OpenAI...');
         try {
-          const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${openaiKey}`,
@@ -393,7 +403,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
               ],
               temperature: 0.3,
             }),
-          });
+          }, 12000);
 
           if (openaiRes.ok) {
             const openaiData = await openaiRes.json();
@@ -402,24 +412,45 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
           } else {
             const errText = await openaiRes.text();
             console.error('[AI] OpenAI also failed:', openaiRes.status, errText.slice(0, 200));
-            return new Response(
-              JSON.stringify({ success: false, error: 'All AI providers unavailable. Please try again.' }),
-              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            content = JSON.stringify({
+              title: topic,
+              subtitle: 'Resumo inicial do tema',
+              facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+              cta_title: 'Continuar',
+              cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+              image_search_terms: [topic],
+              clean_topic: topic,
+              key_entities: [topic],
+              summary: `Resumo inicial gerado localmente para ${topic}.`
+            });
           }
         } catch (openaiErr) {
           console.error('[AI] OpenAI exception:', openaiErr);
-          return new Response(
-            JSON.stringify({ success: false, error: 'All AI providers failed. Please try again.' }),
-            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          content = JSON.stringify({
+            title: topic,
+            subtitle: 'Resumo inicial do tema',
+            facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+            cta_title: 'Continuar',
+            cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+            image_search_terms: [topic],
+            clean_topic: topic,
+            key_entities: [topic],
+            summary: `Resumo inicial gerado localmente para ${topic}.`
+          });
         }
       } else {
         console.error('[AI] No fallback API key available');
-        return new Response(
-          JSON.stringify({ success: false, error: 'Perplexity unavailable and no fallback configured.' }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        content = JSON.stringify({
+          title: topic,
+          subtitle: 'Resumo inicial do tema',
+          facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+          cta_title: 'Continuar',
+          cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+          image_search_terms: [topic],
+          clean_topic: topic,
+          key_entities: [topic],
+          summary: `Resumo inicial gerado localmente para ${topic}.`
+        });
       }
     }
 

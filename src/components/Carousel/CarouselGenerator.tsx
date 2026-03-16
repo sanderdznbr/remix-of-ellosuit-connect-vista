@@ -5712,11 +5712,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 });
                                 if (!error && data) {
                                   if (data.shouldSearch) {
-                                    // Auto-search immediately without asking
+                                    // Auto-search and advance to Pesquisa step
                                     setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
                                     await handleSearchWeb();
-                                    // Don't advance — let user see results and click Continue again
+                                    // After search completes, WIZARD_STEPS now includes 'Pesquisa'
+                                    // Advance to next step (which will be 'Pesquisa')
+                                    const temaIdx = WIZARD_STEPS.indexOf('Tema');
+                                    setWizardStep(temaIdx + 1);
                                     return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically

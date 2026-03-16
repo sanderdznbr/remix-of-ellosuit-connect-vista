@@ -80,6 +80,7 @@ import {
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
+import StepWebSearchResult from './wizard/StepWebSearchResult';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';

@@ -11,6 +11,11 @@ const BLOCKED_DOMAINS = [
   'youtube.com', 'youtu.be', 'ytimg.com', 'i.ytimg.com', 'yt3.ggpht.com',
   'i9.ytimg.com', 'i1.ytimg.com', 'img.youtube.com',
   'dailymotion.com', 'vimeo.com', 'tiktok.com',
+  'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com',
+  'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
+  'reddit.com', 'redd.it', 'preview.redd.it',
+  'slideshare.net', 'slideplayer.com', 'slideserve.com', 'slideteam.net',
+  'templatemonster.com', 'envato.com', 'elements.envato.com',
 ];
 
 // Filter out images that likely contain text overlays

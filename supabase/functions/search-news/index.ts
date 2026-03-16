@@ -188,8 +188,9 @@ Deno.serve(async (req) => {
         try {
           const cardsForAI = per_card_queries.map((q: any) => ({
             index: q.index,
-            title: q.title || q.query,
+            title: q.title || '',
             body: q.body || '',
+            is_cover: q.is_cover || q.index === 0,
           }));
 
           // Also pass key_entities from the initial web search if available
@@ -204,23 +205,19 @@ TOPIC: "${mainTopic}"
 ${entityContext}
 
 CARDS:
-${cardsForAI.map((c: any) => `Card ${c.index}: Title="${c.title}" Body="${c.body}"`).join('\n')}
+${cardsForAI.map((c: any) => `Card ${c.index}${c.is_cover ? ' (COVER)' : ''}: Title="${c.title}" Body="${c.body}"`).join('\n')}
 
 CRITICAL RULES:
-1. Each query MUST find a REAL, EDITORIAL PHOTOGRAPH — like from a news agency (Reuters, AP, AFP, Getty editorial)
-2. **MOST IMPORTANT**: If the card mentions or implies a PERSON (by name, role, or category like "Best Actor"), you MUST:
-   a. Identify the ACTUAL PERSON using the KNOWN ENTITIES list above
-   b. The PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Michael B Jordan Oscar 2025 red carpet photo")
-   c. NEVER search for generic terms like "best actor oscar" — ALWAYS use the person's real name
-3. If card says "Melhor Ator" or "Best Actor" and the entities list includes "Michael B. Jordan", search "Michael B Jordan Oscar photo"
-4. If card says "Melhor Filme" and entities include "Sinners", search "Sinners movie 2025 premiere photo"
-5. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
-6. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
-7. Add "photo" to each query
-8. Each card should have 3 alternative queries (primary: person name + context, secondary: person name alone, fallback: subject + context)
-9. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
-10. For cover/capa cards: search for the most iconic/dramatic photo of the MAIN person of the topic
-11. Cross-reference card titles/bodies with the KNOWN ENTITIES list to resolve who each card is about
+1. You MUST cross-reference each card's title and body with the KNOWN ENTITIES list to figure out WHO or WHAT each card is about
+2. For the COVER card (Card 0): Find the MAIN person or subject. If topic is "Oscar 2026" and "Michael B. Jordan" is in entities, the cover query MUST be "Michael B. Jordan Oscar red carpet photo"
+3. For cards with titles like "O GRANDE VENCEDOR", "MELHOR ATOR", "BEST ACTOR": Look at the body text AND the entities list to find the actual person name. ALWAYS use the person's REAL NAME in the query
+4. For cards about films/movies: Use the film's actual name from entities. "Sinners movie premiere photo" not "best picture oscar"
+5. For cards with NO specific person (generic titles like "POR QUE ESTE FILME?", "ATUAÇÕES MEMORÁVEIS"): Search for the TOPIC itself. E.g. "Oscar 2026 ceremony photo", "Oscar 2026 stage photo"
+6. For CTA/closing cards: Use a general topic photo. "Oscar 2026 red carpet photo"
+7. NEVER search for: memes, quotes, fan art, screenshots, infographics, templates, collages
+8. ALL queries MUST be in ENGLISH for international topics — English returns better photo results from news agencies
+9. Add "photo" to every query
+10. Each card: 3 queries (primary: specific person/film + context, secondary: person/film name alone, fallback: topic + context)
 
 Return a JSON object: { "queries": { "0": ["query1", "query2", "query3"], "1": ["query1", "query2", "query3"], ... } }
 Only return the JSON, nothing else.`;

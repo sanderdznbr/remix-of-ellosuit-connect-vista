@@ -491,7 +491,23 @@ const CarouselGenerator: React.FC = () => {
       toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
     } catch (err: any) {
       console.error('Web search error:', err);
-      toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });
+      setWebSearchResult({
+        summary: 'Não foi possível concluir a pesquisa web agora, mas você pode continuar com o tema já identificado.',
+        citations: [],
+        content: {
+          title: topic.trim(),
+          subtitle: 'Resumo inicial do tema',
+          facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic.trim()}.`, source: 'Fallback local' }],
+          cta_title: 'Continuar',
+          cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+          image_search_terms: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.trim()],
+          clean_topic: topic.trim(),
+          key_entities: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.trim()],
+          summary: `Resumo inicial gerado localmente para ${topic.trim()}.`,
+        },
+        images: [],
+      });
+      toast({ title: 'Pesquisa indisponível', description: 'Avançamos com um resumo inicial para não travar o fluxo.', variant: 'destructive' });
     } finally {
       setSearchingWeb(false);
     }

@@ -5294,10 +5294,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   setMentionedPrompts(newMentionedPrompts);
                 }
               }}
-                if (newTopic) {
-                  setTopic(newTopic); setOriginalTopic(newTopic);
-                }
-              }}
               onLoadCarousel={async (item: any) => {
                 setLoadingCarousel(true);
                 try {

@@ -21,9 +21,9 @@ function isCleanImageUrl(url: string): boolean {
   }
 
   const badPatterns = [
-    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail',
-    'tweet', 'twitter', 'instagram', 'tiktok', 'facebook', 'reddit', 'reaction', 'captura-de-tela', 'screenshot', 'screen-shot',
-    'maxresdefault', 'winners-list', 'feature-image', 'featured-image', 'nominados', 'perdedores', 'thumb800', '.png', '.svg'
+    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer',
+    'captura-de-tela', 'screenshot', 'screen-shot',
+    'maxresdefault', 'winners-list', 'imgflip', '.svg'
   ];
   for (const pat of badPatterns) {
     if (lower.includes(pat)) return false;

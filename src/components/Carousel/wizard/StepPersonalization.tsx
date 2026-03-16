@@ -83,11 +83,11 @@ const StepPersonalization: React.FC<Props> = ({
     return (
       <div className="space-y-5" style={{ minHeight: '260px' }}>
         <div>
-          <h2 className="text-xl font-bold text-white mb-1.5">Personalização</h2>
-          <p className="text-sm text-white/40">Seu post tem algo relacionado à marca ou pessoas?</p>
+         <h2 className="text-xl font-bold text-white mb-1.5">Personalização</h2>
+          <p className="text-sm text-white/40">Seu post tem relação com marca, pessoas ou produto?</p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {/* Person option */}
           <button
             onClick={() => { setWantsPerson(true); setWantsBrand(false); setExpandedSection('face'); }}

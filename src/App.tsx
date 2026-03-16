@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanner";
+import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
 
 // Lazy-loaded pages — each becomes a separate chunk
@@ -46,10 +47,12 @@ function AffiliateTracker({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Minimal loading fallback
+// Minimal loading fallback — uses the same purple orb from DashboardHome
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0f' }}>
-    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    <div className="carousel-loader-wrapper w-[80px] h-[80px]">
+      <div className="carousel-loader-spinner" />
+    </div>
   </div>
 );
 

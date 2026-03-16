@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (job.status !== 'pending') {
+    if (job.status !== 'pending' && job.status !== 'failed') {
       return new Response(JSON.stringify({ error: 'Job already started', status: job.status }), {
         status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

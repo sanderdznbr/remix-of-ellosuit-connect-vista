@@ -6962,7 +6962,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
                     }}>
                       <div style={{ width: thumbW, height: thumbH, overflow: 'hidden', borderRadius: 10 }}>
-                        <div style={{ transform: `scale(${thumbW / PREVIEW_W})`, transformOrigin: 'top left', width: PREVIEW_W, height: PREVIEW_H }}>
+                        <div style={{ transform: `scale(${thumbW / previewW})`, transformOrigin: 'top left', width: previewW, height: previewH }}>
                           {renderCardPreview(card, i, false)}
                         </div>
                       </div>

@@ -85,10 +85,8 @@ const StepCardTexts: React.FC<Props> = ({
       if (error) throw error;
       if (data?.outline && Array.isArray(data.outline) && data.outline.length > 0) {
         setManualCardTexts(data.outline);
+        await onOutlineGenerated?.(data.outline);
         toast.success('Roteiro gerado com sucesso!');
-        if (availableWebImages.length > 0 && setCardPhotoAssignments) {
-          setTimeout(() => autoAssignPhotos(), 300);
-        }
       } else {
         const fallback = Array.from({ length: totalCards }, (_, i) => {
           if (contentMode === 'single-post') return { title: topic.trim().slice(0, 60), body: '' };
@@ -97,6 +95,7 @@ const StepCardTexts: React.FC<Props> = ({
           return { title: `Ponto ${i}`, body: '' };
         });
         setManualCardTexts(fallback);
+        await onOutlineGenerated?.(fallback);
         toast.info('Roteiro gerado com modelo local.');
       }
     } catch (err) {
@@ -109,6 +108,7 @@ const StepCardTexts: React.FC<Props> = ({
         return { title: `Ponto ${i}`, body: '' };
       });
       setManualCardTexts(fallback);
+      await onOutlineGenerated?.(fallback);
     } finally { setFilling(false); }
   };
 

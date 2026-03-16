@@ -5612,7 +5612,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'}
                         webImages={webSearchResult?.images}
                         cardPhotoAssignments={cardPhotoAssignments}
-                        setCardPhotoAssignments={setCardPhotoAssignments} />
+                        setCardPhotoAssignments={setCardPhotoAssignments}
+                        onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
                     )}
                     {currentStepName === 'Logo' && (
                       <StepBranding

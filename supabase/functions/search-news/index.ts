@@ -263,8 +263,8 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
       for (const term of searchTerms.slice(0, 3)) {
         if (images.length >= 20) break;
         try {
-          // Append anti-text keywords and request photo type
-          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography`;
+          // Append strict anti-text / anti-social-post filter keywords and request photo type
+          const cleanQuery = `${term} real event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
           const query = encodeURIComponent(cleanQuery);
           const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {
@@ -276,10 +276,9 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
               if (imgUrl && isCleanImageUrl(imgUrl)) {
-                // Only accept reasonably sized images (photos tend to be larger)
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
+                if (w >= 600 && h >= 400) {
                   images.push(imgUrl);
                 }
               }

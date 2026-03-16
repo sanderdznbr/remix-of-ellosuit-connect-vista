@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Loader2, Pencil, X, MessageSquareText, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Loader2, Pencil, X, MessageSquareText, Image as ImageIcon, ChevronDown, Upload, Monitor, User, Palette } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+
+interface PromptMedia {
+  id: string;
+  prompt_id: string;
+  file_url: string;
+  file_name: string;
+  media_type: string; // 'screenshot' | 'logo' | 'face' | 'reference'
+  sort_order: number;
+}
 
 interface SavedPrompt {
   id: string;
@@ -13,10 +22,18 @@ interface SavedPrompt {
   created_at: string;
 }
 
+const MEDIA_TYPES = [
+  { value: 'screenshot', label: 'Screenshot / Print', icon: Monitor },
+  { value: 'logo', label: 'Logomarca', icon: Palette },
+  { value: 'face', label: 'Pessoa / Rosto', icon: User },
+  { value: 'reference', label: 'Referência visual', icon: ImageIcon },
+];
+
 const PromptGallery: React.FC = () => {
   const { user } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
+  const [promptMedia, setPromptMedia] = useState<Record<string, PromptMedia[]>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,6 +42,9 @@ const PromptGallery: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [selectedMediaType, setSelectedMediaType] = useState('screenshot');
 
   useEffect(() => {
     const fetch = async () => {
@@ -39,12 +59,18 @@ const PromptGallery: React.FC = () => {
     if (!companyId) return;
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('saved_prompts')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('created_at', { ascending: false });
-      setPrompts((data as any[]) || []);
+      const [{ data: promptsData }, { data: mediaData }] = await Promise.all([
+        supabase.from('saved_prompts').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+        supabase.from('saved_prompt_media').select('*').eq('company_id', companyId).order('sort_order', { ascending: true }),
+      ]);
+      setPrompts((promptsData as any[]) || []);
+      // Group media by prompt_id
+      const grouped: Record<string, PromptMedia[]> = {};
+      ((mediaData as any[]) || []).forEach((m: PromptMedia) => {
+        if (!grouped[m.prompt_id]) grouped[m.prompt_id] = [];
+        grouped[m.prompt_id].push(m);
+      });
+      setPromptMedia(grouped);
     } catch (err) {
       console.error(err);
     } finally {
@@ -124,12 +150,47 @@ const PromptGallery: React.FC = () => {
     toast.success('Prompt excluído');
   };
 
+  const handleUploadMedia = async (files: FileList, promptId: string) => {
+    if (!companyId) return;
+    setUploadingMedia(true);
+    try {
+      const existingCount = (promptMedia[promptId] || []).length;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.name.split('.').pop();
+        const path = `${companyId}/prompt-media/${promptId}/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from('brand-assets').upload(path, file);
+        if (error) throw error;
+        const { data: { publicUrl } } = supabase.storage.from('brand-assets').getPublicUrl(path);
+        await supabase.from('saved_prompt_media').insert({
+          prompt_id: promptId,
+          company_id: companyId,
+          file_url: publicUrl,
+          file_name: file.name,
+          media_type: selectedMediaType,
+          sort_order: existingCount + i,
+        } as any);
+      }
+      toast.success(`${files.length} arquivo(s) adicionado(s)`);
+      fetchPrompts();
+    } catch {
+      toast.error('Erro ao enviar arquivo');
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId: string) => {
+    await supabase.from('saved_prompt_media').delete().eq('id', mediaId);
+    fetchPrompts();
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Header */}
       <div className="px-6 pt-6 pb-4 shrink-0">
         <h1 className="text-xl font-bold text-white mb-1">Galeria de Prompts</h1>
-        <p className="text-sm text-white/30">Salve prompts reutilizáveis e use com @ no wizard.</p>
+        <p className="text-sm text-white/30">Salve prompts reutilizáveis com mídias e use com @ no wizard.</p>
       </div>
 
       {/* Action bar */}
@@ -223,41 +284,137 @@ const PromptGallery: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {prompts.map(p => (
-              <motion.div
-                key={p.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="group flex items-start gap-3 p-3 rounded-xl border border-white/[0.06] hover:border-white/[0.1] transition-colors"
-                style={{ backgroundColor: '#111118' }}
-              >
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#1a1a24' }}>
-                  {p.avatar_url ? (
-                    <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <MessageSquareText className="w-4 h-4 text-white/20" />
-                  )}
-                </div>
+            {prompts.map(p => {
+              const media = promptMedia[p.id] || [];
+              const isExpanded = expandedPromptId === p.id;
+              return (
+                <motion.div
+                  key={p.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-white/[0.06] hover:border-white/[0.1] transition-colors overflow-hidden"
+                  style={{ backgroundColor: '#111118' }}
+                >
+                  {/* Main row */}
+                  <div className="flex items-start gap-3 p-3 group">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#1a1a24' }}>
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <MessageSquareText className="w-4 h-4 text-white/20" />
+                      )}
+                    </div>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white/80 truncate">{p.title}</p>
-                  <p className="text-xs text-white/30 mt-0.5 line-clamp-2">{p.content}</p>
-                </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white/80 truncate">{p.title}</p>
+                      <p className="text-xs text-white/30 mt-0.5 line-clamp-2">{p.content}</p>
+                      {/* Media count badge */}
+                      {media.length > 0 && (
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <ImageIcon className="w-3 h-3 text-purple-400/60" />
+                          <span className="text-[10px] text-purple-400/60">{media.length} mídia{media.length > 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </div>
 
-                {/* Actions */}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 cursor-pointer">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                    {/* Actions */}
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        onClick={() => setExpandedPromptId(isExpanded ? null : p.id)}
+                        className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer"
+                        title="Mídias vinculadas"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 cursor-pointer">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded media section */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-3 pb-3 border-t border-white/[0.04] pt-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Mídias vinculadas</p>
+                          </div>
+
+                          {/* Media grid */}
+                          {media.length > 0 && (
+                            <div className="grid grid-cols-4 gap-2 mb-3">
+                              {media.map(m => {
+                                const typeInfo = MEDIA_TYPES.find(t => t.value === m.media_type);
+                                return (
+                                  <div key={m.id} className="relative group/media rounded-lg overflow-hidden border border-white/[0.06]" style={{ aspectRatio: '1' }}>
+                                    <img src={m.file_url} alt={m.file_name} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                      <button
+                                        onClick={() => handleDeleteMedia(m.id)}
+                                        className="p-1 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                                      <span className="text-[8px] text-white/50 truncate block">{typeInfo?.label || m.media_type}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Upload area */}
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={selectedMediaType}
+                              onChange={e => setSelectedMediaType(e.target.value)}
+                              className="text-[11px] bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-white/60 outline-none cursor-pointer"
+                            >
+                              {MEDIA_TYPES.map(t => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                              ))}
+                            </select>
+                            <label className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-white/[0.1] hover:border-white/[0.2] cursor-pointer transition-colors">
+                              {uploadingMedia ? (
+                                <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5 text-white/25" />
+                              )}
+                              <span className="text-[11px] text-white/30">Adicionar mídia</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={e => {
+                                  if (e.target.files?.length) handleUploadMedia(e.target.files, p.id);
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>

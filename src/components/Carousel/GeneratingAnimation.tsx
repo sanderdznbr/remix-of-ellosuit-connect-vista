@@ -219,8 +219,8 @@ const GeneratingAnimation: React.FC<Props> = ({
         <motion.div
           className="carousel-loader-wrapper"
           style={{ width: 200, height: 200 }}
-          animate={completionPhase ? { scale: 12, opacity: 0.6 } : { scale: 1, opacity: 1 }}
-          transition={completionPhase ? { duration: 0.8, ease: [0.22, 1, 0.36, 1] } : {}}
+          animate={completionPhase ? { scale: 18, opacity: 0 } : { scale: 1, opacity: 1 }}
+          transition={completionPhase ? { duration: 1.0, ease: [0.22, 1, 0.36, 1] } : {}}
         >
           <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
         </motion.div>

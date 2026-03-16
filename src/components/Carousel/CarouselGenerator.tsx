@@ -498,66 +498,26 @@ const CarouselGenerator: React.FC = () => {
   ) => {
     if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
 
-    const literalTopicForSearch = topic.trim();
-    const cleanTopicForSearch = webSearchResult.content.clean_topic || literalTopicForSearch;
-    const baseTopicForSearch = /\b(19|20)\d{2}\b/.test(literalTopicForSearch)
-      ? literalTopicForSearch
-      : cleanTopicForSearch;
-
-    const perCardQueries = Array.from({ length: totalCards }, (_, ci) => {
-      const cardText = outline[ci] || {};
-      const cardTitle = (cardText.title || '').trim();
-      const cardBody = (cardText.body || '').trim();
-
-      const titleCore = cardTitle.replace(/^\d+[.)-]?\s*/, '').trim();
-      const bodyCore = cardBody
-        .split(/[.,;!?]/)
-        .map((part: string) => part.trim())
-        .find((part: string) => part.length > 24 && !/saiba mais|arraste|confira|veja|descubra/i.test(part)) || '';
-
-      let query = titleCore ? `${baseTopicForSearch} ${titleCore}` : baseTopicForSearch;
-
-      if (!titleCore && bodyCore) {
-        query = `${baseTopicForSearch} ${bodyCore}`;
-      }
-
-      query = query.replace(/\s+/g, ' ').trim().slice(0, 160);
-
-      return { index: ci, query };
-    });
-
-    try {
-      const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
-      if (!perCardData?.card_images) {
-        setCardPhotoAssignments({});
-        return;
-      }
-
-      const assignments: Record<number, string> = {};
-      const usedUrls = new Set<string>();
-      // Fallback pool from initial web search images
-      const fallbackImages = (webSearchResult?.images || []).filter((u: string) => typeof u === 'string' && u.startsWith('http'));
-      
-      for (let ci = 0; ci < totalCards; ci++) {
-        const cardImgs = (perCardData.card_images[ci] || []).filter((url: string) => typeof url === 'string' && url.startsWith('http'));
-        let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
-        
-        // Fallback: use initial search images if per-card search returned nothing
-        if (!bestImg && fallbackImages.length > 0) {
-          bestImg = fallbackImages.find((url: string) => !usedUrls.has(url)) || fallbackImages[ci % fallbackImages.length];
-        }
-        
-        if (bestImg) {
-          assignments[ci] = bestImg;
-          usedUrls.add(bestImg);
-        }
-      }
-      setCardPhotoAssignments(assignments);
-    } catch (searchErr) {
-      console.error('[WebPhotos] Per-card search error:', searchErr);
+    // Use images from the INITIAL web search — no per-card API call
+    const webImgs = (webSearchResult?.images || []).filter((u: string) => typeof u === 'string' && u.startsWith('http'));
+    if (webImgs.length === 0) {
       setCardPhotoAssignments({});
+      return;
     }
-  }, [skipWebSearch, webSearchResult?.content, topic]);
+
+    const assignments: Record<number, string> = {};
+    const usedUrls = new Set<string>();
+    for (let ci = 0; ci < totalCards; ci++) {
+      // Distribute images round-robin, avoiding duplicates when possible
+      let bestImg = webImgs.find((url: string) => !usedUrls.has(url));
+      if (!bestImg) bestImg = webImgs[ci % webImgs.length];
+      if (bestImg) {
+        assignments[ci] = bestImg;
+        usedUrls.add(bestImg);
+      }
+    }
+    setCardPhotoAssignments(assignments);
+  }, [skipWebSearch, webSearchResult?.content, webSearchResult?.images]);
 
   const handleSearchWeb = async () => {
     if (!topic.trim()) return;

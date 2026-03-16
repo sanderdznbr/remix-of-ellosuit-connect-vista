@@ -1042,7 +1042,7 @@ const CarouselGenerator: React.FC = () => {
     const invokePromise = supabase.functions.invoke('generate-carousel-image', {
       body: {
         prompt: opts.prompt,
-        imageSize: '3:4',
+        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '3:4',
         topic: opts.prompt,
         faceReferenceUrls: opts.faceReferenceUrls,
         styleReferenceUrls: opts.styleReferenceUrls,

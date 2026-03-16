@@ -6093,17 +6093,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </>
               )}
               {/* Phone frame */}
-              <div className="rounded-[3rem] overflow-hidden" style={{
-                border: '3px solid rgba(255,255,255,0.1)',
+              <div className={postFormat === 'story' ? 'rounded-[2rem] overflow-hidden' : 'rounded-[3rem] overflow-hidden'} style={{
+                border: postFormat === 'story' ? '2px solid rgba(255,255,255,0.08)' : '3px solid rgba(255,255,255,0.1)',
                 background: '#000',
                 boxShadow: `0 0 80px rgba(${themeRgb},0.18), 0 0 2px rgba(255,255,255,0.1) inset`,
               }}>
-                {/* Notch */}
+                {/* Notch - hide for stories */}
+                {postFormat !== 'story' && (
                 <div className="flex justify-center pt-3 pb-1" style={{ backgroundColor: '#000' }}>
                   <div className="w-28 h-6 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                 </div>
+                )}
 
-                {/* Instagram header */}
+                {/* Instagram header - hide for stories */}
+                {postFormat !== 'story' && (
                 <div className="flex items-center gap-2.5 px-4 py-2.5" style={{ backgroundColor: 'rgba(0,0,0,0.9)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src={ellocontentProfile} alt="ellocontent" className="w-8 h-8 rounded-full object-cover" />
                   <div className="flex-1">
@@ -6116,6 +6119,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div className="w-1 h-1 rounded-full bg-white/40" />
                   </div>
                 </div>
+                )}
 
             {/* Carousel viewport */}
                 <div className="relative overflow-hidden select-none" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000', cursor: 'grab' }}

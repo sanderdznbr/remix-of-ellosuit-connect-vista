@@ -2048,24 +2048,50 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           const baseImg = await loadImg(finalImageUrl);
           ctx.drawImage(baseImg, 0, 0, baseImg.width, baseImg.height, 0, 0, W, H);
 
-          // Draw logo
-          const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
-            const r = await fetch(logoUrl); const b = await r.blob();
-            return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
-          })();
-          const logoImg = await loadImg(logoB64);
-          const maxLW = 180, maxLH = 80;
-          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-          const lw = logoImg.width * ls, lh = logoImg.height * ls;
-          const pad = 50;
-          let lx = pad, ly = pad;
-          const lp = logoPosition || 'top-left';
-          if (lp.includes('center')) lx = (W - lw) / 2;
-          if (lp.includes('right')) lx = W - lw - pad;
-          if (lp.includes('middle')) ly = (H - lh) / 2;
-          if (lp.includes('bottom')) ly = H - lh - pad;
-          ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
-          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          // Draw logo with smart color adaptation
+          const smartDrawLogo = async (canvasCtx: CanvasRenderingContext2D, canvasW: number, canvasH: number, primaryLogo: string, darkLogo: string | null, pos: string) => {
+            const pad = 50;
+            // Sample background luminance at logo position
+            let sampleX = pad + 40, sampleY = pad + 20;
+            if (pos.includes('right')) sampleX = canvasW - pad - 40;
+            if (pos.includes('bottom')) sampleY = canvasH - pad - 20;
+            if (pos.includes('center')) sampleX = canvasW / 2;
+            const pixel = canvasCtx.getImageData(sampleX, sampleY, 1, 1).data;
+            const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+            const bgIsDark = lum < 0.45;
+
+            // Pick the right logo: on light bg use dark version, on dark bg use light version
+            const chosenUrl = bgIsDark ? primaryLogo : (darkLogo || primaryLogo);
+            const needsInvert = !bgIsDark && !darkLogo;
+
+            const logoB64 = chosenUrl.startsWith('data:') ? chosenUrl : await (async () => {
+              const r = await fetch(chosenUrl); const b = await r.blob();
+              return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+            })();
+            const logoImg = await loadImg(logoB64);
+            const maxLW = 180, maxLH = 80;
+            const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+            const lw = logoImg.width * ls, lh = logoImg.height * ls;
+            let lx = pad, ly = pad;
+            if (pos.includes('center')) lx = (canvasW - lw) / 2;
+            if (pos.includes('right')) lx = canvasW - lw - pad;
+            if (pos.includes('middle')) ly = (canvasH - lh) / 2;
+            if (pos.includes('bottom')) ly = canvasH - lh - pad;
+
+            canvasCtx.save();
+            if (needsInvert) {
+              // On light bg with no dark variant, darken the logo
+              canvasCtx.filter = 'brightness(0)';
+            } else if (bgIsDark && !darkLogo) {
+              // On dark bg with no dark variant, brighten
+              canvasCtx.filter = 'brightness(0) invert(1)';
+            }
+            canvasCtx.shadowColor = 'rgba(0,0,0,0.6)'; canvasCtx.shadowBlur = 12;
+            canvasCtx.drawImage(logoImg, lx, ly, lw, lh);
+            canvasCtx.restore();
+          };
+
+          await smartDrawLogo(ctx, W, H, logoUrl, logoDarkUrl, logoPosition || 'top-left');
           ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
 
           finalImageUrl = canvas.toDataURL('image/jpeg', 0.92);

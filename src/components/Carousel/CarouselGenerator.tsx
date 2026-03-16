@@ -37,6 +37,34 @@ const AnimatedCounter = ({ target }: { target: number }) => {
   return <>{display}%</>;
 };
 import { supabase } from '@/integrations/supabase/client';
+
+// Resilient edge function invoke — falls back to direct HTTP fetch if SDK times out
+const resilientInvoke = async (fnName: string, body: Record<string, unknown>, timeoutMs = 30000) => {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const { data, error } = await supabase.functions.invoke(fnName, { body });
+    clearTimeout(timer);
+    if (error) throw error;
+    return data;
+  } catch (sdkErr) {
+    console.warn(`[resilientInvoke] SDK failed for ${fnName}, trying direct fetch...`, sdkErr);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const SUPABASE_URL = 'https://jwddiyuezqrpuakazvgg.supabase.co';
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${fnName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3ZGRpeXVlenFycHVha2F6dmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNDIzNTgsImV4cCI6MjA2NjkxODM1OH0.CrUu3HGCfWh6cPfGsbDXGQNG5AWOsi9X2GGix1-7izg'}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3ZGRpeXVlenFycHVha2F6dmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNDIzNTgsImV4cCI6MjA2NjkxODM1OH0.CrUu3HGCfWh6cPfGsbDXGQNG5AWOsi9X2GGix1-7izg',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Direct fetch failed: ${res.status}`);
+    return await res.json();
+  }
+};
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -5068,10 +5096,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         if (perCardQueries.length > 0) {
           try {
-            const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-              body: { per_card_queries: perCardQueries },
-            });
-            if (!perCardErr && perCardData?.card_images) {
+            const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
+            if (perCardData?.card_images) {
               const assignments: Record<number, string> = {};
               const usedUrls = new Set<string>();
               for (let ci = 0; ci < totalCards; ci++) {
@@ -5881,10 +5907,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   if (perCardQueries.length > 0) {
                                     console.log('[PER_CARD_SEARCH] Searching images per card:', perCardQueries.map(q => q.query));
                                     try {
-                                      const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-                                        body: { per_card_queries: perCardQueries },
-                                      });
-                                      if (!perCardErr && perCardData?.card_images) {
+                                      const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
+                                      if (perCardData?.card_images) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {

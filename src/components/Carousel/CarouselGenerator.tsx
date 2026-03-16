@@ -409,18 +409,14 @@ const CarouselGenerator: React.FC = () => {
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;
   const hasWebImages = !skipWebSearch && Object.keys(cardPhotoAssignments).length > 0;
-  // When web research is active, skip Pessoas and Visual steps (photos will be searched after the roteiro exists)
-  const skipPeopleVisual = hasFacePhotos || hasWebResearch;
-  // Show 'Posição' step only when user uploaded face AND web research is active
-  const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const showPesquisaStep = hasWebResearch;
   const showProductStep = wantsProduct;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];

@@ -1119,9 +1119,9 @@ const CarouselGenerator: React.FC = () => {
     fontReferenceImage?: string;
     fontReferenceName?: string;
   }): Promise<string | null> => {
-    // Use the model selected by the user (gemini = fast, nano-banana = quality)
+    // Use the model selected by the user (nano-banana = quality default, gemini = fast)
     const resolvedModel = imageSettings.model === 'auto'
-      ? 'gemini'
+      ? 'nano-banana'
       : imageSettings.model;
 
     // === HIGGSFIELD PATH ===
@@ -2246,7 +2246,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           try {
             setImageGenProgress(`🌄 Gerando panorama contínuo... (tentativa ${attempt + 1})`);
             const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
-            const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
+            const resolvedModel = imageSettings.model === 'auto' ? 'nano-banana' : imageSettings.model;
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
               body: {
@@ -4355,7 +4355,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
             const styleImageGen = activeMarketplaceStyle?.imageGeneration;
-            const resolvedModel = imageSettings.model === 'auto' ? 'gemini' : imageSettings.model;
+            const resolvedModel = imageSettings.model === 'auto' ? 'nano-banana' : imageSettings.model;
             
             const { data: imgData, error: imgErr } = await supabase.functions.invoke('generate-carousel-image', {
               body: {

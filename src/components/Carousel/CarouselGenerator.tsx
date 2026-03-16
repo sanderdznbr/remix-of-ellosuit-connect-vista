@@ -401,9 +401,10 @@ const CarouselGenerator: React.FC = () => {
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Velocidade'];
+  const showProductStep = wantsProduct;
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];

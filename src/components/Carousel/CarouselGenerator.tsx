@@ -648,6 +648,7 @@ const CarouselGenerator: React.FC = () => {
     setFamousList([]);
     setFamousImages([]);
     setProductImages([]);
+    setWantsProduct(false);
     setProductAnalysis(null);
     setAnalyzingProduct(false);
     setImageSettings(DEFAULT_IMAGE_SETTINGS);

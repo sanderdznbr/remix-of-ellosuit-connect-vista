@@ -140,8 +140,8 @@ Only return the JSON, nothing else.`;
       const searchBraveImages = async (query: string, braveKey: string): Promise<string[]> => {
         const images: string[] = [];
         try {
-          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography -youtube -thumbnail -video -screenshot -presentation`;
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict&type=photo`;
+          const cleanQuery = `${query} -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -fan-art`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=30&safesearch=strict&type=photo`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveKey },
           });
@@ -152,7 +152,17 @@ Only return the JSON, nothing else.`;
               if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
+                // Prefer larger images (real photos are typically bigger)
+                if (w >= 600 && h >= 400) {
+                  images.push(imgUrl);
+                }
+              }
+              // Also accept slightly smaller if from known good news sources
+              else if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                const isNewsSource = /reuters|apnews|afp|getty|variety|hollywoodreporter|deadline|ew\.com|people\.com|bbc|cnn|nytimes/.test(imgUrl.toLowerCase());
+                if (isNewsSource && w >= 400 && h >= 300) {
                   images.push(imgUrl);
                 }
               }

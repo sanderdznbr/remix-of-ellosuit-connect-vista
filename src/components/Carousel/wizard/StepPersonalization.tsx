@@ -4,6 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { FacePerson, ReferenceImage } from './types';
+import { LogoPosition } from './StepStyle';
 
 interface Props {
   // Face

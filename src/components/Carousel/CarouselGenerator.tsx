@@ -466,8 +466,9 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
   const handleSearchWeb = async () => {
-    if (!topic.trim()) return;
+    if (!topic.trim()) return false;
     setSearchingWeb(true);
+    setWebSearchDecisionMade(true);
     try {
       const { data, error } = await supabase.functions.invoke('search-news', {
         body: { topic: topic.trim(), language: 'pt-BR' },
@@ -483,12 +484,12 @@ const CarouselGenerator: React.FC = () => {
         images: data.images || [],
       });
 
-      // Auto-fill keywords from image search terms (do NOT overwrite the user's topic)
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
       toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
+      return true;
     } catch (err: any) {
       console.error('Web search error:', err);
       setWebSearchResult({
@@ -508,6 +509,7 @@ const CarouselGenerator: React.FC = () => {
         images: [],
       });
       toast({ title: 'Pesquisa indisponível', description: 'Avançamos com um resumo inicial para não travar o fluxo.', variant: 'destructive' });
+      return false;
     } finally {
       setSearchingWeb(false);
     }

@@ -70,6 +70,7 @@ const StepPersonalization: React.FC<Props> = ({
   hasWebImages, webFacePosition, setWebFacePosition,
   onSkipAll, activeMarketplaceStyle, isExtreme,
   hasProduct, setHasProduct, onOpenProductStep,
+  useCustomColors, setUseCustomColors, customColors, setCustomColors,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();

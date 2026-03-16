@@ -196,7 +196,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   };
 
   return (
-    <div className="h-full" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="flex-1" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Header */}
       <div className="px-4 md:px-8 pt-6 md:pt-8 pb-4">
         <motion.h1

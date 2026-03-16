@@ -119,14 +119,14 @@ const GeneratingAnimation: React.FC<Props> = ({
   }, [topic, cardCount, bgColor, accentColor, textColor, brandName, logoUrl, skipWebSearch]);
 
   const STEPS = useMemo(() => [
-    { icon: '📝', label: 'Criando textos persuasivos...' },
-    { icon: '🎨', label: 'Definindo paleta de cores...' },
-    { icon: '📐', label: `Calculando layout de ${cardCount} cards...` },
-    ...(skipWebSearch ? [] : [{ icon: '🖼️', label: 'Buscando imagens na web...' }]),
-    { icon: '✨', label: 'Gerando imagens com IA...' },
-    { icon: '🔤', label: 'Aplicando tipografia...' },
-    { icon: '📱', label: 'Montando carrossel...' },
-    { icon: '🚀', label: 'Finalizando...' },
+    { label: 'Criando textos persuasivos...' },
+    { label: 'Definindo paleta de cores...' },
+    { label: `Calculando layout de ${cardCount} cards...` },
+    ...(skipWebSearch ? [] : [{ label: 'Buscando imagens na web...' }]),
+    { label: 'Gerando imagens com IA...' },
+    { label: 'Aplicando tipografia...' },
+    { label: 'Montando carrossel...' },
+    { label: 'Finalizando...' },
   ], [cardCount, selectedFont, skipWebSearch]);
 
   const displayCardCount = Math.min(cardCount, 8);

@@ -5964,7 +5964,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           }} disabled={!canProceed || searchingWeb || generatingRoteiro || !!webSearchSuggestion}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
                           style={{ background: modeTheme.gradient }}>
-                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
+                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : currentStepName === 'Roteiro' && roteiroCardIndex < (contentMode === 'single-post' ? 0 : cardCount - 1) ? <>Card {roteiroCardIndex + 2} <ChevronRight className="h-4 w-4" /></> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
                         </button>
                       </div>
                     ) : (

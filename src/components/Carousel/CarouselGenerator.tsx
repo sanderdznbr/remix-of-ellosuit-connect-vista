@@ -2884,8 +2884,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
-      setGeneratingAllImages(false);
-      setImageGenProgress('');
+      finishGeneration();
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
 
       // Auto-save for guest (no cloud job)

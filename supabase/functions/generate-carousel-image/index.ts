@@ -287,12 +287,13 @@ REFERÊNCIA DE QUALIDADE: Pense em posts do Instagram de marcas como Apple, Nike
 INSTRUÇÕES PRECISAS PARA O MOCKUP:
 - Crie um iPhone 15 Pro FOTORREALISTA (bordas em titânio, Dynamic Island no topo).
 - Posicione o celular em ângulo 3/4 levemente inclinado para a direita, como um anúncio premium da Apple.
-- Insira o screenshot do app EXATAMENTE como aparece na referência — sem modificar, cortar, reinterpretar ou distorcer a interface. A tela deve mostrar EXATAMENTE o conteúdo da imagem fornecida.
+- Use o screenshot APENAS como base estrutural da interface (layout, blocos, proporções e hierarquia visual), NÃO como texto a ser re-renderizado.
+- NUNCA reproduza nomes de marca, nomes de app, logos, @handles ou qualquer texto institucional presente na screenshot.
+- Se a screenshot contiver “Ellocontent”, “Ellosuit” ou variações, REMOVA/IGNORE completamente esse texto ao compor a tela.
 - Adicione reflexos sutis no vidro da tela e sombra realista embaixo do celular.
 - O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
 - O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
-- NÃO gere uma interface genérica ou inventada — use EXATAMENTE a imagem fornecida na tela do celular.
-- A tela do mockup deve reproduzir PIXEL A PIXEL o screenshot fornecido.`;
+- NÃO gere uma interface genérica ou inventada, mas também NÃO copie literalmente textos de branding da screenshot.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
       textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup de celular profissional; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

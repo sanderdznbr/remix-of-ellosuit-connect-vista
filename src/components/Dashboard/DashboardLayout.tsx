@@ -160,10 +160,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           <img src={ellocontentLogo} alt="elloContent" className="h-7 cursor-pointer" onClick={() => { setActiveTab('home'); }} />
 
           {/* Right: profile avatar */}
-          <button onClick={() => setProfileOpen(!profileOpen)} className="relative cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">
-              {username.charAt(0).toUpperCase()}
-            </div>
+          <button onClick={() => setProfileOpen(!profileOpen)} className="relative cursor-pointer p-1.5 text-white/60">
+            <User className="w-5 h-5" />
           </button>
         </header>
 

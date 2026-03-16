@@ -1,5 +1,12 @@
 // Edge function for carousel generation
 
+const INTERNAL_BRAND_PATTERN = /\b(?:ello\s*content|ellocontent|ello\s*suit|ellosuit|@ellocontent|@ellosuit)\b/gi;
+const stripInternalBrands = (value: string = '') =>
+  value
+    .replace(INTERNAL_BRAND_PATTERN, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -585,7 +592,8 @@ Responda APENAS em JSON válido:
   ]
 }`;
 
-      const userMessage = `Tópico: ${topic}\nPalavras-chave: ${(keywords || []).join(', ')}${
+      const safeTopic = stripInternalBrands(topic || '');
+      const userMessage = `Tópico: ${safeTopic}\nPalavras-chave: ${(keywords || []).join(', ')}${
               body.coverAlreadyExists ? `\n\nIMPORTANTE — CAPA JÁ EXISTE: O card 1 (cover) já foi gerado previamente com título "${body.existingCoverTitle || ''}" e subtítulo "${body.existingCoverBody || ''}". Você DEVE gerar conteúdo COMPLETAMENTE DIFERENTE para o card 2 em diante. O card 2 NÃO pode repetir nem parafrasear o título ou subtítulo da capa. Cada card de conteúdo deve abordar um SUBTEMA ou ÂNGULO DIFERENTE do tópico principal.` : ''
               }${
               body.webSearchContent ? `\n\nDADOS REAIS DA WEB (USE OBRIGATORIAMENTE estes dados verificados para criar o conteúdo):\nTítulo: ${body.webSearchContent.title}\nResumo: ${body.webSearchContent.summary}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body} (Fonte: ${f.source})`).join('\n')}\n\nFontes: ${(body.webSearchCitations || []).slice(0, 5).join(', ')}\n\nIMPORTANTE: Baseie TODO o conteúdo nesses dados reais e verificados. Cite estatísticas e fatos reais.` : ''

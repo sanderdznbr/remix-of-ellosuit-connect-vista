@@ -4,6 +4,13 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const INTERNAL_BRAND_PATTERN = /\b(?:ello\s*content|ellocontent|ello\s*suit|ellosuit|@ellocontent|@ellosuit)\b/gi;
+const stripInternalBrands = (value: string = '') =>
+  value
+    .replace(INTERNAL_BRAND_PATTERN, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -346,11 +353,12 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     }
 
     const rawCleanTopic = textData?.clean_topic || job.topic.split('\n')[0].trim();
-    // Strip brand name from topic used in image prompts to prevent AI from rendering it as text
+    // Strip brand/internal names from topic used in image prompts to prevent AI from rendering them as text
     const brandNameToStrip = job.brand_name?.trim();
-    const cleanTopic = brandNameToStrip 
-      ? rawCleanTopic.replace(new RegExp(`\\(?@?${brandNameToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?`, 'gi'), '').replace(/\s{2,}/g, ' ').trim()
+    const withoutBrandName = brandNameToStrip
+      ? rawCleanTopic.replace(new RegExp(`\\(?@?${brandNameToStrip.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\$&')}\\)?`, 'gi'), ' ')
       : rawCleanTopic;
+    const cleanTopic = stripInternalBrands(withoutBrandName).replace(/\s{2,}/g, ' ').trim();
     // Assign layouts
     const cards = textData.cards.map((c: any, i: number) => {
       if (c.type === 'cover') return { ...c, layout: 'dark' };

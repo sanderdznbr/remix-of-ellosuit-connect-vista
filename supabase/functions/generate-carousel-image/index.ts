@@ -1,6 +1,13 @@
 // Separate edge function for AI image generation - extracted from generate-carousel
 // to reduce CPU usage per invocation and avoid WORKER_LIMIT errors
 
+const INTERNAL_BRAND_PATTERN = /\b(?:ello\s*content|ellocontent|ello\s*suit|ellosuit|@ellocontent|@ellosuit)\b/gi;
+const stripInternalBrands = (value: string = '') =>
+  value
+    .replace(INTERNAL_BRAND_PATTERN, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -87,7 +94,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Não foi possível editar o rosto.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const imagePrompt = prompt || topic || 'abstract background';
+    const imagePrompt = stripInternalBrands(prompt || topic || 'abstract background');
     const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;
     const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;
@@ -280,12 +287,13 @@ REFERÊNCIA DE QUALIDADE: Pense em posts do Instagram de marcas como Apple, Nike
 INSTRUÇÕES PRECISAS PARA O MOCKUP:
 - Crie um iPhone 15 Pro FOTORREALISTA (bordas em titânio, Dynamic Island no topo).
 - Posicione o celular em ângulo 3/4 levemente inclinado para a direita, como um anúncio premium da Apple.
-- Insira o screenshot do app EXATAMENTE como aparece na referência — sem modificar, cortar, reinterpretar ou distorcer a interface. A tela deve mostrar EXATAMENTE o conteúdo da imagem fornecida.
+- Use o screenshot APENAS como base estrutural da interface (layout, blocos, proporções e hierarquia visual), NÃO como texto a ser re-renderizado.
+- NUNCA reproduza nomes de marca, nomes de app, logos, @handles ou qualquer texto institucional presente na screenshot.
+- Se a screenshot contiver “Ellocontent”, “Ellosuit” ou variações, REMOVA/IGNORE completamente esse texto ao compor a tela.
 - Adicione reflexos sutis no vidro da tela e sombra realista embaixo do celular.
 - O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
 - O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
-- NÃO gere uma interface genérica ou inventada — use EXATAMENTE a imagem fornecida na tela do celular.
-- A tela do mockup deve reproduzir PIXEL A PIXEL o screenshot fornecido.`;
+- NÃO gere uma interface genérica ou inventada, mas também NÃO copie literalmente textos de branding da screenshot.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
       textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup de celular profissional; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {

@@ -5108,16 +5108,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             }
           } catch (searchErr) {
             console.error('[AutoRoteiro] Per-card search error:', searchErr);
-            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-            if (webImgs.length > 0) {
-              const assignments: Record<number, string> = {};
-              const usedUrls = new Set<string>();
-              for (let ci = 0; ci < totalCards; ci++) {
-                let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-              }
-              setCardPhotoAssignments(assignments);
-            }
+            setCardPhotoAssignments({});
           }
         }
       } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {

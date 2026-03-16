@@ -437,6 +437,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             </div>
           )}
         </div>
+        {/* Powered by ellosuit */}
+        <div className="px-4 pb-3 pt-1 flex justify-center">
+          <a
+            href="https://www.ellosuit.online"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-white/20 hover:text-white/40 transition-colors"
+          >
+            Powered by <span className="font-semibold">ellosuit</span>
+          </a>
+        </div>
       </div>
     </aside>
   );

@@ -1629,12 +1629,15 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
         if (webImgs.length > 0) {
           effectiveProductRefs = [webImgs[0]];
-          promptParts.push(`\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+          promptParts.push(`\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL (PRESERVAÇÃO TOTAL):
 A imagem de referência enviada é uma FOTO REAL do tema "${topic}". 
-INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do post.
-USE a foto real como elemento visual principal/fundo.
-Sobreponha textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
-MANTENHA a foto real reconhecível e fiel.`);
+REGRAS DE PRESERVAÇÃO ABSOLUTA:
+1. USE a foto real como FUNDO/BASE principal — ela deve ocupar a maior parte da composição.
+2. NÃO RECRIE, NÃO REDESENHE e NÃO REINTERPRETE os rostos ou pessoas da foto. Mantenha-os EXATAMENTE como são.
+3. NÃO substitua a foto por uma ilustração ou versão "melhorada". A foto deve permanecer FOTOGRÁFICA e INALTERADA.
+4. Sobreponha APENAS textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
+5. Se a foto contém pessoas, elas devem aparecer EXATAMENTE como na foto original.
+6. Trate a foto como um print/screenshot que DEVE ser preservado como base da composição.`);
           console.log('[SINGLE_POST_WEB_PHOTO] Assigned web image:', webImgs[0]?.substring(0, 80));
         }
       }
@@ -2499,7 +2502,8 @@ MANTENHA a foto real reconhecível e fiel.`);
               capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
             }
           } else if (!hasFaceRefsForGen && peopleMode === 'none') {
-            capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS.';
+            // Will be overridden below if card has a web photo with people
+            capturedPrompt += '\n\n__NO_HUMANS_PLACEHOLDER__';
           } else if (hasFaceRefsForGen && !faceCardIndices.has(i)) {
             // Card has face refs available but this specific card should NOT show a face
             capturedPrompt += '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. NO HUMANS. Focus on the topic, objects, scenery, or editorial design elements only.';
@@ -2586,14 +2590,22 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const hasWebPhoto = !skipWebSearch && webSearchResult?.images?.length && capturedProductRefs?.length === 1
             && capturedProductRefs[0].startsWith('http') && !useRealEstateBlend && productImages.length === 0;
           if (hasWebPhoto) {
+            // Remove the NO_HUMANS placeholder — web photos often contain people that must be preserved
+            cardPrompt = cardPrompt.replace('\n\n__NO_HUMANS_PLACEHOLDER__', '');
             const cardDesc = updatedCards[i]?.title || updatedCards[i]?.bodyTop || cleanTopic;
-            cardPrompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+            cardPrompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL (PRESERVAÇÃO TOTAL):
 A imagem de referência enviada é uma FOTO REAL buscada especificamente para este card sobre "${cardDesc}". 
-Você DEVE incorporar esta foto real com MÁXIMA FIDELIDADE na composição do card.
-USE a foto real como elemento visual principal/fundo do card.
-Sobreponha os textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
-MANTENHA a foto real reconhecível e fiel — NÃO substitua por uma imagem genérica.
-A composição final deve ser: foto real de fundo + overlay editorial com textos e gráficos do estilo visual.`;
+REGRAS DE PRESERVAÇÃO ABSOLUTA:
+1. USE a foto real como FUNDO/BASE principal do card — ela deve ocupar a maior parte da composição.
+2. NÃO RECRIE, NÃO REDESENHE e NÃO REINTERPRETE os rostos ou pessoas da foto. Mantenha-os EXATAMENTE como são na foto original.
+3. NÃO substitua a foto por uma ilustração, renderização ou versão "melhorada". A foto deve permanecer FOTOGRÁFICA e INALTERADA.
+4. Sobreponha APENAS textos editoriais, elementos gráficos e tipografia POR CIMA da foto real, como um overlay/HUD.
+5. Se a foto contém pessoas, elas devem aparecer EXATAMENTE como na foto original — mesma pose, mesma aparência, mesmas feições.
+6. A composição final deve ser: FOTO REAL INTACTA de fundo + overlay editorial com textos e gráficos do estilo visual.
+7. Trate a foto como se fosse um print/screenshot que DEVE ser preservado pixel a pixel como base da composição.`;
+          } else {
+            // No web photo — apply the NO HUMANS instruction if placeholder exists
+            cardPrompt = cardPrompt.replace('\n\n__NO_HUMANS_PLACEHOLDER__', '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. The image must contain ONLY visual elements, objects, graphics, text overlays, and abstract/decorative elements. NO HUMANS whatsoever.');
           }
 
           // === WEB SEARCH + FACE: create professional portrait matching post theme ===
@@ -3398,12 +3410,17 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           && loop2ProductRefs[0].startsWith('http') && productImages.length === 0;
         let loop2Prompt = buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
         if (hasWebPhotoL2) {
-          loop2Prompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+          loop2Prompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL (PRESERVAÇÃO TOTAL):
 A imagem de referência enviada é uma FOTO REAL do tema. 
-INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do card.
-USE a foto real como elemento visual principal/fundo.
-Sobreponha textos editoriais e tipografia POR CIMA da foto real.
-MANTENHA a foto real reconhecível.`;
+REGRAS DE PRESERVAÇÃO ABSOLUTA:
+1. USE a foto real como FUNDO/BASE principal do card.
+2. NÃO RECRIE, NÃO REDESENHE e NÃO REINTERPRETE os rostos ou pessoas. Mantenha-os EXATAMENTE como são na foto original.
+3. A foto deve permanecer FOTOGRÁFICA e INALTERADA — NÃO substitua por ilustração.
+4. Sobreponha APENAS textos editoriais e tipografia POR CIMA da foto real.
+5. Trate a foto como um print/screenshot que DEVE ser preservado como base.`;
+          // Remove NO HUMANS if present — web photos may contain people
+          loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS whatsoever\./g, '');
+          loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS\./g, '');
         }
 
         imageFactories.push({

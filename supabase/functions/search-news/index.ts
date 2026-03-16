@@ -29,9 +29,13 @@ const BLOCKED_DOMAINS = [
 const TRUSTED_PHOTO_DOMAINS = [
   'people.com', 'ew.com', 'variety.com', 'hollywoodreporter.com', 'deadline.com',
   'bbc.com', 'cnn.com', 'nytimes.com', 'apnews.com', 'reuters.com',
-  'exame.com', 'metropoles.com', 'gshow.globo.com', 'globo.com', 'sbt.com.br',
-  'sbtnews.sbt.com.br', 'uol.com.br', 'folha.uol.com.br', 'estadao.com.br',
-  'opovo.com.br', 'omelete.com.br', 'cinebuzz.com.br', 'rollingstone.com',
+  'exame.com', 'metropoles.com', 'gshow.globo.com', 'globo.com', 'g1.globo.com',
+  'oglobo.globo.com', 'cbn.globo.com', 'valorinternational.globo.com',
+  'sbt.com.br', 'sbtnews.sbt.com.br', 'uol.com.br', 'folha.uol.com.br',
+  'estadao.com.br', 'opovo.com.br', 'omelete.com.br', 'cinebuzz.com.br',
+  'rollingstone.com', 'veja.abril.com.br', 'terra.com.br', 'gazetadopovo.com.br',
+  'revistaoeste.com', 'bloomberglinea.com.br', 'infomoney.com.br', 'poder360.com.br',
+  'agenciabrasil.ebc.com.br', 'correiobraziliense.com.br',
 ];
 
 function getHostname(url: string): string {

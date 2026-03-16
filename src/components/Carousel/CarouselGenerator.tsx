@@ -8554,6 +8554,43 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           }
         }}
       />
+
+      {/* Prompt Media Confirm Dialog */}
+      <AnimatePresence>
+        {pendingPromptMedia && (
+          <PromptMediaConfirmDialog
+            promptTitle={pendingPromptMedia.promptTitle}
+            media={pendingPromptMedia.media}
+            onCancel={() => setPendingPromptMedia(null)}
+            onConfirm={(selectedMedia) => {
+              // Apply media by type
+              const screenshots = selectedMedia.filter(m => m.media_type === 'screenshot');
+              const logos = selectedMedia.filter(m => m.media_type === 'logo');
+              const faces = selectedMedia.filter(m => m.media_type === 'face');
+              const refs = selectedMedia.filter(m => m.media_type === 'reference');
+
+              if (screenshots.length > 0) {
+                setWantsProduct(true);
+                setProductImages(prev => [...prev, ...screenshots.map(s => ({ url: s.file_url, thumb: s.file_url, file: null as any }))]);
+              }
+              if (logos.length > 0) {
+                setLogoUrl(logos[0].file_url);
+              }
+              if (faces.length > 0) {
+                setReferenceImages(prev => [...prev, ...faces.map(f => ({ url: f.file_url, category: 'face' as const }))]);
+              }
+              if (refs.length > 0) {
+                setReferenceImages(prev => [...prev, ...refs.map(r => ({ url: r.file_url, category: 'style' as const }))]);
+              }
+
+              setPendingPromptMedia(null);
+              if (selectedMedia.length > 0) {
+                toast({ title: `${selectedMedia.length} mídia(s) aplicada(s) do prompt` });
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

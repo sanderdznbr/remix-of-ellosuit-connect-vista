@@ -5229,11 +5229,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
-    // Don't speak when loading an already-generated carousel
-    if (!showWelcome && !carouselData && !loadingCarousel) {
-      speakStep(wizardStep);
-    }
-  }, [wizardStep, speakStep, showWelcome, carouselData, loadingCarousel]);
 
 
   useEffect(() => {

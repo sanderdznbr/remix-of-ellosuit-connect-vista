@@ -5063,7 +5063,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       setRoteiroGenerated(true);
 
       // Per-card web image search
-      if (webSearchResult?.images?.length && !skipWebSearch) {
+      if (webSearchResult?.content && !skipWebSearch) {
         const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
         const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
         const keyEntities: string[] = webSearchResult?.content?.key_entities || [];
@@ -5076,7 +5076,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const cardText = outlineToUse[ci];
           const cardTitle = cardText?.title || '';
           const cardBody = cardText?.body || '';
-          const cardContent = `${cardTitle} ${cardBody}`.trim();
           let searchQuery: string;
           if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
             searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
@@ -5919,12 +5918,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                     } catch (searchErr) {
                                       console.error('[PER_CARD_SEARCH] Error:', searchErr);
                                       // Fallback to general web images
-                                      const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                                      const webImgs = (webSearchResult.images || []).filter((u: string) => u?.startsWith('http'));
                                       if (webImgs.length > 0) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {
-                                          let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                          const bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
                                           if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
                                         }
                                         setCardPhotoAssignments(assignments);

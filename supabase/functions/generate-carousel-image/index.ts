@@ -200,8 +200,8 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nFORMATO OBRIGATÓRIO 9:16 STORIES: ${formatInstruction}`;
     }
 
-    // Anti-border + anti-text-copy + anti-grid instruction for ALL modes
-    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM: Cada card DEVE ser UMA ÚNICA composição visual contínua. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens ou sub-quadros. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. A imagem deve ser UMA CENA ÚNICA e UNIFICADA que preenche todo o canvas.`;
+    // Anti-border + anti-text-copy + anti-grid + anti-brand instruction for ALL modes
+    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\nPROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize logomarcas, nomes de marcas ou textos de branding na imagem. A logomarca será adicionada automaticamente como overlay pelo sistema. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO, não como texto visual.\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM: Cada card DEVE ser UMA ÚNICA composição visual contínua. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens ou sub-quadros. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. A imagem deve ser UMA CENA ÚNICA e UNIFICADA que preenche todo o canvas.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity
@@ -254,7 +254,7 @@ INTEGRAÇÃO ANATÔMICA OBRIGATÓRIA (PRIORIDADE CRÍTICA):
     // Detect special modes from prompt content
     const isRealEstatePrompt = /FOTO DO IMÓVEL|FOTO REAL|imóvel|imovel|propriedade|property photo/i.test(imagePrompt);
     const isExtremeMode = isExtremePrompt;
-    const isAppMockup = /app|aplicativo|celular|smartphone|tela|mockup|print.*app|screenshot/i.test(imagePrompt);
+    const isAppMockup = /app|aplicativo|celular|smartphone|tela|mockup|print.*app|screenshot|sistema|dashboard|plataforma|software|crm|erp/i.test(imagePrompt);
 
     // === EXTREME MODE: Inject professional design DNA ===
     if (isExtremeMode) {
@@ -275,21 +275,21 @@ REFERÊNCIA DE QUALIDADE: Pense em posts do Instagram de marcas como Apple, Nike
 
     if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
       textPrompt += `\n\n📸 FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA): A imagem de referência fornecida é uma FOTOGRAFIA REAL do imóvel. Você DEVE usar esta foto como a imagem principal/de fundo do card. NÃO gere uma casa ou imóvel artificial — INCORPORE a foto real no design. A foto real deve ocupar pelo menos 60-80% da área visual do card. Aplique o estilo editorial (textos, badges, overlays, elementos gráficos) POR CIMA da foto real. Trate a foto como se fosse uma imagem de fundo editorializada.`;
-    } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
+    } else if (validGeneralRefs.length > 0 && isAppMockup) {
       textPrompt += `\n\n📱 MOCKUP DE APP (PRIORIDADE MÁXIMA): As imagens de referência de produto contêm SCREENSHOTS REAIS do aplicativo do usuário.
 INSTRUÇÕES PRECISAS PARA O MOCKUP:
 - Crie um iPhone 15 Pro FOTORREALISTA (bordas em titânio, Dynamic Island no topo).
 - Posicione o celular em ângulo 3/4 levemente inclinado para a direita, como um anúncio premium da Apple.
-- Insira o screenshot do app EXATAMENTE como aparece — sem modificar, cortar ou distorcer a interface.
+- Insira o screenshot do app EXATAMENTE como aparece na referência — sem modificar, cortar, reinterpretar ou distorcer a interface. A tela deve mostrar EXATAMENTE o conteúdo da imagem fornecida.
 - Adicione reflexos sutis no vidro da tela e sombra realista embaixo do celular.
-- A mão segurando o celular (se solicitada) deve ser natural, com iluminação consistente.
 - O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
 - O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
-- NÃO gere uma interface genérica — use EXATAMENTE a imagem fornecida na tela do celular.`;
+- NÃO gere uma interface genérica ou inventada — use EXATAMENTE a imagem fornecida na tela do celular.
+- A tela do mockup deve reproduzir PIXEL A PIXEL o screenshot fornecido.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
+      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup de celular profissional; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
-      textPrompt += `\n\nPRODUTO: Reproduza o produto das referências fielmente.`;
+      textPrompt += `\n\nPRODUTO/SCREENSHOT OBRIGATÓRIO: As imagens de referência fornecidas são CONTEÚDO REAL do usuário (screenshot de app, produto, etc.). Você DEVE incorporar estas imagens FIELMENTE no design. Se for um screenshot de aplicativo/sistema: coloque-o dentro de um mockup de smartphone ou laptop premium. Se for um produto: mostre-o em destaque. NÃO gere uma versão genérica ou inventada — use a imagem EXATA fornecida.`;
     }
 
     // Brand colors — always apply when provided (user's brand identity overrides style palette)
@@ -335,10 +335,16 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       messageContent.push({ type: 'text', text: textPrompt });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
+      } else if (validGeneralRefs.length > 0 && isAppMockup) {
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT REAL DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone premium. Reproduza PIXEL A PIXEL o conteúdo da tela. NÃO invente uma interface diferente:` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `🎨 CONTEÚDO VISUAL OBRIGATÓRIO ABAIXO — Esta imagem deve aparecer FIELMENTE no resultado (em mockup se for screenshot, em destaque se for produto):` });
       }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. Ela DEVE ser a imagem principal/de fundo do post. Integre textos e elementos gráficos do estilo POR CIMA desta foto real.` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `A imagem acima é CONTEÚDO REAL do usuário. Ela DEVE aparecer fielmente no resultado final — NÃO gere uma versão inventada ou genérica.` });
       }
     } else {
       // STANDARD MODE
@@ -374,16 +380,16 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       messageContent.push({ type: 'text', text: textPrompt });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
-      } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
-        messageContent.push({ type: 'text', text: `📱 SCREENSHOT DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone profissional. NÃO altere o conteúdo da tela:` });
-      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-        messageContent.push({ type: 'text', text: `🎨 REFERÊNCIAS VISUAIS DO USUÁRIO ABAIXO — Use estas imagens como ELEMENTOS OBRIGATÓRIOS na composição final (logos, screenshots, produtos, etc.):` });
+      } else if (validGeneralRefs.length > 0 && isAppMockup) {
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT REAL DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone premium (iPhone 15 Pro). Reproduza PIXEL A PIXEL o conteúdo da tela. NÃO invente uma interface diferente. NÃO altere o conteúdo:` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `🎨 CONTEÚDO VISUAL OBRIGATÓRIO ABAIXO — Esta imagem deve aparecer FIELMENTE no resultado (em mockup premium se for screenshot, em destaque se for produto):` });
       }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. INCORPORE-A como imagem de fundo/principal do post.` });
-      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-        messageContent.push({ type: 'text', text: `As imagens acima são CONTEÚDO OBRIGATÓRIO do usuário. Cada uma deve aparecer fielmente no resultado final. Para screenshots de app: coloque em mockup de celular. Para logos: inclua no design. Para produtos: destaque na composição.` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `A imagem acima é CONTEÚDO REAL do usuário — DEVE aparecer fielmente. Para screenshots: mockup de celular/laptop. Para produtos: destaque na composição. NÃO gere versão genérica.` });
       }
 
       if (validStyleRefs.length > 0) {

@@ -2500,6 +2500,17 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           } else {
             const mergedProductUrls = [...productRefUrls, ...carouselExtremeProductRefs];
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
+            
+            // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS ===
+            // If web search found real images and no product refs exist, use them as high-priority references
+            if (!capturedProductRefs && !skipWebSearch && webSearchResult?.images?.length) {
+              const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+              if (webImgs.length > 0) {
+                const webImgIdx = i % webImgs.length;
+                capturedProductRefs = [webImgs[webImgIdx]];
+                console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
+              }
+            }
           }
           
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;

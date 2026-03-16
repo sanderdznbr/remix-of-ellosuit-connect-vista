@@ -515,9 +515,18 @@ const CarouselGenerator: React.FC = () => {
 
       const assignments: Record<number, string> = {};
       const usedUrls = new Set<string>();
+      // Fallback pool from initial web search images
+      const fallbackImages = (webSearchResult?.images || []).filter((u: string) => typeof u === 'string' && u.startsWith('http'));
+      
       for (let ci = 0; ci < totalCards; ci++) {
         const cardImgs = (perCardData.card_images[ci] || []).filter((url: string) => typeof url === 'string' && url.startsWith('http'));
-        const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+        let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+        
+        // Fallback: use initial search images if per-card search returned nothing
+        if (!bestImg && fallbackImages.length > 0) {
+          bestImg = fallbackImages.find((url: string) => !usedUrls.has(url)) || fallbackImages[ci % fallbackImages.length];
+        }
+        
         if (bestImg) {
           assignments[ci] = bestImg;
           usedUrls.add(bestImg);

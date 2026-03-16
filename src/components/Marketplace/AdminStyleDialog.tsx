@@ -180,7 +180,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const buildStyleConfig = () => {
+  const buildStyleConfig = (coverUrl?: string) => {
     let promptStyle = `Create an Instagram carousel post that EXACTLY replicates the visual style shown in the reference images. Follow these rules STRICTLY:
 1. COPY THE EXACT VISUAL DNA: Replicate the same color palette, typography style, layout composition, decorative elements, and overall aesthetic from the reference images.
 2. TYPOGRAPHY: Match the exact font styles, sizes, weights, and placement patterns from the references.
@@ -207,6 +207,7 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
       is_real_estate: form.is_real_estate,
       is_beta: form.is_beta,
       real_estate_mode: form.is_real_estate ? form.real_estate_mode : undefined,
+      cover_image: coverUrl || existingCover || undefined,
       colors: { primary: '#8FA9A0', secondary: '#1A1A1A', accent: '#F5F0E8', text: '#FFFFFF', textDark: '#1A1A1A', background_dark: '#0D0D0D', background_light: '#F5F0E8', highlight: '#8FA9A0' },
       imageGeneration: {
         prompt_style: promptStyle,

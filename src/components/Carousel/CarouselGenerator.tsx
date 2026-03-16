@@ -5730,7 +5730,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         cardPhotoAssignments={cardPhotoAssignments}
                         cardPhotoOptions={cardPhotoOptions}
                         setCardPhotoAssignments={setCardPhotoAssignments}
-                        onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
+                        onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)}
+                        activeCardIndex={roteiroCardIndex}
+                        setActiveCardIndex={setRoteiroCardIndex} />
                     )}
                     {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Velocidade' && (

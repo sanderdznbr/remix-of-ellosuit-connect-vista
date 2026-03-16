@@ -5889,7 +5889,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
                                   
                                    const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
-                                   const perCardQueries: { index: number; query: string; title: string; body: string; topic: string }[] = [];
+                                   const keyEntities2: string[] = webSearchResult?.content?.key_entities || [];
+                                   const factsPersonNames2: string[] = (webSearchResult?.content?.facts || [])
+                                     .map((f: any) => f.person_name)
+                                     .filter(Boolean);
+                                   const allEntities2 = [...new Set([...keyEntities2, ...factsPersonNames2])];
+                                   const perCardQueries: { index: number; query: string; title: string; body: string; topic: string; key_entities?: string[] }[] = [];
                                    
                                    for (let ci = 0; ci < totalCards; ci++) {
                                      const cardText = outlineToUse[ci];
@@ -5903,7 +5908,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                      } else {
                                        searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
                                      }
-                                     perCardQueries.push({ index: ci, query: searchQuery, title: cardTitle, body: cardBody, topic: cleanTopicForSearch });
+                                     perCardQueries.push({ index: ci, query: searchQuery, title: cardTitle, body: cardBody, topic: cleanTopicForSearch, key_entities: allEntities2 });
                                    }
 
                                   if (perCardQueries.length > 0) {

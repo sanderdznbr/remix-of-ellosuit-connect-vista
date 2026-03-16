@@ -5599,6 +5599,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   });
                                 };
 
+                                let generatedOutline: { title?: string; body?: string }[] = [];
                                 try {
                                   console.log('[Wizard] Auto-generating outline, topic:', topic.trim(), 'cards:', totalCards);
                                   const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
@@ -5611,28 +5612,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   });
                                   console.log('[Wizard] Outline response:', { outlineData, outlineErr });
                                   if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+                                    generatedOutline = outlineData.outline;
                                     setManualCardTexts(outlineData.outline);
                                   } else {
                                     // Edge function returned empty — use local fallback
                                     console.warn('Outline API returned empty, using local fallback');
-                                    setManualCardTexts(localFallback());
+                                    generatedOutline = localFallback();
+                                    setManualCardTexts(generatedOutline);
                                   }
                                 } catch (err) {
                                   console.error('Auto roteiro error, using local fallback:', err);
-                                  setManualCardTexts(localFallback());
+                                  generatedOutline = localFallback();
+                                  setManualCardTexts(generatedOutline);
                                 }
                                 
                                 setRoteiroGenerated(true);
                                 // Per-card web image search: search specific photos for each card's content
                                 if (webSearchResult?.images?.length && !skipWebSearch) {
-                                  const outline = manualCardTexts.length > 0 ? manualCardTexts : [];
-                                  // Build per-card search queries from card titles/body
-                                  const perCardQueries: { index: number; query: string }[] = [];
-                                  const currentOutline = outline.length > 0 ? outline : ((() => { /* will be set by now */ }) as any);
-                                  // We need to wait for state — use the outline data directly
-                                  const outlineToUse = (outlineData?.outline && Array.isArray(outlineData.outline)) 
-                                    ? outlineData.outline 
-                                    : manualCardTexts;
+                                  const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
                                   
                                   const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
                                   

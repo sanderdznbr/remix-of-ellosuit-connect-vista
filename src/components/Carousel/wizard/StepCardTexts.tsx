@@ -541,6 +541,24 @@ const StepCardTexts: React.FC<Props> = ({
                   {setCardPhotoAssignments && (
                     <div>
                       <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Foto do card</label>
+                      {suggestedOptions.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {suggestedOptions.map((url, optionIndex) => {
+                            const isSelected = assignedPhoto === url;
+                            return (
+                              <button
+                                key={`${i}-${optionIndex}-${url}`}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); assignPhoto(i, url); }}
+                                className={`relative rounded-lg overflow-hidden h-20 transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : 'ring-1 ring-white/[0.06] hover:ring-white/20'}`}
+                              >
+                                <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                {isSelected && <div className="absolute inset-x-0 bottom-0 text-[9px] font-medium text-white bg-black/60 py-1">selecionada</div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                       {assignedPhoto ? (
                         <div className="flex items-center gap-2">
                           <div className="relative w-20 h-14 rounded-lg overflow-hidden ring-1 ring-blue-500/30 flex-shrink-0">
@@ -551,6 +569,10 @@ const StepCardTexts: React.FC<Props> = ({
                               disabled={refreshingCard === i}
                               className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors disabled:opacity-50" title="Buscar nova foto">
                               {refreshingCard === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setPickingPhotoFor(i); }}
+                              className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Escolher outra foto">
+                              <ImageIcon className="h-3.5 w-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); handleManualUpload(i); }}
                               className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors" title="Enviar foto">

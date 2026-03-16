@@ -117,6 +117,7 @@ import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import PostCorrectionEditor from './PostCorrectionEditor';
 import RegeneratePhotoDialog from './RegeneratePhotoDialog';
+import PromptMediaConfirmDialog from './wizard/PromptMediaConfirmDialog';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';

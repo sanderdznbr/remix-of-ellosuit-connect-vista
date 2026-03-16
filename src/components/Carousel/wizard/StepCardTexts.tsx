@@ -34,6 +34,7 @@ const StepCardTexts: React.FC<Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<string[]>([]);
+  const [refreshingCard, setRefreshingCard] = useState<number | null>(null);
   const isMobile = useIsMobile();
 
   // Swipe state

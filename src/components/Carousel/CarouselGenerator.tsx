@@ -4962,6 +4962,130 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' ? true : !!activeMarketplaceStyle) : true;
 
+
+  // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
+  const autoRoteiroTriggered = useRef(false);
+  useEffect(() => {
+    if (currentStepName !== 'Roteiro') {
+      autoRoteiroTriggered.current = false;
+      return;
+    }
+    if (autoRoteiroTriggered.current || roteiroGenerated || generatingRoteiro) return;
+    const hasAnyCardText = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
+    if (hasAnyCardText) return;
+    if (!topic.trim()) return;
+
+    autoRoteiroTriggered.current = true;
+    (async () => {
+      setGeneratingRoteiro(true);
+      const totalCards = contentMode === 'single-post' ? 1 : cardCount;
+      const localFallback = () => {
+        if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
+        return Array.from({ length: totalCards }, (_, i) => {
+          if (i === 0) return { title: topic.trim().slice(0, 60), body: 'Descubra tudo sobre este assunto' };
+          if (i === totalCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
+          return { title: `Ponto ${i}`, body: '' };
+        });
+      };
+
+      let generatedOutline: { title?: string; body?: string }[] = [];
+      try {
+        console.log('[AutoRoteiro] Auto-generating outline on step entry');
+        const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
+          body: { action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode },
+        });
+        if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+          generatedOutline = outlineData.outline;
+          setManualCardTexts(outlineData.outline);
+        } else {
+          generatedOutline = localFallback();
+          setManualCardTexts(generatedOutline);
+        }
+      } catch (err) {
+        console.error('[AutoRoteiro] Error:', err);
+        generatedOutline = localFallback();
+        setManualCardTexts(generatedOutline);
+      }
+
+      setRoteiroGenerated(true);
+
+      // Per-card web image search
+      if (webSearchResult?.images?.length && !skipWebSearch) {
+        const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
+        const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
+        const perCardQueries: { index: number; query: string }[] = [];
+        for (let ci = 0; ci < totalCards; ci++) {
+          const cardText = outlineToUse[ci];
+          const cardTitle = cardText?.title || '';
+          const searchQuery = cardTitle ? `${cleanTopicForSearch} ${cardTitle}`.trim() : `${cleanTopicForSearch} card ${ci + 1}`;
+          perCardQueries.push({ index: ci, query: searchQuery });
+        }
+
+        if (perCardQueries.length > 0) {
+          try {
+            const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
+              body: { per_card_queries: perCardQueries },
+            });
+            if (!perCardErr && perCardData?.card_images) {
+              const assignments: Record<number, string> = {};
+              const usedUrls = new Set<string>();
+              for (let ci = 0; ci < totalCards; ci++) {
+                const cardImgs = perCardData.card_images[ci] || [];
+                let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                else {
+                  const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                  const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                  if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
+                }
+              }
+              setCardPhotoAssignments(assignments);
+            } else {
+              const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+              if (webImgs.length > 0) {
+                const assignments: Record<number, string> = {};
+                const usedUrls = new Set<string>();
+                for (let ci = 0; ci < totalCards; ci++) {
+                  let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                  if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                }
+                setCardPhotoAssignments(assignments);
+              }
+            }
+          } catch (searchErr) {
+            console.error('[AutoRoteiro] Per-card search error:', searchErr);
+            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+            if (webImgs.length > 0) {
+              const assignments: Record<number, string> = {};
+              const usedUrls = new Set<string>();
+              for (let ci = 0; ci < totalCards; ci++) {
+                let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+              }
+              setCardPhotoAssignments(assignments);
+            }
+          }
+        }
+      } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
+        const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+        if (webImgs.length > 0) {
+          const assignments: Record<number, string> = {};
+          const usedUrls = new Set<string>();
+          for (let ci = 0; ci < totalCards; ci++) {
+            let bestImg = '';
+            for (const url of webImgs) { if (!usedUrls.has(url)) { bestImg = url; break; } }
+            if (!bestImg) bestImg = webImgs[ci % webImgs.length];
+            if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+          }
+          setCardPhotoAssignments(assignments);
+        }
+      }
+
+      setGeneratingRoteiro(false);
+    })();
+  }, [currentStepName]);
+
+
   // Voice guide: speak on step change (only after welcome is dismissed)
   useEffect(() => {
     // Don't speak when loading an already-generated carousel

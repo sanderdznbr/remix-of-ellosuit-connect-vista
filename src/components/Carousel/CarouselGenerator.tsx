@@ -497,14 +497,31 @@ const CarouselGenerator: React.FC = () => {
     if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
 
     const cleanTopicForSearch = webSearchResult.content.clean_topic || topic.trim();
-    const curatedTerms = Array.isArray(webSearchResult?.content?.image_search_terms)
-      ? webSearchResult.content.image_search_terms.filter((term: string) => typeof term === 'string' && term.trim())
-      : [];
     const perCardQueries = Array.from({ length: totalCards }, (_, ci) => {
       const cardText = outline[ci] || {};
       const cardTitle = (cardText.title || '').trim();
-      const curatedTerm = curatedTerms[ci] || curatedTerms[ci % Math.max(curatedTerms.length, 1)] || `${cleanTopicForSearch} photo`;
-      const query = [curatedTerm, cardTitle].filter(Boolean).join(' ').slice(0, 180);
+      const cardBody = (cardText.body || '').trim();
+      
+      // Build query from card's OWN content — extract key entities
+      // Priority: card title + body keywords, fallback to clean topic
+      let query = '';
+      if (cardTitle && cardBody) {
+        // Use title + first meaningful part of body (names, places, events)
+        query = `${cardTitle} ${cardBody.split(/[.,;!?]/).slice(0, 2).join(' ')}`.trim();
+      } else if (cardTitle) {
+        query = cardTitle;
+      } else if (cardBody) {
+        query = cardBody.slice(0, 120);
+      }
+      
+      // If card text is too short/generic, add the main topic for context
+      if (query.length < 15) {
+        query = `${cleanTopicForSearch} ${query}`.trim();
+      }
+      
+      // Append "photo" to bias toward real photographs
+      query = `${query} photo`.slice(0, 180);
+      
       return { index: ci, query };
     });
 

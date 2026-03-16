@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName } = body;
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
@@ -310,6 +310,11 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     // Brand colors — always apply when provided (user's brand identity overrides style palette)
     if (brandColors && Array.isArray(brandColors) && brandColors.length > 0) {
       textPrompt += `\n\nCORES DA MARCA (PRIORIDADE MÁXIMA): A paleta da marca do usuário é: ${brandColors.join(', ')}. Você DEVE adaptar a composição para usar estas cores predominantemente. Substitua as cores do estilo original pelas cores da marca. O fundo, elementos decorativos, acentos e tipografia devem refletir esta paleta. Mantenha o layout e a estrutura editorial do estilo, apenas TROQUE as cores.`;
+    }
+
+    // Custom colors — user-selected palette overrides everything
+    if (customColors && Array.isArray(customColors) && customColors.length > 0) {
+      textPrompt += `\n\nCORES PERSONALIZADAS (PRIORIDADE ABSOLUTA - ACIMA DE TUDO): O usuário selecionou estas cores específicas: ${customColors.join(', ')}. Você DEVE usar EXCLUSIVAMENTE estas cores como a paleta principal. IGNORE COMPLETAMENTE as cores do estilo/template original. Todos os fundos, gradientes, elementos decorativos, tipografia e acentos visuais DEVEM ser baseados nestas cores. Mantenha o layout e a estrutura, mas SUBSTITUA 100% da paleta por estas cores.`;
     }
 
     // === 2-STAGE APPROACH: Stage 1 generates WITH face refs (best effort),

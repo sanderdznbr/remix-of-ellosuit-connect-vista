@@ -52,6 +52,11 @@ interface Props {
   hasProduct?: boolean;
   setHasProduct?: (v: boolean) => void;
   onOpenProductStep?: () => void;
+  // Custom colors
+  useCustomColors: boolean;
+  setUseCustomColors: (v: boolean) => void;
+  customColors: string[];
+  setCustomColors: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const StepPersonalization: React.FC<Props> = ({
@@ -65,6 +70,7 @@ const StepPersonalization: React.FC<Props> = ({
   hasWebImages, webFacePosition, setWebFacePosition,
   onSkipAll, activeMarketplaceStyle, isExtreme,
   hasProduct, setHasProduct, onOpenProductStep,
+  useCustomColors, setUseCustomColors, customColors, setCustomColors,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -73,8 +79,7 @@ const StepPersonalization: React.FC<Props> = ({
   const [expandedSection, setExpandedSection] = useState<'face' | 'brand' | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
-  const [useCustomColors, setUseCustomColors] = useState(false);
-  const [customColors, setCustomColors] = useState(['#6366f1', '#ec4899', '#f59e0b']);
+  // useCustomColors and customColors are now from props
 
   // Auto-detect pre-filled data from prompt media and react whenever it changes
   useEffect(() => {

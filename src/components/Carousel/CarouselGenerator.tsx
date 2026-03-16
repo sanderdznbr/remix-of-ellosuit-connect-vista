@@ -332,6 +332,8 @@ const CarouselGenerator: React.FC = () => {
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
   const [useBrandColors, setUseBrandColors] = useState(true);
+  const [useCustomColors, setUseCustomColors] = useState(false);
+  const [customColors, setCustomColors] = useState<string[]>(['#6366f1', '#ec4899', '#f59e0b']);
 
   // Auto-extract colors from logo when it changes
   useEffect(() => {
@@ -1198,6 +1200,11 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 
+    // Custom colors — inject when user selects custom palette
+    if (useCustomColors && customColors.length > 0) {
+      parts.push(`PALETA DE CORES PERSONALIZADA (PRIORIDADE MÁXIMA - SUBSTITUI CORES DO ESTILO): Use EXCLUSIVAMENTE estas cores como base da composição: ${customColors.join(', ')}. Essas cores DEVEM dominar TODOS os elementos visuais: fundos, gradientes, tipografia, formas decorativas e acentos. IGNORE completamente a paleta de cores original do estilo/template. A imagem DEVE ser predominantemente nessas cores.`);
+    }
+
     // Only add aspect ratio for non-panoramic prompts — format-aware
     if (!basePrompt.includes('PANORÂMICA CONTÍNUA')) {
       const fmtDims = FORMAT_DIMENSIONS[postFormat];
@@ -1273,6 +1280,7 @@ const CarouselGenerator: React.FC = () => {
         facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
+        ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
         ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
       },
     });
@@ -2040,24 +2048,50 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           const baseImg = await loadImg(finalImageUrl);
           ctx.drawImage(baseImg, 0, 0, baseImg.width, baseImg.height, 0, 0, W, H);
 
-          // Draw logo
-          const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
-            const r = await fetch(logoUrl); const b = await r.blob();
-            return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
-          })();
-          const logoImg = await loadImg(logoB64);
-          const maxLW = 180, maxLH = 80;
-          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-          const lw = logoImg.width * ls, lh = logoImg.height * ls;
-          const pad = 50;
-          let lx = pad, ly = pad;
-          const lp = logoPosition || 'top-left';
-          if (lp.includes('center')) lx = (W - lw) / 2;
-          if (lp.includes('right')) lx = W - lw - pad;
-          if (lp.includes('middle')) ly = (H - lh) / 2;
-          if (lp.includes('bottom')) ly = H - lh - pad;
-          ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
-          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          // Draw logo with smart color adaptation
+          const smartDrawLogo = async (canvasCtx: CanvasRenderingContext2D, canvasW: number, canvasH: number, primaryLogo: string, darkLogo: string | null, pos: string) => {
+            const pad = 50;
+            // Sample background luminance at logo position
+            let sampleX = pad + 40, sampleY = pad + 20;
+            if (pos.includes('right')) sampleX = canvasW - pad - 40;
+            if (pos.includes('bottom')) sampleY = canvasH - pad - 20;
+            if (pos.includes('center')) sampleX = canvasW / 2;
+            const pixel = canvasCtx.getImageData(sampleX, sampleY, 1, 1).data;
+            const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+            const bgIsDark = lum < 0.45;
+
+            // Pick the right logo: on light bg use dark version, on dark bg use light version
+            const chosenUrl = bgIsDark ? primaryLogo : (darkLogo || primaryLogo);
+            const needsInvert = !bgIsDark && !darkLogo;
+
+            const logoB64 = chosenUrl.startsWith('data:') ? chosenUrl : await (async () => {
+              const r = await fetch(chosenUrl); const b = await r.blob();
+              return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+            })();
+            const logoImg = await loadImg(logoB64);
+            const maxLW = 180, maxLH = 80;
+            const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
+            const lw = logoImg.width * ls, lh = logoImg.height * ls;
+            let lx = pad, ly = pad;
+            if (pos.includes('center')) lx = (canvasW - lw) / 2;
+            if (pos.includes('right')) lx = canvasW - lw - pad;
+            if (pos.includes('middle')) ly = (canvasH - lh) / 2;
+            if (pos.includes('bottom')) ly = canvasH - lh - pad;
+
+            canvasCtx.save();
+            if (needsInvert) {
+              // On light bg with no dark variant, darken the logo
+              canvasCtx.filter = 'brightness(0)';
+            } else if (bgIsDark && !darkLogo) {
+              // On dark bg with no dark variant, brighten
+              canvasCtx.filter = 'brightness(0) invert(1)';
+            }
+            canvasCtx.shadowColor = 'rgba(0,0,0,0.6)'; canvasCtx.shadowBlur = 12;
+            canvasCtx.drawImage(logoImg, lx, ly, lw, lh);
+            canvasCtx.restore();
+          };
+
+          await smartDrawLogo(ctx, W, H, logoUrl, logoDarkUrl, logoPosition || 'top-left');
           ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
 
           finalImageUrl = canvas.toDataURL('image/jpeg', 0.92);
@@ -2141,7 +2175,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
   // ===== GENERATE (CLOUD-BASED) =====
   // Strip mention tags from topic: (@Title) → Title
-  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1');
+  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1').replace(/@(\w+)/g, '$1');
 
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');
@@ -5161,6 +5195,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
     const renderLogo = () => {
       if (!logoUrl) return null;
+      // Smart logo: pick light or dark version based on background luminance
+      const smartLogoUrl = isDarkBg ? (logoUrl) : (logoDarkUrl || logoUrl);
+      const needsInvert = isDarkBg && !logoDarkUrl;
       const size = 72 * s;
       const margin = 18 * s;
       const posStyle: React.CSSProperties = {
@@ -5171,10 +5208,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         zIndex: 15,
         ...(logoPosition.includes('top') ? { top: margin } : logoPosition.includes('bottom') ? { bottom: margin } : { top: '50%', marginTop: -(size / 2) }),
         ...(logoPosition.includes('left') ? { left: margin } : logoPosition.includes('right') ? { right: margin } : { left: '50%', marginLeft: -(size / 2) }),
-        // Auto-whiten colorful logos on dark backgrounds
-        ...(isDarkBg ? { filter: 'brightness(0) invert(1)' } : {}),
+        // Auto-adapt: invert only if dark bg and no dark variant uploaded; on light bg use dark variant
+        ...(needsInvert ? { filter: 'brightness(0) invert(1)' } : (!isDarkBg && !logoDarkUrl ? { filter: 'brightness(0)' } : {})),
       };
-      return <img src={logoUrl} alt="" style={posStyle} />;
+      return <img src={smartLogoUrl} alt="" style={posStyle} />;
     };
 
     if (card.type === 'cover') {
@@ -5806,6 +5843,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         activeMarketplaceStyle={activeMarketplaceStyle}
                         isExtreme={wizardMode === 'extreme'}
                         hasProduct={wantsProduct}
+                        useCustomColors={useCustomColors} setUseCustomColors={setUseCustomColors}
+                        customColors={customColors} setCustomColors={setCustomColors}
                         setHasProduct={wizardMode === 'advanced' ? setWantsProduct : undefined}
                         onOpenProductStep={() => {
                           setWantsProduct(true);
@@ -6866,7 +6905,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   </div>
                   {/* Likes */}
                   <div className="px-4 pb-4">
-                    <p className="text-white text-[11px] line-clamp-2"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{carouselData.title || originalTopic || (topic.length > 100 ? '' : topic)}</span></p>
+                    <p className="text-white text-[11px] line-clamp-2"><span className="font-semibold">{userName || 'ellocontent'}</span> <span className="text-white/60">{cleanMentionsFromTopic(carouselData.title || originalTopic || (topic.length > 100 ? '' : topic))}</span></p>
                   </div>
                   {/* Bottom bar */}
                   <div className="flex justify-center pb-2">

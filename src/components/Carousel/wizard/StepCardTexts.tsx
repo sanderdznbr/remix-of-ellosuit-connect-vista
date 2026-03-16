@@ -434,16 +434,6 @@ const StepCardTexts: React.FC<Props> = ({
         </div>
       </button>
 
-      {hasWebPhotos && setCardPhotoAssignments && (
-        <button onClick={autoAssignPhotos}
-          className="flex items-center gap-2 w-full p-3 rounded-xl transition-all text-left bg-blue-500/[0.08] border border-blue-500/20 hover:bg-blue-500/[0.12]">
-          <div className="p-2 rounded-lg bg-blue-500/15"><ImageIcon className="h-4 w-4 text-blue-400" /></div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-white/80">Atribuir fotos da web automaticamente</p>
-            <p className="text-xs text-white/30 mt-0.5">{availableWebImages.length} fotos encontradas — distribuir nos cards evitando repetições.</p>
-          </div>
-        </button>
-      )}
 
       <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
         {texts.map((card, i) => {

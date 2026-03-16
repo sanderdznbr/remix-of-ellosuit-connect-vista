@@ -1856,10 +1856,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
       let fontBase64: string | undefined;
       let fontName: string | undefined;
-      if (extremeSelectedFont?.previewUrl) {
+      const activeFontRef = extremeSelectedFont || advancedEnvatoFont;
+      if (activeFontRef?.previewUrl) {
         try {
-          setImageGenProgress('🔤 Processando referência de fonte...');
-          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          setImageGenProgress('Processando referencia de fonte...');
+          const fontResp = await fetch(activeFontRef.previewUrl);
           if (fontResp.ok) {
             const blob = await fontResp.blob();
             if (!blob.type.includes('text/html')) {
@@ -1869,7 +1870,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
               });
-              fontName = extremeSelectedFont.name;
+              fontName = activeFontRef.name;
               console.log('[SINGLE_POST] Font reference converted to base64:', fontName);
             }
           }

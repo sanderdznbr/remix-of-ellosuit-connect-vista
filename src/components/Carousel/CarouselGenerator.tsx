@@ -5096,10 +5096,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               const usedUrls = new Set<string>();
               for (let ci = 0; ci < totalCards; ci++) {
                 const cardImgs = perCardData.card_images[ci] || [];
-                let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
-                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                else {
-                  const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+                if (bestImg) {
+                  assignments[ci] = bestImg;
+                  usedUrls.add(bestImg);
+                }
+              }
                   const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
                   if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
                 }

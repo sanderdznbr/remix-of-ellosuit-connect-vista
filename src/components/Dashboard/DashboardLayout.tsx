@@ -91,7 +91,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   };
 
   const renderContent = () => {
-    if (children) return <div className="flex-1 min-w-0 min-h-0 overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>{children}</div>;
+    if (children) return (
+      <div
+        className="flex-1 min-w-0 min-h-0 overflow-y-auto"
+        style={{
+          backgroundColor: '#0a0a0f',
+          ...(isMobile ? { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' } : {}),
+        }}
+      >
+        {children}
+      </div>
+    );
     const content = (() => {
       switch (activeTab) {
         case 'projects':

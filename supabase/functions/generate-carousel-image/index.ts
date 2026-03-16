@@ -319,7 +319,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte (serif, sans-serif, display, script, bold, condensed etc.) é usada nas referências e REPLIQUE-A fielmente. NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
       } else {
         // No face refs — send all style refs
         for (const ref of validStyleRefs) {

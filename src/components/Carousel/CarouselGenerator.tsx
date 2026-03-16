@@ -3110,7 +3110,6 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     setResultEntrance(true);
     setTimeout(() => setResultEntrance(false), 800);
   }, []);
-  const [pendingPromptMedia, setPendingPromptMedia] = useState<{ promptTitle: string; media: any[] } | null>(null);
 
   // ===== HELPER: Extract exact text from Extreme form =====
   const getExtremeExactText = useCallback((): string => {

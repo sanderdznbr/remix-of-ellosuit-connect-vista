@@ -274,56 +274,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           Desenvolva carrosséis com um prompt.
         </motion.p>
 
-        {/* === Active generation jobs indicator === */}
-        <AnimatePresence>
-          {activeJobs.length > 0 && (
-            <motion.div
-              className="w-full max-w-xl mb-4 space-y-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              {activeJobs.map(job => {
-                const pct = job.progress_total > 0 ? Math.round((job.progress_current / job.progress_total) * 100) : 0;
-                const truncatedTopic = job.topic.length > 40 ? job.topic.substring(0, 40) + '...' : job.topic;
-                return (
-                  <div
-                    key={job.id}
-                    className="relative rounded-xl overflow-hidden px-4 py-3 flex items-center gap-3"
-                    style={{
-                      backgroundColor: 'rgba(139, 92, 246, 0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.2)',
-                    }}
-                  >
-                    <div className="shrink-0">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}>
-                        <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white/80 truncate">Gerando: {truncatedTopic}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                        {job.progress_message || 'Processando em segundo plano...'}
-                      </p>
-                      {job.progress_total > 0 && (
-                        <div className="w-full h-1 rounded-full mt-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: '#A855F7' }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.5 }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
-                  </div>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Active jobs indicator removed from here — shown only in Recentes */}
 
         <motion.div
           className="w-full max-w-xl"

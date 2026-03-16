@@ -5723,20 +5723,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setCardPhotoAssignments={setCardPhotoAssignments}
                         onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
                     )}
-                    {currentStepName === 'Logo' && (
-                      <StepBranding
-                        showHeader={showHeader} setShowHeader={setShowHeader}
-                        logoUrl={logoUrl} setLogoUrl={setLogoUrl}
-                        logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
-                        logoPosition={logoPosition} setLogoPosition={setLogoPosition}
-                        logoBrandColors={logoBrandColors}
-                        useBrandColors={useBrandColors}
-                        setUseBrandColors={setUseBrandColors}
-                        brandName={brandName} setBrandName={setBrandName}
-                        userName={userName} setUserName={setUserName}
-                        dateLabel={dateLabel} setDateLabel={setDateLabel}
-                        isExtreme={wizardMode === 'extreme'} />
-                    )}
+                    {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}

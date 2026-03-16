@@ -955,8 +955,8 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`Include a person/model in this image. ${genderMap[peopleMode] || ''} Use a photorealistic, professional-looking person that fits the editorial context. The person should look confident and natural.`);
     }
 
-    // Brand colors — always inject when user has brand colors from logo
-    if (logoBrandColors.length > 0) {
+    // Brand colors — only inject when toggle is ON
+    if (useBrandColors && logoBrandColors.length > 0) {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 

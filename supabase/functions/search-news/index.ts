@@ -114,8 +114,8 @@ function buildQueryVariants(query: string): string[] {
 
 async function searchBravePhotos(query: string, braveKey: string, count = 30): Promise<string[]> {
   try {
-    // Simple search: just the query + minimal exclusions. Let Brave handle relevance.
-    const cleanQuery = `${query} -meme -funny -template -wallpaper -fanart`;
+    // Keep query simple — don't add too many negative terms that break relevance
+    const cleanQuery = query;
     const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
     console.log('[BRAVE] Searching:', cleanQuery.slice(0, 80));
     const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
@@ -141,10 +141,21 @@ async function searchBravePhotos(query: string, braveKey: string, count = 30): P
       const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
       if (looksAggregator) continue;
 
+      // Check page title for signs of infographics/templates/memes
+      const pageTitle = (item.title || '').toLowerCase();
+      const pageUrl = (item.url || '').toLowerCase();
+      if (/(meme|template|infographic|wallpaper|fan art|fanart|poster|collage|mockup|vetor|vector|clipart|sticker|gif|logo)/i.test(pageTitle)) continue;
+      if (/(canva\.com|freepik|template|mockup|vector|clipart)/i.test(pageUrl)) continue;
+
       const trusted = isTrustedPhotoDomain(imgUrl);
-      let score = trusted ? 140 : 40;
+      // Also check if the SOURCE page is from a trusted domain
+      const sourceTrusted = item.url ? isTrustedPhotoDomain(item.url) : false;
+      
+      let score = (trusted || sourceTrusted) ? 140 : 40;
       score += Math.min(width || 800, 2400) / 100;
       score += Math.min(height || 600, 1800) / 100;
+      // Boost results from news sites
+      if (sourceTrusted) score += 50;
       candidates.push({ url: imgUrl, score });
     }
 

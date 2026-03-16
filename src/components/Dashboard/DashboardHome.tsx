@@ -427,7 +427,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
         layout
       >
-        {recentCarousels.length > 0 && (
+
         <div className="max-w-[1200px] mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-6">

@@ -389,7 +389,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
       if (openaiKey) {
         console.log('[AI] Falling back to OpenAI...');
         try {
-          const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${openaiKey}`,
@@ -403,7 +403,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
               ],
               temperature: 0.3,
             }),
-          });
+          }, 12000);
 
           if (openaiRes.ok) {
             const openaiData = await openaiRes.json();

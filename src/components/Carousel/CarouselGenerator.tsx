@@ -92,6 +92,14 @@ import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_
 import { useCarouselVoice } from '@/hooks/useCarouselVoice';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
+// Format dimensions lookup
+const FORMAT_DIMENSIONS = {
+  portrait: { w: 1080, h: 1350 },
+  square: { w: 1080, h: 1080 },
+  story: { w: 1080, h: 1920 },
+} as const;
+type PostFormatType = keyof typeof FORMAT_DIMENSIONS;
+
 const CARD_W = 1080;
 const CARD_H = 1350;
 const PREVIEW_W = 300;
@@ -173,6 +181,14 @@ const CarouselGenerator: React.FC = () => {
   // Keep ref in sync
   useEffect(() => { showWelcomeRef.current = showWelcome; }, [showWelcome]);
   const [loadingCarousel, setLoadingCarousel] = useState(false);
+
+  // Post format state
+  const [postFormat, setPostFormat] = useState<PostFormatType>('portrait');
+  const formatDims = FORMAT_DIMENSIONS[postFormat];
+  const cardW = formatDims.w;
+  const cardH = formatDims.h;
+  const previewW = PREVIEW_W;
+  const previewH = previewW * (cardH / cardW);
   
   // Content mode: carousel vs single-post
   const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
@@ -528,6 +544,7 @@ const CarouselGenerator: React.FC = () => {
     setGeneratingAiImage(false);
     setAiImagePrompt('');
     setGenerating(false);
+    setPostFormat('portrait');
     setTransitionToGenerate(false);
     setGeneratingAllImages(false);
     setImageGenProgress('');
@@ -754,7 +771,8 @@ const CarouselGenerator: React.FC = () => {
     extremeAnalysis: wizardMode === 'extreme' ? extremeAnalysis : undefined,
     extremeFormValues: wizardMode === 'extreme' ? extremeFormValues : undefined,
     extremeSelectedFont: wizardMode === 'extreme' ? extremeSelectedFont : undefined,
-  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont]);
+    postFormat,
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat]);
 
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -808,6 +826,7 @@ const CarouselGenerator: React.FC = () => {
               card_count: carouselData.cards.length,
               marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
               generation_config: buildGenerationConfig(),
+              post_format: postFormat,
             } as any).select('id').single();
             if (inserted && !error) {
               setCurrentCarouselId(inserted.id);
@@ -1227,6 +1246,9 @@ const CarouselGenerator: React.FC = () => {
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
     setCurrentCarouselId(item.id);
+    // Restore post format from DB column or generation_config
+    const savedFormat = item.post_format || item.generation_config?.postFormat;
+    if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);
     // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
     const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme';
     setIsLoadedFullBleed(hasMarketplaceStyle);
@@ -1263,6 +1285,7 @@ const CarouselGenerator: React.FC = () => {
       if (gc.cardCount) setCardCount(gc.cardCount);
       if (gc.imageCardCount !== undefined) setImageCardCount(gc.imageCardCount);
       if (gc.manualPostText) setManualPostText(gc.manualPostText);
+      if (gc.postFormat && gc.postFormat in FORMAT_DIMENSIONS) setPostFormat(gc.postFormat as PostFormatType);
       if (gc.wizardMode === 'extreme') {
         setWizardMode('extreme');
         if (gc.extremeVision) setExtremeVision(gc.extremeVision);
@@ -4861,9 +4884,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             transition={{ duration: 0.3 }}
           >
             <DashboardLayout
-              onStartCarousel={(newTopic?: string) => {
+              onStartCarousel={(newTopic?: string, _mentionedPrompts?: any[], newPostFormat?: string) => {
                 resetWizardState();
                 setShowWelcome(false);
+                if (newPostFormat && newPostFormat in FORMAT_DIMENSIONS) {
+                  setPostFormat(newPostFormat as PostFormatType);
+                }
                 if (newTopic) {
                   setTopic(newTopic); setOriginalTopic(newTopic);
                 }
@@ -4880,7 +4906,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                   const { data, error } = await supabase
                     .from('generated_carousels')
-                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config, generation_config')
+                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config, generation_config, post_format')
                     .eq('id', item.id)
                     .maybeSingle();
 

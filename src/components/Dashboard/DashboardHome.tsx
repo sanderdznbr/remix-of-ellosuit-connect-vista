@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, AtSign, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, Square, RectangleVertical, Smartphone } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
 import PromptMentionInput, { PromptMentionRef } from '@/components/Carousel/wizard/PromptMention';
+
+export type PostFormat = 'portrait' | 'square' | 'story';
+
+export const POST_FORMAT_OPTIONS = [
+  { value: 'portrait' as PostFormat, label: 'Post Retrato', sublabel: '4:5 (1080×1350)', icon: RectangleVertical, w: 1080, h: 1350 },
+  { value: 'square' as PostFormat, label: 'Post Quadrado', sublabel: '1:1 (1080×1080)', icon: Square, w: 1080, h: 1080 },
+  { value: 'story' as PostFormat, label: 'Stories', sublabel: '9:16 (1080×1920)', icon: Smartphone, w: 1080, h: 1920 },
+];
 
 const PLACEHOLDER_SUGGESTIONS = [
   'Crie um post sobre facetas e resinas...',
@@ -32,7 +40,7 @@ interface ActiveJob {
 }
 
 interface DashboardHomeProps {
-  onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[]) => void;
+  onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[], postFormat?: PostFormat) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   onViewAllProjects?: () => void;
 }
@@ -46,6 +54,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [mentionedPrompts, setMentionedPrompts] = useState<MentionedPrompt[]>([]);
+  const [postFormat, setPostFormat] = useState<PostFormat>('portrait');
+  const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -202,7 +212,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   }, [isUserTyping]);
 
   const handleSubmit = () => {
-    if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts);
+    if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts, postFormat);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -339,14 +349,55 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               )}
             </div>
             <div className="flex items-center justify-between px-3 pb-3">
-              <button
-                onClick={() => mentionRef.current?.triggerMention()}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
-                style={{ color: 'rgba(255,255,255,0.2)' }}
-                title="Mencionar prompt salvo"
-              >
-                <AtSign className="w-4 h-4" />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setFormatDropdownOpen(!formatDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
+                  style={{ color: 'rgba(255,255,255,0.35)' }}
+                  title="Formato do post"
+                >
+                  <Instagram className="w-4 h-4" />
+                  <span className="text-[11px]">{POST_FORMAT_OPTIONS.find(f => f.value === postFormat)?.label}</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                <AnimatePresence>
+                  {formatDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setFormatDropdownOpen(false)} />
+                      <motion.div
+                        className="absolute bottom-full left-0 mb-2 w-56 rounded-xl overflow-hidden z-40"
+                        style={{ backgroundColor: '#1a1a24', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {POST_FORMAT_OPTIONS.map((opt) => {
+                          const Icon = opt.icon;
+                          const isActive = postFormat === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => { setPostFormat(opt.value); setFormatDropdownOpen(false); }}
+                              className="w-full flex items-center gap-3 px-3.5 py-2.5 transition-colors cursor-pointer"
+                              style={{
+                                backgroundColor: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
+                                color: isActive ? '#a78bfa' : 'rgba(255,255,255,0.5)',
+                              }}
+                            >
+                              <Icon className="w-4 h-4 shrink-0" />
+                              <div className="text-left">
+                                <p className="text-xs font-medium" style={{ color: isActive ? '#c4b5fd' : 'rgba(255,255,255,0.7)' }}>{opt.label}</p>
+                                <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{opt.sublabel}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim()}

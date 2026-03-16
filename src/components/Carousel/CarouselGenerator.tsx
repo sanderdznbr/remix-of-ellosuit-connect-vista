@@ -55,6 +55,7 @@ import StepTopic from './wizard/StepTopic';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
+import StepFacePosition from './wizard/StepFacePosition';
 import StepProduct, { ProductAnalysis, ProductSize, PRODUCT_SIZE_OPTIONS } from './wizard/StepProduct';
 import GalleryPicker from './wizard/GalleryPicker';
 import StepBrandRef from './wizard/StepBrandRef';
@@ -358,12 +359,14 @@ const CarouselGenerator: React.FC = () => {
   const hasWebImages = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
   // When web search has images, skip Pessoas and Visual steps (AI selects real photos per card)
   const skipPeopleVisual = hasFacePhotos || hasWebImages;
+  // Show 'Posição' step only when user uploaded face AND web images exist
+  const showFacePositionStep = hasFacePhotos && hasWebImages;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -4947,6 +4950,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     );
   };
 
+  // Clamp wizardStep to valid range when WIZARD_STEPS changes dynamically
+  useEffect(() => {
+    if (wizardStep >= WIZARD_STEPS.length && WIZARD_STEPS.length > 0) {
+      setWizardStep(WIZARD_STEPS.length - 1);
+    }
+  }, [WIZARD_STEPS.length, wizardStep]);
+
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
@@ -5365,6 +5375,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         webFacePosition={webFacePosition}
                         setWebFacePosition={setWebFacePosition} />
                     )}
+                    {currentStepName === 'Posição' && (
+                      <StepFacePosition
+                        webFacePosition={webFacePosition}
+                        setWebFacePosition={setWebFacePosition} />
+                    )}
                     {currentStepName === 'Pessoas' && (
                       <StepPeopleMode
                         peopleMode={peopleMode} setPeopleMode={setPeopleMode}
@@ -5521,10 +5536,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 });
                                 if (!error && data) {
                                   if (data.shouldSearch) {
-                                    // Show suggestion to user - don't advance yet
-                                    setWebSearchSuggestion({ classification: data.classification, reason: data.reason || '' });
+                                    // Auto-search immediately without asking
+                                    setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
-                                    return; // Wait for user decision
+                                    await handleSearchWeb();
+                                    // Don't advance — let user see results and click Continue again
+                                    return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically
                                     setSkipWebSearch(true);

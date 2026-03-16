@@ -6134,7 +6134,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         )}
 
         {/* Generating state - fullscreen split animation */}
-        {(generating || generatingAllImages) && !transitionToGenerate && (
+        {(generating || generatingAllImages || completingGeneration) && !transitionToGenerate && (
           <GeneratingAnimation
             imageGenProgress={imageGenProgress}
             topic={topic}
@@ -6148,6 +6148,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             skipWebSearch={skipWebSearch}
             isExtreme={wizardMode === 'extreme'}
             wizardMode={wizardMode}
+            isCompleting={completingGeneration}
+            onCompleteAnimationDone={handleCompleteAnimationDone}
             onGoHome={user ? () => {
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;
@@ -6159,6 +6161,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               setGeneratingAllImages(false);
               setImageGenProgress('');
               setTransitionToGenerate(false);
+              setCompletingGeneration(false);
               setCarouselData(null);
               setCurrentCarouselId(null);
               setShowWelcome(true);

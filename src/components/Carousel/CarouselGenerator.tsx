@@ -1119,9 +1119,9 @@ const CarouselGenerator: React.FC = () => {
     fontReferenceImage?: string;
     fontReferenceName?: string;
   }): Promise<string | null> => {
-    // Use the model selected by the user (gemini = fast, nano-banana = quality)
+    // Use the model selected by the user (nano-banana = quality default, gemini = fast)
     const resolvedModel = imageSettings.model === 'auto'
-      ? 'gemini'
+      ? 'nano-banana'
       : imageSettings.model;
 
     // === HIGGSFIELD PATH ===

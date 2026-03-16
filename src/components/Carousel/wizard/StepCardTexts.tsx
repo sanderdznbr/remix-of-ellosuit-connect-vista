@@ -407,6 +407,28 @@ const StepCardTexts: React.FC<Props> = ({
                       </button>
                     )}
 
+                    {suggestedOptions.length > 0 && (
+                      <div className="px-4 pt-3">
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 mb-2">Escolha 1 de 3 fotos</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {suggestedOptions.map((url, optionIndex) => {
+                            const isSelected = assignedPhoto === url;
+                            return (
+                              <button
+                                key={`${i}-${optionIndex}-${url}`}
+                                type="button"
+                                onClick={() => assignPhoto(i, url)}
+                                className={`relative overflow-hidden rounded-xl h-20 transition-all ${isSelected ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20' : 'ring-1 ring-white/[0.08] hover:ring-white/20'}`}
+                              >
+                                <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                {isSelected && <div className="absolute inset-x-0 bottom-0 text-[9px] font-medium text-white bg-black/60 py-1">selecionada</div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Card text content */}
                     <div className="p-4 space-y-2.5">
                       <div className="flex items-center justify-between mb-0.5">

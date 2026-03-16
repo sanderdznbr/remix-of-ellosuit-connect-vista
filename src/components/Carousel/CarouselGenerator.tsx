@@ -6948,7 +6948,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="flex gap-3 pb-4 px-4 justify-center flex-wrap">
                 {carouselData.cards.map((card, i) => {
                   const thumbW = 120;
-                  const thumbH = thumbW * (CARD_H / CARD_W);
+                  const thumbH = thumbW * (cardH / cardW);
                   return (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
                     onClick={() => {

@@ -4970,9 +4970,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       autoRoteiroTriggered.current = false;
       return;
     }
-    if (autoRoteiroTriggered.current || roteiroGenerated || generatingRoteiro) return;
-    const hasAnyCardText = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
-    if (hasAnyCardText) return;
+    if (autoRoteiroTriggered.current || generatingRoteiro) return;
     if (!topic.trim()) return;
 
     autoRoteiroTriggered.current = true;

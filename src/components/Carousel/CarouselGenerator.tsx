@@ -1827,8 +1827,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
       const finalData: CarouselData = { title: topic.trim(), cards: [singleCard] };
       setCarouselData(finalData);
-      setGeneratingAllImages(false);
-      setImageGenProgress('');
+      finishGeneration();
       toast({ title: 'Post gerado com sucesso!' });
 
       // Guest: don't show blocking paywall immediately, let them see the result

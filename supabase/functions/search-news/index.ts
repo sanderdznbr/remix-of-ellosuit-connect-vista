@@ -107,8 +107,8 @@ async function searchBravePhotos(query: string, braveKey: string, count = 30): P
       const hostname = getHostname(imgUrl);
       const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
       if (looksAggregator) continue;
-      if (requiresEditorialSource && !trusted && (width < 1200 || height < 700)) continue;
-      if (!trusted && (width < 800 || height < 500)) continue;
+      if (requiresEditorialSource && !trusted && (width < 600 || height < 400)) continue;
+      if (!requiresEditorialSource && !trusted && (width < 800 || height < 500)) continue;
       if (trusted && (width < 350 || height < 250)) continue;
 
       let score = trusted ? 140 : 40;

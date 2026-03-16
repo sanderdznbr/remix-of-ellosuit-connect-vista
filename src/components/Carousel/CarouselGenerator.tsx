@@ -397,13 +397,13 @@ const CarouselGenerator: React.FC = () => {
   const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const showPesquisaStep = hasWebResearch;
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
+    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
   const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   

@@ -229,6 +229,7 @@ const CarouselGenerator: React.FC = () => {
   const [cardPhotoOptions, setCardPhotoOptions] = useState<Record<number, string[]>>({});
   const [roteiroGenerated, setRoteiroGenerated] = useState(false);
   const [generatingRoteiro, setGeneratingRoteiro] = useState(false);
+  const [roteiroCardIndex, setRoteiroCardIndex] = useState(0);
   const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
 
   // Wizard mode: simple vs advanced
@@ -555,11 +556,11 @@ const CarouselGenerator: React.FC = () => {
 
       // Prioritize URLs not yet shown in any other card's options
       const freshUrls = uniqueRankedUrls.filter((url: string) => !usedInOptionsUrls.has(url));
-      const options = freshUrls.slice(0, 3);
+      const options = freshUrls.slice(0, 6);
       // If not enough fresh ones, fill from remaining pool (allow some overlap)
-      if (options.length < 3) {
+      if (options.length < 6) {
         const remaining = uniqueRankedUrls.filter((url: string) => !options.includes(url));
-        options.push(...remaining.slice(0, 3 - options.length));
+        options.push(...remaining.slice(0, 6 - options.length));
       }
 
       if (options.length > 0) {
@@ -5370,7 +5371,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   {currentStepName !== 'Modo' && (
                   <div className="flex items-center justify-center gap-2">
                       {WIZARD_STEPS.filter(s => s !== 'Modo').map((stepName, i) => {
-                        const realIndex = i + 1; // offset by 1 since Modo is index 0
+                        const realIndex = i + 1;
                         if ((stepName === 'Cores' || stepName === 'Fontes') && isFullBleedMarketplace) return null;
                         return (
                           <button key={realIndex} onClick={() => {
@@ -5729,7 +5730,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         cardPhotoAssignments={cardPhotoAssignments}
                         cardPhotoOptions={cardPhotoOptions}
                         setCardPhotoAssignments={setCardPhotoAssignments}
-                        onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)} />
+                        onOutlineGenerated={(outline) => assignPerCardWebPhotos(outline, contentMode === 'single-post' ? 1 : cardCount)}
+                        activeCardIndex={roteiroCardIndex}
+                        setActiveCardIndex={setRoteiroCardIndex} />
                     )}
                     {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Velocidade' && (
@@ -5744,7 +5747,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div className="fixed bottom-0 left-0 right-0 z-30 lg:relative lg:bottom-auto lg:left-auto lg:right-auto flex items-center justify-between pt-4 px-5 pb-[calc(env(safe-area-inset-bottom,12px)+12px)] lg:px-0 lg:pb-0" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                     <button onClick={() => {
                       if (currentStepName === 'Modo') { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
+                      else if (currentStepName === 'Roteiro' && roteiroCardIndex > 0) {
+                        // Go back to previous card within Roteiro
+                        setRoteiroCardIndex(roteiroCardIndex - 1);
+                      }
                       else {
+                        if (currentStepName === 'Roteiro') setRoteiroCardIndex(0);
                         let prev = wizardStep - 1;
                         const prevName = WIZARD_STEPS[prev];
                         // Skip Fotos when toggle is off or no images (advanced only)
@@ -5765,7 +5773,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Personalização' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Roteiro' || currentStepName === 'Imóvel') && (
+                        {(currentStepName === 'Personalização' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Imóvel') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular
@@ -5884,20 +5892,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               ].filter(Boolean).join('\n');
                               setTopic(enrichedTopic);
                             }
-                            // Roteiro step: auto-generate on first click, advance on second
+                            // Roteiro step: card-by-card advancement with mandatory photo
                             if (currentStepName === 'Roteiro') {
+                              const totalCards = contentMode === 'single-post' ? 1 : cardCount;
                               const hasAnyCardText = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
                               if (!hasAnyCardText && !roteiroGenerated) {
                                 // First click: generate the outline
                                 setGeneratingRoteiro(true);
-                                let generated = false;
-                                const totalCards = contentMode === 'single-post' ? 1 : cardCount;
                                 
-                                // Local fallback generator
                                 const localFallback = () => {
-                                  if (contentMode === 'single-post') {
-                                    return [{ title: topic.trim().slice(0, 60), body: '' }];
-                                  }
+                                  if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
                                   return Array.from({ length: totalCards }, (_, i) => {
                                     if (i === 0) return { title: topic.trim().slice(0, 60), body: 'Descubra tudo sobre este assunto' };
                                     if (i === totalCards - 1) return { title: 'Gostou?', body: 'Siga para mais conteúdo!' };
@@ -5907,59 +5911,46 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                                 let generatedOutline: { title?: string; body?: string }[] = [];
                                 try {
-                                  console.log('[Wizard] Auto-generating outline, topic:', topic.trim(), 'cards:', totalCards);
-                                  const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
-                                    body: {
-                                      action: 'generate-outline',
-                                      topic: topic.trim(),
-                                      cardCount: totalCards,
-                                      contentMode,
-                                    },
+                                  const outlineData = await resilientInvoke('generate-carousel', {
+                                    action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode,
+                                    ...(webSearchResult?.content?.summary ? { webContext: webSearchResult.content.summary } : {}),
                                   });
-                                  console.log('[Wizard] Outline response:', { outlineData, outlineErr });
-                                  if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+                                  if (outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
                                     generatedOutline = outlineData.outline;
                                     setManualCardTexts(outlineData.outline);
                                   } else {
-                                    // Edge function returned empty — use local fallback
-                                    console.warn('Outline API returned empty, using local fallback');
                                     generatedOutline = localFallback();
                                     setManualCardTexts(generatedOutline);
                                   }
                                 } catch (err) {
-                                  console.error('Auto roteiro error, using local fallback:', err);
+                                  console.error('Auto roteiro error:', err);
                                   generatedOutline = localFallback();
                                   setManualCardTexts(generatedOutline);
                                 }
                                 
                                 setRoteiroGenerated(true);
+                                setRoteiroCardIndex(0);
                                 if (webSearchResult?.images?.length && !skipWebSearch) {
-                                  const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
-                                  await assignPerCardWebPhotos(outlineToUse, totalCards);
-                                } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
-                                  // No per-card search possible, fallback to round-robin
-                                  const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-                                  if (webImgs.length > 0) {
-                                    const assignments: Record<number, string> = {};
-                                    const usedUrls = new Set<string>();
-                                    for (let ci = 0; ci < totalCards; ci++) {
-                                      let bestImg = '';
-                                      for (const url of webImgs) {
-                                        if (!usedUrls.has(url)) { bestImg = url; break; }
-                                      }
-                                      if (!bestImg) bestImg = webImgs[ci % webImgs.length];
-                                      if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                                    }
-                                    setCardPhotoAssignments(assignments);
-                                  }
+                                  await assignPerCardWebPhotos(generatedOutline.length > 0 ? generatedOutline : manualCardTexts, totalCards);
                                 }
-                                generated = true;
                                 setGeneratingRoteiro(false);
-
-                                if (generated) {
-                                  return; // Stay on step to review generated outline
-                                }
+                                return; // Stay on step to review
                               }
+
+                              // Card-by-card: advance to next card if current has a photo
+                              const hasPhotoForCurrent = !!cardPhotoAssignments[roteiroCardIndex];
+                              if (!hasPhotoForCurrent && Object.keys(cardPhotoOptions).length > 0) {
+                                // Photo is mandatory — show warning
+                                sonnerToast.error('Selecione uma foto para este card antes de continuar');
+                                return;
+                              }
+                              if (roteiroCardIndex < totalCards - 1) {
+                                // Advance to next card
+                                setRoteiroCardIndex(roteiroCardIndex + 1);
+                                return;
+                              }
+                              // All cards reviewed — advance wizard
+                              setRoteiroCardIndex(0);
                             }
                             let next = wizardStep + 1;
                             const nextName = WIZARD_STEPS[next];
@@ -5973,7 +5964,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           }} disabled={!canProceed || searchingWeb || generatingRoteiro || !!webSearchSuggestion}
                           className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-30"
                           style={{ background: modeTheme.gradient }}>
-                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
+                          {searchingWeb ? <><Loader2 className="h-4 w-4 animate-spin" /> Pesquisando...</> : generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : currentStepName === 'Roteiro' && roteiroCardIndex < (contentMode === 'single-post' ? 0 : cardCount - 1) ? <>Card {roteiroCardIndex + 2} <ChevronRight className="h-4 w-4" /></> : <>Continuar <ChevronRight className="h-4 w-4" /></>}
                         </button>
                       </div>
                     ) : (

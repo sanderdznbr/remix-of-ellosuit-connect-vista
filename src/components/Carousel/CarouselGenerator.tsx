@@ -5322,7 +5322,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
         {!carouselData && !generating && !generatingAllImages && !loadingCarousel && (
-          <div className="flex-1 flex flex-col w-full relative overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>
             {/* Subtle ambient glow accents */}
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />

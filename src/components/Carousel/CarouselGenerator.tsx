@@ -85,7 +85,7 @@ import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
 import StepFacePosition from './wizard/StepFacePosition';
-import StepProduct, { ProductAnalysis, ProductSize, PRODUCT_SIZE_OPTIONS } from './wizard/StepProduct';
+import StepProduct, { ProductAnalysis, ProductSize, PRODUCT_SIZE_OPTIONS, detectContext } from './wizard/StepProduct';
 import GalleryPicker from './wizard/GalleryPicker';
 import StepBrandRef from './wizard/StepBrandRef';
 import StepColors from './wizard/StepColors';

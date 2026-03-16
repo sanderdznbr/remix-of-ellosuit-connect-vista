@@ -25,7 +25,9 @@ function isCleanImageCandidate(url: string, metadata = ''): boolean {
     'infographic', 'quote', 'meme', 'funny', 'joke', 'viral', 'shitpost', 'reaction',
     'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer',
     'captura-de-tela', 'screenshot', 'screen-shot', 'tutorial', 'interface', 'ui', 'editor',
-    'maxresdefault', 'winners-list', 'imgflip', '.svg'
+    'maxresdefault', 'winners-list', 'imgflip', '.svg',
+    'bingo', 'checklist', 'ballot', 'voting-card', 'scorecard', 'bracket',
+    'poster', 'cover-art', 'album-cover', 'movie-poster', 'trophy-icon'
   ];
   for (const pat of badPatterns) {
     if (combined.includes(pat)) return false;

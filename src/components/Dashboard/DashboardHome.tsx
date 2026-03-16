@@ -549,7 +549,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                     <img
                       src={cover}
                       alt={item.title || item.topic}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className={`absolute inset-0 w-full h-full ${isStory ? 'object-contain' : 'object-cover'}`}
                       loading="lazy"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';

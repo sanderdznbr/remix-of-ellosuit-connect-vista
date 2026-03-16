@@ -2066,8 +2066,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
 
         const panoramaPrompt = [
           `IDIOMA OBRIGATÓRIO: Todo texto renderizado DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. Revise cada palavra. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência.`,
-          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
-          `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
+          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma ${cardW}x${cardH}.`,
+          `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * cardW}x${cardH} pixels. Isso é OBRIGATÓRIO.`,
           `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes, fotos, pessoas e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
           `REGRA CRÍTICA DE TEXTO: Todo texto/tipografia DEVE estar 100% contido dentro da sua seção correspondente. NENHUMA palavra, frase ou bloco de texto pode começar em uma seção e terminar em outra. Cada fatia vertical (seção) deve ter seus textos completamente legíveis de forma independente. Apenas elementos visuais (fotos, design, cenários, gradientes, pessoas, objetos) podem fluir entre seções — TEXTO NUNCA.`,
           `TEMA: "${cleanTopic}"`,

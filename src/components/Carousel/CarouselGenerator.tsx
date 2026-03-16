@@ -8145,6 +8145,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   referenceImageUrl={editorRefImage}
                   onUploadReferenceImage={handleEditorRefImageUpload}
                   onRemoveReferenceImage={() => setEditorRefImage(null)}
+                  isContentStyle={!isFullBleedMarketplace && wizardMode !== 'extreme' && !isRealEstateStyle}
                   isRealEstate={isRealEstateStyle && propertyList.length > 0}
                   propertyData={isRealEstateStyle && propertyList.length > 0 ? (() => {
                     const propIdx = realEstateMode === 'multiple' ? (validIndex % propertyList.length) : 0;

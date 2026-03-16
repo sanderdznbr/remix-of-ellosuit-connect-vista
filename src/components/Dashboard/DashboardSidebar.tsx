@@ -391,15 +391,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <div className="relative px-2 pb-3">
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
-            <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">
-              {username.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-sm text-white/80 font-medium truncate">{username}</p>
-            </div>
-            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+            <p className="text-sm text-white/50 font-medium truncate">{email}</p>
+            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Profile dropdown */}

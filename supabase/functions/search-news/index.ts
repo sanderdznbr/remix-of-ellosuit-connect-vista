@@ -232,7 +232,7 @@ Return ONLY a JSON object mapping card index to the chosen option index. Example
   ],
   "cta_title": "Call to action title (max 60 chars)",
   "cta_body": "Call to action message (max 120 chars)",
-  "image_search_terms": ["term1", "term2", "term3"],
+  "image_search_terms": ["term1", "term2", "term3", "term4", "term5"],
   "clean_topic": "The extracted main subject/topic name only (e.g. 'CS2', 'Tesla', 'Bitcoin')",
   "summary": "A brief 2-sentence summary of the key findings"
 }
@@ -240,12 +240,21 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
 
 CRITICAL for clean_topic: Preserve the REAL searchable subject exactly when qualifiers are essential. Keep year, edition, award category, event name, franchise name, person name, movie title, or location whenever they are important to identify the correct subject. Example: if user says "Crie um post sobre Oscar 2026", the clean_topic should be "Oscar 2026". If user says "Melhor ator no Oscar 2026", the clean_topic should be "Oscar 2026 melhor ator". Remove only filler verbs/instructions.
 
-CRITICAL for image_search_terms: Each term MUST be a precise literal search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Preserve the exact event/topic wording when it matters, especially years like 2026 and named events like Oscar, BBB, Copa do Mundo, Grammy, etc. Build searches close to what a user would type in Brave Images. Examples:
-- For "Oscar 2026": "Oscar 2026 red carpet photo", "Oscar 2026 ceremony photo", "Oscar 2026 winner photo"
-- For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"
-- For "CS2": "Counter-Strike 2 tournament player photo", "CS2 championship stage photo"
-- For "Tesla": "Tesla Model 3 driving road photo"
-NEVER use vague generic terms like "technology", "business", "news", or "update" by themselves. Each term must describe the exact event/person/object/scene the user asked for.`;
+CRITICAL for image_search_terms: You MUST generate 5 search terms. Each term MUST search for REAL PEOPLE by their FULL NAME related to the topic. The goal is to find PHOTOGRAPHS OF PEOPLE (actors, athletes, politicians, CEOs, etc.) — NOT logos, statues, trophies, posters, or graphics with text.
+
+RULES:
+1. ALWAYS include the FULL NAME of real people involved (actors, directors, winners, players, politicians, CEOs, etc.)
+2. ALWAYS append "photo" or "photograph" to every search term
+3. NEVER search for objects, trophies, logos, or abstract concepts — search for PEOPLE
+4. Preserve event names and years when relevant
+5. At least 3 of the 5 terms MUST contain a person's full name
+
+Examples:
+- For "Oscar 2026": "Michael B Jordan Oscar 2026 photo", "Brady Corbet director photo", "Oscar 2026 best actress winner photo", "Oscar 2026 red carpet celebrities photo", "Demi Moore Oscar ceremony photo"
+- For "Copa do Mundo 2026": "Mbappé Copa do Mundo 2026 photo", "Vinicius Jr seleção brasileira photo", "Lionel Messi World Cup 2026 photo"
+- For "Tesla": "Elon Musk Tesla photo", "Tesla factory workers photo", "Tesla Model 3 driving photo"
+- For "BBB 25": "participantes BBB 25 photo", "Tadeu Schmidt BBB photo", "vencedor BBB 25 photo"
+NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 

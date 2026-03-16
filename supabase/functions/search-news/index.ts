@@ -85,26 +85,37 @@ Deno.serve(async (req) => {
             body: q.body || '',
           }));
 
-          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
+          // Also pass key_entities from the initial web search if available
+          const keyEntities = per_card_queries[0]?.key_entities || [];
+          const entityContext = keyEntities.length > 0 
+            ? `\nKNOWN ENTITIES FROM RESEARCH: ${keyEntities.join(', ')}` 
+            : '';
+
+          const aiPrompt = `You are an image search expert. Given a post topic, card contents, and known entities from research, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
 
 TOPIC: "${mainTopic}"
+${entityContext}
 
 CARDS:
 ${cardsForAI.map((c: any) => `Card ${c.index}: Title="${c.title}" Body="${c.body}"`).join('\n')}
 
 CRITICAL RULES:
 1. Each query MUST find a REAL, EDITORIAL PHOTOGRAPH — like from a news agency (Reuters, AP, AFP, Getty editorial)
-2. If the card mentions a PERSON by name, the PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Cillian Murphy Oscar ceremony red carpet photo")
-3. If no person name is mentioned but the card is about a specific subject, search for that subject specifically
-4. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
-5. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
-6. Add "real photo" or "editorial photo" to each query
-7. Each card should have 2 alternative queries (primary: very specific, fallback: slightly broader but still specific)
-8. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
-9. For future events (2026+), search for the most recent past edition instead
-10. For cover/capa cards: search for the most iconic/dramatic photo of the main subject
+2. **MOST IMPORTANT**: If the card mentions or implies a PERSON (by name, role, or category like "Best Actor"), you MUST:
+   a. Identify the ACTUAL PERSON using the KNOWN ENTITIES list above
+   b. The PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Michael B Jordan Oscar 2025 red carpet photo")
+   c. NEVER search for generic terms like "best actor oscar" — ALWAYS use the person's real name
+3. If card says "Melhor Ator" or "Best Actor" and the entities list includes "Michael B. Jordan", search "Michael B Jordan Oscar photo"
+4. If card says "Melhor Filme" and entities include "Sinners", search "Sinners movie 2025 premiere photo"
+5. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
+6. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
+7. Add "photo" to each query
+8. Each card should have 3 alternative queries (primary: person name + context, secondary: person name alone, fallback: subject + context)
+9. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
+10. For cover/capa cards: search for the most iconic/dramatic photo of the MAIN person of the topic
+11. Cross-reference card titles/bodies with the KNOWN ENTITIES list to resolve who each card is about
 
-Return a JSON object: { "queries": { "0": ["query1", "query2"], "1": ["query1", "query2"], ... } }
+Return a JSON object: { "queries": { "0": ["query1", "query2", "query3"], "1": ["query1", "query2", "query3"], ... } }
 Only return the JSON, nothing else.`;
 
           const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

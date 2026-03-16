@@ -5028,8 +5028,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   useEffect(() => {
     if (wizardStep >= WIZARD_STEPS.length && WIZARD_STEPS.length > 0) {
       setWizardStep(WIZARD_STEPS.length - 1);
+      return;
     }
-  }, [WIZARD_STEPS.length, wizardStep]);
+
+    if (!searchingWeb && !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0) {
+      const currentName = WIZARD_STEPS[wizardStep];
+      if (currentName === 'Pessoas' || currentName === 'Visual') {
+        const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
+        if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
+      }
+    }
+  }, [WIZARD_STEPS, wizardStep, searchingWeb, skipWebSearch, webSearchResult?.images?.length]);
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';

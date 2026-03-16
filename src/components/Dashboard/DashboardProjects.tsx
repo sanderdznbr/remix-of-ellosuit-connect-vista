@@ -266,7 +266,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
       </div>
 
       {/* Content */}
-      <div className="px-4 md:px-8 pb-8">
+      <div className="px-4 md:px-8 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))' }}>
         <motion.div
           className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-4' : 'flex flex-col gap-2 mt-4'}
           initial={{ opacity: 0 }}

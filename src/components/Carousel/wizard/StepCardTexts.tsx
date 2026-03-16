@@ -34,7 +34,11 @@ const StepCardTexts: React.FC<Props> = ({
   const [filling, setFilling] = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
   const [pickingPhotoFor, setPickingPhotoFor] = useState<number | null>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlideInternal] = useState(activeCardIndex ?? 0);
+  const setCurrentSlide = (i: number) => {
+    setCurrentSlideInternal(i);
+    setActiveCardIndex?.(i);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<string[]>([]);

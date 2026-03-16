@@ -203,7 +203,7 @@ Do not include markdown or extra text.`
       // Helper: filter out small/bad images
       const MIN_WIDTH = 600;
       const MIN_HEIGHT = 400;
-      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i, /infographic/i, /chart/i, /diagram/i];
+      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i, /infographic/i, /chart/i, /diagram/i, /ytimg/i, /youtube/i, /youtu\.be/i, /maxresdefault/i, /hqdefault/i, /mqdefault/i, /sddefault/i, /video.thumbnail/i, /opengraph/i, /og-image/i];
       const isGoodImage = (img: any) => {
         if (!img.url) return false;
         if (BAD_URL_PATTERNS.some(p => p.test(img.url))) return false;

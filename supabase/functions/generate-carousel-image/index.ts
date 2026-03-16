@@ -380,16 +380,16 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       messageContent.push({ type: 'text', text: textPrompt });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
-      } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
-        messageContent.push({ type: 'text', text: `📱 SCREENSHOT DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone profissional. NÃO altere o conteúdo da tela:` });
-      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-        messageContent.push({ type: 'text', text: `🎨 REFERÊNCIAS VISUAIS DO USUÁRIO ABAIXO — Use estas imagens como ELEMENTOS OBRIGATÓRIOS na composição final (logos, screenshots, produtos, etc.):` });
+      } else if (validGeneralRefs.length > 0 && isAppMockup) {
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT REAL DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone premium (iPhone 15 Pro). Reproduza PIXEL A PIXEL o conteúdo da tela. NÃO invente uma interface diferente. NÃO altere o conteúdo:` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `🎨 CONTEÚDO VISUAL OBRIGATÓRIO ABAIXO — Esta imagem deve aparecer FIELMENTE no resultado (em mockup premium se for screenshot, em destaque se for produto):` });
       }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. INCORPORE-A como imagem de fundo/principal do post.` });
-      } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-        messageContent.push({ type: 'text', text: `As imagens acima são CONTEÚDO OBRIGATÓRIO do usuário. Cada uma deve aparecer fielmente no resultado final. Para screenshots de app: coloque em mockup de celular. Para logos: inclua no design. Para produtos: destaque na composição.` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `A imagem acima é CONTEÚDO REAL do usuário — DEVE aparecer fielmente. Para screenshots: mockup de celular/laptop. Para produtos: destaque na composição. NÃO gere versão genérica.` });
       }
 
       if (validStyleRefs.length > 0) {

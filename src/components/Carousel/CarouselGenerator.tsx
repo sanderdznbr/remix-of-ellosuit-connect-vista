@@ -1421,6 +1421,7 @@ const CarouselGenerator: React.FC = () => {
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
         negative_prompt: imageSettings.negativePrompt || null,
+        post_format: postFormat,
       } as any).select('id').single();
 
       if (jobError || !jobData?.id) {

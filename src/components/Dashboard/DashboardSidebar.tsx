@@ -26,6 +26,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [monthlyCredits, setMonthlyCredits] = useState<number>(0);
   const [planName, setPlanName] = useState<string>('free');
   const [ferramentasOpen, setFerramentasOpen] = useState(false);
+  const [comunidadeOpen, setComunidadeOpen] = useState(false);
+  const [parceirosOpen, setParceirosOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevBalanceRef = useRef<number | null>(null);
 
@@ -235,60 +237,79 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
       )}
 
-      {/* Comunidade section */}
+      {/* Comunidade section — collapsible */}
       <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Comunidade</p>
         <button
-          onClick={() => { navigate('/comunidade'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            location.pathname === '/comunidade'
-              ? 'bg-white/[0.08] text-white font-medium'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
+          onClick={() => setComunidadeOpen(!comunidadeOpen)}
+          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
         >
-          <Users className="w-4 h-4" />
-          Explorar
+          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Comunidade</span>
+          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${comunidadeOpen ? 'rotate-90' : ''}`} />
         </button>
-        <button
-          onClick={() => { navigate('/perfil'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
-              ? 'bg-white/[0.08] text-white font-medium'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-        >
-          <User className="w-4 h-4" />
-          Meu Perfil
-        </button>
+        {comunidadeOpen && (
+          <div className="mt-1 space-y-0.5">
+            <button
+              onClick={() => { navigate('/comunidade'); closeSearch(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                location.pathname === '/comunidade'
+                  ? 'bg-white/[0.08] text-white font-medium'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Explorar
+            </button>
+            <button
+              onClick={() => { navigate('/perfil'); closeSearch(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
+                  ? 'bg-white/[0.08] text-white font-medium'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              Meu Perfil
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Parceiros section */}
+      {/* Parceiros section — collapsible */}
       <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Parceiros</p>
         <button
-          onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            location.pathname === '/area/parceiros'
-              ? 'bg-white/[0.08] text-white font-medium'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
+          onClick={() => setParceirosOpen(!parceirosOpen)}
+          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
         >
-          <Handshake className="w-4 h-4" />
-          Afiliados
+          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Parceiros</span>
+          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${parceirosOpen ? 'rotate-90' : ''}`} />
         </button>
-        {/* Admin Panel - only for admin@gmail.com */}
-        {email === 'admin@gmail.com' && (
-          <button
-            onClick={() => { navigate('/admin'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              location.pathname === '/admin'
-                ? 'bg-purple-500/20 text-purple-400 font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            Painel Admin
-          </button>
+        {parceirosOpen && (
+          <div className="mt-1 space-y-0.5">
+            <button
+              onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                location.pathname === '/area/parceiros'
+                  ? 'bg-white/[0.08] text-white font-medium'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Handshake className="w-4 h-4" />
+              Afiliados
+            </button>
+            {email === 'admin@gmail.com' && (
+              <button
+                onClick={() => { navigate('/admin'); closeSearch(); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                  location.pathname === '/admin'
+                    ? 'bg-purple-500/20 text-purple-400 font-medium'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                Painel Admin
+              </button>
+            )}
+          </div>
         )}
       </div>
 

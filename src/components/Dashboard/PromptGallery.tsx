@@ -159,10 +159,14 @@ const PromptGallery: React.FC = () => {
         const file = files[i];
         const ext = file.name.split('.').pop();
         const path = `${companyId}/prompt-media/${promptId}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from('brand-assets').upload(path, file);
-        if (error) throw error;
+        console.log('[PromptMedia] Uploading file:', file.name, 'to path:', path, 'size:', file.size);
+        const { error: uploadError } = await supabase.storage.from('brand-assets').upload(path, file);
+        if (uploadError) {
+          console.error('[PromptMedia] Upload error:', uploadError);
+          throw uploadError;
+        }
         const { data: { publicUrl } } = supabase.storage.from('brand-assets').getPublicUrl(path);
-        await supabase.from('saved_prompt_media').insert({
+        const { error: insertError } = await supabase.from('saved_prompt_media').insert({
           prompt_id: promptId,
           company_id: companyId,
           file_url: publicUrl,
@@ -170,6 +174,10 @@ const PromptGallery: React.FC = () => {
           media_type: selectedMediaType,
           sort_order: existingCount + i,
         } as any);
+        if (insertError) {
+          console.error('[PromptMedia] Insert error:', insertError);
+          throw insertError;
+        }
       }
       toast.success(`${files.length} arquivo(s) adicionado(s)`);
       fetchPrompts();

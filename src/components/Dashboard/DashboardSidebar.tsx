@@ -106,7 +106,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   };
 
   return (
-    <aside className="w-[240px] md:w-[240px] w-full h-screen flex flex-col border-r border-white/[0.06] shrink-0" style={{ backgroundColor: '#111116' }}>
+    <aside className="w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
       {/* Scrollable nav area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
       {/* Logo */}

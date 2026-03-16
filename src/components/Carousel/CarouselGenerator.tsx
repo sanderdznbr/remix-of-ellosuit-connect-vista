@@ -1610,9 +1610,6 @@ A composição final deve ser como um overlay/HUD elegante sobre fundo escuro.
 PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENAS fundo preto com overlay gráfico.`);
       }
 
-      const finalPrompt = buildImagePrompt(promptParts.join('\n'));
-      const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
-
       // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
       let effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
 
@@ -1630,6 +1627,9 @@ MANTENHA a foto real reconhecível e fiel.`);
           console.log('[SINGLE_POST_WEB_PHOTO] Assigned web image:', webImgs[0]?.substring(0, 80));
         }
       }
+
+      const finalPrompt = buildImagePrompt(promptParts.join('\n'));
+      const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
       // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
       let fontBase64: string | undefined;

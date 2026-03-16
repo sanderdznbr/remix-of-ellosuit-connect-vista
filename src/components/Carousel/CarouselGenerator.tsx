@@ -3467,8 +3467,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
-      setGeneratingAllImages(false);
-      setImageGenProgress('');
+      finishGeneration();
       toast({ title: 'Carrossel gerado!', description: `${totalCards} cards a partir da capa` });
 
       // Auto-save

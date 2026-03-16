@@ -98,6 +98,7 @@ import StepPeopleMode from './wizard/StepPeopleMode';
 import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
+import StepVisualIdea from './wizard/StepVisualIdea';
 import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
@@ -242,6 +243,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
+  const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -428,7 +430,7 @@ const CarouselGenerator: React.FC = () => {
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -1632,7 +1634,9 @@ const CarouselGenerator: React.FC = () => {
           ? `REAL_ESTATE_DATA:${JSON.stringify({ properties: propertyList.map(p => ({ ...p, photos: p.photos.map(ph => ph.url) })), mode: realEstateMode })}`
           : wizardMode === 'extreme' && extremeAnalysis
             ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual. Replique o estilo, peso e proporções da fonte mostrada na imagem de referência.' } : null })}`
-            : productContext,
+            : wizardMode === 'advanced' && advancedVisualIdea.trim()
+              ? `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}`
+              : productContext,
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
         negative_prompt: imageSettings.negativePrompt || null,
@@ -2248,7 +2252,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(hasManualCardTexts ? { manualCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
-          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : productContext ? { productContext } : {}),
+          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : wizardMode === 'advanced' && advancedVisualIdea.trim() ? { productContext: `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}` } : productContext ? { productContext } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
         },
       });
@@ -5835,6 +5839,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setActiveCardIndex={setRoteiroCardIndex} />
                     )}
                     {/* Logo step removed — merged into Personalização */}
+                    {currentStepName === 'Ideia Visual' && (
+                      <StepVisualIdea
+                        visualIdea={advancedVisualIdea}
+                        setVisualIdea={setAdvancedVisualIdea}
+                      />
+                    )}
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
@@ -5873,7 +5883,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Personalização' || currentStepName === 'Produto' || currentStepName === 'Imóvel') && (
+                        {(currentStepName === 'Personalização' || currentStepName === 'Produto' || currentStepName === 'Imóvel' || currentStepName === 'Ideia Visual') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

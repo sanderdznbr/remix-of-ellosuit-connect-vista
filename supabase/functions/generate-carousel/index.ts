@@ -606,6 +606,11 @@ Responda APENAS em JSON válido:
                     return `\n\nCONTEXTO EXTREME: ${body.productContext}`;
                   }
                 }
+                // Advanced mode: user visual idea
+                if (typeof body.productContext === 'string' && body.productContext.startsWith('ADVANCED_VISUAL_IDEA:')) {
+                  const ideaText = body.productContext.replace('ADVANCED_VISUAL_IDEA:', '').trim();
+                  return `\n\nIDEIA VISUAL DO USUÁRIO (PRIORIDADE ALTA):\n"${ideaText}"\n\nIMPORTANTE: Respeite a ideia visual descrita acima. Os imagePrompts devem refletir fielmente a visão criativa do usuário. Use as cores, atmosfera, estilo e composição mencionados como guia principal para a geração das imagens.`;
+                }
                 return `\n\nPRODUTO IDENTIFICADO:\n- Tipo: ${body.productContext.productType}\n- Descrição: ${body.productContext.productDescription}\n\nIMPORTANTE: O carrossel deve destacar este produto. Use o produto como referência criativa — NÃO precisa replicá-lo exatamente. Varie ângulos, cenários, composições e contextos de uso em cada card. Para roupas, mostre em modelos diferentes, ângulos variados, combinações criativas. Para objetos, alterne entre mockups, flat-lays, alguém segurando, contexto de uso real. Para alimentos, varie entre close-ups, composições com ingredientes, mesa posta. Cada imagePrompt deve criar uma cena ÚNICA e DIFERENTE com o produto.`;
               })()
             }`;

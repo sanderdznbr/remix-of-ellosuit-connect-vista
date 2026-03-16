@@ -268,6 +268,7 @@ const CarouselGenerator: React.FC = () => {
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
+  const [useBrandColors, setUseBrandColors] = useState(true);
 
   // Auto-extract colors from logo when it changes
   useEffect(() => {

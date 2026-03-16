@@ -3410,12 +3410,17 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           && loop2ProductRefs[0].startsWith('http') && productImages.length === 0;
         let loop2Prompt = buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
         if (hasWebPhotoL2) {
-          loop2Prompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+          loop2Prompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL (PRESERVAÇÃO TOTAL):
 A imagem de referência enviada é uma FOTO REAL do tema. 
-INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do card.
-USE a foto real como elemento visual principal/fundo.
-Sobreponha textos editoriais e tipografia POR CIMA da foto real.
-MANTENHA a foto real reconhecível.`;
+REGRAS DE PRESERVAÇÃO ABSOLUTA:
+1. USE a foto real como FUNDO/BASE principal do card.
+2. NÃO RECRIE, NÃO REDESENHE e NÃO REINTERPRETE os rostos ou pessoas. Mantenha-os EXATAMENTE como são na foto original.
+3. A foto deve permanecer FOTOGRÁFICA e INALTERADA — NÃO substitua por ilustração.
+4. Sobreponha APENAS textos editoriais e tipografia POR CIMA da foto real.
+5. Trate a foto como um print/screenshot que DEVE ser preservado como base.`;
+          // Remove NO HUMANS if present — web photos may contain people
+          loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS whatsoever\./g, '');
+          loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS\./g, '');
         }
 
         imageFactories.push({

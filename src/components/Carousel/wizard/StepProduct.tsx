@@ -87,7 +87,7 @@ const CONTEXT_HINTS: Record<string, { icon: React.ElementType; title: string; su
   },
 };
 
-function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[]): DetectedContext {
+export function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[]): DetectedContext {
   // Combine topic + all mentioned prompt titles and content for analysis
   const parts = [topic || ''];
   if (mentionedPrompts?.length) {

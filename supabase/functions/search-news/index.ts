@@ -8,6 +8,9 @@ const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
   'dreamstime.com', 'alamy.com', 'pinterest.com',
+  'youtube.com', 'youtu.be', 'ytimg.com', 'i.ytimg.com', 'yt3.ggpht.com',
+  'i9.ytimg.com', 'i1.ytimg.com', 'img.youtube.com',
+  'dailymotion.com', 'vimeo.com', 'tiktok.com',
 ];
 
 // Filter out images that likely contain text overlays

@@ -242,13 +242,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
 
-      {/* Background gradient blobs — purple/red/orange for the 3 modes */}
+      {/* Background gradient */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.15] blur-[120px]" style={{ background: '#8B5CF6', top: '10%', left: '20%' }} />
-        <div className="absolute w-[500px] h-[500px] rounded-full opacity-[0.12] blur-[120px]" style={{ background: '#EF4444', top: '40%', right: '10%' }} />
-        <div className="absolute w-[700px] h-[700px] rounded-full opacity-[0.14] blur-[130px]" style={{ background: '#F97316', bottom: '-10%', left: '30%' }} />
-        <div className="absolute w-[300px] h-[300px] rounded-full opacity-[0.08] blur-[100px]" style={{ background: '#A855F7', top: '60%', left: '-5%' }} />
-        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.10] blur-[110px]" style={{ background: '#DC2626', bottom: '20%', right: '25%' }} />
+        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.18] blur-[130px]" style={{ background: '#8B5CF6', top: '15%', left: '50%', transform: 'translateX(-50%)' }} />
+        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.10] blur-[100px]" style={{ background: '#7C3AED', bottom: '10%', left: '20%' }} />
       </div>
 
       {/* Center content — title + input */}

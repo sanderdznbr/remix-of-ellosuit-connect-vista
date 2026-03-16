@@ -463,19 +463,6 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
         }
       }
     }
-              const aiData = await aiRes.json();
-              const aiImage = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-              if (aiImage) {
-                images.push(aiImage);
-                console.log('[IMAGES] AI generated image successfully');
-              }
-            }
-          }
-        } catch (e) {
-          console.error('[IMAGES] AI generation error:', e);
-        }
-      }
-    }
 
     // Deduplicate
     images = [...new Set(images)];

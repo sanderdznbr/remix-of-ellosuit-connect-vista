@@ -45,9 +45,10 @@ interface DashboardHomeProps {
   onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[], postFormat?: PostFormat) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   onViewAllProjects?: () => void;
+  onResumeJob?: (jobId: string) => void;
 }
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects, onResumeJob }) => {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState('');
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -218,7 +219,13 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     return () => { cancelled = true; if (timeoutRef.current) clearTimeout(timeoutRef.current); };
   }, [isUserTyping]);
 
+  const isGenerating = activeJobs.length > 0;
+
   const handleSubmit = () => {
+    if (isGenerating) {
+      toast.error('Aguarde o post atual terminar antes de criar outro.');
+      return;
+    }
     if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts, postFormat);
   };
 
@@ -244,8 +251,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Background gradient */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.18] blur-[130px]" style={{ background: '#8B5CF6', top: '15%', left: '50%', transform: 'translateX(-50%)' }} />
-        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.10] blur-[100px]" style={{ background: '#7C3AED', bottom: '10%', left: '20%' }} />
+        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.12] blur-[130px]" style={{ background: '#3f3f46', top: '15%', left: '50%', transform: 'translateX(-50%)' }} />
+        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.08] blur-[100px]" style={{ background: '#27272a', bottom: '10%', left: '20%' }} />
       </div>
 
       {/* Center content — title + input */}
@@ -274,56 +281,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           Desenvolva carrosséis com um prompt.
         </motion.p>
 
-        {/* === Active generation jobs indicator === */}
-        <AnimatePresence>
-          {activeJobs.length > 0 && (
-            <motion.div
-              className="w-full max-w-xl mb-4 space-y-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              {activeJobs.map(job => {
-                const pct = job.progress_total > 0 ? Math.round((job.progress_current / job.progress_total) * 100) : 0;
-                const truncatedTopic = job.topic.length > 40 ? job.topic.substring(0, 40) + '...' : job.topic;
-                return (
-                  <div
-                    key={job.id}
-                    className="relative rounded-xl overflow-hidden px-4 py-3 flex items-center gap-3"
-                    style={{
-                      backgroundColor: 'rgba(139, 92, 246, 0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.2)',
-                    }}
-                  >
-                    <div className="shrink-0">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}>
-                        <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white/80 truncate">Gerando: {truncatedTopic}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                        {job.progress_message || 'Processando em segundo plano...'}
-                      </p>
-                      {job.progress_total > 0 && (
-                        <div className="w-full h-1 rounded-full mt-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                          <motion.div
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: '#A855F7' }}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.5 }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
-                  </div>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Active jobs indicator removed from here — shown only in Recentes */}
 
         <motion.div
           className="w-full max-w-xl"
@@ -411,11 +369,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               </div>
               <button
                 onClick={handleSubmit}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isGenerating}
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
-                style={{ backgroundColor: inputValue.trim() ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
+                style={{ backgroundColor: inputValue.trim() && !isGenerating ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
+                title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
               >
-                <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() ? '#0a0a0f' : '#ffffff' }} />
+                <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() && !isGenerating ? '#0a0a0f' : '#ffffff' }} />
               </button>
             </div>
           </div>
@@ -487,13 +446,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               return (
                 <div
                   key={`job-${job.id}`}
-                  className="rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center"
+                  className="rounded-xl overflow-hidden relative shrink-0 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-all duration-200"
                   style={{
                     width: '160px',
                     height: '200px',
                     background: '#0A0A0F',
                     border: `1px solid ${modeColor}33`,
                   }}
+                  onClick={() => onResumeJob?.(job.id)}
                 >
                   {/* Glow background */}
                   <div

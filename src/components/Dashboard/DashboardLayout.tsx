@@ -24,10 +24,11 @@ import ellocontentLogo from '@/assets/ellocontent2.svg';
 interface DashboardLayoutProps {
   onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string) => void;
   onLoadCarousel?: (carouselItem: any) => void;
+  onResumeJob?: (jobId: string) => void;
   children?: React.ReactNode;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel, children }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLoadCarousel, onResumeJob, children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,7 +123,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             setActiveTab('logo-remover');
           }} />;
         default:
-          return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
+          return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} onResumeJob={onResumeJob} />;
       }
     })();
     const isHome = activeTab === 'home';

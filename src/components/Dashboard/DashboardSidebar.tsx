@@ -26,6 +26,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [monthlyCredits, setMonthlyCredits] = useState<number>(0);
   const [planName, setPlanName] = useState<string>('free');
   const [ferramentasOpen, setFerramentasOpen] = useState(false);
+  const [comunidadeOpen, setComunidadeOpen] = useState(false);
+  const [parceirosOpen, setParceirosOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevBalanceRef = useRef<number | null>(null);
 

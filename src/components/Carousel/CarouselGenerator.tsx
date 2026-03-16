@@ -5099,7 +5099,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
             if (perCardData?.card_images) {
             });
-            if (!perCardErr && perCardData?.card_images) {
+            if (perCardData?.card_images) {
               const assignments: Record<number, string> = {};
               const usedUrls = new Set<string>();
               for (let ci = 0; ci < totalCards; ci++) {

@@ -979,9 +979,11 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 
-    // Only add 4:5 aspect ratio for non-panoramic prompts
+    // Only add aspect ratio for non-panoramic prompts — format-aware
     if (!basePrompt.includes('PANORÂMICA CONTÍNUA')) {
-      parts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
+      const fmtDims = FORMAT_DIMENSIONS[postFormat];
+      const aspectLabel = postFormat === 'square' ? '1:1 square' : postFormat === 'story' ? '9:16 vertical story' : '4:5 portrait';
+      parts.push(`${aspectLabel} aspect ratio, ${fmtDims.w}x${fmtDims.h}px, ultra high resolution`);
     } else {
       parts.push('ultra high resolution');
     }
@@ -1040,7 +1042,7 @@ const CarouselGenerator: React.FC = () => {
     const invokePromise = supabase.functions.invoke('generate-carousel-image', {
       body: {
         prompt: opts.prompt,
-        imageSize: '3:4',
+        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '3:4',
         topic: opts.prompt,
         faceReferenceUrls: opts.faceReferenceUrls,
         styleReferenceUrls: opts.styleReferenceUrls,
@@ -1419,6 +1421,7 @@ const CarouselGenerator: React.FC = () => {
         web_search_content: webSearchResult?.content ? JSON.stringify(webSearchResult.content) : null,
         web_search_citations: webSearchResult?.citations as any,
         negative_prompt: imageSettings.negativePrompt || null,
+        post_format: postFormat,
       } as any).select('id').single();
 
       if (jobError || !jobData?.id) {
@@ -1519,7 +1522,8 @@ const CarouselGenerator: React.FC = () => {
         promptParts.push(`TEMA: "${topic.trim()}"`);
         promptParts.push('REGRA DE TEXTO: Crie um título CURTO e IMPACTANTE (máximo 8 palavras) baseado no tema. Pode adicionar um subtítulo curto (máximo 12 palavras). NÃO escreva parágrafos, descrições longas, explicações ou blocos de texto extensos. O post deve ser majoritariamente VISUAL com texto mínimo e editorial.');
       }
-      promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA ÚNICA composição editorial completa — como uma CAPA de revista ou de carrossel. NÃO divida a imagem em múltiplos quadros, slides ou seções. Apenas UMA imagem unificada e impactante.');
+      const fmtLabel = postFormat === 'square' ? '1:1 quadrado (1080x1080)' : postFormat === 'story' ? '9:16 vertical stories (1080x1920)' : '4:5 retrato (1080x1350)';
+      promptParts.push(`POST ÚNICO para Instagram (${formatDims.w}x${formatDims.h}, formato ${fmtLabel}). UMA ÚNICA composição editorial completa — como uma CAPA de revista ou de carrossel. NÃO divida a imagem em múltiplos quadros, slides ou seções. Apenas UMA imagem unificada e impactante.`);
       promptParts.push('LIMITE DE TEXTO (CRÍTICO): A imagem deve ter NO MÁXIMO 3 blocos de texto curtos: 1) Um TÍTULO principal (máximo 8 palavras, impactante e grande), 2) Um SUBTÍTULO opcional (máximo 15 palavras, menor), 3) Um CTA opcional curto (ex: "Saiba mais", máximo 4 palavras). NÃO adicione parágrafos longos, descrições extensas, bullet points, listas ou blocos de texto explicativo. A imagem deve ser VISUAL e LIMPA, com o texto servindo como destaque editorial, NÃO como artigo. Menos é mais.');
       promptParts.push('COMPOSIÇÃO OBRIGATÓRIA: Full bleed total, a imagem DEVE preencher 100% do espaço de ponta a ponta. ZERO bordas, ZERO barras, ZERO margens brancas ou coloridas no topo, base, esquerda ou direita. NENHUM espaço vazio nas bordas.');
 
@@ -2063,8 +2067,8 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
 
         const panoramaPrompt = [
           `IDIOMA OBRIGATÓRIO: Todo texto renderizado DEVE estar em PORTUGUÊS BRASILEIRO CORRETO, sem erros ortográficos. Revise cada palavra. NÃO copie nenhum texto, crédito, watermark, assinatura ou nome de autor/marca das imagens de referência.`,
-          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma na proporção 4:5 (1080x1350).`,
-          `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * 1080}x1350 pixels (${panelCount * 4}:5). Isso é OBRIGATÓRIO.`,
+          `COMPOSIÇÃO PANORÂMICA CONTÍNUA: Gere UMA ÚNICA imagem panorâmica ultra-larga que será dividida em ${panelCount} fatias verticais iguais, cada uma ${cardW}x${cardH}.`,
+          `PROPORÇÃO TOTAL DA IMAGEM: ${panelCount * cardW}x${cardH} pixels. Isso é OBRIGATÓRIO.`,
           `CONTINUIDADE VISUAL OBRIGATÓRIA: Elementos visuais, cenários, gradientes, fotos, pessoas e texturas devem fluir de forma contínua de uma ponta a outra — sem cortes, bordas internas ou separadores visíveis entre as seções. A arte deve parecer uma composição única e ininterrupta quando visualizada lado a lado.`,
           `REGRA CRÍTICA DE TEXTO: Todo texto/tipografia DEVE estar 100% contido dentro da sua seção correspondente. NENHUMA palavra, frase ou bloco de texto pode começar em uma seção e terminar em outra. Cada fatia vertical (seção) deve ter seus textos completamente legíveis de forma independente. Apenas elementos visuais (fotos, design, cenários, gradientes, pessoas, objetos) podem fluir entre seções — TEXTO NUNCA.`,
           `TEMA: "${cleanTopic}"`,
@@ -2904,9 +2908,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
     }
     // Always inject quality baseline for Extreme
     parts.push(`\n🎯 QUALIDADE OBRIGATÓRIA: O resultado deve parecer criado por uma agência de design premium. Tipografia elegante com hierarquia clara (título bold grande, subtítulo leve), composição limpa e respirada, paleta coesa de 3-4 cores, elementos gráficos sutis. Pense em posts de marcas como Apple, Nike, Nubank — design minimalista e impactante.`);
-    parts.push(`\n🚫 REGRA CRÍTICA DE FORMATO — CARD ÚNICO: Cada imagem gerada é UM ÚNICO CARD de um carrossel do Instagram. Cada card deve ser UMA ÚNICA COMPOSIÇÃO VISUAL que ocupa 100% do espaço (1080x1080 ou proporção equivalente). NUNCA crie grids, colagens, mosaicos ou múltiplas imagens dentro de um card. NUNCA divida o card em 2x2, 2x1 ou qualquer grade. O card deve ter UMA ÚNICA CENA/COMPOSIÇÃO por imagem. Se o carrossel tem 3 cards, são 3 imagens SEPARADAS, cada uma com sua própria composição única e completa.`);
+    parts.push(`\n🚫 REGRA CRÍTICA DE FORMATO — CARD ÚNICO: Cada imagem gerada é UM ÚNICO CARD de um carrossel do Instagram. Cada card deve ser UMA ÚNICA COMPOSIÇÃO VISUAL que ocupa 100% do espaço (${cardW}x${cardH}). NUNCA crie grids, colagens, mosaicos ou múltiplas imagens dentro de um card. NUNCA divida o card em 2x2, 2x1 ou qualquer grade. O card deve ter UMA ÚNICA CENA/COMPOSIÇÃO por imagem. Se o carrossel tem 3 cards, são 3 imagens SEPARADAS, cada uma com sua própria composição única e completa.`);
     return parts.join('\n');
-  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues]);
+  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues, cardW, cardH]);
 
 
   // ===== FILL COVER MODAL TEXTS WITH AI =====
@@ -4291,7 +4295,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const el = cardRefs.current[i];
           if (!el) continue;
           const canvas = await html2canvas(el, {
-            width: CARD_W, height: CARD_H, scale: 2, useCORS: true, allowTaint: true,
+            width: cardW, height: cardH, scale: 2, useCORS: true, allowTaint: true,
             backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 30000,
           });
           const blob = await new Promise<Blob>((resolve, reject) => {
@@ -4317,7 +4321,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const el = cardRefs.current[i];
           if (!el) continue;
           const canvas = await html2canvas(el, {
-            width: CARD_W, height: CARD_H, scale: 1, useCORS: true, allowTaint: false,
+            width: cardW, height: cardH, scale: 1, useCORS: true, allowTaint: false,
             backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
             onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
           });
@@ -4354,9 +4358,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // ==================== BETA TEST 2 LAYOUT ====================
   // Completely different UX/UI: clean, light, split-horizontal, bold centered typography
   const renderBetaTest2Card = (card: CarouselCard, index: number, isExport = false) => {
-    const w = isExport ? CARD_W : PREVIEW_W;
-    const h = isExport ? CARD_H : PREVIEW_H;
-    const s = isExport ? 1 : PREVIEW_W / CARD_W;
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
+    const s = isExport ? 1 : previewW / cardW;
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
     const bg = bgColor;
@@ -4506,9 +4510,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   // ===== BETA TEST 3 — Magazine editorial with sidebar accent strip =====
   const renderBetaTest3Card = (card: CarouselCard, index: number, isExport = false) => {
-    const w = isExport ? CARD_W : PREVIEW_W;
-    const h = isExport ? CARD_H : PREVIEW_H;
-    const s = isExport ? 1 : PREVIEW_W / CARD_W;
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
+    const s = isExport ? 1 : previewW / cardW;
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
     const bg = bgColor;
@@ -4632,8 +4636,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   // Full-bleed render for marketplace styles — AI generates complete image with text baked in
   const renderMarketplaceFullBleedCard = (card: CarouselCard, index: number, isExport = false) => {
-    const w = isExport ? CARD_W : PREVIEW_W;
-    const h = isExport ? CARD_H : PREVIEW_H;
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: '#0A0A0A' }}>
@@ -4646,10 +4650,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {generatingAllImages ? (
               <>
                 <div style={{ width: 24, height: 24, border: '2px solid rgba(155,107,255,0.3)', borderTopColor: 'rgba(155,107,255,0.8)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${12 * (isExport ? 1 : PREVIEW_W / CARD_W)}px` }}>Gerando imagem...</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${12 * (isExport ? 1 : previewW / cardW)}px` }}>Gerando imagem...</span>
               </>
             ) : (
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: `${12 * (isExport ? 1 : PREVIEW_W / CARD_W)}px`, textAlign: 'center', padding: '0 16px' }}>Imagem não gerada. Clique para regenerar.</span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: `${12 * (isExport ? 1 : previewW / cardW)}px`, textAlign: 'center', padding: '0 16px' }}>Imagem não gerada. Clique para regenerar.</span>
             )}
           </div>
         )}
@@ -4673,9 +4677,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     if (isBetaTest2) return renderBetaTest2Card(card, index, isExport);
     if (isBetaTest3) return renderBetaTest3Card(card, index, isExport);
 
-    const w = isExport ? CARD_W : PREVIEW_W;
-    const h = isExport ? CARD_H : PREVIEW_H;
-    const s = isExport ? 1 : PREVIEW_W / CARD_W;
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
+    const s = isExport ? 1 : previewW / cardW;
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
     const layout = card.layout || 'dark';
@@ -5171,7 +5175,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               photoContext || '',
                               fontContext,
                               'INSTRUÇÃO: Crie a imagem EXATAMENTE como o usuário descreveu. Use as fotos de referência como ELEMENTOS OBRIGATÓRIOS na composição (ex: se enviou print de app, coloque na tela de um mockup de celular; se enviou logo, inclua no design).',
-                              'FORMATO OBRIGATÓRIO: Cada card do carrossel deve ser UMA ÚNICA imagem/composição visual completa (1080x1080). NUNCA crie grids, colagens, mosaicos ou sub-divisões dentro de um card. Cada card = 1 cena única.',
+                              `FORMATO OBRIGATÓRIO: Cada card do carrossel deve ser UMA ÚNICA imagem/composição visual completa (${cardW}x${cardH}). NUNCA crie grids, colagens, mosaicos ou sub-divisões dentro de um card. Cada card = 1 cena única.`,
                             ].filter(Boolean).join('\n');
                             setTopic(enrichedTopic);
                           }
@@ -6014,7 +6018,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               className="relative flex-shrink-0"
               layout
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{ width: 375, maxWidth: '95vw' }}
+              style={{ width: postFormat === 'story' ? 280 : 375, maxWidth: '95vw' }}
             >
               {!isGuest && carouselData.cards.length > 0 && (
                 <>
@@ -6091,17 +6095,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </>
               )}
               {/* Phone frame */}
-              <div className="rounded-[3rem] overflow-hidden" style={{
-                border: '3px solid rgba(255,255,255,0.1)',
+              <div className={postFormat === 'story' ? 'rounded-[2rem] overflow-hidden' : 'rounded-[3rem] overflow-hidden'} style={{
+                border: postFormat === 'story' ? '2px solid rgba(255,255,255,0.08)' : '3px solid rgba(255,255,255,0.1)',
                 background: '#000',
                 boxShadow: `0 0 80px rgba(${themeRgb},0.18), 0 0 2px rgba(255,255,255,0.1) inset`,
               }}>
-                {/* Notch */}
+                {/* Notch - hide for stories */}
+                {postFormat !== 'story' && (
                 <div className="flex justify-center pt-3 pb-1" style={{ backgroundColor: '#000' }}>
                   <div className="w-28 h-6 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
                 </div>
+                )}
 
-                {/* Instagram header */}
+                {/* Instagram header - hide for stories */}
+                {postFormat !== 'story' && (
                 <div className="flex items-center gap-2.5 px-4 py-2.5" style={{ backgroundColor: 'rgba(0,0,0,0.9)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <img src={ellocontentProfile} alt="ellocontent" className="w-8 h-8 rounded-full object-cover" />
                   <div className="flex-1">
@@ -6114,9 +6121,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div className="w-1 h-1 rounded-full bg-white/40" />
                   </div>
                 </div>
+                )}
 
             {/* Carousel viewport */}
-                <div className="relative overflow-hidden select-none" style={{ aspectRatio: `${CARD_W}/${CARD_H}`, backgroundColor: '#000', cursor: 'grab' }}
+                <div className="relative overflow-hidden select-none" style={{ aspectRatio: `${cardW}/${cardH}`, backgroundColor: '#000', cursor: 'grab' }}
                   onMouseDown={(e) => {
                     const el = e.currentTarget as any;
                     el._dragStartX = e.clientX;
@@ -6199,14 +6207,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Previous card */}
                     <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden' }}>
                       {activeCardIndex > 0 ? (
-                        <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                        <div style={{ width: previewW, height: previewH, transform: `scale(${(postFormat === 'story' ? 276 : 369) / previewW})`, transformOrigin: 'top left' }}>
                           {renderCardPreview(carouselData.cards[activeCardIndex - 1], activeCardIndex - 1, false)}
                         </div>
                       ) : null}
                     </div>
                     {/* Current card */}
                     <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
-                      <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                      <div style={{ width: previewW, height: previewH, transform: `scale(${(postFormat === 'story' ? 276 : 369) / previewW})`, transformOrigin: 'top left' }}>
                         {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                       </div>
                       {/* Regenerating overlay on mockup */}
@@ -6235,7 +6243,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Next card */}
                     <div style={{ width: '33.333%', height: '100%', flexShrink: 0, overflow: 'hidden' }}>
                       {activeCardIndex < carouselData.cards.length - 1 ? (
-                        <div style={{ width: PREVIEW_W, height: PREVIEW_H, transform: `scale(${369 / PREVIEW_W})`, transformOrigin: 'top left' }}>
+                        <div style={{ width: previewW, height: previewH, transform: `scale(${(postFormat === 'story' ? 276 : 369) / previewW})`, transformOrigin: 'top left' }}>
                           {renderCardPreview(carouselData.cards[activeCardIndex + 1], activeCardIndex + 1, false)}
                         </div>
                       ) : null}
@@ -6258,7 +6266,32 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   )}
                 </div>
 
-                {/* Instagram dots + actions */}
+                {/* Instagram dots + actions — hide full IG UI for stories, show minimal dots */}
+                {postFormat === 'story' ? (
+                  <div style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
+                    {/* Stories progress bars */}
+                    <div className="flex items-center gap-1 px-3 py-2.5">
+                      {carouselData.cards.map((_, i) => (
+                        <button key={i} onClick={() => { if (!isCardLocked(i)) setActiveCardIndex(i); }}
+                          className="flex-1 h-[3px] rounded-full transition-all"
+                          style={{
+                            backgroundColor: i <= activeCardIndex ? themeHex : 'rgba(255,255,255,0.2)',
+                          }} />
+                      ))}
+                    </div>
+                    {/* Stories header overlay */}
+                    <div className="flex items-center gap-2.5 px-4 py-2">
+                      <img src={ellocontentProfile} alt="ellocontent" className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                      <p className="text-white text-[11px] font-semibold flex-1">{userName || brandName || 'ellocontent'}</p>
+                      <span className="text-white/40 text-xs">·</span>
+                      <span className="text-white/40 text-[10px]">agora</span>
+                    </div>
+                    {/* Bottom bar */}
+                    <div className="flex justify-center pb-2 pt-1">
+                      <div className="w-32 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+                    </div>
+                  </div>
+                ) : (
                 <div style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}>
                   {/* Dots */}
                   <div className="flex items-center justify-center gap-1 py-2.5">
@@ -6291,6 +6324,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div className="w-32 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
                   </div>
                 </div>
+                )}
               </div>
             </motion.div>
 
@@ -6915,7 +6949,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="flex gap-3 pb-4 px-4 justify-center flex-wrap">
                 {carouselData.cards.map((card, i) => {
                   const thumbW = 120;
-                  const thumbH = thumbW * (CARD_H / CARD_W);
+                  const thumbH = thumbW * (cardH / cardW);
                   return (
                   <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
                     onClick={() => {
@@ -6929,7 +6963,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
                     }}>
                       <div style={{ width: thumbW, height: thumbH, overflow: 'hidden', borderRadius: 10 }}>
-                        <div style={{ transform: `scale(${thumbW / PREVIEW_W})`, transformOrigin: 'top left', width: PREVIEW_W, height: PREVIEW_H }}>
+                        <div style={{ transform: `scale(${thumbW / previewW})`, transformOrigin: 'top left', width: previewW, height: previewH }}>
                           {renderCardPreview(card, i, false)}
                         </div>
                       </div>
@@ -7670,10 +7704,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 >
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
-                      transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth < 768 ? window.innerWidth * 0.6 : window.innerWidth * 0.45) : 300) / PREVIEW_W, 1.4)})`,
+                      transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth < 768 ? window.innerWidth * 0.6 : window.innerWidth * 0.45) : 300) / previewW, 1.4)})`,
                       transformOrigin: 'top center',
-                      width: PREVIEW_W,
-                      height: PREVIEW_H,
+                      width: previewW,
+                      height: previewH,
                       margin: '0 auto',
                     }}>
                       {renderCardPreview(ec, validIndex)}

@@ -5126,10 +5126,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         if (perCardQueries.length > 0) {
           try {
-            const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-              body: { per_card_queries: perCardQueries },
-            });
-            if (!perCardErr && perCardData?.card_images) {
+            const perCardData = await invokeSearchNews({ per_card_queries: perCardQueries });
+            if (perCardData?.card_images) {
               const assignments: Record<number, string> = {};
               const usedUrls = new Set<string>();
               for (let ci = 0; ci < totalCards; ci++) {
@@ -5140,13 +5138,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   usedUrls.add(bestImg);
                 }
               }
-              setCardPhotoAssignments(assignments);
-            } else {
-              setCardPhotoAssignments({});
+              if (Object.keys(assignments).length > 0) setCardPhotoAssignments(assignments);
+            } else if (webSearchResult?.images?.length) {
+              const fallbackAssignments = Object.fromEntries(
+                webSearchResult.images
+                  .filter((u: string) => u && u.startsWith('http'))
+                  .slice(0, totalCards)
+                  .map((url: string, idx: number) => [idx, url])
+              );
+              if (Object.keys(fallbackAssignments).length > 0) setCardPhotoAssignments(fallbackAssignments);
             }
           } catch (searchErr) {
             console.error('[AutoRoteiro] Per-card search error:', searchErr);
-            setCardPhotoAssignments({});
           }
         }
       } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {

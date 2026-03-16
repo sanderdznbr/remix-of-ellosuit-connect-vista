@@ -5826,17 +5826,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 if (webSearchResult?.images?.length && !skipWebSearch) {
                                   const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
                                   
-                                  const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
+                                   const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
                                   const perCardQueries: { index: number; query: string }[] = [];
                                   
                                   for (let ci = 0; ci < totalCards; ci++) {
                                     const cardText = outlineToUse[ci];
                                     const cardTitle = cardText?.title || '';
                                     const cardBody = cardText?.body || '';
-                                    // Extract key subjects from the card text for targeted search
-                                    const searchQuery = cardTitle 
-                                      ? `${cleanTopicForSearch} ${cardTitle}`.trim()
-                                      : `${cleanTopicForSearch} card ${ci + 1}`;
+                                    // Build specific search: prioritize card's own subject
+                                    let searchQuery: string;
+                                    if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
+                                      searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
+                                    } else if (cardBody) {
+                                      searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
+                                    } else {
+                                      searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
+                                    }
                                     perCardQueries.push({ index: ci, query: searchQuery });
                                   }
 

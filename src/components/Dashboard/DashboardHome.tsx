@@ -523,7 +523,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               const format = item.post_format || 'portrait';
               const isStory = format === 'story';
               const cardCount = item.card_count || 1;
-              const typeLabel = isStory ? 'Stories' : cardCount > 1 ? 'Carrossel' : 'Estático';
+              const typeLabel = isStory ? 'Stories' : format === 'square' ? 'Quadrado' : 'Retrato';
               return (
                 <div
                   key={item.id}

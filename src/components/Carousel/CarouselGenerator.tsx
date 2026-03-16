@@ -256,6 +256,7 @@ const CarouselGenerator: React.FC = () => {
   const [faceCardCount, setFaceCardCount] = useState<number | null>(null); // null = all image cards get faces
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
+  const [pendingPromptMedia, setPendingPromptMedia] = useState<{ promptTitle: string; media: any[] } | null>(null);
 
   // Step 2: References
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);

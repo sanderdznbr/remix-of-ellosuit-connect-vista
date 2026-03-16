@@ -5849,15 +5849,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 if (webSearchResult?.images?.length && !skipWebSearch) {
                                   const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
                                   await assignPerCardWebPhotos(outlineToUse, totalCards);
-                                        const usedUrls = new Set<string>();
-                                        for (let ci = 0; ci < totalCards; ci++) {
-                                          let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                                          if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                                        }
-                                        setCardPhotoAssignments(assignments);
-                                      }
-                                    }
-                                  }
                                 } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
                                   // No per-card search possible, fallback to round-robin
                                   const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));

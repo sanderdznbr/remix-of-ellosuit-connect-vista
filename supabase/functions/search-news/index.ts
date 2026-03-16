@@ -56,9 +56,10 @@ Deno.serve(async (req) => {
       const searchCard = async (cardIndex: number, query: string) => {
         const images: string[] = [];
         try {
-          // Append strict anti-text / anti-social-post filter keywords to the query
-          const cleanQuery = `${query} real person portrait event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=15&safesearch=strict&type=photo`;
+          // Use only the first ~60 chars of query + simple negative filters to avoid over-constraining
+          const shortQuery = query.split('.')[0].slice(0, 80).trim();
+          const cleanQuery = `${shortQuery} photo -meme -infographic -template -screenshot`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });
@@ -69,13 +70,14 @@ Deno.serve(async (req) => {
               if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 600 && h >= 400) {
+                // Accept images without dimensions (many Brave results omit them)
+                if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
                 }
               }
             }
           }
-          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} clean images`);
+          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 40)}": ${images.length} clean images`);
         } catch (e) {
           console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
         }

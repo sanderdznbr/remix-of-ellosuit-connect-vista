@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import ellocontentIcon from '@/assets/ellocontent_icon.png';
@@ -23,6 +23,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [displayBalance, setDisplayBalance] = useState<number | null>(null);
+  const [monthlyCredits, setMonthlyCredits] = useState<number>(0);
+  const [planName, setPlanName] = useState<string>('free');
+  const [ferramentasOpen, setFerramentasOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevBalanceRef = useRef<number | null>(null);
 
@@ -32,13 +35,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     try {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
-      const [{ data: carousels }, { data: credits }] = await Promise.all([
+      const [{ data: carousels }, { data: credits }, { data: elloSub }] = await Promise.all([
         supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
         supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
+        supabase.from('ellocontent_subscriptions').select('plan_name, monthly_credits, status').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ]);
       setRecentProjects(carousels || []);
       const newBalance = credits?.balance ?? 0;
       setCreditBalance(newBalance);
+      if (elloSub && (elloSub.status === 'active' || elloSub.status === 'trialing')) {
+        setMonthlyCredits(elloSub.monthly_credits || 0);
+        setPlanName(elloSub.plan_name || 'free');
+      }
     } catch {}
   }, [user]);
 
@@ -190,65 +198,40 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </button>
       </div>
 
-      {/* Ferramentas section */}
+      {/* Ferramentas section — collapsible */}
       {email === 'admin@gmail.com' && (
         <div className="px-2 mt-5">
-          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ferramentas</p>
           <button
-            onClick={() => { onTabChange('logo-remover'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'logo-remover'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
+            onClick={() => setFerramentasOpen(!ferramentasOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
           >
-            <Eraser className="w-4 h-4" />
-            Remover Logo
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Ferramentas</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${ferramentasOpen ? 'rotate-90' : ''}`} />
           </button>
-          <button
-            onClick={() => { onTabChange('logo-history'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'logo-history'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            Histórico Remoções
-          </button>
-          <button
-            onClick={() => { onTabChange('behance-import'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'behance-import'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            Importar do Behance
-          </button>
-          <button
-            onClick={() => { onTabChange('instagram-import'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'instagram-import'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Instagram className="w-4 h-4" />
-            Importar do Instagram
-          </button>
-          <button
-            onClick={() => { onTabChange('face-generator'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'face-generator'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            Gerador de Rosto
-          </button>
+          {ferramentasOpen && (
+            <div className="mt-1 space-y-0.5">
+              {[
+                { tab: 'logo-remover', icon: Eraser, label: 'Remover Logo' },
+                { tab: 'logo-history', icon: Clock, label: 'Histórico Remoções' },
+                { tab: 'behance-import', icon: Globe, label: 'Importar do Behance' },
+                { tab: 'instagram-import', icon: Instagram, label: 'Importar do Instagram' },
+                { tab: 'face-generator', icon: Camera, label: 'Gerador de Rosto' },
+              ].map(({ tab, icon: Icon, label }) => (
+                <button
+                  key={tab}
+                  onClick={() => { onTabChange(tab); closeSearch(); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                    activeTab === tab
+                      ? 'bg-white/[0.08] text-white font-medium'
+                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -315,16 +298,73 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
       {/* Bottom: Profile — fixed at bottom */}
       <div className="shrink-0 border-t border-white/[0.06]">
-        {/* Credits */}
-        <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors rounded-lg" onClick={() => navigate('/precos')}>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-white/40">Créditos</span>
-            <span className="text-white/70 font-medium">{displayBalance !== null ? `${Math.floor(displayBalance)} restantes` : '...'}</span>
-          </div>
-          <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-            <div className="h-full rounded-full bg-purple-500/60 transition-all duration-700" style={{ width: `${Math.min(100, ((displayBalance ?? 0) / 100) * 100)}%` }} />
-          </div>
-        </div>
+        {/* Credits with gradient bar and plan marker */}
+        {(() => {
+          const balance = displayBalance ?? 0;
+          const planNameLower = planName.toLowerCase();
+          const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
+          const planColor = planNameLower.includes('growth') ? '#10B981' : planNameLower.includes('pro') ? '#8B5CF6' : planNameLower.includes('starter') ? '#3B82F6' : '#6B7280';
+          // Total bar represents max(balance, monthlyCredits) + some headroom
+          const maxBar = Math.max(balance, monthlyCredits, 50);
+          const balancePct = Math.min(100, (balance / maxBar) * 100);
+          const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
+          const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
+
+          return (
+            <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
+              {/* Plan badge + balance */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                    style={{ backgroundColor: `${planColor}20`, color: planColor }}
+                  >
+                    {planLabel}
+                  </span>
+                </div>
+                <span className="text-white/70 text-xs font-medium">
+                  {Math.floor(balance)} restantes
+                </span>
+              </div>
+
+              {/* Gradient progress bar with monthly marker */}
+              <div className="relative w-full h-2 rounded-full overflow-visible" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${balancePct}%`,
+                    background: `linear-gradient(90deg, ${planColor}, ${planColor}AA)`,
+                  }}
+                />
+                {/* Monthly credits marker line */}
+                {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
+                  <div
+                    className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full"
+                    style={{
+                      left: `${monthlyMarkerPct}%`,
+                      backgroundColor: 'rgba(255,255,255,0.5)',
+                    }}
+                    title={`${monthlyCredits} créditos mensais`}
+                  />
+                )}
+              </div>
+
+              {/* Monthly credits label */}
+              {monthlyCredits > 0 && (
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[10px] text-white/25">
+                    {monthlyCredits} mensais
+                  </span>
+                  {bonusCredits > 0 && (
+                    <span className="text-[10px]" style={{ color: `${planColor}99` }}>
+                      +{Math.floor(bonusCredits)} bônus
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Profile button */}
         <div className="relative px-2 pb-3">

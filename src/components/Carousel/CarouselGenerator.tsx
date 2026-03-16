@@ -1524,7 +1524,7 @@ const CarouselGenerator: React.FC = () => {
         const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
         promptParts.push(`MARCA: Inclua "${brandName}" como texto pequeno no ${posLabel} da imagem.`);
       }
-      if (logoBrandColors.length > 0) {
+      if (useBrandColors && logoBrandColors.length > 0) {
         promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
       }
 

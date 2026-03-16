@@ -3328,6 +3328,7 @@ A composição final deve ser: foto real de fundo + overlay editorial com textos
           }
         }
 
+        const loop2ExtremeCtx = buildExtremePromptContext();
         const hasWebPhotoL2 = !skipWebSearch && webSearchResult?.images?.length && loop2ProductRefs?.length === 1
           && loop2ProductRefs[0].startsWith('http') && productImages.length === 0;
         let loop2Prompt = buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
@@ -3340,7 +3341,6 @@ Sobreponha textos editoriais e tipografia POR CIMA da foto real.
 MANTENHA a foto real reconhecível.`;
         }
 
-        const loop2ExtremeCtx = buildExtremePromptContext();
         imageFactories.push({
           index: i,
           factory: () => generateImage({

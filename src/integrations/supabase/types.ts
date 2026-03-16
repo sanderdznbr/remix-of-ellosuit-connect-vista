@@ -1197,6 +1197,7 @@ export type Database = {
           image_card_count: number | null
           image_settings: Json | null
           keywords: string | null
+          logo_dark_url: string | null
           logo_position: string | null
           logo_url: string | null
           marketplace_style_config: Json | null
@@ -1234,6 +1235,7 @@ export type Database = {
           image_card_count?: number | null
           image_settings?: Json | null
           keywords?: string | null
+          logo_dark_url?: string | null
           logo_position?: string | null
           logo_url?: string | null
           marketplace_style_config?: Json | null
@@ -1271,6 +1273,7 @@ export type Database = {
           image_card_count?: number | null
           image_settings?: Json | null
           keywords?: string | null
+          logo_dark_url?: string | null
           logo_position?: string | null
           logo_url?: string | null
           marketplace_style_config?: Json | null

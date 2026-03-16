@@ -5080,6 +5080,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
     const layout = card.layout || 'dark';
+    const cardAlign = card.textAlign || 'left';
+    const cardSerif = card.cardFontIndex !== undefined ? FONT_OPTIONS[card.cardFontIndex]?.value || serif : serif;
     const isLight = layout === 'light';
     const isAccent = layout === 'accent';
     const bg = isAccent ? accentColor : bgColor;

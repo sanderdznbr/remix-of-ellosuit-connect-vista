@@ -2559,8 +2559,9 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
           const hasWebPhoto = !skipWebSearch && webSearchResult?.images?.length && capturedProductRefs?.length === 1
             && capturedProductRefs[0].startsWith('http') && !useRealEstateBlend && productImages.length === 0;
           if (hasWebPhoto) {
+            const cardDesc = updatedCards[i]?.title || updatedCards[i]?.bodyTop || cleanTopic;
             cardPrompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
-A imagem de referência enviada é uma FOTO REAL do tema "${cleanTopic}". 
+A imagem de referência enviada é uma FOTO REAL buscada especificamente para este card sobre "${cardDesc}". 
 Você DEVE incorporar esta foto real com MÁXIMA FIDELIDADE na composição do card.
 USE a foto real como elemento visual principal/fundo do card.
 Sobreponha os textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
@@ -5599,6 +5600,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   });
                                 };
 
+                                let generatedOutline: { title?: string; body?: string }[] = [];
                                 try {
                                   console.log('[Wizard] Auto-generating outline, topic:', topic.trim(), 'cards:', totalCards);
                                   const { data: outlineData, error: outlineErr } = await supabase.functions.invoke('generate-carousel', {
@@ -5611,20 +5613,95 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   });
                                   console.log('[Wizard] Outline response:', { outlineData, outlineErr });
                                   if (!outlineErr && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+                                    generatedOutline = outlineData.outline;
                                     setManualCardTexts(outlineData.outline);
                                   } else {
                                     // Edge function returned empty — use local fallback
                                     console.warn('Outline API returned empty, using local fallback');
-                                    setManualCardTexts(localFallback());
+                                    generatedOutline = localFallback();
+                                    setManualCardTexts(generatedOutline);
                                   }
                                 } catch (err) {
                                   console.error('Auto roteiro error, using local fallback:', err);
-                                  setManualCardTexts(localFallback());
+                                  generatedOutline = localFallback();
+                                  setManualCardTexts(generatedOutline);
                                 }
                                 
                                 setRoteiroGenerated(true);
-                                // Auto-assign web photos to cards after outline is generated
-                                if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
+                                // Per-card web image search: search specific photos for each card's content
+                                if (webSearchResult?.images?.length && !skipWebSearch) {
+                                  const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
+                                  
+                                  const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
+                                  const perCardQueries: { index: number; query: string }[] = [];
+                                  
+                                  for (let ci = 0; ci < totalCards; ci++) {
+                                    const cardText = outlineToUse[ci];
+                                    const cardTitle = cardText?.title || '';
+                                    const cardBody = cardText?.body || '';
+                                    // Extract key subjects from the card text for targeted search
+                                    const searchQuery = cardTitle 
+                                      ? `${cleanTopicForSearch} ${cardTitle}`.trim()
+                                      : `${cleanTopicForSearch} card ${ci + 1}`;
+                                    perCardQueries.push({ index: ci, query: searchQuery });
+                                  }
+
+                                  if (perCardQueries.length > 0) {
+                                    console.log('[PER_CARD_SEARCH] Searching images per card:', perCardQueries.map(q => q.query));
+                                    try {
+                                      const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
+                                        body: { per_card_queries: perCardQueries },
+                                      });
+                                      if (!perCardErr && perCardData?.card_images) {
+                                        const assignments: Record<number, string> = {};
+                                        const usedUrls = new Set<string>();
+                                        for (let ci = 0; ci < totalCards; ci++) {
+                                          const cardImgs = perCardData.card_images[ci] || [];
+                                          // Pick the best unused image for this card
+                                          let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+                                          if (bestImg) {
+                                            assignments[ci] = bestImg;
+                                            usedUrls.add(bestImg);
+                                          } else {
+                                            // Fallback to general web images
+                                            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                                            const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                            if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
+                                          }
+                                        }
+                                        setCardPhotoAssignments(assignments);
+                                        console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
+                                      } else {
+                                        console.warn('[PER_CARD_SEARCH] Failed, falling back to round-robin');
+                                        // Fallback: round-robin from general images
+                                        const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                                        if (webImgs.length > 0) {
+                                          const assignments: Record<number, string> = {};
+                                          const usedUrls = new Set<string>();
+                                          for (let ci = 0; ci < totalCards; ci++) {
+                                            let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                            if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                                          }
+                                          setCardPhotoAssignments(assignments);
+                                        }
+                                      }
+                                    } catch (searchErr) {
+                                      console.error('[PER_CARD_SEARCH] Error:', searchErr);
+                                      // Fallback to general web images
+                                      const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                                      if (webImgs.length > 0) {
+                                        const assignments: Record<number, string> = {};
+                                        const usedUrls = new Set<string>();
+                                        for (let ci = 0; ci < totalCards; ci++) {
+                                          let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                          if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                                        }
+                                        setCardPhotoAssignments(assignments);
+                                      }
+                                    }
+                                  }
+                                } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
+                                  // No per-card search possible, fallback to round-robin
                                   const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
                                   if (webImgs.length > 0) {
                                     const assignments: Record<number, string> = {};

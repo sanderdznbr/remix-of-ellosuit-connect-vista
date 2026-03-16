@@ -339,7 +339,7 @@ const StepCardTexts: React.FC<Props> = ({
                   <button
                     key={idx}
                     onClick={() => assignPhoto(pickingPhotoFor, url)}
-                    className={`relative rounded-lg overflow-hidden aspect-video transition-all ${
+                    className={`relative rounded-lg overflow-hidden transition-all h-24 ${
                       isCurrentlyAssigned
                         ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/20'
                         : isUsedByOther

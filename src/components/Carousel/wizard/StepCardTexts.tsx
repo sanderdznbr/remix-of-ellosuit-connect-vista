@@ -358,9 +358,10 @@ const StepCardTexts: React.FC<Props> = ({
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <div className="absolute top-2 right-2 flex gap-1.5">
-                          <button onClick={() => setPickingPhotoFor(i)}
-                            className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform">
-                            <RefreshCw className="h-4 w-4" />
+                          <button onClick={() => refreshPhoto(i)}
+                            disabled={refreshingCard === i}
+                            className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform disabled:opacity-50">
+                            {refreshingCard === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                           </button>
                           <button onClick={() => removePhoto(i)}
                             className="p-2 rounded-xl bg-black/50 backdrop-blur-sm text-white/80 active:scale-95 transition-transform">

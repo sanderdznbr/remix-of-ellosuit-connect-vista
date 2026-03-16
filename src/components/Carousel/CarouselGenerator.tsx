@@ -256,7 +256,10 @@ const CarouselGenerator: React.FC = () => {
   const [faceCardCount, setFaceCardCount] = useState<number | null>(null); // null = all image cards get faces
   const [enhancingPrompt, setEnhancingPrompt] = useState(false);
   const [mentionedPrompts, setMentionedPrompts] = useState<{ id: string; title: string; avatar_url: string | null; content: string }[]>([]);
-  const [pendingPromptMedia, setPendingPromptMedia] = useState<{ promptTitle: string; media: any[] } | null>(null);
+  const [pendingPromptMedia, setPendingPromptMedia] = useState<{ promptId: string; promptTitle: string; media: any[] } | null>(null);
+  const promptMediaQueueRef = useRef<{ promptId: string; promptTitle: string; media: any[] }[]>([]);
+  const promptMediaLoadingIdsRef = useRef<Set<string>>(new Set());
+  const promptMediaResolvedIdsRef = useRef<Set<string>>(new Set());
 
   // Step 2: References
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([]);
@@ -662,6 +665,7 @@ const CarouselGenerator: React.FC = () => {
     setFaceCardCount(null);
     setEnhancingPrompt(false);
     setMentionedPrompts([]);
+    setPendingPromptMedia(null);
     setReferenceImages([]);
     setFamousList([]);
     setFamousImages([]);
@@ -708,7 +712,56 @@ const CarouselGenerator: React.FC = () => {
     setFaceGender('auto');
     setWearsGlasses(false);
     setAllPeopleOnCover(true);
+    promptMediaQueueRef.current = [];
+    promptMediaLoadingIdsRef.current.clear();
+    promptMediaResolvedIdsRef.current.clear();
   }, []);
+
+  const openNextPendingPromptMedia = useCallback(() => {
+    setPendingPromptMedia(promptMediaQueueRef.current.shift() ?? null);
+  }, []);
+
+  const queuePromptMediaDialog = useCallback((payload: { promptId: string; promptTitle: string; media: any[] }) => {
+    setPendingPromptMedia((current) => {
+      if (!current) return payload;
+      const alreadyQueued = promptMediaQueueRef.current.some(item => item.promptId === payload.promptId);
+      if (current.promptId !== payload.promptId && !alreadyQueued) {
+        promptMediaQueueRef.current.push(payload);
+      }
+      return current;
+    });
+  }, []);
+
+  const fetchMentionPromptMedia = useCallback(async (prompt: { id: string; title: string }) => {
+    if (!prompt?.id) return;
+    if (promptMediaResolvedIdsRef.current.has(prompt.id) || promptMediaLoadingIdsRef.current.has(prompt.id)) return;
+
+    promptMediaLoadingIdsRef.current.add(prompt.id);
+    try {
+      const { data: media, error } = await supabase
+        .from('saved_prompt_media')
+        .select('*')
+        .eq('prompt_id', prompt.id)
+        .order('sort_order');
+
+      if (error) throw error;
+
+      promptMediaResolvedIdsRef.current.add(prompt.id);
+      if (media && media.length > 0) {
+        queuePromptMediaDialog({ promptId: prompt.id, promptTitle: prompt.title, media });
+      }
+    } catch (err) {
+      console.error('Failed to fetch prompt media:', err);
+    } finally {
+      promptMediaLoadingIdsRef.current.delete(prompt.id);
+    }
+  }, [queuePromptMediaDialog]);
+
+  useEffect(() => {
+    mentionedPrompts.forEach((prompt) => {
+      void fetchMentionPromptMedia(prompt);
+    });
+  }, [mentionedPrompts, fetchMentionPromptMedia]);
 
   const currentFont = FONT_OPTIONS[selectedFont];
   const serif = currentFont.value;
@@ -5596,22 +5649,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         skipWebSearch={wizardMode === 'simple' ? false : skipWebSearch}
                         onToggleSkipWebSearch={wizardMode === 'simple' ? undefined : () => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
                         mentionedPrompts={mentionedPrompts}
-                        onMentionAdd={async (p) => {
+                        onMentionAdd={(p) => {
                           console.log('[PromptMention] Added prompt:', p.title, p.id);
-                          setMentionedPrompts(prev => [...prev, p]);
-                          // Fetch linked media for this prompt
-                          try {
-                            const { data: media, error: mediaError } = await supabase.from('saved_prompt_media').select('*').eq('prompt_id', p.id).order('sort_order');
-                            console.log('[PromptMention] Media query result:', { media, mediaError, count: media?.length });
-                            if (media && media.length > 0) {
-                              console.log('[PromptMention] Setting pendingPromptMedia, types:', media.map((m: any) => m.media_type));
-                              setPendingPromptMedia({ promptTitle: p.title, media });
-                            } else {
-                              console.log('[PromptMention] No media found for prompt');
-                            }
-                          } catch (err) { console.error('Failed to fetch prompt media:', err); }
+                          setMentionedPrompts(prev => prev.some(existing => existing.id === p.id) ? prev : [...prev, p]);
                         }}
-                        onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
+                        onMentionRemove={(id) => {
+                          setMentionedPrompts(prev => prev.filter(m => m.id !== id));
+                          promptMediaQueueRef.current = promptMediaQueueRef.current.filter(item => item.promptId !== id);
+                          promptMediaLoadingIdsRef.current.delete(id);
+                          promptMediaResolvedIdsRef.current.delete(id);
+                          setPendingPromptMedia(current => current?.promptId === id ? (promptMediaQueueRef.current.shift() ?? null) : current);
+                        }}
                         contentMode={contentMode}
                         manualPostText={manualPostText}
                         setManualPostText={setManualPostText}
@@ -8556,12 +8604,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           <PromptMediaConfirmDialog
             promptTitle={pendingPromptMedia.promptTitle}
             media={pendingPromptMedia.media}
-            onCancel={() => setPendingPromptMedia(null)}
+            onCancel={openNextPendingPromptMedia}
             onConfirm={(selectedMedia) => {
               const screenshots = selectedMedia.filter(m => m.media_type === 'screenshot');
               const logos = selectedMedia.filter(m => m.media_type === 'logo');
               const faces = selectedMedia.filter(m => m.media_type === 'face');
               const refs = selectedMedia.filter(m => m.media_type === 'reference');
+
+              if (selectedMedia.length > 0 && pendingPromptMedia.promptTitle) {
+                setBrandName(prev => prev || pendingPromptMedia.promptTitle);
+              }
 
               if (screenshots.length > 0) {
                 setWantsProduct(true);
@@ -8577,7 +8629,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               if (logos.length > 0) {
                 const primaryLogo = logos[0];
                 setLogoUrl(primaryLogo.file_url);
-                setBrandName(prev => prev || pendingPromptMedia?.promptTitle || '');
               }
 
               if (faces.length > 0) {
@@ -8608,7 +8659,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 });
               }
 
-              setPendingPromptMedia(null);
+              openNextPendingPromptMedia();
               if (selectedMedia.length > 0) {
                 toast({ title: `${selectedMedia.length} mídia(s) aplicada(s) do prompt` });
               }

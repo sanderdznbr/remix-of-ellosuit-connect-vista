@@ -83,7 +83,7 @@ function isCleanImageUrl(url: string): boolean {
 async function searchBravePhotos(query: string, braveKey: string, count = 30): Promise<string[]> {
   try {
     const queryLower = query.toLowerCase();
-    const requiresEditorialSource = /(oscar|academy awards|red carpet|premiere|ceremony|actor|actress|director|winner|best picture|film|movie)/i.test(queryLower);
+    const requiresEditorialSource = /(oscar|academy awards|red carpet|premiere|ceremony|actor|atriz|actor|actress|director|winner|vencedor|best picture|film|filme|movie)/i.test(queryLower);
     const cleanQuery = `${query} photo -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -poster -fan-art -fanart -edit -edits -drawing -illustration -render`;
     const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict&type=photo`;
     const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
@@ -97,21 +97,24 @@ async function searchBravePhotos(query: string, braveKey: string, count = 30): P
       if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
 
       const itemText = JSON.stringify(item).toLowerCase();
-      if (['meme', 'memes', 'wallpaper', 'poster', 'fanart', 'fan-art', 'nominee', 'nominees', 'quote', 'quotes', 'list of', 'feature image'].some((pat) => itemText.includes(pat))) continue;
+      if (['meme', 'memes', 'wallpaper', 'poster', 'fanart', 'fan-art', 'quote', 'quotes', 'feature image'].some((pat) => itemText.includes(pat))) continue;
 
       const width = item.properties?.width || item.width || 0;
       const height = item.properties?.height || item.height || 0;
       if (!hasPhotoLikeAspectRatio(width, height)) continue;
 
       const trusted = isTrustedPhotoDomain(imgUrl);
-      if (requiresEditorialSource && !trusted) continue;
-      if (!trusted && (width < 900 || height < 600)) continue;
-      if (trusted && (width < 400 || height < 300)) continue;
+      const hostname = getHostname(imgUrl);
+      const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
+      if (looksAggregator) continue;
+      if (requiresEditorialSource && !trusted && (width < 1200 || height < 700)) continue;
+      if (!trusted && (width < 800 || height < 500)) continue;
+      if (trusted && (width < 350 || height < 250)) continue;
 
-      let score = trusted ? 120 : 0;
-      score += Math.min(width, 2400) / 80;
-      score += Math.min(height, 1800) / 80;
-      if (/(red carpet|premiere|ceremony|oscar|academy awards)/i.test(queryLower) && trusted) score += 40;
+      let score = trusted ? 140 : 40;
+      score += Math.min(width, 2400) / 100;
+      score += Math.min(height, 1800) / 100;
+      if (/(red carpet|premiere|ceremony|oscar|academy awards)/i.test(queryLower) && trusted) score += 30;
       candidates.push({ url: imgUrl, score });
     }
 

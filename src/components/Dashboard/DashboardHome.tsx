@@ -261,7 +261,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           transition={{ delay: 0.2, duration: 0.5 }}
           style={{ fontFamily: "'Inter', sans-serif", color: '#ffffff' }}
         >
-          Vamos criar, {username}
+          Crie seu post com a Ello
         </motion.h1>
 
         <motion.p

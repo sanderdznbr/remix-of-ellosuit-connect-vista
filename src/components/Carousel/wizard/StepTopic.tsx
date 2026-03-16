@@ -134,43 +134,13 @@ const StepTopic: React.FC<Props> = ({
 
           {/* Manual toggle removed from advanced mode — AI classifies and suggests automatically */}
 
-          {/* Web search result */}
+          {/* Web search status indicator (results shown in dedicated Pesquisa step) */}
           {webSearchResult && !skipWebSearch && (
-            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-400/80 text-xs font-medium">
-                  <Search className="h-3.5 w-3.5" />
-                  Conteúdo encontrado na web
-                  {(webSearchResult as any).images?.length > 0 && (
-                    <span className="text-white/30">· {(webSearchResult as any).images.length} fotos</span>
-                  )}
-                </div>
-                {onSearchWeb && (
-                  <button
-                    onClick={onSearchWeb}
-                    disabled={searchingWeb}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-white/40 hover:text-white/60 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all disabled:opacity-30"
-                  >
-                    {searchingWeb ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
-                    Repesquisar
-                  </button>
-                )}
-              </div>
-              <p className="text-sm text-white/50 leading-relaxed line-clamp-3">{webSearchResult.summary}</p>
-              {webSearchResult.citations.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {webSearchResult.citations.slice(0, 3).map((url, i) => {
-                    let hostname = url;
-                    try { hostname = new URL(url).hostname.replace('www.', ''); } catch { /* keep raw url */ }
-                    return (
-                      <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/[0.04] text-white/40 text-[10px] hover:bg-white/[0.08] hover:text-white/60 transition-colors truncate max-w-[200px]">
-                        <Globe className="h-2.5 w-2.5 flex-shrink-0" />
-                        {hostname}
-                      </a>
-                    );
-                  })}
-                </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/15">
+              <Search className="h-3.5 w-3.5 text-emerald-400/70" />
+              <span className="text-xs text-emerald-400/70 font-medium">Pesquisa web encontrada</span>
+              {(webSearchResult as any).images?.length > 0 && (
+                <span className="text-xs text-white/30">· {(webSearchResult as any).images.length} fotos</span>
               )}
             </div>
           )}

@@ -1629,12 +1629,15 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
         const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
         if (webImgs.length > 0) {
           effectiveProductRefs = [webImgs[0]];
-          promptParts.push(`\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+          promptParts.push(`\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL (PRESERVAÇÃO TOTAL):
 A imagem de referência enviada é uma FOTO REAL do tema "${topic}". 
-INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do post.
-USE a foto real como elemento visual principal/fundo.
-Sobreponha textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
-MANTENHA a foto real reconhecível e fiel.`);
+REGRAS DE PRESERVAÇÃO ABSOLUTA:
+1. USE a foto real como FUNDO/BASE principal — ela deve ocupar a maior parte da composição.
+2. NÃO RECRIE, NÃO REDESENHE e NÃO REINTERPRETE os rostos ou pessoas da foto. Mantenha-os EXATAMENTE como são.
+3. NÃO substitua a foto por uma ilustração ou versão "melhorada". A foto deve permanecer FOTOGRÁFICA e INALTERADA.
+4. Sobreponha APENAS textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
+5. Se a foto contém pessoas, elas devem aparecer EXATAMENTE como na foto original.
+6. Trate a foto como um print/screenshot que DEVE ser preservado como base da composição.`);
           console.log('[SINGLE_POST_WEB_PHOTO] Assigned web image:', webImgs[0]?.substring(0, 80));
         }
       }

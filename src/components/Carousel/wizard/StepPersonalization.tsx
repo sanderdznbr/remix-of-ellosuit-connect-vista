@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag } from 'lucide-react';
+import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -73,6 +73,8 @@ const StepPersonalization: React.FC<Props> = ({
   const [expandedSection, setExpandedSection] = useState<'face' | 'brand' | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
+  const [useCustomColors, setUseCustomColors] = useState(false);
+  const [customColors, setCustomColors] = useState(['#6366f1', '#ec4899', '#f59e0b']);
 
   // Auto-detect pre-filled data from prompt media and react whenever it changes
   useEffect(() => {
@@ -146,7 +148,7 @@ const StepPersonalization: React.FC<Props> = ({
             className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
           >
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-purple-500/15 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">✨</span>
+              <span className="text-lg">+</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white/80">Ambos</p>
@@ -310,7 +312,7 @@ const StepPersonalization: React.FC<Props> = ({
 
               {/* Gender selector */}
               <div className="flex gap-2">
-                {[{ value: 'male', label: '♂ Masculino' }, { value: 'female', label: '♀ Feminino' }, { value: 'auto', label: '⚡ Auto' }].map(opt => (
+                {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => setFaceGender(opt.value as 'male' | 'female' | 'auto')}
@@ -336,15 +338,15 @@ const StepPersonalization: React.FC<Props> = ({
               <Building2 className="h-4 w-4 text-purple-400" />
               <span className="text-sm font-medium text-white/80">Marca / Logo</span>
               {hasBrandInfo && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">✓</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">ok</span>
               )}
             </div>
             {expandedSection === 'brand' ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}
           </button>
 
           {expandedSection === 'brand' && (
-            <div className="px-4 pb-4 space-y-3">
-              {/* Logo */}
+            <div className="px-4 pb-4 space-y-4">
+              {/* Logo upload */}
               <div>
                 <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Logomarca</label>
                 {logoUrl ? (
@@ -379,52 +381,95 @@ const StepPersonalization: React.FC<Props> = ({
                 />
               </div>
 
-              {/* Author name */}
-              <div>
-                <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Seu nome (opcional)</label>
-                <input
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Ex: João Silva"
-                  className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl outline-none focus:border-white/15 transition-colors"
-                />
-              </div>
-
-              {/* Logo position */}
+              {/* Logo position - visual mini-canvas */}
               {logoUrl && (
                 <div>
-                  <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Posição do logo</label>
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <label className="text-[11px] text-white/40 uppercase tracking-wider mb-2 block">Posição do logo</label>
+                  <div className="relative w-full aspect-[4/5] max-w-[160px] rounded-xl border border-white/[0.10] bg-white/[0.03] mx-auto">
                     {[
-                      { value: 'top-left', label: '↖' },
-                      { value: 'top-right', label: '↗' },
-                      { value: 'bottom-left', label: '↙' },
-                      { value: 'bottom-right', label: '↘' },
+                      { value: 'top-left', style: 'top-2 left-2' },
+                      { value: 'top-right', style: 'top-2 right-2' },
+                      { value: 'bottom-left', style: 'bottom-2 left-2' },
+                      { value: 'bottom-right', style: 'bottom-2 right-2' },
                     ].map(pos => (
                       <button
                         key={pos.value}
                         onClick={() => setLogoPosition(pos.value as LogoPosition)}
-                        className={`py-2 rounded-lg text-sm font-medium transition-all ${logoPosition === pos.value ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                        className={`absolute ${pos.style} w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                          logoPosition === pos.value
+                            ? 'bg-purple-500 ring-2 ring-purple-400/50 scale-110'
+                            : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.10]'
+                        }`}
                       >
-                        {pos.label}
+                        {logoPosition === pos.value ? (
+                          <img src={logoUrl} alt="" className="w-4 h-4 object-contain" />
+                        ) : (
+                          <div className="w-2.5 h-2.5 rounded-sm bg-white/20" />
+                        )}
                       </button>
                     ))}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="text-[10px] text-white/15 font-medium">POST</span>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Use brand colors toggle */}
+              {/* Color options */}
               {logoUrl && (
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-white/60">Usar cores da marca no post</span>
-                  <button
-                    onClick={() => setUseBrandColors(!useBrandColors)}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-5' : 'translate-x-0'}`}
-                    />
-                  </button>
+                <div className="space-y-2.5 pt-1">
+                  {/* Brand colors toggle */}
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-sm text-white/60">Usar cores da marca</span>
+                    <button
+                      onClick={() => { setUseBrandColors(!useBrandColors); if (!useBrandColors) setUseCustomColors(false); }}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* Custom colors - only when brand colors OFF */}
+                  {!useBrandColors && (
+                    <>
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <Palette className="h-3.5 w-3.5 text-white/40" />
+                          <span className="text-sm text-white/60">Cores personalizadas</span>
+                        </div>
+                        <button
+                          onClick={() => setUseCustomColors(!useCustomColors)}
+                          className={`relative w-10 h-5 rounded-full transition-colors ${useCustomColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useCustomColors ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
+                      {useCustomColors && (
+                        <div className="flex items-center gap-3 pt-1">
+                          {customColors.map((color, i) => (
+                            <label key={i} className="relative cursor-pointer group">
+                              <input
+                                type="color"
+                                value={color}
+                                onChange={(e) => {
+                                  const updated = [...customColors];
+                                  updated[i] = e.target.value;
+                                  setCustomColors(updated);
+                                }}
+                                className="sr-only"
+                              />
+                              <div
+                                className="w-10 h-10 rounded-xl border-2 border-white/[0.12] group-hover:border-white/30 transition-colors shadow-lg"
+                                style={{ backgroundColor: color }}
+                              />
+                              <span className="block text-center text-[9px] text-white/30 mt-1">Cor {i + 1}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -437,7 +482,7 @@ const StepPersonalization: React.FC<Props> = ({
         onClick={() => { setWantsPerson(null); setWantsBrand(null); setExpandedSection(null); }}
         className="w-full py-2.5 rounded-xl text-xs font-medium text-white/20 hover:text-white/40 transition-colors"
       >
-        ← Alterar escolha
+        Alterar escolha
       </button>
     </div>
   );

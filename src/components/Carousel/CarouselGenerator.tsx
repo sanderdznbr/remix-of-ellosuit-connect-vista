@@ -571,6 +571,7 @@ const CarouselGenerator: React.FC = () => {
     if (!topic.trim()) return;
     setSearchingWeb(true);
     setCardPhotoAssignments({});
+    setCardPhotoOptions({});
     try {
       const data = await resilientInvoke('search-news', { topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');

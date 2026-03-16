@@ -7703,10 +7703,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 >
                   <div className="relative w-full flex items-center justify-center" style={{ maxWidth: '90vw' }}>
                     <div style={{
-                      transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth < 768 ? window.innerWidth * 0.6 : window.innerWidth * 0.45) : 300) / PREVIEW_W, 1.4)})`,
+                      transform: `scale(${Math.min((typeof window !== 'undefined' ? (window.innerWidth < 768 ? window.innerWidth * 0.6 : window.innerWidth * 0.45) : 300) / previewW, 1.4)})`,
                       transformOrigin: 'top center',
-                      width: PREVIEW_W,
-                      height: PREVIEW_H,
+                      width: previewW,
+                      height: previewH,
                       margin: '0 auto',
                     }}>
                       {renderCardPreview(ec, validIndex)}

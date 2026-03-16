@@ -5294,12 +5294,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
 
   useEffect(() => {
-    if ((wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) ||
-        (!searchingWeb && !skipWebSearch && hasWebImages && (currentStepName === 'Pessoas' || currentStepName === 'Visual'))) {
+    if (wizardMode === 'advanced' && isFullBleedMarketplace && (currentStepName === 'Cores' || currentStepName === 'Fontes')) {
       const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
       if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
     }
-  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName, searchingWeb, skipWebSearch, hasWebImages, WIZARD_STEPS]);
+  }, [wizardStep, isFullBleedMarketplace, wizardMode, currentStepName, WIZARD_STEPS]);
 
   return (
     <div className="h-screen flex flex-col overflow-y-auto" style={{ backgroundColor: '#0A0A0A' }}>

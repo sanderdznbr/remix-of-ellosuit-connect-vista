@@ -431,7 +431,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         <div className="max-w-[1200px] mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-6">
-              <span className="text-sm font-medium pb-1 border-b-2 border-purple-500" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
+              <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
             </div>
             <div className="flex items-center gap-2">
               {recentCarousels.length > 4 && (

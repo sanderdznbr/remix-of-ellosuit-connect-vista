@@ -37,6 +37,8 @@ interface ActiveJob {
   progress_current: number;
   progress_total: number;
   updated_at: string;
+  product_context: string | null;
+  marketplace_style_id: string | null;
 }
 
 interface DashboardHomeProps {

@@ -501,6 +501,7 @@ const CarouselGenerator: React.FC = () => {
     setContentMode('carousel');
     setManualPostText('');
     setManualCardTexts([]);
+    setCardPhotoAssignments({});
     setWizardMode('simple');
     setExtremeAnalysis(null);
     setExtremeVision('');

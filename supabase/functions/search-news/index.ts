@@ -10,8 +10,13 @@ const BLOCKED_DOMAINS = [
   'dreamstime.com', 'alamy.com', 'pinterest.com', 'pinimg.com',
   'boredpanda.com', 'buzzfeed.com', 'chzbgr.com', 'imgflip.com',
   'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', '9gag.com',
-  'tenor.com', 'giphy.com', 'img.youtube.com', 'youtube.com',
-  'venngage.com', 'slidechef.net', 'dexerto.com', 'termometrooscar.com', 'techtudo.com'
+  'tenor.com', 'giphy.com', 'img.youtube.com', 'youtube.com', 'ytimg.com',
+  'venngage.com', 'slidechef.net', 'dexerto.com', 'termometrooscar.com', 'techtudo.com',
+  'cnnbrasil.com.br', 'uol.com.br', 'globo.com', 'r7.com', 'ig.com.br',
+  'eonline.com', 'usmagazine.com', 'tmz.com', 'dailymail.co.uk',
+  'pagesix.com', 'insider.com', 'screenrant.com', 'cbr.com',
+  'goldderby.com', 'awardswatch.com', 'deadline.com', 'variety.com',
+  'entertainmentweekly.com', 'hollywoodreporter.com',
 ];
 
 function isCleanImageCandidate(url: string, metadata = ''): boolean {

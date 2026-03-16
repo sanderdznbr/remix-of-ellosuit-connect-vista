@@ -367,37 +367,8 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             </div>
           </div>
 
-          {/* Cover Image */}
-          <div>
-            <label className="text-[10px] text-white/40 mb-1 block">Capa do Estilo (opcional)</label>
-            <p className="text-[9px] text-white/15 mb-2">Imagem usada apenas para exibição no Marketplace. Não é usada como referência na geração.</p>
-            <div className="flex items-center gap-3">
-              {(coverPreview || existingCover) ? (
-                <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 group">
-                  <img src={coverPreview || existingCover} alt="Capa" className="w-full h-full object-cover" />
-                  <button onClick={() => { setCoverFile(null); setCoverPreview(''); setExistingCover(''); }}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
-                  <div className="text-center">
-                    <Upload className="w-4 h-4 text-white/20 mx-auto mb-1" />
-                    <span className="text-[9px] text-white/20">Upload Capa</span>
-                  </div>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setCoverFile(file);
-                    const reader = new FileReader();
-                    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
-                    reader.readAsDataURL(file);
-                  }} />
-                </label>
-              )}
-            </div>
-          </div>
+
+
 
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -549,7 +520,39 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             )}
           </div>
 
-          {/* Strict instructions */}
+          {/* Cover Image - separate from references */}
+          <div>
+            <label className="text-[10px] text-white/40 mb-1 block">Capa para o Marketplace (opcional)</label>
+            <p className="text-[9px] text-white/15 mb-2">Imagem de capa usada apenas para exibição. Não é usada como referência na geração.</p>
+            <div className="flex items-center gap-3">
+              {(coverPreview || existingCover) ? (
+                <div className="relative w-28 h-28 rounded-lg overflow-hidden border border-yellow-500/20 group">
+                  <img src={coverPreview || existingCover} alt="Capa" className="w-full h-full object-cover" />
+                  <span className="absolute bottom-0.5 left-0.5 px-1.5 py-0.5 rounded bg-yellow-500/80 text-black text-[8px] font-bold">CAPA</span>
+                  <button onClick={() => { setCoverFile(null); setCoverPreview(''); setExistingCover(''); }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center w-28 h-28 rounded-lg border-2 border-dashed border-yellow-500/20 cursor-pointer hover:border-yellow-500/40 transition-colors" style={{ backgroundColor: 'rgba(234,179,8,0.03)' }}>
+                  <div className="text-center">
+                    <Upload className="w-5 h-5 text-yellow-500/30 mx-auto mb-1" />
+                    <span className="text-[9px] text-yellow-500/40 font-medium">Upload Capa</span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setCoverFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="text-[10px] text-white/40 mb-1 block">Instruções Rígidas (opcional)</label>
             <textarea value={form.strict_instructions} onChange={e => setForm(f => ({ ...f, strict_instructions: e.target.value }))}

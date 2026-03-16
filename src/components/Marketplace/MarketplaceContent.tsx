@@ -211,7 +211,7 @@ const StyleCard: React.FC<{
   onToggleVisibility?: () => void;
 }> = ({ style, owned, onClick, featured, isAdmin, onEdit, onToggleVisibility }) => {
   const isHidden = style.is_active === false;
-  const previewImage = style.preview_images?.[0];
+  const previewImage = (style as any).style_config?.cover_image || style.preview_images?.[0];
   return (
     <div onClick={onClick}
       className={`group relative rounded-2xl border overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl ${

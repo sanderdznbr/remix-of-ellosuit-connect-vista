@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface DashboardLayoutProps {
-  onStartCarousel?: (topic?: string) => void;
+  onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   children?: React.ReactNode;
 }

@@ -5168,6 +5168,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
     const renderLogo = () => {
       if (!logoUrl) return null;
+      // Smart logo: pick light or dark version based on background luminance
+      const smartLogoUrl = isDarkBg ? (logoUrl) : (logoDarkUrl || logoUrl);
+      const needsInvert = isDarkBg && !logoDarkUrl;
       const size = 72 * s;
       const margin = 18 * s;
       const posStyle: React.CSSProperties = {
@@ -5178,10 +5181,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         zIndex: 15,
         ...(logoPosition.includes('top') ? { top: margin } : logoPosition.includes('bottom') ? { bottom: margin } : { top: '50%', marginTop: -(size / 2) }),
         ...(logoPosition.includes('left') ? { left: margin } : logoPosition.includes('right') ? { right: margin } : { left: '50%', marginLeft: -(size / 2) }),
-        // Auto-whiten colorful logos on dark backgrounds
-        ...(isDarkBg ? { filter: 'brightness(0) invert(1)' } : {}),
+        // Auto-adapt: invert only if dark bg and no dark variant uploaded; on light bg use dark variant
+        ...(needsInvert ? { filter: 'brightness(0) invert(1)' } : (!isDarkBg && !logoDarkUrl ? { filter: 'brightness(0)' } : {})),
       };
-      return <img src={logoUrl} alt="" style={posStyle} />;
+      return <img src={smartLogoUrl} alt="" style={posStyle} />;
     };
 
     if (card.type === 'cover') {

@@ -106,7 +106,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   };
 
   return (
-    <aside className="w-[240px] md:w-[240px] w-full h-screen flex flex-col border-r border-white/[0.06] shrink-0" style={{ backgroundColor: '#111116' }}>
+    <aside className="w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
       {/* Scrollable nav area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
       {/* Logo */}
@@ -309,22 +309,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         )}
       </div>
 
-      {/* Recentes */}
-      {recentProjects.length > 0 && (
-        <div className="px-2 mt-5 pb-3">
-          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Recentes</p>
-          {recentProjects.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => { onLoadCarousel?.(p); closeSearch(); }}
-              className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors cursor-pointer truncate"
-            >
-              <FileText className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{p.title || p.topic || 'Sem título'}</span>
-            </button>
-          ))}
-        </div>
-      )}
 
       </div>{/* end scrollable nav area */}
 

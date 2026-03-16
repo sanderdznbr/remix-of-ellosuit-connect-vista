@@ -287,7 +287,6 @@ const GeneratingAnimation: React.FC<Props> = ({
                 </div>
               ) : (
                 <>
-                  <span className="text-2xl">{STEPS[activeStep]?.icon}</span>
                   <p className="text-white/70 text-sm font-medium">{STEPS[activeStep]?.label}</p>
                 </>
               )}

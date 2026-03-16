@@ -4634,8 +4634,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   // Full-bleed render for marketplace styles — AI generates complete image with text baked in
   const renderMarketplaceFullBleedCard = (card: CarouselCard, index: number, isExport = false) => {
-    const w = isExport ? CARD_W : PREVIEW_W;
-    const h = isExport ? CARD_H : PREVIEW_H;
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
     return (
       <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
         style={{ width: w, height: h, position: 'relative', overflow: 'hidden', backgroundColor: '#0A0A0A' }}>

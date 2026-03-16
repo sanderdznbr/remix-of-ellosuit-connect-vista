@@ -370,16 +370,6 @@ const StepPersonalization: React.FC<Props> = ({
                 )}
               </div>
 
-              {/* Brand name */}
-              <div>
-                <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Nome da marca</label>
-                <input
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  placeholder="Ex: Minha Empresa"
-                  className="w-full bg-white/[0.04] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-xl outline-none focus:border-white/15 transition-colors"
-                />
-              </div>
 
               {/* Logo position - visual mini-canvas */}
               {logoUrl && (

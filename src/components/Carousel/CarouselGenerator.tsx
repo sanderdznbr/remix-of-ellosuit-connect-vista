@@ -5064,7 +5064,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       if (webSearchResult?.images?.length && !skipWebSearch) {
         const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
         const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
-        const perCardQueries: { index: number; query: string; title: string; body: string; topic: string }[] = [];
+        const keyEntities: string[] = webSearchResult?.content?.key_entities || [];
+        const factsPersonNames: string[] = (webSearchResult?.content?.facts || [])
+          .map((f: any) => f.person_name)
+          .filter(Boolean);
+        const allEntities = [...new Set([...keyEntities, ...factsPersonNames])];
+        const perCardQueries: { index: number; query: string; title: string; body: string; topic: string; key_entities?: string[] }[] = [];
         for (let ci = 0; ci < totalCards; ci++) {
           const cardText = outlineToUse[ci];
           const cardTitle = cardText?.title || '';

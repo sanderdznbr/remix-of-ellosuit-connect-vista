@@ -2965,6 +2965,20 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       });
   }, [wizardMode, extremeAnalysis, extremeFormValues]);
 
+  // Helper: trigger zoom-out animation before showing result
+  const finishGeneration = useCallback(() => {
+    setCompletingGeneration(true);
+  }, []);
+
+  const handleCompleteAnimationDone = useCallback(() => {
+    setGenerating(false);
+    setGeneratingAllImages(false);
+    setImageGenProgress('');
+    setCompletingGeneration(false);
+    setResultEntrance(true);
+    setTimeout(() => setResultEntrance(false), 800);
+  }, []);
+
 
   // ===== HELPER: Extract exact text from Extreme form =====
   const getExtremeExactText = useCallback((): string => {

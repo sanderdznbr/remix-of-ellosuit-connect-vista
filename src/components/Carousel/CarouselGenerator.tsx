@@ -1200,6 +1200,11 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 
+    // Custom colors — inject when user selects custom palette
+    if (useCustomColors && customColors.length > 0) {
+      parts.push(`PALETA DE CORES PERSONALIZADA (PRIORIDADE MÁXIMA - SUBSTITUI CORES DO ESTILO): Use EXCLUSIVAMENTE estas cores como base da composição: ${customColors.join(', ')}. Essas cores DEVEM dominar TODOS os elementos visuais: fundos, gradientes, tipografia, formas decorativas e acentos. IGNORE completamente a paleta de cores original do estilo/template. A imagem DEVE ser predominantemente nessas cores.`);
+    }
+
     // Only add aspect ratio for non-panoramic prompts — format-aware
     if (!basePrompt.includes('PANORÂMICA CONTÍNUA')) {
       const fmtDims = FORMAT_DIMENSIONS[postFormat];

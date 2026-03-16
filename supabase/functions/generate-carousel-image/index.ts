@@ -275,21 +275,21 @@ REFERÊNCIA DE QUALIDADE: Pense em posts do Instagram de marcas como Apple, Nike
 
     if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
       textPrompt += `\n\n📸 FOTO REAL DO IMÓVEL (PRIORIDADE MÁXIMA): A imagem de referência fornecida é uma FOTOGRAFIA REAL do imóvel. Você DEVE usar esta foto como a imagem principal/de fundo do card. NÃO gere uma casa ou imóvel artificial — INCORPORE a foto real no design. A foto real deve ocupar pelo menos 60-80% da área visual do card. Aplique o estilo editorial (textos, badges, overlays, elementos gráficos) POR CIMA da foto real. Trate a foto como se fosse uma imagem de fundo editorializada.`;
-    } else if (validGeneralRefs.length > 0 && isExtremeMode && isAppMockup) {
+    } else if (validGeneralRefs.length > 0 && isAppMockup) {
       textPrompt += `\n\n📱 MOCKUP DE APP (PRIORIDADE MÁXIMA): As imagens de referência de produto contêm SCREENSHOTS REAIS do aplicativo do usuário.
 INSTRUÇÕES PRECISAS PARA O MOCKUP:
 - Crie um iPhone 15 Pro FOTORREALISTA (bordas em titânio, Dynamic Island no topo).
 - Posicione o celular em ângulo 3/4 levemente inclinado para a direita, como um anúncio premium da Apple.
-- Insira o screenshot do app EXATAMENTE como aparece — sem modificar, cortar ou distorcer a interface.
+- Insira o screenshot do app EXATAMENTE como aparece na referência — sem modificar, cortar, reinterpretar ou distorcer a interface. A tela deve mostrar EXATAMENTE o conteúdo da imagem fornecida.
 - Adicione reflexos sutis no vidro da tela e sombra realista embaixo do celular.
-- A mão segurando o celular (se solicitada) deve ser natural, com iluminação consistente.
 - O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
 - O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
-- NÃO gere uma interface genérica — use EXATAMENTE a imagem fornecida na tela do celular.`;
+- NÃO gere uma interface genérica ou inventada — use EXATAMENTE a imagem fornecida na tela do celular.
+- A tela do mockup deve reproduzir PIXEL A PIXEL o screenshot fornecido.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
+      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup de celular profissional; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
-      textPrompt += `\n\nPRODUTO: Reproduza o produto das referências fielmente.`;
+      textPrompt += `\n\nPRODUTO/SCREENSHOT OBRIGATÓRIO: As imagens de referência fornecidas são CONTEÚDO REAL do usuário (screenshot de app, produto, etc.). Você DEVE incorporar estas imagens FIELMENTE no design. Se for um screenshot de aplicativo/sistema: coloque-o dentro de um mockup de smartphone ou laptop premium. Se for um produto: mostre-o em destaque. NÃO gere uma versão genérica ou inventada — use a imagem EXATA fornecida.`;
     }
 
     // Brand colors — always apply when provided (user's brand identity overrides style palette)

@@ -178,6 +178,8 @@ interface CarouselCard {
   layout?: 'dark' | 'light' | 'accent';
   fontScale?: number;
   paddingScale?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  cardFontIndex?: number;
 }
 
 interface CarouselData {

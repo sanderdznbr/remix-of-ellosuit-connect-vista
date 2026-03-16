@@ -3470,14 +3470,10 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
 
-        // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS (Loop 2) ===
+        // === AUTO-ASSIGN WEB SEARCH REAL PHOTO (Loop 2) ===
         let loop2ProductRefs = mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined;
-        if (!loop2ProductRefs && !skipWebSearch && webSearchResult?.images?.length && productImages.length === 0) {
-          const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-          if (webImgs.length > 0) {
-            const webImgIdx = i % webImgs.length;
-            loop2ProductRefs = [webImgs[webImgIdx]];
-          }
+        if (!loop2ProductRefs && !skipWebSearch && cardPhotoAssignments[i]) {
+          loop2ProductRefs = [cardPhotoAssignments[i]];
         }
 
         const loop2ExtremeCtx = buildExtremePromptContext();

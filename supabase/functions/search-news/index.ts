@@ -3,39 +3,69 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Domains known to have text overlays, infographics, or watermarks
+// Domains known to return memes, posters, wallpapers, screenshots, templates, or low-quality image aggregators
 const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
-  'dreamstime.com', 'alamy.com', 'pinterest.com',
+  'dreamstime.com', 'alamy.com', 'pinterest.com', 'pinimg.com',
   'youtube.com', 'youtu.be', 'ytimg.com', 'i.ytimg.com', 'yt3.ggpht.com',
   'i9.ytimg.com', 'i1.ytimg.com', 'img.youtube.com',
-  'dailymotion.com', 'vimeo.com', 'tiktok.com',
+  'dailymotion.com', 'vimeo.com', 'tiktok.com', 'tiktokcdn.com',
   'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com', 'ton.twimg.com',
   'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
   'reddit.com', 'redd.it', 'preview.redd.it', 'i.redd.it',
-  'slideshare.net', 'slideplayer.com', 'slideserve.com', 'slideteam.net',
+  'slideshare.net', 'slideplayer.com', 'slideserve.com', 'slideteam.net', 'slidechef.net',
   'templatemonster.com', 'envato.com', 'elements.envato.com',
   'imgflip.com', 'memegenerator.net', 'makeameme.org', 'quickmeme.com',
-  'knowyourmeme.com', 'memedroid.com', 'ifunny.co', '9gag.com',
-  'buzzfeed.com', 'boredpanda.com', 'cheezburger.com',
+  'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', 'ifunny.co', '9gag.com',
+  'buzzfeed.com', 'boredpanda.com', 'cheezburger.com', 'chzbgr.com', 'quickpun.com',
   'wikimedia.org', 'wikipedia.org', 'wikia.com', 'fandom.com',
   'goodreads.com', 'brainyquote.com', 'azquotes.com',
   'etsy.com', 'redbubble.com', 'teepublic.com', 'zazzle.com',
-  'screenrant.com', 'cbr.com', 'gamerant.com',
+  'screenrant.com', 'srcdn.com', 'cbr.com', 'gamerant.com',
+  'amazon.com', 'media-amazon.com', 'wallpapercave.com', 'wallpapersafari.com',
 ];
 
-// Filter out images that likely contain text overlays
+const TRUSTED_PHOTO_DOMAINS = [
+  'people.com', 'ew.com', 'variety.com', 'hollywoodreporter.com', 'deadline.com',
+  'bbc.com', 'cnn.com', 'nytimes.com', 'apnews.com', 'reuters.com',
+  'exame.com', 'metropoles.com', 'gshow.globo.com', 'globo.com', 'sbt.com.br',
+  'sbtnews.sbt.com.br', 'uol.com.br', 'folha.uol.com.br', 'estadao.com.br',
+  'opovo.com.br', 'omelete.com.br', 'cinebuzz.com.br', 'rollingstone.com',
+];
+
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function matchesDomain(url: string, domains: string[]): boolean {
+  const hostname = getHostname(url);
+  const lower = url.toLowerCase();
+  return domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`) || lower.includes(domain));
+}
+
+function isTrustedPhotoDomain(url: string): boolean {
+  return matchesDomain(url, TRUSTED_PHOTO_DOMAINS);
+}
+
+function hasPhotoLikeAspectRatio(width: number, height: number): boolean {
+  if (!width || !height) return false;
+  const ratio = width / height;
+  return ratio >= 0.65 && ratio <= 2.2;
+}
+
+// Filter out images that likely contain text overlays, posters, memes, or screenshots
 function isCleanImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
-  // Block known stock/design/meme sites
-  for (const domain of BLOCKED_DOMAINS) {
-    if (lower.includes(domain)) return false;
-  }
-  // Block URLs that hint at infographics, quotes, memes, screenshots, tweets
+  if (matchesDomain(url, BLOCKED_DOMAINS)) return false;
+
   const badPatterns = [
-    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template',
-    'mockup', 'banner', 'flyer', 'poster', 'thumbnail',
+    'infographic', 'quote', 'meme', 'memes', 'text-overlay', 'typography', 'template',
+    'mockup', 'banner', 'flyer', 'poster', 'thumbnail', 'wallpaper',
     'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault',
     'vi_webp', 'vi/', 'embed', 'watch', 'shorts',
     'video-thumbnail', 'video_thumbnail', 'cover_image',
@@ -43,13 +73,56 @@ function isCleanImageUrl(url: string): boolean {
     'tweet', 'screenshot', 'screen-shot', 'screen_shot', 'screencap',
     'motivational', 'inspirational', 'wallpaper-quote',
     'collection-of', 'best-of', 'top-10', 'compilation',
-    'nomination', 'nominees-list', 'award-list',
-    'funny', 'hilarious', 'lol', 'reaction', 'gif',
+    'nomination', 'nominee', 'nominees-list', 'award-list',
+    'funny', 'hilarious', 'lol', 'reaction', 'gif', 'fan-art', 'fanart',
   ];
-  for (const pat of badPatterns) {
-    if (lower.includes(pat)) return false;
+
+  return !badPatterns.some((pat) => lower.includes(pat));
+}
+
+async function searchBravePhotos(query: string, braveKey: string, count = 30): Promise<string[]> {
+  try {
+    const queryLower = query.toLowerCase();
+    const requiresEditorialSource = /(oscar|academy awards|red carpet|premiere|ceremony|actor|atriz|actor|actress|director|winner|vencedor|best picture|film|filme|movie)/i.test(queryLower);
+    const cleanQuery = `${query} photo -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -poster -fan-art -fanart -edit -edits -drawing -illustration -render`;
+    const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict&type=photo`;
+    const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const candidates: { url: string; score: number }[] = [];
+
+    for (const item of (data.results || [])) {
+      const imgUrl = item.properties?.url || item.thumbnail?.src;
+      if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
+
+      const itemText = JSON.stringify(item).toLowerCase();
+      if (['meme', 'memes', 'wallpaper', 'poster', 'fanart', 'fan-art', 'quote', 'quotes', 'feature image'].some((pat) => itemText.includes(pat))) continue;
+
+      const width = item.properties?.width || item.width || 0;
+      const height = item.properties?.height || item.height || 0;
+      if (!hasPhotoLikeAspectRatio(width, height)) continue;
+
+      const trusted = isTrustedPhotoDomain(imgUrl);
+      const hostname = getHostname(imgUrl);
+      const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
+      if (looksAggregator) continue;
+      if (requiresEditorialSource && !trusted && (width < 1200 || height < 700)) continue;
+      if (!trusted && (width < 800 || height < 500)) continue;
+      if (trusted && (width < 350 || height < 250)) continue;
+
+      let score = trusted ? 140 : 40;
+      score += Math.min(width, 2400) / 100;
+      score += Math.min(height, 1800) / 100;
+      if (/(red carpet|premiere|ceremony|oscar|academy awards)/i.test(queryLower) && trusted) score += 30;
+      candidates.push({ url: imgUrl, score });
+    }
+
+    return [...new Set(candidates.sort((a, b) => b.score - a.score).map((candidate) => candidate.url))].slice(0, 8);
+  } catch (e) {
+    console.error('[IMAGES] Brave search error:', e);
+    return [];
   }
-  return true;
 }
 
 Deno.serve(async (req) => {
@@ -148,67 +221,18 @@ Only return the JSON, nothing else.`;
         }
       }
 
-      const searchBraveImages = async (query: string, braveKey: string): Promise<string[]> => {
-        const images: string[] = [];
-        try {
-          const cleanQuery = `${query} -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -fan-art`;
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=30&safesearch=strict&type=photo`;
-          const res = await fetch(url, {
-            headers: { 'X-Subscription-Token': braveKey },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            for (const item of (data.results || [])) {
-              const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                const w = item.properties?.width || item.width || 0;
-                const h = item.properties?.height || item.height || 0;
-                // Prefer larger images (real photos are typically bigger)
-                if (w >= 600 && h >= 400) {
-                  images.push(imgUrl);
-                }
-              }
-              // Also accept slightly smaller if from known good news sources
-              else if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                const w = item.properties?.width || item.width || 0;
-                const h = item.properties?.height || item.height || 0;
-                const isNewsSource = /reuters|apnews|afp|getty|variety|hollywoodreporter|deadline|ew\.com|people\.com|bbc|cnn|nytimes/.test(imgUrl.toLowerCase());
-                if (isNewsSource && w >= 400 && h >= 300) {
-                  images.push(imgUrl);
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error('[PER_CARD] Brave search error:', e);
-        }
-        return images;
-      };
-
       const searchCard = async (cardIndex: number, originalQuery: string) => {
-        // Use AI-generated queries if available, otherwise fall back to original
         const queries = aiQueries[String(cardIndex)] || aiQueries[cardIndex] || [originalQuery];
         let images: string[] = [];
 
         for (const query of queries) {
           if (images.length >= 5) break;
-          const results = await searchBraveImages(query, braveApiKey);
+          const results = await searchBravePhotos(query, braveApiKey, 30);
           images = [...images, ...results];
           console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 50)}": ${results.length} images`);
         }
 
-        // Final fallback: if still too few, try just the topic + card index context
-        if (images.length < 3) {
-          const topicOnly = mainTopic.replace(/\b(20\d{2})\b/g, '').trim();
-          if (topicOnly) {
-            console.log(`[PER_CARD] Card ${cardIndex} topic-only fallback: "${topicOnly}"`);
-            const fallbackImages = await searchBraveImages(`${topicOnly} photo`, braveApiKey);
-            images = [...images, ...fallbackImages];
-          }
-        }
-
-        // Deduplicate
-        cardImages[cardIndex] = [...new Set(images)];
+        cardImages[cardIndex] = [...new Set(images)].slice(0, 8);
       };
 
       for (let i = 0; i < per_card_queries.length; i += 3) {
@@ -397,38 +421,18 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     if (braveApiKey) {
       for (const term of searchTerms.slice(0, 3)) {
         if (images.length >= 20) break;
-        try {
-          // Append anti-text keywords and request photo type
-          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography`;
-          const query = encodeURIComponent(cleanQuery);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
-          const imgResponse = await fetch(url, {
-            headers: { 'X-Subscription-Token': braveApiKey },
-          });
-          if (imgResponse.ok) {
-            const imgData = await imgResponse.json();
-            const results = (imgData.results || []);
-            for (const item of results) {
-              const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && isCleanImageUrl(imgUrl)) {
-                // Only accept reasonably sized images (photos tend to be larger)
-                const w = item.properties?.width || item.width || 0;
-                const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
-                  images.push(imgUrl);
-                }
-              }
-            }
-            console.log('[IMAGES] Brave images for "' + term + '":', results.length, 'raw, ' + images.length + ' after filter');
-          }
-        } catch (e) {
-          console.error('[IMAGES] Brave error:', e);
-        }
+        const results = await searchBravePhotos(term, braveApiKey, 50);
+        images = [...images, ...results];
+        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length + ' after strict filter');
       }
     }
 
-    // Strategy 2: Generate images with AI if search found too few
-    if (images.length < 2) {
+    const shouldAvoidAiFallback = /(oscar|academy awards|ator|atriz|actor|actress|director|premiere|ceremony|winner|vencedor|filme|movie)/i.test(
+      `${cleanTopic} ${searchTerms.join(' ')}`
+    );
+
+    // Strategy 2: Generate images with AI only for non-editorial topics if search found too few
+    if (images.length < 2 && !shouldAvoidAiFallback) {
       const lovableKey = Deno.env.get('LOVABLE_API_KEY');
       if (lovableKey) {
         console.log('[IMAGES] Generating AI images for topic:', cleanTopic);

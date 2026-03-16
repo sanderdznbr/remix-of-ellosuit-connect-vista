@@ -268,7 +268,7 @@ const StepPersonalization: React.FC<Props> = ({
                 {[{ value: 'male', label: '♂ Masculino' }, { value: 'female', label: '♀ Feminino' }, { value: 'auto', label: '⚡ Auto' }].map(opt => (
                   <button
                     key={opt.value}
-                    onClick={() => setFaceGender(opt.value)}
+                    onClick={() => setFaceGender(opt.value as 'male' | 'female' | 'auto')}
                     className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${faceGender === opt.value ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
                   >
                     {opt.label}

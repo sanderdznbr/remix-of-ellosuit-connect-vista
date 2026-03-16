@@ -241,6 +241,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
   const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
+  const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -1855,10 +1856,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
       let fontBase64: string | undefined;
       let fontName: string | undefined;
-      if (extremeSelectedFont?.previewUrl) {
+      const activeFontRef = extremeSelectedFont || advancedEnvatoFont;
+      if (activeFontRef?.previewUrl) {
         try {
-          setImageGenProgress('🔤 Processando referência de fonte...');
-          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          setImageGenProgress('Processando referencia de fonte...');
+          const fontResp = await fetch(activeFontRef.previewUrl);
           if (fontResp.ok) {
             const blob = await fontResp.blob();
             if (!blob.type.includes('text/html')) {
@@ -1868,7 +1870,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
               });
-              fontName = extremeSelectedFont.name;
+              fontName = activeFontRef.name;
               console.log('[SINGLE_POST] Font reference converted to base64:', fontName);
             }
           }
@@ -2573,10 +2575,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       // === FONT REFERENCE: Convert Envato preview to base64 for carousel AI ===
       let carouselFontBase64: string | undefined;
       let carouselFontName: string | undefined;
-      if (extremeSelectedFont?.previewUrl) {
+      const carouselFontRef = extremeSelectedFont || advancedEnvatoFont;
+      if (carouselFontRef?.previewUrl) {
         try {
-          setImageGenProgress('🔤 Processando referência de fonte...');
-          const fontResp = await fetch(extremeSelectedFont.previewUrl);
+          setImageGenProgress('Processando referencia de fonte...');
+          const fontResp = await fetch(carouselFontRef.previewUrl);
           if (fontResp.ok) {
             const blob = await fontResp.blob();
             if (!blob.type.includes('text/html')) {
@@ -2586,7 +2589,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
               });
-              carouselFontName = extremeSelectedFont.name;
+              carouselFontName = carouselFontRef.name;
               console.log('[CAROUSEL] Font reference converted to base64:', carouselFontName);
             }
           }
@@ -5807,7 +5810,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onDismissBrandPalette={() => setBrandSuggestedPalette(null)} />
                     )}
                     {currentStepName === 'Fontes' && !isFullBleedMarketplace && wizardMode !== 'extreme' && (
-                      <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
+                      <StepFonts
+                        selectedFont={selectedFont}
+                        setSelectedFont={setSelectedFont}
+                        envatoFont={advancedEnvatoFont}
+                        onEnvatoFontSelect={setAdvancedEnvatoFont}
+                        hasMarketplaceStyle={!!activeMarketplaceStyle?.imageGeneration?.prompt_style}
+                      />
                     )}
                     {currentStepName === 'Roteiro' && (
                       <StepCardTexts

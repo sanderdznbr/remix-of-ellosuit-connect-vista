@@ -240,8 +240,8 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         promptParts.push(`TEMA: "${job.topic}"`);
       }
       promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-      // NOTE: Logo/brand is overlaid programmatically via Canvas — do NOT ask AI to render it
-      if (job.brand_name) promptParts.push(`PROIBIDO RENDERIZAR LOGOMARCA/NOME DA MARCA: A marca "${job.brand_name}" será adicionada automaticamente como overlay. NÃO renderize o nome da marca, logotipo ou texto da marca na imagem. Foque apenas no conteúdo visual e nos textos do post.`);
+      // NOTE: Logo/brand is overlaid programmatically via Canvas — do NOT mention brand name in prompt
+      promptParts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema. Deixe a área do logo LIMPA e SEM TEXTO.');
       const isMarketplaceStyle = !!singlePromptStyle;
       if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
@@ -345,7 +345,12 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
       });
     }
 
-    const cleanTopic = textData?.clean_topic || job.topic.split('\n')[0].trim();
+    const rawCleanTopic = textData?.clean_topic || job.topic.split('\n')[0].trim();
+    // Strip brand name from topic used in image prompts to prevent AI from rendering it as text
+    const brandNameToStrip = job.brand_name?.trim();
+    const cleanTopic = brandNameToStrip 
+      ? rawCleanTopic.replace(new RegExp(`\\(?@?${brandNameToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)?`, 'gi'), '').replace(/\s{2,}/g, ' ').trim()
+      : rawCleanTopic;
     // Assign layouts
     const cards = textData.cards.map((c: any, i: number) => {
       if (c.type === 'cover') return { ...c, layout: 'dark' };
@@ -534,10 +539,8 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
         parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt.');
         
-        // Logo/brand — overlaid programmatically, tell AI NOT to render it
-        if (job.brand_name) {
-          parts.push(`PROIBIDO RENDERIZAR LOGOMARCA: A marca "${job.brand_name}" será sobreposta automaticamente via Canvas. NÃO renderize o nome da marca, logotipo ou texto da marca na imagem gerada. Deixe a área do logo limpa.`);
-        }
+        // Logo/brand — overlaid programmatically, do NOT mention brand name to avoid AI rendering it
+        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema.');
 
         if (isCover) {
           parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);

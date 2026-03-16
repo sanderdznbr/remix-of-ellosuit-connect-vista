@@ -56,7 +56,7 @@ const GeneratingAnimation: React.FC<Props> = ({
       setCompletionPhase(true);
       const timer = setTimeout(() => {
         onCompleteAnimationDone?.();
-      }, 900);
+      }, 1100);
       return () => clearTimeout(timer);
     }
   }, [isCompleting]);
@@ -119,14 +119,14 @@ const GeneratingAnimation: React.FC<Props> = ({
   }, [topic, cardCount, bgColor, accentColor, textColor, brandName, logoUrl, skipWebSearch]);
 
   const STEPS = useMemo(() => [
-    { icon: '📝', label: 'Criando textos persuasivos...' },
-    { icon: '🎨', label: 'Definindo paleta de cores...' },
-    { icon: '📐', label: `Calculando layout de ${cardCount} cards...` },
-    ...(skipWebSearch ? [] : [{ icon: '🖼️', label: 'Buscando imagens na web...' }]),
-    { icon: '✨', label: 'Gerando imagens com IA...' },
-    { icon: '🔤', label: 'Aplicando tipografia...' },
-    { icon: '📱', label: 'Montando carrossel...' },
-    { icon: '🚀', label: 'Finalizando...' },
+    { label: 'Criando textos persuasivos...' },
+    { label: 'Definindo paleta de cores...' },
+    { label: `Calculando layout de ${cardCount} cards...` },
+    ...(skipWebSearch ? [] : [{ label: 'Buscando imagens na web...' }]),
+    { label: 'Gerando imagens com IA...' },
+    { label: 'Aplicando tipografia...' },
+    { label: 'Montando carrossel...' },
+    { label: 'Finalizando...' },
   ], [cardCount, selectedFont, skipWebSearch]);
 
   const displayCardCount = Math.min(cardCount, 8);
@@ -219,15 +219,15 @@ const GeneratingAnimation: React.FC<Props> = ({
         <motion.div
           className="carousel-loader-wrapper"
           style={{ width: 200, height: 200 }}
-          animate={completionPhase ? { scale: 12, opacity: 0.6 } : { scale: 1, opacity: 1 }}
-          transition={completionPhase ? { duration: 0.8, ease: [0.22, 1, 0.36, 1] } : {}}
+          animate={completionPhase ? { scale: 18, opacity: 0 } : { scale: 1, opacity: 1 }}
+          transition={completionPhase ? { duration: 1.0, ease: [0.22, 1, 0.36, 1] } : {}}
         >
           <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
         </motion.div>
 
         <motion.div
-          animate={completionPhase ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          animate={completionPhase ? { opacity: 0, y: 30 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
         >
         {imageGenProgress && (
           <motion.div className="md:hidden mt-6 flex flex-col items-center gap-2 w-full max-w-[260px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -287,7 +287,6 @@ const GeneratingAnimation: React.FC<Props> = ({
                 </div>
               ) : (
                 <>
-                  <span className="text-2xl">{STEPS[activeStep]?.icon}</span>
                   <p className="text-white/70 text-sm font-medium">{STEPS[activeStep]?.label}</p>
                 </>
               )}

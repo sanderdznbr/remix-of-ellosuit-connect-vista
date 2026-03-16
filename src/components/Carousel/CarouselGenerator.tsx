@@ -769,7 +769,7 @@ const CarouselGenerator: React.FC = () => {
         // Update progress
         if (job.progress_message) setImageGenProgress(job.progress_message);
         if (job.progress_current !== undefined && job.progress_total) {
-          setImageGenProgress(`🎨 ${job.progress_current}/${job.progress_total} imagens geradas...`);
+          setImageGenProgress(`${job.progress_current}/${job.progress_total} imagens geradas...`);
         }
 
         // Update carousel data as images come in
@@ -1612,7 +1612,7 @@ const CarouselGenerator: React.FC = () => {
 
     try {
       setGeneratingAllImages(true);
-      setImageGenProgress('🎨 Gerando post único...');
+      setImageGenProgress('Gerando post único...');
 
       const activeFP = facePersons.filter(p => p.photos.length > 0);
       const faceRefUrls = activeFP.length > 0 ? activeFP.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url);
@@ -2757,7 +2757,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       if (imageFactories.length > 0) {
         let completed = 0;
         const totalAi = imageFactories.length;
-        setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
+        setImageGenProgress(`0/${totalAi} imagens geradas...`);
 
         // When using marketplace styles with heavy refs, go fully sequential to avoid 429
         const hasHeavyRefs = !!activeMarketplaceStyleRef.current || styleRefUrls.length > 0;
@@ -2772,7 +2772,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               batch.map(f =>
                 f.factory().then(url => {
                   completed++;
-                  setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+                  setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
                   if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true, generatedPrompt: f.prompt };
                   return url;
                 })
@@ -2789,7 +2789,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         if (coverFactory) {
           const coverUrl = await coverFactory.factory();
           completed++;
-          setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+          setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
           if (coverUrl) updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true, generatedPrompt: coverFactory.prompt };
         }
 
@@ -2801,7 +2801,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           await new Promise(r => setTimeout(r, batchDelay));
           const lastUrl = await lastFactory.factory();
           completed++;
-          setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+          setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
           if (lastUrl) updatedCards[lastFactory.index] = { ...updatedCards[lastFactory.index], imageUrl: lastUrl, isAiImage: true, generatedPrompt: lastFactory.prompt };
         }
 
@@ -3356,7 +3356,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         return { ...prev, cards: newCards };
       });
 
-      toast({ title: '✨ Card de texto criado!' });
+      toast({ title: 'Card de texto criado!' });
     } catch (err: any) {
       toast({ title: 'Erro ao gerar card', description: err.message, variant: 'destructive' });
     } finally {
@@ -3439,7 +3439,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
       setActiveCardIndex(0);
       setGeneratingAllImages(true);
-      setImageGenProgress('🎨 Gerando imagens dos cards...');
+      setImageGenProgress('Gerando imagens dos cards...');
 
       // IMPORTANT: Collect face refs from BOTH facePersons (multi-person mode) and referenceImages
       const coverFaceRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];
@@ -3569,7 +3569,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       // Generate images in batches
       let completed = 0;
       const totalAi = imageFactories.length;
-      setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
+      setImageGenProgress(`0/${totalAi} imagens geradas...`);
 
       for (let i = 0; i < imageFactories.length; i += 2) {
         const batch = imageFactories.slice(i, i + 2);
@@ -3577,7 +3577,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         await Promise.all(batch.map(f =>
           f.factory().then(url => {
             completed++;
-            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+            setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
             if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true };
           })
         ));
@@ -4353,7 +4353,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         }
       }
 
-      toast({ title: '✨ Card regenerado!' });
+      toast({ title: 'Card regenerado!' });
       return true;
     } catch (err: any) {
       toast({ title: 'Erro ao regenerar', description: err.message, variant: 'destructive' });
@@ -4505,7 +4505,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           if (i < total - 1) await new Promise(r => setTimeout(r, 500));
         }
         setRegenAllProgress(null);
-        toast({ title: '✨ Todos os cards regenerados!' });
+        toast({ title: 'Todos os cards regenerados!' });
       }
       // Auto-save after regeneration
       setTimeout(() => saveCarousel(), 500);
@@ -4552,7 +4552,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         const newCards = [...carouselData.cards];
         newCards[cardIndex] = { ...newCards[cardIndex], imageUrl: data.imageUrl };
         setCarouselData({ ...carouselData, cards: newCards });
-        toast({ title: '✨ Rosto regenerado!' });
+        toast({ title: 'Rosto regenerado!' });
       } else {
         throw new Error('Não foi possível regenerar o rosto');
       }
@@ -7573,7 +7573,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         disabled={tempFaceFiles.length === 0}
                         className="flex-1 px-3 py-3 rounded-xl text-[13px] font-semibold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
                         style={{ backgroundColor: wizardMode === 'extreme' ? '#E84D1A' : '#9333EA', boxShadow: wizardMode === 'extreme' ? '0 10px 30px rgba(232,77,26,0.25)' : '0 10px 30px rgba(147,51,234,0.2)' }}>
-                        ✨ Regenerar rosto
+                        Regenerar rosto
                       </button>
                     </div>
                   </div>
@@ -8248,7 +8248,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: wizardMode === 'extreme' ? 'linear-gradient(135deg, rgba(232,77,26,0.2), rgba(232,77,26,0.05))' : 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
               <Sparkles className="w-8 h-8" style={{ color: wizardMode === 'extreme' ? '#E84D1A' : '#9B6BFF' }} />
             </div>
-            <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado? ✨</h2>
+            <h2 className="text-white text-xl font-bold mb-2">Gostou do resultado?</h2>
             <p className="text-white/50 text-sm mb-6 leading-relaxed">
               Para baixar, editar e criar conteúdos ilimitados com IA, crie sua conta.
             </p>

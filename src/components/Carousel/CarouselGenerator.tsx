@@ -5611,24 +5611,30 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         webImages={webSearchResult?.images} onSkip={() => setWizardStep(wizardStep + 1)} />
                     )}
-                    {currentStepName === 'Rosto' && (
-                      <StepFaceRef
+                    {currentStepName === 'Personalização' && (
+                      <StepPersonalization
                         facePersons={facePersons} setFacePersons={setFacePersons}
                         referenceImages={referenceImages} setReferenceImages={setReferenceImages}
                         allPeopleOnCover={allPeopleOnCover} setAllPeopleOnCover={setAllPeopleOnCover}
-                        famousList={famousList} setFamousList={setFamousList}
-                        famousImages={famousImages} setFamousImages={setFamousImages}
                         faceGender={faceGender} setFaceGender={setFaceGender}
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
-                        activeMarketplaceStyle={activeMarketplaceStyle}
+                        brandAssets={brandAssets}
+                        onSuggestColors={(palette) => setBrandSuggestedPalette(palette)}
+                        showHeader={showHeader} setShowHeader={setShowHeader}
+                        logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+                        logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
+                        logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+                        logoBrandColors={logoBrandColors}
+                        useBrandColors={useBrandColors} setUseBrandColors={setUseBrandColors}
+                        brandName={brandName} setBrandName={setBrandName}
+                        userName={userName} setUserName={setUserName}
+                        dateLabel={dateLabel} setDateLabel={setDateLabel}
                         hasWebImages={hasWebImages}
-                        webFacePosition={webFacePosition}
-                        setWebFacePosition={setWebFacePosition} />
-                    )}
-                    {currentStepName === 'Posição' && (
-                      <StepFacePosition
-                        webFacePosition={webFacePosition}
-                        setWebFacePosition={setWebFacePosition} />
+                        webFacePosition={webFacePosition} setWebFacePosition={setWebFacePosition}
+                        onSkipAll={() => setWizardStep(wizardStep + 1)}
+                        activeMarketplaceStyle={activeMarketplaceStyle}
+                        isExtreme={wizardMode === 'extreme'}
+                      />
                     )}
                     {currentStepName === 'Pessoas' && (
                       <StepPeopleMode

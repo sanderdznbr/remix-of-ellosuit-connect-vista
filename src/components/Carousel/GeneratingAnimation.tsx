@@ -308,8 +308,11 @@ const GeneratingAnimation: React.FC<Props> = ({
       </div>
 
       {/* RIGHT SIDE — Code flow + Mini cards */}
-      <div className="hidden md:flex flex-1 flex-col relative overflow-hidden"
-        style={{ borderLeft: '1px solid rgba(255,255,255,0.04)' }}>
+      <motion.div className="hidden md:flex flex-1 flex-col relative overflow-hidden"
+        style={{ borderLeft: '1px solid rgba(255,255,255,0.04)' }}
+        animate={completionPhase ? { opacity: 0, x: 40 } : { opacity: 1, x: 0 }}
+        transition={{ duration: 0.4 }}
+      >
 
         <div className="flex-1 p-8 overflow-hidden relative">
           <div className="flex items-center gap-2 mb-4">

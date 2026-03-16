@@ -29,9 +29,13 @@ const BLOCKED_DOMAINS = [
 const TRUSTED_PHOTO_DOMAINS = [
   'people.com', 'ew.com', 'variety.com', 'hollywoodreporter.com', 'deadline.com',
   'bbc.com', 'cnn.com', 'nytimes.com', 'apnews.com', 'reuters.com',
-  'exame.com', 'metropoles.com', 'gshow.globo.com', 'globo.com', 'sbt.com.br',
-  'sbtnews.sbt.com.br', 'uol.com.br', 'folha.uol.com.br', 'estadao.com.br',
-  'opovo.com.br', 'omelete.com.br', 'cinebuzz.com.br', 'rollingstone.com',
+  'exame.com', 'metropoles.com', 'gshow.globo.com', 'globo.com', 'g1.globo.com',
+  'oglobo.globo.com', 'cbn.globo.com', 'valorinternational.globo.com',
+  'sbt.com.br', 'sbtnews.sbt.com.br', 'uol.com.br', 'folha.uol.com.br',
+  'estadao.com.br', 'opovo.com.br', 'omelete.com.br', 'cinebuzz.com.br',
+  'rollingstone.com', 'veja.abril.com.br', 'terra.com.br', 'gazetadopovo.com.br',
+  'revistaoeste.com', 'bloomberglinea.com.br', 'infomoney.com.br', 'poder360.com.br',
+  'agenciabrasil.ebc.com.br', 'correiobraziliense.com.br',
 ];
 
 function getHostname(url: string): string {
@@ -110,49 +114,42 @@ function buildQueryVariants(query: string): string[] {
 
 async function searchBravePhotos(query: string, braveKey: string, count = 30): Promise<string[]> {
   try {
-    const queryLower = query.toLowerCase();
-    const requiresEditorialSource = /(oscar|academy awards|red carpet|premiere|ceremony|actor|atriz|actress|director|winner|vencedor|best picture|film|filme|movie)/i.test(queryLower);
-    const queryVariants = buildQueryVariants(query);
-    const candidates: { url: string; score: number }[] = [];
-
-    for (const rawQuery of queryVariants) {
-      const cleanQuery = `${rawQuery} -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -poster -fan-art -fanart -edit -edits -drawing -illustration -render`;
-      const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
-      const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
-      if (!res.ok) continue;
-
-      const data = await res.json();
-      for (const item of (data.results || [])) {
-        const imgUrl = item.properties?.url || item.thumbnail?.src;
-        if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
-
-        const itemText = JSON.stringify(item).toLowerCase();
-        if (['meme', 'memes', 'wallpaper', 'poster', 'fanart', 'fan-art', 'quote', 'quotes', 'feature image'].some((pat) => itemText.includes(pat))) continue;
-
-        const width = item.properties?.width || item.width || 0;
-        const height = item.properties?.height || item.height || 0;
-        if (!hasPhotoLikeAspectRatio(width, height)) continue;
-
-        const trusted = isTrustedPhotoDomain(imgUrl);
-        const hostname = getHostname(imgUrl);
-        const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
-        if (looksAggregator) continue;
-        if (requiresEditorialSource && !trusted && (width < 420 || height < 280)) continue;
-        if (!requiresEditorialSource && !trusted && (width < 640 || height < 420)) continue;
-        if (trusted && (width < 300 || height < 200)) continue;
-
-        let score = trusted ? 140 : 40;
-        score += Math.min(width, 2400) / 100;
-        score += Math.min(height, 1800) / 100;
-        if (/(red carpet|premiere|ceremony|oscar|academy awards)/i.test(rawQuery.toLowerCase()) && trusted) score += 30;
-        if (/photo|editorial/.test(rawQuery.toLowerCase())) score += 10;
-        candidates.push({ url: imgUrl, score });
-      }
-
-      if (candidates.length >= 8) break;
+    // Simple search: just the query + minimal exclusions. Let Brave handle relevance.
+    const cleanQuery = `${query} -meme -funny -template -wallpaper -fanart`;
+    const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
+    console.log('[BRAVE] Searching:', cleanQuery.slice(0, 80));
+    const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
+    if (!res.ok) {
+      console.error('[BRAVE] HTTP error:', res.status);
+      return [];
     }
 
-    return [...new Set(candidates.sort((a, b) => b.score - a.score).map((candidate) => candidate.url))].slice(0, 8);
+    const data = await res.json();
+    const candidates: { url: string; score: number }[] = [];
+
+    for (const item of (data.results || [])) {
+      const imgUrl = item.properties?.url || item.thumbnail?.src;
+      if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
+
+      const width = item.properties?.width || item.width || 0;
+      const height = item.properties?.height || item.height || 0;
+      // Minimum 300x200 for any image
+      if (width > 0 && height > 0 && (width < 300 || height < 200)) continue;
+      if (width > 0 && height > 0 && !hasPhotoLikeAspectRatio(width, height)) continue;
+
+      const hostname = getHostname(imgUrl);
+      const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
+      if (looksAggregator) continue;
+
+      const trusted = isTrustedPhotoDomain(imgUrl);
+      let score = trusted ? 140 : 40;
+      score += Math.min(width || 800, 2400) / 100;
+      score += Math.min(height || 600, 1800) / 100;
+      candidates.push({ url: imgUrl, score });
+    }
+
+    console.log('[BRAVE] Found', candidates.length, 'candidates for:', query.slice(0, 50));
+    return [...new Set(candidates.sort((a, b) => b.score - a.score).map((c) => c.url))].slice(0, 8);
   } catch (e) {
     console.error('[IMAGES] Brave search error:', e);
     return [];
@@ -443,18 +440,49 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
 
     // Search for images - use clean topic from AI, not raw user input
     let images: string[] = [];
-    const cleanTopic = parsedContent.clean_topic || topic;
-    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} photo`, `${cleanTopic} fotografia`];
+    let cleanTopic = parsedContent.clean_topic || topic;
+    // If AI failed to extract clean_topic and it still looks like a full sentence, extract the key subject
+    if (cleanTopic.length > 40 || /\b(crie|sobre|post|explique|faça|fale)\b/i.test(cleanTopic)) {
+      // Try to extract a name or subject from the prompt
+      const nameMatch = cleanTopic.match(/(?:sobre|de|quem é)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)+)/i);
+      if (nameMatch) {
+        cleanTopic = nameMatch[1].trim();
+      } else {
+        // Remove common filler words
+        cleanTopic = cleanTopic
+          .replace(/\b(crie|criar|um|uma|post|sobre|explique|faça|fale|conte|o que|e|ele|ela|fez|quem é)\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+      console.log('[IMAGES] Cleaned topic from prompt:', cleanTopic);
+    }
+    // Store cleaned topic back so per-card search uses it too
+    parsedContent.clean_topic = cleanTopic;
+
+    // Build search terms: always include the clean name/topic directly
+    const keyEntities: string[] = parsedContent.key_entities || [];
+    const searchTerms: string[] = [];
+    // Primary: just the name/topic
+    searchTerms.push(cleanTopic);
+    // Secondary: key entities (people names)
+    for (const entity of keyEntities.slice(0, 3)) {
+      if (entity !== cleanTopic) searchTerms.push(entity);
+    }
+    // Tertiary: AI-suggested terms
+    const aiTerms: string[] = parsedContent.image_search_terms || [];
+    for (const term of aiTerms) {
+      if (!searchTerms.includes(term)) searchTerms.push(term);
+    }
     console.log('[IMAGES] Clean topic:', cleanTopic);
-    console.log('[IMAGES] Search terms:', searchTerms);
+    console.log('[IMAGES] Search terms:', searchTerms.slice(0, 5));
 
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      for (const term of searchTerms.slice(0, 3)) {
+      for (const term of searchTerms.slice(0, 4)) {
         if (images.length >= 20) break;
         const results = await searchBravePhotos(term, braveApiKey, 50);
         images = [...images, ...results];
-        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length + ' after strict filter');
+        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length);
       }
     }
 

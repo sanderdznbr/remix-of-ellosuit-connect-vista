@@ -24,6 +24,7 @@ import ellocontentLogo from '@/assets/ellocontent2.svg';
 interface DashboardLayoutProps {
   onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string) => void;
   onLoadCarousel?: (carouselItem: any) => void;
+  onResumeJob?: (jobId: string) => void;
   children?: React.ReactNode;
 }
 

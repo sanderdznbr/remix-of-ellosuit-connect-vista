@@ -405,9 +405,9 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
       for (const term of searchTerms) {
         if (images.length >= 20) break;
         try {
-          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
+          const cleanQuery = `${term} portrait photograph -text -infographic -quote -meme -template -typography -tweet -twitter -screenshot -poster -thumbnail -reaction -instagram -tiktok -promo -banner -collage -montage -listicle -slideshow -"here are" -"must see" -"top 10" -highlights -recap`;
           const query = encodeURIComponent(cleanQuery);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=30&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {
             headers: { 'X-Subscription-Token': braveApiKey },
           });

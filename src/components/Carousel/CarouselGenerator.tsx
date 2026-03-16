@@ -4353,7 +4353,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         }
       }
 
-      toast({ title: '✨ Card regenerado!' });
+      toast({ title: 'Card regenerado!' });
       return true;
     } catch (err: any) {
       toast({ title: 'Erro ao regenerar', description: err.message, variant: 'destructive' });

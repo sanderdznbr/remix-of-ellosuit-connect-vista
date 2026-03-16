@@ -4877,9 +4877,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             transition={{ duration: 0.3 }}
           >
             <DashboardLayout
-              onStartCarousel={(newTopic?: string) => {
+              onStartCarousel={(newTopic?: string, _mentionedPrompts?: any[], newPostFormat?: string) => {
                 resetWizardState();
                 setShowWelcome(false);
+                if (newPostFormat && newPostFormat in FORMAT_DIMENSIONS) {
+                  setPostFormat(newPostFormat as PostFormatType);
+                }
                 if (newTopic) {
                   setTopic(newTopic); setOriginalTopic(newTopic);
                 }

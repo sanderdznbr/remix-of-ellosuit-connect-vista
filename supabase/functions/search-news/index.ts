@@ -358,20 +358,32 @@ NEVER use vague generic terms like "technology", "business", "news", or "update"
       };
     }
 
-    // Search for images - use clean topic from AI, not raw user input
+    // Search for images - preserve the literal topic when qualifiers like year/event matter
     let images: string[] = [];
-    const cleanTopic = parsedContent.clean_topic || topic;
-    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} photo`, `${cleanTopic} fotografia`];
+    const literalTopic = String(topic || '').trim();
+    const cleanTopic = (parsedContent.clean_topic || literalTopic).trim();
+    const hasCriticalQualifier = /\b(19|20)\d{2}\b/.test(literalTopic) || /(oscar|bbb|grammy|cannes|copa do mundo|world cup|champions league|emmy|golden globe|festival|eleiç|olimp|formula 1|f1)/i.test(literalTopic);
+    const baseTopicForSearch = hasCriticalQualifier ? literalTopic : cleanTopic;
+    const rawSearchTerms: string[] = parsedContent.image_search_terms || [`${baseTopicForSearch} photo`, `${baseTopicForSearch} fotografia`];
+    const searchTerms = rawSearchTerms
+      .map((term) => String(term || '').trim())
+      .filter(Boolean)
+      .map((term) => {
+        const normalized = term.toLowerCase();
+        const baseNormalized = baseTopicForSearch.toLowerCase();
+        return normalized.includes(baseNormalized) ? term : `${baseTopicForSearch} ${term}`;
+      })
+      .slice(0, 3);
+    console.log('[IMAGES] Literal topic:', literalTopic);
     console.log('[IMAGES] Clean topic:', cleanTopic);
     console.log('[IMAGES] Search terms:', searchTerms);
 
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      for (const term of searchTerms.slice(0, 3)) {
+      for (const term of searchTerms) {
         if (images.length >= 20) break;
         try {
-          // Append strict anti-text / anti-social-post filter keywords and request photo type
-          const cleanQuery = `${term} real event photography -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
+          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography -tweet -twitter -x -screenshot -poster -thumbnail -reaction -instagram -tiktok`;
           const query = encodeURIComponent(cleanQuery);
           const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {

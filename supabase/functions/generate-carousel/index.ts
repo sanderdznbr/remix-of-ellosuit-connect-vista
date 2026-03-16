@@ -722,7 +722,7 @@ Responda APENAS em JSON válido:
         });
       }
 
-      const searchQuery = query || keywords?.join(' ') || topic;
+      const searchQuery = String(query || keywords?.join(' ') || topic || '').trim();
       const perPage = body.perPage || 12;
       const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(searchQuery)}&count=${perPage}&safesearch=strict&size=Large`;
       const response = await fetch(braveUrl, { headers: { 'X-Subscription-Token': BRAVE_API_KEY } });

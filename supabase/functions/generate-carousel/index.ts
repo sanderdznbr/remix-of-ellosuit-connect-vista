@@ -174,10 +174,12 @@ Do not include markdown or extra text.`
             const parsed = JSON.parse(cleaned);
             const classification = parsed.classification || 'unknown';
             const shouldSearch = classification === 'news' || classification === 'educational';
+            const keywords = parsed.keywords || [];
             return new Response(JSON.stringify({
               classification,
               shouldSearch,
               reason: parsed.reason_pt || '',
+              keywords,
             }), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });

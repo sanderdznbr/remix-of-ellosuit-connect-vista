@@ -482,9 +482,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   key={item.id}
                   className="rounded-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer overflow-hidden relative group shrink-0"
                   style={{
-                    width: isStory ? '112px' : '160px',
-                    height: isStory ? '200px' : '200px',
-                    aspectRatio: isStory ? '9/16' : undefined,
+                    width: isStory ? '112px' : format === 'square' ? '160px' : '160px',
+                    height: isStory ? '199px' : '200px',
                     background: !cover
                       ? sc.bgColor
                         ? `linear-gradient(135deg, ${sc.bgColor}, ${sc.accentColor || sc.bgColor}80)`

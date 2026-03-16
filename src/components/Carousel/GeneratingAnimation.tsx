@@ -225,6 +225,10 @@ const GeneratingAnimation: React.FC<Props> = ({
           <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
         </motion.div>
 
+        <motion.div
+          animate={completionPhase ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
         {imageGenProgress && (
           <motion.div className="md:hidden mt-6 flex flex-col items-center gap-2 w-full max-w-[260px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <p className="text-white text-base font-bold">{imageGenProgress}</p>
@@ -300,6 +304,7 @@ const GeneratingAnimation: React.FC<Props> = ({
             ))}
           </div>
         </div>
+        </motion.div>
       </div>
 
       {/* RIGHT SIDE — Code flow + Mini cards */}

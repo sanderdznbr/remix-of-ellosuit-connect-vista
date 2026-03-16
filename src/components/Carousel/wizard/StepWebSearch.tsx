@@ -15,8 +15,12 @@ interface Props {
 
 const StepWebSearch: React.FC<Props> = ({ webSearchResult, searchingWeb, onResearch, topic }) => {
   const content = webSearchResult.content || {};
-  const facts = content.facts || [];
+  const facts = Array.isArray(content.facts) ? content.facts : [];
   const imageCount = webSearchResult.images?.length || 0;
+  // Build a clean summary string, never show raw JSON
+  const summaryText = typeof webSearchResult.summary === 'string' && !webSearchResult.summary.startsWith('{')
+    ? webSearchResult.summary
+    : (typeof content.summary === 'string' ? content.summary : (content.title ? `${content.title}. ${content.subtitle || ''}`.trim() : 'Conteúdo encontrado com sucesso'));
   const citationCount = webSearchResult.citations?.length || 0;
 
   return (

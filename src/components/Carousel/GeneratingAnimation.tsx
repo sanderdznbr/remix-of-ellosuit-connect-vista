@@ -216,9 +216,14 @@ const GeneratingAnimation: React.FC<Props> = ({
         <div className="absolute w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"
           style={{ background: `radial-gradient(circle, ${loadingColor}99 0%, transparent 70%)` }} />
 
-        <div className="carousel-loader-wrapper" style={{ width: 200, height: 200 }}>
+        <motion.div
+          className="carousel-loader-wrapper"
+          style={{ width: 200, height: 200 }}
+          animate={completionPhase ? { scale: 12, opacity: 0.6 } : { scale: 1, opacity: 1 }}
+          transition={completionPhase ? { duration: 0.8, ease: [0.22, 1, 0.36, 1] } : {}}
+        >
           <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
-        </div>
+        </motion.div>
 
         {imageGenProgress && (
           <motion.div className="md:hidden mt-6 flex flex-col items-center gap-2 w-full max-w-[260px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

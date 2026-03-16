@@ -2789,7 +2789,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         if (coverFactory) {
           const coverUrl = await coverFactory.factory();
           completed++;
-          setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+          setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
           if (coverUrl) updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true, generatedPrompt: coverFactory.prompt };
         }
 

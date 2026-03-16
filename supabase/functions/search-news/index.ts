@@ -32,7 +32,13 @@ function isCleanImageCandidate(url: string, metadata = ''): boolean {
     'captura-de-tela', 'screenshot', 'screen-shot', 'tutorial', 'interface', 'ui', 'editor',
     'maxresdefault', 'winners-list', 'imgflip', '.svg',
     'bingo', 'checklist', 'ballot', 'voting-card', 'scorecard', 'bracket',
-    'poster', 'cover-art', 'album-cover', 'movie-poster', 'trophy-icon'
+    'poster', 'cover-art', 'album-cover', 'movie-poster', 'trophy-icon',
+    'must-see', 'moments', 'highlights', 'recap', 'listicle', 'slideshow',
+    'gonna be', 'hosted by', 'here are', 'top 10', 'best of', 'worst of',
+    'predictions', 'nominees', 'nomination', 'snubs',
+    'promo', 'promotional', 'advertisement', 'ad-', 'sponsored',
+    'thumbnail', 'thumb_', 'hqdefault', 'sddefault', 'mqdefault',
+    'collage', 'grid', 'montage', 'compilation', 'roundup'
   ];
   for (const pat of badPatterns) {
     if (combined.includes(pat)) return false;

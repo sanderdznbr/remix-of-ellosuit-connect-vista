@@ -5584,7 +5584,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         skipWebSearch={wizardMode === 'simple' ? false : skipWebSearch}
                         onToggleSkipWebSearch={wizardMode === 'simple' ? undefined : () => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
                         mentionedPrompts={mentionedPrompts}
-                        onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
+                        onMentionAdd={async (p) => {
+                          setMentionedPrompts(prev => [...prev, p]);
+                          // Fetch linked media for this prompt
+                          try {
+                            const { data: media } = await supabase.from('saved_prompt_media').select('*').eq('prompt_id', p.id).order('sort_order');
+                            if (media && media.length > 0) {
+                              setPendingPromptMedia({ promptTitle: p.title, media });
+                            }
+                          } catch (err) { console.error('Failed to fetch prompt media:', err); }
+                        }}
                         onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
                         contentMode={contentMode}
                         manualPostText={manualPostText}

@@ -2032,6 +2032,7 @@ MANTENHA a foto real reconhecível e fiel.`);
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
         },
       });
+      console.log('[GENERATE_FLOW] generate-carousel response:', error ? 'ERROR' : 'OK', data?.success, data?.error);
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao gerar');
 

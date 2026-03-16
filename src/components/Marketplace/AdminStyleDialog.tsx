@@ -367,7 +367,38 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             </div>
           </div>
 
-          {/* Description */}
+          {/* Cover Image */}
+          <div>
+            <label className="text-[10px] text-white/40 mb-1 block">Capa do Estilo (opcional)</label>
+            <p className="text-[9px] text-white/15 mb-2">Imagem usada apenas para exibição no Marketplace. Não é usada como referência na geração.</p>
+            <div className="flex items-center gap-3">
+              {(coverPreview || existingCover) ? (
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 group">
+                  <img src={coverPreview || existingCover} alt="Capa" className="w-full h-full object-cover" />
+                  <button onClick={() => { setCoverFile(null); setCoverPreview(''); setExistingCover(''); }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-white/10 cursor-pointer hover:border-yellow-500/30 transition-colors">
+                  <div className="text-center">
+                    <Upload className="w-4 h-4 text-white/20 mx-auto mb-1" />
+                    <span className="text-[9px] text-white/20">Upload Capa</span>
+                  </div>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setCoverFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setCoverPreview(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+              )}
+            </div>
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[10px] text-white/40">Descrição</label>

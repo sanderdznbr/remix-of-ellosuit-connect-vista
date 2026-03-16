@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Não foi possível editar o rosto.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const imagePrompt = prompt || topic || 'abstract background';
+    const imagePrompt = stripInternalBrands(prompt || topic || 'abstract background');
     const hasFaceRefs = faceReferenceUrls && faceReferenceUrls.length > 0;
     const hasStyleRefs = styleReferenceUrls && styleReferenceUrls.length > 0;
     const hasGeneralRefs = referenceImageUrls && referenceImageUrls.length > 0;

@@ -418,38 +418,18 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     if (braveApiKey) {
       for (const term of searchTerms.slice(0, 3)) {
         if (images.length >= 20) break;
-        try {
-          // Append anti-text keywords and request photo type
-          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography`;
-          const query = encodeURIComponent(cleanQuery);
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
-          const imgResponse = await fetch(url, {
-            headers: { 'X-Subscription-Token': braveApiKey },
-          });
-          if (imgResponse.ok) {
-            const imgData = await imgResponse.json();
-            const results = (imgData.results || []);
-            for (const item of results) {
-              const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && isCleanImageUrl(imgUrl)) {
-                // Only accept reasonably sized images (photos tend to be larger)
-                const w = item.properties?.width || item.width || 0;
-                const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
-                  images.push(imgUrl);
-                }
-              }
-            }
-            console.log('[IMAGES] Brave images for "' + term + '":', results.length, 'raw, ' + images.length + ' after filter');
-          }
-        } catch (e) {
-          console.error('[IMAGES] Brave error:', e);
-        }
+        const results = await searchBravePhotos(term, braveApiKey, 50);
+        images = [...images, ...results];
+        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length + ' after strict filter');
       }
     }
 
-    // Strategy 2: Generate images with AI if search found too few
-    if (images.length < 2) {
+    const shouldAvoidAiFallback = /(oscar|academy awards|ator|atriz|actor|actress|director|premiere|ceremony|winner|vencedor|filme|movie)/i.test(
+      `${cleanTopic} ${searchTerms.join(' ')}`
+    );
+
+    // Strategy 2: Generate images with AI only for non-editorial topics if search found too few
+    if (images.length < 2 && !shouldAvoidAiFallback) {
       const lovableKey = Deno.env.get('LOVABLE_API_KEY');
       if (lovableKey) {
         console.log('[IMAGES] Generating AI images for topic:', cleanTopic);
@@ -470,6 +450,19 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
               }),
             });
             if (aiRes.ok) {
+              const aiData = await aiRes.json();
+              const aiImage = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+              if (aiImage) {
+                images.push(aiImage);
+                console.log('[IMAGES] AI generated image successfully');
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[IMAGES] AI generation error:', e);
+        }
+      }
+    }
               const aiData = await aiRes.json();
               const aiImage = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
               if (aiImage) {

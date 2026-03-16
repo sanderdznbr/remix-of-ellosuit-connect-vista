@@ -145,8 +145,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   if (isMobile) {
     return (
       <div className="flex flex-col h-[100dvh] w-full" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        {/* Mobile Header */}
-        <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 h-14 z-50" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        {/* Mobile Header — transparent, floats above content */}
+        <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 h-14 z-50 bg-transparent" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Left: hamburger to open sidebar */}
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/60 cursor-pointer">
             <div className="w-5 h-4 flex flex-col justify-between">

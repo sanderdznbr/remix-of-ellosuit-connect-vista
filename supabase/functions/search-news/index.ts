@@ -49,21 +49,19 @@ Deno.serve(async (req) => {
       console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards');
       const cardImages: Record<number, string[]> = {};
 
-      const searchCard = async (cardIndex: number, query: string) => {
+      const searchBraveImages = async (query: string, braveKey: string): Promise<string[]> => {
         const images: string[] = [];
         try {
-          // Append anti-text filter keywords to the query
-          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography photo`;
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=15&safesearch=strict&type=photo`;
+          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography -youtube -thumbnail -video photo`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict&type=photo`;
           const res = await fetch(url, {
-            headers: { 'X-Subscription-Token': braveApiKey },
+            headers: { 'X-Subscription-Token': braveKey },
           });
           if (res.ok) {
             const data = await res.json();
             for (const item of (data.results || [])) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
               if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
-                // Prefer larger images (likely photos, not graphics with text)
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
                 if (w >= 400 && h >= 400) {
@@ -72,11 +70,37 @@ Deno.serve(async (req) => {
               }
             }
           }
-          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} clean images`);
         } catch (e) {
-          console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
+          console.error('[PER_CARD] Brave search error:', e);
         }
-        cardImages[cardIndex] = images;
+        return images;
+      };
+
+      const searchCard = async (cardIndex: number, query: string) => {
+        // First attempt: full query
+        let images = await searchBraveImages(query, braveApiKey);
+        console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} images (attempt 1)`);
+
+        // Fallback: if too few results, simplify the query by removing year/numbers and using fewer words
+        if (images.length < 3) {
+          const simplified = query
+            .replace(/\b(20\d{2})\b/g, '') // remove years like 2024, 2025, 2026
+            .replace(/\b\d+\b/g, '') // remove other numbers
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split(' ')
+            .slice(0, 3) // keep only first 3 words
+            .join(' ');
+          if (simplified && simplified !== query.trim()) {
+            console.log(`[PER_CARD] Card ${cardIndex} fallback query: "${simplified}"`);
+            const fallbackImages = await searchBraveImages(simplified + ' photo', braveApiKey);
+            images = [...images, ...fallbackImages];
+            console.log(`[PER_CARD] Card ${cardIndex} after fallback: ${images.length} total`);
+          }
+        }
+
+        // Deduplicate
+        cardImages[cardIndex] = [...new Set(images)];
       };
 
       for (let i = 0; i < per_card_queries.length; i += 3) {

@@ -184,7 +184,7 @@ const PromptGallery: React.FC = () => {
     } catch {
       toast.error('Erro ao enviar arquivo');
     } finally {
-      setUploadingMedia(false);
+      setUploadingMediaFor(null);
     }
   };
 

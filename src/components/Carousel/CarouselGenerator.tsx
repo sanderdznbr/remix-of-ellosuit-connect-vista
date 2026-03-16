@@ -4126,6 +4126,10 @@ FORBIDDEN:
         const isCover = card.type === 'cover' || cardIndex === 0;
         const isCta = card.type === 'cta' || cardIndex === carouselData.cards.length - 1;
         const parts: string[] = [];
+        // Enforce current post format dimensions explicitly
+        const fmtDims = FORMAT_DIMENSIONS[postFormat];
+        const aspectLabel = postFormat === 'square' ? '1:1 QUADRADO' : postFormat === 'story' ? '9:16 STORIES VERTICAL' : '4:5 RETRATO';
+        parts.push(`⚠️ FORMATO OBRIGATÓRIO: ${aspectLabel} (${fmtDims.w}x${fmtDims.h}px). Gere EXATAMENTE UMA ÚNICA imagem neste formato. NÃO gere múltiplas imagens, NÃO divida em painéis, NÃO crie colagem ou grid.`);
         parts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO. NÃO use espanhol, NÃO use inglês.`);
         parts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
         parts.push(`PROIBIDO: NÃO copie nomes de usuário (@), nomes de empresas, marcas ou qualquer informação pessoal das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos).`);

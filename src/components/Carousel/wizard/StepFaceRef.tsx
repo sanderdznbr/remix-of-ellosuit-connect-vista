@@ -60,6 +60,7 @@ const StepFaceRef: React.FC<Props> = ({
   faceGender, setFaceGender,
   wearsGlasses, setWearsGlasses,
   activeMarketplaceStyle,
+  hasWebImages, webFacePosition, setWebFacePosition,
 }) => {
   const { user } = useAuth();
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);

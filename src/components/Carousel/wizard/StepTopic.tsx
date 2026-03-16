@@ -23,7 +23,7 @@ interface Props {
   onEnhance: () => void;
   searchingWeb?: boolean;
   onSearchWeb?: () => void;
-  webSearchResult?: { summary: string; citations: string[] } | null;
+  webSearchResult?: { summary: string; citations: string[]; images?: string[] } | null;
   skipWebSearch?: boolean;
   onToggleSkipWebSearch?: () => void;
   mentionedPrompts?: MentionedPrompt[];

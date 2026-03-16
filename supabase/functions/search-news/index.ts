@@ -386,6 +386,7 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
 
     // Search for images - preserve the literal topic when qualifiers like year/event matter
     let images: string[] = [];
+    let rawImageCandidates: { url: string; title?: string; desc?: string; source?: string }[] = [];
     const cleanTopic = (parsedContent.clean_topic || String(topic || '')).trim();
     // ALWAYS use clean_topic for image search - never the raw user prompt
     const baseTopicForSearch = cleanTopic;

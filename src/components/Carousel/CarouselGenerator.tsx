@@ -2561,39 +2561,39 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             const isCover = card.type === 'cover' || i === 0;
             const isCta = card.type === 'cta' || i === updatedCards.length - 1;
             const cardTextParts: string[] = [];
-            cardTextParts.push(`IDIOMA OBRIGATÓRIO: Todo texto renderizado na imagem DEVE estar em PORTUGUÊS BRASILEIRO CORRETO e sem erros ortográficos. NÃO use espanhol (ex: "descubra" não "descbura", "segunda" não "secunda", "maior" não "magior", "tornou" não "tornão", "rentável" não "rentábel", "história" não "históría"). Revise CADA palavra antes de renderizar. NÃO use inglês.`);
+            // ANTI-GRID as the VERY FIRST instruction for maximum priority
+            cardTextParts.push(`🚫 REGRA #1 ABSOLUTA — COMPOSIÇÃO ÚNICA: Cada card DEVE ser UMA ÚNICA CENA/COMPOSIÇÃO VISUAL que ocupa 100% do espaço (${cardW}x${cardH}). É TERMINANTEMENTE PROIBIDO criar grids, grades, mosaicos, colagens, divisões 2x2, 2x1, 3x1 ou qualquer subdivisão dentro de um card. NUNCA divida a imagem em múltiplos quadros ou painéis. O card inteiro é UMA composição editorial unificada.`);
+            cardTextParts.push(`IDIOMA OBRIGATÓRIO: Todo texto renderizado na imagem DEVE estar em PORTUGUÊS BRASILEIRO CORRETO e sem erros ortográficos. NÃO use espanhol. NÃO use inglês.`);
             cardTextParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
             const styleName = activeMarketplaceStyleRef.current?.name || '';
-            cardTextParts.push(`PROIBIDO COPIAR DAS REFERÊNCIAS: NÃO copie NENHUM texto, nome de marca, crédito de autor, watermark, assinatura ou rodapé das imagens de referência (ex: "marketing para...", "by ...", "@...", nomes de pessoas ou empresas). Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS das referências. NUNCA gere grades, mosaicos ou grids. NUNCA use "@" antes de nomes. Todo texto na imagem deve vir EXCLUSIVAMENTE do conteúdo fornecido pelo usuário abaixo.`);
-            cardTextParts.push(`PROIBIDO NOME DO ESTILO: NUNCA renderize o nome do estilo/template ("${styleName}") como texto na imagem. Se o nome do estilo aparecer nas referências, NÃO o copie. Use SOMENTE os textos fornecidos pelo usuário abaixo.`);
-            cardTextParts.push(`CRIATIVIDADE POR CARD: Cada card deve ter uma composição visual ÚNICA e CRIATIVA. Varie ângulos, elementos decorativos, ilustrações e cenários entre os cards. Gere imagens, ícones e elementos visuais RELEVANTES ao assunto "${cleanTopic}" — NÃO repita a mesma composição. A IA deve criar cenários contextuais ricos e diversificados para cada slide.`);
+            cardTextParts.push(`PROIBIDO COPIAR DAS REFERÊNCIAS: NÃO copie NENHUM texto, nome de marca, crédito de autor, watermark, assinatura ou rodapé das imagens de referência. Use APENAS o estilo visual (cores, tipografia, layout, elementos decorativos). NÃO COPIE OS ROSTOS das referências. NUNCA use "@" antes de nomes. Todo texto na imagem deve vir EXCLUSIVAMENTE do conteúdo fornecido pelo usuário abaixo.`);
+            cardTextParts.push(`PROIBIDO NOME DO ESTILO: NUNCA renderize o nome do estilo/template ("${styleName}") como texto na imagem.`);
+            cardTextParts.push(`CRIATIVIDADE POR CARD: Cada card deve ter uma composição visual ÚNICA e CRIATIVA. Varie ângulos, elementos decorativos, ilustrações e cenários entre os cards. Gere imagens, ícones e elementos visuais RELEVANTES ao assunto "${cleanTopic}" — NÃO repita a mesma composição.`);
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
-            cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem. Mantenha espaçamento generoso.`);
+            cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem.`);
             
-            if (logoUrl && brandName) {
-              const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
-              const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
-              cardTextParts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, sobrepondo o conteúdo com leve destaque (fundo semitransparente ou sombra sutil). A logo deve ser pequena e elegante, sem dominar o layout.`);
-            } else if (brandName) {
-              const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito', 'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito', 'middle-left': 'centro esquerdo', 'middle-right': 'centro direito' };
-              const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
-              cardTextParts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
+            // LOGO: Do NOT ask AI to render logo — it's overlaid programmatically via Canvas afterwards.
+            // Only mention brand name for textual context, NOT for rendering.
+            if (brandName) {
+              cardTextParts.push(`CONTEXTO DA MARCA: Este post é da marca "${brandName}". NÃO renderize logomarca ou logotipo na imagem — a logo será adicionada automaticamente depois. Apenas use o nome da marca como contexto textual se necessário no conteúdo.`);
             }
             
-            cardTextParts.push(`REGRA CRÍTICA DE TEXTO: Copie os textos abaixo LETRA POR LETRA, EXATAMENTE como escritos. NÃO invente, NÃO altere, NÃO troque letras, NÃO adicione acentos incorretos. Se o texto diz "os", escreva "os" (NÃO "on"). Se diz "financeiros", escreva "financeiros" (NÃO "financierios"). Se diz "Descubra", escreva "Descubra" (NÃO "Desctura"). Cada caractere deve ser idêntico ao fornecido.`);
+            cardTextParts.push(`REGRA CRÍTICA DE TEXTO: Copie os textos abaixo LETRA POR LETRA, EXATAMENTE como escritos. NÃO invente, NÃO altere, NÃO troque letras, NÃO adicione acentos incorretos.`);
+            // IMPORTANT: metadata like "Card X of Y" must NOT be rendered as visible text
+            cardTextParts.push(`🚫 REGRA CRÍTICA — METADADOS INVISÍVEIS: As instruções de contexto abaixo (como "CARD DE CAPA", "CARD DE CONTEÚDO", números de card) são APENAS para guiar seu estilo de design. NÃO renderize esses metadados como texto visível na imagem. NUNCA escreva "Card 1 de 5", "Card 3 of 5" ou similar na imagem.`);
             
             if (isCover) {
-              cardTextParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${updatedCards.length}).`);
+              cardTextParts.push(`[CONTEXTO INTERNO — NÃO RENDERIZAR]: Este é o card de capa.`);
               cardTextParts.push(`TÍTULO EXATO PARA RENDERIZAR (copie caractere por caractere): "${card.title || cleanTopic}"`);
               if (card.subtitle) cardTextParts.push(`SUBTÍTULO EXATO (copie caractere por caractere): "${card.subtitle}"`);
               cardTextParts.push(`Deve ser o card mais impactante, estilo capa de revista, com tipografia grande.`);
             } else if (isCta) {
-              cardTextParts.push(`ESTE É O CARD FINAL DE CTA (Card ${i + 1} de ${updatedCards.length}).`);
+              cardTextParts.push(`[CONTEXTO INTERNO — NÃO RENDERIZAR]: Este é o card final de encerramento.`);
               if (card.title) cardTextParts.push(`TÍTULO EXATO DO CTA (copie caractere por caractere): "${card.title}"`);
               if (card.body) cardTextParts.push(`TEXTO EXATO DO CTA (copie caractere por caractere): "${card.body}"`);
               cardTextParts.push(`Card de encerramento com call-to-action. NÃO é uma capa/hero.`);
             } else {
-              cardTextParts.push(`CARD DE CONTEÚDO ${i + 1} de ${updatedCards.length} (NÃO é capa, NÃO é hero).`);
+              cardTextParts.push(`[CONTEXTO INTERNO — NÃO RENDERIZAR]: Este é um card de conteúdo intermediário.`);
               const bodyText = (card.bodyTop || card.body || '').replace(/\*\*/g, '');
               if (bodyText) cardTextParts.push(`TEXTO PRINCIPAL EXATO PARA RENDERIZAR (copie caractere por caractere, sem alterar NENHUMA letra): "${bodyText}"`);
               if (card.bodyBottom) cardTextParts.push(`TEXTO SECUNDÁRIO EXATO (copie caractere por caractere): "${card.bodyBottom}"`);
@@ -3152,7 +3152,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       parts.push(`📱 MOCKUP OBRIGATÓRIO: O usuário mencionou um aplicativo/tela. As imagens de referência são SCREENSHOTS REAIS. Crie um mockup FOTORREALISTA de iPhone 15 Pro com o screenshot EXATO na tela. Ângulo 3/4 premium, sombras e reflexos realistas. Composição de anúncio profissional de app — como Apple ou Nubank fariam.`);
     }
     if (/logo|marca|logotipo|logomarca/i.test(visionLower)) {
-      parts.push(`🏷️ LOGO OBRIGATÓRIO: O usuário forneceu seu logo. Ele DEVE aparecer no design final, posicionado de forma elegante e profissional.`);
+      parts.push(`🏷️ LOGO: O usuário forneceu seu logo. NÃO renderize o logo/logomarca na imagem — ele será sobreposto automaticamente depois. Apenas deixe um espaço limpo no canto onde o logo será posicionado.`);
     }
     // Always inject quality baseline for Extreme
     parts.push(`\n🎯 QUALIDADE OBRIGATÓRIA: O resultado deve parecer criado por uma agência de design premium. Tipografia elegante com hierarquia clara (título bold grande, subtítulo leve), composição limpa e respirada, paleta coesa de 3-4 cores, elementos gráficos sutis. Pense em posts de marcas como Apple, Nike, Nubank — design minimalista e impactante.`);

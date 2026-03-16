@@ -769,7 +769,7 @@ const CarouselGenerator: React.FC = () => {
         // Update progress
         if (job.progress_message) setImageGenProgress(job.progress_message);
         if (job.progress_current !== undefined && job.progress_total) {
-          setImageGenProgress(`🎨 ${job.progress_current}/${job.progress_total} imagens geradas...`);
+          setImageGenProgress(`${job.progress_current}/${job.progress_total} imagens geradas...`);
         }
 
         // Update carousel data as images come in

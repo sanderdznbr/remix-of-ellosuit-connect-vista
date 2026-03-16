@@ -56,7 +56,7 @@ const GeneratingAnimation: React.FC<Props> = ({
       setCompletionPhase(true);
       const timer = setTimeout(() => {
         onCompleteAnimationDone?.();
-      }, 900);
+      }, 1100);
       return () => clearTimeout(timer);
     }
   }, [isCompleting]);

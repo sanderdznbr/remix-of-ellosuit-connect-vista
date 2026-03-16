@@ -659,10 +659,9 @@ const CarouselGenerator: React.FC = () => {
           setCloudJobId(null);
           // Only take over the screen if the user is actively in a generation session (not on dashboard)
           if (generatingRef.current && !showWelcomeRef.current) {
-            setGenerating(false);
-            setGeneratingAllImages(false);
-            setImageGenProgress('');
             if (job.carousel_data) setCarouselData(job.carousel_data);
+            if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
+            finishGeneration();
             if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
             toast({ title: 'Carrossel gerado com sucesso!' });
           } else {

@@ -465,15 +465,41 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
+  const invokeSearchNews = useCallback(async (payload: Record<string, any>) => {
+    const { data, error } = await supabase.functions.invoke('search-news', {
+      body: payload,
+    });
+
+    if (!error) return data;
+
+    console.warn('[search-news] supabase.functions.invoke failed, trying direct fetch fallback:', error);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(text || `search-news failed with status ${response.status}`);
+    }
+
+    return await response.json();
+  }, []);
+
   const handleSearchWeb = async () => {
     if (!topic.trim()) return false;
     setSearchingWeb(true);
     setWebSearchDecisionMade(true);
     try {
-      const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { topic: topic.trim(), language: 'pt-BR' },
-      });
-      if (error) throw error;
+      const data = await invokeSearchNews({ topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
       
       const content = data.content || {};
@@ -5100,10 +5126,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         if (perCardQueries.length > 0) {
           try {
-            const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-              body: { per_card_queries: perCardQueries },
-            });
-            if (!perCardErr && perCardData?.card_images) {
+            const perCardData = await invokeSearchNews({ per_card_queries: perCardQueries });
+            if (perCardData?.card_images) {
               const assignments: Record<number, string> = {};
               const usedUrls = new Set<string>();
               for (let ci = 0; ci < totalCards; ci++) {
@@ -5114,13 +5138,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   usedUrls.add(bestImg);
                 }
               }
-              setCardPhotoAssignments(assignments);
-            } else {
-              setCardPhotoAssignments({});
+              if (Object.keys(assignments).length > 0) setCardPhotoAssignments(assignments);
+            } else if (webSearchResult?.images?.length) {
+              const fallbackAssignments = Object.fromEntries(
+                webSearchResult.images
+                  .filter((u: string) => u && u.startsWith('http'))
+                  .slice(0, totalCards)
+                  .map((url: string, idx: number) => [idx, url])
+              );
+              if (Object.keys(fallbackAssignments).length > 0) setCardPhotoAssignments(fallbackAssignments);
             }
           } catch (searchErr) {
             console.error('[AutoRoteiro] Per-card search error:', searchErr);
-            setCardPhotoAssignments({});
           }
         }
       } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
@@ -5898,10 +5927,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   if (perCardQueries.length > 0) {
                                     console.log('[PER_CARD_SEARCH] Searching images per card:', perCardQueries.map(q => q.query));
                                     try {
-                                      const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-                                        body: { per_card_queries: perCardQueries },
-                                      });
-                                      if (!perCardErr && perCardData?.card_images) {
+                                      const perCardData = await invokeSearchNews({ per_card_queries: perCardQueries });
+                                      if (perCardData?.card_images) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {
@@ -5912,11 +5939,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                             usedUrls.add(bestImg);
                                           }
                                         }
-                                        setCardPhotoAssignments(assignments);
-                                        console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
+                                        if (Object.keys(assignments).length > 0) {
+                                          setCardPhotoAssignments(assignments);
+                                          console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
+                                        }
                                       } else {
-                                        console.warn('[PER_CARD_SEARCH] Failed, clearing assignments');
-                                        setCardPhotoAssignments({});
+                                        console.warn('[PER_CARD_SEARCH] No card_images returned, keeping existing/fallback images');
                                       }
                                     } catch (searchErr) {
                                       console.error('[PER_CARD_SEARCH] Error:', searchErr);

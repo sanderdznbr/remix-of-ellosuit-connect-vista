@@ -2280,7 +2280,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             }
           } catch (saveErr) { console.error('Auto-save error:', saveErr); }
           if (localJobId) { setCloudJobId(null); }
-          setGenerating(false);
+          finishGeneration();
           return;
         }
       }

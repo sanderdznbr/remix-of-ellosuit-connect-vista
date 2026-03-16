@@ -534,10 +534,8 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
         parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt.');
         
-        // Logo/brand — overlaid programmatically, tell AI NOT to render it
-        if (job.brand_name) {
-          parts.push(`PROIBIDO RENDERIZAR LOGOMARCA: A marca "${job.brand_name}" será sobreposta automaticamente via Canvas. NÃO renderize o nome da marca, logotipo ou texto da marca na imagem gerada. Deixe a área do logo limpa.`);
-        }
+        // Logo/brand — overlaid programmatically, do NOT mention brand name to avoid AI rendering it
+        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema.');
 
         if (isCover) {
           parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);

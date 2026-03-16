@@ -301,6 +301,8 @@ const CarouselGenerator: React.FC = () => {
   // Generation state
   const [generating, setGenerating] = useState(false);
   const [transitionToGenerate, setTransitionToGenerate] = useState(false);
+  const [completingGeneration, setCompletingGeneration] = useState(false);
+  const [resultEntrance, setResultEntrance] = useState(false);
   const [carouselData, setCarouselData] = useState<CarouselData | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [exporting, setExporting] = useState(false);
@@ -557,6 +559,8 @@ const CarouselGenerator: React.FC = () => {
     setGenerating(false);
     setPostFormat('portrait');
     setTransitionToGenerate(false);
+    setCompletingGeneration(false);
+    setResultEntrance(false);
     setGeneratingAllImages(false);
     setImageGenProgress('');
     setPropertyList([createEmptyProperty()]);
@@ -657,10 +661,9 @@ const CarouselGenerator: React.FC = () => {
           setCloudJobId(null);
           // Only take over the screen if the user is actively in a generation session (not on dashboard)
           if (generatingRef.current && !showWelcomeRef.current) {
-            setGenerating(false);
-            setGeneratingAllImages(false);
-            setImageGenProgress('');
             if (job.carousel_data) setCarouselData(job.carousel_data);
+            if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
+            finishGeneration();
             if (job.carousel_id) setCurrentCarouselId(job.carousel_id);
             toast({ title: 'Carrossel gerado com sucesso!' });
           } else {
@@ -1826,8 +1829,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
       const finalData: CarouselData = { title: topic.trim(), cards: [singleCard] };
       setCarouselData(finalData);
-      setGeneratingAllImages(false);
-      setImageGenProgress('');
+      finishGeneration();
       toast({ title: 'Post gerado com sucesso!' });
 
       // Guest: don't show blocking paywall immediately, let them see the result
@@ -2243,8 +2245,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         if (panoramaUrl && updatedCards.every(c => c.imageUrl)) {
           const finalData = { ...data.data, cards: updatedCards };
           setCarouselData(finalData);
-          setGeneratingAllImages(false);
-          setImageGenProgress('');
+          finishGeneration();
 
           // Auto-save
           try {
@@ -2280,7 +2281,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             }
           } catch (saveErr) { console.error('Auto-save error:', saveErr); }
           if (localJobId) { setCloudJobId(null); }
-          setGenerating(false);
+          finishGeneration();
           return;
         }
       }
@@ -2885,8 +2886,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
-      setGeneratingAllImages(false);
-      setImageGenProgress('');
+      finishGeneration();
       toast({ title: 'Carrossel completo!', description: `${cards.length} cards com ${totalImages} imagens gerados` });
 
       // Auto-save for guest (no cloud job)
@@ -2962,6 +2962,20 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         }));
       });
   }, [wizardMode, extremeAnalysis, extremeFormValues]);
+
+  // Helper: trigger zoom-out animation before showing result
+  const finishGeneration = useCallback(() => {
+    setCompletingGeneration(true);
+  }, []);
+
+  const handleCompleteAnimationDone = useCallback(() => {
+    setGenerating(false);
+    setGeneratingAllImages(false);
+    setImageGenProgress('');
+    setCompletingGeneration(false);
+    setResultEntrance(true);
+    setTimeout(() => setResultEntrance(false), 800);
+  }, []);
 
 
   // ===== HELPER: Extract exact text from Extreme form =====
@@ -3455,8 +3469,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
       const finalData = { ...data.data, cards: updatedCards };
       setCarouselData(finalData);
-      setGeneratingAllImages(false);
-      setImageGenProgress('');
+      finishGeneration();
       toast({ title: 'Carrossel gerado!', description: `${totalCards} cards a partir da capa` });
 
       // Auto-save
@@ -6123,7 +6136,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         )}
 
         {/* Generating state - fullscreen split animation */}
-        {(generating || generatingAllImages) && !transitionToGenerate && (
+        {(generating || generatingAllImages || completingGeneration) && !transitionToGenerate && (
           <GeneratingAnimation
             imageGenProgress={imageGenProgress}
             topic={topic}
@@ -6137,6 +6150,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             skipWebSearch={skipWebSearch}
             isExtreme={wizardMode === 'extreme'}
             wizardMode={wizardMode}
+            isCompleting={completingGeneration}
+            onCompleteAnimationDone={handleCompleteAnimationDone}
             onGoHome={user ? () => {
               // Trigger cloud fallback for the current job
               const jobId = cloudJobIdRef.current;
@@ -6148,6 +6163,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               setGeneratingAllImages(false);
               setImageGenProgress('');
               setTransitionToGenerate(false);
+              setCompletingGeneration(false);
               setCarouselData(null);
               setCurrentCarouselId(null);
               setShowWelcome(true);
@@ -6163,7 +6179,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           const themeRgb = modeTheme.rgb;
           const themeRgb2 = modeTheme.rgb2;
           return (
-          <div className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+          <motion.div
+            className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden"
+            style={{ backgroundColor: '#0A0A0A' }}
+            initial={resultEntrance ? { opacity: 0, y: 40, scale: 0.97 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
             {/* Header bar */}
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
               <div className="flex items-center gap-3">
@@ -7376,7 +7398,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 })}
               </div>
             </div>
-          </div>
+          </motion.div>
           );
         })()}
       </div>

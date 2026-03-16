@@ -17,6 +17,8 @@ interface Props {
   onGoHome?: () => void;
   isExtreme?: boolean;
   wizardMode?: 'simple' | 'advanced' | 'extreme';
+  isCompleting?: boolean;
+  onCompleteAnimationDone?: () => void;
 }
 
 // Fixed bright colors for loading UI - never uses user's accent color
@@ -38,12 +40,26 @@ const GeneratingAnimation: React.FC<Props> = ({
   onGoHome,
   isExtreme = false,
   wizardMode = 'simple',
+  isCompleting = false,
+  onCompleteAnimationDone,
 }) => {
   // Use orange for extreme mode, red for advanced, purple otherwise
   const loadingColor = isExtreme ? LOADING_ORANGE : wizardMode === 'advanced' ? LOADING_RED : LOADING_PURPLE;
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);
+  const [completionPhase, setCompletionPhase] = useState(false);
+
+  // When isCompleting becomes true, trigger zoom animation
+  useEffect(() => {
+    if (isCompleting && !completionPhase) {
+      setCompletionPhase(true);
+      const timer = setTimeout(() => {
+        onCompleteAnimationDone?.();
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isCompleting]);
 
   // Build real code lines from actual params
   const CODE_LINES = useMemo(() => {
@@ -200,10 +216,19 @@ const GeneratingAnimation: React.FC<Props> = ({
         <div className="absolute w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full opacity-20 blur-[100px] pointer-events-none"
           style={{ background: `radial-gradient(circle, ${loadingColor}99 0%, transparent 70%)` }} />
 
-        <div className="carousel-loader-wrapper" style={{ width: 200, height: 200 }}>
+        <motion.div
+          className="carousel-loader-wrapper"
+          style={{ width: 200, height: 200 }}
+          animate={completionPhase ? { scale: 12, opacity: 0.6 } : { scale: 1, opacity: 1 }}
+          transition={completionPhase ? { duration: 0.8, ease: [0.22, 1, 0.36, 1] } : {}}
+        >
           <div className={`carousel-loader-spinner ${isExtreme ? 'carousel-loader-spinner--orange' : wizardMode === 'advanced' ? 'carousel-loader-spinner--red' : ''}`} />
-        </div>
+        </motion.div>
 
+        <motion.div
+          animate={completionPhase ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
         {imageGenProgress && (
           <motion.div className="md:hidden mt-6 flex flex-col items-center gap-2 w-full max-w-[260px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <p className="text-white text-base font-bold">{imageGenProgress}</p>
@@ -279,11 +304,15 @@ const GeneratingAnimation: React.FC<Props> = ({
             ))}
           </div>
         </div>
+        </motion.div>
       </div>
 
       {/* RIGHT SIDE — Code flow + Mini cards */}
-      <div className="hidden md:flex flex-1 flex-col relative overflow-hidden"
-        style={{ borderLeft: '1px solid rgba(255,255,255,0.04)' }}>
+      <motion.div className="hidden md:flex flex-1 flex-col relative overflow-hidden"
+        style={{ borderLeft: '1px solid rgba(255,255,255,0.04)' }}
+        animate={completionPhase ? { opacity: 0, x: 40 } : { opacity: 1, x: 0 }}
+        transition={{ duration: 0.4 }}
+      >
 
         <div className="flex-1 p-8 overflow-hidden relative">
           <div className="flex items-center gap-2 mb-4">
@@ -323,7 +352,7 @@ const GeneratingAnimation: React.FC<Props> = ({
             style={{ background: 'linear-gradient(transparent, #050508)' }} />
         </div>
 
-      </div>
+      </motion.div>
     </motion.div>
   );
 };

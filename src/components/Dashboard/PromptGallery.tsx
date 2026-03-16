@@ -43,7 +43,7 @@ const PromptGallery: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadingMediaFor, setUploadingMediaFor] = useState<string | null>(null);
   const [selectedMediaType, setSelectedMediaType] = useState('screenshot');
 
   useEffect(() => {
@@ -152,7 +152,7 @@ const PromptGallery: React.FC = () => {
 
   const handleUploadMedia = async (files: FileList, promptId: string) => {
     if (!companyId) return;
-    setUploadingMedia(true);
+    setUploadingMediaFor(promptId);
     try {
       const existingCount = (promptMedia[promptId] || []).length;
       for (let i = 0; i < files.length; i++) {
@@ -184,7 +184,7 @@ const PromptGallery: React.FC = () => {
     } catch {
       toast.error('Erro ao enviar arquivo');
     } finally {
-      setUploadingMedia(false);
+      setUploadingMediaFor(null);
     }
   };
 
@@ -408,7 +408,7 @@ const PromptGallery: React.FC = () => {
                               onDragLeave={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
                               onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; if (e.dataTransfer.files?.length) handleUploadMedia(e.dataTransfer.files, p.id); }}
                             >
-                              {uploadingMedia ? (
+                              {uploadingMediaFor === p.id ? (
                                 <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />
                               ) : (
                                 <Upload className="w-3.5 h-3.5 text-white/25" />

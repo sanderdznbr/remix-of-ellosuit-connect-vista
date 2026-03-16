@@ -3,25 +3,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Domains known to have text overlays, infographics, or watermarks
+// Domains known to return memes, screenshots, infographics, social posts, or watermarked assets
 const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
-  'dreamstime.com', 'alamy.com', 'pinterest.com',
+  'dreamstime.com', 'alamy.com', 'pinterest.com', 'boredpanda.com',
+  'buzzfeed.com', 'chzbgr.com', 'imgflip.com', 'knowyourmeme.com',
+  'venngage.com', 'slidechef.net', 'img.youtube.com', 'youtube.com',
+  'dexerto.com', 'termometrooscar.com', 'techtudo.com'
 ];
 
-// Filter out images that likely contain text overlays
+// Filter out images that likely contain text overlays, screenshots, memes, or social post captures
 function isCleanImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
-  // Block known stock/design sites that watermark or overlay text
   for (const domain of BLOCKED_DOMAINS) {
     if (lower.includes(domain)) return false;
   }
-  // Block URLs that hint at infographics, quotes, memes
-  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail'];
+
+  const badPatterns = [
+    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail',
+    'tweet', 'twitter', 'instagram', 'tiktok', 'facebook', 'reddit', 'reaction', 'captura-de-tela', 'screenshot', 'screen-shot',
+    'maxresdefault', 'winners-list', 'feature-image', 'featured-image', 'nominados', 'perdedores', 'thumb800', '.png', '.svg'
+  ];
   for (const pat of badPatterns) {
     if (lower.includes(pat)) return false;
   }
+
   return true;
 }
 

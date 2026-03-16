@@ -20,6 +20,7 @@ interface Props {
   webImages?: string[];
   cardPhotoAssignments?: Record<number, string>;
   setCardPhotoAssignments?: (v: Record<number, string>) => void;
+  onOutlineGenerated?: (outline: CardText[]) => Promise<void> | void;
 }
 
 const StepCardTexts: React.FC<Props> = ({

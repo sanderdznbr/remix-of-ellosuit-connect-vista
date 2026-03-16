@@ -490,9 +490,50 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
+  const assignPerCardWebPhotos = useCallback(async (
+    outline: { title?: string; body?: string }[],
+    totalCards: number
+  ) => {
+    if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
+
+    const cleanTopicForSearch = webSearchResult.content.clean_topic || topic.trim();
+    const perCardQueries = Array.from({ length: totalCards }, (_, ci) => {
+      const cardText = outline[ci] || {};
+      const cardTitle = (cardText.title || '').trim();
+      const cardBody = (cardText.body || '').trim();
+      const queryBase = [cardTitle, cardBody].filter(Boolean).join('. ').replace(/\s+/g, ' ').trim();
+      const query = (queryBase ? `${queryBase} ${cleanTopicForSearch}` : `${cleanTopicForSearch} card ${ci + 1}`).slice(0, 180);
+      return { index: ci, query };
+    });
+
+    try {
+      const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
+      if (!perCardData?.card_images) {
+        setCardPhotoAssignments({});
+        return;
+      }
+
+      const assignments: Record<number, string> = {};
+      const usedUrls = new Set<string>();
+      for (let ci = 0; ci < totalCards; ci++) {
+        const cardImgs = (perCardData.card_images[ci] || []).filter((url: string) => typeof url === 'string' && url.startsWith('http'));
+        const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+        if (bestImg) {
+          assignments[ci] = bestImg;
+          usedUrls.add(bestImg);
+        }
+      }
+      setCardPhotoAssignments(assignments);
+    } catch (searchErr) {
+      console.error('[WebPhotos] Per-card search error:', searchErr);
+      setCardPhotoAssignments({});
+    }
+  }, [skipWebSearch, webSearchResult?.content, topic]);
+
   const handleSearchWeb = async () => {
     if (!topic.trim()) return;
     setSearchingWeb(true);
+    setCardPhotoAssignments({});
     try {
       const data = await resilientInvoke('search-news', { topic: topic.trim(), language: 'pt-BR' });
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
@@ -506,25 +547,11 @@ const CarouselGenerator: React.FC = () => {
         images,
       });
 
-      if (images.length > 0) {
-        const totalCards = contentMode === 'single-post' ? 1 : cardCount;
-        const assignments: Record<number, string> = {};
-        const usedUrls = new Set<string>();
-        for (let ci = 0; ci < totalCards; ci++) {
-          const bestImg = images.find((u: string) => !usedUrls.has(u)) || images[ci % images.length];
-          if (bestImg) {
-            assignments[ci] = bestImg;
-            usedUrls.add(bestImg);
-          }
-        }
-        setCardPhotoAssignments(assignments);
-      }
-
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
-      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas e fotos carregadas.` });
+      toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. As fotos serão buscadas por card após gerar o roteiro.` });
     } catch (err: any) {
       console.error('Web search error:', err);
       toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });

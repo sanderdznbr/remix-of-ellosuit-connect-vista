@@ -5580,12 +5580,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onToggleSkipWebSearch={wizardMode === 'simple' ? undefined : () => { setSkipWebSearch(!skipWebSearch); if (!skipWebSearch) setWebSearchResult(null); }}
                         mentionedPrompts={mentionedPrompts}
                         onMentionAdd={async (p) => {
+                          console.log('[PromptMention] Added prompt:', p.title, p.id);
                           setMentionedPrompts(prev => [...prev, p]);
                           // Fetch linked media for this prompt
                           try {
-                            const { data: media } = await supabase.from('saved_prompt_media').select('*').eq('prompt_id', p.id).order('sort_order');
+                            const { data: media, error: mediaError } = await supabase.from('saved_prompt_media').select('*').eq('prompt_id', p.id).order('sort_order');
+                            console.log('[PromptMention] Media query result:', { media, mediaError, count: media?.length });
                             if (media && media.length > 0) {
+                              console.log('[PromptMention] Setting pendingPromptMedia, types:', media.map((m: any) => m.media_type));
                               setPendingPromptMedia({ promptTitle: p.title, media });
+                            } else {
+                              console.log('[PromptMention] No media found for prompt');
                             }
                           } catch (err) { console.error('Failed to fetch prompt media:', err); }
                         }}

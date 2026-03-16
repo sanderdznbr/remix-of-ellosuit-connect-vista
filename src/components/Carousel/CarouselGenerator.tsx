@@ -5337,7 +5337,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         famousImages={famousImages} setFamousImages={setFamousImages}
                         faceGender={faceGender} setFaceGender={setFaceGender}
                         wearsGlasses={wearsGlasses} setWearsGlasses={setWearsGlasses}
-                        activeMarketplaceStyle={activeMarketplaceStyle} />
+                        activeMarketplaceStyle={activeMarketplaceStyle}
+                        hasWebImages={hasWebImages}
+                        webFacePosition={webFacePosition}
+                        setWebFacePosition={setWebFacePosition} />
                     )}
                     {currentStepName === 'Pessoas' && (
                       <StepPeopleMode

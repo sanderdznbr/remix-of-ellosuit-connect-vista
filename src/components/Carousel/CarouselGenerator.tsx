@@ -2532,6 +2532,19 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
             capturedProductRefs = undefined;
           }
 
+          // === WEB PHOTO FIDELITY: instruct AI to incorporate real photo ===
+          const hasWebPhoto = !skipWebSearch && webSearchResult?.images?.length && capturedProductRefs?.length === 1
+            && capturedProductRefs[0].startsWith('http') && !useRealEstateBlend && productImages.length === 0;
+          if (hasWebPhoto) {
+            cardPrompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+A imagem de referência enviada é uma FOTO REAL do tema "${cleanTopic}". 
+Você DEVE incorporar esta foto real com MÁXIMA FIDELIDADE na composição do card.
+USE a foto real como elemento visual principal/fundo do card.
+Sobreponha os textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
+MANTENHA a foto real reconhecível e fiel — NÃO substitua por uma imagem genérica.
+A composição final deve ser: foto real de fundo + overlay editorial com textos e gráficos do estilo visual.`;
+          }
+
           imageFactories.push({
             index: i,
             prompt: cardPrompt,

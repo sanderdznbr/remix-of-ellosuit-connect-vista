@@ -198,65 +198,40 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </button>
       </div>
 
-      {/* Ferramentas section */}
+      {/* Ferramentas section — collapsible */}
       {email === 'admin@gmail.com' && (
         <div className="px-2 mt-5">
-          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ferramentas</p>
           <button
-            onClick={() => { onTabChange('logo-remover'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'logo-remover'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
+            onClick={() => setFerramentasOpen(!ferramentasOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
           >
-            <Eraser className="w-4 h-4" />
-            Remover Logo
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Ferramentas</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${ferramentasOpen ? 'rotate-90' : ''}`} />
           </button>
-          <button
-            onClick={() => { onTabChange('logo-history'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'logo-history'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            Histórico Remoções
-          </button>
-          <button
-            onClick={() => { onTabChange('behance-import'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'behance-import'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Globe className="w-4 h-4" />
-            Importar do Behance
-          </button>
-          <button
-            onClick={() => { onTabChange('instagram-import'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'instagram-import'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Instagram className="w-4 h-4" />
-            Importar do Instagram
-          </button>
-          <button
-            onClick={() => { onTabChange('face-generator'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'face-generator'
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            Gerador de Rosto
-          </button>
+          {ferramentasOpen && (
+            <div className="mt-1 space-y-0.5">
+              {[
+                { tab: 'logo-remover', icon: Eraser, label: 'Remover Logo' },
+                { tab: 'logo-history', icon: Clock, label: 'Histórico Remoções' },
+                { tab: 'behance-import', icon: Globe, label: 'Importar do Behance' },
+                { tab: 'instagram-import', icon: Instagram, label: 'Importar do Instagram' },
+                { tab: 'face-generator', icon: Camera, label: 'Gerador de Rosto' },
+              ].map(({ tab, icon: Icon, label }) => (
+                <button
+                  key={tab}
+                  onClick={() => { onTabChange(tab); closeSearch(); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                    activeTab === tab
+                      ? 'bg-white/[0.08] text-white font-medium'
+                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

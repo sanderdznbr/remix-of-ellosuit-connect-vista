@@ -543,7 +543,7 @@ const CarouselGenerator: React.FC = () => {
 
     const assignments: Record<number, string> = {};
     const optionsByCard: Record<number, string[]> = {};
-    const usedUrls = new Set<string>();
+    const usedInOptionsUrls = new Set<string>();
 
     for (let ci = 0; ci < totalCards; ci++) {
       const card = outline[ci] || {};
@@ -553,14 +553,20 @@ const CarouselGenerator: React.FC = () => {
         .map((candidate: any) => candidate.url)
         .filter((url: string, index: number, arr: string[]) => arr.indexOf(url) === index);
 
-      const preferredOptions = uniqueRankedUrls.filter((url: string) => !usedUrls.has(url)).slice(0, 3);
-      const fallbackOptions = uniqueRankedUrls.filter((url: string) => !preferredOptions.includes(url)).slice(0, Math.max(0, 3 - preferredOptions.length));
-      const options = [...preferredOptions, ...fallbackOptions].slice(0, 3);
+      // Prioritize URLs not yet shown in any other card's options
+      const freshUrls = uniqueRankedUrls.filter((url: string) => !usedInOptionsUrls.has(url));
+      const options = freshUrls.slice(0, 3);
+      // If not enough fresh ones, fill from remaining pool (allow some overlap)
+      if (options.length < 3) {
+        const remaining = uniqueRankedUrls.filter((url: string) => !options.includes(url));
+        options.push(...remaining.slice(0, 3 - options.length));
+      }
 
       if (options.length > 0) {
         optionsByCard[ci] = options;
         assignments[ci] = options[0];
-        usedUrls.add(options[0]);
+        // Track ALL options shown, not just the assigned one
+        options.forEach(url => usedInOptionsUrls.add(url));
       }
     }
 

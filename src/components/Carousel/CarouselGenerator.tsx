@@ -7573,7 +7573,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         disabled={tempFaceFiles.length === 0}
                         className="flex-1 px-3 py-3 rounded-xl text-[13px] font-semibold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
                         style={{ backgroundColor: wizardMode === 'extreme' ? '#E84D1A' : '#9333EA', boxShadow: wizardMode === 'extreme' ? '0 10px 30px rgba(232,77,26,0.25)' : '0 10px 30px rgba(147,51,234,0.2)' }}>
-                        ✨ Regenerar rosto
+                        Regenerar rosto
                       </button>
                     </div>
                   </div>

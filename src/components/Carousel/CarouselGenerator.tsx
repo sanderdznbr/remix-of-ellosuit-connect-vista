@@ -5808,7 +5808,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onDismissBrandPalette={() => setBrandSuggestedPalette(null)} />
                     )}
                     {currentStepName === 'Fontes' && !isFullBleedMarketplace && wizardMode !== 'extreme' && (
-                      <StepFonts selectedFont={selectedFont} setSelectedFont={setSelectedFont} />
+                      <StepFonts
+                        selectedFont={selectedFont}
+                        setSelectedFont={setSelectedFont}
+                        envatoFont={advancedEnvatoFont}
+                        onEnvatoFontSelect={setAdvancedEnvatoFont}
+                        hasMarketplaceStyle={!!activeMarketplaceStyle?.imageGeneration?.prompt_style}
+                      />
                     )}
                     {currentStepName === 'Roteiro' && (
                       <StepCardTexts

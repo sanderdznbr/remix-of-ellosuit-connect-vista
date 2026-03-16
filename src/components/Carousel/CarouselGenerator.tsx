@@ -497,12 +497,14 @@ const CarouselGenerator: React.FC = () => {
     if (skipWebSearch || !webSearchResult?.content || totalCards <= 0) return;
 
     const cleanTopicForSearch = webSearchResult.content.clean_topic || topic.trim();
+    const curatedTerms = Array.isArray(webSearchResult?.content?.image_search_terms)
+      ? webSearchResult.content.image_search_terms.filter((term: string) => typeof term === 'string' && term.trim())
+      : [];
     const perCardQueries = Array.from({ length: totalCards }, (_, ci) => {
       const cardText = outline[ci] || {};
       const cardTitle = (cardText.title || '').trim();
-      const cardBody = (cardText.body || '').trim();
-      const queryBase = [cardTitle, cardBody].filter(Boolean).join('. ').replace(/\s+/g, ' ').trim();
-      const query = (queryBase ? `${queryBase} ${cleanTopicForSearch}` : `${cleanTopicForSearch} card ${ci + 1}`).slice(0, 180);
+      const curatedTerm = curatedTerms[ci] || curatedTerms[ci % Math.max(curatedTerms.length, 1)] || `${cleanTopicForSearch} photo`;
+      const query = [curatedTerm, cardTitle].filter(Boolean).join(' ').slice(0, 180);
       return { index: ci, query };
     });
 

@@ -152,7 +152,7 @@ const PromptGallery: React.FC = () => {
 
   const handleUploadMedia = async (files: FileList, promptId: string) => {
     if (!companyId) return;
-    setUploadingMedia(true);
+    setUploadingMediaFor(promptId);
     try {
       const existingCount = (promptMedia[promptId] || []).length;
       for (let i = 0; i < files.length; i++) {

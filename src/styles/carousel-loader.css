@@ -106,6 +106,67 @@
   }
 }
 
+/* === TRI-COLOR: Purple → Red → Orange cycle for Dashboard === */
+.carousel-loader-spinner--tricolor {
+  animation: carousel-loader-rotate-tricolor 8s linear infinite;
+}
+
+@keyframes carousel-loader-rotate-tricolor {
+  /* Purple phase */
+  0% {
+    transform: rotate(90deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 30px 0 #c084fc inset,
+      0 60px 60px 0 #7c3aed inset;
+  }
+  16% {
+    transform: rotate(330deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 10px 0 #a855f7 inset,
+      0 40px 60px 0 #6d28d9 inset;
+  }
+  /* Transition to Red */
+  33% {
+    transform: rotate(570deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 30px 0 #fca5a5 inset,
+      0 60px 60px 0 #dc2626 inset;
+  }
+  50% {
+    transform: rotate(810deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 10px 0 #ef4444 inset,
+      0 40px 60px 0 #b91c1c inset;
+  }
+  /* Transition to Orange */
+  66% {
+    transform: rotate(1050deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 30px 0 #fdba74 inset,
+      0 60px 60px 0 #ea580c inset;
+  }
+  83% {
+    transform: rotate(1290deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 10px 0 #f97316 inset,
+      0 40px 60px 0 #c2410c inset;
+  }
+  /* Back to Purple */
+  100% {
+    transform: rotate(1530deg);
+    box-shadow:
+      0 10px 20px 0 #fff inset,
+      0 20px 30px 0 #c084fc inset,
+      0 60px 60px 0 #7c3aed inset;
+  }
+}
+
 .carousel-loader-letter {
   display: inline-block;
   opacity: 0.4;

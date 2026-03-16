@@ -3439,7 +3439,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
       setActiveCardIndex(0);
       setGeneratingAllImages(true);
-      setImageGenProgress('🎨 Gerando imagens dos cards...');
+      setImageGenProgress('Gerando imagens dos cards...');
 
       // IMPORTANT: Collect face refs from BOTH facePersons (multi-person mode) and referenceImages
       const coverFaceRef = coverCard.imageUrl ? [coverCard.imageUrl] : [];

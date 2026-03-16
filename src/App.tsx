@@ -1,4 +1,5 @@
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,31 +9,49 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanner";
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import PublicCarouselGenerator from './pages/PublicCarouselGenerator';
-import Pricing from './pages/Pricing';
-import Checkout from './pages/Checkout';
-import MarketplaceStyleDetail from './pages/MarketplaceStyleDetail';
-import Recursos from './pages/Recursos';
-import Suporte from './pages/Suporte';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import PostPublic from './pages/PostPublic';
-import Presentear from './pages/Presentear';
-import Parceiros from './pages/Parceiros';
-import Admin from './pages/Admin';
-import AreaParceiros from './pages/AreaParceiros';
-import Comunidade from './pages/Comunidade';
 
-const queryClient = new QueryClient();
+// Lazy-loaded pages — each becomes a separate chunk
+const PublicCarouselGenerator = lazy(() => import('./pages/PublicCarouselGenerator'));
+const Index = lazy(() => import('./pages/Index'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const MarketplaceStyleDetail = lazy(() => import('./pages/MarketplaceStyleDetail'));
+const Recursos = lazy(() => import('./pages/Recursos'));
+const Suporte = lazy(() => import('./pages/Suporte'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
+const PostPublic = lazy(() => import('./pages/PostPublic'));
+const Presentear = lazy(() => import('./pages/Presentear'));
+const Parceiros = lazy(() => import('./pages/Parceiros'));
+const Admin = lazy(() => import('./pages/Admin'));
+const AreaParceiros = lazy(() => import('./pages/AreaParceiros'));
+const Comunidade = lazy(() => import('./pages/Comunidade'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 min
+      gcTime: 1000 * 60 * 10, // 10 min
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function AffiliateTracker({ children }: { children: React.ReactNode }) {
   useAffiliateTracking();
   return <>{children}</>;
 }
+
+// Minimal loading fallback
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -44,29 +63,31 @@ const App = () => (
           <ScrollToTop />
           <AuthProvider>
             <SubscriptionBlockedBanner />
-            <Routes>
-              <Route path="/" element={<PublicCarouselGenerator />} />
-              <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
-              <Route path="/auth" element={<Index />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
-              <Route path="/precos" element={<Pricing />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
-              <Route path="/recursos" element={<Recursos />} />
-              <Route path="/suporte" element={<Suporte />} />
-              <Route path="/perfil" element={<Profile />} />
-              <Route path="/perfil/:username" element={<Profile />} />
-              <Route path="/configuracoes" element={<Settings />} />
-              <Route path="/post/:postId" element={<PostPublic />} />
-              <Route path="/presentear" element={<Presentear />} />
-              <Route path="/parceiros" element={<Parceiros />} />
-              <Route path="/area/parceiros" element={<AreaParceiros />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/comunidade" element={<Comunidade />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<PublicCarouselGenerator />} />
+                <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
+                <Route path="/auth" element={<Index />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
+                <Route path="/precos" element={<Pricing />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
+                <Route path="/recursos" element={<Recursos />} />
+                <Route path="/suporte" element={<Suporte />} />
+                <Route path="/perfil" element={<Profile />} />
+                <Route path="/perfil/:username" element={<Profile />} />
+                <Route path="/configuracoes" element={<Settings />} />
+                <Route path="/post/:postId" element={<PostPublic />} />
+                <Route path="/presentear" element={<Presentear />} />
+                <Route path="/parceiros" element={<Parceiros />} />
+                <Route path="/area/parceiros" element={<AreaParceiros />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/comunidade" element={<Comunidade />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </AuthProvider>
         </AffiliateTracker>
       </BrowserRouter>

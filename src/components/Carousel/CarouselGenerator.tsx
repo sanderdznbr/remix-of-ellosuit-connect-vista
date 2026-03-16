@@ -466,8 +466,9 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
   const handleSearchWeb = async () => {
-    if (!topic.trim()) return;
+    if (!topic.trim()) return false;
     setSearchingWeb(true);
+    setWebSearchDecisionMade(true);
     try {
       const { data, error } = await supabase.functions.invoke('search-news', {
         body: { topic: topic.trim(), language: 'pt-BR' },
@@ -483,12 +484,12 @@ const CarouselGenerator: React.FC = () => {
         images: data.images || [],
       });
 
-      // Auto-fill keywords from image search terms (do NOT overwrite the user's topic)
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
       toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
+      return true;
     } catch (err: any) {
       console.error('Web search error:', err);
       setWebSearchResult({
@@ -508,6 +509,7 @@ const CarouselGenerator: React.FC = () => {
         images: [],
       });
       toast({ title: 'Pesquisa indisponível', description: 'Avançamos com um resumo inicial para não travar o fluxo.', variant: 'destructive' });
+      return false;
     } finally {
       setSearchingWeb(false);
     }
@@ -5714,7 +5716,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
                             // Smart web search classification on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
                               // Classify the topic first
                               setClassifyingTopic(true);
                               try {
@@ -5722,17 +5724,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   body: { action: 'classify-topic', topic: topic.trim() },
                                 });
                                 if (!error && data) {
-                                  // Always set AI-extracted keywords if available
                                   if (data.keywords?.length > 0 && !keywords.trim()) {
                                     setKeywords(data.keywords.join(', '));
                                   }
                                   if (data.shouldSearch) {
-                                    // Auto-search and let useEffect advance to Pesquisa step
-                                    setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
                                     await handleSearchWeb();
-                                    // webSearchResult is now set → WIZARD_STEPS will include 'Pesquisa' on next render
-                                    // We need to advance after re-render, so just return — useEffect below handles it
                                     return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically

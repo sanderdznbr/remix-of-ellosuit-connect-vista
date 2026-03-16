@@ -386,6 +386,7 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
 
     // Search for images - preserve the literal topic when qualifiers like year/event matter
     let images: string[] = [];
+    let rawImageCandidates: { url: string; title?: string; desc?: string; source?: string }[] = [];
     const cleanTopic = (parsedContent.clean_topic || String(topic || '')).trim();
     // ALWAYS use clean_topic for image search - never the raw user prompt
     const baseTopicForSearch = cleanTopic;
@@ -431,6 +432,12 @@ NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
                 const h = item.properties?.height || item.height || 0;
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
+                  rawImageCandidates.push({
+                    url: imgUrl,
+                    title: item.title || item.page_fetched?.title || '',
+                    desc: item.description || item.page_fetched?.description || '',
+                    source: item.source || '',
+                  });
                 }
               }
             }
@@ -542,12 +549,21 @@ Return ONLY a JSON array of the indices of ACCEPTED (clean) images. Example: [0,
     }
     console.log('[IMAGES] Total clean images after filter:', images.length);
 
+    const seenCandidateUrls = new Set<string>();
+    const imageCandidates = rawImageCandidates.filter((candidate) => {
+      if (!images.includes(candidate.url)) return false;
+      if (seenCandidateUrls.has(candidate.url)) return false;
+      seenCandidateUrls.add(candidate.url);
+      return true;
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         content: parsedContent,
         citations,
         images: images.slice(0, 50),
+        image_candidates: imageCandidates.slice(0, 50),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

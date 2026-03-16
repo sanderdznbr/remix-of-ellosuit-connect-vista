@@ -5927,10 +5927,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   if (perCardQueries.length > 0) {
                                     console.log('[PER_CARD_SEARCH] Searching images per card:', perCardQueries.map(q => q.query));
                                     try {
-                                      const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-                                        body: { per_card_queries: perCardQueries },
-                                      });
-                                      if (!perCardErr && perCardData?.card_images) {
+                                      const perCardData = await invokeSearchNews({ per_card_queries: perCardQueries });
+                                      if (perCardData?.card_images) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {
@@ -5941,11 +5939,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                             usedUrls.add(bestImg);
                                           }
                                         }
-                                        setCardPhotoAssignments(assignments);
-                                        console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
+                                        if (Object.keys(assignments).length > 0) {
+                                          setCardPhotoAssignments(assignments);
+                                          console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
+                                        }
                                       } else {
-                                        console.warn('[PER_CARD_SEARCH] Failed, clearing assignments');
-                                        setCardPhotoAssignments({});
+                                        console.warn('[PER_CARD_SEARCH] No card_images returned, keeping existing/fallback images');
                                       }
                                     } catch (searchErr) {
                                       console.error('[PER_CARD_SEARCH] Error:', searchErr);

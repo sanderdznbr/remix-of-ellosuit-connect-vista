@@ -215,10 +215,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
           </div>
         )}
 
-        {/* Content — offset below fixed header */}
-        <div className="flex-1 overflow-y-auto" style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}>
-          {renderContent()}
-        </div>
+        {/* Content */}
+        {renderContent()}
       </div>
     );
   }

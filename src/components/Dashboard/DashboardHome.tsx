@@ -413,7 +413,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           </div>
         </motion.div>
 
-      </div>
+      </motion.div>
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
       <motion.div

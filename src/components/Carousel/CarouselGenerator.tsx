@@ -5096,8 +5096,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
         if (perCardQueries.length > 0) {
           try {
-            const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
-              body: { per_card_queries: perCardQueries },
+            const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
+            if (perCardData?.card_images) {
             });
             if (!perCardErr && perCardData?.card_images) {
               const assignments: Record<number, string> = {};

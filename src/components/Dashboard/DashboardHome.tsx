@@ -172,7 +172,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     };
 
     checkActiveJobs();
-    const interval = setInterval(checkActiveJobs, 30000);
+    const interval = setInterval(checkActiveJobs, 10000);
     return () => clearInterval(interval);
   }, [user]);
 

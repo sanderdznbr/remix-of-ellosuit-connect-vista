@@ -1338,7 +1338,7 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
-  // ===== SAVE COVER FROM AI-GENERATED IMAGE (no html2canvas) =====
+  // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
     try {
       // Use explicit data (passed directly) or fall back to state
@@ -1351,7 +1351,44 @@ const CarouselGenerator: React.FC = () => {
       }
       
       if (!firstCardImage) {
-        // Retry up to 3 times with increasing delay (image may still be generating)
+        // For non-full-bleed styles (Content/layered), card 0 may have no imageUrl
+        // Use html2canvas to capture the rendered preview card as cover
+        const isNonFullBleed = !activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style && !isLoadedFullBleed && wizardMode !== 'extreme';
+        if (isNonFullBleed) {
+          // Try html2canvas on the preview card element
+          const previewCard = document.querySelector('[data-cover-capture="true"]') as HTMLElement;
+          if (previewCard) {
+            try {
+              const canvas = await html2canvas(previewCard, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: null,
+                logging: false,
+              });
+              const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+              if (blob) {
+                const fileName = `${companyId}/${carouselId}.jpg`;
+                const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+                if (!uploadError) {
+                  const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+                  if (urlData?.publicUrl) {
+                    const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                    await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
+                    return;
+                  }
+                }
+              }
+            } catch (canvasErr) {
+              console.warn('html2canvas cover fallback failed:', canvasErr);
+            }
+          }
+          // If html2canvas also failed, try server fallback
+          await serverFallbackCover(carouselId);
+          return;
+        }
+
+        // For full-bleed styles, retry waiting for image generation
         if (retryCount < 3) {
           const delay = (retryCount + 1) * 3000;
           console.warn(`Cover: no image yet, retrying in ${delay}ms (attempt ${retryCount + 1}/3)`);

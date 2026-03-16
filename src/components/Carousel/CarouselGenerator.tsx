@@ -3577,7 +3577,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         await Promise.all(batch.map(f =>
           f.factory().then(url => {
             completed++;
-            setImageGenProgress(`🎨 ${completed}/${totalAi} imagens geradas...`);
+            setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
             if (url) updatedCards[f.index] = { ...updatedCards[f.index], imageUrl: url, isAiImage: true };
           })
         ));

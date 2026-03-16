@@ -1882,6 +1882,8 @@ MANTENHA a foto real reconhecível e fiel.`);
 
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');
+    console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', contentMode, 'cardCount:', cardCount);
+    console.log('[GENERATE_FLOW] generating:', generating, 'generationInFlightRef:', generationInFlightRef.current);
     console.log('[GENERATE_FLOW] snapshot ref:', JSON.stringify({
       exists: !!generationSnapshotRef.current,
       isRealEstate: generationSnapshotRef.current?.isRealEstate,
@@ -1894,6 +1896,7 @@ MANTENHA a foto real reconhecível e fiel.`);
 
     // === SINGLE POST MODE ===
     if (contentMode === 'single-post') {
+      console.log('[GENERATE_FLOW] Routing to generateSinglePost()');
       return generateSinglePost();
     }
 
@@ -1902,6 +1905,7 @@ MANTENHA a foto real reconhecível e fiel.`);
     let userId: string | null = null;
     if (user) {
       try {
+        console.log('[GENERATE_FLOW] Checking credits...');
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
           userId = userData.user.id;
@@ -1910,6 +1914,7 @@ MANTENHA a foto real reconhecível e fiel.`);
             companyId = cu.company_id;
             const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
             const creditsNeeded = cardCount;
+            console.log('[GENERATE_FLOW] Credits check: balance=', balance?.balance, 'needed=', creditsNeeded);
             if (balance && balance.balance < creditsNeeded) {
               sonnerToast.error(`Créditos insuficientes: você precisa de ${creditsNeeded} mas tem ${Math.floor(balance.balance)}.`);
               setTransitionToGenerate(false); return;
@@ -1939,6 +1944,7 @@ MANTENHA a foto real reconhecível e fiel.`);
     if (userId && companyId && !skipCloudRef.current) {
       localJobId = await createCloudJob('carousel');
       if (localJobId) setCloudJobId(localJobId);
+      console.log('[GENERATE_FLOW] Cloud job created:', localJobId);
     }
     skipCloudRef.current = false;
 

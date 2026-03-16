@@ -544,6 +544,7 @@ const CarouselGenerator: React.FC = () => {
     setGeneratingAiImage(false);
     setAiImagePrompt('');
     setGenerating(false);
+    setPostFormat('portrait');
     setTransitionToGenerate(false);
     setGeneratingAllImages(false);
     setImageGenProgress('');

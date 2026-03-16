@@ -5837,6 +5837,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setActiveCardIndex={setRoteiroCardIndex} />
                     )}
                     {/* Logo step removed — merged into Personalização */}
+                    {currentStepName === 'Ideia Visual' && (
+                      <StepVisualIdea
+                        visualIdea={advancedVisualIdea}
+                        setVisualIdea={setAdvancedVisualIdea}
+                      />
+                    )}
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}

@@ -11,22 +11,41 @@ const BLOCKED_DOMAINS = [
   'youtube.com', 'youtu.be', 'ytimg.com', 'i.ytimg.com', 'yt3.ggpht.com',
   'i9.ytimg.com', 'i1.ytimg.com', 'img.youtube.com',
   'dailymotion.com', 'vimeo.com', 'tiktok.com',
-  'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com',
+  'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com', 'ton.twimg.com',
   'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
-  'reddit.com', 'redd.it', 'preview.redd.it',
+  'reddit.com', 'redd.it', 'preview.redd.it', 'i.redd.it',
   'slideshare.net', 'slideplayer.com', 'slideserve.com', 'slideteam.net',
   'templatemonster.com', 'envato.com', 'elements.envato.com',
+  'imgflip.com', 'memegenerator.net', 'makeameme.org', 'quickmeme.com',
+  'knowyourmeme.com', 'memedroid.com', 'ifunny.co', '9gag.com',
+  'buzzfeed.com', 'boredpanda.com', 'cheezburger.com',
+  'wikimedia.org', 'wikipedia.org', 'wikia.com', 'fandom.com',
+  'goodreads.com', 'brainyquote.com', 'azquotes.com',
+  'etsy.com', 'redbubble.com', 'teepublic.com', 'zazzle.com',
+  'screenrant.com', 'cbr.com', 'gamerant.com',
 ];
 
 // Filter out images that likely contain text overlays
 function isCleanImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
-  // Block known stock/design sites that watermark or overlay text
+  // Block known stock/design/meme sites
   for (const domain of BLOCKED_DOMAINS) {
     if (lower.includes(domain)) return false;
   }
-  // Block URLs that hint at infographics, quotes, memes
-  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail', 'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault', 'vi_webp', 'vi/', 'embed', 'watch', 'shorts', 'video-thumbnail', 'video_thumbnail', 'cover_image', 'og-image', 'opengraph'];
+  // Block URLs that hint at infographics, quotes, memes, screenshots, tweets
+  const badPatterns = [
+    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template',
+    'mockup', 'banner', 'flyer', 'poster', 'thumbnail',
+    'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault',
+    'vi_webp', 'vi/', 'embed', 'watch', 'shorts',
+    'video-thumbnail', 'video_thumbnail', 'cover_image',
+    'og-image', 'opengraph', 'og_image', 'social-share',
+    'tweet', 'screenshot', 'screen-shot', 'screen_shot', 'screencap',
+    'motivational', 'inspirational', 'wallpaper-quote',
+    'collection-of', 'best-of', 'top-10', 'compilation',
+    'nomination', 'nominees-list', 'award-list',
+    'funny', 'hilarious', 'lol', 'reaction', 'gif',
+  ];
   for (const pat of badPatterns) {
     if (lower.includes(pat)) return false;
   }
@@ -66,22 +85,24 @@ Deno.serve(async (req) => {
             body: q.body || '',
           }));
 
-          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS (not memes, not graphics, not quotes, not templates, not screenshots).
+          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
 
 TOPIC: "${mainTopic}"
 
 CARDS:
 ${cardsForAI.map((c: any) => `Card ${c.index}: Title="${c.title}" Body="${c.body}"`).join('\n')}
 
-RULES:
-1. Each query must find a REAL PHOTOGRAPH of the actual subject mentioned in the card
-2. If the card mentions a PERSON (actor, athlete, politician), the query MUST include the person's FULL NAME
-3. If the card mentions an EVENT (Oscar ceremony, award show), search for real photos FROM that event
-4. NEVER use the editorial/catchy title directly - extract the REAL SUBJECT
-5. Add "photo" or "real photo" to each query
-6. Each card should have 2 alternative queries (primary and fallback)
-7. Queries must be in the language that will return the best photo results (usually English for international topics)
-8. NEVER include years like 2026 in queries unless the event already happened - for future events, search for the most recent edition
+CRITICAL RULES:
+1. Each query MUST find a REAL, EDITORIAL PHOTOGRAPH — like from a news agency (Reuters, AP, AFP, Getty editorial)
+2. If the card mentions a PERSON by name, the PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Cillian Murphy Oscar ceremony red carpet photo")
+3. If no person name is mentioned but the card is about a specific subject, search for that subject specifically
+4. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
+5. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
+6. Add "real photo" or "editorial photo" to each query
+7. Each card should have 2 alternative queries (primary: very specific, fallback: slightly broader but still specific)
+8. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
+9. For future events (2026+), search for the most recent past edition instead
+10. For cover/capa cards: search for the most iconic/dramatic photo of the main subject
 
 Return a JSON object: { "queries": { "0": ["query1", "query2"], "1": ["query1", "query2"], ... } }
 Only return the JSON, nothing else.`;
@@ -119,8 +140,8 @@ Only return the JSON, nothing else.`;
       const searchBraveImages = async (query: string, braveKey: string): Promise<string[]> => {
         const images: string[] = [];
         try {
-          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography -youtube -thumbnail -video -screenshot -presentation`;
-          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=20&safesearch=strict&type=photo`;
+          const cleanQuery = `${query} -meme -memes -funny -quote -quotes -motivational -infographic -template -collage -compilation -reaction -tweet -screenshot -presentation -wallpaper -fan-art`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=30&safesearch=strict&type=photo`;
           const res = await fetch(url, {
             headers: { 'X-Subscription-Token': braveKey },
           });
@@ -131,7 +152,17 @@ Only return the JSON, nothing else.`;
               if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 400 && h >= 400) {
+                // Prefer larger images (real photos are typically bigger)
+                if (w >= 600 && h >= 400) {
+                  images.push(imgUrl);
+                }
+              }
+              // Also accept slightly smaller if from known good news sources
+              else if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                const isNewsSource = /reuters|apnews|afp|getty|variety|hollywoodreporter|deadline|ew\.com|people\.com|bbc|cnn|nytimes/.test(imgUrl.toLowerCase());
+                if (isNewsSource && w >= 400 && h >= 300) {
                   images.push(imgUrl);
                 }
               }

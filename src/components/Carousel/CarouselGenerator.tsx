@@ -39,12 +39,9 @@ const AnimatedCounter = ({ target }: { target: number }) => {
 import { supabase } from '@/integrations/supabase/client';
 
 // Resilient edge function invoke — falls back to direct HTTP fetch if SDK times out
-const resilientInvoke = async (fnName: string, body: Record<string, unknown>, timeoutMs = 30000) => {
+const resilientInvoke = async (fnName: string, body: Record<string, unknown>) => {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const { data, error } = await supabase.functions.invoke(fnName, { body });
-    clearTimeout(timer);
     if (error) throw error;
     return data;
   } catch (sdkErr) {
@@ -61,7 +58,10 @@ const resilientInvoke = async (fnName: string, body: Record<string, unknown>, ti
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`Direct fetch failed: ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Direct fetch failed: ${res.status} ${text}`);
+    }
     return await res.json();
   }
 };

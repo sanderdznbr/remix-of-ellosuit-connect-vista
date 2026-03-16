@@ -5280,14 +5280,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             transition={{ duration: 0.3 }}
           >
             <DashboardLayout
-              onStartCarousel={(newTopic?: string, _mentionedPrompts?: any[], newPostFormat?: string) => {
+              onStartCarousel={(newTopic?: string, newMentionedPrompts?: any[], newPostFormat?: string) => {
                 resetWizardState();
                 setShowWelcome(false);
                 if (newPostFormat && newPostFormat in FORMAT_DIMENSIONS) {
                   setPostFormat(newPostFormat as PostFormatType);
                 }
                 if (newTopic) {
-                  setTopic(newTopic); setOriginalTopic(newTopic);
+                  setTopic(newTopic);
+                  setOriginalTopic(newTopic);
+                }
+                if (newMentionedPrompts?.length) {
+                  setMentionedPrompts(newMentionedPrompts);
                 }
               }}
               onLoadCarousel={async (item: any) => {
@@ -8554,7 +8558,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             media={pendingPromptMedia.media}
             onCancel={() => setPendingPromptMedia(null)}
             onConfirm={(selectedMedia) => {
-              // Apply media by type
               const screenshots = selectedMedia.filter(m => m.media_type === 'screenshot');
               const logos = selectedMedia.filter(m => m.media_type === 'logo');
               const faces = selectedMedia.filter(m => m.media_type === 'face');
@@ -8562,25 +8565,47 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
               if (screenshots.length > 0) {
                 setWantsProduct(true);
-                setProductImages(prev => [...prev, ...screenshots.map(s => ({ url: s.file_url, thumb: s.file_url, file: null as any }))]);
+                setProductImages(prev => {
+                  const existing = new Set(prev.map(p => p.url));
+                  const next = screenshots
+                    .filter(s => !existing.has(s.file_url))
+                    .map(s => ({ url: s.file_url, thumb: s.file_url, file: null as any }));
+                  return [...prev, ...next];
+                });
               }
+
               if (logos.length > 0) {
-                setLogoUrl(logos[0].file_url);
+                const primaryLogo = logos[0];
+                setLogoUrl(primaryLogo.file_url);
+                setBrandName(prev => prev || pendingPromptMedia?.promptTitle || '');
               }
+
               if (faces.length > 0) {
                 const facePhotos = faces.map(f => ({ url: f.file_url, thumb: f.file_url, label: f.file_name, source: 'upload' as const, category: 'face' as const }));
-                setReferenceImages(prev => [...prev, ...facePhotos]);
+                setReferenceImages(prev => {
+                  const existing = new Set(prev.map(r => `${r.category}:${r.url}`));
+                  const next = facePhotos.filter(photo => !existing.has(`face:${photo.url}`));
+                  return [...prev, ...next];
+                });
                 setFacePersons(prev => {
                   const updated = [...prev];
                   if (updated.length === 0) {
                     updated.push({ id: crypto.randomUUID(), label: 'Pessoa 1', gender: 'auto', wearsGlasses: false, photos: [] });
                   }
-                  updated[0] = { ...updated[0], photos: [...updated[0].photos, ...facePhotos] };
+                  const existingUrls = new Set(updated[0].photos.map(ph => ph.url));
+                  const nextPhotos = facePhotos.filter(photo => !existingUrls.has(photo.url));
+                  updated[0] = { ...updated[0], photos: [...updated[0].photos, ...nextPhotos] };
                   return updated;
                 });
               }
+
               if (refs.length > 0) {
-                setReferenceImages(prev => [...prev, ...refs.map(r => ({ url: r.file_url, thumb: r.file_url, label: r.file_name, source: 'upload' as const, category: 'style' as const }))]);
+                const styleRefs = refs.map(r => ({ url: r.file_url, thumb: r.file_url, label: r.file_name, source: 'upload' as const, category: 'style' as const }));
+                setReferenceImages(prev => {
+                  const existing = new Set(prev.map(r => `${r.category}:${r.url}`));
+                  const next = styleRefs.filter(ref => !existing.has(`style:${ref.url}`));
+                  return [...prev, ...next];
+                });
               }
 
               setPendingPromptMedia(null);

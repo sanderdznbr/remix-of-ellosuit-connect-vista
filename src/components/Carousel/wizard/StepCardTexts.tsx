@@ -39,6 +39,13 @@ const StepCardTexts: React.FC<Props> = ({
     setCurrentSlideInternal(i);
     setActiveCardIndex?.(i);
   };
+
+  // Sync internal state when parent changes activeCardIndex (e.g. footer buttons)
+  React.useEffect(() => {
+    if (activeCardIndex !== undefined && activeCardIndex !== currentSlide) {
+      setCurrentSlideInternal(activeCardIndex);
+    }
+  }, [activeCardIndex]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<string[]>([]);

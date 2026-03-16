@@ -277,6 +277,7 @@ const CarouselGenerator: React.FC = () => {
   const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis | null>(null);
   const [analyzingProduct, setAnalyzingProduct] = useState(false);
   const [productSize, setProductSize] = useState<ProductSize>('medium');
+  const [wantsProduct, setWantsProduct] = useState(false);
 
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
@@ -400,9 +401,10 @@ const CarouselGenerator: React.FC = () => {
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Velocidade'];
+  const showProductStep = wantsProduct;
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', 'Produto', 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -646,6 +648,7 @@ const CarouselGenerator: React.FC = () => {
     setFamousList([]);
     setFamousImages([]);
     setProductImages([]);
+    setWantsProduct(false);
     setProductAnalysis(null);
     setAnalyzingProduct(false);
     setImageSettings(DEFAULT_IMAGE_SETTINGS);
@@ -5643,6 +5646,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onSkipAll={() => setWizardStep(wizardStep + 1)}
                         activeMarketplaceStyle={activeMarketplaceStyle}
                         isExtreme={wizardMode === 'extreme'}
+                        hasProduct={wantsProduct}
+                        setHasProduct={wizardMode === 'advanced' ? setWantsProduct : undefined}
+                        onOpenProductStep={() => {
+                          setWantsProduct(true);
+                          // Jump to next step which will now be 'Produto'
+                          setTimeout(() => setWizardStep(wizardStep + 1), 100);
+                        }}
                       />
                     )}
                     {currentStepName === 'Pessoas' && (

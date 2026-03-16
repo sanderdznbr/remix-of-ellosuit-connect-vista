@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2 } from 'lucide-react';
+import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +48,10 @@ interface Props {
   // Active marketplace style
   activeMarketplaceStyle?: any;
   isExtreme?: boolean;
+  // Product
+  hasProduct?: boolean;
+  setHasProduct?: (v: boolean) => void;
+  onOpenProductStep?: () => void;
 }
 
 const StepPersonalization: React.FC<Props> = ({
@@ -60,6 +64,7 @@ const StepPersonalization: React.FC<Props> = ({
   brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   hasWebImages, webFacePosition, setWebFacePosition,
   onSkipAll, activeMarketplaceStyle, isExtreme,
+  hasProduct, setHasProduct, onOpenProductStep,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -78,11 +83,11 @@ const StepPersonalization: React.FC<Props> = ({
     return (
       <div className="space-y-5" style={{ minHeight: '260px' }}>
         <div>
-          <h2 className="text-xl font-bold text-white mb-1.5">Personalização</h2>
-          <p className="text-sm text-white/40">Seu post tem algo relacionado à marca ou pessoas?</p>
+         <h2 className="text-xl font-bold text-white mb-1.5">Personalização</h2>
+          <p className="text-sm text-white/40">Seu post tem relação com marca, pessoas ou produto?</p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {/* Person option */}
           <button
             onClick={() => { setWantsPerson(true); setWantsBrand(false); setExpandedSection('face'); }}
@@ -124,6 +129,22 @@ const StepPersonalization: React.FC<Props> = ({
               <p className="text-[11px] text-white/30 mt-0.5">Pessoa + logomarca no post</p>
             </div>
           </button>
+
+          {/* Product option */}
+          {setHasProduct && (
+            <button
+              onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
+              className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
+            >
+              <div className="w-11 h-11 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/25 transition-colors">
+                <ShoppingBag className="h-5 w-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white/80">Sim, tem produto</p>
+                <p className="text-[11px] text-white/30 mt-0.5">Envie foto do produto para destaque</p>
+              </div>
+            </button>
+          )}
 
           {/* Skip */}
           <button

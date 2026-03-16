@@ -5319,6 +5319,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
                         logoPosition={logoPosition} setLogoPosition={setLogoPosition}
                         logoBrandColors={logoBrandColors}
+                        useBrandColors={useBrandColors}
+                        setUseBrandColors={setUseBrandColors}
                         brandName={brandName} setBrandName={setBrandName}
                         userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel}

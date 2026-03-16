@@ -48,6 +48,10 @@ interface Props {
   // Active marketplace style
   activeMarketplaceStyle?: any;
   isExtreme?: boolean;
+  // Product
+  hasProduct?: boolean;
+  setHasProduct?: (v: boolean) => void;
+  onOpenProductStep?: () => void;
 }
 
 const StepPersonalization: React.FC<Props> = ({

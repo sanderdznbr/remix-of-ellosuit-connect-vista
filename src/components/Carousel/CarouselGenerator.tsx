@@ -245,7 +245,7 @@ const CarouselGenerator: React.FC = () => {
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
   // WIZARD_STEPS computed below after all state declarations
-  const { speakStep, stopSpeaking, isSpeaking, voiceEnabled, setVoiceEnabled } = useCarouselVoice();
+  
 
   // Step 1: Topic
   const [topic, setTopic] = useState('');

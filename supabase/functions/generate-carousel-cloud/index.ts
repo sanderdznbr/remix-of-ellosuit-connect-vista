@@ -240,8 +240,8 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         promptParts.push(`TEMA: "${job.topic}"`);
       }
       promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-      // NOTE: Logo/brand is overlaid programmatically via Canvas — do NOT ask AI to render it
-      if (job.brand_name) promptParts.push(`PROIBIDO RENDERIZAR LOGOMARCA/NOME DA MARCA: A marca "${job.brand_name}" será adicionada automaticamente como overlay. NÃO renderize o nome da marca, logotipo ou texto da marca na imagem. Foque apenas no conteúdo visual e nos textos do post.`);
+      // NOTE: Logo/brand is overlaid programmatically via Canvas — do NOT mention brand name in prompt
+      promptParts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema. Deixe a área do logo LIMPA e SEM TEXTO.');
       const isMarketplaceStyle = !!singlePromptStyle;
       if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 

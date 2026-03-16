@@ -79,8 +79,7 @@ const StepPersonalization: React.FC<Props> = ({
   const [expandedSection, setExpandedSection] = useState<'face' | 'brand' | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
-  const [useCustomColors, setUseCustomColors] = useState(false);
-  const [customColors, setCustomColors] = useState(['#6366f1', '#ec4899', '#f59e0b']);
+  // useCustomColors and customColors are now from props
 
   // Auto-detect pre-filled data from prompt media and react whenever it changes
   useEffect(() => {

@@ -219,9 +219,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         {sidebarOpen && (
           <div className="fixed inset-0 z-50 flex">
             <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
-            <div className="relative w-[280px] h-full animate-in slide-in-from-left duration-200">
+            <div className="relative w-[260px] h-full animate-in slide-in-from-left duration-200">
               <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
-              <button onClick={() => setSidebarOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">
+              <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-1.5 text-white/40 hover:text-white cursor-pointer z-10" style={{ right: '12px' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>

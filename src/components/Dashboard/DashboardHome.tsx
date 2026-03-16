@@ -48,7 +48,7 @@ interface DashboardHomeProps {
   onResumeJob?: (jobId: string) => void;
 }
 
-const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects }) => {
+const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects, onResumeJob }) => {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState('');
   const [loadingId, setLoadingId] = useState<string | null>(null);

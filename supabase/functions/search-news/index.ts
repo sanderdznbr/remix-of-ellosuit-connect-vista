@@ -285,10 +285,17 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
             const results = (imgData.results || []);
             for (const item of results) {
               const imgUrl = item.properties?.url || item.thumbnail?.src;
-              if (imgUrl && isCleanImageUrl(imgUrl)) {
+              const metadata = [
+                item.title,
+                item.description,
+                item.source,
+                item.page_fetched?.title,
+                item.page_fetched?.description,
+              ].filter(Boolean).join(' ');
+              if (imgUrl && isCleanImageCandidate(imgUrl, metadata)) {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
-                if (w >= 600 && h >= 400) {
+                if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
                   images.push(imgUrl);
                 }
               }

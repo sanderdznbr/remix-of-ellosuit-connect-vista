@@ -11,22 +11,41 @@ const BLOCKED_DOMAINS = [
   'youtube.com', 'youtu.be', 'ytimg.com', 'i.ytimg.com', 'yt3.ggpht.com',
   'i9.ytimg.com', 'i1.ytimg.com', 'img.youtube.com',
   'dailymotion.com', 'vimeo.com', 'tiktok.com',
-  'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com',
+  'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com', 'ton.twimg.com',
   'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
-  'reddit.com', 'redd.it', 'preview.redd.it',
+  'reddit.com', 'redd.it', 'preview.redd.it', 'i.redd.it',
   'slideshare.net', 'slideplayer.com', 'slideserve.com', 'slideteam.net',
   'templatemonster.com', 'envato.com', 'elements.envato.com',
+  'imgflip.com', 'memegenerator.net', 'makeameme.org', 'quickmeme.com',
+  'knowyourmeme.com', 'memedroid.com', 'ifunny.co', '9gag.com',
+  'buzzfeed.com', 'boredpanda.com', 'cheezburger.com',
+  'wikimedia.org', 'wikipedia.org', 'wikia.com', 'fandom.com',
+  'goodreads.com', 'brainyquote.com', 'azquotes.com',
+  'etsy.com', 'redbubble.com', 'teepublic.com', 'zazzle.com',
+  'screenrant.com', 'cbr.com', 'gamerant.com',
 ];
 
 // Filter out images that likely contain text overlays
 function isCleanImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
-  // Block known stock/design sites that watermark or overlay text
+  // Block known stock/design/meme sites
   for (const domain of BLOCKED_DOMAINS) {
     if (lower.includes(domain)) return false;
   }
-  // Block URLs that hint at infographics, quotes, memes
-  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail', 'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault', 'vi_webp', 'vi/', 'embed', 'watch', 'shorts', 'video-thumbnail', 'video_thumbnail', 'cover_image', 'og-image', 'opengraph'];
+  // Block URLs that hint at infographics, quotes, memes, screenshots, tweets
+  const badPatterns = [
+    'infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template',
+    'mockup', 'banner', 'flyer', 'poster', 'thumbnail',
+    'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault',
+    'vi_webp', 'vi/', 'embed', 'watch', 'shorts',
+    'video-thumbnail', 'video_thumbnail', 'cover_image',
+    'og-image', 'opengraph', 'og_image', 'social-share',
+    'tweet', 'screenshot', 'screen-shot', 'screen_shot', 'screencap',
+    'motivational', 'inspirational', 'wallpaper-quote',
+    'collection-of', 'best-of', 'top-10', 'compilation',
+    'nomination', 'nominees-list', 'award-list',
+    'funny', 'hilarious', 'lol', 'reaction', 'gif',
+  ];
   for (const pat of badPatterns) {
     if (lower.includes(pat)) return false;
   }

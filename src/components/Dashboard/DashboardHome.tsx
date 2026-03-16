@@ -516,8 +516,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             </div>
           </div>
         </div>
-        )}
       </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

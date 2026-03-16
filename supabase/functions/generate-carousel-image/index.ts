@@ -335,10 +335,16 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       messageContent.push({ type: 'text', text: textPrompt });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
+      } else if (validGeneralRefs.length > 0 && isAppMockup) {
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT REAL DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone premium. Reproduza PIXEL A PIXEL o conteúdo da tela. NÃO invente uma interface diferente:` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `🎨 CONTEÚDO VISUAL OBRIGATÓRIO ABAIXO — Esta imagem deve aparecer FIELMENTE no resultado (em mockup se for screenshot, em destaque se for produto):` });
       }
       for (const ref of validGeneralRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `A foto acima é a FOTOGRAFIA REAL do imóvel. Ela DEVE ser a imagem principal/de fundo do post. Integre textos e elementos gráficos do estilo POR CIMA desta foto real.` });
+      } else if (validGeneralRefs.length > 0) {
+        messageContent.push({ type: 'text', text: `A imagem acima é CONTEÚDO REAL do usuário. Ela DEVE aparecer fielmente no resultado final — NÃO gere uma versão inventada ou genérica.` });
       }
     } else {
       // STANDARD MODE

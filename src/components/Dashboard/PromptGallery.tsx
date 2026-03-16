@@ -43,7 +43,7 @@ const PromptGallery: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadingMediaFor, setUploadingMediaFor] = useState<string | null>(null);
   const [selectedMediaType, setSelectedMediaType] = useState('screenshot');
 
   useEffect(() => {

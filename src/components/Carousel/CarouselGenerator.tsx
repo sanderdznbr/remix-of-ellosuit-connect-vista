@@ -4950,6 +4950,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     );
   };
 
+  // Clamp wizardStep to valid range when WIZARD_STEPS changes dynamically
+  useEffect(() => {
+    if (wizardStep >= WIZARD_STEPS.length && WIZARD_STEPS.length > 0) {
+      setWizardStep(WIZARD_STEPS.length - 1);
+    }
+  }, [WIZARD_STEPS.length, wizardStep]);
+
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 

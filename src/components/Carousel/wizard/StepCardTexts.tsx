@@ -78,8 +78,20 @@ const StepCardTexts: React.FC<Props> = ({
   const refreshPhoto = async (cardIndex: number) => {
     if (refreshingCard !== null) return;
     const cardData = texts[cardIndex];
-    const query = (cardData?.title || topic || '').trim();
-    if (!query) { toast.error('Sem texto para buscar foto'); return; }
+    const cardTitle = (cardData?.title || '').trim();
+    const cardBody = (cardData?.body || '').trim();
+    // Build query from card content — extract names, events, entities
+    let query = '';
+    if (cardTitle && cardBody) {
+      query = `${cardTitle} ${cardBody.split(/[.,;!?]/).slice(0, 2).join(' ')}`.trim();
+    } else if (cardTitle) {
+      query = cardTitle;
+    } else {
+      query = topic || '';
+    }
+    if (!query.trim()) { toast.error('Sem texto para buscar foto'); return; }
+    // Add topic as fallback context if query is short
+    if (query.length < 15) query = `${topic} ${query}`.trim();
     setRefreshingCard(cardIndex);
     try {
       const currentUrl = cardPhotoAssignments?.[cardIndex];

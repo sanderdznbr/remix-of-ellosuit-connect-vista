@@ -17,6 +17,8 @@ interface Props {
   onGoHome?: () => void;
   isExtreme?: boolean;
   wizardMode?: 'simple' | 'advanced' | 'extreme';
+  isCompleting?: boolean;
+  onCompleteAnimationDone?: () => void;
 }
 
 // Fixed bright colors for loading UI - never uses user's accent color

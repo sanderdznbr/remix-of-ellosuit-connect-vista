@@ -5773,7 +5773,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Personalização' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Roteiro' || currentStepName === 'Imóvel') && (
+                        {(currentStepName === 'Personalização' || currentStepName === 'Pessoas' || currentStepName === 'Visual' || currentStepName === 'Produto' || currentStepName === 'Imóvel') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

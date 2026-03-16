@@ -5749,6 +5749,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     )}
                     </motion.div>
                   </AnimatePresence>
+                </div>
+                </div>
+                {/* end scrollable content area */}
 
                   {/* Navigation buttons — sticky on mobile */}
                   <div className="fixed bottom-0 left-0 right-0 z-30 lg:relative lg:bottom-auto lg:left-auto lg:right-auto flex items-center justify-between pt-4 px-5 pb-[calc(env(safe-area-inset-bottom,12px)+12px)] lg:px-0 lg:pb-0" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>

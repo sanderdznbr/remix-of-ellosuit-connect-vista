@@ -5059,20 +5059,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return;
     }
 
-    if (!searchingWeb && !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0) {
+    if (!searchingWeb && hasWebResearch) {
       const currentName = WIZARD_STEPS[wizardStep];
       if (currentName === 'Pessoas' || currentName === 'Visual') {
         const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
         if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
       }
     }
-  }, [WIZARD_STEPS, wizardStep, searchingWeb, skipWebSearch, webSearchResult?.images?.length]);
-
-  // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
-  const currentStepName = WIZARD_STEPS[wizardStep] || '';
-
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' ? true : !!activeMarketplaceStyle) : true;
-
+  }, [WIZARD_STEPS, wizardStep, searchingWeb, hasWebResearch]);
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);
@@ -5087,6 +5081,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     autoRoteiroTriggered.current = true;
     (async () => {
       setGeneratingRoteiro(true);
+      setCardPhotoAssignments({});
       const totalCards = contentMode === 'single-post' ? 1 : cardCount;
       const localFallback = () => {
         if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
@@ -5117,92 +5112,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       }
 
       setRoteiroGenerated(true);
-
-      // Per-card web image search
-      if (webSearchResult?.images?.length && !skipWebSearch) {
-        const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
-        const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
-        const perCardQueries: { index: number; query: string }[] = [];
-        for (let ci = 0; ci < totalCards; ci++) {
-          const cardText = outlineToUse[ci];
-          const cardTitle = cardText?.title || '';
-          const cardBody = cardText?.body || '';
-          // Build a specific search query: prioritize card-specific content
-          // If the card mentions a specific subject (film, person, product), search for THAT subject
-          const cardContent = `${cardTitle} ${cardBody}`.trim();
-          let searchQuery: string;
-          if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
-            // Card has a distinct title — search specifically for that subject WITH context
-            searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
-          } else if (cardBody) {
-            searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
-          } else {
-            searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
-          }
-          perCardQueries.push({ index: ci, query: searchQuery });
-        }
-
-        if (perCardQueries.length > 0) {
-          try {
-            const perCardData = await resilientInvoke('search-news', { per_card_queries: perCardQueries });
-            if (perCardData?.card_images) {
-              const assignments: Record<number, string> = {};
-              const usedUrls = new Set<string>();
-              for (let ci = 0; ci < totalCards; ci++) {
-                const cardImgs = perCardData.card_images[ci] || [];
-                let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
-                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                else {
-                  const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-                  const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                  if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
-                }
-              }
-              setCardPhotoAssignments(assignments);
-            } else {
-              const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-              if (webImgs.length > 0) {
-                const assignments: Record<number, string> = {};
-                const usedUrls = new Set<string>();
-                for (let ci = 0; ci < totalCards; ci++) {
-                  let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                  if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-                }
-                setCardPhotoAssignments(assignments);
-              }
-            }
-          } catch (searchErr) {
-            console.error('[AutoRoteiro] Per-card search error:', searchErr);
-            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
-            if (webImgs.length > 0) {
-              const assignments: Record<number, string> = {};
-              const usedUrls = new Set<string>();
-              for (let ci = 0; ci < totalCards; ci++) {
-                let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
-                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-              }
-              setCardPhotoAssignments(assignments);
-            }
-          }
-        }
-      } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
-        const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
-        if (webImgs.length > 0) {
-          const assignments: Record<number, string> = {};
-          const usedUrls = new Set<string>();
-          for (let ci = 0; ci < totalCards; ci++) {
-            let bestImg = '';
-            for (const url of webImgs) { if (!usedUrls.has(url)) { bestImg = url; break; } }
-            if (!bestImg) bestImg = webImgs[ci % webImgs.length];
-            if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
-          }
-          setCardPhotoAssignments(assignments);
-        }
-      }
-
+      await assignPerCardWebPhotos(generatedOutline, totalCards);
       setGeneratingRoteiro(false);
     })();
-  }, [currentStepName]);
+  }, [currentStepName, generatingRoteiro, topic, contentMode, cardCount, assignPerCardWebPhotos]);
 
 
   // Voice guide: speak on step change (only after welcome is dismissed)

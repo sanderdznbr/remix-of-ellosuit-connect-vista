@@ -5227,8 +5227,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   }, [currentStepName, generatingRoteiro, topic, contentMode, cardCount, assignPerCardWebPhotos]);
 
 
-  // Voice guide: speak on step change (only after welcome is dismissed)
-  useEffect(() => {
+
+
 
 
   useEffect(() => {

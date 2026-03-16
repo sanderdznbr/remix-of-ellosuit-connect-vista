@@ -2092,7 +2092,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     let localJobId: string | null = null;
     if (userId && companyId && !skipCloudRef.current) {
       localJobId = await createCloudJob('carousel');
-      if (localJobId) setCloudJobId(localJobId);
+      if (localJobId) {
+        setCloudJobId(localJobId);
+        // Mark as generating immediately so dashboard doesn't show as "pending" duplicate
+        supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', localJobId).then(() => {});
+      }
       console.log('[GENERATE_FLOW] Cloud job created:', localJobId);
     }
     skipCloudRef.current = false;

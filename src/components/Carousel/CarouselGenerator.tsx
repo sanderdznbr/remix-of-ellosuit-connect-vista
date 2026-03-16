@@ -390,6 +390,16 @@ const CarouselGenerator: React.FC = () => {
   const [skipWebSearch, setSkipWebSearch] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[] } | null>(null);
 
+  // Auto-detect product context from topic to show Produto step
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const detectedProductContext = React.useMemo(() => detectContext(topic, mentionedPrompts), [topic, mentionedPrompts]);
+  React.useEffect(() => {
+    if (detectedProductContext && !autoProductDetected && !wantsProduct) {
+      setWantsProduct(true);
+      setAutoProductDetected(true);
+    }
+  }, [detectedProductContext, autoProductDetected, wantsProduct]);
+
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;

@@ -335,7 +335,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         userName: job.user_name || '',
         ...(job.web_search_content ? { webSearchContent: JSON.parse(job.web_search_content) } : {}),
         ...(job.web_search_citations ? { webSearchCitations: job.web_search_citations } : {}),
-        ...(job.product_context ? { productContext: job.product_context.startsWith('EXTREME_VISION:') ? job.product_context : JSON.parse(job.product_context) } : {}),
+        ...(job.product_context ? { productContext: (job.product_context.startsWith('EXTREME_VISION:') || job.product_context.startsWith('ADVANCED_VISUAL_IDEA:')) ? job.product_context : JSON.parse(job.product_context) } : {}),
         ...(job.marketplace_style_config ? { marketplaceStyleConfig: job.marketplace_style_config } : {}),
       });
     } catch (e: any) {

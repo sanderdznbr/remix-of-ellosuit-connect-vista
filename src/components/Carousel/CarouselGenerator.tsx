@@ -4902,7 +4902,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                   const { data, error } = await supabase
                     .from('generated_carousels')
-                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config, generation_config')
+                    .select('id, topic, keywords, carousel_data, marketplace_style_id, style_config, generation_config, post_format')
                     .eq('id', item.id)
                     .maybeSingle();
 

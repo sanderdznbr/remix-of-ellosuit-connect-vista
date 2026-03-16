@@ -5128,7 +5128,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       setGeneratingRoteiro(false);
     })();
-  }, [currentStepName]);
+  }, [currentStepName]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Voice guide: speak on step change (only after welcome is dismissed)

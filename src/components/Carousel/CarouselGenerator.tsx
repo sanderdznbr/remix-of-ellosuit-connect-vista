@@ -8577,10 +8577,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 setLogoUrl(logos[0].file_url);
               }
               if (faces.length > 0) {
-                setReferenceImages(prev => [...prev, ...faces.map(f => ({ url: f.file_url, category: 'face' as const }))]);
+                setReferenceImages(prev => [...prev, ...faces.map(f => ({ url: f.file_url, thumb: f.file_url, label: f.file_name, source: 'upload' as const, category: 'face' as const }))]);
               }
               if (refs.length > 0) {
-                setReferenceImages(prev => [...prev, ...refs.map(r => ({ url: r.file_url, category: 'style' as const }))]);
+                setReferenceImages(prev => [...prev, ...refs.map(r => ({ url: r.file_url, thumb: r.file_url, label: r.file_name, source: 'upload' as const, category: 'style' as const }))]);
               }
 
               setPendingPromptMedia(null);

@@ -412,10 +412,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim()}
-                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
-                style={{ backgroundColor: inputValue.trim() ? '#7B50DC' : 'rgba(255,255,255,0.08)' }}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+                style={{ backgroundColor: inputValue.trim() ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
               >
-                <ArrowUp className="w-4 h-4" style={{ color: '#ffffff' }} />
+                <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() ? '#0a0a0f' : '#ffffff' }} />
               </button>
             </div>
           </div>

@@ -3318,14 +3318,36 @@ A composição final deve ser: foto real de fundo + overlay editorial com textos
         // For text-only cards, don't send face references
         const cardFaceRefs = showPerson && faceRefUrls.length > 0 ? faceRefUrls : undefined;
 
+        // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS (Loop 2) ===
+        let loop2ProductRefs = mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined;
+        if (!loop2ProductRefs && !skipWebSearch && webSearchResult?.images?.length && productImages.length === 0) {
+          const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+          if (webImgs.length > 0) {
+            const webImgIdx = i % webImgs.length;
+            loop2ProductRefs = [webImgs[webImgIdx]];
+          }
+        }
+
+        const hasWebPhotoL2 = !skipWebSearch && webSearchResult?.images?.length && loop2ProductRefs?.length === 1
+          && loop2ProductRefs[0].startsWith('http') && productImages.length === 0;
+        let loop2Prompt = buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+        if (hasWebPhotoL2) {
+          loop2Prompt += `\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+A imagem de referência enviada é uma FOTO REAL do tema. 
+INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do card.
+USE a foto real como elemento visual principal/fundo.
+Sobreponha textos editoriais e tipografia POR CIMA da foto real.
+MANTENHA a foto real reconhecível.`;
+        }
+
         const loop2ExtremeCtx = buildExtremePromptContext();
         imageFactories.push({
           index: i,
           factory: () => generateImage({
-            prompt: buildImagePrompt(imgPrompt + (loop2ExtremeCtx || '')) + (isFullBleedStyle ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.'),
+            prompt: loop2Prompt,
             faceReferenceUrls: cardFaceRefs,
             styleReferenceUrls: capturedStyleRefs,
-            referenceImageUrls: mergedLoop2ProductRefs.length > 0 ? mergedLoop2ProductRefs : undefined,
+            referenceImageUrls: loop2ProductRefs,
             negativePrompt: finalNegative + (!showPerson && faceRefUrls.length > 0 ? ', no people, no faces, no portraits' : ''),
             facePersonsMetadata: showPerson ? facePersonsMeta : undefined,
           }).catch(err => { console.error('Image gen error for card', i, err); return null; }),

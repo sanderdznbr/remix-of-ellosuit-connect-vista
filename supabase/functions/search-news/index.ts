@@ -350,6 +350,19 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     let content = '';
     let citations: string[] = [];
 
+    const localFallback = JSON.stringify({
+      title: topic,
+      subtitle: 'Resumo inicial do tema',
+      facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+      cta_title: 'Continuar',
+      cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+      image_search_terms: [topic],
+      clean_topic: topic,
+      key_entities: [topic],
+      summary: `Resumo inicial gerado localmente para ${topic}.`
+    });
+
+    // Try Perplexity first (8s timeout), then Lovable gateway (8s), then local fallback
     let perplexityOk = false;
     try {
       console.log('[AI] Trying Perplexity...');
@@ -368,7 +381,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
           temperature: 0.3,
           search_recency_filter: 'month',
         }),
-      }, 12000);
+      }, 8000);
 
       if (response.ok) {
         const data = await response.json();
@@ -385,72 +398,77 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     }
 
     if (!perplexityOk) {
-      const openaiKey = Deno.env.get('OPENAI_API_KEY');
-      if (openaiKey) {
-        console.log('[AI] Falling back to OpenAI...');
+      // Use Lovable gateway (faster, more reliable) as primary fallback
+      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+      if (lovableKey) {
+        console.log('[AI] Falling back to Lovable gateway...');
         try {
-          const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+          const lovableRes = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${openaiKey}`,
+              'Authorization': `Bearer ${lovableKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'gpt-4o-mini',
+              model: 'google/gemini-2.5-flash-lite',
               messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
               ],
               temperature: 0.3,
             }),
-          }, 12000);
+          }, 8000);
 
-          if (openaiRes.ok) {
-            const openaiData = await openaiRes.json();
-            content = openaiData.choices?.[0]?.message?.content || '';
-            console.log('[AI] OpenAI fallback OK');
+          if (lovableRes.ok) {
+            const lovableData = await lovableRes.json();
+            content = lovableData.choices?.[0]?.message?.content || '';
+            console.log('[AI] Lovable gateway fallback OK');
           } else {
-            const errText = await openaiRes.text();
-            console.error('[AI] OpenAI also failed:', openaiRes.status, errText.slice(0, 200));
-            content = JSON.stringify({
-              title: topic,
-              subtitle: 'Resumo inicial do tema',
-              facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
-              cta_title: 'Continuar',
-              cta_body: 'Revise e refine o conteúdo na próxima etapa.',
-              image_search_terms: [topic],
-              clean_topic: topic,
-              key_entities: [topic],
-              summary: `Resumo inicial gerado localmente para ${topic}.`
-            });
+            console.error('[AI] Lovable gateway failed:', lovableRes.status);
+            content = localFallback;
           }
-        } catch (openaiErr) {
-          console.error('[AI] OpenAI exception:', openaiErr);
-          content = JSON.stringify({
-            title: topic,
-            subtitle: 'Resumo inicial do tema',
-            facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
-            cta_title: 'Continuar',
-            cta_body: 'Revise e refine o conteúdo na próxima etapa.',
-            image_search_terms: [topic],
-            clean_topic: topic,
-            key_entities: [topic],
-            summary: `Resumo inicial gerado localmente para ${topic}.`
-          });
+        } catch (lovableErr) {
+          console.error('[AI] Lovable gateway exception:', lovableErr);
+          content = localFallback;
         }
       } else {
-        console.error('[AI] No fallback API key available');
-        content = JSON.stringify({
-          title: topic,
-          subtitle: 'Resumo inicial do tema',
-          facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
-          cta_title: 'Continuar',
-          cta_body: 'Revise e refine o conteúdo na próxima etapa.',
-          image_search_terms: [topic],
-          clean_topic: topic,
-          key_entities: [topic],
-          summary: `Resumo inicial gerado localmente para ${topic}.`
-        });
+        // Last resort: try OpenAI directly
+        const openaiKey = Deno.env.get('OPENAI_API_KEY');
+        if (openaiKey) {
+          console.log('[AI] Falling back to OpenAI...');
+          try {
+            const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openaiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.3,
+              }),
+            }, 8000);
+
+            if (openaiRes.ok) {
+              const openaiData = await openaiRes.json();
+              content = openaiData.choices?.[0]?.message?.content || '';
+              console.log('[AI] OpenAI fallback OK');
+            } else {
+              console.error('[AI] OpenAI also failed:', openaiRes.status);
+              content = localFallback;
+            }
+          } catch (openaiErr) {
+            console.error('[AI] OpenAI exception:', openaiErr);
+            content = localFallback;
+          }
+        } else {
+          console.error('[AI] No fallback API key available');
+          content = localFallback;
+        }
       }
     }
 

@@ -53,10 +53,11 @@ Deno.serve(async (req) => {
       }
 
       console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards');
-      const cardImages: Record<number, string[]> = {};
+      // Collect images WITH metadata for AI ranking
+      const cardCandidates: Record<number, { url: string; title: string; desc: string }[]> = {};
 
       const searchCard = async (cardIndex: number, query: string) => {
-        const images: string[] = [];
+        const candidates: { url: string; title: string; desc: string }[] = [];
         try {
           const shortQuery = query.slice(0, 120).trim();
           const cleanQuery = `${shortQuery} -meme -infographic -template -screenshot -reaction`;
@@ -80,16 +81,20 @@ Deno.serve(async (req) => {
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
-                  images.push(imgUrl);
+                  candidates.push({
+                    url: imgUrl,
+                    title: (item.title || '').slice(0, 100),
+                    desc: (item.description || item.page_fetched?.description || '').slice(0, 150),
+                  });
                 }
               }
             }
           }
-          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 60)}": ${images.length} clean images`);
+          console.log(`[PER_CARD] Card ${cardIndex} "${shortQuery.slice(0, 60)}": ${candidates.length} candidates`);
         } catch (e) {
           console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
         }
-        cardImages[cardIndex] = images;
+        cardCandidates[cardIndex] = candidates;
       };
 
       for (let i = 0; i < per_card_queries.length; i += 3) {
@@ -98,6 +103,97 @@ Deno.serve(async (req) => {
         );
         await Promise.all(batch);
         if (i + 3 < per_card_queries.length) await new Promise(r => setTimeout(r, 200));
+      }
+
+      // === AI RANKING: pick best image per card ===
+      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+      const cardImages: Record<number, string[]> = {};
+
+      if (lovableKey) {
+        // Build a single AI call with all cards for efficiency
+        const cardsForAI: { index: number; query: string; options: { i: number; title: string; desc: string }[] }[] = [];
+        
+        for (const q of per_card_queries) {
+          const candidates = cardCandidates[q.index] || [];
+          if (candidates.length <= 1) {
+            // No need for AI if 0-1 candidates
+            cardImages[q.index] = candidates.map(c => c.url);
+            continue;
+          }
+          cardsForAI.push({
+            index: q.index,
+            query: q.query,
+            options: candidates.slice(0, 10).map((c, i) => ({ i, title: c.title, desc: c.desc })),
+          });
+        }
+
+        if (cardsForAI.length > 0) {
+          try {
+            const prompt = `You are an image selector for social media carousel posts.
+For each card below, pick the BEST image option based on relevance to the card's topic.
+Prefer: real photographs of people/events/places directly related to the topic.
+Avoid: generic stock photos, screenshots, graphics with text, memes.
+
+Cards:
+${cardsForAI.map(c => `CARD ${c.index} — Topic: "${c.query}"
+Options: ${c.options.map(o => `[${o.i}] "${o.title}" — ${o.desc}`).join('\n')}`).join('\n\n')}
+
+Return ONLY a JSON object mapping card index to the chosen option index. Example: {"0": 2, "1": 0, "3": 1}`;
+
+            const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash-lite',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.1,
+              }),
+            });
+
+            if (aiRes.ok) {
+              const aiData = await aiRes.json();
+              const aiText = aiData.choices?.[0]?.message?.content || '';
+              const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const picks = JSON.parse(jsonMatch[0]);
+                console.log('[PER_CARD] AI picks:', picks);
+                
+                for (const card of cardsForAI) {
+                  const candidates = cardCandidates[card.index] || [];
+                  const pickedIdx = Number(picks[String(card.index)]);
+                  if (!isNaN(pickedIdx) && pickedIdx >= 0 && pickedIdx < candidates.length) {
+                    // Put AI-picked image first, then rest as alternatives
+                    const picked = candidates[pickedIdx];
+                    const rest = candidates.filter((_, i) => i !== pickedIdx).map(c => c.url);
+                    cardImages[card.index] = [picked.url, ...rest];
+                  } else {
+                    cardImages[card.index] = candidates.map(c => c.url);
+                  }
+                }
+              } else {
+                // AI didn't return valid JSON, fall back to original order
+                for (const card of cardsForAI) {
+                  cardImages[card.index] = (cardCandidates[card.index] || []).map(c => c.url);
+                }
+              }
+            } else {
+              console.error('[PER_CARD] AI ranking failed:', aiRes.status);
+              for (const card of cardsForAI) {
+                cardImages[card.index] = (cardCandidates[card.index] || []).map(c => c.url);
+              }
+            }
+          } catch (aiErr) {
+            console.error('[PER_CARD] AI ranking error:', aiErr);
+            for (const card of cardsForAI) {
+              cardImages[card.index] = (cardCandidates[card.index] || []).map(c => c.url);
+            }
+          }
+        }
+      } else {
+        // No AI key, just return images in search order
+        for (const [idx, candidates] of Object.entries(cardCandidates)) {
+          cardImages[Number(idx)] = candidates.map(c => c.url);
+        }
       }
 
       return new Response(

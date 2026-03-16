@@ -2014,6 +2014,8 @@ MANTENHA a foto real reconhecível e fiel.`);
       } : undefined;
 
       const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
+      console.log('[GENERATE_FLOW] Calling generate-carousel edge function...');
+      console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: cleanMentionsFromTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',

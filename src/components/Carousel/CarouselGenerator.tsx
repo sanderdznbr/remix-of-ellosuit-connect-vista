@@ -2243,8 +2243,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         if (panoramaUrl && updatedCards.every(c => c.imageUrl)) {
           const finalData = { ...data.data, cards: updatedCards };
           setCarouselData(finalData);
-          setGeneratingAllImages(false);
-          setImageGenProgress('');
+          finishGeneration();
 
           // Auto-save
           try {

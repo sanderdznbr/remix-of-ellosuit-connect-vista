@@ -40,7 +40,9 @@ function isCleanImageCandidate(url: string, metadata = ''): boolean {
     'predictions', 'nominees', 'nomination', 'snubs',
     'promo', 'promotional', 'advertisement', 'ad-', 'sponsored',
     'thumbnail', 'thumb_', 'hqdefault', 'sddefault', 'mqdefault',
-    'collage', 'grid', 'montage', 'compilation', 'roundup'
+    'collage', 'grid', 'montage', 'compilation', 'roundup',
+    'tweet', 'tweetdeck', 'social-media-post', 'thread', 'retweet',
+    'print-screen', 'captura', 'tela'
   ];
   for (const pat of badPatterns) {
     if (combined.includes(pat)) return false;

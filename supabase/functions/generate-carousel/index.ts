@@ -145,19 +145,13 @@ Deno.serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: `You are a topic classifier and keyword extractor. Analyze the user's topic and:
-
-1. Classify it into one of these categories:
-- "news": Current events, trending topics, public figures, companies, brands, factual information that benefits from real-time web data (e.g., "chuvas em minas", "eleições 2026", "bitcoin hoje", "Daniel Vorcaro", "Banco Master", "Elon Musk")
+                content: `You are a topic classifier. Analyze the user's topic and classify it into one of these categories:
+- "news": Current events, trending topics, factual information that benefits from real-time web data (e.g., "chuvas em minas", "eleições 2026", "bitcoin hoje")
 - "educational": Educational/informational content that could benefit from web enrichment (e.g., "5 dicas de contabilidade", "como investir na bolsa")
 - "personal": Personal, creative, brand-specific, or proprietary content that does NOT need web search (e.g., "lançamento do meu produto", "promoção da minha loja", "minha história", "receita da vovó")
 - "opinion": Personal opinions, motivational content, creative writing (e.g., "frases motivacionais", "minha visão sobre liderança")
 
-IMPORTANT: If the topic mentions ANY public figure (CEO, politician, celebrity, influencer), company, bank, brand, or organization by name, ALWAYS classify as "news".
-
-2. Extract 2-5 keywords/key phrases from the topic. These are the most important search terms to find relevant photos and information. For people, always include their full name. For companies/brands, include the company name.
-
-Respond ONLY with a JSON object: {"classification": "news|educational|personal|opinion", "reason_pt": "brief reason in Portuguese", "keywords": ["keyword1", "keyword2"]}
+Respond ONLY with a JSON object: {"classification": "news|educational|personal|opinion", "reason_pt": "brief reason in Portuguese"}
 Do not include markdown or extra text.`
               },
               { role: 'user', content: classifyTopic }
@@ -174,12 +168,10 @@ Do not include markdown or extra text.`
             const parsed = JSON.parse(cleaned);
             const classification = parsed.classification || 'unknown';
             const shouldSearch = classification === 'news' || classification === 'educational';
-            const keywords = parsed.keywords || [];
             return new Response(JSON.stringify({
               classification,
               shouldSearch,
               reason: parsed.reason_pt || '',
-              keywords,
             }), {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });
@@ -211,7 +203,7 @@ Do not include markdown or extra text.`
       // Helper: filter out small/bad images
       const MIN_WIDTH = 600;
       const MIN_HEIGHT = 400;
-      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i, /infographic/i, /chart/i, /diagram/i, /ytimg/i, /youtube/i, /youtu\.be/i, /maxresdefault/i, /hqdefault/i, /mqdefault/i, /sddefault/i, /video.thumbnail/i, /opengraph/i, /og-image/i];
+      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i, /infographic/i, /chart/i, /diagram/i];
       const isGoodImage = (img: any) => {
         if (!img.url) return false;
         if (BAD_URL_PATTERNS.some(p => p.test(img.url))) return false;

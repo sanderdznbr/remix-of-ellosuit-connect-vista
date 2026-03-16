@@ -52,7 +52,6 @@ import {
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
-import StepWebSearch from './wizard/StepWebSearch';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
@@ -360,19 +359,16 @@ const CarouselGenerator: React.FC = () => {
   // Compute wizard steps after all state is declared
   const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
   const hasWebImages = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
-  // When web search found content (even without initial images), skip Pessoas and Visual steps
-  // because per-card image search will find real photos later in the Roteiro step
-  const hasWebContent = !skipWebSearch && !!webSearchResult?.content;
-  const skipPeopleVisual = hasFacePhotos || hasWebImages || hasWebContent;
+  // When web search has images, skip Pessoas and Visual steps (AI selects real photos per card)
+  const skipPeopleVisual = hasFacePhotos || hasWebImages;
   // Show 'Posição' step only when user uploaded face AND web images exist
   const showFacePositionStep = hasFacePhotos && hasWebImages;
-  const hasWebSearch = !skipWebSearch && !!webSearchResult;
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', ...(hasWebSearch ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
+    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -465,41 +461,14 @@ const CarouselGenerator: React.FC = () => {
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
 
-  const invokeSearchNews = useCallback(async (payload: Record<string, any>) => {
-    const { data, error } = await supabase.functions.invoke('search-news', {
-      body: payload,
-    });
-
-    if (!error) return data;
-
-    console.warn('[search-news] supabase.functions.invoke failed, trying direct fetch fallback:', error);
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search-news`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new Error(text || `search-news failed with status ${response.status}`);
-    }
-
-    return await response.json();
-  }, []);
-
   const handleSearchWeb = async () => {
-    if (!topic.trim()) return false;
+    if (!topic.trim()) return;
     setSearchingWeb(true);
-    setWebSearchDecisionMade(true);
     try {
-      const data = await invokeSearchNews({ topic: topic.trim(), language: 'pt-BR' });
+      const { data, error } = await supabase.functions.invoke('search-news', {
+        body: { topic: topic.trim(), language: 'pt-BR' },
+      });
+      if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro na pesquisa');
       
       const content = data.content || {};
@@ -510,32 +479,15 @@ const CarouselGenerator: React.FC = () => {
         images: data.images || [],
       });
 
+      // Auto-fill keywords from image search terms (do NOT overwrite the user's topic)
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
       }
 
       toast({ title: '🌐 Pesquisa concluída!', description: `${data.citations?.length || 0} fontes encontradas. O conteúdo será usado na geração.` });
-      return true;
     } catch (err: any) {
       console.error('Web search error:', err);
-      setWebSearchResult({
-        summary: 'Não foi possível concluir a pesquisa web agora, mas você pode continuar com o tema já identificado.',
-        citations: [],
-        content: {
-          title: topic.trim(),
-          subtitle: 'Resumo inicial do tema',
-          facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic.trim()}.`, source: 'Fallback local' }],
-          cta_title: 'Continuar',
-          cta_body: 'Revise e refine o conteúdo na próxima etapa.',
-          image_search_terms: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.trim()],
-          clean_topic: topic.trim(),
-          key_entities: keywords.trim() ? keywords.split(',').map(k => k.trim()).filter(Boolean) : [topic.trim()],
-          summary: `Resumo inicial gerado localmente para ${topic.trim()}.`,
-        },
-        images: [],
-      });
-      toast({ title: 'Pesquisa indisponível', description: 'Avançamos com um resumo inicial para não travar o fluxo.', variant: 'destructive' });
-      return false;
+      toast({ title: 'Erro na pesquisa', description: err.message, variant: 'destructive' });
     } finally {
       setSearchingWeb(false);
     }
@@ -5040,22 +4992,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     }
   }, [WIZARD_STEPS.length, wizardStep]);
 
-  // Auto-advance from Tema to Pesquisa when web search result arrives
-  const prevWebSearchResult = useRef(webSearchResult);
-  useEffect(() => {
-    if (webSearchResult && !prevWebSearchResult.current) {
-      // Web search just completed — if we're on Tema, advance to Pesquisa
-      const currentName = WIZARD_STEPS[wizardStep] || '';
-      if (currentName === 'Tema') {
-        const pesquisaIdx = WIZARD_STEPS.indexOf('Pesquisa');
-        if (pesquisaIdx > 0) {
-          setWizardStep(pesquisaIdx);
-        }
-      }
-    }
-    prevWebSearchResult.current = webSearchResult;
-  }, [webSearchResult, WIZARD_STEPS, wizardStep]);
-
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
@@ -5107,49 +5043,72 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       setRoteiroGenerated(true);
 
       // Per-card web image search
-      if (webSearchResult?.content && !skipWebSearch) {
+      if (webSearchResult?.images?.length && !skipWebSearch) {
         const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
         const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
-        const keyEntities: string[] = webSearchResult?.content?.key_entities || [];
-        const factsPersonNames: string[] = (webSearchResult?.content?.facts || [])
-          .map((f: any) => f.person_name)
-          .filter(Boolean);
-        const allEntities = [...new Set([...keyEntities, ...factsPersonNames])];
-        const perCardQueries: { index: number; query: string; title: string; body: string; topic: string; key_entities?: string[]; is_cover?: boolean }[] = [];
+        const perCardQueries: { index: number; query: string }[] = [];
         for (let ci = 0; ci < totalCards; ci++) {
           const cardText = outlineToUse[ci];
           const cardTitle = cardText?.title || '';
           const cardBody = cardText?.body || '';
-          // Don't build query from editorial titles — let the AI in edge function handle it
-          perCardQueries.push({ index: ci, query: cleanTopicForSearch, title: cardTitle, body: cardBody, topic: cleanTopicForSearch, key_entities: allEntities, is_cover: ci === 0 });
+          // Build a specific search query: prioritize card-specific content
+          // If the card mentions a specific subject (film, person, product), search for THAT subject
+          const cardContent = `${cardTitle} ${cardBody}`.trim();
+          let searchQuery: string;
+          if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
+            // Card has a distinct title — search specifically for that subject WITH context
+            searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
+          } else if (cardBody) {
+            searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
+          } else {
+            searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
+          }
+          perCardQueries.push({ index: ci, query: searchQuery });
         }
 
         if (perCardQueries.length > 0) {
           try {
-            const perCardData = await invokeSearchNews({ per_card_queries: perCardQueries });
-            if (perCardData?.card_images) {
+            const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
+              body: { per_card_queries: perCardQueries },
+            });
+            if (!perCardErr && perCardData?.card_images) {
               const assignments: Record<number, string> = {};
               const usedUrls = new Set<string>();
               for (let ci = 0; ci < totalCards; ci++) {
                 const cardImgs = perCardData.card_images[ci] || [];
-                const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
-                if (bestImg) {
-                  assignments[ci] = bestImg;
-                  usedUrls.add(bestImg);
+                let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                else {
+                  const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                  const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                  if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
                 }
               }
-              if (Object.keys(assignments).length > 0) setCardPhotoAssignments(assignments);
-            } else if (webSearchResult?.images?.length) {
-              const fallbackAssignments = Object.fromEntries(
-                webSearchResult.images
-                  .filter((u: string) => u && u.startsWith('http'))
-                  .slice(0, totalCards)
-                  .map((url: string, idx: number) => [idx, url])
-              );
-              if (Object.keys(fallbackAssignments).length > 0) setCardPhotoAssignments(fallbackAssignments);
+              setCardPhotoAssignments(assignments);
+            } else {
+              const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+              if (webImgs.length > 0) {
+                const assignments: Record<number, string> = {};
+                const usedUrls = new Set<string>();
+                for (let ci = 0; ci < totalCards; ci++) {
+                  let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                  if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                }
+                setCardPhotoAssignments(assignments);
+              }
             }
           } catch (searchErr) {
             console.error('[AutoRoteiro] Per-card search error:', searchErr);
+            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+            if (webImgs.length > 0) {
+              const assignments: Record<number, string> = {};
+              const usedUrls = new Set<string>();
+              for (let ci = 0; ci < totalCards; ci++) {
+                let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+              }
+              setCardPhotoAssignments(assignments);
+            }
           }
         }
       } else if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
@@ -5169,7 +5128,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       setGeneratingRoteiro(false);
     })();
-  }, [currentStepName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentStepName]);
 
 
   // Voice guide: speak on step change (only after welcome is dismissed)
@@ -5546,14 +5505,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           else if (cardCount < 2) { setCardCount(5); }
                         }} />
                     )}
-                    {currentStepName === 'Pesquisa' && webSearchResult && (
-                      <StepWebSearch
-                        webSearchResult={webSearchResult}
-                        searchingWeb={searchingWeb}
-                        onResearch={handleSearchWeb}
-                        topic={topic}
-                      />
-                    )}
                     {currentStepName === 'Formato' && (
                       <StepCardCount
                         cardCount={cardCount}
@@ -5745,7 +5696,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
                             // Smart web search classification on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText) {
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
                               // Classify the topic first
                               setClassifyingTopic(true);
                               try {
@@ -5753,12 +5704,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   body: { action: 'classify-topic', topic: topic.trim() },
                                 });
                                 if (!error && data) {
-                                  if (data.keywords?.length > 0 && !keywords.trim()) {
-                                    setKeywords(data.keywords.join(', '));
-                                  }
                                   if (data.shouldSearch) {
+                                    // Auto-search immediately without asking
+                                    setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
                                     await handleSearchWeb();
+                                    // Don't advance — let user see results and click Continue again
                                     return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically
@@ -5905,56 +5856,76 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 
                                 setRoteiroGenerated(true);
                                 // Per-card web image search: search specific photos for each card's content
-                                if (webSearchResult?.content && !skipWebSearch) {
+                                if (webSearchResult?.images?.length && !skipWebSearch) {
                                   const outlineToUse = generatedOutline.length > 0 ? generatedOutline : manualCardTexts;
                                   
                                    const cleanTopicForSearch = webSearchResult?.content?.clean_topic || topic.trim();
-                                   const keyEntities2: string[] = webSearchResult?.content?.key_entities || [];
-                                   const factsPersonNames2: string[] = (webSearchResult?.content?.facts || [])
-                                     .map((f: any) => f.person_name)
-                                     .filter(Boolean);
-                                   const allEntities2 = [...new Set([...keyEntities2, ...factsPersonNames2])];
-                                   const perCardQueries: { index: number; query: string; title: string; body: string; topic: string; key_entities?: string[]; is_cover?: boolean }[] = [];
-                                   
-                                   for (let ci = 0; ci < totalCards; ci++) {
-                                     const cardText = outlineToUse[ci];
-                                     const cardTitle = cardText?.title || '';
-                                     const cardBody = cardText?.body || '';
-                                     // Don't build query from editorial titles — let the AI in edge function handle it
-                                     perCardQueries.push({ index: ci, query: cleanTopicForSearch, title: cardTitle, body: cardBody, topic: cleanTopicForSearch, key_entities: allEntities2, is_cover: ci === 0 });
-                                   }
+                                  const perCardQueries: { index: number; query: string }[] = [];
+                                  
+                                  for (let ci = 0; ci < totalCards; ci++) {
+                                    const cardText = outlineToUse[ci];
+                                    const cardTitle = cardText?.title || '';
+                                    const cardBody = cardText?.body || '';
+                                    // Build specific search: prioritize card's own subject
+                                    let searchQuery: string;
+                                    if (cardTitle && cardTitle.toLowerCase() !== cleanTopicForSearch.toLowerCase()) {
+                                      searchQuery = `${cardTitle} ${cleanTopicForSearch}`.trim();
+                                    } else if (cardBody) {
+                                      searchQuery = `${cleanTopicForSearch} ${cardBody.slice(0, 60)}`.trim();
+                                    } else {
+                                      searchQuery = `${cleanTopicForSearch} card ${ci + 1}`;
+                                    }
+                                    perCardQueries.push({ index: ci, query: searchQuery });
+                                  }
 
                                   if (perCardQueries.length > 0) {
                                     console.log('[PER_CARD_SEARCH] Searching images per card:', perCardQueries.map(q => q.query));
                                     try {
-                                      const perCardData = await invokeSearchNews({ per_card_queries: perCardQueries });
-                                      if (perCardData?.card_images) {
+                                      const { data: perCardData, error: perCardErr } = await supabase.functions.invoke('search-news', {
+                                        body: { per_card_queries: perCardQueries },
+                                      });
+                                      if (!perCardErr && perCardData?.card_images) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {
                                           const cardImgs = perCardData.card_images[ci] || [];
-                                          const bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
+                                          // Pick the best unused image for this card
+                                          let bestImg = cardImgs.find((url: string) => !usedUrls.has(url)) || cardImgs[0];
                                           if (bestImg) {
                                             assignments[ci] = bestImg;
                                             usedUrls.add(bestImg);
+                                          } else {
+                                            // Fallback to general web images
+                                            const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                                            const fallback = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                            if (fallback) { assignments[ci] = fallback; usedUrls.add(fallback); }
                                           }
                                         }
-                                        if (Object.keys(assignments).length > 0) {
-                                          setCardPhotoAssignments(assignments);
-                                          console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
-                                        }
+                                        setCardPhotoAssignments(assignments);
+                                        console.log('[PER_CARD_SEARCH] Assigned per-card photos:', Object.keys(assignments).length);
                                       } else {
-                                        console.warn('[PER_CARD_SEARCH] No card_images returned, keeping existing/fallback images');
+                                        console.warn('[PER_CARD_SEARCH] Failed, falling back to round-robin');
+                                        // Fallback: round-robin from general images
+                                        const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
+                                        if (webImgs.length > 0) {
+                                          const assignments: Record<number, string> = {};
+                                          const usedUrls = new Set<string>();
+                                          for (let ci = 0; ci < totalCards; ci++) {
+                                            let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                            if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                                          }
+                                          setCardPhotoAssignments(assignments);
+                                        }
                                       }
                                     } catch (searchErr) {
                                       console.error('[PER_CARD_SEARCH] Error:', searchErr);
                                       // Fallback to general web images
-                                      const webImgs = (webSearchResult.images || []).filter((u: string) => u?.startsWith('http'));
+                                      const webImgs = webSearchResult.images!.filter((u: string) => u?.startsWith('http'));
                                       if (webImgs.length > 0) {
                                         const assignments: Record<number, string> = {};
                                         const usedUrls = new Set<string>();
                                         for (let ci = 0; ci < totalCards; ci++) {
-                                          const bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
+                                          let bestImg = webImgs.find(u => !usedUrls.has(u)) || webImgs[ci % webImgs.length];
                                           if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
                                         }
                                         setCardPhotoAssignments(assignments);

@@ -3,178 +3,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Domains known to return memes, posters, wallpapers, screenshots, templates, or low-quality image aggregators
+// Domains known to have text overlays, infographics, or watermarks
 const BLOCKED_DOMAINS = [
   'shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'canva.com',
   'freepik.com', 'vecteezy.com', 'depositphotos.com', '123rf.com',
-  'dreamstime.com', 'alamy.com', 'pinterest.com', 'pinimg.com',
-  'youtube.com', 'youtu.be', 'ytimg.com', 'i.ytimg.com', 'yt3.ggpht.com',
-  'i9.ytimg.com', 'i1.ytimg.com', 'img.youtube.com',
-  'dailymotion.com', 'vimeo.com', 'tiktok.com', 'tiktokcdn.com',
-  'twitter.com', 'x.com', 'pbs.twimg.com', 'abs.twimg.com', 'ton.twimg.com',
-  'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
-  'reddit.com', 'redd.it', 'preview.redd.it', 'i.redd.it',
-  'slideshare.net', 'slideplayer.com', 'slideserve.com', 'slideteam.net', 'slidechef.net',
-  'templatemonster.com', 'envato.com', 'elements.envato.com',
-  'imgflip.com', 'memegenerator.net', 'makeameme.org', 'quickmeme.com',
-  'knowyourmeme.com', 'kym-cdn.com', 'memedroid.com', 'ifunny.co', '9gag.com',
-  'buzzfeed.com', 'boredpanda.com', 'cheezburger.com', 'chzbgr.com', 'quickpun.com',
-  'wikimedia.org', 'wikipedia.org', 'wikia.com', 'fandom.com',
-  'goodreads.com', 'brainyquote.com', 'azquotes.com',
-  'etsy.com', 'redbubble.com', 'teepublic.com', 'zazzle.com',
-  'screenrant.com', 'srcdn.com', 'cbr.com', 'gamerant.com',
-  'amazon.com', 'media-amazon.com', 'wallpapercave.com', 'wallpapersafari.com',
+  'dreamstime.com', 'alamy.com', 'pinterest.com',
 ];
 
-const TRUSTED_PHOTO_DOMAINS = [
-  'people.com', 'ew.com', 'variety.com', 'hollywoodreporter.com', 'deadline.com',
-  'bbc.com', 'cnn.com', 'nytimes.com', 'apnews.com', 'reuters.com',
-  'exame.com', 'metropoles.com', 'gshow.globo.com', 'globo.com', 'g1.globo.com',
-  'oglobo.globo.com', 'cbn.globo.com', 'valorinternational.globo.com',
-  'sbt.com.br', 'sbtnews.sbt.com.br', 'uol.com.br', 'folha.uol.com.br',
-  'estadao.com.br', 'opovo.com.br', 'omelete.com.br', 'cinebuzz.com.br',
-  'rollingstone.com', 'veja.abril.com.br', 'terra.com.br', 'gazetadopovo.com.br',
-  'revistaoeste.com', 'bloomberglinea.com.br', 'infomoney.com.br', 'poder360.com.br',
-  'agenciabrasil.ebc.com.br', 'correiobraziliense.com.br',
-];
-
-function getHostname(url: string): string {
-  try {
-    return new URL(url).hostname.toLowerCase();
-  } catch {
-    return '';
-  }
-}
-
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 12000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function matchesDomain(url: string, domains: string[]): boolean {
-  const hostname = getHostname(url);
-  const lower = url.toLowerCase();
-  return domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`) || lower.includes(domain));
-}
-
-function isTrustedPhotoDomain(url: string): boolean {
-  return matchesDomain(url, TRUSTED_PHOTO_DOMAINS);
-}
-
-function hasPhotoLikeAspectRatio(width: number, height: number): boolean {
-  if (!width || !height) return false;
-  const ratio = width / height;
-  return ratio >= 0.65 && ratio <= 2.2;
-}
-
-// Filter out images that likely contain text overlays, posters, memes, or screenshots
+// Filter out images that likely contain text overlays
 function isCleanImageUrl(url: string): boolean {
   const lower = url.toLowerCase();
-  if (matchesDomain(url, BLOCKED_DOMAINS)) return false;
-
-  const badPatterns = [
-    'infographic', 'quote', 'meme', 'memes', 'text-overlay', 'typography', 'template',
-    'mockup', 'banner', 'flyer', 'poster', 'thumbnail', 'wallpaper',
-    'maxresdefault', 'hqdefault', 'mqdefault', 'sddefault',
-    'vi_webp', 'vi/', 'embed', 'watch', 'shorts',
-    'video-thumbnail', 'video_thumbnail', 'cover_image',
-    'og-image', 'opengraph', 'og_image', 'social-share',
-    'tweet', 'screenshot', 'screen-shot', 'screen_shot', 'screencap',
-    'motivational', 'inspirational', 'wallpaper-quote',
-    'collection-of', 'best-of', 'top-10', 'compilation',
-    'nomination', 'nominee', 'nominees-list', 'award-list',
-    'funny', 'hilarious', 'lol', 'reaction', 'gif', 'fan-art', 'fanart',
-  ];
-
-  return !badPatterns.some((pat) => lower.includes(pat));
-}
-
-function normalizeSearchQuery(query: string): string {
-  return query
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\b(foto|fotografia|fotografias)\b/gi, 'photo')
-    .replace(/\b(oscars)\b/gi, 'Oscar')
-    .replace(/\b(tapete vermelho)\b/gi, 'red carpet')
-    .replace(/\b(ator ganhador|ator vencedor|melhor ator)\b/gi, 'Best Actor winner')
-    .replace(/\b(atriz vencedora|melhor atriz)\b/gi, 'Best Actress winner')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function buildQueryVariants(query: string): string[] {
-  const normalized = normalizeSearchQuery(query);
-  const compact = normalized
-    .replace(/\b(2026|2025|2024)\b/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return [...new Set([
-    query,
-    normalized,
-    `${normalized} editorial`,
-    compact ? `${compact} photo` : '',
-  ].filter(Boolean))];
-}
-
-async function searchBravePhotos(query: string, braveKey: string, count = 30): Promise<string[]> {
-  try {
-    // Keep query simple — don't add too many negative terms that break relevance
-    const cleanQuery = query;
-    const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
-    console.log('[BRAVE] Searching:', cleanQuery.slice(0, 80));
-    const res = await fetchWithTimeout(url, { headers: { 'X-Subscription-Token': braveKey } }, 8000);
-    if (!res.ok) {
-      console.error('[BRAVE] HTTP error:', res.status);
-      return [];
-    }
-
-    const data = await res.json();
-    const candidates: { url: string; score: number }[] = [];
-
-    for (const item of (data.results || [])) {
-      const imgUrl = item.properties?.url || item.thumbnail?.src;
-      if (!imgUrl || !imgUrl.startsWith('http') || !isCleanImageUrl(imgUrl)) continue;
-
-      const width = item.properties?.width || item.width || 0;
-      const height = item.properties?.height || item.height || 0;
-      // Minimum 300x200 for any image
-      if (width > 0 && height > 0 && (width < 300 || height < 200)) continue;
-      if (width > 0 && height > 0 && !hasPhotoLikeAspectRatio(width, height)) continue;
-
-      const hostname = getHostname(imgUrl);
-      const looksAggregator = /(pinimg|pinterest|amazon|wallpap|slide|meme|quote|tiktok|reddit|facebook|instagram|twitter|x\.|youtube|fandom|wikia|redbubble)/i.test(hostname);
-      if (looksAggregator) continue;
-
-      // Check page title for signs of infographics/templates/memes
-      const pageTitle = (item.title || '').toLowerCase();
-      const pageUrl = (item.url || '').toLowerCase();
-      if (/(meme|template|infographic|wallpaper|fan art|fanart|poster|collage|mockup|vetor|vector|clipart|sticker|gif|logo)/i.test(pageTitle)) continue;
-      if (/(canva\.com|freepik|template|mockup|vector|clipart)/i.test(pageUrl)) continue;
-
-      const trusted = isTrustedPhotoDomain(imgUrl);
-      // Also check if the SOURCE page is from a trusted domain
-      const sourceTrusted = item.url ? isTrustedPhotoDomain(item.url) : false;
-      
-      let score = (trusted || sourceTrusted) ? 140 : 40;
-      score += Math.min(width || 800, 2400) / 100;
-      score += Math.min(height || 600, 1800) / 100;
-      // Boost results from news sites
-      if (sourceTrusted) score += 50;
-      candidates.push({ url: imgUrl, score });
-    }
-
-    console.log('[BRAVE] Found', candidates.length, 'candidates for:', query.slice(0, 50));
-    return [...new Set(candidates.sort((a, b) => b.score - a.score).map((c) => c.url))].slice(0, 8);
-  } catch (e) {
-    console.error('[IMAGES] Brave search error:', e);
-    return [];
+  // Block known stock/design sites that watermark or overlay text
+  for (const domain of BLOCKED_DOMAINS) {
+    if (lower.includes(domain)) return false;
   }
+  // Block URLs that hint at infographics, quotes, memes
+  const badPatterns = ['infographic', 'quote', 'meme', 'text-overlay', 'typography', 'template', 'mockup', 'banner', 'flyer', 'poster', 'thumbnail'];
+  for (const pat of badPatterns) {
+    if (lower.includes(pat)) return false;
+  }
+  return true;
 }
 
 Deno.serve(async (req) => {
@@ -195,90 +43,37 @@ Deno.serve(async (req) => {
         );
       }
 
-      const mainTopic = per_card_queries[0]?.topic || '';
-      console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards, topic:', mainTopic);
+      console.log('[PER_CARD] Searching images for', per_card_queries.length, 'cards');
       const cardImages: Record<number, string[]> = {};
 
-      // === STEP 1: Use AI to generate proper image search queries from editorial card titles ===
-      let aiQueries: Record<number, string[]> = {};
-      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-      if (lovableKey) {
+      const searchCard = async (cardIndex: number, query: string) => {
+        const images: string[] = [];
         try {
-          const cardsForAI = per_card_queries.map((q: any) => ({
-            index: q.index,
-            title: q.title || '',
-            body: q.body || '',
-            is_cover: q.is_cover || q.index === 0,
-          }));
-
-          // Also pass key_entities from the initial web search if available
-          const keyEntities = per_card_queries[0]?.key_entities || [];
-          const entityContext = keyEntities.length > 0 
-            ? `\nKNOWN ENTITIES FROM RESEARCH: ${keyEntities.join(', ')}` 
-            : '';
-
-          const aiPrompt = `You are an image search expert. Generate search queries to find REAL PHOTOGRAPHS of the people/places mentioned in each card.
-
-TOPIC: "${mainTopic}"
-${entityContext}
-
-CARDS:
-${cardsForAI.map((c: any) => `Card ${c.index}${c.is_cover ? ' (COVER)' : ''}: Title="${c.title}" Body="${c.body}"`).join('\n')}
-
-CRITICAL RULES:
-1. If the topic is about a SPECIFIC PERSON (e.g. "Daniel Vorcaro", "Elon Musk"), the PRIMARY query for EVERY card must be just that person's name. Example: "Daniel Vorcaro". Do NOT add random context words like "business", "investment", "entrepreneur" — these pollute search results with stock photos.
-2. The SECONDARY query can add ONE specific keyword from the card (e.g. "Daniel Vorcaro Banco Master" or "Daniel Vorcaro Atletico").
-3. The FALLBACK query should be just the person's name again or a very specific entity from the card (company name, place name).
-4. For cards about specific PLACES or COMPANIES (Hotel Fasano, Banco Master), search for the place/company name directly.
-5. Keep queries SHORT (2-4 words max). Long queries return irrelevant results.
-6. Use the SAME LANGUAGE as the topic. If topic is in Portuguese, queries should be in Portuguese.
-7. NEVER add words like "photo", "portrait", "image", "business", "success", "entrepreneur", "investment" — these return stock photos instead of real editorial photos.
-
-Return JSON: { "queries": { "0": ["query1", "query2", "query3"], "1": [...], ... } }
-Only return the JSON.`;
-
-          const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${lovableKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'google/gemini-2.5-flash-lite',
-              messages: [{ role: 'user', content: aiPrompt }],
-              temperature: 0.2,
-            }),
+          // Append anti-text filter keywords to the query
+          const cleanQuery = `${query} -text -infographic -quote -meme -template -typography photo`;
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=15&safesearch=strict&type=photo`;
+          const res = await fetch(url, {
+            headers: { 'X-Subscription-Token': braveApiKey },
           });
-
-          if (aiRes.ok) {
-            const aiData = await aiRes.json();
-            const aiContent = aiData.choices?.[0]?.message?.content || '';
-            const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              aiQueries = parsed.queries || {};
-              console.log('[PER_CARD] AI generated queries:', JSON.stringify(aiQueries));
+          if (res.ok) {
+            const data = await res.json();
+            for (const item of (data.results || [])) {
+              const imgUrl = item.properties?.url || item.thumbnail?.src;
+              if (imgUrl && imgUrl.startsWith('http') && isCleanImageUrl(imgUrl)) {
+                // Prefer larger images (likely photos, not graphics with text)
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                if (w >= 400 && h >= 400) {
+                  images.push(imgUrl);
+                }
+              }
             }
-          } else {
-            console.error('[PER_CARD] AI query generation failed:', aiRes.status);
           }
+          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 40)}": ${images.length} clean images`);
         } catch (e) {
-          console.error('[PER_CARD] AI query generation error:', e);
+          console.error(`[PER_CARD] Card ${cardIndex} error:`, e);
         }
-      }
-
-      const searchCard = async (cardIndex: number, originalQuery: string) => {
-        const queries = aiQueries[String(cardIndex)] || aiQueries[cardIndex] || [originalQuery];
-        let images: string[] = [];
-
-        for (const query of queries) {
-          if (images.length >= 5) break;
-          const results = await searchBravePhotos(query, braveApiKey, 30);
-          images = [...images, ...results];
-          console.log(`[PER_CARD] Card ${cardIndex} "${query.slice(0, 50)}": ${results.length} images`);
-        }
-
-        cardImages[cardIndex] = [...new Set(images)].slice(0, 8);
+        cardImages[cardIndex] = images;
       };
 
       for (let i = 0; i < per_card_queries.length; i += 3) {
@@ -320,24 +115,18 @@ Only return the JSON.`;
     {
       "heading": "Short heading for this fact/point (max 60 chars)",
       "body": "Detailed explanation of this fact or news point (100-200 chars)",
-      "source": "Name of the source",
-      "person_name": "Full name of the main person mentioned in this fact (or null if none)"
+      "source": "Name of the source"
     }
   ],
   "cta_title": "Call to action title (max 60 chars)",
   "cta_body": "Call to action message (max 120 chars)",
   "image_search_terms": ["term1", "term2", "term3"],
   "clean_topic": "The extracted main subject/topic name only (e.g. 'CS2', 'Tesla', 'Bitcoin')",
-  "key_entities": ["Full Name 1", "Full Name 2", "Company Name"],
   "summary": "A brief 2-sentence summary of the key findings"
 }
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
 CRITICAL for clean_topic: Extract ONLY the core subject name from the user request. If user says "Crie um post sobre CS2" the clean_topic is "CS2". If user says "Novidades do Bitcoin" the clean_topic is "Bitcoin". Just the subject, no verbs or filler words.
-
-CRITICAL for key_entities: Extract ALL specific named entities (people, companies, films, teams, products) mentioned in the facts. Use their FULL REAL NAMES exactly as known publicly. For example, for "Oscar 2026 winners": ["Michael B. Jordan", "Sinners", "Demi Moore", "The Substance", "Brady Corbet", "The Brutalist"]. This is essential for image search.
-
-CRITICAL for person_name in each fact: If the fact is about or mentions a specific person, include their FULL NAME. Example: if the heading says "Melhor Ator" and the body mentions the winner, person_name should be "Michael B. Jordan" (the actual winner's full name). This field is MANDATORY when a person is involved.
 
 CRITICAL for image_search_terms: Each term MUST be a search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Think about what a photographer would capture. Add the word "photo" or "fotografia" to each term. Examples:
 - For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"
@@ -350,23 +139,10 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     let content = '';
     let citations: string[] = [];
 
-    const localFallback = JSON.stringify({
-      title: topic,
-      subtitle: 'Resumo inicial do tema',
-      facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
-      cta_title: 'Continuar',
-      cta_body: 'Revise e refine o conteúdo na próxima etapa.',
-      image_search_terms: [topic],
-      clean_topic: topic,
-      key_entities: [topic],
-      summary: `Resumo inicial gerado localmente para ${topic}.`
-    });
-
-    // Try Perplexity first (8s timeout), then Lovable gateway (8s), then local fallback
     let perplexityOk = false;
     try {
       console.log('[AI] Trying Perplexity...');
-      const response = await fetchWithTimeout('https://api.perplexity.ai/chat/completions', {
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -381,7 +157,7 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
           temperature: 0.3,
           search_recency_filter: 'month',
         }),
-      }, 8000);
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -398,77 +174,51 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
     }
 
     if (!perplexityOk) {
-      // Use Lovable gateway (faster, more reliable) as primary fallback
-      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-      if (lovableKey) {
-        console.log('[AI] Falling back to Lovable gateway...');
+      const openaiKey = Deno.env.get('OPENAI_API_KEY');
+      if (openaiKey) {
+        console.log('[AI] Falling back to OpenAI...');
         try {
-          const lovableRes = await fetchWithTimeout('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${lovableKey}`,
+              'Authorization': `Bearer ${openaiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash-lite',
+              model: 'gpt-4o-mini',
               messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
               ],
               temperature: 0.3,
             }),
-          }, 8000);
+          });
 
-          if (lovableRes.ok) {
-            const lovableData = await lovableRes.json();
-            content = lovableData.choices?.[0]?.message?.content || '';
-            console.log('[AI] Lovable gateway fallback OK');
+          if (openaiRes.ok) {
+            const openaiData = await openaiRes.json();
+            content = openaiData.choices?.[0]?.message?.content || '';
+            console.log('[AI] OpenAI fallback OK');
           } else {
-            console.error('[AI] Lovable gateway failed:', lovableRes.status);
-            content = localFallback;
+            const errText = await openaiRes.text();
+            console.error('[AI] OpenAI also failed:', openaiRes.status, errText.slice(0, 200));
+            return new Response(
+              JSON.stringify({ success: false, error: 'All AI providers unavailable. Please try again.' }),
+              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           }
-        } catch (lovableErr) {
-          console.error('[AI] Lovable gateway exception:', lovableErr);
-          content = localFallback;
+        } catch (openaiErr) {
+          console.error('[AI] OpenAI exception:', openaiErr);
+          return new Response(
+            JSON.stringify({ success: false, error: 'All AI providers failed. Please try again.' }),
+            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
       } else {
-        // Last resort: try OpenAI directly
-        const openaiKey = Deno.env.get('OPENAI_API_KEY');
-        if (openaiKey) {
-          console.log('[AI] Falling back to OpenAI...');
-          try {
-            const openaiRes = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${openaiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: [
-                  { role: 'system', content: systemPrompt },
-                  { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.3,
-              }),
-            }, 8000);
-
-            if (openaiRes.ok) {
-              const openaiData = await openaiRes.json();
-              content = openaiData.choices?.[0]?.message?.content || '';
-              console.log('[AI] OpenAI fallback OK');
-            } else {
-              console.error('[AI] OpenAI also failed:', openaiRes.status);
-              content = localFallback;
-            }
-          } catch (openaiErr) {
-            console.error('[AI] OpenAI exception:', openaiErr);
-            content = localFallback;
-          }
-        } else {
-          console.error('[AI] No fallback API key available');
-          content = localFallback;
-        }
+        console.error('[AI] No fallback API key available');
+        return new Response(
+          JSON.stringify({ success: false, error: 'Perplexity unavailable and no fallback configured.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
@@ -497,58 +247,47 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
 
     // Search for images - use clean topic from AI, not raw user input
     let images: string[] = [];
-    let cleanTopic = parsedContent.clean_topic || topic;
-    // If AI failed to extract clean_topic and it still looks like a full sentence, extract the key subject
-    if (cleanTopic.length > 40 || /\b(crie|sobre|post|explique|faça|fale)\b/i.test(cleanTopic)) {
-      // Try to extract a name or subject from the prompt
-      const nameMatch = cleanTopic.match(/(?:sobre|de|quem é)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)+)/i);
-      if (nameMatch) {
-        cleanTopic = nameMatch[1].trim();
-      } else {
-        // Remove common filler words
-        cleanTopic = cleanTopic
-          .replace(/\b(crie|criar|um|uma|post|sobre|explique|faça|fale|conte|o que|e|ele|ela|fez|quem é)\b/gi, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-      }
-      console.log('[IMAGES] Cleaned topic from prompt:', cleanTopic);
-    }
-    // Store cleaned topic back so per-card search uses it too
-    parsedContent.clean_topic = cleanTopic;
-
-    // Build search terms: always include the clean name/topic directly
-    const keyEntities: string[] = parsedContent.key_entities || [];
-    const searchTerms: string[] = [];
-    // Primary: just the name/topic
-    searchTerms.push(cleanTopic);
-    // Secondary: key entities (people names)
-    for (const entity of keyEntities.slice(0, 3)) {
-      if (entity !== cleanTopic) searchTerms.push(entity);
-    }
-    // Tertiary: AI-suggested terms
-    const aiTerms: string[] = parsedContent.image_search_terms || [];
-    for (const term of aiTerms) {
-      if (!searchTerms.includes(term)) searchTerms.push(term);
-    }
+    const cleanTopic = parsedContent.clean_topic || topic;
+    const searchTerms: string[] = parsedContent.image_search_terms || [`${cleanTopic} photo`, `${cleanTopic} fotografia`];
     console.log('[IMAGES] Clean topic:', cleanTopic);
-    console.log('[IMAGES] Search terms:', searchTerms.slice(0, 5));
+    console.log('[IMAGES] Search terms:', searchTerms);
 
     const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey) {
-      for (const term of searchTerms.slice(0, 4)) {
+      for (const term of searchTerms.slice(0, 3)) {
         if (images.length >= 20) break;
-        const results = await searchBravePhotos(term, braveApiKey, 50);
-        images = [...images, ...results];
-        console.log('[IMAGES] Brave images for "' + term + '": ' + results.length);
+        try {
+          // Append anti-text keywords and request photo type
+          const cleanQuery = `${term} -text -infographic -quote -meme -template -typography`;
+          const query = encodeURIComponent(cleanQuery);
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=50&safesearch=strict&type=photo`;
+          const imgResponse = await fetch(url, {
+            headers: { 'X-Subscription-Token': braveApiKey },
+          });
+          if (imgResponse.ok) {
+            const imgData = await imgResponse.json();
+            const results = (imgData.results || []);
+            for (const item of results) {
+              const imgUrl = item.properties?.url || item.thumbnail?.src;
+              if (imgUrl && isCleanImageUrl(imgUrl)) {
+                // Only accept reasonably sized images (photos tend to be larger)
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                if (w >= 400 && h >= 400) {
+                  images.push(imgUrl);
+                }
+              }
+            }
+            console.log('[IMAGES] Brave images for "' + term + '":', results.length, 'raw, ' + images.length + ' after filter');
+          }
+        } catch (e) {
+          console.error('[IMAGES] Brave error:', e);
+        }
       }
     }
 
-    const shouldAvoidAiFallback = /(oscar|academy awards|ator|atriz|actor|actress|director|premiere|ceremony|winner|vencedor|filme|movie)/i.test(
-      `${cleanTopic} ${searchTerms.join(' ')}`
-    );
-
-    // Strategy 2: Generate images with AI only for non-editorial topics if search found too few
-    if (images.length < 2 && !shouldAvoidAiFallback) {
+    // Strategy 2: Generate images with AI if search found too few
+    if (images.length < 2) {
       const lovableKey = Deno.env.get('LOVABLE_API_KEY');
       if (lovableKey) {
         console.log('[IMAGES] Generating AI images for topic:', cleanTopic);

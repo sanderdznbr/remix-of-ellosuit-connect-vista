@@ -3493,6 +3493,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: finalData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: finalData as any, style_config: styleConfig as any, card_count: finalData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || null, generation_config: buildGenerationConfig() } as any).select('id').single();
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
+                  lastSavedDataRef.current = JSON.stringify({ cards: finalData.cards.map(c => ({ ...c })), title: finalData.title });
                   setTimeout(() => captureCoverImage(inserted.id, companyData.company_id, finalData).catch(() => {}), 2000);
                 }
               }

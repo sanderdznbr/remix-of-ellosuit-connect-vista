@@ -419,7 +419,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
       <AnimatePresence>
-        {recentCarousels.length > 0 && (
+        {(recentCarousels.length > 0 || activeJobs.length > 0) && (
       <motion.div
         className="relative z-[1] px-4 md:px-8 shrink-0"
         style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}

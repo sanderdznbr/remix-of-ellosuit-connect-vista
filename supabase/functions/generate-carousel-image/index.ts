@@ -177,9 +177,9 @@ Deno.serve(async (req) => {
         }
       }
     } else if (isVisualCloneMode) {
-      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência de estilo.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\n${formatInstruction}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas, de ponta a ponta. ZERO bordas.\n- PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, subtítulos, nomes, @handles, marcas d'água ou QUALQUER texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no campo CONTEÚDO DO POST acima.\n- Se as referências contêm textos como nomes de estilos, categorias, ou rótulos (ex: "Estratégia Profunda", "Business Pro", etc.), IGNORE-OS COMPLETAMENTE — eles são metadados do template, NÃO conteúdo do post.\n- Gere elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.`;
+      textPrompt = `Crie um post para Instagram que seja VISUALMENTE IDÊNTICO às imagens de referência de estilo.\n\nCONTEÚDO DO POST:\n${imagePrompt}\n\n${formatInstruction}\n\nREGRAS OBRIGATÓRIAS:\n- Replique EXATAMENTE o estilo visual das referências: mesmas cores, mesma tipografia, mesmos elementos decorativos, mesmo layout.\n- TIPOGRAFIA OBRIGATÓRIA: Analise as FONTES usadas nas referências de estilo (serif, sans-serif, display, script, bold, light, etc.) e REPLIQUE EXATAMENTE a mesma família tipográfica, peso e estilo. NÃO use fontes genéricas ou padrão. A tipografia é parte ESSENCIAL do DNA visual do estilo — copie-a fielmente.\n- Todo texto DEVE estar em PORTUGUÊS BRASILEIRO.\n- FULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas, de ponta a ponta. ZERO bordas.\n- PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, subtítulos, nomes, @handles, marcas d'água ou QUALQUER texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no campo CONTEÚDO DO POST acima.\n- Se as referências contêm textos como nomes de estilos, categorias, ou rótulos (ex: "Estratégia Profunda", "Business Pro", etc.), IGNORE-OS COMPLETAMENTE — eles são metadados do template, NÃO conteúdo do post.\n- Gere elementos visuais CRIATIVOS e RELEVANTES ao assunto do post.`;
       if (cleanStylePrompt) {
-        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, tipografia e layout — NÃO copie textos):\n${cleanStylePrompt}`;
+        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, TIPOGRAFIA/FONTES e layout — NÃO copie textos):\n${cleanStylePrompt}`;
       }
     } else if (cleanStylePrompt) {
       textPrompt = `${cleanStylePrompt}\n\n${imagePrompt}\n\nIMPORTANTE: NÃO copie textos das referências. Use APENAS os textos fornecidos acima.`;
@@ -319,13 +319,13 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte (serif, sans-serif, display, script, bold, condensed etc.) é usada nas referências e REPLIQUE-A fielmente. NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
       } else {
         // No face refs — send all style refs
         for (const ref of validStyleRefs) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, tipografia, layout, elementos gráficos). NÃO copie textos, títulos, nomes, @handles ou qualquer texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no prompt do usuário.` });
+        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte é usada nas referências e REPLIQUE-A fielmente — mesma família, peso, estilo e hierarquia tipográfica. NÃO copie textos, títulos, nomes, @handles ou qualquer texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no prompt do usuário.` });
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
@@ -363,7 +363,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, tipografia, layout). NÃO copie textos visíveis nas referências:` });
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout). Analise e replique EXATAMENTE a mesma família de fonte das referências. NÃO copie textos visíveis nas referências:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
@@ -383,7 +383,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, tipografia, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. Renderize APENAS os textos fornecidos no prompt.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, TIPOGRAFIA/FONTES exatas, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. A FONTE usada nos textos DEVE ser a MESMA família tipográfica das referências. Renderize APENAS os textos fornecidos no prompt.` });
       }
       if (validFaceRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência.` });

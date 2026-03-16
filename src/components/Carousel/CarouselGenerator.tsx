@@ -80,6 +80,7 @@ import {
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
+import StepWebSearchResult from './wizard/StepWebSearchResult';
 import StepCardCount from './wizard/StepCardCount';
 import StepWebImages from './wizard/StepWebImages';
 import StepFaceRef from './wizard/StepFaceRef';
@@ -392,12 +393,13 @@ const CarouselGenerator: React.FC = () => {
   const skipPeopleVisual = hasFacePhotos || hasWebResearch;
   // Show 'Posição' step only when user uploaded face AND web research is active
   const showFacePositionStep = hasFacePhotos && hasWebResearch;
+  const showPesquisaStep = hasWebResearch;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Logo', 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade']
-    : ['Modo', 'Tema', 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Rosto', ...(showFacePositionStep ? ['Posição'] : []), ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Produto', 'Marca', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -5078,8 +5080,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return;
     }
 
+    // Auto-advance to Pesquisa step when web search completes while on Tema
+    const currentName = WIZARD_STEPS[wizardStep];
+    if (currentName === 'Tema' && !searchingWeb && hasWebResearch) {
+      const pesquisaIdx = WIZARD_STEPS.indexOf('Pesquisa');
+      if (pesquisaIdx >= 0) setWizardStep(pesquisaIdx);
+      return;
+    }
+
     if (!searchingWeb && hasWebResearch) {
-      const currentName = WIZARD_STEPS[wizardStep];
       if (currentName === 'Pessoas' || currentName === 'Visual') {
         const roteiroIdx = WIZARD_STEPS.indexOf('Roteiro');
         if (roteiroIdx >= 0) setWizardStep(roteiroIdx);
@@ -5516,6 +5525,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
                           else if (cardCount < 2) { setCardCount(5); }
                         }} />
+                    )}
+                    {currentStepName === 'Pesquisa' && (
+                      <StepWebSearchResult
+                        webSearchResult={webSearchResult}
+                        searchingWeb={searchingWeb}
+                        onSearchWeb={handleSearchWeb}
+                        skipWebSearch={skipWebSearch}
+                        onToggleSkipWebSearch={() => { setSkipWebSearch(true); setWebSearchResult(null); setWizardStep(wizardStep + 1); }}
+                      />
                     )}
                     {currentStepName === 'Formato' && (
                       <StepCardCount

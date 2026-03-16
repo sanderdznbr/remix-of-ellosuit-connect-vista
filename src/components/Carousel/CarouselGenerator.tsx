@@ -5712,14 +5712,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 });
                                 if (!error && data) {
                                   if (data.shouldSearch) {
-                                    // Auto-search and advance to Pesquisa step
+                                    // Auto-search and let useEffect advance to Pesquisa step
                                     setWebSearchDecisionMade(true);
                                     setClassifyingTopic(false);
                                     await handleSearchWeb();
-                                    // After search completes, WIZARD_STEPS now includes 'Pesquisa'
-                                    // Advance to next step (which will be 'Pesquisa')
-                                    const temaIdx = WIZARD_STEPS.indexOf('Tema');
-                                    setWizardStep(temaIdx + 1);
+                                    // webSearchResult is now set → WIZARD_STEPS will include 'Pesquisa' on next render
+                                    // We need to advance after re-render, so just return — useEffect below handles it
                                     return;
                                   } else {
                                     // Personal/opinion content - skip web search automatically

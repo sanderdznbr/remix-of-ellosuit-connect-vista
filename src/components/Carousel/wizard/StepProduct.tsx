@@ -107,7 +107,8 @@ export function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[
       /divulgar.*(app|aplicativo|plataforma)/.test(t)) return 'app';
   
   // Website / system / dashboard
-  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|portal|web app|ferramenta online|software)\b/.test(t)) return 'website';
+  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|portal|web app|ferramenta online|software|erp|crm)\b/.test(t) ||
+      /lancamento.*(sistema|plataforma|software|ferramenta|portal)|divulgar.*(sistema|plataforma|software)/.test(t)) return 'website';
   
   // Food
   if (/\b(receita|prato|comida|alimento|restaurante|lanche|pizza|hamburguer|bolo|doce|bebida|suco|cafe|cardapio|menu|delivery)\b/.test(t)) return 'food';

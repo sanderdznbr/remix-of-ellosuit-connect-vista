@@ -25,7 +25,12 @@ const InstagramImporter: React.FC<InstagramImporterProps> = ({ onSendToLogoRemov
 
   const fetchPost = async () => {
     if (!url.includes('instagram.com/p/') && !url.includes('instagram.com/reel/')) {
-      toast.error('Cole um link válido do Instagram (ex: https://www.instagram.com/p/...)');
+      const isProfileUrl = /instagram\.com\/[a-zA-Z0-9._]+\/?(\?.*)?$/.test(url);
+      toast.error(
+        isProfileUrl
+          ? 'Links de perfil não são suportados. Abra um post específico e cole o link dele (ex: instagram.com/p/...)'
+          : 'Cole um link válido de um post do Instagram (ex: https://www.instagram.com/p/...)'
+      );
       return;
     }
     setFetching(true);

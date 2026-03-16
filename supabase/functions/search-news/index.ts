@@ -239,18 +239,24 @@ Only return the JSON, nothing else.`;
     {
       "heading": "Short heading for this fact/point (max 60 chars)",
       "body": "Detailed explanation of this fact or news point (100-200 chars)",
-      "source": "Name of the source"
+      "source": "Name of the source",
+      "person_name": "Full name of the main person mentioned in this fact (or null if none)"
     }
   ],
   "cta_title": "Call to action title (max 60 chars)",
   "cta_body": "Call to action message (max 120 chars)",
   "image_search_terms": ["term1", "term2", "term3"],
   "clean_topic": "The extracted main subject/topic name only (e.g. 'CS2', 'Tesla', 'Bitcoin')",
+  "key_entities": ["Full Name 1", "Full Name 2", "Company Name"],
   "summary": "A brief 2-sentence summary of the key findings"
 }
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
 CRITICAL for clean_topic: Extract ONLY the core subject name from the user request. If user says "Crie um post sobre CS2" the clean_topic is "CS2". If user says "Novidades do Bitcoin" the clean_topic is "Bitcoin". Just the subject, no verbs or filler words.
+
+CRITICAL for key_entities: Extract ALL specific named entities (people, companies, films, teams, products) mentioned in the facts. Use their FULL REAL NAMES exactly as known publicly. For example, for "Oscar 2026 winners": ["Michael B. Jordan", "Sinners", "Demi Moore", "The Substance", "Brady Corbet", "The Brutalist"]. This is essential for image search.
+
+CRITICAL for person_name in each fact: If the fact is about or mentions a specific person, include their FULL NAME. Example: if the heading says "Melhor Ator" and the body mentions the winner, person_name should be "Michael B. Jordan" (the actual winner's full name). This field is MANDATORY when a person is involved.
 
 CRITICAL for image_search_terms: Each term MUST be a search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Think about what a photographer would capture. Add the word "photo" or "fotografia" to each term. Examples:
 - For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"

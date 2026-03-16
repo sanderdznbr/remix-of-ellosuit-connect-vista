@@ -7,6 +7,7 @@ import {
   Edit3, Upload, Search, Wand2, SlidersHorizontal, X, Loader2,
   Type, Maximize, LayoutGrid, ImageIcon, Palette, ChevronDown, ChevronUp, Info, Paperclip,
   Home, DollarSign, BedDouble, Bath, Car, Ruler, MapPin,
+  AlignLeft, AlignCenter, AlignRight,
 } from 'lucide-react';
 import { FLOW_COLOR } from '../wizard/types';
 
@@ -30,6 +31,8 @@ interface CarouselCard {
   layout?: 'dark' | 'light' | 'accent';
   fontScale?: number;
   paddingScale?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  cardFontIndex?: number;
 }
 
 interface Props {
@@ -51,20 +54,19 @@ interface Props {
   onChangeBgColor: (c: string) => void;
   onChangeAccentColor: (c: string) => void;
   onChangeTextColor: (c: string) => void;
-  // New props
   fontOptions: FontOption[];
   selectedFont: number;
   onChangeFont: (index: number) => void;
   referenceImageUrl: string | null;
   onUploadReferenceImage: (file: File) => void;
   onRemoveReferenceImage: () => void;
-  // Real estate props
   isRealEstate?: boolean;
   propertyData?: {
     price: string; area: string; bedrooms: string; bathrooms: string;
     parking: string; location: string; neighborhood: string; highlights: string; title: string;
   };
   onPropertyFieldChange?: (field: string, value: string) => void;
+  isContentStyle?: boolean;
 }
 
 const CarouselEditorSidebar: React.FC<Props> = ({
@@ -76,11 +78,13 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   fontOptions, selectedFont, onChangeFont,
   referenceImageUrl, onUploadReferenceImage, onRemoveReferenceImage,
   isRealEstate, propertyData, onPropertyFieldChange,
+  isContentStyle,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refImageInputRef = useRef<HTMLInputElement>(null);
   const [showGlobal, setShowGlobal] = React.useState(false);
   const [showStyle, setShowStyle] = React.useState(false);
+  const [showTypography, setShowTypography] = React.useState(isContentStyle ? true : false);
   const [globalFontScale, setGlobalFontScale] = React.useState(100);
   const [globalPaddingScale, setGlobalPaddingScale] = React.useState(100);
 
@@ -99,6 +103,9 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   };
 
   const PRESET_COLORS = ['#0F0F1A', '#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560', '#E84D1A', '#F38181', '#FCE38A', '#95E1D3', '#EAFFD0', '#F8F4EF', '#FFFFFF'];
+
+  const currentAlign = card.textAlign || 'left';
+  const currentCardFont = card.cardFontIndex ?? selectedFont;
 
   return (
     <div className="w-full md:w-[340px] flex-shrink-0 border-t md:border-t-0 md:border-l flex flex-col min-h-0 flex-1 md:h-full" style={{ backgroundColor: '#111118', borderColor: 'rgba(255,255,255,0.06)' }}>
@@ -165,6 +172,78 @@ const CarouselEditorSidebar: React.FC<Props> = ({
             )}
           </div>
 
+          {/* ===== TYPOGRAPHY (Content style only) ===== */}
+          {isContentStyle && (
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={() => setShowTypography(!showTypography)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.04] transition-colors">
+                <div className="flex items-center gap-2">
+                  <Type className="h-4 w-4" style={{ color: FLOW_COLOR }} />
+                  <span className="text-sm font-semibold text-white">Tipografia</span>
+                </div>
+                {showTypography ? <ChevronUp className="h-4 w-4 text-white/40" /> : <ChevronDown className="h-4 w-4 text-white/40" />}
+              </button>
+              {showTypography && (
+                <div className="px-4 pb-4 space-y-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  {/* Font family per card */}
+                  <div>
+                    <label className="text-xs font-medium text-white/40 mb-1.5 block">Fonte deste card</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {fontOptions.map((font, i) => (
+                        <button key={i} onClick={() => onUpdateCard(cardIndex, { cardFontIndex: i })}
+                          className={`px-2.5 py-2 rounded-xl text-xs border transition-all text-left truncate ${currentCardFont === i ? 'ring-2 ring-white/50 border-white/20 bg-white/[0.08] font-bold text-white' : 'border-white/[0.06] text-white/40 hover:bg-white/[0.04]'}`}>
+                          <span style={{ fontFamily: font.value }}>{font.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Font size */}
+                  <div>
+                    <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
+                      <span>Tamanho da Fonte</span>
+                      <span className="text-[10px] font-mono text-white/50">{Math.round((card.fontScale ?? 1) * 100)}%</span>
+                    </label>
+                    <input type="range" min="50" max="200" step="5"
+                      value={Math.round((card.fontScale ?? 1) * 100)}
+                      onChange={(e) => onUpdateCard(cardIndex, { fontScale: parseInt(e.target.value) / 100 })}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+                  </div>
+
+                  {/* Text alignment */}
+                  <div>
+                    <label className="text-xs font-medium text-white/40 mb-1.5 block">Alinhamento</label>
+                    <div className="flex gap-2">
+                      {([
+                        { value: 'left' as const, icon: AlignLeft, label: 'Esquerda' },
+                        { value: 'center' as const, icon: AlignCenter, label: 'Centro' },
+                        { value: 'right' as const, icon: AlignRight, label: 'Direita' },
+                      ]).map(({ value, icon: Icon, label }) => (
+                        <button key={value} onClick={() => onUpdateCard(cardIndex, { textAlign: value })}
+                          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-all ${currentAlign === value ? 'ring-2 ring-white/50 border-white/20 bg-white/[0.08] text-white' : 'border-white/[0.06] text-white/40 hover:bg-white/[0.04]'}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Margins */}
+                  <div>
+                    <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
+                      <span>Margens</span>
+                      <span className="text-[10px] font-mono text-white/50">{Math.round((card.paddingScale ?? 1) * 100)}%</span>
+                    </label>
+                    <input type="range" min="30" max="200" step="5"
+                      value={Math.round((card.paddingScale ?? 1) * 100)}
+                      onChange={(e) => onUpdateCard(cardIndex, { paddingScale: parseInt(e.target.value) / 100 })}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ===== STYLE / COLORS ===== */}
           <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
             <button onClick={() => setShowStyle(!showStyle)}
@@ -230,7 +309,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Font selector */}
+                {/* Font selector (global) */}
                 <div>
                   <label className="text-xs font-medium text-white/40 mb-1.5 flex items-center gap-1.5">
                     <Type className="h-3 w-3" /> Fonte (todos os cards)
@@ -379,33 +458,35 @@ const CarouselEditorSidebar: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* ===== FONT & PADDING ===== */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <SlidersHorizontal className="h-4 w-4 text-white/40" />
-              <span className="text-xs font-semibold text-white uppercase tracking-wider">Ajustes</span>
+          {/* ===== FONT & PADDING (non-Content styles) ===== */}
+          {!isContentStyle && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <SlidersHorizontal className="h-4 w-4 text-white/40" />
+                <span className="text-xs font-semibold text-white uppercase tracking-wider">Ajustes</span>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
+                  <span>Tamanho da Fonte</span>
+                  <span className="text-[10px] font-mono text-white/50">{Math.round((card.fontScale ?? 1) * 100)}%</span>
+                </label>
+                <input type="range" min="50" max="200" step="5"
+                  value={Math.round((card.fontScale ?? 1) * 100)}
+                  onChange={(e) => onUpdateCard(cardIndex, { fontScale: parseInt(e.target.value) / 100 })}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
+                  <span>Margens</span>
+                  <span className="text-[10px] font-mono text-white/50">{Math.round((card.paddingScale ?? 1) * 100)}%</span>
+                </label>
+                <input type="range" min="30" max="200" step="5"
+                  value={Math.round((card.paddingScale ?? 1) * 100)}
+                  onChange={(e) => onUpdateCard(cardIndex, { paddingScale: parseInt(e.target.value) / 100 })}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
-                <span>Tamanho da Fonte</span>
-                <span className="text-[10px] font-mono text-white/50">{Math.round((card.fontScale ?? 1) * 100)}%</span>
-              </label>
-              <input type="range" min="50" max="200" step="5"
-                value={Math.round((card.fontScale ?? 1) * 100)}
-                onChange={(e) => onUpdateCard(cardIndex, { fontScale: parseInt(e.target.value) / 100 })}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
-                <span>Margens</span>
-                <span className="text-[10px] font-mono text-white/50">{Math.round((card.paddingScale ?? 1) * 100)}%</span>
-              </label>
-              <input type="range" min="30" max="200" step="5"
-                value={Math.round((card.paddingScale ?? 1) * 100)}
-                onChange={(e) => onUpdateCard(cardIndex, { paddingScale: parseInt(e.target.value) / 100 })}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
-            </div>
-          </div>
+          )}
 
           {/* ===== IMAGE ===== */}
           <div className="space-y-3">

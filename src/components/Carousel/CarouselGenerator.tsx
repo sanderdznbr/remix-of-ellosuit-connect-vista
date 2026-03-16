@@ -268,6 +268,7 @@ const CarouselGenerator: React.FC = () => {
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
+  const [useBrandColors, setUseBrandColors] = useState(true);
 
   // Auto-extract colors from logo when it changes
   useEffect(() => {
@@ -954,8 +955,8 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`Include a person/model in this image. ${genderMap[peopleMode] || ''} Use a photorealistic, professional-looking person that fits the editorial context. The person should look confident and natural.`);
     }
 
-    // Brand colors — always inject when user has brand colors from logo
-    if (logoBrandColors.length > 0) {
+    // Brand colors — only inject when toggle is ON
+    if (useBrandColors && logoBrandColors.length > 0) {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 
@@ -1031,7 +1032,7 @@ const CarouselGenerator: React.FC = () => {
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
-        ...(logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
+        ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
       },
     });
@@ -1384,7 +1385,7 @@ const CarouselGenerator: React.FC = () => {
         logo_dark_url: logoDarkUrl,
         logo_position: logoPosition,
         show_header: showHeader,
-        image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: logoBrandColors.length > 0 ? logoBrandColors : undefined, facePersonsMetadata: facePersons.filter(p => p.photos.length > 0).length > 1 ? facePersons.filter(p => p.photos.length > 0).map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined, allPeopleOnCover } as any,
+        image_settings: { ...imageSettings, faceGender, wearsGlasses, brandColors: useBrandColors && logoBrandColors.length > 0 ? logoBrandColors : undefined, facePersonsMetadata: facePersons.filter(p => p.photos.length > 0).length > 1 ? facePersons.filter(p => p.photos.length > 0).map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined, allPeopleOnCover } as any,
         reference_images: referenceImages as any,
         face_ref_urls: (() => { const active = facePersons.filter(p => p.photos.length > 0); return active.length > 0 ? active.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url); })() as any,
         product_context: isRealEstateStyle
@@ -1523,7 +1524,7 @@ const CarouselGenerator: React.FC = () => {
         const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
         promptParts.push(`MARCA: Inclua "${brandName}" como texto pequeno no ${posLabel} da imagem.`);
       }
-      if (logoBrandColors.length > 0) {
+      if (useBrandColors && logoBrandColors.length > 0) {
         promptParts.push(`PALETA DE CORES DA MARCA: Use predominantemente estas cores: ${logoBrandColors.join(', ')}.`);
       }
 
@@ -5318,6 +5319,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         logoDarkUrl={logoDarkUrl} setLogoDarkUrl={setLogoDarkUrl}
                         logoPosition={logoPosition} setLogoPosition={setLogoPosition}
                         logoBrandColors={logoBrandColors}
+                        useBrandColors={useBrandColors}
+                        setUseBrandColors={setUseBrandColors}
                         brandName={brandName} setBrandName={setBrandName}
                         userName={userName} setUserName={setUserName}
                         dateLabel={dateLabel} setDateLabel={setDateLabel}

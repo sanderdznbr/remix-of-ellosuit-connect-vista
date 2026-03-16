@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { Upload, X, Settings2, Sun, Moon } from 'lucide-react';
+import { Upload, X, Settings2, Sun, Moon, Palette } from 'lucide-react';
 import { LogoPosition } from './StepStyle';
 import LogoPositionPicker from './LogoPositionPicker';
 import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
+import { Switch } from '@/components/ui/switch';
 
 interface Props {
   showHeader: boolean;
@@ -14,6 +15,8 @@ interface Props {
   logoPosition: LogoPosition;
   setLogoPosition: (v: LogoPosition) => void;
   logoBrandColors?: string[];
+  useBrandColors?: boolean;
+  setUseBrandColors?: (v: boolean) => void;
   brandName?: string;
   setBrandName?: (v: string) => void;
   userName?: string;
@@ -27,7 +30,8 @@ interface Props {
 const StepBranding: React.FC<Props> = ({
   showHeader, setShowHeader, logoUrl, setLogoUrl, logoDarkUrl, setLogoDarkUrl,
   logoPosition, setLogoPosition,
-  logoBrandColors = [], brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
+  logoBrandColors = [], useBrandColors = true, setUseBrandColors,
+  brandName, setBrandName, userName, setUserName, dateLabel, setDateLabel,
   isExtreme = false,
   accentTheme,
 }) => {
@@ -184,18 +188,38 @@ const StepBranding: React.FC<Props> = ({
         <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
       )}
 
-      {/* Brand colors extracted */}
-      {hasAnyLogo && logoBrandColors.length > 0 && (
-        <div>
-          <p className="text-[10px] text-white/30 mb-1.5">Cores extraídas da logo (usadas na geração IA)</p>
-          <div className="flex gap-1.5">
-            {logoBrandColors.map((color, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <div className="w-5 h-5 rounded-md border border-white/10" style={{ backgroundColor: color }} />
-                <span className="text-[9px] text-white/20 font-mono">{color}</span>
+      {/* Brand colors toggle + preview */}
+      {hasAnyLogo && logoBrandColors.length > 0 && setUseBrandColors && (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-center gap-2.5">
+              <Palette className={`h-4 w-4 ${useBrandColors ? t.text : 'text-white/30'}`} />
+              <div>
+                <p className="text-xs font-medium text-white/70">Usar cores da marca no post</p>
+                <p className="text-[10px] text-white/30">
+                  {useBrandColors ? 'As cores extraídas da logo serão aplicadas' : 'Serão usadas as cores do estilo escolhido'}
+                </p>
               </div>
-            ))}
+            </div>
+            <Switch
+              checked={useBrandColors}
+              onCheckedChange={setUseBrandColors}
+              className={useBrandColors ? `data-[state=checked]:bg-${theme === 'orange' ? 'orange' : theme === 'red' ? 'red' : 'purple'}-500` : ''}
+            />
           </div>
+          {useBrandColors && (
+            <div>
+              <p className="text-[10px] text-white/30 mb-1.5">Cores extraídas da logo</p>
+              <div className="flex gap-1.5">
+                {logoBrandColors.map((color, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <div className="w-5 h-5 rounded-md border border-white/10" style={{ backgroundColor: color }} />
+                    <span className="text-[9px] text-white/20 font-mono">{color}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -48,6 +48,7 @@ const StepCardTexts: React.FC<Props> = ({
   const totalCards = contentMode === 'single-post' ? 1 : cardCount;
   const texts = Array.from({ length: totalCards }, (_, i) => manualCardTexts[i] || { title: '', body: '' });
   const availableWebImages = (webImages || []).filter(url => typeof url === 'string' && url.startsWith('http'));
+  const getSuggestedOptions = (cardIndex: number) => (cardPhotoOptions?.[cardIndex] || []).filter(url => typeof url === 'string' && url.startsWith('http'));
 
   const updateCard = (index: number, field: 'title' | 'body', value: string) => {
     const updated = [...texts];

@@ -212,7 +212,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   }, [isUserTyping]);
 
   const handleSubmit = () => {
-    if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts);
+    if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts, postFormat);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

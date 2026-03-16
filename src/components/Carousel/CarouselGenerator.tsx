@@ -2584,6 +2584,20 @@ MANTENHA a foto real reconhecível e fiel — NÃO substitua por uma imagem gen�
 A composição final deve ser: foto real de fundo + overlay editorial com textos e gráficos do estilo visual.`;
           }
 
+          // === WEB SEARCH + FACE: create professional portrait matching post theme ===
+          if (hasWebImages && hasFaceRefsForGen && faceCardIndices.has(i) && capturedFaceRefs?.length) {
+            const personGender = activeFacePersonsForGen[0]?.gender || faceGender || 'auto';
+            const genderLabel = personGender === 'male' ? 'masculino' : personGender === 'female' ? 'feminino' : '';
+            // For face cards in web mode: don't use web photo, create a portrait instead
+            capturedProductRefs = undefined;
+            cardPrompt += `\n\n👤 INSTRUÇÃO CRÍTICA — RETRATO COM ROSTO:
+Este card deve apresentar a PESSOA da referência facial. Crie uma foto profissional ${genderLabel ? `de corpo ${genderLabel}` : ''} 
+com o ROSTO da referência em um corpo completo gerado, vestido de forma elegante e adequada ao tema "${cleanTopic}".
+A composição deve ser um retrato editorial premium que combine com a estética do post.
+NÃO use foto da web neste card — crie uma foto original com o rosto fornecido.
+Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`;
+          }
+
           imageFactories.push({
             index: i,
             prompt: cardPrompt,

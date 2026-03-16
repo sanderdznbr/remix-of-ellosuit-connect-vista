@@ -333,6 +333,7 @@ const StepCardTexts: React.FC<Props> = ({
   if (isMobile) {
     const card = texts[currentSlide] || { title: '', body: '' };
     const assignedPhoto = cardPhotoAssignments?.[currentSlide];
+    const suggestedOptions = getSuggestedOptions(currentSlide);
 
     return (
       <div className="space-y-3" style={{ minHeight: '300px' }}>

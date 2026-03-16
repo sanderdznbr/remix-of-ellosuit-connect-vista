@@ -40,7 +40,7 @@ interface ActiveJob {
 }
 
 interface DashboardHomeProps {
-  onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[]) => void;
+  onStartCarousel: (topic?: string, mentionedPrompts?: MentionedPrompt[], postFormat?: PostFormat) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   onViewAllProjects?: () => void;
 }

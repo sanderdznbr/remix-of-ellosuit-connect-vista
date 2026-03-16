@@ -123,7 +123,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             setActiveTab('logo-remover');
           }} />;
         default:
-          return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} />;
+          return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} onResumeJob={onResumeJob} />;
       }
     })();
     const isHome = activeTab === 'home';

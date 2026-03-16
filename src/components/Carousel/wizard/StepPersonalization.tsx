@@ -52,6 +52,11 @@ interface Props {
   hasProduct?: boolean;
   setHasProduct?: (v: boolean) => void;
   onOpenProductStep?: () => void;
+  // Custom colors
+  useCustomColors: boolean;
+  setUseCustomColors: (v: boolean) => void;
+  customColors: string[];
+  setCustomColors: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const StepPersonalization: React.FC<Props> = ({

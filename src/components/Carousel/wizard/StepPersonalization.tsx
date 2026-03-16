@@ -130,6 +130,22 @@ const StepPersonalization: React.FC<Props> = ({
             </div>
           </button>
 
+          {/* Product option */}
+          {setHasProduct && (
+            <button
+              onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
+              className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
+            >
+              <div className="w-11 h-11 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/25 transition-colors">
+                <ShoppingBag className="h-5 w-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white/80">Sim, tem produto</p>
+                <p className="text-[11px] text-white/30 mt-0.5">Envie foto do produto para destaque</p>
+              </div>
+            </button>
+          )}
+
           {/* Skip */}
           <button
             onClick={onSkipAll}

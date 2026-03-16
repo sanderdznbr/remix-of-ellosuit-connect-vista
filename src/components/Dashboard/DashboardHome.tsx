@@ -137,7 +137,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
         const rows = data || [];
         const now = Date.now();
-        const staleThresholdMs = 5 * 60 * 1000;
+        const staleThresholdMs = 2 * 60 * 1000;
 
         // Mark as stale if updated_at is too old OR if carousel_id is already set (generation finished but status wasn't updated)
         const staleIds = rows

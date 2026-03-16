@@ -128,7 +128,7 @@ async function searchBravePhotos(query: string, braveKey: string, count = 30): P
     const cleanQuery = query;
     const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(cleanQuery)}&count=${count}&safesearch=strict`;
     console.log('[BRAVE] Searching:', cleanQuery.slice(0, 80));
-    const res = await fetch(url, { headers: { 'X-Subscription-Token': braveKey } });
+    const res = await fetchWithTimeout(url, { headers: { 'X-Subscription-Token': braveKey } }, 8000);
     if (!res.ok) {
       console.error('[BRAVE] HTTP error:', res.status);
       return [];

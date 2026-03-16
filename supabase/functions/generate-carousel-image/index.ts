@@ -416,7 +416,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     const fallbackModel = 'google/gemini-3.1-flash-image-preview';
     console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 
-    async function tryGenerate(model: string, content: any[], attempt: number, maxRetries = 2): Promise<string | null> {
+    async function tryGenerate(model: string, content: any[], attempt: number, maxRetries = 3): Promise<string | null> {
       for (let retry = 0; retry <= maxRetries; retry++) {
         const label = retry === 0 ? `Attempt ${attempt}` : `Attempt ${attempt} retry ${retry}`;
         console.log(`${label} model=${model} parts=${content.length}`);
@@ -438,10 +438,10 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
           const errText = await res.text();
           console.error(`${label} error:`, res.status, errText.slice(0, 500));
           
-          // Rate limit: wait and retry instead of failing immediately
+          // Rate limit: wait and retry with exponential backoff
           if (res.status === 429 && retry < maxRetries) {
-            const waitSec = 3 + retry * 4; // 3s, 7s
-            console.log(`${label}: Rate limited, waiting ${waitSec}s before retry...`);
+            const waitSec = 5 + retry * 5; // 5s, 10s, 15s
+            console.log(`${label}: Rate limited, waiting ${waitSec}s before retry ${retry + 1}/${maxRetries}...`);
             await new Promise(r => setTimeout(r, waitSec * 1000));
             continue;
           }

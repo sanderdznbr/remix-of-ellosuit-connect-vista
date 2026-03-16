@@ -412,24 +412,45 @@ NEVER use abstract terms like "technology", "update", "2026". NEVER suggest term
           } else {
             const errText = await openaiRes.text();
             console.error('[AI] OpenAI also failed:', openaiRes.status, errText.slice(0, 200));
-            return new Response(
-              JSON.stringify({ success: false, error: 'All AI providers unavailable. Please try again.' }),
-              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            content = JSON.stringify({
+              title: topic,
+              subtitle: 'Resumo inicial do tema',
+              facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+              cta_title: 'Continuar',
+              cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+              image_search_terms: [topic],
+              clean_topic: topic,
+              key_entities: [topic],
+              summary: `Resumo inicial gerado localmente para ${topic}.`
+            });
           }
         } catch (openaiErr) {
           console.error('[AI] OpenAI exception:', openaiErr);
-          return new Response(
-            JSON.stringify({ success: false, error: 'All AI providers failed. Please try again.' }),
-            { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          content = JSON.stringify({
+            title: topic,
+            subtitle: 'Resumo inicial do tema',
+            facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+            cta_title: 'Continuar',
+            cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+            image_search_terms: [topic],
+            clean_topic: topic,
+            key_entities: [topic],
+            summary: `Resumo inicial gerado localmente para ${topic}.`
+          });
         }
       } else {
         console.error('[AI] No fallback API key available');
-        return new Response(
-          JSON.stringify({ success: false, error: 'Perplexity unavailable and no fallback configured.' }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        content = JSON.stringify({
+          title: topic,
+          subtitle: 'Resumo inicial do tema',
+          facts: [{ heading: 'Tema identificado', body: `Conteúdo sobre ${topic}.`, source: 'Fallback local', person_name: null }],
+          cta_title: 'Continuar',
+          cta_body: 'Revise e refine o conteúdo na próxima etapa.',
+          image_search_terms: [topic],
+          clean_topic: topic,
+          key_entities: [topic],
+          summary: `Resumo inicial gerado localmente para ${topic}.`
+        });
       }
     }
 

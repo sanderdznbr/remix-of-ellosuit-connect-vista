@@ -2757,7 +2757,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       if (imageFactories.length > 0) {
         let completed = 0;
         const totalAi = imageFactories.length;
-        setImageGenProgress(`🎨 0/${totalAi} imagens geradas...`);
+        setImageGenProgress(`0/${totalAi} imagens geradas...`);
 
         // When using marketplace styles with heavy refs, go fully sequential to avoid 429
         const hasHeavyRefs = !!activeMarketplaceStyleRef.current || styleRefUrls.length > 0;

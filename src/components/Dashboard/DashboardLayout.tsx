@@ -19,7 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import ellocontentLogo from '@/assets/ellocontent2.svg';
 
 interface DashboardLayoutProps {
   onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string) => void;
@@ -148,8 +148,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         {/* Mobile Header */}
         <header className="flex items-center justify-between px-4 h-14 shrink-0 relative z-50" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* Left: hamburger to open sidebar */}
-          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/70 cursor-pointer">
-            <Menu className="w-5 h-5" />
+          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/60 cursor-pointer">
+            <div className="w-5 h-4 flex flex-col justify-between">
+              <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
+              <span className="block w-3.5 h-[1.5px] bg-white/60 rounded-full" />
+              <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
+            </div>
           </button>
 
           {/* Center: logo */}

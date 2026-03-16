@@ -4648,7 +4648,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {generatingAllImages ? (
               <>
                 <div style={{ width: 24, height: 24, border: '2px solid rgba(155,107,255,0.3)', borderTopColor: 'rgba(155,107,255,0.8)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${12 * (isExport ? 1 : PREVIEW_W / CARD_W)}px` }}>Gerando imagem...</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: `${12 * (isExport ? 1 : previewW / cardW)}px` }}>Gerando imagem...</span>
               </>
             ) : (
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: `${12 * (isExport ? 1 : PREVIEW_W / CARD_W)}px`, textAlign: 'center', padding: '0 16px' }}>Imagem não gerada. Clique para regenerar.</span>

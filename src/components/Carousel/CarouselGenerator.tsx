@@ -2519,13 +2519,19 @@ MANTENHA a foto real reconhecível e fiel.`);
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
             
             // === AUTO-ASSIGN WEB SEARCH REAL PHOTOS ===
-            // If web search found real images and no product refs exist, use them as high-priority references
+            // Use card-specific photo assignment if available, otherwise fall back to round-robin
             if (!capturedProductRefs && !skipWebSearch && webSearchResult?.images?.length) {
               const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
               if (webImgs.length > 0) {
-                const webImgIdx = i % webImgs.length;
-                capturedProductRefs = [webImgs[webImgIdx]];
-                console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
+                // Priority: use manual cardPhotoAssignments from Roteiro step
+                if (cardPhotoAssignments[i]) {
+                  capturedProductRefs = [cardPhotoAssignments[i]];
+                  console.log(`[WEB_PHOTO] Card ${i}: using manual assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
+                } else {
+                  const webImgIdx = i % webImgs.length;
+                  capturedProductRefs = [webImgs[webImgIdx]];
+                  console.log(`[WEB_PHOTO] Card ${i}: assigned web image ${webImgIdx}:`, webImgs[webImgIdx]?.substring(0, 80));
+                }
               }
             }
           }

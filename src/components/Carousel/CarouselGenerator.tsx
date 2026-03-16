@@ -979,9 +979,11 @@ const CarouselGenerator: React.FC = () => {
       parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
     }
 
-    // Only add 4:5 aspect ratio for non-panoramic prompts
+    // Only add aspect ratio for non-panoramic prompts — format-aware
     if (!basePrompt.includes('PANORÂMICA CONTÍNUA')) {
-      parts.push('4:5 portrait aspect ratio, 1080x1350px, ultra high resolution');
+      const fmtDims = FORMAT_DIMENSIONS[postFormat];
+      const aspectLabel = postFormat === 'square' ? '1:1 square' : postFormat === 'story' ? '9:16 vertical story' : '4:5 portrait';
+      parts.push(`${aspectLabel} aspect ratio, ${fmtDims.w}x${fmtDims.h}px, ultra high resolution`);
     } else {
       parts.push('ultra high resolution');
     }

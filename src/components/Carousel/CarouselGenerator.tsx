@@ -399,10 +399,10 @@ const CarouselGenerator: React.FC = () => {
   // Show 'Posição' step only when user uploaded face AND web research is active
   const showFacePositionStep = hasFacePhotos && hasWebResearch;
   const showPesquisaStep = hasWebResearch;
+  const showProductStep = wantsProduct;
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
-  const showProductStep = wantsProduct;
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', ...(skipPeopleVisual ? [] : ['Pessoas', 'Visual']), 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];

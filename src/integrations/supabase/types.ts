@@ -1202,6 +1202,7 @@ export type Database = {
           marketplace_style_config: Json | null
           marketplace_style_id: string | null
           negative_prompt: string | null
+          post_format: string
           product_context: string | null
           progress_current: number
           progress_message: string | null
@@ -1238,6 +1239,7 @@ export type Database = {
           marketplace_style_config?: Json | null
           marketplace_style_id?: string | null
           negative_prompt?: string | null
+          post_format?: string
           product_context?: string | null
           progress_current?: number
           progress_message?: string | null
@@ -1274,6 +1276,7 @@ export type Database = {
           marketplace_style_config?: Json | null
           marketplace_style_id?: string | null
           negative_prompt?: string | null
+          post_format?: string
           product_context?: string | null
           progress_current?: number
           progress_message?: string | null
@@ -2978,6 +2981,7 @@ export type Database = {
           is_starred: boolean
           keywords: string[] | null
           marketplace_style_id: string | null
+          post_format: string
           style_config: Json | null
           title: string
           topic: string
@@ -2995,6 +2999,7 @@ export type Database = {
           is_starred?: boolean
           keywords?: string[] | null
           marketplace_style_id?: string | null
+          post_format?: string
           style_config?: Json | null
           title: string
           topic: string
@@ -3012,6 +3017,7 @@ export type Database = {
           is_starred?: boolean
           keywords?: string[] | null
           marketplace_style_id?: string | null
+          post_format?: string
           style_config?: Json | null
           title?: string
           topic?: string

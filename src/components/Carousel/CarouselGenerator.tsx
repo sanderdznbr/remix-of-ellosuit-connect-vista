@@ -826,6 +826,7 @@ const CarouselGenerator: React.FC = () => {
               card_count: carouselData.cards.length,
               marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
               generation_config: buildGenerationConfig(),
+              post_format: postFormat,
             } as any).select('id').single();
             if (inserted && !error) {
               setCurrentCarouselId(inserted.id);

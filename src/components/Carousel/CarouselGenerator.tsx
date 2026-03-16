@@ -5164,6 +5164,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     (async () => {
       setGeneratingRoteiro(true);
       setCardPhotoAssignments({});
+      setCardPhotoOptions({});
       const totalCards = contentMode === 'single-post' ? 1 : cardCount;
       const localFallback = () => {
         if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];

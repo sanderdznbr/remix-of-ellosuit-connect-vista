@@ -1614,7 +1614,22 @@ PROIBIDO: qualquer imagem de imóvel, casa, apartamento, prédio no fundo. APENA
       const negPrompt = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || 'Do NOT copy exact faces or identities from reference images';
 
       // If real estate blend: do NOT send property photos as reference (AI would try to recreate them)
-      const effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
+      let effectiveProductRefs = (useRealEstateBlend && propertyPhotoBase64.length > 0) ? undefined : (mergedProductRefs.length > 0 ? mergedProductRefs : undefined);
+
+      // === AUTO-ASSIGN WEB SEARCH REAL PHOTO (Single Post) ===
+      if (!effectiveProductRefs && !skipWebSearch && webSearchResult?.images?.length && productImages.length === 0 && !useRealEstateBlend) {
+        const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+        if (webImgs.length > 0) {
+          effectiveProductRefs = [webImgs[0]];
+          promptParts.push(`\n\n📸 INSTRUÇÃO CRÍTICA — FOTO REAL:
+A imagem de referência enviada é uma FOTO REAL do tema "${topic}". 
+INCORPORE esta foto real com MÁXIMA FIDELIDADE na composição do post.
+USE a foto real como elemento visual principal/fundo.
+Sobreponha textos editoriais, elementos gráficos e tipografia POR CIMA da foto real.
+MANTENHA a foto real reconhecível e fiel.`);
+          console.log('[SINGLE_POST_WEB_PHOTO] Assigned web image:', webImgs[0]?.substring(0, 80));
+        }
+      }
 
       // === FONT REFERENCE: Convert Envato preview to base64 for AI ===
       let fontBase64: string | undefined;

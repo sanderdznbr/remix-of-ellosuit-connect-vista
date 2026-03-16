@@ -241,7 +241,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
 
       {/* Center content — title + input */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 min-h-0">
+      <motion.div
+        className="flex-1 flex flex-col items-center justify-center text-center px-5 md:px-6 w-full max-w-2xl mx-auto relative z-10 min-h-0"
+        layout
+        transition={{ layout: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } }}
+      >
         <motion.h1
           className="text-2xl md:text-4xl font-semibold leading-snug mb-3"
           initial={{ opacity: 0, y: 20 }}

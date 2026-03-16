@@ -40,6 +40,8 @@ const GeneratingAnimation: React.FC<Props> = ({
   onGoHome,
   isExtreme = false,
   wizardMode = 'simple',
+  isCompleting = false,
+  onCompleteAnimationDone,
 }) => {
   // Use orange for extreme mode, red for advanced, purple otherwise
   const loadingColor = isExtreme ? LOADING_ORANGE : wizardMode === 'advanced' ? LOADING_RED : LOADING_PURPLE;

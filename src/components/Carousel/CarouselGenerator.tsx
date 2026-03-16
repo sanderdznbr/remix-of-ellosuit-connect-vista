@@ -411,12 +411,23 @@ const CarouselGenerator: React.FC = () => {
   const hasWebImages = !skipWebSearch && Object.keys(cardPhotoAssignments).length > 0;
   const showPesquisaStep = hasWebResearch;
   const showProductStep = wantsProduct;
+
+  // Smart Advanced mode: auto-skip steps that aren't relevant
+  const hasMarketplaceStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
+  const hasBrandColorsFromLogo = useBrandColors && logoBrandColors.length > 0;
+  // Skip Cores when marketplace style defines colors OR brand colors are auto-applied from logo
+  const showCoresStep = !hasMarketplaceStyle && !hasBrandColorsFromLogo;
+  // Skip Fontes when marketplace style defines typography
+  const showFontesStep = !hasMarketplaceStyle;
+  // Skip Roteiro for single-post mode
+  const showRoteiroStep = contentMode === 'carousel' && cardCount > 1;
+
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Cores', 'Fontes', 'Roteiro', 'Velocidade'];
+    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];

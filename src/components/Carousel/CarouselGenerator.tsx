@@ -5623,6 +5623,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 }
                                 
                                 setRoteiroGenerated(true);
+                                // Auto-assign web photos to cards after outline is generated
+                                if (webSearchResult?.images?.length && Object.keys(cardPhotoAssignments).length === 0) {
+                                  const webImgs = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+                                  if (webImgs.length > 0) {
+                                    const assignments: Record<number, string> = {};
+                                    const usedUrls = new Set<string>();
+                                    for (let ci = 0; ci < totalCards; ci++) {
+                                      let bestImg = '';
+                                      for (const url of webImgs) {
+                                        if (!usedUrls.has(url)) { bestImg = url; break; }
+                                      }
+                                      if (!bestImg) bestImg = webImgs[ci % webImgs.length];
+                                      if (bestImg) { assignments[ci] = bestImg; usedUrls.add(bestImg); }
+                                    }
+                                    setCardPhotoAssignments(assignments);
+                                  }
+                                }
                                 generated = true;
                                 setGeneratingRoteiro(false);
 

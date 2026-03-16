@@ -85,26 +85,37 @@ Deno.serve(async (req) => {
             body: q.body || '',
           }));
 
-          const aiPrompt = `You are an image search expert. Given a post topic and card contents, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
+          // Also pass key_entities from the initial web search if available
+          const keyEntities = per_card_queries[0]?.key_entities || [];
+          const entityContext = keyEntities.length > 0 
+            ? `\nKNOWN ENTITIES FROM RESEARCH: ${keyEntities.join(', ')}` 
+            : '';
+
+          const aiPrompt = `You are an image search expert. Given a post topic, card contents, and known entities from research, generate the BEST image search queries to find REAL PHOTOGRAPHS only.
 
 TOPIC: "${mainTopic}"
+${entityContext}
 
 CARDS:
 ${cardsForAI.map((c: any) => `Card ${c.index}: Title="${c.title}" Body="${c.body}"`).join('\n')}
 
 CRITICAL RULES:
 1. Each query MUST find a REAL, EDITORIAL PHOTOGRAPH — like from a news agency (Reuters, AP, AFP, Getty editorial)
-2. If the card mentions a PERSON by name, the PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Cillian Murphy Oscar ceremony red carpet photo")
-3. If no person name is mentioned but the card is about a specific subject, search for that subject specifically
-4. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
-5. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
-6. Add "real photo" or "editorial photo" to each query
-7. Each card should have 2 alternative queries (primary: very specific, fallback: slightly broader but still specific)
-8. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
-9. For future events (2026+), search for the most recent past edition instead
-10. For cover/capa cards: search for the most iconic/dramatic photo of the main subject
+2. **MOST IMPORTANT**: If the card mentions or implies a PERSON (by name, role, or category like "Best Actor"), you MUST:
+   a. Identify the ACTUAL PERSON using the KNOWN ENTITIES list above
+   b. The PRIMARY query MUST be: "[Person Full Name] [event context] photo" (e.g., "Michael B Jordan Oscar 2025 red carpet photo")
+   c. NEVER search for generic terms like "best actor oscar" — ALWAYS use the person's real name
+3. If card says "Melhor Ator" or "Best Actor" and the entities list includes "Michael B. Jordan", search "Michael B Jordan Oscar photo"
+4. If card says "Melhor Filme" and entities include "Sinners", search "Sinners movie 2025 premiere photo"
+5. NEVER use generic terms like "award", "winner", "ceremony" alone — always pair with the specific person/film/event name
+6. NEVER generate queries that could return: memes, quote images, fan art, collages, screenshots, tweets, social media posts, infographics, or Wikipedia images
+7. Add "photo" to each query
+8. Each card should have 3 alternative queries (primary: person name + context, secondary: person name alone, fallback: subject + context)
+9. Queries MUST be in ENGLISH for international topics (Oscar, sports, etc.) — English returns better photo results
+10. For cover/capa cards: search for the most iconic/dramatic photo of the MAIN person of the topic
+11. Cross-reference card titles/bodies with the KNOWN ENTITIES list to resolve who each card is about
 
-Return a JSON object: { "queries": { "0": ["query1", "query2"], "1": ["query1", "query2"], ... } }
+Return a JSON object: { "queries": { "0": ["query1", "query2", "query3"], "1": ["query1", "query2", "query3"], ... } }
 Only return the JSON, nothing else.`;
 
           const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -239,18 +250,24 @@ Only return the JSON, nothing else.`;
     {
       "heading": "Short heading for this fact/point (max 60 chars)",
       "body": "Detailed explanation of this fact or news point (100-200 chars)",
-      "source": "Name of the source"
+      "source": "Name of the source",
+      "person_name": "Full name of the main person mentioned in this fact (or null if none)"
     }
   ],
   "cta_title": "Call to action title (max 60 chars)",
   "cta_body": "Call to action message (max 120 chars)",
   "image_search_terms": ["term1", "term2", "term3"],
   "clean_topic": "The extracted main subject/topic name only (e.g. 'CS2', 'Tesla', 'Bitcoin')",
+  "key_entities": ["Full Name 1", "Full Name 2", "Company Name"],
   "summary": "A brief 2-sentence summary of the key findings"
 }
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
 CRITICAL for clean_topic: Extract ONLY the core subject name from the user request. If user says "Crie um post sobre CS2" the clean_topic is "CS2". If user says "Novidades do Bitcoin" the clean_topic is "Bitcoin". Just the subject, no verbs or filler words.
+
+CRITICAL for key_entities: Extract ALL specific named entities (people, companies, films, teams, products) mentioned in the facts. Use their FULL REAL NAMES exactly as known publicly. For example, for "Oscar 2026 winners": ["Michael B. Jordan", "Sinners", "Demi Moore", "The Substance", "Brady Corbet", "The Brutalist"]. This is essential for image search.
+
+CRITICAL for person_name in each fact: If the fact is about or mentions a specific person, include their FULL NAME. Example: if the heading says "Melhor Ator" and the body mentions the winner, person_name should be "Michael B. Jordan" (the actual winner's full name). This field is MANDATORY when a person is involved.
 
 CRITICAL for image_search_terms: Each term MUST be a search query that returns REAL PHOTOGRAPHS (not graphics, not infographics, not images with text). Think about what a photographer would capture. Add the word "photo" or "fotografia" to each term. Examples:
 - For "MEI": "microempreendedor trabalhando escritório fotografia", "pessoa empreendedora negócio próprio foto"

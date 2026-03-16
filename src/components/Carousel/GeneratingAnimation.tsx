@@ -352,7 +352,7 @@ const GeneratingAnimation: React.FC<Props> = ({
             style={{ background: 'linear-gradient(transparent, #050508)' }} />
         </div>
 
-      </div>
+      </motion.div>
     </motion.div>
   );
 };

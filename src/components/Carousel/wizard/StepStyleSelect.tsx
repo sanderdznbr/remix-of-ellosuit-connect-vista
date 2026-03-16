@@ -180,9 +180,10 @@ const StepStyleSelect: React.FC<Props> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {filteredStyles.map(style => {
               const isActive = activeStyleId === style.id;
+              const coverImage = (style as any).style_config?.cover_image;
               const images = style.preview_images || [];
               const currentIdx = previewIndex[style.id] || 0;
-              const currentImg = images[currentIdx] || images[0];
+              const currentImg = coverImage || images[currentIdx] || images[0];
               const isFree = (style as any).is_free;
               const isLocked = !user && !isFree;
               const hasMultiple = images.length > 1;

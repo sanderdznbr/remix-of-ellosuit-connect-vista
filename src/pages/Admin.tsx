@@ -401,6 +401,7 @@ function AdminContent() {
     { key: 'subscriptions', label: 'Assinaturas', icon: UserCheck },
     { key: 'payments', label: 'Pagamentos', icon: DollarSign },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
+    { key: 'content', label: 'Conteúdo', icon: FileText },
   ];
 
   const statusColor = (s: string) => {

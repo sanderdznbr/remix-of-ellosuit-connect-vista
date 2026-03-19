@@ -287,7 +287,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         marketplace_style_id: job.marketplace_style_id || null,
       }).select('id').single();
 
-      await updateJob(jobId, { status: 'completed', carousel_data: finalData, carousel_id: inserted?.id || null, completed_at: new Date().toISOString(), progress_message: '✅ Post gerado!' });
+      await updateJob(jobId, { status: 'completed', carousel_id: inserted?.id || null, completed_at: new Date().toISOString(), progress_message: '✅ Post gerado!' });
       return new Response(JSON.stringify({ success: true, carouselId: inserted?.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 

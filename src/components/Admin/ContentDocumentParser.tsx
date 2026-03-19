@@ -344,37 +344,25 @@ export default function ContentDocumentParser() {
                     />
                   </div>
 
-                  {/* Logo URLs */}
+                  {/* Logo Uploads */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Logo (clara)</label>
-                      <input
+                      <LogoUploader
                         value={config.logoUrl}
-                        onChange={e => setConfig(prev => ({ ...prev, logoUrl: e.target.value }))}
-                        placeholder="URL da logo clara"
-                        className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none"
-                        style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        onChange={url => setConfig(prev => ({ ...prev, logoUrl: url }))}
+                        companyId={companyId}
+                        label="clara"
                       />
-                      {config.logoUrl && (
-                        <div className="mt-1.5 h-8 flex items-center">
-                          <img src={config.logoUrl} alt="Logo" className="h-6 object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
-                        </div>
-                      )}
                     </div>
                     <div>
                       <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Logo (escura)</label>
-                      <input
+                      <LogoUploader
                         value={config.logoDarkUrl}
-                        onChange={e => setConfig(prev => ({ ...prev, logoDarkUrl: e.target.value }))}
-                        placeholder="URL da logo escura"
-                        className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none"
-                        style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        onChange={url => setConfig(prev => ({ ...prev, logoDarkUrl: url }))}
+                        companyId={companyId}
+                        label="escura"
                       />
-                      {config.logoDarkUrl && (
-                        <div className="mt-1.5 h-8 flex items-center">
-                          <img src={config.logoDarkUrl} alt="Logo escura" className="h-6 object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
-                        </div>
-                      )}
                     </div>
                   </div>
 

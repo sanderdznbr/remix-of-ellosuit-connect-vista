@@ -825,7 +825,6 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
       progress_total: cards.length,
       progress_message: 'Carrossel gerado com sucesso!',
       carousel_id: inserted?.id,
-      carousel_data: finalCarouselData,
       completed_at: new Date().toISOString(),
     });
 

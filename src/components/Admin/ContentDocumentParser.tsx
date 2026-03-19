@@ -195,18 +195,24 @@ export default function ContentDocumentParser() {
         userName: '',
         dateLabel: '',
         logoUrl: config.logoUrl,
+        logoDarkUrl: config.logoDarkUrl,
         logoPosition: config.logoPosition,
         showHeader: false,
         contentMode: post.type === 'carrossel' ? 'carousel' : 'single-post',
         manualPostText: post.type === 'estatico' ? post.cards[0]?.text : undefined,
       };
 
-      // Get marketplace style config if selected
+      // Get marketplace style config if selected — map preview_images → _previewImages for cloud function
       let marketplaceConfig = null;
       if (config.marketplaceStyleId) {
         const { data: msData } = await supabase.from('marketplace_styles').select('*')
           .eq('id', config.marketplaceStyleId).single();
-        if (msData) marketplaceConfig = msData;
+        if (msData) {
+          marketplaceConfig = {
+            ...msData,
+            _previewImages: msData.preview_images || [],
+          };
+        }
       }
 
       const { data: jobData, error: jobError } = await supabase.from('carousel_generation_jobs').insert({

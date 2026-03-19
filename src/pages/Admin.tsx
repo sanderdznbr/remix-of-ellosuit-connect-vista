@@ -808,6 +808,13 @@ function AdminContent() {
             )}
           </div>
         )}
+
+        {/* ═══ CONTENT PARSER ═══ */}
+        {tab === 'content' && (
+          <div className="max-w-2xl">
+            <ContentDocumentParser />
+          </div>
+        )}
       </motion.div>
     </div>
   );

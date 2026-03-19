@@ -233,7 +233,26 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     company_id: job.company_id, user_id: job.user_id, title: job.topic, topic: job.topic,
     keywords: [], carousel_data: finalData, style_config: styleConfig, card_count: 1,
     marketplace_style_id: job.marketplace_style_id || null,
+    cover_url: imageUrl.startsWith('http') ? imageUrl : null,
   }).select('id').single();
+
+  // Upload cover from base64 if needed
+  if (inserted?.id && imageUrl.startsWith('data:')) {
+    try {
+      const base64Data = imageUrl.split(',')[1];
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+      const coverPath = `${job.company_id}/${inserted.id}/cover.jpg`;
+      const { error: uploadErr } = await sb.storage.from('covers').upload(coverPath, bytes.buffer, { contentType: 'image/jpeg', upsert: true });
+      if (!uploadErr) {
+        const { data: urlData } = sb.storage.from('covers').getPublicUrl(coverPath);
+        if (urlData?.publicUrl) {
+          await sb.from('generated_carousels').update({ cover_url: `${urlData.publicUrl}?t=${Date.now()}` }).eq('id', inserted.id);
+        }
+      }
+    } catch (coverErr) { console.error('Single post cover upload error:', coverErr); }
+  }
 
   await updateJob(jobId, { status: 'completed', carousel_id: inserted?.id || null, completed_at: new Date().toISOString(), progress_message: '✅ Post gerado!' });
 }

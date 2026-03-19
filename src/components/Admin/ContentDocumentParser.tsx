@@ -32,6 +32,58 @@ interface GenerationConfig {
   brandName: string;
 }
 
+function LogoUploader({ value, onChange, companyId, label }: { value: string; onChange: (url: string) => void; companyId: string | null; label: string }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !companyId) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${companyId}/logo-${label}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+      onChange(publicUrl);
+      toast.success(`Logo ${label} enviada!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar logo');
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      {value ? (
+        <div className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <img src={value} alt={`Logo ${label}`} className="h-8 object-contain flex-1" onError={e => (e.currentTarget.style.display = 'none')} />
+          <button onClick={() => inputRef.current?.click()} className="text-[10px] text-purple-400 hover:text-purple-300 whitespace-nowrap cursor-pointer">
+            {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Trocar'}
+          </button>
+          <button onClick={() => onChange('')} className="text-[10px] text-red-400 hover:text-red-300 cursor-pointer">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading || !companyId}
+          className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-lg text-xs text-white/40 hover:text-white/60 transition-colors cursor-pointer"
+          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.15)' }}
+        >
+          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          {uploading ? 'Enviando...' : `Enviar logo ${label}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function ContentDocumentParser() {
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);

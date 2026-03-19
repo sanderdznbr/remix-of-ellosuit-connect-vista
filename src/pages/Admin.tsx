@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ContentDocumentParser from '@/components/Admin/ContentDocumentParser';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Users, CreditCard, Activity, Search, Loader2, 
   DollarSign, UserCheck, UserX, Clock, Gift, 
-  TrendingUp, Eye, RefreshCw, Shield, ChevronDown
+  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +14,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 const ADMIN_EMAIL = 'admin@gmail.com';
 
-type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'actions';
+type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'actions' | 'content';
 
 // ── Helpers ──
 const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
@@ -400,6 +401,7 @@ function AdminContent() {
     { key: 'subscriptions', label: 'Assinaturas', icon: UserCheck },
     { key: 'payments', label: 'Pagamentos', icon: DollarSign },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
+    { key: 'content', label: 'Conteúdo', icon: FileText },
   ];
 
   const statusColor = (s: string) => {
@@ -804,6 +806,13 @@ function AdminContent() {
                 )}
               </motion.div>
             )}
+          </div>
+        )}
+
+        {/* ═══ CONTENT PARSER ═══ */}
+        {tab === 'content' && (
+          <div className="max-w-2xl">
+            <ContentDocumentParser />
           </div>
         )}
       </motion.div>

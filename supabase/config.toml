@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.post-correction]
 verify_jwt = false
+
+[functions.parse-content-document]
+verify_jwt = false

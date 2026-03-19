@@ -816,7 +816,7 @@ Deno.serve(async (req) => {
     // Atomic claim
     const { data: claimedJob, error: claimErr } = await sb
       .from('carousel_generation_jobs')
-      .update({ status: 'claimed', progress_message: 'Iniciando geração...' })
+      .update({ status: 'generating_text', progress_message: 'Iniciando geração...' })
       .eq('id', jobId)
       .in('status', ['pending', 'failed'])
       .select('id')

@@ -1508,10 +1508,12 @@ const CarouselGenerator: React.FC = () => {
   };
 
   const loadCarousel = async (item: any) => {
+    // CRITICAL: Set ID FIRST to prevent auto-save from creating a duplicate INSERT
+    setCurrentCarouselId(item.id);
+    lastSavedDataRef.current = JSON.stringify({ cards: (item.carousel_data?.cards || []).map((c: any) => ({ ...c })), title: item.carousel_data?.title });
     setCarouselData(item.carousel_data);
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));
-    setCurrentCarouselId(item.id);
     // Restore post format from DB column or generation_config
     const savedFormat = item.post_format || item.generation_config?.postFormat;
     if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);

@@ -30,6 +30,9 @@ interface GenerationConfig {
   marketplaceStyleId: string | null;
   postFormat: 'square' | 'story' | 'portrait';
   brandName: string;
+  imageModel: 'gemini' | 'nano-banana';
+  useBrandColors: boolean;
+  brandColors: string[];
 }
 
 function LogoUploader({ value, onChange, companyId, label }: { value: string; onChange: (url: string) => void; companyId: string | null; label: string }) {

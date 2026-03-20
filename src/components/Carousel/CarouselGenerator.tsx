@@ -2960,7 +2960,13 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
 
         if (coverFactory) {
-          const coverUrl = await coverFactory.factory();
+          let coverUrl = await coverFactory.factory();
+          // Retry cover once if it fails — cover is critical
+          if (!coverUrl) {
+            console.warn('[COVER RETRY] Cover generation failed, retrying...');
+            await new Promise(r => setTimeout(r, 3000));
+            coverUrl = await coverFactory.factory();
+          }
           completed++;
           setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
           if (coverUrl) updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true, generatedPrompt: coverFactory.prompt };

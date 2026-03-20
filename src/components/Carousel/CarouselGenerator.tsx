@@ -6037,7 +6037,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
-                        setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))} />
+                        setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))}
+                        generationMode={imageSettings.generationMode}
+                        setGenerationMode={(m) => setImageSettings(prev => ({ ...prev, generationMode: m }))} />
                     )}
                     </motion.div>
                   </AnimatePresence>

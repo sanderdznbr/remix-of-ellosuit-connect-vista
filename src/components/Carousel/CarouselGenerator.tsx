@@ -1773,24 +1773,19 @@ const CarouselGenerator: React.FC = () => {
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
 
-    // Create cloud job for fallback — immediately mark as generating so dashboard doesn't show duplicate
-    const jobId = await createCloudJob('single-post');
-    if (jobId) {
-      setCloudJobId(jobId);
-
-      // === CLOUD MODE: delegate everything to server and return ===
-      if (imageSettings.generationMode === 'cloud') {
+    // Create cloud job ONLY for cloud mode — direct mode doesn't need it
+    let jobId: string | null = null;
+    if (imageSettings.generationMode === 'cloud') {
+      jobId = await createCloudJob('single-post');
+      if (jobId) {
+        setCloudJobId(jobId);
         console.log('[CLOUD_MODE] Delegating single-post to cloud:', jobId);
         setImageGenProgress('☁️ Enviando para a nuvem...');
         triggerCloudFallback(jobId);
         setGeneratingAllImages(false);
         generationInFlightRef.current = false;
-        // Keep generating=true so the realtime subscription handles completion
         return;
       }
-
-      // Mark as generating_images immediately so it's not picked up as "pending" by dashboard
-      supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', jobId).then(() => {});
     }
 
     try {

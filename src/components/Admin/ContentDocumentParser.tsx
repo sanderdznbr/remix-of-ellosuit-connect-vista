@@ -105,6 +105,9 @@ export default function ContentDocumentParser() {
     marketplaceStyleId: null,
     postFormat: 'square',
     brandName: '',
+    imageModel: 'nano-banana',
+    useBrandColors: false,
+    brandColors: [],
   });
   const [styles, setStyles] = useState<any[]>([]);
   const [stylesLoading, setStylesLoading] = useState(false);

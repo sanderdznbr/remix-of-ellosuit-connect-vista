@@ -4486,7 +4486,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               });
             }
 
-            const W = 1080, H = 1350;
+            const W = cardW, H = cardH;
             const canvas = document.createElement('canvas');
             canvas.width = W; canvas.height = H;
             const ctx = canvas.getContext('2d')!;

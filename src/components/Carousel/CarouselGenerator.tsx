@@ -5732,7 +5732,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'Referências' && (wizardMode === 'extreme' ? extremeAnalysis : wizardMode === 'advanced') && (
                       <StepExtremeBehanceRefs
                         vision={wizardMode === 'extreme' ? extremeVision : topic}
-                        suggestedStyle={extremeAnalysis?.suggestedStyle || selectedPreset?.name}
+                        suggestedStyle={extremeAnalysis?.suggestedStyle || activeMarketplaceStyle?.name || ''}
                         selectedImages={extremeBehanceRefs}
                         onSelectionChange={setExtremeBehanceRefs}
                       />

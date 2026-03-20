@@ -138,27 +138,48 @@ Deno.serve(async (req) => {
       } catch { return false; }
     };
 
-    // Cap total images to avoid WORKER_LIMIT (546) errors
-    const MAX_TOTAL_IMAGES = 7;
-    let validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, 6).filter(isUrlAccessible) : [];
-    let validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, 6).filter(isUrlAccessible) : [];
-    let validGeneralRefs = hasGeneralRefs ? referenceImageUrls.slice(0, 2).filter(isUrlAccessible) : [];
+    // === SMART REF BUDGET: prevents WORKER_LIMIT (546) errors ===
+    // Single post = more generous (function called once)
+    // Carousel = strict (function called N times, resources shared)
+    const isSinglePost = !isCarousel;
+    const BUDGET = isSinglePost
+      ? { maxTotal: 8, maxFace: 5, maxStyle: 6, maxGeneral: 2, maxFont: 1, maxLogo: 1 }
+      : { maxTotal: 5, maxFace: 3, maxStyle: 3, maxGeneral: 1, maxFont: 1, maxLogo: 1 };
+
+    let validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, BUDGET.maxFace).filter(isUrlAccessible) : [];
+    let validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, BUDGET.maxStyle).filter(isUrlAccessible) : [];
+    let validGeneralRefs = hasGeneralRefs ? referenceImageUrls.slice(0, BUDGET.maxGeneral).filter(isUrlAccessible) : [];
     
-    // Dynamically reduce refs if total exceeds limit
-    const totalRefs = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length;
-    if (totalRefs > MAX_TOTAL_IMAGES) {
+    // Dynamic rebalancing: ensure total never exceeds budget
+    const extraSlots = (slot: string) => {
+      const used = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length;
+      return Math.max(0, BUDGET.maxTotal - used);
+    };
+
+    const totalBeforeCap = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length;
+    if (totalBeforeCap > BUDGET.maxTotal) {
       // Priority: face > general (product) > style
-      const faceSlots = Math.min(validFaceRefs.length, 4);
-      const generalSlots = Math.min(validGeneralRefs.length, 1);
-      const styleSlots = Math.min(validStyleRefs.length, MAX_TOTAL_IMAGES - faceSlots - generalSlots);
+      const faceSlots = Math.min(validFaceRefs.length, BUDGET.maxFace);
+      const generalSlots = Math.min(validGeneralRefs.length, Math.max(1, BUDGET.maxTotal - faceSlots));
+      const styleSlots = Math.min(validStyleRefs.length, Math.max(0, BUDGET.maxTotal - faceSlots - generalSlots));
       validFaceRefs = validFaceRefs.slice(0, faceSlots);
       validGeneralRefs = validGeneralRefs.slice(0, generalSlots);
       validStyleRefs = validStyleRefs.slice(0, styleSlots);
-      console.log(`Reduced refs to fit limit: face=${faceSlots}, style=${styleSlots}, general=${generalSlots}`);
+    }
+
+    // If font ref or logo will be added, reduce style refs to stay in budget
+    const willAddFont = !!fontReferenceImage;
+    const willAddLogo = !!(logoImageUrl && typeof logoImageUrl === 'string' && (logoImageUrl.startsWith('http') || logoImageUrl.startsWith('data:')));
+    const extraImages = (willAddFont ? 1 : 0) + (willAddLogo ? 1 : 0);
+    const finalTotal = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length + extraImages;
+    if (finalTotal > BUDGET.maxTotal && validStyleRefs.length > 1) {
+      const overflow = finalTotal - BUDGET.maxTotal;
+      validStyleRefs = validStyleRefs.slice(0, Math.max(1, validStyleRefs.length - overflow));
     }
     
     const filteredCount = (faceReferenceUrls?.length || 0) + (styleReferenceUrls?.length || 0) + (referenceImageUrls?.length || 0) - validFaceRefs.length - validStyleRefs.length - validGeneralRefs.length;
-    if (filteredCount > 0) console.log(`Filtered out ${filteredCount} blocked/inaccessible URLs`);
+    if (filteredCount > 0) console.log(`Filtered/capped ${filteredCount} refs`);
+    console.log(`REF BUDGET [${isSinglePost ? 'SINGLE' : 'CAROUSEL'}]: face=${validFaceRefs.length}/${BUDGET.maxFace}, style=${validStyleRefs.length}/${BUDGET.maxStyle}, general=${validGeneralRefs.length}/${BUDGET.maxGeneral}, font=${willAddFont?1:0}, logo=${willAddLogo?1:0}, total=${validFaceRefs.length+validStyleRefs.length+validGeneralRefs.length+extraImages}/${BUDGET.maxTotal}`);
 
     // === DIAGNOSTIC LOGGING ===
     console.log('=== IMAGE GEN REQUEST ===');

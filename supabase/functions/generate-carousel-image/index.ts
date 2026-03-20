@@ -138,9 +138,24 @@ Deno.serve(async (req) => {
       } catch { return false; }
     };
 
-    const validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, 12).filter(isUrlAccessible) : [];
-    const validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, 8).filter(isUrlAccessible) : [];
-    const validGeneralRefs = hasGeneralRefs ? referenceImageUrls.slice(0, 2).filter(isUrlAccessible) : [];
+    // Cap total images to avoid WORKER_LIMIT (546) errors
+    const MAX_TOTAL_IMAGES = 7;
+    let validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, 6).filter(isUrlAccessible) : [];
+    let validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, 6).filter(isUrlAccessible) : [];
+    let validGeneralRefs = hasGeneralRefs ? referenceImageUrls.slice(0, 2).filter(isUrlAccessible) : [];
+    
+    // Dynamically reduce refs if total exceeds limit
+    const totalRefs = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length;
+    if (totalRefs > MAX_TOTAL_IMAGES) {
+      // Priority: face > general (product) > style
+      const faceSlots = Math.min(validFaceRefs.length, 4);
+      const generalSlots = Math.min(validGeneralRefs.length, 1);
+      const styleSlots = Math.min(validStyleRefs.length, MAX_TOTAL_IMAGES - faceSlots - generalSlots);
+      validFaceRefs = validFaceRefs.slice(0, faceSlots);
+      validGeneralRefs = validGeneralRefs.slice(0, generalSlots);
+      validStyleRefs = validStyleRefs.slice(0, styleSlots);
+      console.log(`Reduced refs to fit limit: face=${faceSlots}, style=${styleSlots}, general=${generalSlots}`);
+    }
     
     const filteredCount = (faceReferenceUrls?.length || 0) + (styleReferenceUrls?.length || 0) + (referenceImageUrls?.length || 0) - validFaceRefs.length - validStyleRefs.length - validGeneralRefs.length;
     if (filteredCount > 0) console.log(`Filtered out ${filteredCount} blocked/inaccessible URLs`);

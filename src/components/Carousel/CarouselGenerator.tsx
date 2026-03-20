@@ -2279,27 +2279,18 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     setCurrentCarouselId(null);
     setTimeout(() => setTransitionToGenerate(false), 500);
 
-    // === HYBRID: Create cloud job for fallback (if user closes browser, cloud continues) ===
+    // === HYBRID: Create cloud job ONLY for cloud mode ===
     let localJobId: string | null = null;
-    if (userId && companyId && !skipCloudRef.current) {
+    if (userId && companyId && !skipCloudRef.current && imageSettings.generationMode === 'cloud') {
       localJobId = await createCloudJob('carousel');
       if (localJobId) {
         setCloudJobId(localJobId);
-
-        // === CLOUD MODE: delegate everything to server and return ===
-        if (imageSettings.generationMode === 'cloud') {
-          console.log('[CLOUD_MODE] Delegating carousel to cloud:', localJobId);
-          setImageGenProgress('☁️ Enviando para a nuvem...');
-          triggerCloudFallback(localJobId);
-          generationInFlightRef.current = false;
-          // Keep generating=true so the realtime subscription handles completion
-          return;
-        }
-
-        // Mark as generating immediately so dashboard doesn't show as "pending" duplicate
-        supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', localJobId).then(() => {});
+        console.log('[CLOUD_MODE] Delegating carousel to cloud:', localJobId);
+        setImageGenProgress('☁️ Enviando para a nuvem...');
+        triggerCloudFallback(localJobId);
+        generationInFlightRef.current = false;
+        return;
       }
-      console.log('[GENERATE_FLOW] Cloud job created:', localJobId);
     }
     skipCloudRef.current = false;
 

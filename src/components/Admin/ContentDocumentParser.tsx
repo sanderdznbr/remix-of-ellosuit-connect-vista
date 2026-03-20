@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Loader2, Sparkles, ChevronDown, ChevronUp, Copy, Check, Play, Settings, Image, Palette, X, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Upload, FileText, Loader2, Sparkles, ChevronDown, ChevronUp, Copy, Check, Play, Settings, Image, Palette, X, CheckCircle2, AlertCircle, Clock, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import mammoth from 'mammoth';

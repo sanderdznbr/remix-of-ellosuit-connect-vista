@@ -417,6 +417,7 @@ const CarouselGenerator: React.FC = () => {
   const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;
   const hasWebImages = !skipWebSearch && Object.keys(cardPhotoAssignments).length > 0;
   const showPesquisaStep = hasWebResearch;
+  const showFotosWebStep = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
   const showProductStep = wantsProduct;
 
   // Smart Advanced mode: auto-skip steps that aren't relevant
@@ -431,10 +432,10 @@ const CarouselGenerator: React.FC = () => {
 
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), 'Estilo', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -1994,7 +1995,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         setImageGenProgress('🏠 Mesclando foto real com overlay IA...');
         console.log('[SINGLE_BLEND] Starting canvas blend...');
         try {
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;
@@ -2078,7 +2079,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       if (!useRealEstateBlend && logoUrl && finalImageUrl) {
         try {
           console.log('[LOGO_OVERLAY] Adding logo to single post...');
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;
@@ -3071,7 +3072,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
         
         const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center', cropOffsetY?: number): Promise<string> => {
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;
@@ -3206,7 +3207,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
             return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
           })();
           const logoImg = await loadImg(logoB64);
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const maxLW = 180, maxLH = 80;
           const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
           const lw = logoImg.width * ls, lh = logoImg.height * ls;
@@ -4485,7 +4486,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               });
             }
 
-            const W = 1080, H = 1350;
+            const W = cardW, H = cardH;
             const canvas = document.createElement('canvas');
             canvas.width = W; canvas.height = H;
             const ctx = canvas.getContext('2d')!;
@@ -4565,7 +4566,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       if (!regenHasPhotos && logoUrl && newImageUrl) {
         try {
           console.log('[REGEN_LOGO] Adding logo to regenerated card', cardIndex);
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;

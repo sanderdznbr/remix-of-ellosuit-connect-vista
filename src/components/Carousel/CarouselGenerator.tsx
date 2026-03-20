@@ -1261,6 +1261,37 @@ const CarouselGenerator: React.FC = () => {
     // === GEMINI / NANO BANANA PATH ===
     const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
     
+    // === SMART REF BUDGET (FRONTEND) — cap references BEFORE sending to edge function ===
+    // This prevents 546 WORKER_LIMIT errors by ensuring the payload is always within safe limits.
+    // Single post: more generous (one invocation). Carousel: strict (N invocations share resources).
+    const isCarouselMode = !!opts.isCarousel;
+    const REF_LIMITS = isCarouselMode
+      ? { maxFace: 3, maxStyle: 3, maxGeneral: 1, maxTotal: 5 }
+      : { maxFace: 5, maxStyle: 6, maxGeneral: 2, maxTotal: 8 };
+
+    let cappedFaceRefs = (opts.faceReferenceUrls || []).slice(0, REF_LIMITS.maxFace);
+    let cappedStyleRefs = (opts.styleReferenceUrls || []).slice(0, REF_LIMITS.maxStyle);
+    let cappedGeneralRefs = (opts.referenceImageUrls || []).slice(0, REF_LIMITS.maxGeneral);
+
+    // Dynamic rebalance: if total exceeds budget, trim lower-priority refs (style first, then general)
+    const fontSlot = opts.fontReferenceImage ? 1 : 0;
+    let currentTotal = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
+    if (currentTotal > REF_LIMITS.maxTotal) {
+      // Trim style refs first
+      const overflow1 = currentTotal - REF_LIMITS.maxTotal;
+      const styleToKeep = Math.max(1, cappedStyleRefs.length - overflow1);
+      cappedStyleRefs = cappedStyleRefs.slice(0, styleToKeep);
+      currentTotal = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
+      // If still over, trim general refs
+      if (currentTotal > REF_LIMITS.maxTotal) {
+        const overflow2 = currentTotal - REF_LIMITS.maxTotal;
+        cappedGeneralRefs = cappedGeneralRefs.slice(0, Math.max(0, cappedGeneralRefs.length - overflow2));
+      }
+    }
+
+    const finalRefCount = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
+    console.log(`[REF_BUDGET_FE] mode=${isCarouselMode ? 'CAROUSEL' : 'SINGLE'} face=${cappedFaceRefs.length} style=${cappedStyleRefs.length} general=${cappedGeneralRefs.length} font=${fontSlot} total=${finalRefCount}/${REF_LIMITS.maxTotal}`);
+
     // Add timeout to prevent infinite loading (90s max per image)
     const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('Image generation timeout (90s)')), 90000)
@@ -1271,15 +1302,15 @@ const CarouselGenerator: React.FC = () => {
         prompt: opts.prompt,
         imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '3:4',
         topic: opts.prompt,
-        faceReferenceUrls: opts.faceReferenceUrls,
-        styleReferenceUrls: opts.styleReferenceUrls,
-        referenceImageUrls: opts.referenceImageUrls,
+        faceReferenceUrls: cappedFaceRefs.length > 0 ? cappedFaceRefs : undefined,
+        styleReferenceUrls: cappedStyleRefs.length > 0 ? cappedStyleRefs : undefined,
+        referenceImageUrls: cappedGeneralRefs.length > 0 ? cappedGeneralRefs : undefined,
         imageModel: resolvedModel,
         negativePrompt: opts.negativePrompt,
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
-        isCarousel: !!opts.isCarousel,
+        isCarousel: isCarouselMode,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),

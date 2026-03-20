@@ -415,7 +415,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       } else if (validFaceRefs.length > 0) {
         // Single person: send face refs with strong identity instructions
         messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL OBRIGATÓRIA — Esta é a pessoa que DEVE aparecer na imagem. Copie EXATAMENTE este rosto:` });
-        for (const ref of validFaceRefs.slice(0, 6)) {
+        for (const ref of validFaceRefs) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
       }

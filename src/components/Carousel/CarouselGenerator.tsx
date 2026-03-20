@@ -3072,7 +3072,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         console.log('[BLEND] Starting real estate photo blend for', updatedCards.length, 'cards');
         
         const blendPhotoWithOverlay = async (photoDataUrl: string, aiImageUrl: string, focalPoint: string = 'center', cropOffsetY?: number): Promise<string> => {
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;

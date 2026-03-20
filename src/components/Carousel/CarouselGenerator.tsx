@@ -3985,6 +3985,7 @@ FORBIDDEN:
         faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
         styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
         negativePrompt: negPrompt,
+        isCarousel: true,
       });
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem');
       setCardImage(cardIndex, imageUrl);

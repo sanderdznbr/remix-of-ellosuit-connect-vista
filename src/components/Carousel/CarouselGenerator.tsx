@@ -2289,6 +2289,17 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       localJobId = await createCloudJob('carousel');
       if (localJobId) {
         setCloudJobId(localJobId);
+
+        // === CLOUD MODE: delegate everything to server and return ===
+        if (imageSettings.generationMode === 'cloud') {
+          console.log('[CLOUD_MODE] Delegating carousel to cloud:', localJobId);
+          setImageGenProgress('☁️ Enviando para a nuvem...');
+          triggerCloudFallback(localJobId);
+          generationInFlightRef.current = false;
+          // Keep generating=true so the realtime subscription handles completion
+          return;
+        }
+
         // Mark as generating immediately so dashboard doesn't show as "pending" duplicate
         supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', localJobId).then(() => {});
       }

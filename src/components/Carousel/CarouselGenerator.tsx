@@ -4249,12 +4249,60 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         imgPrompt = parts.join('\n');
         negPrompt = [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', 'Do NOT copy exact faces or identities from reference images'].filter(Boolean).join(', ');
       } else {
-        // For standard styles, build a richer prompt that maintains consistency
-        const cardType = card.type === 'cover' ? 'capa editorial' : card.type === 'cta' ? 'card final de chamada para ação' : 'slide de conteúdo informativo';
-        imgPrompt = disallowPeople
-          ? `Fundo gráfico editorial para ${cardType} sobre "${cleanTopic}". Visual tipográfico/abstrato com formas, textura e luz; sem pessoas, sem retratos e sem silhuetas humanas.${customInstruction ? ` INSTRUÇÃO ESPECIAL: ${customInstruction}` : ''}`
-          : `${cardType} sobre "${cleanTopic}". ${newImagePrompt || newBody.slice(0, 150)}. Manter o mesmo estilo visual, cores e atmosfera dos outros cards do carrossel.${customInstruction ? ` INSTRUÇÃO ESPECIAL: ${customInstruction}` : ''}`;
-        negPrompt = imageSettings.negativePrompt || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
+        // For standard styles, build a COMPLETE design prompt (not just a photo)
+        const isCover = card.type === 'cover' || cardIndex === 0;
+        const isCta = card.type === 'cta' || cardIndex === carouselData.cards.length - 1;
+        const fmtDims = FORMAT_DIMENSIONS[postFormat];
+        const aspectLabel = postFormat === 'square' ? '1:1 QUADRADO' : postFormat === 'story' ? '9:16 STORIES VERTICAL' : '4:5 RETRATO';
+        const stdParts: string[] = [];
+        stdParts.push(`⚠️ FORMATO OBRIGATÓRIO: ${aspectLabel} (${fmtDims.w}x${fmtDims.h}px). Gere EXATAMENTE UMA ÚNICA imagem neste formato. NÃO gere múltiplas imagens, NÃO divida em painéis, NÃO crie colagem ou grid.`);
+        stdParts.push(`IDIOMA: Todo texto gerado na imagem DEVE estar em PORTUGUÊS BRASILEIRO.`);
+        stdParts.push(`TEMA DO CARROSSEL: "${cleanTopic}"`);
+        stdParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas.`);
+        if (customInstruction) {
+          stdParts.push(`\n🎯 INSTRUÇÃO ESPECIAL DO USUÁRIO (PRIORIDADE MÁXIMA): ${customInstruction}`);
+        }
+        if (disallowPeople) {
+          stdParts.push(`DIREÇÃO VISUAL OBRIGATÓRIA: card tipográfico/editorial SOMENTE com elementos gráficos.`);
+          stdParts.push(`NÃO use retrato, pessoa, modelo, rosto, mãos, corpo humano ou silhuetas humanas.`);
+        }
+        // Include logo/brand instructions
+        if (logoUrl && brandName) {
+          const posMap: Record<string, string> = {
+            'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
+            'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
+          };
+          const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
+          stdParts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, pequena e elegante.`);
+        }
+        if (logoUrl) {
+          stdParts.push(`REFERÊNCIA DE LOGO: A imagem da logomarca foi fornecida como referência. Renderize-a fielmente na posição indicada.`);
+        }
+        // Product references
+        const allProductRefsStd = [...productRefUrls, ...extremeProductRefs];
+        if (allProductRefsStd.length > 0) {
+          stdParts.push(`REFERÊNCIAS DE PRODUTO: Foram fornecidas ${allProductRefsStd.length} imagem(ns) de produto. Inclua-as fielmente no design.`);
+        }
+        // Card-specific text context
+        if (isCover) {
+          stdParts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
+          stdParts.push(`TÍTULO PARA RENDERIZAR NA IMAGEM: "${newBody || card.title || cleanTopic}"`);
+          if (card.subtitle) stdParts.push(`SUBTÍTULO: "${card.subtitle}"`);
+          stdParts.push(`Deve ser o card mais impactante, com tipografia grande e design profissional.`);
+        } else if (isCta) {
+          stdParts.push(`ESTE É O CARD FINAL DE CTA (Card ${cardIndex + 1} de ${carouselData.cards.length}).`);
+          if (card.title) stdParts.push(`TÍTULO DO CTA: "${card.title}"`);
+          if (newBody) stdParts.push(`TEXTO DO CTA: "${newBody}"`);
+          stdParts.push(`Card de encerramento com call-to-action.`);
+        } else {
+          stdParts.push(`CARD DE CONTEÚDO ${cardIndex + 1} de ${carouselData.cards.length}.`);
+          if (newBody) stdParts.push(`TEXTO PRINCIPAL PARA RENDERIZAR NA IMAGEM: "${newBody}"`);
+          if (newBottomText) stdParts.push(`TEXTO SECUNDÁRIO: "${newBottomText}"`);
+          stdParts.push(`Slide de conteúdo interno com design editorial profissional — NÃO estilo capa/hero.`);
+        }
+        stdParts.push(`IMPORTANTE: Gere um DESIGN COMPLETO (arte final) com foto/ilustração de fundo, tipografia, elementos gráficos e os textos indicados acima renderizados na imagem. NÃO gere apenas uma foto sem design.`);
+        imgPrompt = stdParts.join('\n');
+        negPrompt = imageSettings.negativePrompt || '';
       }
       
       // Use existing card images as additional style references for consistency

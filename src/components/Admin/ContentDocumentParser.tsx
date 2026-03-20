@@ -236,7 +236,11 @@ export default function ContentDocumentParser() {
         logo_dark_url: config.logoDarkUrl,
         logo_position: config.logoPosition,
         show_header: false,
-        image_settings: {} as any,
+        image_settings: {
+          model: config.imageModel,
+          wizardMode: 'simple',
+          ...(config.useBrandColors && config.brandColors.length > 0 ? { brandColors: config.brandColors } : {}),
+        } as any,
         reference_images: [] as any,
         face_ref_urls: [] as any,
         post_format: config.postFormat,

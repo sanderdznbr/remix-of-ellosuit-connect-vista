@@ -2461,6 +2461,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
                 panoramicCardCount: panelCount,
+                isCarousel: true,
               },
             });
             if (imgErr) throw imgErr;

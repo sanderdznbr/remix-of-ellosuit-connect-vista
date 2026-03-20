@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName, logoImageUrl, logoPosition } = body;
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {

@@ -5729,10 +5729,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onSelect={setExtremeSelectedFont}
                       />
                     )}
-                    {currentStepName === 'Referências' && extremeAnalysis && (
+                    {currentStepName === 'Referências' && (wizardMode === 'extreme' ? extremeAnalysis : wizardMode === 'advanced') && (
                       <StepExtremeBehanceRefs
-                        vision={extremeVision}
-                        suggestedStyle={extremeAnalysis.suggestedStyle}
+                        vision={wizardMode === 'extreme' ? extremeVision : topic}
+                        suggestedStyle={extremeAnalysis?.suggestedStyle || selectedPreset?.name}
                         selectedImages={extremeBehanceRefs}
                         onSelectionChange={setExtremeBehanceRefs}
                       />

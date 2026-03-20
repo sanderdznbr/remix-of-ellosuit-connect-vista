@@ -75,4 +75,5 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   imageType: 'photo',
   lightingStyle: 'cinematic',
   cameraAngle: 'front',
+  generationMode: 'direct',
 };

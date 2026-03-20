@@ -645,14 +645,15 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       
       const refineContent: any[] = [];
       
-      // Send face references FIRST
-      refineContent.push({ type: 'text', text: `🚨 REFERÊNCIAS FACIAIS — Estas ${validFaceRefs.length} fotos mostram a pessoa EXATA cujo rosto deve aparecer na imagem final. Memorize cada detalhe facial:` });
-      for (const ref of validFaceRefs.slice(0, 6)) {
+      // Send max 3 face refs for Stage 2 to stay within compute limits
+      const stage2FaceRefs = validFaceRefs.slice(0, 3);
+      refineContent.push({ type: 'text', text: `🚨 REFERÊNCIAS FACIAIS — Estas ${stage2FaceRefs.length} fotos mostram a pessoa EXATA cujo rosto deve aparecer na imagem final:` });
+      for (const ref of stage2FaceRefs) {
         refineContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       
       // Then send the generated image
-      refineContent.push({ type: 'text', text: `A imagem abaixo é o RESULTADO ATUAL. Refine o rosto da pessoa para que fique MAIS PARECIDO com as fotos de referência acima:` });
+      refineContent.push({ type: 'text', text: `A imagem abaixo é o RESULTADO ATUAL. Refine o rosto para ficar MAIS PARECIDO com as referências:` });
       refineContent.push({ type: 'image_url', image_url: { url: generatedImage } });
       
       const aspectInstr = outputAspectRatio === '9:16' 
@@ -660,21 +661,18 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         : `Output aspect ratio: ${outputAspectRatio}. Fill the entire canvas.`;
       
       refineContent.push({ type: 'text', text: `REGRAS DE REFINAMENTO FACIAL:
-1. MANTENHA TUDO IDÊNTICO: fundo, roupas, pose corporal, textos, logos, cores, layout, composição, TODOS os elementos gráficos — mude APENAS o rosto para ficar mais fiel às referências.
-2. O rosto DEVE reproduzir EXATAMENTE: estrutura óssea, formato dos olhos, nariz, lábios, sobrancelhas, linha do maxilar, tom de pele, cor e textura do cabelo da pessoa nas referências.
-3. Mantenha a iluminação e ângulo naturais da posição original do rosto.
-4. ${aspectInstr}
-5. O output deve preencher 100% do canvas — SEM bordas, SEM cortes, SEM barras pretas.
-6. NÃO altere, mova ou remova nenhum texto, logo ou elemento de design.
-7. ${singleGender}
-8. Se o rosto já está muito parecido com as referências, faça ajustes SUTIS para máxima fidelidade — não recrie a imagem do zero.
-9. INTEGRAÇÃO ANATÔMICA: O rosto refinado DEVE manter o MESMO tom de pele do pescoço e corpo. A transição entre rosto, pescoço e ombros deve ser INVISÍVEL e natural. NÃO mude o tamanho ou a proporção do rosto — apenas refine as feições para maior semelhança com a referência.` });
+1. MANTENHA TUDO IDÊNTICO: fundo, roupas, pose, textos, logos, cores, layout — mude APENAS o rosto.
+2. O rosto DEVE reproduzir: estrutura óssea, olhos, nariz, lábios, sobrancelhas, tom de pele, cabelo.
+3. ${aspectInstr}. SEM bordas, SEM barras pretas.
+4. ${singleGender}
+5. Ajustes SUTIS — não recrie do zero. Integração anatômica natural.` });
 
-      // Try refinement with premium model only (flash is too imprecise for this)
+      // Use flash model for Stage 2 to avoid WORKER_LIMIT
       let refinedImage: string | null = null;
+      const stage2Model = 'google/gemini-3.1-flash-image-preview';
       
       try {
-        console.log('🎭 Face refinement with gemini-3-pro...');
+        console.log(`🎭 Face refinement with ${stage2Model}...`);
         const refineRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -682,7 +680,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-3-pro-image-preview',
+            model: stage2Model,
             messages: [{ role: 'user', content: refineContent }],
             modalities: ['image', 'text'],
             temperature: 0.05,

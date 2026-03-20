@@ -1233,6 +1233,7 @@ const CarouselGenerator: React.FC = () => {
     facePersonsMetadata?: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[];
     fontReferenceImage?: string;
     fontReferenceName?: string;
+    isCarousel?: boolean;
   }): Promise<string | null> => {
     // Use the model selected by the user (nano-banana = quality default, gemini = fast)
     const resolvedModel = imageSettings.model === 'auto'
@@ -1278,6 +1279,7 @@ const CarouselGenerator: React.FC = () => {
         fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
         faceGender: faceGender,
         facePersonsMetadata: opts.facePersonsMetadata,
+        isCarousel: !!opts.isCarousel,
         ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
@@ -2459,6 +2461,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
                 panoramicCardCount: panelCount,
+                isCarousel: true,
               },
             });
             if (imgErr) throw imgErr;
@@ -3983,6 +3986,7 @@ FORBIDDEN:
         faceReferenceUrls: faceRefUrls.length > 0 ? faceRefUrls : undefined,
         styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
         negativePrompt: negPrompt,
+        isCarousel: true,
       });
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem');
       setCardImage(cardIndex, imageUrl);
@@ -4373,7 +4377,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let attempt = 0; attempt < generationAttempts.length; attempt++) {
           const attemptConfig = generationAttempts[attempt];
           try {
-            const generatedUrl = await generateImage(attemptConfig);
+            const generatedUrl = await generateImage({ ...attemptConfig, isCarousel: true });
             if (generatedUrl) {
               newImageUrl = generatedUrl;
               break;
@@ -4665,6 +4669,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
                 panoramicCardCount: panelCount,
+                isCarousel: true,
               },
             });
             if (imgErr) throw imgErr;

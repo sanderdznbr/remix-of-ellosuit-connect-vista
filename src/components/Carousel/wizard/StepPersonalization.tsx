@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette } from 'lucide-react';
+import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette, ImagePlus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -115,20 +115,20 @@ const StepPersonalization: React.FC<Props> = ({
       <div className="space-y-5" style={{ minHeight: '260px' }}>
         <div>
          <h2 className="text-xl font-bold text-white mb-1.5">Personalização</h2>
-          <p className="text-sm text-white/40">Seu post tem relação com marca, pessoas ou produto?</p>
+          <p className="text-sm text-white/40">O que você quer adicionar ao post?</p>
         </div>
 
         <div className="space-y-2.5">
           {/* Person option */}
           <button
             onClick={() => { setWantsPerson(true); setWantsBrand(false); setExpandedSection('face'); }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
+            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
           >
             <div className="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/25 transition-colors">
               <User className="h-5 w-5 text-blue-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Sim, tem pessoa</p>
+              <p className="text-sm font-medium text-white/80">Pessoa / Rosto</p>
               <p className="text-[11px] text-white/30 mt-0.5">Envie sua foto para aparecer no post</p>
             </div>
           </button>
@@ -136,28 +136,64 @@ const StepPersonalization: React.FC<Props> = ({
           {/* Brand option */}
           <button
             onClick={() => { setWantsBrand(true); setWantsPerson(false); setExpandedSection('brand'); }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
+            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
           >
             <div className="w-11 h-11 rounded-xl bg-purple-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/25 transition-colors">
               <Building2 className="h-5 w-5 text-purple-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Sim, tem marca / logo</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Adicione logomarca e nome da marca</p>
+              <p className="text-sm font-medium text-white/80">Marca / Logo</p>
+              <p className="text-[11px] text-white/30 mt-0.5">Adicione logomarca e cores da marca</p>
             </div>
           </button>
 
           {/* Both option */}
           <button
             onClick={() => { setWantsPerson(true); setWantsBrand(true); setExpandedSection('face'); }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
+            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
           >
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-purple-500/15 flex items-center justify-center flex-shrink-0">
               <span className="text-lg">+</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Ambos</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Pessoa + logomarca no post</p>
+              <p className="text-sm font-medium text-white/80">Pessoa + Marca</p>
+              <p className="text-[11px] text-white/30 mt-0.5">Rosto + logomarca no post</p>
+            </div>
+          </button>
+
+          {/* Media/Photos option */}
+          <button
+            onClick={() => {
+              setWantsPerson(false);
+              setWantsBrand(false);
+              // Open file picker for general media
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*';
+              input.multiple = true;
+              input.onchange = (e) => {
+                const files = (e.target as HTMLInputElement).files;
+                if (!files) return;
+                Array.from(files).forEach(file => {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    if (!ev.target?.result) return;
+                    const url = ev.target.result as string;
+                    setReferenceImages(prev => [...prev, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'style' as const }]);
+                  };
+                  reader.readAsDataURL(file);
+                });
+              };
+              input.click();
+            }}
+            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
+          >
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/25 transition-colors">
+              <ImagePlus className="h-5 w-5 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white/80">Fotos / Mídias</p>
+              <p className="text-[11px] text-white/30 mt-0.5">Envie fotos para usar como referência no post</p>
             </div>
           </button>
 
@@ -165,13 +201,13 @@ const StepPersonalization: React.FC<Props> = ({
           {setHasProduct && (
             <button
               onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
-              className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group"
+              className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
             >
               <div className="w-11 h-11 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/25 transition-colors">
                 <ShoppingBag className="h-5 w-5 text-amber-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white/80">Sim, tem produto</p>
+                <p className="text-sm font-medium text-white/80">Produto</p>
                 <p className="text-[11px] text-white/30 mt-0.5">Envie foto do produto para destaque</p>
               </div>
             </button>
@@ -180,11 +216,31 @@ const StepPersonalization: React.FC<Props> = ({
           {/* Skip */}
           <button
             onClick={onSkipAll}
-            className="w-full py-3 rounded-xl text-sm font-medium text-white/30 hover:text-white/50 border border-white/[0.06] hover:border-white/[0.10] bg-white/[0.02] hover:bg-white/[0.04] transition-all"
+            className="w-full py-3 rounded-xl text-sm font-medium text-white/30 hover:text-white/50 border border-white/[0.06] hover:border-white/[0.10] bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer"
           >
             Não, pular tudo
           </button>
         </div>
+
+        {/* Show uploaded media thumbnails */}
+        {referenceImages.filter(r => r.category !== 'face').length > 0 && (
+          <div className="pt-2">
+            <p className="text-[11px] text-white/40 uppercase tracking-wider mb-2">Mídias adicionadas</p>
+            <div className="flex gap-2 flex-wrap">
+              {referenceImages.filter(r => r.category !== 'face').map((ref, idx) => (
+                <div key={idx} className="relative w-14 h-14 rounded-xl overflow-hidden ring-1 ring-emerald-500/30">
+                  <img src={ref.url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setReferenceImages(prev => prev.filter(r => r.url !== ref.url))}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="h-3 w-3 text-white" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

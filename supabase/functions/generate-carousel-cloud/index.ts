@@ -197,7 +197,11 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     promptParts.push(`TEMA: "${job.topic}"`);
   }
   promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-  promptParts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema. Deixe a área do logo LIMPA e SEM TEXTO.');
+  // Logo is now sent to AI as an image reference — remove the prohibition
+  const hasLogoForAI = !!job.logo_url;
+  if (!hasLogoForAI) {
+    promptParts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem.');
+  }
   const isMarketplaceStyle = !!singlePromptStyle;
   if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
@@ -219,6 +223,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
+    ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
   });
 
   if (!imageUrl) {
@@ -499,7 +504,10 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
       parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt.');
-      parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema.');
+      // Logo is now sent to AI — only prohibit if no logo provided
+      if (!job.logo_url) {
+        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem.');
+      }
 
       if (isCover) {
         parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);
@@ -636,6 +644,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
+          ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {
@@ -653,6 +662,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 fidelity: task.cardGetsFace ? 'high' : 'high',
                 facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
                 ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
+                ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
               });
               if (retryUrl) return { index: task.index, url: retryUrl };
             }

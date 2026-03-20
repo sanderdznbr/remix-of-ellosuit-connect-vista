@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName } = body;
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName, logoImageUrl, logoPosition } = body;
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
@@ -214,8 +214,12 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nFORMATO OBRIGATÓRIO 9:16 STORIES: ${formatInstruction}`;
     }
 
-    // Anti-border + anti-text-copy + anti-grid + anti-brand instruction for ALL modes
-    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\nPROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte.\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM: Cada card DEVE ser UMA ÚNICA composição visual contínua. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens ou sub-quadros. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. A imagem deve ser UMA CENA ÚNICA e UNIFICADA que preenche todo o canvas.`;
+    // Anti-border + anti-text-copy + anti-grid instruction for ALL modes
+    // Logo handling: if logoImageUrl is provided, instruct AI to place it; otherwise prohibit logo rendering
+    const logoInstruction = logoImageUrl
+      ? `LOGOMARCA DO USUÁRIO: A imagem da logomarca do usuário será fornecida separadamente. Você DEVE posicioná-la no canto ${logoPosition === 'top-left' ? 'SUPERIOR ESQUERDO' : logoPosition === 'top-right' ? 'SUPERIOR DIREITO' : logoPosition === 'bottom-left' ? 'INFERIOR ESQUERDO' : 'INFERIOR DIREITO'} da imagem. REGRAS DA LOGO:\n- APLIQUE a logo EXATAMENTE como ela é — NÃO redesenhe, NÃO altere cores, NÃO modifique proporções.\n- A logo deve ser pequena (cerca de 8-12% da largura) e com espaçamento adequado das bordas.\n- NÃO adicione fundo, borda, sombra ou efeito à logo — ela deve flutuar naturalmente sobre o design.\n- Mantenha 100% de FIDELIDADE à imagem original da logo fornecida.`
+      : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte.`;
+    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM: Cada card DEVE ser UMA ÚNICA composição visual contínua. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens ou sub-quadros. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. A imagem deve ser UMA CENA ÚNICA e UNIFICADA que preenche todo o canvas.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity
@@ -427,6 +431,15 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       messageContent.push({ type: 'image_url', image_url: { url: fontReferenceImage } });
       messageContent.push({ type: 'text', text: `REGRA DE TIPOGRAFIA INVIOLÁVEL: A fonte renderizada no post DEVE ser VISUALMENTE IDÊNTICA à imagem de referência acima ("${fontLabel}"). Copie cada detalhe: serifas ou sem serifas, peso (bold/light/regular), largura, espaçamento entre letras, estilo decorativo. A tipografia é tão importante quanto o conteúdo visual. Se a fonte é bold e impactante, use bold e impactante. Se é elegante e fina, use elegante e fina. FIDELIDADE TOTAL.` });
       console.log('Font reference injected:', fontLabel, 'base64 length:', fontReferenceImage.length);
+    }
+
+    // === LOGO IMAGE: Send to AI for placement ===
+    if (logoImageUrl && typeof logoImageUrl === 'string' && (logoImageUrl.startsWith('http') || logoImageUrl.startsWith('data:'))) {
+      const posLabel = logoPosition === 'top-left' ? 'superior esquerdo' : logoPosition === 'top-right' ? 'superior direito' : logoPosition === 'bottom-left' ? 'inferior esquerdo' : 'inferior direito';
+      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DO USUÁRIO ABAIXO — Posicione esta logo EXATAMENTE no canto ${posLabel} da imagem. NÃO redesenhe, NÃO altere cores, NÃO modifique. APLIQUE a imagem da logo tal como ela é, apenas redimensionada para caber (8-12% da largura). Mantenha fidelidade TOTAL:` });
+      messageContent.push({ type: 'image_url', image_url: { url: logoImageUrl } });
+      messageContent.push({ type: 'text', text: `REGRA DA LOGO: A logo acima DEVE aparecer no resultado final EXATAMENTE como fornecida. Apenas reduza o tamanho para ficar proporcional. NÃO invente uma logo diferente. NÃO omita a logo. NÃO adicione efeitos.` });
+      console.log('Logo image injected for AI placement, position:', posLabel);
     }
 
     // === DIAGNOSTIC: Log total message size ===

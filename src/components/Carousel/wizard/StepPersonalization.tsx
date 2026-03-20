@@ -74,7 +74,9 @@ const StepPersonalization: React.FC<Props> = ({
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    () => new Set(setHasProduct ? ['face', 'brand', 'media', 'product'] : ['face', 'brand', 'media'])
+  );
 
   // Auto-expand sections with pre-filled data
   useEffect(() => {
@@ -196,7 +198,11 @@ const StepPersonalization: React.FC<Props> = ({
     <div className="space-y-3" style={{ minHeight: '260px' }}>
       <div>
         <h2 className="text-xl font-bold text-white mb-1">Personalização</h2>
-        <p className="text-sm text-white/40">Adicione rosto, marca e mídias ao post.</p>
+        <p className="text-sm text-white/40">Adicione logo, rosto e mídias nesta mesma tela antes de continuar.</p>
+      </div>
+
+      <div className="rounded-2xl border border-white/[0.08] px-4 py-3 text-sm text-white/55" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
+        Você pode preencher <span className="text-white/80 font-medium">Marca</span> e <span className="text-white/80 font-medium">Fotos / Mídias</span> juntos — não precisa voltar etapa.
       </div>
 
       {/* === FACE SECTION === */}

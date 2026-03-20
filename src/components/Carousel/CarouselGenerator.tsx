@@ -4376,7 +4376,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let attempt = 0; attempt < generationAttempts.length; attempt++) {
           const attemptConfig = generationAttempts[attempt];
           try {
-            const generatedUrl = await generateImage(attemptConfig);
+            const generatedUrl = await generateImage({ ...attemptConfig, isCarousel: true });
             if (generatedUrl) {
               newImageUrl = generatedUrl;
               break;

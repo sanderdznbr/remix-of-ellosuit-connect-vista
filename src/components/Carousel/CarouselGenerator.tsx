@@ -3207,7 +3207,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
             return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
           })();
           const logoImg = await loadImg(logoB64);
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const maxLW = 180, maxLH = 80;
           const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
           const lw = logoImg.width * ls, lh = logoImg.height * ls;

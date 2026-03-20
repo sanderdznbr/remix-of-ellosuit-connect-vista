@@ -2792,7 +2792,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           
           // Add Extreme vision context to each card's prompt
           const carouselExtremeCtx = buildExtremePromptContext();
-          let capturedPrompt = buildImagePrompt(imgPrompt + (carouselExtremeCtx || '')) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          let capturedPrompt = buildImagePrompt(imgPrompt + (carouselExtremeCtx || '')) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE. PROIBIDO MOLDURAS: NÃO adicione molduras, bordas decorativas, frames de celular, frames de dispositivo, sombras de cartão ou qualquer elemento que emoldure a imagem. A imagem deve ser FULL BLEED puro, preenchendo 100% do canvas sem nenhum tipo de frame ou borda.');
           
           if (!hasFaceRefsForGen && peopleMode !== 'none') {
             const shouldHaveRandomPerson = randomPeopleCardIndices.has(i);

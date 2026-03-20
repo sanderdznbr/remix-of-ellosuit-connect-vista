@@ -662,6 +662,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 fidelity: task.cardGetsFace ? 'high' : 'high',
                 facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
                 ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
+                ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
               });
               if (retryUrl) return { index: task.index, url: retryUrl };
             }

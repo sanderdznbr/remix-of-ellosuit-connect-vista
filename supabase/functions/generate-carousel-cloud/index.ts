@@ -575,6 +575,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
   console.log('=== CAROUSEL IMAGE GENERATION ===');
   console.log('Style refs:', allStyleRefs.length, 'Face refs:', faceRefUrls.length);
   console.log('isFullBleed:', isFullBleed, 'promptStyle length:', promptStyle.length);
+  console.log('LOGO:', { url: job.logo_url ? job.logo_url.slice(0, 80) : null, position: job.logo_position });
   console.log('Total image tasks:', imageTasks.length, '/', cards.length, 'cards');
   if (imageTasks.length > 0) {
     console.log('Sample prompt (card 0):', imageTasks[0].prompt.slice(0, 300));

@@ -435,7 +435,7 @@ const CarouselGenerator: React.FC = () => {
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Referências', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -5729,10 +5729,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onSelect={setExtremeSelectedFont}
                       />
                     )}
-                    {currentStepName === 'Referências' && extremeAnalysis && (
+                    {currentStepName === 'Referências' && (wizardMode === 'extreme' ? extremeAnalysis : wizardMode === 'advanced') && (
                       <StepExtremeBehanceRefs
-                        vision={extremeVision}
-                        suggestedStyle={extremeAnalysis.suggestedStyle}
+                        vision={wizardMode === 'extreme' ? extremeVision : topic}
+                        suggestedStyle={extremeAnalysis?.suggestedStyle || activeMarketplaceStyle?.name || ''}
                         selectedImages={extremeBehanceRefs}
                         onSelectionChange={setExtremeBehanceRefs}
                       />

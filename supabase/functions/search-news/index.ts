@@ -257,21 +257,22 @@ Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Po
 
 CRITICAL for clean_topic: Preserve the REAL searchable subject exactly when qualifiers are essential. Keep year, edition, award category, event name, franchise name, person name, movie title, or location whenever they are important to identify the correct subject. Example: if user says "Crie um post sobre Oscar 2026", the clean_topic should be "Oscar 2026". If user says "Melhor ator no Oscar 2026", the clean_topic should be "Oscar 2026 melhor ator". Remove only filler verbs/instructions.
 
-CRITICAL for image_search_terms: You MUST generate 5 search terms. Each term MUST search for REAL PEOPLE by their FULL NAME related to the topic. The goal is to find PHOTOGRAPHS OF PEOPLE (actors, athletes, politicians, CEOs, etc.) — NOT logos, statues, trophies, posters, or graphics with text.
+CRITICAL for image_search_terms: You MUST generate 5 search terms that are DIRECTLY and SPECIFICALLY related to the topic. The goal is to find HIGH-QUALITY PHOTOGRAPHS that visually represent the topic.
 
 RULES:
-1. ALWAYS include the FULL NAME of real people involved (actors, directors, winners, players, politicians, CEOs, etc.)
-2. ALWAYS append "photo" or "photograph" to every search term
-3. NEVER search for objects, trophies, logos, or abstract concepts — search for PEOPLE
-4. Preserve event names and years when relevant
-5. At least 3 of the 5 terms MUST contain a person's full name
+1. EVERY search term MUST be directly about the topic — NEVER generic or tangential
+2. ALWAYS append "photo" or "photograph" or "fotografia" to every search term
+3. For topics about PEOPLE or EVENTS with people (awards, sports, politics): search for real people by FULL NAME
+4. For topics about HEALTH, SCIENCE, PRODUCTS, SERVICES, EDUCATION: search for real photographs of the subject matter (e.g. procedures, results, equipment, before/after)
+5. NEVER generate search terms about unrelated subjects. If the topic is "implantes dentários", ALL 5 terms must be about dental implants
+6. Use the SAME LANGUAGE as the topic for search terms (Portuguese topics → Portuguese search terms)
 
 Examples:
-- For "Oscar 2026": "Michael B Jordan Oscar 2026 photo", "Brady Corbet director photo", "Oscar 2026 best actress winner photo", "Oscar 2026 red carpet celebrities photo", "Demi Moore Oscar ceremony photo"
-- For "Copa do Mundo 2026": "Mbappé Copa do Mundo 2026 photo", "Vinicius Jr seleção brasileira photo", "Lionel Messi World Cup 2026 photo"
-- For "Tesla": "Elon Musk Tesla photo", "Tesla factory workers photo", "Tesla Model 3 driving photo"
-- For "BBB 25": "participantes BBB 25 photo", "Tadeu Schmidt BBB photo", "vencedor BBB 25 photo"
-NEVER use vague generic terms. NEVER search for statues, awards, or graphics.`;
+- For "Oscar 2026": "Michael B Jordan Oscar 2026 photo", "Brady Corbet director photo", "Oscar 2026 red carpet celebrities photo"
+- For "implantes dentários": "implante dentário antes e depois fotografia", "procedimento implante dentário foto", "sorriso com implante dentário foto", "cirurgia implante dentário profissional", "resultado implante dentário paciente foto"
+- For "Tesla": "Elon Musk Tesla photo", "Tesla Model 3 driving photo", "Tesla factory photo"
+- For "marketing digital": "equipe marketing digital escritório foto", "estratégia marketing digital profissional fotografia", "resultados marketing digital gráfico foto"
+NEVER use vague generic terms. NEVER search for unrelated subjects.`;
 
     const userPrompt = `Search for the latest real news, data, and facts about: "${topic}". Focus on recent developments, statistics, and verified information.`;
 

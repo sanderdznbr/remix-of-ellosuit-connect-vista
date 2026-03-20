@@ -4669,6 +4669,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style } : {}),
                 panoramic: true,
                 panoramicCardCount: panelCount,
+                isCarousel: true,
               },
             });
             if (imgErr) throw imgErr;

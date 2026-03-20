@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, FileText, Loader2, Sparkles, ChevronDown, ChevronUp, Copy, Check, Play, Settings, Image, Palette, X, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Upload, FileText, Loader2, Sparkles, ChevronDown, ChevronUp, Copy, Check, Play, Settings, Image, Palette, X, CheckCircle2, AlertCircle, Clock, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import mammoth from 'mammoth';
@@ -30,6 +30,9 @@ interface GenerationConfig {
   marketplaceStyleId: string | null;
   postFormat: 'square' | 'story' | 'portrait';
   brandName: string;
+  imageModel: 'gemini' | 'nano-banana';
+  useBrandColors: boolean;
+  brandColors: string[];
 }
 
 function LogoUploader({ value, onChange, companyId, label }: { value: string; onChange: (url: string) => void; companyId: string | null; label: string }) {
@@ -102,6 +105,9 @@ export default function ContentDocumentParser() {
     marketplaceStyleId: null,
     postFormat: 'square',
     brandName: '',
+    imageModel: 'nano-banana',
+    useBrandColors: false,
+    brandColors: [],
   });
   const [styles, setStyles] = useState<any[]>([]);
   const [stylesLoading, setStylesLoading] = useState(false);
@@ -230,7 +236,11 @@ export default function ContentDocumentParser() {
         logo_dark_url: config.logoDarkUrl,
         logo_position: config.logoPosition,
         show_header: false,
-        image_settings: {} as any,
+        image_settings: {
+          model: config.imageModel,
+          wizardMode: 'simple',
+          ...(config.useBrandColors && config.brandColors.length > 0 ? { brandColors: config.brandColors } : {}),
+        } as any,
         reference_images: [] as any,
         face_ref_urls: [] as any,
         post_format: config.postFormat,
@@ -463,6 +473,63 @@ export default function ContentDocumentParser() {
                       <option value="bottom-center" className="bg-[#111]">Base Centro</option>
                       <option value="bottom-right" className="bg-[#111]">Base Direita</option>
                     </select>
+                  </div>
+
+                  {/* Speed Mode */}
+                  <div>
+                    <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Velocidade de Geração</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setConfig(prev => ({ ...prev, imageModel: 'nano-banana' }))}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                          config.imageModel === 'nano-banana' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'text-white/40 hover:text-white/60'
+                        }`}
+                        style={config.imageModel !== 'nano-banana' ? { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' } : undefined}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Qualidade (~15s)
+                      </button>
+                      <button
+                        onClick={() => setConfig(prev => ({ ...prev, imageModel: 'gemini' }))}
+                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                          config.imageModel === 'gemini' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-white/40 hover:text-white/60'
+                        }`}
+                        style={config.imageModel !== 'gemini' ? { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' } : undefined}
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Rápido (~5s)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Brand Colors Toggle */}
+                  <div>
+                    <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Cores da Marca</label>
+                    <button
+                      onClick={() => setConfig(prev => ({ ...prev, useBrandColors: !prev.useBrandColors }))}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        config.useBrandColors ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'text-white/40 hover:text-white/60'
+                      }`}
+                      style={!config.useBrandColors ? { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' } : undefined}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Palette className="w-3.5 h-3.5" />
+                        Aplicar cores da marca no design
+                      </span>
+                      <span className={`w-4 h-4 rounded-full border-2 transition-colors ${config.useBrandColors ? 'bg-purple-400 border-purple-400' : 'border-white/20'}`} />
+                    </button>
+                    {config.useBrandColors && (
+                      <div className="mt-2">
+                        <input
+                          value={config.brandColors.join(', ')}
+                          onChange={e => setConfig(prev => ({ ...prev, brandColors: e.target.value.split(',').map(c => c.trim()).filter(Boolean) }))}
+                          placeholder="#FF5733, #33FF57, #3357FF"
+                          className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        />
+                        <p className="text-[10px] text-white/25 mt-1">Insira cores HEX separadas por vírgula</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Marketplace Style */}

@@ -417,6 +417,7 @@ const CarouselGenerator: React.FC = () => {
   const hasWebResearch = !skipWebSearch && !!webSearchResult?.content;
   const hasWebImages = !skipWebSearch && Object.keys(cardPhotoAssignments).length > 0;
   const showPesquisaStep = hasWebResearch;
+  const showFotosWebStep = !skipWebSearch && (webSearchResult?.images?.length ?? 0) > 0;
   const showProductStep = wantsProduct;
 
   // Smart Advanced mode: auto-skip steps that aren't relevant

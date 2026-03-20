@@ -223,6 +223,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
+    ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
   });
 
   if (!imageUrl) {

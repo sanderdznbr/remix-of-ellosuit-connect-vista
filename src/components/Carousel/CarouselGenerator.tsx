@@ -1995,7 +1995,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         setImageGenProgress('🏠 Mesclando foto real com overlay IA...');
         console.log('[SINGLE_BLEND] Starting canvas blend...');
         try {
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;

@@ -74,178 +74,30 @@ const StepPersonalization: React.FC<Props> = ({
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const [wantsPerson, setWantsPerson] = useState<boolean | null>(null);
-  const [wantsBrand, setWantsBrand] = useState<boolean | null>(null);
-  const [expandedSection, setExpandedSection] = useState<'face' | 'brand' | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const logoFileRef = useRef<HTMLInputElement>(null);
-  // useCustomColors and customColors are now from props
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
-  // Auto-detect pre-filled data from prompt media and react whenever it changes
+  // Auto-expand sections with pre-filled data
   useEffect(() => {
     const hasFace = facePersons.some(p => p.photos.length > 0);
     const hasLogoData = !!logoUrl;
-    const hasProductData = !!hasProduct;
+    const newExpanded = new Set(expandedSections);
+    if (hasFace) newExpanded.add('face');
+    if (hasLogoData) newExpanded.add('brand');
+    if (newExpanded.size !== expandedSections.size) setExpandedSections(newExpanded);
+  }, [facePersons, logoUrl]);
 
-    if (!hasFace && !hasLogoData && !hasProductData) return;
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
+  };
 
-    if (hasFace) {
-      setWantsPerson(true);
-      setExpandedSection(prev => prev ?? 'face');
-    }
+  const facePhotos = facePersons.flatMap(p => p.photos);
+  const mediaRefs = referenceImages.filter(r => r.category !== 'face');
 
-    if (hasLogoData) {
-      setWantsBrand(true);
-      setExpandedSection(prev => prev ?? (hasFace ? 'face' : 'brand'));
-    }
-
-    if (hasProductData && !hasFace && !hasLogoData) {
-      setWantsPerson(false);
-      setWantsBrand(false);
-    }
-  }, [facePersons, logoUrl, hasProduct]);
-
-  const hasFacePhotos = facePersons.some(p => p.photos.length > 0);
-  const hasLogo = !!logoUrl;
-  const hasBrandInfo = !!brandName || hasLogo;
-
-  // If user hasn't decided yet, show the gate question
-  if (wantsPerson === null && wantsBrand === null) {
-    return (
-      <div className="space-y-5" style={{ minHeight: '260px' }}>
-        <div>
-         <h2 className="text-xl font-bold text-white mb-1.5">Personalização</h2>
-          <p className="text-sm text-white/40">O que você quer adicionar ao post?</p>
-        </div>
-
-        <div className="space-y-2.5">
-          {/* Person option */}
-          <button
-            onClick={() => { setWantsPerson(true); setWantsBrand(false); setExpandedSection('face'); }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
-          >
-            <div className="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/25 transition-colors">
-              <User className="h-5 w-5 text-blue-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Pessoa / Rosto</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Envie sua foto para aparecer no post</p>
-            </div>
-          </button>
-
-          {/* Brand option */}
-          <button
-            onClick={() => { setWantsBrand(true); setWantsPerson(false); setExpandedSection('brand'); }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
-          >
-            <div className="w-11 h-11 rounded-xl bg-purple-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/25 transition-colors">
-              <Building2 className="h-5 w-5 text-purple-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Marca / Logo</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Adicione logomarca e cores da marca</p>
-            </div>
-          </button>
-
-          {/* Both option */}
-          <button
-            onClick={() => { setWantsPerson(true); setWantsBrand(true); setExpandedSection('face'); }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
-          >
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500/15 to-purple-500/15 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">+</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Pessoa + Marca</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Rosto + logomarca no post</p>
-            </div>
-          </button>
-
-          {/* Media/Photos option */}
-          <button
-            onClick={() => {
-              setWantsPerson(false);
-              setWantsBrand(false);
-              // Open file picker for general media
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.accept = 'image/*';
-              input.multiple = true;
-              input.onchange = (e) => {
-                const files = (e.target as HTMLInputElement).files;
-                if (!files) return;
-                Array.from(files).forEach(file => {
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    if (!ev.target?.result) return;
-                    const url = ev.target.result as string;
-                    setReferenceImages(prev => [...prev, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'style' as const }]);
-                  };
-                  reader.readAsDataURL(file);
-                });
-              };
-              input.click();
-            }}
-            className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
-          >
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/25 transition-colors">
-              <ImagePlus className="h-5 w-5 text-emerald-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white/80">Fotos / Mídias</p>
-              <p className="text-[11px] text-white/30 mt-0.5">Envie fotos para usar como referência no post</p>
-            </div>
-          </button>
-
-          {/* Product option */}
-          {setHasProduct && (
-            <button
-              onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
-              className="w-full flex items-center gap-3.5 p-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all text-left group cursor-pointer"
-            >
-              <div className="w-11 h-11 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500/25 transition-colors">
-                <ShoppingBag className="h-5 w-5 text-amber-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white/80">Produto</p>
-                <p className="text-[11px] text-white/30 mt-0.5">Envie foto do produto para destaque</p>
-              </div>
-            </button>
-          )}
-
-          {/* Skip */}
-          <button
-            onClick={onSkipAll}
-            className="w-full py-3 rounded-xl text-sm font-medium text-white/30 hover:text-white/50 border border-white/[0.06] hover:border-white/[0.10] bg-white/[0.02] hover:bg-white/[0.04] transition-all cursor-pointer"
-          >
-            Não, pular tudo
-          </button>
-        </div>
-
-        {/* Show uploaded media thumbnails */}
-        {referenceImages.filter(r => r.category !== 'face').length > 0 && (
-          <div className="pt-2">
-            <p className="text-[11px] text-white/40 uppercase tracking-wider mb-2">Mídias adicionadas</p>
-            <div className="flex gap-2 flex-wrap">
-              {referenceImages.filter(r => r.category !== 'face').map((ref, idx) => (
-                <div key={idx} className="relative w-14 h-14 rounded-xl overflow-hidden ring-1 ring-emerald-500/30">
-                  <img src={ref.url} alt="" className="w-full h-full object-cover" />
-                  <button
-                    onClick={() => setReferenceImages(prev => prev.filter(r => r.url !== ref.url))}
-                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center cursor-pointer"
-                  >
-                    <X className="h-3 w-3 text-white" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Show inline editors based on choices
   const handleFaceUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -268,7 +120,6 @@ const StepPersonalization: React.FC<Props> = ({
               ...updated[0],
               photos: [...updated[0].photos, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'face' as const }],
             };
-            // Sync referenceImages
             const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
             const allFaceRefs = updated.flatMap(p => p.photos);
             setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
@@ -296,7 +147,6 @@ const StepPersonalization: React.FC<Props> = ({
         const { data: urlData } = supabase.storage.from('brand-assets').getPublicUrl(path);
         setLogoUrl(urlData.publicUrl);
       } catch {
-        // Fallback to data URL
         const reader = new FileReader();
         reader.onload = (ev) => {
           if (ev.target?.result) setLogoUrl(ev.target.result as string);
@@ -307,233 +157,292 @@ const StepPersonalization: React.FC<Props> = ({
     input.click();
   };
 
-  const facePhotos = facePersons.flatMap(p => p.photos);
+  const handleMediaUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files) return;
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (!ev.target?.result) return;
+          const url = ev.target.result as string;
+          setReferenceImages(prev => [...prev, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'style' as const }]);
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+    input.click();
+  };
+
+  const SectionHeader = ({ id, icon: Icon, iconColor, label, badge }: { id: string; icon: any; iconColor: string; label: string; badge?: React.ReactNode }) => (
+    <button
+      onClick={() => toggleSection(id)}
+      className="w-full flex items-center justify-between px-4 py-3 text-left"
+    >
+      <div className="flex items-center gap-2.5">
+        <Icon className={`h-4 w-4 ${iconColor}`} />
+        <span className="text-sm font-medium text-white/80">{label}</span>
+        {badge}
+      </div>
+      {expandedSections.has(id) ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}
+    </button>
+  );
 
   return (
-    <div className="space-y-4" style={{ minHeight: '260px' }}>
+    <div className="space-y-3" style={{ minHeight: '260px' }}>
       <div>
         <h2 className="text-xl font-bold text-white mb-1">Personalização</h2>
-        <p className="text-sm text-white/40">Configure pessoa e/ou marca do post.</p>
+        <p className="text-sm text-white/40">Adicione rosto, marca e mídias ao post.</p>
       </div>
 
-      {/* Face section */}
-      {wantsPerson && (
-        <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
-          <button
-            onClick={() => setExpandedSection(expandedSection === 'face' ? null : 'face')}
-            className="w-full flex items-center justify-between px-4 py-3 text-left"
-          >
-            <div className="flex items-center gap-2.5">
-              <User className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-medium text-white/80">Rosto / Pessoa</span>
-              {facePhotos.length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300">{facePhotos.length} foto(s)</span>
-              )}
-            </div>
-            {expandedSection === 'face' ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}
-          </button>
-
-          {expandedSection === 'face' && (
-            <div className="px-4 pb-4 space-y-3">
-              {/* Uploaded face photos */}
-              {facePhotos.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
-                  {facePhotos.map((photo, idx) => (
-                    <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-blue-500/30">
-                      <img src={photo.url} alt="" className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => {
-                          setFacePersons(prev => {
-                            const updated = prev.map(p => ({
-                              ...p,
-                              photos: p.photos.filter(ph => ph.url !== photo.url),
-                            }));
-                            const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
-                            const allFaceRefs = updated.flatMap(p => p.photos);
-                            setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
-                            return updated;
-                          });
-                        }}
-                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button
-                onClick={handleFaceUpload}
-                className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-                {facePhotos.length > 0 ? 'Adicionar mais fotos' : 'Enviar foto do rosto'}
-              </button>
-
-              {/* Gender selector */}
-              <div className="flex gap-2">
-                {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setFaceGender(opt.value as 'male' | 'female' | 'auto')}
-                    className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${faceGender === opt.value ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Brand/Logo section */}
-      {wantsBrand && (
-        <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
-          <button
-            onClick={() => setExpandedSection(expandedSection === 'brand' ? null : 'brand')}
-            className="w-full flex items-center justify-between px-4 py-3 text-left"
-          >
-            <div className="flex items-center gap-2.5">
-              <Building2 className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-medium text-white/80">Marca / Logo</span>
-              {hasBrandInfo && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">ok</span>
-              )}
-            </div>
-            {expandedSection === 'brand' ? <ChevronUp className="h-4 w-4 text-white/30" /> : <ChevronDown className="h-4 w-4 text-white/30" />}
-          </button>
-
-          {expandedSection === 'brand' && (
-            <div className="px-4 pb-4 space-y-4">
-              {/* Logo upload */}
-              <div>
-                <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Logomarca</label>
-                {logoUrl ? (
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-14 h-14 rounded-xl overflow-hidden ring-1 ring-purple-500/30 bg-white/[0.04] flex items-center justify-center">
-                      <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-1" />
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button onClick={handleLogoUpload} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors text-xs">Trocar</button>
-                      <button onClick={() => setLogoUrl('')} className="p-2 rounded-lg bg-white/[0.06] hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-colors text-xs">Remover</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleLogoUpload}
-                    className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Enviar logomarca
-                  </button>
-                )}
-              </div>
-
-
-              {/* Logo position - visual mini-canvas */}
-              {logoUrl && (
-                <div>
-                  <label className="text-[11px] text-white/40 uppercase tracking-wider mb-2 block">Posição do logo</label>
-                  <div className="relative w-full aspect-[4/5] max-w-[160px] rounded-xl border border-white/[0.10] bg-white/[0.03] mx-auto">
-                    {[
-                      { value: 'top-left', style: 'top-2 left-2' },
-                      { value: 'top-right', style: 'top-2 right-2' },
-                      { value: 'bottom-left', style: 'bottom-2 left-2' },
-                      { value: 'bottom-right', style: 'bottom-2 right-2' },
-                    ].map(pos => (
-                      <button
-                        key={pos.value}
-                        onClick={() => setLogoPosition(pos.value as LogoPosition)}
-                        className={`absolute ${pos.style} w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                          logoPosition === pos.value
-                            ? 'bg-purple-500 ring-2 ring-purple-400/50 scale-110'
-                            : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.10]'
-                        }`}
-                      >
-                        {logoPosition === pos.value ? (
-                          <img src={logoUrl} alt="" className="w-4 h-4 object-contain" />
-                        ) : (
-                          <div className="w-2.5 h-2.5 rounded-sm bg-white/20" />
-                        )}
-                      </button>
-                    ))}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <span className="text-[10px] text-white/15 font-medium">POST</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Color options */}
-              {logoUrl && (
-                <div className="space-y-2.5 pt-1">
-                  {/* Brand colors toggle */}
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-sm text-white/60">Usar cores da marca</span>
+      {/* === FACE SECTION === */}
+      <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
+        <SectionHeader
+          id="face"
+          icon={User}
+          iconColor="text-blue-400"
+          label="Rosto / Pessoa"
+          badge={facePhotos.length > 0 ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300">{facePhotos.length} foto(s)</span> : undefined}
+        />
+        {expandedSections.has('face') && (
+          <div className="px-4 pb-4 space-y-3">
+            {facePhotos.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {facePhotos.map((photo, idx) => (
+                  <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-blue-500/30">
+                    <img src={photo.url} alt="" className="w-full h-full object-cover" />
                     <button
-                      onClick={() => { setUseBrandColors(!useBrandColors); if (!useBrandColors) setUseCustomColors(false); }}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
+                      onClick={() => {
+                        setFacePersons(prev => {
+                          const updated = prev.map(p => ({
+                            ...p,
+                            photos: p.photos.filter(ph => ph.url !== photo.url),
+                          }));
+                          const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
+                          const allFaceRefs = updated.flatMap(p => p.photos);
+                          setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
+                          return updated;
+                        });
+                      }}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
                     >
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-5' : 'translate-x-0'}`} />
+                      <X className="h-3 w-3 text-white" />
                     </button>
                   </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={handleFaceUpload}
+              className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+            >
+              <Upload className="h-4 w-4" />
+              {facePhotos.length > 0 ? 'Adicionar mais fotos' : 'Enviar foto do rosto'}
+            </button>
+            <div className="flex gap-2">
+              {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFaceGender(opt.value as 'male' | 'female' | 'auto')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${faceGender === opt.value ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
-                  {/* Custom colors - only when brand colors OFF */}
-                  {!useBrandColors && (
-                    <>
-                      <div className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-2">
-                          <Palette className="h-3.5 w-3.5 text-white/40" />
-                          <span className="text-sm text-white/60">Cores personalizadas</span>
-                        </div>
-                        <button
-                          onClick={() => setUseCustomColors(!useCustomColors)}
-                          className={`relative w-10 h-5 rounded-full transition-colors ${useCustomColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
-                        >
-                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useCustomColors ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                      </div>
-
-                      {useCustomColors && (
-                        <div className="flex items-center gap-3 pt-1">
-                          {customColors.map((color, i) => (
-                            <label key={i} className="relative cursor-pointer group">
-                              <input
-                                type="color"
-                                value={color}
-                                onChange={(e) => {
-                                  const updated = [...customColors];
-                                  updated[i] = e.target.value;
-                                  setCustomColors(updated);
-                                }}
-                                className="sr-only"
-                              />
-                              <div
-                                className="w-10 h-10 rounded-xl border-2 border-white/[0.12] group-hover:border-white/30 transition-colors shadow-lg"
-                                style={{ backgroundColor: color }}
-                              />
-                              <span className="block text-center text-[9px] text-white/30 mt-1">Cor {i + 1}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
+      {/* === BRAND SECTION === */}
+      <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
+        <SectionHeader
+          id="brand"
+          icon={Building2}
+          iconColor="text-purple-400"
+          label="Marca / Logo"
+          badge={logoUrl ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">ok</span> : undefined}
+        />
+        {expandedSections.has('brand') && (
+          <div className="px-4 pb-4 space-y-4">
+            {/* Logo upload */}
+            <div>
+              <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1.5 block">Logomarca</label>
+              {logoUrl ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden ring-1 ring-purple-500/30 bg-white/[0.04] flex items-center justify-center">
+                    <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-1" />
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button onClick={handleLogoUpload} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors text-xs">Trocar</button>
+                    <button onClick={() => setLogoUrl('')} className="p-2 rounded-lg bg-white/[0.06] hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-colors text-xs">Remover</button>
+                  </div>
                 </div>
+              ) : (
+                <button
+                  onClick={handleLogoUpload}
+                  className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+                >
+                  <Upload className="h-4 w-4" />
+                  Enviar logomarca
+                </button>
               )}
             </div>
-          )}
+
+            {/* Logo position */}
+            {logoUrl && (
+              <div>
+                <label className="text-[11px] text-white/40 uppercase tracking-wider mb-2 block">Posição do logo</label>
+                <div className="relative w-full aspect-[4/5] max-w-[160px] rounded-xl border border-white/[0.10] bg-white/[0.03] mx-auto">
+                  {[
+                    { value: 'top-left', style: 'top-2 left-2' },
+                    { value: 'top-right', style: 'top-2 right-2' },
+                    { value: 'bottom-left', style: 'bottom-2 left-2' },
+                    { value: 'bottom-right', style: 'bottom-2 right-2' },
+                  ].map(pos => (
+                    <button
+                      key={pos.value}
+                      onClick={() => setLogoPosition(pos.value as LogoPosition)}
+                      className={`absolute ${pos.style} w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                        logoPosition === pos.value
+                          ? 'bg-purple-500 ring-2 ring-purple-400/50 scale-110'
+                          : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.10]'
+                      }`}
+                    >
+                      {logoPosition === pos.value ? (
+                        <img src={logoUrl} alt="" className="w-4 h-4 object-contain" />
+                      ) : (
+                        <div className="w-2.5 h-2.5 rounded-sm bg-white/20" />
+                      )}
+                    </button>
+                  ))}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-[10px] text-white/15 font-medium">POST</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Color options */}
+            {logoUrl && (
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-sm text-white/60">Usar cores da marca</span>
+                  <button
+                    onClick={() => { setUseBrandColors(!useBrandColors); if (!useBrandColors) setUseCustomColors(false); }}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {!useBrandColors && (
+                  <>
+                    <div className="flex items-center justify-between py-1">
+                      <div className="flex items-center gap-2">
+                        <Palette className="h-3.5 w-3.5 text-white/40" />
+                        <span className="text-sm text-white/60">Cores personalizadas</span>
+                      </div>
+                      <button
+                        onClick={() => setUseCustomColors(!useCustomColors)}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${useCustomColors ? 'bg-purple-500' : 'bg-white/[0.1]'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${useCustomColors ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    {useCustomColors && (
+                      <div className="flex items-center gap-3 pt-1">
+                        {customColors.map((color, i) => (
+                          <label key={i} className="relative cursor-pointer group">
+                            <input
+                              type="color"
+                              value={color}
+                              onChange={(e) => {
+                                const updated = [...customColors];
+                                updated[i] = e.target.value;
+                                setCustomColors(updated);
+                              }}
+                              className="sr-only"
+                            />
+                            <div
+                              className="w-10 h-10 rounded-xl border-2 border-white/[0.12] group-hover:border-white/30 transition-colors shadow-lg"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="block text-center text-[9px] text-white/30 mt-1">Cor {i + 1}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* === MEDIA SECTION === */}
+      <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
+        <SectionHeader
+          id="media"
+          icon={ImagePlus}
+          iconColor="text-emerald-400"
+          label="Fotos / Mídias"
+          badge={mediaRefs.length > 0 ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">{mediaRefs.length}</span> : undefined}
+        />
+        {expandedSections.has('media') && (
+          <div className="px-4 pb-4 space-y-3">
+            {mediaRefs.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {mediaRefs.map((ref, idx) => (
+                  <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden ring-1 ring-emerald-500/30">
+                    <img src={ref.url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setReferenceImages(prev => prev.filter(r => r.url !== ref.url))}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={handleMediaUpload}
+              className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+            >
+              <Upload className="h-4 w-4" />
+              {mediaRefs.length > 0 ? 'Adicionar mais mídias' : 'Enviar fotos de referência'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* === PRODUCT SECTION === */}
+      {setHasProduct && (
+        <div className="rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
+          <button
+            onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
+            className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+          >
+            <ShoppingBag className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-medium text-white/80">Produto</span>
+            {hasProduct && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300">ok</span>}
+          </button>
         </div>
       )}
 
-      {/* Reset choice */}
+      {/* Skip */}
       <button
-        onClick={() => { setWantsPerson(null); setWantsBrand(null); setExpandedSection(null); }}
+        onClick={onSkipAll}
         className="w-full py-2.5 rounded-xl text-xs font-medium text-white/20 hover:text-white/40 transition-colors"
       >
-        Alterar escolha
+        Pular personalização
       </button>
     </div>
   );

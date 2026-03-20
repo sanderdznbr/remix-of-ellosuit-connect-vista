@@ -644,6 +644,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
+          ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {

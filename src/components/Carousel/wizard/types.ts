@@ -29,6 +29,7 @@ export interface ImageSettings {
   imageType: 'photo' | 'illustration' | 'print' | '3d-render' | 'cinematic';
   lightingStyle: 'cinematic' | 'natural' | 'studio' | 'dramatic' | 'soft' | 'neon';
   cameraAngle: 'front' | 'side' | 'low-angle' | 'high-angle' | 'close-up' | 'full-body';
+  generationMode: 'direct' | 'cloud';
 }
 
 export interface FamousPerson {

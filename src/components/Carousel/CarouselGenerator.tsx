@@ -1233,6 +1233,7 @@ const CarouselGenerator: React.FC = () => {
     facePersonsMetadata?: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[];
     fontReferenceImage?: string;
     fontReferenceName?: string;
+    isCarousel?: boolean;
   }): Promise<string | null> => {
     // Use the model selected by the user (nano-banana = quality default, gemini = fast)
     const resolvedModel = imageSettings.model === 'auto'

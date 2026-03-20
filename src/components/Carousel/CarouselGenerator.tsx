@@ -1776,6 +1776,18 @@ const CarouselGenerator: React.FC = () => {
     const jobId = await createCloudJob('single-post');
     if (jobId) {
       setCloudJobId(jobId);
+
+      // === CLOUD MODE: delegate everything to server and return ===
+      if (imageSettings.generationMode === 'cloud') {
+        console.log('[CLOUD_MODE] Delegating single-post to cloud:', jobId);
+        setImageGenProgress('☁️ Enviando para a nuvem...');
+        triggerCloudFallback(jobId);
+        setGeneratingAllImages(false);
+        generationInFlightRef.current = false;
+        // Keep generating=true so the realtime subscription handles completion
+        return;
+      }
+
       // Mark as generating_images immediately so it's not picked up as "pending" by dashboard
       supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', jobId).then(() => {});
     }
@@ -2277,6 +2289,17 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       localJobId = await createCloudJob('carousel');
       if (localJobId) {
         setCloudJobId(localJobId);
+
+        // === CLOUD MODE: delegate everything to server and return ===
+        if (imageSettings.generationMode === 'cloud') {
+          console.log('[CLOUD_MODE] Delegating carousel to cloud:', localJobId);
+          setImageGenProgress('☁️ Enviando para a nuvem...');
+          triggerCloudFallback(localJobId);
+          generationInFlightRef.current = false;
+          // Keep generating=true so the realtime subscription handles completion
+          return;
+        }
+
         // Mark as generating immediately so dashboard doesn't show as "pending" duplicate
         supabase.from('carousel_generation_jobs').update({ status: 'generating_images', progress_message: 'Gerando localmente...' } as any).eq('id', localJobId).then(() => {});
       }
@@ -6037,7 +6060,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}
-                        setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))} />
+                        setImageModel={(m) => setImageSettings(prev => ({ ...prev, model: m }))}
+                        generationMode={imageSettings.generationMode}
+                        setGenerationMode={(m) => setImageSettings(prev => ({ ...prev, generationMode: m }))} />
                     )}
                     </motion.div>
                   </AnimatePresence>

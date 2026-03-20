@@ -2079,7 +2079,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       if (!useRealEstateBlend && logoUrl && finalImageUrl) {
         try {
           console.log('[LOGO_OVERLAY] Adding logo to single post...');
-          const W = 1080, H = 1350;
+          const W = cardW, H = cardH;
           const canvas = document.createElement('canvas');
           canvas.width = W; canvas.height = H;
           const ctx = canvas.getContext('2d')!;

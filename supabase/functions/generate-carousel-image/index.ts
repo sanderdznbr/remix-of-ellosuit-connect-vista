@@ -138,48 +138,35 @@ Deno.serve(async (req) => {
       } catch { return false; }
     };
 
-    // === SMART REF BUDGET: prevents WORKER_LIMIT (546) errors ===
-    // Single post = more generous (function called once)
-    // Carousel = strict (function called N times, resources shared)
+    // === SMART REF BUDGET (BACKEND SAFETY NET) ===
+    // Frontend already caps refs, but this is the HARD LIMIT safety net.
+    // These limits are absolute — they prevent WORKER_LIMIT (546) errors no matter what.
     const isSinglePost = !isCarousel;
     const BUDGET = isSinglePost
-      ? { maxTotal: 8, maxFace: 5, maxStyle: 6, maxGeneral: 2, maxFont: 1, maxLogo: 1 }
-      : { maxTotal: 5, maxFace: 3, maxStyle: 3, maxGeneral: 1, maxFont: 1, maxLogo: 1 };
+      ? { maxTotal: 8, maxFace: 5, maxStyle: 6, maxGeneral: 2 }
+      : { maxTotal: 5, maxFace: 3, maxStyle: 3, maxGeneral: 1 };
 
     let validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, BUDGET.maxFace).filter(isUrlAccessible) : [];
     let validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, BUDGET.maxStyle).filter(isUrlAccessible) : [];
     let validGeneralRefs = hasGeneralRefs ? referenceImageUrls.slice(0, BUDGET.maxGeneral).filter(isUrlAccessible) : [];
-    
-    // Dynamic rebalancing: ensure total never exceeds budget
-    const extraSlots = (slot: string) => {
-      const used = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length;
-      return Math.max(0, BUDGET.maxTotal - used);
-    };
 
-    const totalBeforeCap = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length;
-    if (totalBeforeCap > BUDGET.maxTotal) {
-      // Priority: face > general (product) > style
-      const faceSlots = Math.min(validFaceRefs.length, BUDGET.maxFace);
-      const generalSlots = Math.min(validGeneralRefs.length, Math.max(1, BUDGET.maxTotal - faceSlots));
-      const styleSlots = Math.min(validStyleRefs.length, Math.max(0, BUDGET.maxTotal - faceSlots - generalSlots));
-      validFaceRefs = validFaceRefs.slice(0, faceSlots);
-      validGeneralRefs = validGeneralRefs.slice(0, generalSlots);
-      validStyleRefs = validStyleRefs.slice(0, styleSlots);
-    }
-
-    // If font ref or logo will be added, reduce style refs to stay in budget
+    // Hard rebalance: face > general > style priority
     const willAddFont = !!fontReferenceImage;
     const willAddLogo = !!(logoImageUrl && typeof logoImageUrl === 'string' && (logoImageUrl.startsWith('http') || logoImageUrl.startsWith('data:')));
-    const extraImages = (willAddFont ? 1 : 0) + (willAddLogo ? 1 : 0);
-    const finalTotal = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length + extraImages;
-    if (finalTotal > BUDGET.maxTotal && validStyleRefs.length > 1) {
-      const overflow = finalTotal - BUDGET.maxTotal;
-      validStyleRefs = validStyleRefs.slice(0, Math.max(1, validStyleRefs.length - overflow));
-    }
-    
-    const filteredCount = (faceReferenceUrls?.length || 0) + (styleReferenceUrls?.length || 0) + (referenceImageUrls?.length || 0) - validFaceRefs.length - validStyleRefs.length - validGeneralRefs.length;
-    if (filteredCount > 0) console.log(`Filtered/capped ${filteredCount} refs`);
-    console.log(`REF BUDGET [${isSinglePost ? 'SINGLE' : 'CAROUSEL'}]: face=${validFaceRefs.length}/${BUDGET.maxFace}, style=${validStyleRefs.length}/${BUDGET.maxStyle}, general=${validGeneralRefs.length}/${BUDGET.maxGeneral}, font=${willAddFont?1:0}, logo=${willAddLogo?1:0}, total=${validFaceRefs.length+validStyleRefs.length+validGeneralRefs.length+extraImages}/${BUDGET.maxTotal}`);
+    const fixedSlots = (willAddFont ? 1 : 0) + (willAddLogo ? 1 : 0);
+    const availableForRefs = BUDGET.maxTotal - fixedSlots;
+
+    // Step 1: cap face refs
+    validFaceRefs = validFaceRefs.slice(0, Math.min(validFaceRefs.length, availableForRefs));
+    // Step 2: cap general refs with remaining budget
+    const afterFace = availableForRefs - validFaceRefs.length;
+    validGeneralRefs = validGeneralRefs.slice(0, Math.min(validGeneralRefs.length, Math.max(0, afterFace)));
+    // Step 3: cap style refs with remaining budget
+    const afterGeneral = afterFace - validGeneralRefs.length;
+    validStyleRefs = validStyleRefs.slice(0, Math.min(validStyleRefs.length, Math.max(0, afterGeneral)));
+
+    const totalRefs = validFaceRefs.length + validStyleRefs.length + validGeneralRefs.length + fixedSlots;
+    console.log(`REF BUDGET [${isSinglePost ? 'SINGLE' : 'CAROUSEL'}]: face=${validFaceRefs.length}/${BUDGET.maxFace}, style=${validStyleRefs.length}/${BUDGET.maxStyle}, general=${validGeneralRefs.length}/${BUDGET.maxGeneral}, font=${willAddFont?1:0}, logo=${willAddLogo?1:0}, total=${totalRefs}/${BUDGET.maxTotal}`);
 
     // === DIAGNOSTIC LOGGING ===
     console.log('=== IMAGE GEN REQUEST ===');

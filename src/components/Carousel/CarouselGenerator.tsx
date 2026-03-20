@@ -2792,7 +2792,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           
           // Add Extreme vision context to each card's prompt
           const carouselExtremeCtx = buildExtremePromptContext();
-          let capturedPrompt = buildImagePrompt(imgPrompt + (carouselExtremeCtx || '')) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE.');
+          let capturedPrompt = buildImagePrompt(imgPrompt + (carouselExtremeCtx || '')) + (isFullBleedMarketplace ? '' : '. Clean professional photo, NO TEXT OR WORDS IN THE IMAGE. PROIBIDO MOLDURAS: NÃO adicione molduras, bordas decorativas, frames de celular, frames de dispositivo, sombras de cartão ou qualquer elemento que emoldure a imagem. A imagem deve ser FULL BLEED puro, preenchendo 100% do canvas sem nenhum tipo de frame ou borda.');
           
           if (!hasFaceRefsForGen && peopleMode !== 'none') {
             const shouldHaveRandomPerson = randomPeopleCardIndices.has(i);
@@ -2960,7 +2960,13 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
 
         if (coverFactory) {
-          const coverUrl = await coverFactory.factory();
+          let coverUrl = await coverFactory.factory();
+          // Retry cover once if it fails — cover is critical
+          if (!coverUrl) {
+            console.warn('[COVER RETRY] Cover generation failed, retrying...');
+            await new Promise(r => setTimeout(r, 3000));
+            coverUrl = await coverFactory.factory();
+          }
           completed++;
           setImageGenProgress(`${completed}/${totalAi} imagens geradas...`);
           if (coverUrl) updatedCards[coverFactory.index] = { ...updatedCards[coverFactory.index], imageUrl: coverUrl, isAiImage: true, generatedPrompt: coverFactory.prompt };

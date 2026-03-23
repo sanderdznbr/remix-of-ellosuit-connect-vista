@@ -7291,6 +7291,170 @@ export type Database = {
           },
         ]
       }
+      ycloud_conversations: {
+        Row: {
+          company_id: string
+          contact_name: string | null
+          contact_phone: string
+          created_at: string | null
+          id: string
+          last_message: string | null
+          last_message_at: string | null
+          session_id: string
+          unread_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          session_id: string
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          last_message_at?: string | null
+          session_id?: string
+          unread_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ycloud_conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ycloud_conversations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ycloud_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ycloud_messages: {
+        Row: {
+          company_id: string
+          content: string | null
+          conversation_id: string
+          created_at: string | null
+          from_me: boolean | null
+          id: string
+          media_url: string | null
+          message_type: string | null
+          raw_payload: Json | null
+          status: string | null
+          wamid: string | null
+          ycloud_message_id: string | null
+        }
+        Insert: {
+          company_id: string
+          content?: string | null
+          conversation_id: string
+          created_at?: string | null
+          from_me?: boolean | null
+          id?: string
+          media_url?: string | null
+          message_type?: string | null
+          raw_payload?: Json | null
+          status?: string | null
+          wamid?: string | null
+          ycloud_message_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          content?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          from_me?: boolean | null
+          id?: string
+          media_url?: string | null
+          message_type?: string | null
+          raw_payload?: Json | null
+          status?: string | null
+          wamid?: string | null
+          ycloud_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ycloud_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ycloud_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ycloud_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ycloud_sessions: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          phone_number: string | null
+          status: string | null
+          updated_at: string | null
+          waba_id: string | null
+          webhook_secret: string | null
+          ycloud_api_key: string
+          ycloud_phone_number_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          phone_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+          waba_id?: string | null
+          webhook_secret?: string | null
+          ycloud_api_key: string
+          ycloud_phone_number_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          phone_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+          waba_id?: string | null
+          webhook_secret?: string | null
+          ycloud_api_key?: string
+          ycloud_phone_number_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ycloud_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

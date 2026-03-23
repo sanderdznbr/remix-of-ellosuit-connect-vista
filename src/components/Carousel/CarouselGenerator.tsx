@@ -534,6 +534,7 @@ const CarouselGenerator: React.FC = () => {
   const [classifyingTopic, setClassifyingTopic] = useState(false);
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
+  const [forceWebSearch, setForceWebSearch] = useState(false);
 
   const assignPerCardWebPhotos = useCallback(async (
     outline: { title?: string; body?: string }[],

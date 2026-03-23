@@ -7062,22 +7062,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         textColor={textColor} setTextColor={setTextColor}
                         selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         onApplyMarketplaceStyle={(config) => {
-                          setActiveMarketplaceStyle(config);
-                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                           setShowStylePanel(false);
                           setStyleChangeSource('toolbar');
-                          propertyListRef.current = propertyList;
-                          activeMarketplaceStyleRef.current = config;
-                          generationSnapshotRef.current = {
-                            isRealEstate: !!config?.is_real_estate,
-                            realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
-                            propertyList: JSON.parse(JSON.stringify(propertyList)),
-                            marketplaceStyle: config ? { ...config } : null,
-                          };
-                          setTransitionToGenerate(true);
-                          setCurrentCarouselId(null);
-                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
-                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          setRecreateVisualIdea('');
+                          setPendingRecreateConfig(config);
                         }}
                       />
                     ) : (

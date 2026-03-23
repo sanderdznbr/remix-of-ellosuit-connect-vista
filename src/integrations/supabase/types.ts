@@ -7293,6 +7293,10 @@ export type Database = {
       }
       ycloud_conversations: {
         Row: {
+          ai_auto_reply_enabled: boolean | null
+          ai_thinking: boolean | null
+          ai_thinking_since: string | null
+          assigned_agent_id: string | null
           company_id: string
           contact_name: string | null
           contact_phone: string
@@ -7300,11 +7304,16 @@ export type Database = {
           id: string
           last_message: string | null
           last_message_at: string | null
+          profile_picture: string | null
           session_id: string
           unread_count: number | null
           updated_at: string | null
         }
         Insert: {
+          ai_auto_reply_enabled?: boolean | null
+          ai_thinking?: boolean | null
+          ai_thinking_since?: string | null
+          assigned_agent_id?: string | null
           company_id: string
           contact_name?: string | null
           contact_phone: string
@@ -7312,11 +7321,16 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_at?: string | null
+          profile_picture?: string | null
           session_id: string
           unread_count?: number | null
           updated_at?: string | null
         }
         Update: {
+          ai_auto_reply_enabled?: boolean | null
+          ai_thinking?: boolean | null
+          ai_thinking_since?: string | null
+          assigned_agent_id?: string | null
           company_id?: string
           contact_name?: string | null
           contact_phone?: string
@@ -7324,11 +7338,19 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_at?: string | null
+          profile_picture?: string | null
           session_id?: string
           unread_count?: number | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ycloud_conversations_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ycloud_conversations_company_id_fkey"
             columns: ["company_id"]
@@ -7353,6 +7375,7 @@ export type Database = {
           created_at: string | null
           from_me: boolean | null
           id: string
+          is_ai_response: boolean | null
           media_url: string | null
           message_type: string | null
           raw_payload: Json | null
@@ -7367,6 +7390,7 @@ export type Database = {
           created_at?: string | null
           from_me?: boolean | null
           id?: string
+          is_ai_response?: boolean | null
           media_url?: string | null
           message_type?: string | null
           raw_payload?: Json | null
@@ -7381,6 +7405,7 @@ export type Database = {
           created_at?: string | null
           from_me?: boolean | null
           id?: string
+          is_ai_response?: boolean | null
           media_url?: string | null
           message_type?: string | null
           raw_payload?: Json | null

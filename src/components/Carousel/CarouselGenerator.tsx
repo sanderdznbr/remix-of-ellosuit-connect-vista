@@ -6110,8 +6110,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
+                            // Force web search when toggle is ON
+                            if (currentStepName === 'Tema' && forceWebSearch && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
+                              setWebSearchDecisionMade(true);
+                              await handleSearchWeb();
+                              return;
+                            }
                             // Smart web search classification on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade && !forceWebSearch) {
                               // Classify the topic first
                               setClassifyingTopic(true);
                               let shouldSearch = true; // Default: always search on failure

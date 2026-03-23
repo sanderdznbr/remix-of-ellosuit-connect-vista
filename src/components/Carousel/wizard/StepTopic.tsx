@@ -53,6 +53,7 @@ const StepTopic: React.FC<Props> = ({
   contentMode, manualPostText, setManualPostText,
   wizardMode = 'advanced', setContentMode, guestMode = false,
   webSearchSuggestion, onAcceptWebSearch, onDeclineWebSearch, classifyingTopic,
+  forceWebSearch = false, setForceWebSearch,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
   const t = getThemeClasses(getAccentTheme(wizardMode));

@@ -6098,19 +6098,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
                               // Classify the topic first
                               setClassifyingTopic(true);
+                              let shouldSearch = true; // Default: always search on failure
                               try {
                                 const { data, error } = await supabase.functions.invoke('generate-carousel', {
                                   body: { action: 'classify-topic', topic: topic.trim() },
                                 });
                                 if (!error && data) {
-                                  if (data.shouldSearch) {
-                                    // Auto-search immediately without asking
-                                    setWebSearchDecisionMade(true);
-                                    setClassifyingTopic(false);
-                                    await handleSearchWeb();
-                                    // Don't advance — let user see results and click Continue again
-                                    return;
-                                  } else {
+                                  shouldSearch = data.shouldSearch !== false; // Only skip if explicitly false
+                                  if (!shouldSearch) {
                                     // Personal/opinion content - skip web search automatically
                                     setSkipWebSearch(true);
                                     setWebSearchDecisionMade(true);
@@ -6118,11 +6113,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 }
                               } catch (err) {
                                 console.error('Classification error:', err);
-                                // On error, skip search and continue
-                                setSkipWebSearch(true);
-                                setWebSearchDecisionMade(true);
+                                // On error, default to searching
+                                shouldSearch = true;
                               }
                               setClassifyingTopic(false);
+                              if (shouldSearch) {
+                                setWebSearchDecisionMade(true);
+                                await handleSearchWeb();
+                                // Don't advance — let user see results and click Continue again
+                                return;
+                              }
                             }
                             if (currentStepName === 'Tema' && hasManualText && !topic.trim()) {
                               setTopic(manualPostText.trim());

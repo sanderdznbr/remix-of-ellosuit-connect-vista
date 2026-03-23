@@ -39,6 +39,8 @@ interface Props {
   onAcceptWebSearch?: () => void;
   onDeclineWebSearch?: () => void;
   classifyingTopic?: boolean;
+  forceWebSearch?: boolean;
+  setForceWebSearch?: (v: boolean) => void;
 }
 
 const StepTopic: React.FC<Props> = ({

@@ -7291,6 +7291,65 @@ export type Database = {
           },
         ]
       }
+      ycloud_contacts: {
+        Row: {
+          company_id: string
+          contact_name: string | null
+          contact_phone: string
+          conversation_id: string | null
+          created_at: string | null
+          has_conversation: boolean | null
+          id: string
+          last_message_at: string | null
+          profile_picture: string | null
+          session_id: string
+          source: string | null
+          status: string | null
+          updated_at: string | null
+          ycloud_contact_id: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_name?: string | null
+          contact_phone: string
+          conversation_id?: string | null
+          created_at?: string | null
+          has_conversation?: boolean | null
+          id?: string
+          last_message_at?: string | null
+          profile_picture?: string | null
+          session_id: string
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          ycloud_contact_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_name?: string | null
+          contact_phone?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          has_conversation?: boolean | null
+          id?: string
+          last_message_at?: string | null
+          profile_picture?: string | null
+          session_id?: string
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          ycloud_contact_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ycloud_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ycloud_conversations: {
         Row: {
           ai_auto_reply_enabled: boolean | null
@@ -7306,6 +7365,7 @@ export type Database = {
           last_message_at: string | null
           profile_picture: string | null
           session_id: string
+          status: string | null
           unread_count: number | null
           updated_at: string | null
         }
@@ -7323,6 +7383,7 @@ export type Database = {
           last_message_at?: string | null
           profile_picture?: string | null
           session_id: string
+          status?: string | null
           unread_count?: number | null
           updated_at?: string | null
         }
@@ -7340,6 +7401,7 @@ export type Database = {
           last_message_at?: string | null
           profile_picture?: string | null
           session_id?: string
+          status?: string | null
           unread_count?: number | null
           updated_at?: string | null
         }

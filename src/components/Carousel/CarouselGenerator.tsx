@@ -7079,21 +7079,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onChangeGlobalFontScale={(v) => updateAllCards({ fontScale: v / 100 })}
                         onApplyPreset={(preset) => setActivePresetId(preset.id)}
                         onRecreateWithStyle={(config) => {
-                          setActiveMarketplaceStyle(config);
-                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                           setShowStylePanel(false);
-                          propertyListRef.current = propertyList;
-                          activeMarketplaceStyleRef.current = config;
-                          generationSnapshotRef.current = {
-                            isRealEstate: !!config?.is_real_estate,
-                            realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
-                            propertyList: JSON.parse(JSON.stringify(propertyList)),
-                            marketplaceStyle: config ? { ...config } : null,
-                          };
-                          setTransitionToGenerate(true);
-                          setCurrentCarouselId(null);
-                          const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
-                          setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                          setRecreateVisualIdea('');
+                          setPendingRecreateConfig(config);
                         }} />
                     )}
                   </div>

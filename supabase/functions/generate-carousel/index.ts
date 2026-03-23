@@ -558,6 +558,15 @@ IMPORTANTE sobre imagePrompt e searchTerms:
 - Se menciona MARCAS, inclua o nome + "logo" ou "produto" em searchTerms
 - imagePrompt deve descrever a cena visual detalhadamente (iluminação, composição, estilo)
 - searchTerms são para buscar referências reais na web
+
+CRIATIVIDADE VISUAL OBRIGATÓRIA NOS imagePrompts:
+- Cada imagePrompt DEVE ser uma composição CINEMATOGRÁFICA e EDITORIAL rica, com múltiplos elementos visuais.
+- NUNCA gere um imagePrompt que descreva APENAS um objeto isolado (ex: apenas um celular, apenas um produto). Sempre adicione contexto visual rico: mãos interagindo, pessoas usando, ambientes detalhados, iluminação dramática, partículas, reflexos, profundidade de campo.
+- Para temas de TECNOLOGIA/APP/SOFTWARE: varie entre mockups 3D flutuantes com partículas luminosas, pessoa usando o app em cenário urbano noturno com neon, tela do app em perspectiva isométrica com elementos saindo da tela, mão segurando celular em ambiente elegante com reflexos, dispositivos em composição editorial com gradientes e luzes volumétricas. NUNCA repita a mesma abordagem visual entre cards.
+- Para temas de SAÚDE/BELEZA: alterne entre close-ups cinematográficos, profissionais em ação, resultados antes/depois estilizados, equipamentos em composição editorial, ambientes clínicos modernos com iluminação suave.
+- Para temas de NEGÓCIOS/MARKETING: use composições com gráficos 3D, pessoas em reuniões dinâmicas, escritórios modernos, flat-lays estilizados, cenários corporativos com iluminação dramática.
+- Para temas GERAIS: crie composições visuais INESPERADAS e MEMORÁVEIS que surpreendam — use metáforas visuais, contrastes de escala, iluminação cinematográfica, texturas ricas e ângulos criativos.
+- REGRA DE VARIAÇÃO: Nenhum card pode ter a mesma abordagem visual de outro. Se um card mostra um mockup de frente, o próximo DEVE ter ângulo diferente, cenário diferente, composição diferente. Diversidade visual é OBRIGATÓRIA.
 ${styleImagePromptInstructions}
 
 Responda APENAS em JSON válido:

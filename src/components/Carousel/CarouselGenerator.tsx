@@ -534,6 +534,7 @@ const CarouselGenerator: React.FC = () => {
   const [classifyingTopic, setClassifyingTopic] = useState(false);
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
+  const [forceWebSearch, setForceWebSearch] = useState(false);
 
   const assignPerCardWebPhotos = useCallback(async (
     outline: { title?: string; body?: string }[],
@@ -712,6 +713,7 @@ const CarouselGenerator: React.FC = () => {
     setClassifyingTopic(false);
     setWebSearchSuggestion(null);
     setWebSearchDecisionMade(false);
+    setForceWebSearch(false);
     setCurrentCarouselId(null);
     setPexelsImages([]);
     setShowImagePicker(null);
@@ -791,7 +793,17 @@ const CarouselGenerator: React.FC = () => {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
       const { data } = await supabase.from('brand_assets').select('id, name, file_url, category').eq('company_id', cu.company_id).eq('file_type', 'image').order('created_at', { ascending: false });
-      if (data) setBrandAssets(data);
+      if (data) {
+        setBrandAssets(data);
+        // Auto-load logo from brand assets if not already set
+        if (!logoUrl) {
+          const logo = data.find(a => a.category === 'logo');
+          if (logo) {
+            setLogoUrl(logo.file_url);
+            console.log('[AutoBrand] Logo auto-loaded from brand assets:', logo.file_url);
+          }
+        }
+      }
     };
     fetchBrandAssets();
   }, [user?.id]);
@@ -5883,6 +5895,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setWebSearchDecisionMade(true);
                           setSkipWebSearch(true);
                         }}
+                        forceWebSearch={forceWebSearch}
+                        setForceWebSearch={(v) => {
+                          setForceWebSearch(v);
+                          if (v) { setSkipWebSearch(false); setWebSearchDecisionMade(false); }
+                        }}
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
@@ -6094,8 +6111,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
+                            // Force web search when toggle is ON
+                            if (currentStepName === 'Tema' && forceWebSearch && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
+                              setWebSearchDecisionMade(true);
+                              await handleSearchWeb();
+                              return;
+                            }
                             // Smart web search classification on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade) {
+                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade && !forceWebSearch) {
                               // Classify the topic first
                               setClassifyingTopic(true);
                               let shouldSearch = true; // Default: always search on failure

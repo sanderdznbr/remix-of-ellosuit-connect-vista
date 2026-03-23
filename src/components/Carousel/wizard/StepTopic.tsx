@@ -39,6 +39,8 @@ interface Props {
   onAcceptWebSearch?: () => void;
   onDeclineWebSearch?: () => void;
   classifyingTopic?: boolean;
+  forceWebSearch?: boolean;
+  setForceWebSearch?: (v: boolean) => void;
 }
 
 const StepTopic: React.FC<Props> = ({
@@ -51,6 +53,7 @@ const StepTopic: React.FC<Props> = ({
   contentMode, manualPostText, setManualPostText,
   wizardMode = 'advanced', setContentMode, guestMode = false,
   webSearchSuggestion, onAcceptWebSearch, onDeclineWebSearch, classifyingTopic,
+  forceWebSearch = false, setForceWebSearch,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
   const t = getThemeClasses(getAccentTheme(wizardMode));
@@ -132,7 +135,27 @@ const StepTopic: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Manual toggle removed from advanced mode — AI classifies and suggests automatically */}
+          {/* Force web search toggle */}
+          {setForceWebSearch && !classifyingTopic && !searchingWeb && (
+            <button
+              onClick={() => setForceWebSearch(!forceWebSearch)}
+              className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all w-full"
+              style={{
+                backgroundColor: forceWebSearch ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${forceWebSearch ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              }}
+            >
+              <Globe className="h-4 w-4" style={{ color: forceWebSearch ? '#60A5FA' : 'rgba(255,255,255,0.3)' }} />
+              <span className="text-sm" style={{ color: forceWebSearch ? '#93C5FD' : 'rgba(255,255,255,0.4)' }}>
+                Buscar na web (notícias / dados atuais)
+              </span>
+              <div className="ml-auto">
+                <div className={`relative w-9 h-5 rounded-full transition-colors ${forceWebSearch ? 'bg-blue-500' : 'bg-white/[0.1]'}`}>
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${forceWebSearch ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </div>
+            </button>
+          )}
 
           {/* Web search loading indicators */}
           {classifyingTopic && (

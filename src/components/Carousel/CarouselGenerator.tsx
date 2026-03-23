@@ -5894,6 +5894,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setWebSearchDecisionMade(true);
                           setSkipWebSearch(true);
                         }}
+                        forceWebSearch={forceWebSearch}
+                        setForceWebSearch={(v) => {
+                          setForceWebSearch(v);
+                          if (v) { setSkipWebSearch(false); setWebSearchDecisionMade(false); }
+                        }}
                         setContentMode={(mode) => {
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }

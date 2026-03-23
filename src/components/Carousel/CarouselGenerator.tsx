@@ -376,6 +376,8 @@ const CarouselGenerator: React.FC = () => {
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
   const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card' | 'recreate'>('toolbar');
+  const [pendingRecreateConfig, setPendingRecreateConfig] = useState<any>(null);
+  const [recreateVisualIdea, setRecreateVisualIdea] = useState('');
   const [pendingAddCardStyle, setPendingAddCardStyle] = useState<any>(null);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
   const [postCaption, setPostCaption] = useState('');

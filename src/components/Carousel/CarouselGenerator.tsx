@@ -437,7 +437,7 @@ const CarouselGenerator: React.FC = () => {
     : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Referências', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -2906,10 +2906,20 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
             
             // === AUTO-ASSIGN WEB SEARCH REAL PHOTO ===
-            // Only use the card-specific assignment generated from the roteiro text
+            // Priority 1: card-specific assignment from roteiro
             if (!capturedProductRefs && !skipWebSearch && cardPhotoAssignments[i]) {
               capturedProductRefs = [cardPhotoAssignments[i]];
               console.log(`[WEB_PHOTO] Card ${i}: using card-specific assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
+            }
+            // Priority 2: user-selected web photos from 'Fotos' step (round-robin)
+            if (!capturedProductRefs && webImagePool.length > 0) {
+              const poolIdx = i % webImagePool.length;
+              const webUrl = webImagePool[poolIdx];
+              if (webUrl && !usedImageUrls.has(webUrl)) {
+                capturedProductRefs = [webUrl];
+                usedImageUrls.add(webUrl);
+                console.log(`[WEB_PHOTO] Card ${i}: using user-selected web photo:`, webUrl?.substring(0, 80));
+              }
             }
           }
           
@@ -5743,7 +5753,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onSelect={setExtremeSelectedFont}
                       />
                     )}
-                    {currentStepName === 'Referências' && (wizardMode === 'extreme' ? extremeAnalysis : wizardMode === 'advanced') && (
+                    {currentStepName === 'Referências' && wizardMode === 'extreme' && extremeAnalysis && (
                       <StepExtremeBehanceRefs
                         vision={wizardMode === 'extreme' ? extremeVision : topic}
                         suggestedStyle={extremeAnalysis?.suggestedStyle || activeMarketplaceStyle?.name || ''}

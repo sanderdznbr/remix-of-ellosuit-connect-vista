@@ -2906,10 +2906,20 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             capturedProductRefs = mergedProductUrls.length > 0 ? [...mergedProductUrls] : undefined;
             
             // === AUTO-ASSIGN WEB SEARCH REAL PHOTO ===
-            // Only use the card-specific assignment generated from the roteiro text
+            // Priority 1: card-specific assignment from roteiro
             if (!capturedProductRefs && !skipWebSearch && cardPhotoAssignments[i]) {
               capturedProductRefs = [cardPhotoAssignments[i]];
               console.log(`[WEB_PHOTO] Card ${i}: using card-specific assignment:`, cardPhotoAssignments[i]?.substring(0, 80));
+            }
+            // Priority 2: user-selected web photos from 'Fotos' step (round-robin)
+            if (!capturedProductRefs && webImagePool.length > 0) {
+              const poolIdx = i % webImagePool.length;
+              const webUrl = webImagePool[poolIdx];
+              if (webUrl && !usedImageUrls.has(webUrl)) {
+                capturedProductRefs = [webUrl];
+                usedImageUrls.add(webUrl);
+                console.log(`[WEB_PHOTO] Card ${i}: using user-selected web photo:`, webUrl?.substring(0, 80));
+              }
             }
           }
           

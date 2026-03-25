@@ -7725,7 +7725,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </span>
               </div>
               <button
-                onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { exportAllCards('png'); } }}
+                onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
                 disabled={exporting}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
                 style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}

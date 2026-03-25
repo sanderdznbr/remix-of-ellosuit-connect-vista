@@ -1188,16 +1188,23 @@ const CarouselGenerator: React.FC = () => {
         if (!userData.user) return;
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
         if (!companyData) return;
+
+        let dataToPersist = carouselData;
+        if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
+          const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+          dataToPersist = { ...carouselData, cards: renderedCards };
+          setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+        }
         
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
         const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
         
         if (currentCarouselIdRef.current) {
           await supabase.from('generated_carousels').update({ 
-            title: carouselData.title || topic, topic, 
+            title: dataToPersist.title || topic, topic, 
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), 
-            carousel_data: carouselData as any, style_config: styleConfig as any, 
-            card_count: carouselData.cards.length,
+            carousel_data: dataToPersist as any, style_config: styleConfig as any, 
+            card_count: dataToPersist.cards.length,
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
             generation_config: buildGenerationConfig(),
           } as any).eq('id', currentCarouselIdRef.current);
@@ -1205,7 +1212,7 @@ const CarouselGenerator: React.FC = () => {
           try {
             const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselIdRef.current).single();
             if (!existing?.cover_url) {
-              captureCoverImage(currentCarouselIdRef.current, companyData.company_id, carouselData).catch(() => {});
+              captureCoverImage(currentCarouselIdRef.current, companyData.company_id, dataToPersist).catch(() => {});
             }
           } catch { /* ignore */ }
         } else if (!generationInFlightRef.current) {
@@ -1214,343 +1221,36 @@ const CarouselGenerator: React.FC = () => {
           try {
             const { data: inserted, error } = await supabase.from('generated_carousels').insert({
               company_id: companyData.company_id, user_id: userData.user.id,
-              title: carouselData.title || topic, topic,
+              title: dataToPersist.title || topic, topic,
               keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-              carousel_data: carouselData as any, style_config: styleConfig as any,
-              card_count: carouselData.cards.length,
+              carousel_data: dataToPersist as any, style_config: styleConfig as any,
+              card_count: dataToPersist.cards.length,
               marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
               generation_config: buildGenerationConfig(),
               post_format: postFormat,
             } as any).select('id').single();
             if (inserted && !error) {
               setCurrentCarouselId(inserted.id);
-              captureCoverImage(inserted.id, companyData.company_id, carouselData).catch(() => {});
+              captureCoverImage(inserted.id, companyData.company_id, dataToPersist).catch(() => {});
             }
           } finally { isSavingRef.current = false; }
         } else {
           console.log('[AUTO-SAVE] Skipping INSERT: generation in flight');
         }
         
-        lastSavedDataRef.current = dataHash;
+        lastSavedDataRef.current = JSON.stringify({ cards: dataToPersist.cards.map(c => ({ ...c })), title: dataToPersist.title });
         setAutoSaveStatus('saved');
         setTimeout(() => setAutoSaveStatus('idle'), 2000);
       } catch (err) {
         console.error('Auto-save error:', err);
         setAutoSaveStatus('idle');
       }
-    }, 3000); // 3s debounce
-    
-    return () => { if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current); };
-  }, [carouselData, bgColor, accentColor, textColor, selectedFont, brandName, userName, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, isLoadedFullBleed, loadedMarketplaceStyleId, regeneratingAll, regeneratingCard]);
+    }, 1500);
 
-  // Export dialog is now a centered modal, no outside-click handler needed
-
-  // ===== BUILD IMAGE PROMPT with settings =====
-  const buildImagePrompt = (basePrompt: string, cardIndex?: number): string => {
-    const parts: string[] = [];
-
-    // If marketplace style has imageGeneration config, use its prompt_style as the foundation
-    const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
-    if (styleImageGen?.prompt_style) {
-      parts.push(styleImageGen.prompt_style);
-      if (styleImageGen.prompt_prefix) {
-        parts.push(styleImageGen.prompt_prefix);
-      }
-      parts.push(`CONTENT FOR THIS CARD: ${basePrompt}`);
-    } else {
-      // Default: use image type
-      const typeMap: Record<string, string> = {
-        'photo': 'Professional photorealistic photograph',
-        'cinematic': 'Cinematic film still, movie-quality',
-        'illustration': 'High-quality digital illustration, artistic',
-        'print': 'Screenshot/print of a digital interface, UI design',
-        '3d-render': 'Professional 3D render, octane render quality',
-      };
-      parts.push(typeMap[imageSettings.imageType] || 'Professional photograph');
-      parts.push(basePrompt);
-    }
-
-    // Body position
-    if (imageSettings.bodyPosition) {
-      const posMap: Record<string, string> = {
-        'standing': 'person standing upright',
-        'sitting': 'person sitting',
-        'walking': 'person walking confidently',
-        'leaning': 'person leaning casually',
-        'arms-crossed': 'person with arms crossed confidently',
-        'presenting': 'person presenting/gesturing',
-        'pointing': 'person pointing forward',
-      };
-      parts.push(posMap[imageSettings.bodyPosition] || '');
-    }
-
-    // Hand object
-    if (imageSettings.handObject) {
-      const handMap: Record<string, string> = {
-        'smartphone': `holding a smartphone${imageSettings.phoneScreen ? ` showing ${imageSettings.phoneScreen} on the screen` : ''}`,
-        'laptop': 'holding/using a laptop',
-        'tablet': 'holding a tablet',
-        'coffee': 'holding a coffee cup',
-        'pen': 'holding a pen/stylus',
-        'microphone': 'holding a microphone',
-        'product': 'holding a product box',
-        'document': 'holding a document/paper',
-      };
-      parts.push(handMap[imageSettings.handObject] || '');
-    }
-
-    // Lighting
-    const lightMap: Record<string, string> = {
-      'cinematic': 'cinematic lighting with dramatic shadows',
-      'natural': 'natural daylight, warm tones',
-      'studio': 'studio lighting, clean and professional',
-      'dramatic': 'dramatic high-contrast lighting, deep shadows',
-      'soft': 'soft diffused lighting, gentle shadows',
-      'neon': 'neon lighting, cyberpunk atmosphere, colorful glow',
+    return () => {
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
-    parts.push(lightMap[imageSettings.lightingStyle] || 'cinematic lighting');
-
-    // Camera angle
-    const angleMap: Record<string, string> = {
-      'front': 'front view',
-      'side': 'side profile view',
-      'low-angle': 'low angle shot looking up',
-      'high-angle': 'high angle shot looking down',
-      'close-up': 'close-up portrait',
-      'full-body': 'full body shot',
-    };
-    parts.push(angleMap[imageSettings.cameraAngle] || '');
-
-    // Fidelity
-    if (imageSettings.fidelity === 'high') {
-      parts.push('Extremely faithful to reference images. Reproduce exact features, colors, and details.');
-    } else if (imageSettings.fidelity === 'creative') {
-      parts.push('Creative artistic interpretation inspired by the references. Take artistic liberties.');
-    }
-
-    // Face attributes (gender + glasses) + STRONG FIDELITY
-    const hasFaceRefs = referenceImages.some(r => r.category === 'face');
-    const activeFacePersons = facePersons.filter(p => p.photos.length > 0);
-    if (hasFaceRefs && activeFacePersons.length > 0) {
-      if (activeFacePersons.length === 1) {
-        const p = activeFacePersons[0];
-        parts.push('FACE REFERENCE FIDELITY (CRITICAL): The face in this image MUST be an EXACT match to the uploaded face reference photos. Preserve the EXACT same facial structure, nose shape, eye shape, eyebrow shape, jawline, skin tone, skin texture, lip shape, and all distinctive features. The person must be immediately recognizable as the SAME individual from the reference photos. Do NOT change or stylize facial features. Do NOT use a different person. This is the #1 priority.');
-        if (p.gender === 'male') parts.push('The person in the image MUST be MALE with a masculine body and build.');
-        else if (p.gender === 'female') parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
-        if (p.wearsGlasses) parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
-      } else {
-        parts.push(`MULTIPLE PEOPLE (CRITICAL): This image MUST contain exactly ${activeFacePersons.length} distinct people. Each person MUST match their respective face reference photos EXACTLY. Preserve facial structure, nose shape, eye shape, jawline, skin tone, and all distinctive features for EACH person.`);
-        activeFacePersons.forEach((p, idx) => {
-          const label = p.label || `Pessoa ${idx + 1}`;
-          let desc = `${label}:`;
-          if (p.gender === 'male') desc += ' MALE with masculine build.';
-          else if (p.gender === 'female') desc += ' FEMALE with feminine build.';
-          if (p.wearsGlasses) desc += ' MUST wear glasses.';
-          parts.push(desc);
-        });
-      }
-    } else if (hasFaceRefs) {
-      // Fallback for legacy data without facePersons
-      parts.push('FACE REFERENCE FIDELITY (CRITICAL): The face in this image MUST be an EXACT match to the uploaded face reference photos. Preserve the EXACT same facial structure, nose shape, eye shape, eyebrow shape, jawline, skin tone, skin texture, lip shape, and all distinctive features. The person must be immediately recognizable as the SAME individual from the reference photos. Do NOT change or stylize facial features. Do NOT use a different person. This is the #1 priority.');
-      if (faceGender === 'male') parts.push('The person in the image MUST be MALE with a masculine body and build.');
-      else if (faceGender === 'female') parts.push('The person in the image MUST be FEMALE with a feminine body and build.');
-      if (wearsGlasses) parts.push('The person MUST be wearing glasses/eyeglasses. This is mandatory.');
-    } else if (!hasFaceRefs && peopleMode === 'none') {
-      // Explicit NO PEOPLE instruction
-      parts.push('CRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. The image must contain ONLY visual elements, objects, graphics, text overlays, and abstract/decorative elements. NO HUMANS whatsoever.');
-    } else if (!hasFaceRefs && peopleMode !== 'none') {
-      // Random person mode
-      const genderMap: Record<string, string> = {
-        'random-female': 'The person MUST be FEMALE with a feminine body and build.',
-        'random-male': 'The person MUST be MALE with a masculine body and build.',
-        'random-auto': 'The AI can choose an appropriate gender for the person.',
-      };
-      parts.push(`Include a person/model in this image. ${genderMap[peopleMode] || ''} Use a photorealistic, professional-looking person that fits the editorial context. The person should look confident and natural.`);
-    }
-
-    // Brand colors — only inject when toggle is ON
-    if (useBrandColors && logoBrandColors.length > 0) {
-      parts.push(`PALETA DE CORES DA MARCA (OBRIGATÓRIO): Use predominantemente estas cores: ${logoBrandColors.join(', ')}. Essas cores DEVEM dominar a composição, fundos, elementos decorativos, tipografia e acentos visuais. NÃO ignore estas cores. MANTENHA o estilo editorial e layout do template, mas SUBSTITUA a paleta de cores original pelas cores da marca. O fundo deve combinar com a paleta da marca (tons claros ou da cor dominante).`);
-    }
-
-    // Custom colors — inject when user selects custom palette
-    if (useCustomColors && customColors.length > 0) {
-      parts.push(`PALETA DE CORES PERSONALIZADA (PRIORIDADE MÁXIMA - SUBSTITUI CORES DO ESTILO): Use EXCLUSIVAMENTE estas cores como base da composição: ${customColors.join(', ')}. Essas cores DEVEM dominar TODOS os elementos visuais: fundos, gradientes, tipografia, formas decorativas e acentos. IGNORE completamente a paleta de cores original do estilo/template. A imagem DEVE ser predominantemente nessas cores.`);
-    }
-
-    // Only add aspect ratio for non-panoramic prompts — format-aware
-    if (!basePrompt.includes('PANORÂMICA CONTÍNUA')) {
-      const fmtDims = FORMAT_DIMENSIONS[postFormat];
-      const aspectLabel = postFormat === 'square' ? '1:1 square' : postFormat === 'story' ? '9:16 vertical story' : '4:5 portrait';
-      parts.push(`${aspectLabel} aspect ratio, ${fmtDims.w}x${fmtDims.h}px, ultra high resolution`);
-    } else {
-      parts.push('ultra high resolution');
-    }
-
-    // Real estate property context
-    if (isRealEstateStyle && propertyList.length > 0 && propertyList.some(p => p.price || p.area || p.photos.length > 0)) {
-      const propContext = buildPropertyPromptContext(propertyList, realEstateMode, cardIndex ?? 0);
-      if (propContext) parts.push(propContext);
-    }
-
-    return parts.filter(Boolean).join('. ');
-  };
-
-  // ===== GENERATE IMAGE (routes to Gemini or Higgsfield) =====
-  const generateImage = async (opts: {
-    prompt: string;
-    faceReferenceUrls?: string[];
-    styleReferenceUrls?: string[];
-    referenceImageUrls?: string[];
-    negativePrompt?: string;
-    facePersonsMetadata?: { label: string; gender: string; wearsGlasses: boolean; photoCount: number }[];
-    fontReferenceImage?: string;
-    fontReferenceName?: string;
-    isCarousel?: boolean;
-  }): Promise<string | null> => {
-    // Use the model selected by the user (nano-banana = quality default, gemini = fast)
-    const resolvedModel = imageSettings.model === 'auto'
-      ? 'nano-banana'
-      : imageSettings.model;
-
-    // === HIGGSFIELD PATH ===
-    if (resolvedModel === 'higgsfield') {
-      const { data, error } = await supabase.functions.invoke('higgsfield-generate', {
-        body: {
-          action: 'generate-and-wait',
-          prompt: opts.prompt,
-          model_id: imageSettings.higgsFieldModel || 'higgsfield-ai/soul/standard',
-          aspect_ratio: '3:4',
-          resolution: '720p',
-          max_wait_seconds: 120,
-        },
-      });
-      if (error) throw error;
-      if (data?.success && data?.imageUrl) return data.imageUrl;
-      if (data?.error) throw new Error(data.error);
-      return null;
-    }
-
-    // === GEMINI / NANO BANANA PATH ===
-    const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
-    
-    // === SMART REF BUDGET (FRONTEND) — cap references BEFORE sending to edge function ===
-    // This prevents 546 WORKER_LIMIT errors by ensuring the payload is always within safe limits.
-    // Single post: more generous (one invocation). Carousel: strict (N invocations share resources).
-    const isCarouselMode = !!opts.isCarousel;
-    const REF_LIMITS = isCarouselMode
-      ? { maxFace: 3, maxStyle: 3, maxGeneral: 1, maxTotal: 5 }
-      : { maxFace: 5, maxStyle: 6, maxGeneral: 2, maxTotal: 8 };
-
-    let cappedFaceRefs = (opts.faceReferenceUrls || []).slice(0, REF_LIMITS.maxFace);
-    let cappedStyleRefs = (opts.styleReferenceUrls || []).slice(0, REF_LIMITS.maxStyle);
-    let cappedGeneralRefs = (opts.referenceImageUrls || []).slice(0, REF_LIMITS.maxGeneral);
-
-    // Dynamic rebalance: if total exceeds budget, trim lower-priority refs (style first, then general)
-    const fontSlot = opts.fontReferenceImage ? 1 : 0;
-    let currentTotal = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
-    if (currentTotal > REF_LIMITS.maxTotal) {
-      // Trim style refs first
-      const overflow1 = currentTotal - REF_LIMITS.maxTotal;
-      const styleToKeep = Math.max(1, cappedStyleRefs.length - overflow1);
-      cappedStyleRefs = cappedStyleRefs.slice(0, styleToKeep);
-      currentTotal = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
-      // If still over, trim general refs
-      if (currentTotal > REF_LIMITS.maxTotal) {
-        const overflow2 = currentTotal - REF_LIMITS.maxTotal;
-        cappedGeneralRefs = cappedGeneralRefs.slice(0, Math.max(0, cappedGeneralRefs.length - overflow2));
-      }
-    }
-
-    const finalRefCount = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
-    console.log(`[REF_BUDGET_FE] mode=${isCarouselMode ? 'CAROUSEL' : 'SINGLE'} face=${cappedFaceRefs.length} style=${cappedStyleRefs.length} general=${cappedGeneralRefs.length} font=${fontSlot} total=${finalRefCount}/${REF_LIMITS.maxTotal}`);
-
-    // Add timeout to prevent infinite loading (90s max per image)
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Image generation timeout (90s)')), 90000)
-    );
-    
-    const invokePromise = supabase.functions.invoke('generate-carousel-image', {
-      body: {
-        prompt: opts.prompt,
-        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '3:4',
-        topic: opts.prompt,
-        faceReferenceUrls: cappedFaceRefs.length > 0 ? cappedFaceRefs : undefined,
-        styleReferenceUrls: cappedStyleRefs.length > 0 ? cappedStyleRefs : undefined,
-        referenceImageUrls: cappedGeneralRefs.length > 0 ? cappedGeneralRefs : undefined,
-        imageModel: resolvedModel,
-        negativePrompt: opts.negativePrompt,
-        fidelity: styleImageGen?.fidelity || imageSettings.fidelity,
-        faceGender: faceGender,
-        facePersonsMetadata: opts.facePersonsMetadata,
-        isCarousel: isCarouselMode,
-        ...(styleImageGen?.prompt_style ? { stylePrompt: styleImageGen.prompt_style + (activeMarketplaceStyleRef.current?._strictInstructions ? `\n\nINSTRUÇÕES RÍGIDAS DO ESTILO (PRIORIDADE MÁXIMA - SIGA À RISCA):\n${activeMarketplaceStyleRef.current._strictInstructions}` : '') } : {}),
-        ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
-        ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
-        ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
-      },
-    });
-    
-    const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
-    if (error) throw error;
-    if (data?.code === 'CONTENT_BLOCKED' || data?.error?.includes('filtros de segurança')) {
-      throw new Error('⚠️ Suas fotos foram bloqueadas pelos filtros de segurança da IA. Por favor, envie imagens apropriadas e tente novamente.');
-    }
-    if (data?.success && data?.imageUrl) return data.imageUrl;
-    if (data?.error) throw new Error(data.error);
-    return null;
-  };
-
-  // ===== ENHANCE PROMPT =====
-  const enhancePrompt = async (inputTopic?: string) => {
-    const baseTopic = (inputTopic ?? topic).trim();
-    if (!baseTopic) { toast({ title: 'Insira um tópico primeiro', variant: 'destructive' }); return; }
-    setEnhancingPrompt(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: { action: 'enhance-prompt', prompt: baseTopic, topic: baseTopic },
-      });
-      if (error) throw error;
-      if (data?.enhancedPrompt) { setTopic(data.enhancedPrompt); toast({ title: 'Prompt melhorado com IA!' }); }
-    } catch (err) {
-      toast({ title: 'Erro ao melhorar prompt', variant: 'destructive' });
-    } finally {
-      setEnhancingPrompt(false);
-    }
-  };
-
-  // ===== GENERATE CAPTION =====
-  const openCaptionConfigDialog = () => {
-    setShowCaptionConfigDialog(true);
-  };
-
-  const generateCaption = async (maxChars?: string, mentions?: string) => {
-    if (generatingCaption) return;
-    setGeneratingCaption(true);
-    setShowCaptionPanel(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: {
-          action: 'generate-caption',
-          topic: topic.trim(),
-          keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount: carouselData?.cards?.length || 7,
-          ...(maxChars ? { maxChars: parseInt(maxChars) } : {}),
-          ...(mentions ? { mentions: mentions.trim() } : {}),
-        },
-      });
-      if (!error && data?.caption) {
-        setPostCaption(data.caption);
-      } else {
-        const fallback = `${carouselData?.title || topic}\n\n📌 Salve esse post para consultar depois!\n\n#${topic.split(' ').slice(0, 3).map(w => w.replace(/[^a-zA-ZÀ-ú0-9]/g, '')).filter(Boolean).join(' #')}`;
-        setPostCaption(fallback);
-      }
-    } catch {
-      toast({ title: 'Erro ao gerar legenda', variant: 'destructive' });
-    } finally {
-      setGeneratingCaption(false);
-    }
-  };
+  }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig]);
 
   // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
@@ -1678,19 +1378,26 @@ const CarouselGenerator: React.FC = () => {
       if (!userData.user) throw new Error('Não autenticado');
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
+      let dataToPersist = carouselData;
+      if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
+        const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+        dataToPersist = { ...carouselData, cards: renderedCards };
+        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+      }
+
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
       const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover, continuousMode };
       const effectiveId = currentCarouselIdRef.current;
       if (effectiveId) {
-        await supabase.from('generated_carousels').update({ title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).eq('id', effectiveId);
+        await supabase.from('generated_carousels').update({ title: dataToPersist.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: dataToPersist as any, style_config: styleConfig as any, card_count: dataToPersist.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).eq('id', effectiveId);
         // Capture real rendered card as cover in background
-        captureCoverImage(effectiveId, companyData.company_id).catch(() => {});
+        captureCoverImage(effectiveId, companyData.company_id, dataToPersist).catch(() => {});
         toast({ title: 'Carrossel atualizado!' });
       } else {
-        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: carouselData.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: carouselData as any, style_config: styleConfig as any, card_count: carouselData.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).select('id').single();
+        const { data: inserted } = await supabase.from('generated_carousels').insert({ company_id: companyData.company_id, user_id: userData.user.id, title: dataToPersist.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: dataToPersist as any, style_config: styleConfig as any, card_count: dataToPersist.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).select('id').single();
         setCurrentCarouselId(inserted?.id || null);
         // Capture real rendered card as cover in background
-        if (inserted?.id) captureCoverImage(inserted.id, companyData.company_id).catch(() => {});
+        if (inserted?.id) captureCoverImage(inserted.id, companyData.company_id, dataToPersist).catch(() => {});
         toast({ title: 'Carrossel salvo!' });
       }
     } catch (err: any) {

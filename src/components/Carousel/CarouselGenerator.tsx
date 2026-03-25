@@ -398,6 +398,7 @@ const CarouselGenerator: React.FC = () => {
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
+  const tweetPhotoUploadCardIndexRef = useRef<number>(0);
   const [tweetPhotoUploadCardIndex, setTweetPhotoUploadCardIndex] = useState<number>(0);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const activeMarketplaceStyleRef = useRef<any>(null);
@@ -449,7 +450,7 @@ const CarouselGenerator: React.FC = () => {
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
-  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(tweetConfig.photoMode === 'web' ? ['Pesquisa', ...(showFotosWebStep ? ['Fotos'] : [])] : []), 'Roteiro Tweet'];
+  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet'];
   const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -1908,6 +1909,7 @@ const CarouselGenerator: React.FC = () => {
         paddingScale: 1.05,
         textAlign: 'left' as const,
         uniformFontSize: maxTextLen, // pass to renderer for uniform sizing
+        photoFit: tweetConfig.photoFit,
       }));
 
       console.log('[TweetCanvas] Rendering', cards.length, 'cards:', cards.map(c => c.body?.substring(0, 40)));
@@ -4308,6 +4310,10 @@ FORBIDDEN:
       .map((ref) => ref.url)
       .filter(Boolean);
 
+    // Calculate uniform font size across all cards (use max text length)
+    const allTexts = cards.map((card) => (card.body || card.bodyTop || card.title || '').length);
+    const maxTextLen = Math.max(...allTexts, 50);
+
     const renderedImages = await renderAllTweetCards(
       cfg,
       cards.map((card, i) => ({
@@ -4320,6 +4326,8 @@ FORBIDDEN:
         fontScale: card.fontScale,
         paddingScale: card.paddingScale,
         textAlign: card.textAlign,
+        uniformFontSize: maxTextLen,
+        photoFit: cfg.photoFit,
       })),
       formatDims,
     );
@@ -6583,6 +6591,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             if (currentStepName === 'Tema' && hasManualText) {
                               setSkipWebSearch(true);
                             }
+                            // Tweet mode: auto-set photoMode when user selected web images
+                            if (currentStepName === 'Fotos' && wizardMode === 'tweet') {
+                              const selectedWebImgs = referenceImages.filter(r => r.category === 'general');
+                              if (selectedWebImgs.length > 0 && tweetConfig.photoMode === 'none') {
+                                setTweetConfig(prev => ({ ...prev, photoMode: 'web' }));
+                              }
+                            }
                             // Formato step (advanced)
                             if (currentStepName === 'Formato') {
                               if (cardCount === 1) {
@@ -7086,6 +7101,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <>
                             <button
                               onClick={() => {
+                                tweetPhotoUploadCardIndexRef.current = activeCardIndex;
                                 setTweetPhotoUploadCardIndex(activeCardIndex);
                                 tweetCardPhotoInputRef.current?.click();
                               }}
@@ -7110,6 +7126,37 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-red-300 hover:text-red-200 hover:bg-white/[0.06] transition-all w-full">
                                 <ImageMinus className="h-4 w-4 text-red-400" /> Remover Foto
                               </button>
+                            )}
+
+                            {/* Photo fit mode selector — show when any card has photo */}
+                            {tweetConfig.tweetPhotos.some(p => p) && (
+                              <div className="flex items-center gap-1.5 px-3 py-2">
+                                <span className="text-[11px] text-white/30 mr-1">Ajuste:</span>
+                                {([
+                                  { key: 'cover' as const, label: 'Preencher' },
+                                  { key: 'contain' as const, label: 'Caber' },
+                                  { key: 'fill' as const, label: 'Esticar' },
+                                ] as const).map(opt => (
+                                  <button key={opt.key}
+                                    onClick={() => {
+                                      const updatedConfig = { ...tweetConfig, photoFit: opt.key };
+                                      setTweetConfig(updatedConfig);
+                                      if (carouselData) {
+                                        const newCards = [...carouselData.cards];
+                                        void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
+                                          setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                                        });
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                                      tweetConfig.photoFit === opt.key
+                                        ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                        : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
+                                    }`}>
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
                             )}
                           </>
                         )}
@@ -9085,12 +9132,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file && carouselData) {
+            const cardIdx = tweetPhotoUploadCardIndexRef.current;
             const url = URL.createObjectURL(file);
             const newPhotos = [...tweetConfig.tweetPhotos];
-            while (newPhotos.length <= tweetPhotoUploadCardIndex) newPhotos.push(null);
-            newPhotos[tweetPhotoUploadCardIndex] = url;
+            while (newPhotos.length <= cardIdx) newPhotos.push(null);
+            newPhotos[cardIdx] = url;
             const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' as const : tweetConfig.photoMode };
             setTweetConfig(updatedConfig);
+            console.log('[TweetPhoto] Inserted photo for card', cardIdx, 'photoMode:', updatedConfig.photoMode, 'url:', url.substring(0, 50));
             // re-render tweet cards with updated config
             const newCards = [...carouselData.cards];
             void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {

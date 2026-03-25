@@ -5278,17 +5278,84 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const mimeType = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
       const quality = format === 'png' ? undefined : 0.92;
 
+      // Tweet mode: render each card at full resolution via off-screen DOM capture
+      const isTweetExport = wizardMode === 'tweet' && carouselData.cards.some(c => c.type === 'tweet');
+
+      const captureTweetAtFullRes = async (cardIndex: number): Promise<HTMLCanvasElement> => {
+        const card = carouselData!.cards[cardIndex];
+        const cardText = card.body || card.bodyTop || card.title || '';
+        const resolvedPhoto = cardPhotoAssignments[cardIndex] || tweetConfig.tweetPhotos[cardIndex] || null;
+
+        // Create off-screen container with full resolution TweetCard
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = `${cardW}px`;
+        container.style.height = `${cardH}px`;
+        container.style.zIndex = '-1';
+        document.body.appendChild(container);
+
+        // Render TweetCard via ReactDOM
+        const { createRoot } = await import('react-dom/client');
+        const root = createRoot(container);
+        await new Promise<void>((resolve) => {
+          root.render(
+            React.createElement(TweetCard, {
+              config: tweetConfig,
+              text: cardText,
+              photo: resolvedPhoto,
+              photoFit: tweetConfig.photoFit,
+              width: cardW,
+              height: cardH,
+              photoHeight: tweetPhotoHeights[cardIndex],
+              fontSizeOverride: tweetFontSizeOverride ?? undefined,
+            })
+          );
+          setTimeout(resolve, 300);
+        });
+
+        // Wait for images inside
+        const imgs = container.querySelectorAll('img');
+        if (imgs.length > 0) {
+          await Promise.all(Array.from(imgs).map(img =>
+            img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
+          ));
+        }
+
+        const isDark = tweetConfig.theme === 'dark';
+        const canvas = await html2canvas(container.firstElementChild as HTMLElement || container, {
+          width: cardW,
+          height: cardH,
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: isDark ? '#000000' : '#FFFFFF',
+          logging: false,
+          imageTimeout: 30000,
+        });
+
+        root.unmount();
+        document.body.removeChild(container);
+        return canvas;
+      };
+
       if (asZip) {
         const JSZip = (await import('jszip')).default;
         const zip = new JSZip();
         
         for (let i = 0; i < carouselData.cards.length; i++) {
-          const el = cardRefs.current[i];
-          if (!el) continue;
-          const canvas = await html2canvas(el, {
-            width: cardW, height: cardH, scale: 2, useCORS: true, allowTaint: true,
-            backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 30000,
-          });
+          let canvas: HTMLCanvasElement;
+          if (isTweetExport) {
+            canvas = await captureTweetAtFullRes(i);
+          } else {
+            const el = cardRefs.current[i];
+            if (!el) continue;
+            canvas = await html2canvas(el, {
+              width: cardW, height: cardH, scale: 2, useCORS: true, allowTaint: true,
+              backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 30000,
+            });
+          }
           const blob = await new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((b) => {
               if (b) resolve(b);
@@ -5309,13 +5376,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         for (let i = 0; i < carouselData.cards.length; i++) {
-          const el = cardRefs.current[i];
-          if (!el) continue;
-          const canvas = await html2canvas(el, {
-            width: cardW, height: cardH, scale: 1, useCORS: true, allowTaint: false,
-            backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
-            onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
-          });
+          let canvas: HTMLCanvasElement;
+          if (isTweetExport) {
+            canvas = await captureTweetAtFullRes(i);
+          } else {
+            const el = cardRefs.current[i];
+            if (!el) continue;
+            canvas = await html2canvas(el, {
+              width: cardW, height: cardH, scale: 1, useCORS: true, allowTaint: false,
+              backgroundColor: bgColor || '#0A0A1A', logging: false, imageTimeout: 15000,
+              onclone: (clonedDoc) => { clonedDoc.querySelectorAll('img').forEach(img => { img.crossOrigin = 'anonymous'; }); },
+            });
+          }
           const link = document.createElement('a');
           link.download = `carousel-card-${i + 1}.${format}`;
           link.href = canvas.toDataURL(mimeType, quality);

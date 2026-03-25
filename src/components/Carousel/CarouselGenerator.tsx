@@ -6437,9 +6437,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           } else {
                             // Tweet mode: sync cardCount from tweetConfig
                             if (wizardMode === 'tweet') {
-                              setCardCount(tweetConfig.cardCount);
-                              setImageCardCount(tweetConfig.cardCount);
-                              if (tweetConfig.cardCount === 1) {
+                              const tweetCards = tweetConfig.cardCount;
+                              setCardCount(tweetCards);
+                              setImageCardCount(tweetCards);
+                              if (tweetCards === 1) {
                                 setContentMode('single-post');
                               } else {
                                 setContentMode('carousel');

@@ -402,7 +402,7 @@ const CarouselGenerator: React.FC = () => {
   const tweetPhotoUploadCardIndexRef = useRef<number>(0);
   const [tweetPhotoUploadCardIndex, setTweetPhotoUploadCardIndex] = useState<number>(0);
   const [tweetPhotoHeights, setTweetPhotoHeights] = useState<Record<number, number>>({});
-  const [tweetFontSizeOverride, setTweetFontSizeOverride] = useState<number | null>(null);
+  const [tweetFontSizeOverride, setTweetFontSizeOverride] = useState<number | null>(38);
   const tweetPhotoDataUrlCacheRef = useRef<Record<string, string>>({});
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const activeMarketplaceStyleRef = useRef<any>(null);
@@ -494,9 +494,28 @@ const CarouselGenerator: React.FC = () => {
     return selectedWebPhotos;
   }, [referenceImages, tweetConfig, webSearchResult]);
 
+  const resolveTweetPhotoUrl = useCallback(async (url: string): Promise<string> => {
+    if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+    const cached = tweetPhotoDataUrlCacheRef.current[url];
+    if (cached) return cached;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Falha ao carregar imagem do tweet: ${response.status}`);
+    const blob = await response.blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
+    return dataUrl;
+  }, []);
+
   const getResolvedTweetPhotoForCard = useCallback((index: number, cfg?: TweetConfig) => {
     const activeConfig = cfg || tweetConfig;
-    const explicitPhoto = activeConfig.tweetPhotos[index] || cardPhotoAssignments[index] || null;
+    const explicitPhoto = cardPhotoAssignments[index] || activeConfig.tweetPhotos[index] || null;
     if (explicitPhoto) return explicitPhoto;
     if (activeConfig.photoMode !== 'web') return null;
 
@@ -504,6 +523,52 @@ const CarouselGenerator: React.FC = () => {
     if (selectedWebPhotos.length === 0) return null;
     return selectedWebPhotos[index % selectedWebPhotos.length] || null;
   }, [cardPhotoAssignments, getSelectedTweetWebPhotos, tweetConfig]);
+
+  useEffect(() => {
+    if (wizardMode !== 'tweet' || tweetConfig.photoMode === 'none') return;
+
+    let cancelled = false;
+
+    const normalizeTweetPhotos = async () => {
+      const nextPhotos = [...tweetConfig.tweetPhotos];
+      const totalCards = Math.max(tweetConfig.cardCount, nextPhotos.length);
+      let changed = false;
+
+      for (let i = 0; i < totalCards; i++) {
+        const sourceUrl = tweetConfig.photoMode === 'web'
+          ? getResolvedTweetPhotoForCard(i, tweetConfig)
+          : tweetConfig.tweetPhotos[i] || null;
+
+        if (!sourceUrl) {
+          if (nextPhotos[i] !== null && nextPhotos[i] !== undefined) {
+            nextPhotos[i] = null;
+            changed = true;
+          }
+          continue;
+        }
+
+        try {
+          const normalizedUrl = await resolveTweetPhotoUrl(sourceUrl);
+          if (nextPhotos[i] !== normalizedUrl) {
+            nextPhotos[i] = normalizedUrl;
+            changed = true;
+          }
+        } catch (error) {
+          console.warn('[TweetPhoto] Failed to normalize photo for card', i, error);
+        }
+      }
+
+      if (!cancelled && changed) {
+        setTweetConfig((prev) => ({ ...prev, tweetPhotos: nextPhotos }));
+      }
+    };
+
+    void normalizeTweetPhotos();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [wizardMode, tweetConfig, getResolvedTweetPhotoForCard, resolveTweetPhotoUrl]);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);
   const [carouselFromCoverCount, setCarouselFromCoverCount] = useState(8);
@@ -1912,24 +1977,6 @@ const CarouselGenerator: React.FC = () => {
       }
       cards = cards.slice(0, tweetConfig.cardCount);
 
-      const resolveImageUrl = async (url: string): Promise<string> => {
-        if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
-        const cached = tweetPhotoDataUrlCacheRef.current[url];
-        if (cached) return cached;
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Falha ao carregar imagem do tweet: ${response.status}`);
-        const blob = await response.blob();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
-        return dataUrl;
-      };
-
       let configForRender = tweetConfig;
       const resolvedPhotos = new Array<string | null>(cards.length).fill(null);
 
@@ -1947,7 +1994,7 @@ const CarouselGenerator: React.FC = () => {
           const photoUrl = mergedTweetPhotos[i];
           if (!photoUrl) continue;
           try {
-            resolvedPhotos[i] = await resolveImageUrl(photoUrl);
+            resolvedPhotos[i] = await resolveTweetPhotoUrl(photoUrl);
           } catch (error) {
             console.warn('[TweetPhoto] Failed to normalize web photo for card', i, error);
             resolvedPhotos[i] = null;
@@ -1978,7 +2025,7 @@ const CarouselGenerator: React.FC = () => {
             });
             if (!imgErr && imgData?.imageUrl) {
               try {
-                resolvedPhotos[i] = await resolveImageUrl(imgData.imageUrl);
+                resolvedPhotos[i] = await resolveTweetPhotoUrl(imgData.imageUrl);
               } catch (normalizeError) {
                 console.warn(`[TweetPhoto AI] Card ${i}: failed to normalize generated image`, normalizeError);
                 resolvedPhotos[i] = imgData.imageUrl;
@@ -4412,23 +4459,6 @@ FORBIDDEN:
   const rerenderTweetCards = async (cards: CarouselCard[], configOverride?: TweetConfig) => {
     if (!cards.some((card) => card.type === 'tweet')) return cards;
     const cfg = configOverride || tweetConfig;
-    const resolveImageUrl = async (url: string): Promise<string> => {
-      if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
-      const cached = tweetPhotoDataUrlCacheRef.current[url];
-      if (cached) return cached;
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Falha ao carregar imagem do tweet: ${response.status}`);
-      const blob = await response.blob();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
-      return dataUrl;
-    };
 
     const resolvedPhotos = new Array<string | null>(cards.length).fill(null);
     if (cfg.photoMode === 'web') {
@@ -4440,7 +4470,7 @@ FORBIDDEN:
         const photoUrl = mergedTweetPhotos[i];
         if (!photoUrl) continue;
         try {
-          resolvedPhotos[i] = await resolveImageUrl(photoUrl);
+          resolvedPhotos[i] = await resolveTweetPhotoUrl(photoUrl);
         } catch (error) {
           console.warn('[TweetPhoto] Failed to normalize web photo for card', i, error);
           resolvedPhotos[i] = null;
@@ -4452,6 +4482,14 @@ FORBIDDEN:
       }
     }
 
+    const normalizedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
+      resolvedPhotos[i] || (cfg.photoMode === 'web' ? getResolvedTweetPhotoForCard(i, cfg) : cfg.tweetPhotos[i]) || null
+    ));
+    const normalizedConfig = cfg.photoMode === 'none' ? cfg : { ...cfg, tweetPhotos: normalizedTweetPhotos };
+    if (normalizedConfig !== tweetConfig) {
+      setTweetConfig(normalizedConfig);
+    }
+
     // Calculate uniform font size across all cards (use max text length)
     const allTexts = cards.map((card) => (card.body || card.bodyTop || card.title || '').length);
     const maxTextLen = Math.max(...allTexts, 50);
@@ -4460,12 +4498,12 @@ FORBIDDEN:
       cfg,
       cards.map((card, i) => ({
         body: card.body || card.bodyTop || card.title || '',
-        photo: resolvedPhotos[i] || null,
+        photo: normalizedTweetPhotos[i] || null,
         fontScale: card.fontScale,
         paddingScale: card.paddingScale,
         textAlign: card.textAlign,
         uniformFontSize: maxTextLen,
-        photoFit: cfg.photoFit,
+        photoFit: normalizedConfig.photoFit,
       })),
       formatDims,
     );
@@ -5753,26 +5791,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const cardText = card.body || card.bodyTop || card.title || '';
       const resolvedPhoto = getResolvedTweetPhotoForCard(index, tweetConfig);
       const cardPhoto = resolvedPhoto || null;
-      const shouldUseRenderedFallback = !cardPhoto && !!card.imageUrl;
       const tweetPreviewScale = w / cardW;
-
-      if (shouldUseRenderedFallback) {
-        return (
-          <div
-            ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
-            data-cover-capture={index === 0 ? 'true' : undefined}
-            style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
-          >
-            <img
-              src={card.imageUrl}
-              alt=""
-              {...(isExport ? { crossOrigin: 'anonymous' } : {})}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
-          </div>
-        );
-      }
 
       if (isExport) {
         return (

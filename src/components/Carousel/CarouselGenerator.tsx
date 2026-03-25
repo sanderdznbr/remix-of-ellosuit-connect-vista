@@ -6123,11 +6123,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       return (
         <div
-          ref={(el) => { tweetPreviewRefs.current[index] = el; }}
           data-cover-capture={index === 0 ? 'true' : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
         >
-          <div style={{ width: cardW, height: cardH, transform: `scale(${tweetPreviewScale})`, transformOrigin: 'top left' }}>
+          <div
+            ref={(el) => { tweetPreviewRefs.current[index] = el; }}
+            style={{ width: cardW, height: cardH, transform: `scale(${tweetPreviewScale})`, transformOrigin: 'top left' }}
+          >
             <TweetCard2
               config={tweet2Config}
               text={cardText}

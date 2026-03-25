@@ -388,10 +388,17 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
     let images: string[] = [];
     let rawImageCandidates: { url: string; title?: string; desc?: string; source?: string }[] = [];
     const cleanTopic = (parsedContent.clean_topic || String(topic || '')).trim();
-    // ALWAYS use clean_topic for image search - never the raw user prompt
     const baseTopicForSearch = cleanTopic;
+    const normalizedTopic = String(topic || '').trim();
+    const isPortuguese = language === 'pt-BR' || /[ãõáéíóúç]/i.test(`${normalizedTopic} ${baseTopicForSearch}`);
+    const exactEntityTerms = [
+      baseTopicForSearch,
+      `${baseTopicForSearch} ${isPortuguese ? 'foto' : 'photo'}`,
+      `${baseTopicForSearch} ${isPortuguese ? 'governador' : 'governor'}`,
+      `${baseTopicForSearch} ${isPortuguese ? 'evento oficial' : 'official event'}`,
+    ].map((term) => term.trim()).filter(Boolean);
     const rawSearchTerms: string[] = parsedContent.image_search_terms || [`${baseTopicForSearch} photo`, `${baseTopicForSearch} fotografia`];
-    const searchTerms = rawSearchTerms
+    const searchTerms = [...exactEntityTerms, ...rawSearchTerms]
       .map((term) => String(term || '').trim())
       .filter(Boolean)
       .map((term) => {
@@ -400,9 +407,61 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
         // Only prepend clean topic if the search term doesn't already contain it
         return normalized.includes(baseNormalized) ? term : `${baseTopicForSearch} ${term}`;
       })
-      .slice(0, 5);
+      .filter((term, index, arr) => arr.findIndex((item) => item.toLowerCase() === term.toLowerCase()) === index)
+      .slice(0, 8);
     console.log('[IMAGES] Clean topic (base for search):', baseTopicForSearch);
     console.log('[IMAGES] Search terms:', searchTerms);
+
+    const pushCandidate = (candidate: { url: string; title?: string; desc?: string; source?: string }) => {
+      if (!candidate.url || images.includes(candidate.url)) return;
+      images.push(candidate.url);
+      rawImageCandidates.push(candidate);
+    };
+
+    // === Strategy 0: exact entity query via Brave, mirroring manual search behavior ===
+    const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
+    if (braveApiKey) {
+      const exactQueries = [
+        baseTopicForSearch,
+        isPortuguese ? `${baseTopicForSearch} foto` : `${baseTopicForSearch} photo`,
+      ].filter(Boolean);
+
+      for (const exactQuery of exactQueries) {
+        if (images.length >= 12) break;
+        try {
+          console.log('[IMAGES] Exact Brave query:', exactQuery);
+          const url = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(exactQuery)}&count=30&safesearch=strict&size=Large`;
+          const imgResponse = await fetch(url, {
+            headers: { 'X-Subscription-Token': braveApiKey },
+          });
+          if (imgResponse.ok) {
+            const imgData = await imgResponse.json();
+            const results = imgData.results || [];
+            for (const item of results) {
+              const imgUrl = item.properties?.url || item.thumbnail?.src;
+              const metadata = [
+                item.title, item.description, item.source,
+                item.page_fetched?.title, item.page_fetched?.description,
+              ].filter(Boolean).join(' ');
+              if (imgUrl && isCleanImageCandidate(imgUrl, metadata)) {
+                const w = item.properties?.width || item.width || 0;
+                const h = item.properties?.height || item.height || 0;
+                if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
+                  pushCandidate({
+                    url: imgUrl,
+                    title: item.title || item.page_fetched?.title || '',
+                    desc: item.description || item.page_fetched?.description || '',
+                    source: item.source || '',
+                  });
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[IMAGES] Exact Brave error:', e);
+        }
+      }
+    }
 
     // === Strategy 1: ScrapingDog Google Images API (higher quality, real Google results) ===
     const scrapingDogKey = Deno.env.get('SCRAPINGDOG_API_KEY');
@@ -410,8 +469,11 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
       for (const term of searchTerms) {
         if (images.length >= 25) break;
         try {
-          const query = encodeURIComponent(`${term} photograph`);
-          const sdUrl = `https://api.scrapingdog.com/google_images/?api_key=${scrapingDogKey}&query=${query}&results=20&country=us&safe=active&image_type=photo&imgsz=l`;
+          const localizedQuery = /\bfoto\b|\bfotografia\b|\bphoto\b|\bphotograph\b/i.test(term)
+            ? term
+            : `${term} ${isPortuguese ? 'foto' : 'photo'}`;
+          const query = encodeURIComponent(localizedQuery);
+          const sdUrl = `https://api.scrapingdog.com/google_images/?api_key=${scrapingDogKey}&query=${query}&results=20&country=${isPortuguese ? 'br' : 'us'}&safe=active&image_type=photo&imgsz=l`;
           console.log('[IMAGES] ScrapingDog query:', term);
           const sdResponse = await fetch(sdUrl);
           if (sdResponse.ok) {
@@ -425,8 +487,7 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
                 const w = item.original_width || 0;
                 const h = item.original_height || 0;
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
-                  images.push(imgUrl);
-                  rawImageCandidates.push({
+                  pushCandidate({
                     url: imgUrl,
                     title: item.title || '',
                     desc: '',
@@ -447,13 +508,12 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
     }
 
     // === Strategy 2: Brave Search fallback (if ScrapingDog returned too few) ===
-    const braveApiKey = Deno.env.get('BRAVE_SEARCH_API_KEY');
     if (braveApiKey && images.length < 8) {
       console.log('[IMAGES] ScrapingDog returned only', images.length, '— falling back to Brave Search');
       for (const term of searchTerms) {
         if (images.length >= 20) break;
         try {
-          const cleanQuery = `${term} portrait photograph -text -infographic -quote -meme -template -typography -tweet -twitter -screenshot -poster -thumbnail -reaction -instagram -tiktok -promo -banner -collage -montage -listicle -slideshow -"here are" -"must see" -"top 10" -highlights -recap`;
+          const cleanQuery = `${term} ${isPortuguese ? 'foto' : 'photo'} -text -infographic -quote -meme -template -typography -tweet -twitter -screenshot -poster -thumbnail -reaction -instagram -tiktok -promo -banner -collage -montage -listicle -slideshow -"here are" -"must see" -"top 10" -highlights -recap`;
           const query = encodeURIComponent(cleanQuery);
           const url = `https://api.search.brave.com/res/v1/images/search?q=${query}&count=30&safesearch=strict&type=photo`;
           const imgResponse = await fetch(url, {
@@ -472,8 +532,7 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
                 const w = item.properties?.width || item.width || 0;
                 const h = item.properties?.height || item.height || 0;
                 if ((w === 0 && h === 0) || (w >= 400 && h >= 300)) {
-                  images.push(imgUrl);
-                  rawImageCandidates.push({
+                  pushCandidate({
                     url: imgUrl,
                     title: item.title || item.page_fetched?.title || '',
                     desc: item.description || item.page_fetched?.description || '',
@@ -490,41 +549,7 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
       }
     }
 
-    // Strategy 2: Generate images with AI if search found too few
-    if (images.length < 2) {
-      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-      if (lovableKey) {
-        console.log('[IMAGES] Generating AI images for topic:', cleanTopic);
-        try {
-          for (const term of searchTerms.slice(0, 3)) {
-            if (images.length >= 4) break;
-            const aiPrompt = `Create a high-quality, photorealistic image of: ${term}. Make it visually stunning and suitable for a social media carousel post. No text, no watermarks, no overlays, no typography — pure photography only.`;
-            const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${lovableKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'google/gemini-2.5-flash-image',
-                messages: [{ role: 'user', content: aiPrompt }],
-                modalities: ['image', 'text'],
-              }),
-            });
-            if (aiRes.ok) {
-              const aiData = await aiRes.json();
-              const aiImage = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-              if (aiImage) {
-                images.push(aiImage);
-                console.log('[IMAGES] AI generated image successfully');
-              }
-            }
-          }
-        } catch (e) {
-          console.error('[IMAGES] AI generation error:', e);
-        }
-      }
-    }
+    // Never invent images in automatic web search; if search quality is low, return fewer but relevant real photos.
 
     // Deduplicate
     images = [...new Set(images)];

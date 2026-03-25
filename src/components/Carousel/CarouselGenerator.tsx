@@ -607,6 +607,23 @@ const CarouselGenerator: React.FC = () => {
     };
   }, [wizardMode, tweetConfig, getResolvedTweetPhotoForCard, resolveTweetPhotoUrl]);
 
+  // Helper: distribute N photo slots evenly across totalCards indices
+  const getPhotoIndices = (totalCards: number, photoCount: number): Set<number> => {
+    if (photoCount >= totalCards) return new Set(Array.from({ length: totalCards }, (_, i) => i));
+    if (photoCount <= 0) return new Set();
+    const indices: number[] = [];
+    for (let i = 0; i < photoCount; i++) {
+      indices.push(Math.round(i * (totalCards - 1) / (photoCount - 1 || 1)));
+    }
+    const set = new Set(indices);
+    let idx = 0;
+    while (set.size < photoCount && idx < totalCards) {
+      set.add(idx);
+      idx++;
+    }
+    return set;
+  };
+
   // Normalize tweet2 photos from web search referenceImages into tweet2Config.tweetPhotos
   useEffect(() => {
     if (wizardMode !== 'tweet2' || tweet2Config.photoMode === 'none') return;
@@ -617,6 +634,7 @@ const CarouselGenerator: React.FC = () => {
       const nextPhotos = [...tweet2Config.tweetPhotos];
       const totalCards = Math.max(tweet2Config.cardCount, nextPhotos.length);
       const maxPhotoCards = tweet2Config.photoCardCount || totalCards;
+      const photoIndices = getPhotoIndices(totalCards, maxPhotoCards);
       let changed = false;
 
       // Build web photo fallbacks from referenceImages
@@ -625,17 +643,23 @@ const CarouselGenerator: React.FC = () => {
         .map(r => r.url || r.thumb);
 
       // Process all cards in parallel for faster resolution
+      // Map photo indices to sequential fallback positions
+      const photoIndexList = Array.from(photoIndices).sort((a, b) => a - b);
+      const photoSlotMap = new Map<number, number>(); // cardIndex -> fallback position
+      photoIndexList.forEach((cardIdx, seqIdx) => photoSlotMap.set(cardIdx, seqIdx));
+
       const resolvePromises = Array.from({ length: totalCards }, async (_, i) => {
         if (cancelled) return { index: i, url: nextPhotos[i] ?? null };
 
-        // If this card exceeds the photoCardCount, set to null
-        if (i >= maxPhotoCards) {
+        // If this card is not a photo slot, set to null
+        if (!photoIndices.has(i)) {
           return { index: i, url: null };
         }
 
+        const seqIdx = photoSlotMap.get(i) ?? 0;
         // For web mode: use referenceImages as source; for manual: use existing tweetPhotos
         const sourceUrl = tweet2Config.photoMode === 'web'
-          ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null)
+          ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[seqIdx] || null)
           : (tweet2Config.tweetPhotos[i] || null);
 
         if (!sourceUrl) return { index: i, url: null };
@@ -2144,10 +2168,16 @@ const CarouselGenerator: React.FC = () => {
         // Resolve photos — use tweet2Config.tweetPhotos, fallback to referenceImages from web search
         const webPhotoFallbacks = referenceImages.filter(r => r.category === 'general').map(r => r.url || r.thumb);
         const maxPhotoCards = tweet2Config.photoCardCount || tweet2Config.cardCount;
+        const photoIndicesGen = getPhotoIndices(tweet2Config.cardCount, maxPhotoCards);
+        const photoIndexListGen = Array.from(photoIndicesGen).sort((a, b) => a - b);
+        const photoSlotMapGen = new Map<number, number>();
+        photoIndexListGen.forEach((cardIdx, seqIdx) => photoSlotMapGen.set(cardIdx, seqIdx));
+
         const resolvedPhotos = await Promise.all(
           Array.from({ length: tweet2Config.cardCount }, async (_, i) => {
-            if (i >= maxPhotoCards) return null;
-            const src = tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null;
+            if (!photoIndicesGen.has(i)) return null;
+            const seqIdx = photoSlotMapGen.get(i) ?? 0;
+            const src = tweet2Config.tweetPhotos[i] || webPhotoFallbacks[seqIdx] || null;
             if (!src) return null;
             try { return await resolveTweetPhotoUrl(src); } catch { return src; }
           })

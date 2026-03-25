@@ -237,7 +237,7 @@ const CarouselGenerator: React.FC = () => {
   const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
 
   // Wizard mode: simple vs advanced
-  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme'>('simple');
+  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme' | 'tweet'>('simple');
   const [continuousMode, setContinuousMode] = useState(false);
   const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
   const [extremeVision, setExtremeVision] = useState('');

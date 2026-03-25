@@ -124,7 +124,8 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
-import { renderAllTweetCards } from './TweetCanvasRenderer';
+import { renderAllTweetCards, captureTweetCardElement } from './TweetCanvasRenderer';
+import TweetCard from './TweetCard';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
@@ -5658,20 +5659,51 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
     // Tweet mode cards are already fully rendered images; do not wrap them in templates
     if (card.type === 'tweet') {
-      return (
-        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
-          data-cover-capture={index === 0 ? 'true' : undefined}
-          onClick={!isExport ? () => { setActiveCardIndex(index); setShowTweetTextEditor(true); } : undefined}
-          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: '#000000', cursor: isExport ? undefined : 'pointer' }}>
-          {card.imageUrl && (
-            <img
-              src={card.imageUrl}
-              alt=""
-              {...(isExport ? { crossOrigin: 'anonymous' } : {})}
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+      const cardText = card.body || card.bodyTop || card.title || '';
+      const cardPhoto = card.imageUrl?.startsWith('data:') ? null : (card.photo as string | undefined) || null;
+
+      // For export: render at full resolution, capture via html2canvas
+      if (isExport) {
+        return (
+          <div
+            ref={(el) => { cardRefs.current[index] = el; }}
+            data-cover-capture={index === 0 ? 'true' : undefined}
+            style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+          >
+            <TweetCard
+              config={tweetConfig}
+              text={cardText}
+              photo={cardPhoto}
+              photoFit={tweetConfig.photoFit}
+              width={w}
+              height={h}
             />
-          )}
+          </div>
+        );
+      }
+
+      // For preview: live editable card
+      return (
+        <div
+          data-cover-capture={index === 0 ? 'true' : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+        >
+          <TweetCard
+            config={tweetConfig}
+            text={cardText}
+            photo={cardPhoto}
+            photoFit={tweetConfig.photoFit}
+            width={w}
+            height={h}
+            editable={activeCardIndex === index}
+            onTextChange={(newText) => {
+              updateCard(index, { body: newText });
+              const newTexts = [...tweetConfig.tweetTexts];
+              newTexts[index] = newText;
+              setTweetConfig(prev => ({ ...prev, tweetTexts: newTexts }));
+            }}
+            onClick={() => { setActiveCardIndex(index); }}
+          />
         </div>
       );
     }

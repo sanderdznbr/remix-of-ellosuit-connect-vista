@@ -401,6 +401,7 @@ const CarouselGenerator: React.FC = () => {
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
   const tweetPhotoUploadCardIndexRef = useRef<number>(0);
   const [tweetPhotoUploadCardIndex, setTweetPhotoUploadCardIndex] = useState<number>(0);
+  const [tweetPhotoHeights, setTweetPhotoHeights] = useState<Record<number, number>>({});
   const tweetPhotoDataUrlCacheRef = useRef<Record<string, string>>({});
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const activeMarketplaceStyleRef = useRef<any>(null);
@@ -5679,6 +5680,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               photoFit={tweetConfig.photoFit}
               width={w}
               height={h}
+              photoHeight={tweetPhotoHeights[index]}
             />
           </div>
         );
@@ -5690,22 +5692,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           data-cover-capture={index === 0 ? 'true' : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
         >
-          <TweetCard
-            config={tweetConfig}
-            text={cardText}
-            photo={cardPhoto}
-            photoFit={tweetConfig.photoFit}
-            width={w}
-            height={h}
-            editable={activeCardIndex === index}
-            onTextChange={(newText) => {
-              updateCard(index, { body: newText });
-              const newTexts = [...tweetConfig.tweetTexts];
-              newTexts[index] = newText;
-              setTweetConfig(prev => ({ ...prev, tweetTexts: newTexts }));
-            }}
-            onClick={() => { setActiveCardIndex(index); }}
-          />
+            <TweetCard
+              config={tweetConfig}
+              text={cardText}
+              photo={cardPhoto}
+              photoFit={tweetConfig.photoFit}
+              width={w}
+              height={h}
+              editable={activeCardIndex === index}
+              photoHeight={tweetPhotoHeights[index]}
+              onPhotoHeightChange={(newH) => {
+                setTweetPhotoHeights(prev => ({ ...prev, [index]: newH }));
+              }}
+              onTextChange={(newText) => {
+                updateCard(index, { body: newText });
+                const newTexts = [...tweetConfig.tweetTexts];
+                newTexts[index] = newText;
+                setTweetConfig(prev => ({ ...prev, tweetTexts: newTexts }));
+              }}
+              onClick={() => { setActiveCardIndex(index); }}
+            />
         </div>
       );
     }

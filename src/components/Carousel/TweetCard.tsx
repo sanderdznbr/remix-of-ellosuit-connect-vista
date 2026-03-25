@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import type { TweetConfig, TweetPhotoFit } from './wizard/StepTweetConfig';
 
 export interface TweetCardProps {
@@ -12,6 +12,8 @@ export interface TweetCardProps {
   onTextChange?: (newText: string) => void;
   onClick?: () => void;
   cardRef?: React.Ref<HTMLDivElement>;
+  photoHeight?: number;
+  onPhotoHeightChange?: (h: number) => void;
 }
 
 /** Live DOM tweet card — pixel-perfect X/Twitter layout, optionally editable */
@@ -26,6 +28,8 @@ const TweetCard: React.FC<TweetCardProps> = ({
   onTextChange,
   onClick,
   cardRef,
+  photoHeight: photoHeightProp,
+  onPhotoHeightChange,
 }) => {
   const isDark = config.theme === 'dark';
   const bg = isDark ? '#000000' : '#FFFFFF';
@@ -63,7 +67,8 @@ const TweetCard: React.FC<TweetCardProps> = ({
   const avatarSize = s(80);
   const headerGap = s(16);
   const horizontalPadding = s(80);
-  const photoMaxH = hasPhoto ? Math.round(height * 0.35) : 0;
+  const defaultPhotoH = hasPhoto ? Math.round(height * 0.35) : 0;
+  const photoMaxH = photoHeightProp ?? defaultPhotoH;
 
   const textRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
@@ -199,18 +204,19 @@ const TweetCard: React.FC<TweetCardProps> = ({
 
         {/* Photo */}
         {hasPhoto && (
-          <div style={{
-            borderRadius: s(16),
-            overflow: 'hidden',
-            border: `1px solid ${borderColor}`,
-            height: photoMaxH,
-            flexShrink: 0,
-            background: isDark ? '#000' : '#F7F9F9',
-            backgroundImage: `url('${photo}')`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center center',
-            backgroundSize: bgSizeMap[photoFit] || 'cover',
-          }} />
+          <PhotoResizable
+            photoMaxH={photoMaxH}
+            borderRadius={s(16)}
+            borderColor={borderColor}
+            isDark={isDark}
+            photo={photo!}
+            photoFit={photoFit}
+            bgSizeMap={bgSizeMap}
+            editable={editable}
+            minH={Math.round(height * 0.15)}
+            maxH={Math.round(height * 0.65)}
+            onHeightChange={onPhotoHeightChange}
+          />
         )}
 
         {/* Engagement */}
@@ -232,6 +238,92 @@ const TweetCard: React.FC<TweetCardProps> = ({
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+/** Resizable photo container with drag handles */
+const PhotoResizable: React.FC<{
+  photoMaxH: number;
+  borderRadius: number;
+  borderColor: string;
+  isDark: boolean;
+  photo: string;
+  photoFit: TweetPhotoFit;
+  bgSizeMap: Record<string, string>;
+  editable?: boolean;
+  minH: number;
+  maxH: number;
+  onHeightChange?: (h: number) => void;
+}> = ({ photoMaxH, borderRadius, borderColor, isDark, photo, photoFit, bgSizeMap, editable, minH, maxH, onHeightChange }) => {
+  const [localH, setLocalH] = useState(photoMaxH);
+  const dragging = useRef(false);
+  const startY = useRef(0);
+  const startH = useRef(0);
+
+  useEffect(() => { setLocalH(photoMaxH); }, [photoMaxH]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!editable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging.current = true;
+    startY.current = e.clientY;
+    startH.current = localH;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [editable, localH]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const delta = e.clientY - startY.current;
+    const newH = Math.max(minH, Math.min(maxH, startH.current + delta));
+    setLocalH(newH);
+  }, [minH, maxH]);
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    onHeightChange?.(localH);
+  }, [localH, onHeightChange]);
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <div style={{
+        borderRadius,
+        overflow: 'hidden',
+        border: `1px solid ${borderColor}`,
+        height: localH,
+        background: isDark ? '#000' : '#F7F9F9',
+        backgroundImage: `url('${photo}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center center',
+        backgroundSize: bgSizeMap[photoFit] || 'cover',
+      }} />
+      {editable && (
+        <div
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          style={{
+            position: 'absolute',
+            bottom: -6,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 48,
+            height: 12,
+            borderRadius: 6,
+            background: 'rgba(29,155,240,0.7)',
+            cursor: 'ns-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+          }}
+        >
+          <div style={{ width: 20, height: 2, borderRadius: 1, background: 'white' }} />
+        </div>
+      )}
     </div>
   );
 };

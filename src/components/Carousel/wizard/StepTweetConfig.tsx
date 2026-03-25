@@ -11,6 +11,7 @@ export interface TweetConfig {
   tweetTexts: string[];
   tweetPhotos: (string | null)[];
   photoMode: 'none' | 'manual' | 'web' | 'ai';
+  autoSelectPhotos: boolean;
   contentMode: 'static' | 'carousel';
   cardCount: number;
   theme: 'light' | 'dark';

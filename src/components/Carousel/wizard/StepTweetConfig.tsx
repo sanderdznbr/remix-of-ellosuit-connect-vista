@@ -60,7 +60,15 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
 
   const handleProfileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) update({ profilePhoto: URL.createObjectURL(file) });
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          update({ profilePhoto: reader.result });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
     e.target.value = '';
   };
 

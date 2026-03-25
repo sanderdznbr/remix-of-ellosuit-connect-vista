@@ -139,7 +139,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
           {config.profilePhoto ? (
             <img
               src={config.profilePhoto}
-              crossOrigin={config.profilePhoto.startsWith('blob:') ? undefined : 'anonymous'}
+              crossOrigin={config.profilePhoto.startsWith('data:') || config.profilePhoto.startsWith('blob:') ? undefined : 'anonymous'}
               style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               alt=""
             />

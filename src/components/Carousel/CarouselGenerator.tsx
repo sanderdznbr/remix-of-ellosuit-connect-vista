@@ -444,7 +444,7 @@ const CarouselGenerator: React.FC = () => {
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
-  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(tweetConfig.photoMode === 'web' ? ['Pesquisa'] : []), 'Velocidade'];
+  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(tweetConfig.photoMode === 'web' ? ['Pesquisa'] : []), ...(tweetConfig.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -1796,7 +1796,7 @@ const CarouselGenerator: React.FC = () => {
       const formatDims = postFormat === 'square' ? { w: 1080, h: 1080 } : postFormat === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1350 };
 
       // If no manual texts, generate tweet-native content first
-      let cards: Array<{ body?: string; title?: string; bodyTop?: string }> = [];
+      let cards: Array<{ body?: string; title?: string; bodyTop?: string; photo?: string | null; fontScale?: number; paddingScale?: number; textAlign?: 'left' | 'center' | 'right' }> = [];
       if (tweetConfig.tweetTexts.some(t => t.trim())) {
         cards = tweetConfig.tweetTexts.map(t => ({ body: t.trim() }));
       } else if (topic.trim()) {
@@ -1812,8 +1812,8 @@ const CarouselGenerator: React.FC = () => {
             },
           });
           if (error) throw error;
-          if (data?.cards?.length) {
-            cards = data.cards.map((c: any) => ({ body: (c.body || c.bodyTop || c.title || '').trim() })).filter((c: any) => c.body);
+          if (data?.data?.cards?.length) {
+            cards = data.data.cards.map((c: any) => ({ body: (c.body || c.bodyTop || c.title || '').trim() })).filter((c: any) => c.body);
           }
         } catch (e) {
           console.error('[TweetCanvas] Content generation failed:', e);
@@ -1832,6 +1832,23 @@ const CarouselGenerator: React.FC = () => {
       }
       cards = cards.slice(0, tweetConfig.cardCount);
 
+      const selectedWebPhotos = referenceImages
+        .filter((ref) => ref.category === 'general')
+        .map((ref) => ref.url)
+        .filter(Boolean);
+
+      cards = cards.map((card, i) => ({
+        ...card,
+        photo: tweetConfig.photoMode === 'web'
+          ? selectedWebPhotos[i] || selectedWebPhotos[0] || null
+          : tweetConfig.photoMode !== 'none'
+            ? tweetConfig.tweetPhotos[i] || null
+            : null,
+        fontScale: 1.15,
+        paddingScale: 1.05,
+        textAlign: 'left',
+      }));
+
       const images = await renderAllTweetCards(tweetConfig, cards, formatDims, (current, total) => {
         setImageGenProgress(`${current}/${total} tweets renderizados...`);
       });
@@ -1841,6 +1858,9 @@ const CarouselGenerator: React.FC = () => {
         imageUrl: imgUrl,
         title: '',
         body: cards[i]?.body || '',
+        fontScale: cards[i]?.fontScale,
+        paddingScale: cards[i]?.paddingScale,
+        textAlign: cards[i]?.textAlign,
       }));
 
       const newCarouselData: CarouselData = {
@@ -4216,17 +4236,54 @@ FORBIDDEN:
     }
   };
 
+  const rerenderTweetCards = async (cards: CarouselCard[]) => {
+    if (!cards.some((card) => card.type === 'tweet')) return cards;
+
+    const selectedWebPhotos = referenceImages
+      .filter((ref) => ref.category === 'general')
+      .map((ref) => ref.url)
+      .filter(Boolean);
+
+    const renderedImages = await renderAllTweetCards(
+      tweetConfig,
+      cards.map((card, i) => ({
+        body: card.body || card.bodyTop || card.title || '',
+        photo: tweetConfig.photoMode === 'web'
+          ? selectedWebPhotos[i] || selectedWebPhotos[0] || null
+          : tweetConfig.photoMode !== 'none'
+            ? tweetConfig.tweetPhotos[i] || null
+            : null,
+        fontScale: card.fontScale,
+        paddingScale: card.paddingScale,
+        textAlign: card.textAlign,
+      })),
+      formatDims,
+    );
+
+    return cards.map((card, i) => card.type === 'tweet' ? { ...card, imageUrl: renderedImages[i] || card.imageUrl } : card);
+  };
+
   const updateCard = (index: number, updates: Partial<CarouselCard>) => {
     if (!carouselData) return;
     const newCards = [...carouselData.cards];
     newCards[index] = { ...newCards[index], ...updates };
     setCarouselData({ ...carouselData, cards: newCards });
+    if (newCards[index]?.type === 'tweet') {
+      void rerenderTweetCards(newCards).then((renderedCards) => {
+        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+      });
+    }
   };
 
   const updateAllCards = (updates: Partial<CarouselCard>) => {
     if (!carouselData) return;
     const newCards = carouselData.cards.map(c => ({ ...c, ...updates }));
     setCarouselData({ ...carouselData, cards: newCards });
+    if (newCards.some((card) => card.type === 'tweet')) {
+      void rerenderTweetCards(newCards).then((renderedCards) => {
+        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+      });
+    }
   };
 
   const addCard = () => {
@@ -6306,6 +6363,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             if (currentStepName === 'Tema' && wizardMode === 'tweet' && forceWebSearch && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
                               setWebSearchDecisionMade(true);
                               await handleSearchWeb();
+                              setWizardStep(wizardStep + 1);
                               return;
                             }
                             // Force web search when toggle is ON
@@ -6728,7 +6786,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Home className="w-5 h-5 text-white/60" />
                 </button>
                 <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: themeHex, backgroundColor: `rgba(${themeRgb},0.12)`, border: `1px solid rgba(${themeRgb},0.25)` }}>
-                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : 'Modo Simples'}
+                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : wizardMode === 'tweet' ? 'Tweet Mode' : 'Modo Simples'}
                   {activeMarketplaceStyle?.name && (
                     <>, tema {activeMarketplaceStyle.name}</>
                   )}

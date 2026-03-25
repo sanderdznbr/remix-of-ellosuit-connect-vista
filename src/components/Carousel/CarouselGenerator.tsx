@@ -1830,7 +1830,8 @@ const CarouselGenerator: React.FC = () => {
       });
 
       // Build carousel data structure
-      const carouselCards = images.map((imgUrl, i) => ({
+      const carouselCards: CarouselCard[] = images.map((imgUrl, i) => ({
+        type: 'content' as const,
         imageUrl: imgUrl,
         title: '',
         body: cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || '',

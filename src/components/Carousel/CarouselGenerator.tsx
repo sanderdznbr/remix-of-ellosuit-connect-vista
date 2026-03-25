@@ -2172,14 +2172,17 @@ const CarouselGenerator: React.FC = () => {
         const maxPhotoCards = tweet2Config.photoCardCount || tweet2Config.cardCount;
         const photoIndicesGen = getPhotoIndices(tweet2Config.cardCount, maxPhotoCards);
         const photoIndexListGen = Array.from(photoIndicesGen).sort((a, b) => a - b);
-        const photoSlotMapGen = new Map<number, number>();
-        photoIndexListGen.forEach((cardIdx, seqIdx) => photoSlotMapGen.set(cardIdx, seqIdx));
+
+        // Collect all available photos (non-null) from wizard in order
+        const availablePhotos = tweet2Config.tweetPhotos.filter((p): p is string => !!p && p.length > 5);
 
         const resolvedPhotos = await Promise.all(
           Array.from({ length: tweet2Config.cardCount }, async (_, i) => {
             if (!photoIndicesGen.has(i)) return null;
-            const seqIdx = photoSlotMapGen.get(i) ?? 0;
-            const src = tweet2Config.tweetPhotos[i] || webPhotoFallbacks[seqIdx] || null;
+            // seqIdx = which photo slot this card corresponds to (0th photo slot, 1st, etc.)
+            const seqIdx = photoIndexListGen.indexOf(i);
+            // Try: 1) photo already at this exact index, 2) sequential available photo, 3) web fallback
+            const src = tweet2Config.tweetPhotos[i] || availablePhotos[seqIdx] || webPhotoFallbacks[seqIdx] || null;
             if (!src) return null;
             try { return await resolveTweetPhotoUrl(src); } catch { return src; }
           })

@@ -17,19 +17,23 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
   const textRef = useRef<HTMLDivElement>(null);
   const isDark = config.theme === 'dark';
   const scale = width / 1080;
-  const s = useCallback((value: number) => Math.round(value * scale), [scale]);
+  const s = useCallback((v: number) => Math.round(v * scale), [scale]);
 
   const colors = useMemo(() => ({
     bg: isDark ? '#000000' : '#ffffff',
     text: isDark ? '#e7e9ea' : '#0f1419',
     sub: isDark ? '#71767b' : '#536471',
-    border: isDark ? '#2f3336' : '#cfd9de',
+    border: isDark ? '#2f3336' : '#eff3f4',
     photoBg: isDark ? '#16181c' : '#eff3f4',
     brand: '#1d9bf0',
   }), [isDark]);
 
   const formattedHtml = useMemo(() => {
-    let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>');
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     return html;
   }, [text]);
@@ -39,58 +43,108 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
     onTextChange(textRef.current.innerText || '');
   }, [onTextChange]);
 
-  const avatarSize = s(76);
-  const headerGap = s(16);
-  const sidePadding = s(64);
-  const photoHeight = photo ? Math.round(height * 0.34) : 0;
-  const tweetFontSize = text.length > 220 ? s(42) : text.length > 120 ? s(48) : s(56);
+  // Sizing — matches real Twitter proportions at 1080px base
+  const avatarSize = s(80);
+  const sidePad = s(56);
+  const topPad = s(56);
+  const photoHeight = photo ? Math.round(height * 0.38) : 0;
+  const tweetFontSize = text.length > 220 ? s(38) : text.length > 120 ? s(44) : s(50);
+
+  // Profile photo src with fallback
+  const profileSrc = config.profilePhoto || undefined;
+  const crossOriginAttr = profileSrc && !profileSrc.startsWith('data:') && !profileSrc.startsWith('blob:') ? 'anonymous' as const : undefined;
 
   return (
     <div
       ref={cardRef}
       onClick={onClick}
+      data-tweet2-card
       style={{
         width,
         height,
         background: colors.bg,
         color: colors.text,
-        fontFamily: "'TwitterChirp', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+        fontFamily: "'TwitterChirp', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         overflow: 'hidden',
         boxSizing: 'border-box',
-        padding: `${s(84)}px ${sidePadding}px ${s(48)}px`,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: s(34) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: headerGap }}>
-          {config.profilePhoto ? (
+      {/* Main content area — vertically centered */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: photo ? 'flex-start' : 'center',
+        padding: `${topPad}px ${sidePad}px`,
+        gap: s(24),
+        overflow: 'hidden',
+      }}>
+        {/* Header: avatar + name row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: s(14) }}>
+          {/* Avatar */}
+          {profileSrc ? (
             <img
-              src={config.profilePhoto}
+              src={profileSrc}
               alt=""
-              crossOrigin={config.profilePhoto.startsWith('data:') || config.profilePhoto.startsWith('blob:') ? undefined : 'anonymous'}
+              crossOrigin={crossOriginAttr}
               referrerPolicy="no-referrer"
-              style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              style={{
+                width: avatarSize,
+                height: avatarSize,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                flexShrink: 0,
+                border: `${s(2)}px solid ${colors.border}`,
+              }}
             />
           ) : (
-            <div style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', background: colors.photoBg, border: `1px solid ${colors.border}`, flexShrink: 0 }} />
+            <div style={{
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: '50%',
+              background: colors.photoBg,
+              border: `${s(2)}px solid ${colors.border}`,
+              flexShrink: 0,
+            }} />
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: s(8), minWidth: 0 }}>
-              <span style={{ fontWeight: 800, fontSize: s(34), lineHeight: 1.1, color: colors.text }}>{config.displayName || 'User'}</span>
+          {/* Name + username column */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: s(8) }}>
+              <span style={{
+                fontWeight: 700,
+                fontSize: s(32),
+                lineHeight: 1.2,
+                color: colors.text,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}>
+                {config.displayName || 'User'}
+              </span>
+
+              {/* Verified badge — proper size */}
               {config.isVerified && (
-                <svg viewBox="0 0 24 24" width={s(24)} height={s(24)} style={{ flexShrink: 0 }}>
-                  <path fill={colors.brand} d="M22.25 12c0 .58-.34 1.11-.52 1.63-.19.55-.25 1.18-.61 1.65-.36.48-.97.73-1.45 1.09-.46.35-.86.82-1.41 1.01-.53.18-1.14.07-1.72.07-.58 0-1.2.11-1.72-.07-.55-.19-.95-.66-1.41-1.01-.48-.36-1.09-.61-1.45-1.09-.36-.47-.42-1.1-.61-1.65C2.09 13.11 1.75 12.58 1.75 12s.34-1.11.52-1.63c.19-.55.25-1.18.61-1.65.36-.48.97-.73 1.45-1.09.46-.35.86-.82 1.41-1.01.53-.18 1.14-.07 1.72-.07.58 0 1.2-.11 1.72.07.55.19.95.66 1.41 1.01.48.36 1.09.61 1.45 1.09.36.47.42 1.1.61 1.65.18.52.52 1.05.52 1.63Z" />
-                  <path fill="#fff" d="m10.4 15.4-2.55-2.54 1.14-1.14 1.41 1.41 4.62-4.62 1.14 1.14-5.76 5.75Z" />
+                <svg viewBox="0 0 22 22" width={s(36)} height={s(36)} style={{ flexShrink: 0, display: 'inline-block', verticalAlign: 'middle' }}>
+                  <path fill={colors.brand} d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.855-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.607-.274 1.264-.144 1.897.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681.132-.637.075-1.299-.165-1.903.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" />
                 </svg>
               )}
             </div>
-            <span style={{ fontSize: s(26), lineHeight: 1.2, color: colors.sub, marginTop: s(4) }}>@{config.username || 'user'}</span>
+            <span style={{
+              fontSize: s(28),
+              lineHeight: 1.3,
+              color: colors.sub,
+              marginTop: s(2),
+            }}>
+              @{config.username || 'user'}
+            </span>
           </div>
         </div>
 
+        {/* Tweet text */}
         {editable ? (
           <div
             ref={textRef}
@@ -98,29 +152,78 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
             suppressContentEditableWarning
             onInput={handleInput}
             dangerouslySetInnerHTML={{ __html: formattedHtml }}
-            style={{ fontSize: tweetFontSize, lineHeight: 1.22, fontWeight: 400, letterSpacing: '-0.03em', color: colors.text, outline: 'none', whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: s(120) }}
+            style={{
+              fontSize: tweetFontSize,
+              lineHeight: 1.3,
+              fontWeight: 400,
+              letterSpacing: '-0.02em',
+              color: colors.text,
+              outline: 'none',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
           />
         ) : (
-          <div dangerouslySetInnerHTML={{ __html: formattedHtml }} style={{ fontSize: tweetFontSize, lineHeight: 1.22, fontWeight: 400, letterSpacing: '-0.03em', color: colors.text, whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: s(120) }} />
+          <div
+            dangerouslySetInnerHTML={{ __html: formattedHtml }}
+            style={{
+              fontSize: tweetFontSize,
+              lineHeight: 1.3,
+              fontWeight: 400,
+              letterSpacing: '-0.02em',
+              color: colors.text,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+            }}
+          />
         )}
 
+        {/* Photo */}
         {photo && (
-          <div style={{ width: '100%', height: photoHeight, borderRadius: s(22), overflow: 'hidden', border: `1px solid ${colors.border}`, background: colors.photoBg }}>
+          <div style={{
+            width: '100%',
+            height: photoHeight,
+            borderRadius: s(24),
+            overflow: 'hidden',
+            border: `${s(2)}px solid ${colors.border}`,
+            background: colors.photoBg,
+            flexShrink: 0,
+          }}>
             <img
               src={photo}
               alt=""
               crossOrigin={photo.startsWith('data:') || photo.startsWith('blob:') ? undefined : 'anonymous'}
               referrerPolicy="no-referrer"
-              style={{ width: '100%', height: '100%', display: 'block', objectFit: config.photoFit, objectPosition: 'center' }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                objectFit: config.photoFit || 'cover',
+                objectPosition: 'center',
+              }}
             />
           </div>
         )}
       </div>
 
-      {config.showEngagement ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: s(18) }}>
+      {/* Engagement bar */}
+      {config.showEngagement && (
+        <div style={{
+          padding: `0 ${sidePad}px ${s(40)}px`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: s(16),
+        }}>
           <div style={{ height: 1, background: colors.border, width: '100%' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: colors.sub, fontSize: s(18) }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            color: colors.sub,
+            fontSize: s(24),
+            fontWeight: 500,
+          }}>
             <span>💬 {config.engagement.replies || '0'}</span>
             <span>🔁 {config.engagement.retweets || '0'}</span>
             <span>❤️ {config.engagement.likes || '0'}</span>
@@ -128,7 +231,7 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
             <span>👁 {config.engagement.views || '0'}</span>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 };

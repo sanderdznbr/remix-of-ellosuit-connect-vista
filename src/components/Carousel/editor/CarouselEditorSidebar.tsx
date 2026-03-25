@@ -88,7 +88,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
   const [globalFontScale, setGlobalFontScale] = React.useState(100);
   const [globalPaddingScale, setGlobalPaddingScale] = React.useState(100);
 
-  const isTweet = card.type === 'tweet';
+  const isTweet = card.type === 'tweet' || card.type === 'tweet2';
 
   const applyGlobalFont = (val: number) => {
     setGlobalFontScale(val);

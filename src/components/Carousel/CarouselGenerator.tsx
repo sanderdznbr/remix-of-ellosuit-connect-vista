@@ -2053,10 +2053,11 @@ const CarouselGenerator: React.FC = () => {
         while (texts.length < tweet2Config.cardCount) texts.push(texts[texts.length - 1] || 'Tweet');
         texts = texts.slice(0, tweet2Config.cardCount);
 
-        // Resolve photos
+        // Resolve photos — use tweet2Config.tweetPhotos, fallback to referenceImages from web search
+        const webPhotoFallbacks = referenceImages.filter(r => r.category === 'general').map(r => r.url || r.thumb);
         const resolvedPhotos = await Promise.all(
           Array.from({ length: tweet2Config.cardCount }, async (_, i) => {
-            const src = tweet2Config.tweetPhotos[i] || null;
+            const src = tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null;
             if (!src) return null;
             try { return await resolveTweetPhotoUrl(src); } catch { return src; }
           })
@@ -7128,10 +7129,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               setSkipWebSearch(true);
                             }
                             // Tweet mode: auto-set photoMode when user selected web images
-                            if (currentStepName === 'Fotos' && wizardMode === 'tweet') {
+                            if (currentStepName === 'Fotos' && (wizardMode === 'tweet' || wizardMode === 'tweet2')) {
                               const selectedWebImgs = referenceImages.filter(r => r.category === 'general');
-                              if (selectedWebImgs.length > 0 && tweetConfig.photoMode === 'none') {
-                                setTweetConfig(prev => ({ ...prev, photoMode: 'web' }));
+                              if (selectedWebImgs.length > 0) {
+                                if (wizardMode === 'tweet' && tweetConfig.photoMode === 'none') {
+                                  setTweetConfig(prev => ({ ...prev, photoMode: 'web' }));
+                                }
+                                if (wizardMode === 'tweet2') {
+                                  // Assign web photos to tweet2Config.tweetPhotos
+                                  setTweet2Config(prev => {
+                                    const nextPhotos = [...prev.tweetPhotos];
+                                    selectedWebImgs.forEach((img, i) => {
+                                      if (i < nextPhotos.length && !nextPhotos[i]) {
+                                        nextPhotos[i] = img.url || img.thumb;
+                                      }
+                                    });
+                                    return { ...prev, tweetPhotos: nextPhotos, photoMode: 'web' };
+                                  });
+                                }
                               }
                             }
                             // Formato step (advanced)

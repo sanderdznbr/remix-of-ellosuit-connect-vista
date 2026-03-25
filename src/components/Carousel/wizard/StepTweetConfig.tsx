@@ -11,6 +11,7 @@ export interface TweetConfig {
   tweetTexts: string[];
   tweetPhotos: (string | null)[];
   photoMode: 'none' | 'manual' | 'web' | 'ai';
+  autoSelectPhotos: boolean;
   contentMode: 'static' | 'carousel';
   cardCount: number;
   theme: 'light' | 'dark';
@@ -24,6 +25,7 @@ export const DEFAULT_TWEET_CONFIG: TweetConfig = {
   tweetTexts: [''],
   tweetPhotos: [null],
   photoMode: 'none',
+  autoSelectPhotos: true,
   contentMode: 'static',
   cardCount: 1,
   theme: 'light',
@@ -184,6 +186,29 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
           ))}
         </div>
       </div>
+
+      {/* Auto vs Manual photo selection for web mode */}
+      {config.photoMode === 'web' && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-white/40 uppercase tracking-wider">Seleção de fotos</p>
+          <div className="flex gap-2">
+            {[
+              { value: true, label: 'Automático', desc: 'IA seleciona as melhores' },
+              { value: false, label: 'Manual', desc: 'Eu escolho as fotos' },
+            ].map(opt => (
+              <button key={String(opt.value)} onClick={() => update({ autoSelectPhotos: opt.value })}
+                className={`flex-1 p-3 rounded-xl text-left transition-all border ${
+                  config.autoSelectPhotos === opt.value
+                    ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
+                    : 'bg-white/[0.03] text-white/30 border-white/[0.06] hover:bg-white/[0.06]'
+                }`}>
+                <span className="text-sm font-medium block">{opt.label}</span>
+                <span className="text-[10px] opacity-60">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Manual photo uploads per card */}
       {config.photoMode === 'manual' && (

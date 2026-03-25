@@ -484,7 +484,7 @@ REGRAS:
       const isTweetMode = !!body.isTweetMode;
 
       if (isTweetMode) {
-        const tweetSystemPrompt = `Você escreve posts curtos no estilo Twitter/X em português brasileiro. Gere EXATAMENTE ${numCards} textos curtos, publicáveis, humanos e variados sobre o tema. Não repita o prompt do usuário literalmente. Não escreva títulos de capa, não use CTA de carrossel, não use marca interna, não use hashtags em excesso. Se houver dados da web, incorpore-os com naturalidade. Cada texto deve ter no máximo 280 caracteres. IMPORTANTE: Use **negrito** (com asteriscos duplos) em 1-3 palavras-chave ou expressões importantes de cada tweet para dar destaque visual. Responda APENAS em JSON válido no formato {"title":"...","cards":[{"type":"tweet","body":"..."}]}.`;
+        const tweetSystemPrompt = `Você escreve posts curtos no estilo Twitter/X em português brasileiro. Gere EXATAMENTE ${numCards} textos curtos, publicáveis, humanos e variados sobre o tema. Não repita o prompt do usuário literalmente. Não escreva títulos de capa, não use CTA de carrossel, não use marca interna, não use hashtags em excesso. Se houver dados da web, incorpore-os com naturalidade. Cada texto deve ter no máximo 280 caracteres. IMPORTANTE: Use **negrito** (com asteriscos duplos) em 1-3 palavras-chave ou expressões importantes de cada tweet para dar destaque visual. NUNCA escreva nenhum tweet inteiro em CAIXA ALTA/MAIÚSCULAS - use caixa normal (primeira letra maiúscula, resto minúscula). Responda APENAS em JSON válido no formato {"title":"...","cards":[{"type":"tweet","body":"..."}]}.`;
 
         const tweetUserMessage = `Tópico: ${stripInternalBrands(topic || '')}${body.webSearchContent ? `\n\nContexto real da web:\nTítulo: ${body.webSearchContent.title || ''}\nResumo: ${body.webSearchContent.summary || ''}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body}`).join('\n')}` : ''}`;
 
@@ -531,7 +531,15 @@ REGRAS:
         }
 
         parsedTweet.cards = parsedTweet.cards
-          .map((card: any) => ({ type: 'tweet', body: stripInternalBrands(String(card?.body || '')).trim() }))
+          .map((card: any) => {
+            let body = stripInternalBrands(String(card?.body || '')).trim();
+            // Fix all-caps text: convert to sentence case
+            if (body.replace(/\*\*/g, '').replace(/[^a-záàâãéêíóôõúç]/gi, '').length > 5 && 
+                body.replace(/\*\*/g, '') === body.replace(/\*\*/g, '').toUpperCase()) {
+              body = body.charAt(0).toUpperCase() + body.slice(1).toLowerCase();
+            }
+            return { type: 'tweet', body };
+          })
           .filter((card: any) => card.body);
 
         while (parsedTweet.cards.length < numCards) {

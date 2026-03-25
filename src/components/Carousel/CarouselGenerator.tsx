@@ -9088,10 +9088,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             const newPhotos = [...tweetConfig.tweetPhotos];
             while (newPhotos.length <= tweetPhotoUploadCardIndex) newPhotos.push(null);
             newPhotos[tweetPhotoUploadCardIndex] = url;
-            setTweetConfig({ ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' : tweetConfig.photoMode });
-            // re-render tweet cards
+            const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' as const : tweetConfig.photoMode };
+            setTweetConfig(updatedConfig);
+            // re-render tweet cards with updated config
             const newCards = [...carouselData.cards];
-            void rerenderTweetCards(newCards).then((rendered) => {
+            void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
               setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
             });
           }

@@ -7118,6 +7118,37 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 <ImageMinus className="h-4 w-4 text-red-400" /> Remover Foto
                               </button>
                             )}
+
+                            {/* Photo fit mode selector — show when any card has photo */}
+                            {tweetConfig.tweetPhotos.some(p => p) && (
+                              <div className="flex items-center gap-1.5 px-3 py-2">
+                                <span className="text-[11px] text-white/30 mr-1">Ajuste:</span>
+                                {([
+                                  { key: 'cover' as const, label: 'Preencher' },
+                                  { key: 'contain' as const, label: 'Caber' },
+                                  { key: 'fill' as const, label: 'Esticar' },
+                                ] as const).map(opt => (
+                                  <button key={opt.key}
+                                    onClick={() => {
+                                      const updatedConfig = { ...tweetConfig, photoFit: opt.key };
+                                      setTweetConfig(updatedConfig);
+                                      if (carouselData) {
+                                        const newCards = [...carouselData.cards];
+                                        void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
+                                          setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                                        });
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                                      tweetConfig.photoFit === opt.key
+                                        ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                        : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
+                                    }`}>
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </>
                         )}
 

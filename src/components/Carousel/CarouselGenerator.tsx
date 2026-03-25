@@ -122,6 +122,7 @@ import PromptMediaConfirmDialog from './wizard/PromptMediaConfirmDialog';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
+import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 

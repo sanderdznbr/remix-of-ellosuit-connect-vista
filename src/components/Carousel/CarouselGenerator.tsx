@@ -6297,6 +6297,63 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         activeCardIndex={roteiroCardIndex}
                         setActiveCardIndex={setRoteiroCardIndex} />
                     )}
+                    {currentStepName === 'Roteiro Tweet' && (
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <h3 className="text-lg font-bold" style={{ color: modeTheme.hex }}>Roteiro dos Tweets</h3>
+                          <p className="text-sm text-muted-foreground">Edite os textos que serão renderizados nos tweets</p>
+                        </div>
+                        {Array.from({ length: tweetConfig.cardCount }).map((_, i) => (
+                          <div key={i} className="space-y-1">
+                            <label className="text-xs font-semibold text-muted-foreground">Tweet {i + 1}</label>
+                            <Textarea
+                              value={tweetConfig.tweetTexts[i] || ''}
+                              onChange={(e) => {
+                                const newTexts = [...tweetConfig.tweetTexts];
+                                newTexts[i] = e.target.value;
+                                setTweetConfig(prev => ({ ...prev, tweetTexts: newTexts }));
+                              }}
+                              placeholder={`Texto do tweet ${i + 1}...`}
+                              className="min-h-[80px] text-sm resize-none"
+                              maxLength={280}
+                            />
+                            <p className="text-[11px] text-muted-foreground text-right">{(tweetConfig.tweetTexts[i] || '').length}/280</p>
+                          </div>
+                        ))}
+                        {!tweetConfig.tweetTexts.some(t => t.trim()) && (
+                          <button
+                            onClick={async () => {
+                              if (!topic.trim()) return;
+                              setGeneratingRoteiro(true);
+                              try {
+                                const { data, error } = await supabase.functions.invoke('generate-carousel', {
+                                  body: {
+                                    action: 'generate-content',
+                                    topic: cleanMentionsFromTopic(topic.trim()),
+                                    cardCount: tweetConfig.cardCount,
+                                    keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+                                    productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
+                                  },
+                                });
+                                if (error) throw error;
+                                if (data?.data?.cards?.length) {
+                                  const texts = data.data.cards.map((c: any) => (c.body || c.bodyTop || c.title || '').trim()).filter(Boolean);
+                                  setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
+                                }
+                              } catch (e) {
+                                console.error('[TweetRoteiro] Error:', e);
+                                sonnerToast.error('Erro ao gerar roteiro');
+                              }
+                              setGeneratingRoteiro(false);
+                            }}
+                            disabled={generatingRoteiro || !topic.trim()}
+                            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                            style={{ background: modeTheme.gradient }}>
+                            {generatingRoteiro ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando roteiro...</> : <><Wand2 className="h-4 w-4" /> Gerar roteiro com IA</>}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Ideia Visual' && (
                       <StepVisualIdea

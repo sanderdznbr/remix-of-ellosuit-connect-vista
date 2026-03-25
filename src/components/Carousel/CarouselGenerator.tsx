@@ -7094,6 +7094,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <>
                             <button
                               onClick={() => {
+                                tweetPhotoUploadCardIndexRef.current = activeCardIndex;
                                 setTweetPhotoUploadCardIndex(activeCardIndex);
                                 tweetCardPhotoInputRef.current?.click();
                               }}
@@ -9124,12 +9125,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file && carouselData) {
+            const cardIdx = tweetPhotoUploadCardIndexRef.current;
             const url = URL.createObjectURL(file);
             const newPhotos = [...tweetConfig.tweetPhotos];
-            while (newPhotos.length <= tweetPhotoUploadCardIndex) newPhotos.push(null);
-            newPhotos[tweetPhotoUploadCardIndex] = url;
+            while (newPhotos.length <= cardIdx) newPhotos.push(null);
+            newPhotos[cardIdx] = url;
             const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' as const : tweetConfig.photoMode };
             setTweetConfig(updatedConfig);
+            console.log('[TweetPhoto] Inserted photo for card', cardIdx, 'photoMode:', updatedConfig.photoMode, 'url:', url.substring(0, 50));
             // re-render tweet cards with updated config
             const newCards = [...carouselData.cards];
             void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {

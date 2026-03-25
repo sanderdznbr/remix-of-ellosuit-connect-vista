@@ -4333,11 +4333,46 @@ FORBIDDEN:
   const rerenderTweetCards = async (cards: CarouselCard[], configOverride?: TweetConfig) => {
     if (!cards.some((card) => card.type === 'tweet')) return cards;
     const cfg = configOverride || tweetConfig;
+    const resolveImageUrl = async (url: string): Promise<string> => {
+      if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+      const cached = tweetPhotoDataUrlCacheRef.current[url];
+      if (cached) return cached;
 
-    const selectedWebPhotos = referenceImages
-      .filter((ref) => ref.category === 'general')
-      .map((ref) => ref.url)
-      .filter(Boolean);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Falha ao carregar imagem do tweet: ${response.status}`);
+      const blob = await response.blob();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
+      return dataUrl;
+    };
+
+    const resolvedPhotos = new Array<string | null>(cards.length).fill(null);
+    if (cfg.photoMode === 'web') {
+      const selectedWebPhotos = referenceImages
+        .filter((ref) => ref.category === 'general')
+        .map((ref) => ref.url)
+        .filter(Boolean);
+
+      for (let i = 0; i < cards.length; i++) {
+        const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || selectedWebPhotos[0] || null;
+        if (!photoUrl) continue;
+        try {
+          resolvedPhotos[i] = await resolveImageUrl(photoUrl);
+        } catch (error) {
+          console.warn('[TweetPhoto] Failed to normalize web photo for card', i, error);
+          resolvedPhotos[i] = photoUrl;
+        }
+      }
+    } else if (cfg.photoMode !== 'none') {
+      for (let i = 0; i < cards.length; i++) {
+        resolvedPhotos[i] = cfg.tweetPhotos[i] || null;
+      }
+    }
 
     // Calculate uniform font size across all cards (use max text length)
     const allTexts = cards.map((card) => (card.body || card.bodyTop || card.title || '').length);
@@ -4347,11 +4382,7 @@ FORBIDDEN:
       cfg,
       cards.map((card, i) => ({
         body: card.body || card.bodyTop || card.title || '',
-        photo: cfg.photoMode === 'web'
-          ? selectedWebPhotos[i] || selectedWebPhotos[0] || null
-          : cfg.photoMode !== 'none'
-            ? cfg.tweetPhotos[i] || null
-            : null,
+        photo: resolvedPhotos[i] || null,
         fontScale: card.fontScale,
         paddingScale: card.paddingScale,
         textAlign: card.textAlign,

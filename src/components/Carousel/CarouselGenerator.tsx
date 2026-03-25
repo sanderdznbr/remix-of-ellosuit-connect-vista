@@ -7104,7 +7104,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
                             // Tweet mode: always search web (skip only if user explicitly turned off toggle)
-                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
+                            if (currentStepName === 'Tema' && (wizardMode === 'tweet' || wizardMode === 'tweet2') && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
                               setWebSearchDecisionMade(true);
                               await handleSearchWeb();
                               setWizardStep(wizardStep + 1);
@@ -7511,7 +7511,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Home className="w-5 h-5 text-white/60" />
                 </button>
                 <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: themeHex, backgroundColor: `rgba(${themeRgb},0.12)`, border: `1px solid rgba(${themeRgb},0.25)` }}>
-                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : wizardMode === 'tweet' ? 'Tweet Mode' : 'Modo Simples'}
+                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : wizardMode === 'tweet' || wizardMode === 'tweet2' ? 'Tweet Mode' : 'Modo Simples'}
                   {activeMarketplaceStyle?.name && (
                     <>, tema {activeMarketplaceStyle.name}</>
                   )}
@@ -7557,7 +7557,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Mode & Topic badge */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 text-[11px]" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.12)` }}>
                       <span className="font-bold uppercase tracking-wider" style={{ color: themeHex }}>
-                        {wizardMode === 'tweet' ? 'Tweet Mode' : wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
+                        {wizardMode === 'tweet' || wizardMode === 'tweet2' ? 'Tweet Mode' : wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
                       </span>
                       <span className="text-white/20">•</span>
                       <span className="text-white/50 truncate flex-1">{topic || 'Sem tema'}</span>
@@ -7620,7 +7620,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </p>
                     )}
 
-                    {wizardMode === 'tweet' ? (
+                    {(wizardMode === 'tweet' || wizardMode === 'tweet2') ? (
                       <>
                         {/* Tweet-specific: Edit text inline */}
                         {!isGuest && carouselData.cards[activeCardIndex] && (

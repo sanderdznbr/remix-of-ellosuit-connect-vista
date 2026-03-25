@@ -1929,7 +1929,7 @@ const CarouselGenerator: React.FC = () => {
         const resolvedModel = imageSettings.model === 'auto' ? 'nano-banana' : imageSettings.model;
         for (let i = 0; i < cards.length; i++) {
           const cardText = cards[i]?.body || cards[i]?.title || topic;
-          const productRefs = productImages.length > 0 ? productImages.map(p => p.url || p.preview).filter(Boolean) : [];
+          const productRefs = productImages.length > 0 ? productImages.map(p => p.url || p.thumb).filter(Boolean) : [];
           const photoPrompt = productRefs.length > 0
             ? `Create a professional social media photo for a tweet about: "${cardText}". The image should feature the product/brand shown in the reference images. Make it visually appealing, modern, and suitable for Twitter/X. Clean composition, no text overlays.`
             : `Create a professional social media photo for a tweet about: "${cardText}". Make it visually appealing, modern, and suitable for Twitter/X. Clean composition, no text overlays.`;

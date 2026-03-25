@@ -400,6 +400,7 @@ const CarouselGenerator: React.FC = () => {
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
   const tweetPhotoUploadCardIndexRef = useRef<number>(0);
   const [tweetPhotoUploadCardIndex, setTweetPhotoUploadCardIndex] = useState<number>(0);
+  const tweetPhotoDataUrlCacheRef = useRef<Record<string, string>>({});
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const activeMarketplaceStyleRef = useRef<any>(null);
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);

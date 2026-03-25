@@ -6869,6 +6869,79 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                       </div>
                     )}
+                    {currentStepName === 'Roteiro Tweet2' && (
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <h3 className="text-lg font-bold" style={{ color: modeTheme.hex }}>Roteiro dos Tweets</h3>
+                          <p className="text-sm text-muted-foreground">Edite os textos que serão renderizados nos tweets</p>
+                        </div>
+                        {generatingRoteiro ? (
+                          <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <Loader2 className="h-8 w-8 animate-spin" style={{ color: modeTheme.hex }} />
+                            <p className="text-sm text-white/50">Gerando roteiro dos tweets...</p>
+                          </div>
+                        ) : (
+                          <>
+                            {Array.from({ length: tweet2Config.cardCount }).map((_, i) => (
+                              <div key={i} className="space-y-1">
+                                <label className="text-xs font-semibold text-muted-foreground">Tweet {i + 1}</label>
+                                <Textarea
+                                  value={tweet2Config.tweetTexts[i] || ''}
+                                  onChange={(e) => {
+                                    const newTexts = [...tweet2Config.tweetTexts];
+                                    newTexts[i] = e.target.value;
+                                    setTweet2Config(prev => ({ ...prev, tweetTexts: newTexts }));
+                                  }}
+                                  placeholder={`Texto do tweet ${i + 1}...`}
+                                  className="min-h-[80px] text-sm resize-none"
+                                  maxLength={280}
+                                />
+                                <p className="text-[11px] text-muted-foreground text-right">{(tweet2Config.tweetTexts[i] || '').length}/280</p>
+                              </div>
+                            ))}
+                            <button
+                              onClick={async () => {
+                                if (!topic.trim()) return;
+                                setGeneratingRoteiro(true);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke('generate-carousel', {
+                                    body: {
+                                      action: 'generate-content',
+                                      topic: cleanMentionsFromTopic(topic.trim()),
+                                      cardCount: tweet2Config.cardCount,
+                                      isTweetMode: true,
+                                      webSearchContent: (!skipWebSearch && webSearchResult) ? {
+                                        title: (webSearchResult as any).title || '',
+                                        summary: webSearchResult.summary || '',
+                                        facts: (webSearchResult as any).facts || [],
+                                      } : undefined,
+                                      keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+                                    },
+                                  });
+                                  if (error) throw error;
+                                  if (data?.data?.cards?.length) {
+                                    const texts = data.data.cards.map((c: any) => {
+                                      let t = (c.body || '').trim();
+                                      if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+                                      return t;
+                                    }).filter(Boolean);
+                                    setTweet2Config(prev => ({ ...prev, tweetTexts: texts }));
+                                  }
+                                } catch (e) {
+                                  console.error('[Tweet2Roteiro] Error:', e);
+                                  sonnerToast.error('Erro ao gerar roteiro');
+                                }
+                                setGeneratingRoteiro(false);
+                              }}
+                              disabled={generatingRoteiro || !topic.trim()}
+                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                              style={{ background: modeTheme.gradient }}>
+                              <Wand2 className="h-4 w-4" /> {tweet2Config.tweetTexts.some(t => t.trim()) ? 'Regenerar roteiro' : 'Gerar roteiro com IA'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Ideia Visual' && (
                       <StepVisualIdea

@@ -34,7 +34,7 @@ export async function renderTweetToImage(
   container.style.zIndex = '-1';
   document.body.appendChild(container);
 
-  const bg = isDark ? '#15202B' : '#FFFFFF';
+  const bg = isDark ? '#000000' : '#FFFFFF';
   const textColor = isDark ? '#E7E9EA' : '#0F1419';
   const subColor = isDark ? '#8B98A5' : '#536471';
   const borderColor = isDark ? '#2F3336' : '#EFF3F4';
@@ -94,18 +94,18 @@ export async function renderTweetToImage(
     ">
       <div style="padding: 0 ${horizontalPadding}px; display: flex; flex-direction: column; justify-content: center; flex: 1;">
         <!-- Header: profile -->
-        <div style="display: flex; align-items: flex-start; margin-bottom: ${Math.round(32 * paddingScale)}px; gap: ${headerGap}px;">
+        <div style="display: flex; align-items: center; margin-bottom: ${Math.round(32 * paddingScale)}px; gap: ${headerGap}px;">
           ${config.profilePhoto
             ? `<img src="${config.profilePhoto}" style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" ${config.profilePhoto.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />`
             : `<div style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; background: ${isDark ? '#2F3336' : '#CFD9DE'}; flex-shrink: 0;"></div>`
           }
-          <div style="display: flex; flex-direction: column; justify-content: flex-start; padding-top: ${Math.max(2, Math.round(4 * paddingScale))}px; min-width: 0;">
+          <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-              <span style="font-weight: 700; font-size: ${nameFontSize}px; color: ${textColor}; line-height: 1.3;">
+              <span style="font-weight: 700; font-size: ${nameFontSize}px; color: ${textColor}; line-height: 1.15;">
                 ${escapeHtml(config.displayName || 'User')}
               </span>
               ${config.isVerified ? `
-                <svg viewBox="0 0 22 22" width="${verifiedSize}" height="${verifiedSize}" style="flex-shrink: 0; align-self: center; margin-top: 1px;">
+                <svg viewBox="0 0 22 22" width="${verifiedSize}" height="${verifiedSize}" style="flex-shrink: 0; align-self: center; margin-top: 0;">
                   <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.855-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.69-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.636.433 1.221.878 1.69.47.446 1.055.752 1.69.883.635.13 1.294.083 1.902-.143.272.587.702 1.086 1.24 1.44.54.354 1.167.551 1.813.568.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.225 1.26.276 1.897.143.634-.131 1.217-.437 1.687-.883.445-.468.751-1.053.882-1.687.13-.633.083-1.29-.14-1.897.587-.273 1.084-.704 1.438-1.246.355-.54.552-1.17.57-1.817z" fill="${linkColor}"/>
                   <path d="M9.585 14.929l-3.28-3.28 1.168-1.168 2.112 2.112 4.716-4.716 1.168 1.168-5.884 5.884z" fill="white"/>
                 </svg>
@@ -141,7 +141,7 @@ export async function renderTweetToImage(
             display: flex;
             align-items: center;
             justify-content: center;
-            background: ${isDark ? '#0F1419' : '#F7F9F9'};
+            background: ${isDark ? '#000000' : '#F7F9F9'};
           ">
             <img src="${card.photo}" style="width: 100%; height: 100%; display: block; object-fit: ${photoObjectFit}; object-position: center;" ${card.photo!.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />
           </div>
@@ -261,26 +261,13 @@ export async function renderAllTweetCards(
   const total = config.cardCount;
   const results: string[] = [];
 
-  // Determine which cards get photos:
-  // Cards with explicit photos from the caller always get them.
-  // For remaining slots, pick ~60% randomly.
+  // Determine which cards get photos: only explicit assignments should render images.
   const photoSlots = new Set<number>();
   if (config.photoMode !== 'none') {
-    // First, include cards that have explicit photos
     for (let i = 0; i < total; i++) {
       if (cards[i]?.photo || config.tweetPhotos[i]) {
         photoSlots.add(i);
       }
-    }
-    // Then fill remaining to ~60%
-    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
-    if (photoSlots.size < targetPhotoCount) {
-      const candidates = Array.from({ length: total }, (_, i) => i).filter(i => !photoSlots.has(i));
-      for (let j = candidates.length - 1; j > 0; j--) {
-        const k = Math.floor(Math.random() * (j + 1));
-        [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
-      }
-      candidates.slice(0, targetPhotoCount - photoSlots.size).forEach(idx => photoSlots.add(idx));
     }
   }
 

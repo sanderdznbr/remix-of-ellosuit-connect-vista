@@ -44,7 +44,7 @@ export async function renderTweetToImage(
   const hasPhoto = !!(card.photo && card.photoStyle);
   const fontScale = card.fontScale ?? 1;
   const paddingScale = card.paddingScale ?? 1;
-  const textAlign = card.textAlign ?? 'left';
+  const textAlign = hasPhoto ? (card.textAlign ?? 'left') : 'center';
   const horizontalPadding = Math.round(100 * paddingScale);
   const avatarSize = Math.round(80 * paddingScale);
   const headerGap = Math.round(16 * paddingScale);
@@ -125,6 +125,8 @@ export async function renderTweetToImage(
           font-weight: 400;
           letter-spacing: -0.4px;
           text-align: ${textAlign};
+          align-self: ${hasPhoto ? 'stretch' : 'center'};
+          max-width: ${hasPhoto ? '100%' : '88%'};
         ">${formatTweetText(card.text)}</div>
 
         <!-- Photo -->

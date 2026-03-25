@@ -16,6 +16,8 @@ export interface TweetCardProps {
   onPhotoHeightChange?: (h: number) => void;
   /** Override font size (unscaled, base 1080px). When set, ignores text-length auto-sizing */
   fontSizeOverride?: number;
+  /** Optional vertical offset for export/save rendering fine-tuning */
+  headerOffsetY?: number;
 }
 
 /** Live DOM tweet card — pixel-perfect X/Twitter layout, optionally editable */
@@ -33,6 +35,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
   photoHeight: photoHeightProp,
   onPhotoHeightChange,
   fontSizeOverride,
+  headerOffsetY = 0,
 }) => {
   const isDark = config.theme === 'dark';
   const bg = isDark ? '#000000' : '#FFFFFF';
@@ -73,6 +76,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
   const horizontalPadding = s(80);
   const defaultPhotoH = hasPhoto ? Math.round(height * 0.35) : 0;
   const photoMaxH = photoHeightProp ?? defaultPhotoH;
+  const headerOffset = s(headerOffsetY);
 
   const textRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
@@ -139,7 +143,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
     >
       <div style={{ padding: `0 ${horizontalPadding}px` }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: s(32), gap: headerGap }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: s(32), gap: headerGap, paddingTop: headerOffset }}>
           {config.profilePhoto ? (
             <img
               src={config.profilePhoto}
@@ -308,6 +312,7 @@ const PhotoResizable: React.FC<{
         <img
           src={photo}
           alt=""
+          crossOrigin={photo.startsWith('data:') || photo.startsWith('blob:') ? undefined : 'anonymous'}
           referrerPolicy="no-referrer"
           style={{
             width: '100%',

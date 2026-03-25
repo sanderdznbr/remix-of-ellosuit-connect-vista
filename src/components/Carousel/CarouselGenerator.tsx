@@ -2109,12 +2109,14 @@ const CarouselGenerator: React.FC = () => {
 
       cards = cards.map((card, i) => ({
         ...card,
-        photo: resolvedPhotos[i] || null,
+        photo: resolvedPhotos[i] || configForRender.tweetPhotos[i] || null,
         fontScale: 1.15,
         paddingScale: 1.05,
         textAlign: 'left' as const,
         uniformFontSize: maxTextLen, // pass to renderer for uniform sizing
         photoFit: configForRender.photoFit,
+        photoHeight: tweetPhotoHeights[i],
+        fontSizeOverride: tweetFontSizeOverride ?? undefined,
       }));
 
       console.log('[TweetCanvas] Rendering', cards.length, 'cards:', cards.map(c => c.body?.substring(0, 40)));

@@ -242,6 +242,92 @@ const TweetCard: React.FC<TweetCardProps> = ({
   );
 };
 
+/** Resizable photo container with drag handles */
+const PhotoResizable: React.FC<{
+  photoMaxH: number;
+  borderRadius: number;
+  borderColor: string;
+  isDark: boolean;
+  photo: string;
+  photoFit: TweetPhotoFit;
+  bgSizeMap: Record<string, string>;
+  editable?: boolean;
+  minH: number;
+  maxH: number;
+  onHeightChange?: (h: number) => void;
+}> = ({ photoMaxH, borderRadius, borderColor, isDark, photo, photoFit, bgSizeMap, editable, minH, maxH, onHeightChange }) => {
+  const [localH, setLocalH] = useState(photoMaxH);
+  const dragging = useRef(false);
+  const startY = useRef(0);
+  const startH = useRef(0);
+
+  useEffect(() => { setLocalH(photoMaxH); }, [photoMaxH]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!editable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging.current = true;
+    startY.current = e.clientY;
+    startH.current = localH;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [editable, localH]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const delta = e.clientY - startY.current;
+    const newH = Math.max(minH, Math.min(maxH, startH.current + delta));
+    setLocalH(newH);
+  }, [minH, maxH]);
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    onHeightChange?.(localH);
+  }, [localH, onHeightChange]);
+
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <div style={{
+        borderRadius,
+        overflow: 'hidden',
+        border: `1px solid ${borderColor}`,
+        height: localH,
+        background: isDark ? '#000' : '#F7F9F9',
+        backgroundImage: `url('${photo}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center center',
+        backgroundSize: bgSizeMap[photoFit] || 'cover',
+      }} />
+      {editable && (
+        <div
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          style={{
+            position: 'absolute',
+            bottom: -6,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 48,
+            height: 12,
+            borderRadius: 6,
+            background: 'rgba(29,155,240,0.7)',
+            cursor: 'ns-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+          }}
+        >
+          <div style={{ width: 20, height: 2, borderRadius: 1, background: 'white' }} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const EngagementIcon: React.FC<{ type: string; size: number; color: string }> = ({ type, size, color }) => {
   const props = { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: color, strokeWidth: 1.5 };
   switch (type) {

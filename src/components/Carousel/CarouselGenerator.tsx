@@ -7816,21 +7816,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 tweetCardPhotoInputRef.current?.click();
                               }}
                               className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-emerald-300 hover:text-emerald-200 hover:bg-white/[0.06] transition-all w-full">
-                              <ImagePlus className="h-4 w-4 text-emerald-400" /> {tweetConfig.tweetPhotos[activeCardIndex] ? 'Trocar Foto' : 'Inserir Foto'}
+                              <ImagePlus className="h-4 w-4 text-emerald-400" /> {(wizardMode === 'tweet2' ? tweet2Config.tweetPhotos[activeCardIndex] : tweetConfig.tweetPhotos[activeCardIndex]) ? 'Trocar Foto' : 'Inserir Foto'}
                             </button>
-                            {tweetConfig.tweetPhotos[activeCardIndex] && (
+                            {(wizardMode === 'tweet2' ? tweet2Config.tweetPhotos[activeCardIndex] : tweetConfig.tweetPhotos[activeCardIndex]) && (
                               <button
                                 onClick={() => {
-                                  const newPhotos = [...tweetConfig.tweetPhotos];
-                                  newPhotos[activeCardIndex] = null;
-                                  const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos };
-                                  setTweetConfig(updatedConfig);
-                                  // re-render with updated config
-                                  if (carouselData) {
-                                    const newCards = [...carouselData.cards];
-                                    void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
-                                      setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
-                                    });
+                                  if (wizardMode === 'tweet2') {
+                                    const newPhotos = [...tweet2Config.tweetPhotos];
+                                    newPhotos[activeCardIndex] = null;
+                                    setTweet2Config(prev => ({ ...prev, tweetPhotos: newPhotos }));
+                                  } else {
+                                    const newPhotos = [...tweetConfig.tweetPhotos];
+                                    newPhotos[activeCardIndex] = null;
+                                    const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos };
+                                    setTweetConfig(updatedConfig);
+                                    if (carouselData) {
+                                      const newCards = [...carouselData.cards];
+                                      void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
+                                        setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                                      });
+                                    }
                                   }
                                 }}
                                 className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-red-300 hover:text-red-200 hover:bg-white/[0.06] transition-all w-full">
@@ -7839,7 +7844,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             )}
 
                             {/* Photo fit mode selector — show when any card has photo */}
-                            {tweetConfig.tweetPhotos.some(p => p) && (
+                            {(wizardMode === 'tweet2' ? tweet2Config.tweetPhotos.some(p => p) : tweetConfig.tweetPhotos.some(p => p)) && (
                               <div className="flex items-center gap-1.5 px-3 py-2">
                                 <span className="text-[11px] text-white/30 mr-1">Ajuste:</span>
                                 {([
@@ -7849,17 +7854,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 ] as const).map(opt => (
                                   <button key={opt.key}
                                     onClick={() => {
-                                      const updatedConfig = { ...tweetConfig, photoFit: opt.key };
-                                      setTweetConfig(updatedConfig);
-                                      if (carouselData) {
-                                        const newCards = [...carouselData.cards];
-                                        void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
-                                          setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
-                                        });
+                                      if (wizardMode === 'tweet2') {
+                                        setTweet2Config(prev => ({ ...prev, photoFit: opt.key }));
+                                      } else {
+                                        const updatedConfig = { ...tweetConfig, photoFit: opt.key };
+                                        setTweetConfig(updatedConfig);
+                                        if (carouselData) {
+                                          const newCards = [...carouselData.cards];
+                                          void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
+                                            setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                                          });
+                                        }
                                       }
                                     }}
                                     className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-                                      tweetConfig.photoFit === opt.key
+                                      (wizardMode === 'tweet2' ? tweet2Config.photoFit : tweetConfig.photoFit) === opt.key
                                         ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
                                         : 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
                                     }`}>

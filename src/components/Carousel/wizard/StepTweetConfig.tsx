@@ -151,6 +151,7 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
             { value: 3, label: '3 slides' },
             { value: 5, label: '5 slides' },
             { value: 7, label: '7 slides' },
+            { value: 10, label: '10 slides' },
           ].map(opt => (
             <button key={opt.value} onClick={() => updateCardCount(opt.value)}
               className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition-all border ${

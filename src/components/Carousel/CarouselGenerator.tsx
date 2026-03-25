@@ -629,21 +629,6 @@ const CarouselGenerator: React.FC = () => {
     if (wizardMode !== 'tweet2' || tweet2Config.photoMode === 'none') return;
 
     let cancelled = false;
-      if (photoCount >= totalCards) return new Set(Array.from({ length: totalCards }, (_, i) => i));
-      if (photoCount <= 0) return new Set();
-      const indices: number[] = [];
-      for (let i = 0; i < photoCount; i++) {
-        indices.push(Math.round(i * (totalCards - 1) / (photoCount - 1 || 1)));
-      }
-      // Deduplicate in case of rounding collisions
-      const set = new Set(indices);
-      let idx = 0;
-      while (set.size < photoCount && idx < totalCards) {
-        set.add(idx);
-        idx++;
-      }
-      return set;
-    };
 
     const normalizeTweet2Photos = async () => {
       const nextPhotos = [...tweet2Config.tweetPhotos];

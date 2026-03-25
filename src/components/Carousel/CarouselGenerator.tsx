@@ -5417,6 +5417,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }
 
+    const w = isExport ? cardW : previewW;
+    const h = isExport ? cardH : previewH;
+    const s = isExport ? 1 : previewW / cardW;
+    const fs = card.fontScale ?? 1.0;
+    const ps = card.paddingScale ?? 1.0;
+
     // Tweet mode cards are already fully rendered images; do not wrap them in templates
     if (card.type === 'tweet') {
       return (
@@ -5440,17 +5446,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     // Extreme mode also generates full-bleed images with text baked in by the AI
     const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
     if (isMarketplaceFullBleed) return renderMarketplaceFullBleedCard(card, index, isExport);
-
+    
     const isBetaTest2 = activePresetId === 'beta-test2';
     const isBetaTest3 = activePresetId === 'beta-test3';
     if (isBetaTest2) return renderBetaTest2Card(card, index, isExport);
     if (isBetaTest3) return renderBetaTest3Card(card, index, isExport);
-
-    const w = isExport ? cardW : previewW;
-    const h = isExport ? cardH : previewH;
-    const s = isExport ? 1 : previewW / cardW;
-    const fs = card.fontScale ?? 1.0;
-    const ps = card.paddingScale ?? 1.0;
     const layout = card.layout || 'dark';
     const cardAlign = card.textAlign || 'left';
     const cardSerif = card.cardFontIndex !== undefined ? FONT_OPTIONS[card.cardFontIndex]?.value || serif : serif;

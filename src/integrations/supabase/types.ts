@@ -7363,7 +7363,9 @@ export type Database = {
           id: string
           last_message: string | null
           last_message_at: string | null
+          lead_temperature: string | null
           profile_picture: string | null
+          reschedule_event_id: string | null
           session_id: string
           status: string | null
           unread_count: number | null
@@ -7381,7 +7383,9 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_at?: string | null
+          lead_temperature?: string | null
           profile_picture?: string | null
+          reschedule_event_id?: string | null
           session_id: string
           status?: string | null
           unread_count?: number | null
@@ -7399,7 +7403,9 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_at?: string | null
+          lead_temperature?: string | null
           profile_picture?: string | null
+          reschedule_event_id?: string | null
           session_id?: string
           status?: string | null
           unread_count?: number | null
@@ -7418,6 +7424,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ycloud_conversations_reschedule_event_id_fkey"
+            columns: ["reschedule_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
             referencedColumns: ["id"]
           },
           {
@@ -7442,6 +7455,7 @@ export type Database = {
           message_type: string | null
           raw_payload: Json | null
           status: string | null
+          transcription: string | null
           wamid: string | null
           ycloud_message_id: string | null
         }
@@ -7457,6 +7471,7 @@ export type Database = {
           message_type?: string | null
           raw_payload?: Json | null
           status?: string | null
+          transcription?: string | null
           wamid?: string | null
           ycloud_message_id?: string | null
         }
@@ -7472,6 +7487,7 @@ export type Database = {
           message_type?: string | null
           raw_payload?: Json | null
           status?: string | null
+          transcription?: string | null
           wamid?: string | null
           ycloud_message_id?: string | null
         }

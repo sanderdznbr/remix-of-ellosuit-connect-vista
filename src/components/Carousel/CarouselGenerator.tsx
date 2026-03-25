@@ -247,6 +247,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
+  const [tweetConfig, setTweetConfig] = useState<TweetConfig>(DEFAULT_TWEET_CONFIG);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

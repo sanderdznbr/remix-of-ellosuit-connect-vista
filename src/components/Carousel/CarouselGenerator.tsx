@@ -1908,6 +1908,7 @@ const CarouselGenerator: React.FC = () => {
         paddingScale: 1.05,
         textAlign: 'left' as const,
         uniformFontSize: maxTextLen, // pass to renderer for uniform sizing
+        photoFit: tweetConfig.photoFit,
       }));
 
       console.log('[TweetCanvas] Rendering', cards.length, 'cards:', cards.map(c => c.body?.substring(0, 40)));

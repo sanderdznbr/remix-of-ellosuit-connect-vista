@@ -80,13 +80,13 @@ const StepMode: React.FC<Props> = ({
   };
 
   return (
-    <div className="space-y-6" style={{ minHeight: '300px' }}>
+    <div className="space-y-4" style={{ minHeight: '200px' }}>
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Como você quer criar?</h2>
+        <h2 className="text-2xl font-bold text-white mb-1">Como você quer criar?</h2>
         <p className="text-sm text-white/40">Escolha o nível de controle sobre a geração.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-2">
         {modes.map((m) => {
           const Icon = m.icon;
           const selected = wizardMode === m.key;
@@ -102,7 +102,7 @@ const StepMode: React.FC<Props> = ({
                 }
                 setWizardMode(m.key);
               }}
-              className={`flex items-center gap-4 p-5 rounded-2xl text-left transition-all border relative ${
+              className={`flex items-center gap-3 p-4 rounded-2xl text-left transition-all border relative ${
                 locked
                   ? 'bg-white/[0.01] border-white/[0.04] opacity-60 cursor-pointer'
                   : selected

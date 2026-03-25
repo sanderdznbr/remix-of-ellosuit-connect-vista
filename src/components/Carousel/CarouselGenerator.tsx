@@ -6191,6 +6191,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
+                            // Tweet mode: skip all web search logic
+                            if (currentStepName === 'Tema' && wizardMode === 'tweet') {
+                              setSkipWebSearch(true);
+                              setWebSearchDecisionMade(true);
+                              setWizardStep(wizardStep + 1);
+                              return;
+                            }
                             // Force web search when toggle is ON
                             if (currentStepName === 'Tema' && forceWebSearch && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
                               setWebSearchDecisionMade(true);

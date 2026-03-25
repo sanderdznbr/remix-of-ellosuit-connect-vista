@@ -606,6 +606,66 @@ const CarouselGenerator: React.FC = () => {
       cancelled = true;
     };
   }, [wizardMode, tweetConfig, getResolvedTweetPhotoForCard, resolveTweetPhotoUrl]);
+
+  // Normalize tweet2 photos from web search referenceImages into tweet2Config.tweetPhotos
+  useEffect(() => {
+    if (wizardMode !== 'tweet2' || tweet2Config.photoMode === 'none') return;
+
+    let cancelled = false;
+
+    const normalizeTweet2Photos = async () => {
+      const nextPhotos = [...tweet2Config.tweetPhotos];
+      const totalCards = Math.max(tweet2Config.cardCount, nextPhotos.length);
+      let changed = false;
+
+      // Build web photo fallbacks from referenceImages
+      const webPhotoFallbacks = referenceImages
+        .filter(r => r.category === 'general')
+        .map(r => r.url || r.thumb);
+
+      for (let i = 0; i < totalCards; i++) {
+        if (cancelled) return;
+
+        // For web mode: use referenceImages as source; for manual: use existing tweetPhotos
+        const sourceUrl = tweet2Config.photoMode === 'web'
+          ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null)
+          : (tweet2Config.tweetPhotos[i] || null);
+
+        if (!sourceUrl) {
+          if (nextPhotos[i] !== null && nextPhotos[i] !== undefined) {
+            nextPhotos[i] = null;
+            changed = true;
+          }
+          continue;
+        }
+
+        try {
+          const normalizedUrl = await resolveTweetPhotoUrl(sourceUrl);
+          if (nextPhotos[i] !== normalizedUrl) {
+            nextPhotos[i] = normalizedUrl;
+            changed = true;
+          }
+        } catch (error) {
+          console.warn('[Tweet2Photo] Failed to normalize photo for card', i, error);
+          if (nextPhotos[i] !== sourceUrl) {
+            nextPhotos[i] = sourceUrl;
+            changed = true;
+          }
+        }
+      }
+
+      if (!cancelled && changed) {
+        setTweet2Config((prev) => ({ ...prev, tweetPhotos: nextPhotos }));
+      }
+    };
+
+    void normalizeTweet2Photos();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [wizardMode, tweet2Config.photoMode, tweet2Config.cardCount, referenceImages, resolveTweetPhotoUrl]);
+
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);
   const [carouselFromCoverCount, setCarouselFromCoverCount] = useState(8);

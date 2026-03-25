@@ -1562,12 +1562,6 @@ const CarouselGenerator: React.FC = () => {
     }
   };
 
-  // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
-  const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
-    try {
-      // Use explicit data (passed directly) or fall back to state
-      const dataSource = explicitData || carouselData;
-      
 
   // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {

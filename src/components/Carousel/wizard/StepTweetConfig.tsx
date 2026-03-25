@@ -25,7 +25,7 @@ export const DEFAULT_TWEET_CONFIG: TweetConfig = {
   tweetTexts: [''],
   tweetPhotos: [null],
   photoMode: 'none',
-  autoSelectPhotos: true,
+  autoSelectPhotos: false,
   contentMode: 'static',
   cardCount: 1,
   theme: 'light',

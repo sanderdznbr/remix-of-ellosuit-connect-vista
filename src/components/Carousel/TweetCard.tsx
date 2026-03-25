@@ -143,7 +143,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
     >
       <div style={{ padding: `0 ${horizontalPadding}px` }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: s(32), gap: headerGap, paddingTop: headerOffset }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: s(32), gap: headerGap, paddingTop: headerOffset }}>
           {config.profilePhoto ? (
             <img
               src={config.profilePhoto}
@@ -154,8 +154,8 @@ const TweetCard: React.FC<TweetCardProps> = ({
           ) : (
             <div style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', background: isDark ? '#2F3336' : '#CFD9DE', flexShrink: 0 }} />
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, paddingTop: s(4) }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: s(6), minWidth: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, paddingTop: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: s(6), minWidth: 0, lineHeight: 1 }}>
               <span style={{ fontWeight: 700, fontSize: nameFontSize, color: textColor, lineHeight: 1.1 }}>
                 {config.displayName || 'User'}
               </span>

@@ -1817,7 +1817,22 @@ const CarouselGenerator: React.FC = () => {
         if (gc.extremeSelectedFont) setExtremeSelectedFont(gc.extremeSelectedFont);
       } else if (gc.wizardMode === 'tweet') {
         setWizardMode('tweet');
-        if (gc.tweetConfig) setTweetConfig(gc.tweetConfig);
+        if (gc.tweetConfig) {
+          const restoredTweetConfig = { ...gc.tweetConfig };
+          if (restoredTweetConfig.photoMode !== 'none' && Array.isArray(restoredTweetConfig.tweetPhotos)) {
+            restoredTweetConfig.tweetPhotos = await Promise.all(
+              restoredTweetConfig.tweetPhotos.map(async (photoUrl: string | null) => {
+                if (!photoUrl) return null;
+                try {
+                  return await resolveTweetPhotoUrl(photoUrl);
+                } catch {
+                  return photoUrl;
+                }
+              })
+            );
+          }
+          setTweetConfig(restoredTweetConfig);
+        }
         if (gc.tweetPhotoHeights) setTweetPhotoHeights(gc.tweetPhotoHeights);
         if (gc.tweetFontSizeOverride !== undefined) setTweetFontSizeOverride(gc.tweetFontSizeOverride);
         if (gc.tweetCardPhotoAssignments) setCardPhotoAssignments(gc.tweetCardPhotoAssignments);

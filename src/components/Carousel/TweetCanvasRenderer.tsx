@@ -1,6 +1,25 @@
 import html2canvas from 'html2canvas';
 import type { TweetConfig } from './wizard/StepTweetConfig';
 
+/**
+ * Captures a visible DOM element (TweetCard) as a data URL image.
+ */
+export async function captureTweetCardElement(
+  element: HTMLElement,
+  format: { w: number; h: number }
+): Promise<string> {
+  const canvas = await html2canvas(element, {
+    width: format.w,
+    height: format.h,
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: null,
+    logging: false,
+  });
+  return canvas.toDataURL('image/png');
+}
+
 interface TweetRenderData {
   text: string;
   photo?: string | null;

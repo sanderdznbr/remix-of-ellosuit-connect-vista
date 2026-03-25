@@ -689,7 +689,7 @@ const CarouselGenerator: React.FC = () => {
     const persistedCards = [...cards];
 
     for (let i = 0; i < cards.length; i++) {
-      if (cards[i]?.type !== 'tweet') continue;
+      if (cards[i]?.type !== 'tweet' && cards[i]?.type !== 'tweet2') continue;
 
       const previewEl = tweetPreviewRefs.current[i];
       if (!previewEl) throw new Error(`Preview do card ${i + 1} não encontrado`);

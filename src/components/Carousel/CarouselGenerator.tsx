@@ -165,7 +165,7 @@ const FONT_OPTIONS = [
 ];
 
 interface CarouselCard {
-  type: 'cover' | 'content' | 'cta';
+  type: 'cover' | 'content' | 'cta' | 'tweet';
   title?: string;
   subtitle?: string;
   body?: string;
@@ -1795,46 +1795,52 @@ const CarouselGenerator: React.FC = () => {
 
       const formatDims = postFormat === 'square' ? { w: 1080, h: 1080 } : postFormat === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1350 };
 
-      // If no manual texts, generate content via AI first
+      // If no manual texts, generate tweet-native content first
       let cards: Array<{ body?: string; title?: string; bodyTop?: string }> = [];
       if (tweetConfig.tweetTexts.some(t => t.trim())) {
-        cards = tweetConfig.tweetTexts.map(t => ({ body: t }));
+        cards = tweetConfig.tweetTexts.map(t => ({ body: t.trim() }));
       } else if (topic.trim()) {
-        // Generate tweet texts via edge function
         setImageGenProgress('Gerando textos dos tweets...');
         try {
-          const { data } = await supabase.functions.invoke('generate-carousel', {
+          const { data, error } = await supabase.functions.invoke('generate-carousel', {
             body: {
               action: 'generate-content',
-              topic: topic.trim(),
+              topic: cleanMentionsFromTopic(topic.trim()),
               cardCount: tweetConfig.cardCount,
-              keywords: [],
-              productContext: `TWEET_POST_MODE: Gere conteúdo no formato de tweet/post do Twitter/X. Cada card deve ter texto curto e impactante (máx 280 caracteres). Linguagem informal e direta.`,
+              keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+              productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
             },
           });
-          if (data?.cards) {
-            cards = data.cards;
+          if (error) throw error;
+          if (data?.cards?.length) {
+            cards = data.cards.map((c: any) => ({ body: (c.body || c.bodyTop || c.title || '').trim() })).filter((c: any) => c.body);
           }
         } catch (e) {
           console.error('[TweetCanvas] Content generation failed:', e);
         }
+
         if (cards.length === 0) {
-          cards = [{ body: topic.trim() }];
+          cards = [{ body: cleanMentionsFromTopic(topic.trim()) }];
         }
       } else {
         cards = [{ body: 'Tweet de exemplo' }];
       }
 
+      // Normalize amount of cards
+      while (cards.length < tweetConfig.cardCount) {
+        cards.push({ body: cards[cards.length - 1]?.body || cleanMentionsFromTopic(topic.trim()) || 'Tweet' });
+      }
+      cards = cards.slice(0, tweetConfig.cardCount);
+
       const images = await renderAllTweetCards(tweetConfig, cards, formatDims, (current, total) => {
         setImageGenProgress(`${current}/${total} tweets renderizados...`);
       });
 
-      // Build carousel data structure
       const carouselCards: CarouselCard[] = images.map((imgUrl, i) => ({
-        type: 'content' as const,
+        type: 'tweet' as const,
         imageUrl: imgUrl,
         title: '',
-        body: cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || '',
+        body: cards[i]?.body || '',
       }));
 
       const newCarouselData: CarouselData = {
@@ -5411,21 +5417,40 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }
 
-    // Marketplace full-bleed mode: AI generates complete images with text baked in
-    // Extreme mode also generates full-bleed images with text baked in by the AI
-    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
-    if (isMarketplaceFullBleed) return renderMarketplaceFullBleedCard(card, index, isExport);
-
-    const isBetaTest2 = activePresetId === 'beta-test2';
-    const isBetaTest3 = activePresetId === 'beta-test3';
-    if (isBetaTest2) return renderBetaTest2Card(card, index, isExport);
-    if (isBetaTest3) return renderBetaTest3Card(card, index, isExport);
-
     const w = isExport ? cardW : previewW;
     const h = isExport ? cardH : previewH;
     const s = isExport ? 1 : previewW / cardW;
     const fs = card.fontScale ?? 1.0;
     const ps = card.paddingScale ?? 1.0;
+
+    // Tweet mode cards are already fully rendered images; do not wrap them in templates
+    if (card.type === 'tweet') {
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? 'true' : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: '#000000' }}>
+          {card.imageUrl && (
+            <img
+              src={card.imageUrl}
+              alt=""
+              {...(isExport ? { crossOrigin: 'anonymous' } : {})}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Marketplace full-bleed mode: AI generates complete images with text baked in
+    // Extreme mode also generates full-bleed images with text baked in by the AI
+    const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
+    if (isMarketplaceFullBleed) return renderMarketplaceFullBleedCard(card, index, isExport);
+    
+    const isBetaTest2 = activePresetId === 'beta-test2';
+    const isBetaTest3 = activePresetId === 'beta-test3';
+    if (isBetaTest2) return renderBetaTest2Card(card, index, isExport);
+    if (isBetaTest3) return renderBetaTest3Card(card, index, isExport);
     const layout = card.layout || 'dark';
     const cardAlign = card.textAlign || 'left';
     const cardSerif = card.cardFontIndex !== undefined ? FONT_OPTIONS[card.cardFontIndex]?.value || serif : serif;

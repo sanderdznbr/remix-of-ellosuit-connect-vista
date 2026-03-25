@@ -42,8 +42,8 @@ export async function renderTweetToImage(
   const paddingScale = card.paddingScale ?? 1;
   const textAlign = card.textAlign ?? 'left';
   const horizontalPadding = Math.round(100 * paddingScale);
-  const avatarSize = Math.round(110 * paddingScale);
-  const headerGap = Math.round(20 * paddingScale);
+  const avatarSize = Math.round(80 * paddingScale);
+  const headerGap = Math.round(16 * paddingScale);
 
   // Calculate font sizes based on text length for optimal fill
   const textLen = card.text.length;
@@ -55,9 +55,9 @@ export async function renderTweetToImage(
   else tweetFontSize = 38;
   tweetFontSize = Math.round(tweetFontSize * fontScale);
 
-  const nameFontSize = Math.round(40 * fontScale);
-  const usernameFontSize = Math.round(32 * fontScale);
-  const verifiedSize = Math.round(34 * fontScale);
+  const nameFontSize = Math.round(34 * fontScale);
+  const usernameFontSize = Math.round(28 * fontScale);
+  const verifiedSize = Math.round(30 * fontScale);
 
   // Photo height: constrain to a reasonable portion, like real Twitter
   const photoMaxH = hasPhoto ? Math.round(format.h * 0.35) : 0;
@@ -104,12 +104,12 @@ export async function renderTweetToImage(
         <!-- Tweet text -->
         <div style="
           font-size: ${tweetFontSize}px;
-          line-height: 1.25;
+          line-height: 1.3;
           color: ${textColor};
-          margin-bottom: ${hasPhoto ? Math.round(28 * paddingScale) : 0}px;
+          margin-bottom: ${hasPhoto ? Math.round(44 * paddingScale) : 0}px;
           word-wrap: break-word;
           white-space: pre-wrap;
-          font-weight: 400;
+          font-weight: 700;
           letter-spacing: -0.4px;
           text-align: ${textAlign};
         ">${escapeHtml(card.text)}</div>
@@ -180,10 +180,25 @@ export async function renderAllTweetCards(
   const total = config.cardCount;
   const results: string[] = [];
 
+  // Only ~60% of cards get photos — skip photo on some cards for variety
+  const photoSlots = new Set<number>();
+  if (config.photoMode !== 'none') {
+    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
+    // Always include first card, then pick random others
+    photoSlots.add(0);
+    const candidates = Array.from({ length: total - 1 }, (_, i) => i + 1);
+    for (let j = candidates.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
+    }
+    candidates.slice(0, targetPhotoCount - 1).forEach(idx => photoSlots.add(idx));
+  }
+
   for (let i = 0; i < total; i++) {
     onProgress?.(i, total);
     const cardText = cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || config.tweetTexts[i] || '';
-    const cardPhoto = cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null);
+    const shouldHavePhoto = photoSlots.has(i);
+    const cardPhoto = shouldHavePhoto ? (cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null)) : null;
 
     const dataUrl = await renderTweetToImage(config, {
       text: cardText,

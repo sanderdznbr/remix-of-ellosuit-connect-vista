@@ -132,7 +132,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
         fontFamily: "'TwitterChirp', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
         overflow: 'hidden',
         boxSizing: 'border-box',
-        padding: `${Math.round(height * 0.06)}px 0`,
+        padding: `${Math.round(height * 0.10)}px 0 ${Math.round(height * 0.05)}px 0`,
         cursor: editable ? 'text' : onClick ? 'pointer' : undefined,
         position: 'relative',
       }}

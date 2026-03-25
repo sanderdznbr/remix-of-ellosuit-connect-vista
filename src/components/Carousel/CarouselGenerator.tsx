@@ -2381,20 +2381,37 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       console.log('[GENERATE_FLOW] Calling generate-carousel edge function...');
       console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: cleanMentionsFromTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
+      // Build tweet context for tweet mode
+      const tweetModeContext = wizardMode === 'tweet' ? {
+        isTweetMode: true,
+        tweetProfile: {
+          displayName: tweetConfig.displayName || 'User',
+          username: tweetConfig.username || 'user',
+          isVerified: tweetConfig.isVerified,
+          hasProfilePhoto: !!tweetConfig.profilePhoto,
+          photoMode: tweetConfig.photoMode,
+        },
+      } : undefined;
+
+      const tweetProductContext = wizardMode === 'tweet'
+        ? `TWEET_POST_MODE: Gere conteúdo no formato de um tweet/post do Twitter/X. Cada card deve ter um texto curto e impactante como um tweet real. O conteúdo deve ser envolvente, usar linguagem informal e direta. Cada "tweet" é independente mas relacionado ao tema. Gere textos curtos (máx 280 caracteres por tweet). NÃO gere títulos longos - cada card é um tweet separado com texto curto e direto.`
+        : undefined;
+
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
           topic: cleanMentionsFromTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount,
+          cardCount: wizardMode === 'tweet' ? tweetConfig.cardCount : cardCount,
           brandName: brandName || undefined,
           userName: userName || undefined,
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(hasManualCardTexts ? { manualCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
-          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : wizardMode === 'advanced' && advancedVisualIdea.trim() ? { productContext: `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}` } : productContext ? { productContext } : {}),
+          ...(tweetProductContext ? { productContext: tweetProductContext } : wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : wizardMode === 'advanced' && advancedVisualIdea.trim() ? { productContext: `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}` } : productContext ? { productContext } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
+          ...(tweetModeContext || {}),
         },
       });
       console.log('[GENERATE_FLOW] generate-carousel response:', error ? 'ERROR' : 'OK', data?.success, data?.error);

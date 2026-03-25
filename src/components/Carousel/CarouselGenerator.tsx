@@ -124,7 +124,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
-import { renderAllTweetCards, captureTweetCardElement } from './TweetCanvasRenderer';
+import { renderAllTweetCards } from './TweetCanvasRenderer';
 import TweetCard from './TweetCard';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
@@ -207,7 +207,6 @@ const CarouselGenerator: React.FC = () => {
   const { isMobile: isMobileView } = useIsMobile();
   const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const tweetPreviewShellRef = useRef<HTMLDivElement | null>(null);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
   const planLimits = usePlanLimits();
@@ -5281,34 +5280,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       const isTweetExport = wizardMode === 'tweet' && carouselData.cards.some(c => c.type === 'tweet');
 
-      const captureTweetPreviewShell = async (cardIndex: number): Promise<HTMLCanvasElement> => {
-        const previousIndex = activeCardIndex;
-        setActiveCardIndex(cardIndex);
-
-        await new Promise(r => setTimeout(r, 450));
-
-        const shell = tweetPreviewShellRef.current;
-        if (!shell) throw new Error('Tweet preview shell não encontrado');
-
-        const canvas = await html2canvas(shell, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#000000',
-          logging: false,
-          imageTimeout: 30000,
-          onclone: (clonedDoc) => {
-            clonedDoc.querySelectorAll('img').forEach(img => {
-              img.crossOrigin = 'anonymous';
-            });
-          },
-        });
-
-        setActiveCardIndex(previousIndex);
-        await new Promise(r => setTimeout(r, 50));
-        return canvas;
-      };
-
       if (asZip) {
         const JSZip = (await import('jszip')).default;
         const zip = new JSZip();
@@ -5316,7 +5287,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let i = 0; i < carouselData.cards.length; i++) {
           let canvas: HTMLCanvasElement;
           if (isTweetExport) {
-            canvas = await captureTweetPreviewShell(i);
+            const el = cardRefs.current[i];
+            if (!el) continue;
+            canvas = await html2canvas(el, {
+              width: cardW,
+              height: cardH,
+              scale: 2,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: tweetConfig.theme === 'dark' ? '#000000' : '#FFFFFF',
+              logging: false,
+              imageTimeout: 30000,
+              onclone: (clonedDoc) => {
+                clonedDoc.querySelectorAll('img').forEach(img => {
+                  img.crossOrigin = 'anonymous';
+                });
+              },
+            });
           } else {
             const el = cardRefs.current[i];
             if (!el) continue;
@@ -5347,7 +5334,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let i = 0; i < carouselData.cards.length; i++) {
           let canvas: HTMLCanvasElement;
           if (isTweetExport) {
-            canvas = await captureTweetPreviewShell(i);
+            const el = cardRefs.current[i];
+            if (!el) continue;
+            canvas = await html2canvas(el, {
+              width: cardW,
+              height: cardH,
+              scale: 1,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: tweetConfig.theme === 'dark' ? '#000000' : '#FFFFFF',
+              logging: false,
+              imageTimeout: 30000,
+              onclone: (clonedDoc) => {
+                clonedDoc.querySelectorAll('img').forEach(img => {
+                  img.crossOrigin = 'anonymous';
+                });
+              },
+            });
           } else {
             const el = cardRefs.current[i];
             if (!el) continue;
@@ -7493,7 +7496,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* Instagram Phone Mockup */}
             <motion.div
-              ref={wizardMode === 'tweet' ? tweetPreviewShellRef : undefined}
               className="relative flex-shrink-0"
               layout
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}

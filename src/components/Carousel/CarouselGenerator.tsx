@@ -5818,12 +5818,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             topic: cleanMentionsFromTopic(topic.trim()),
             cardCount: tweetConfig.cardCount,
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-            productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
+            productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
           },
         });
         if (error) throw error;
         if (data?.data?.cards?.length) {
-          const texts = data.data.cards.map((c: any) => (c.body || c.bodyTop || c.title || '').trim()).filter(Boolean);
+          const texts = data.data.cards.map((c: any) => {
+            let t = (c.body || c.bodyTop || c.title || '').trim();
+            if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+            return t;
+          }).filter(Boolean);
           setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
         }
       } catch (e) {

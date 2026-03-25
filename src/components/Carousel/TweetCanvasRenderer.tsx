@@ -59,8 +59,8 @@ export async function renderTweetToImage(
   const usernameFontSize = Math.round(32 * fontScale);
   const verifiedSize = Math.round(34 * fontScale);
 
-  // Photo height calculation
-  const photoMaxH = hasPhoto ? Math.round(format.h * 0.40) : 0;
+  // Photo height: constrain to a reasonable portion, like real Twitter
+  const photoMaxH = hasPhoto ? Math.round(format.h * 0.35) : 0;
 
   container.innerHTML = `
     <div style="

@@ -15,7 +15,6 @@ const BLOCKED_DOMAINS = [
   'twitter.com', 'x.com', 'pbs.twimg.com', 'twimg.com', 'nitter.net',
   'facebook.com', 'fbcdn.net', 'instagram.com', 'cdninstagram.com',
   'tiktok.com', 'tiktokcdn.com', 'threads.net',
-  'cnnbrasil.com.br', 'uol.com.br', 'globo.com', 'r7.com', 'ig.com.br',
   'eonline.com', 'usmagazine.com', 'tmz.com', 'dailymail.co.uk',
   'pagesix.com', 'insider.com', 'screenrant.com', 'cbr.com',
   'goldderby.com', 'awardswatch.com',
@@ -531,64 +530,6 @@ NEVER use vague generic terms. NEVER search for unrelated subjects.`;
     images = [...new Set(images)];
     console.log('[IMAGES] Total candidates before AI filter:', images.length);
 
-    // AI FILTER: Use vision to reject images with text overlays, promotional graphics, etc.
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
-    if (lovableKey && images.length > 0) {
-      try {
-        const candidatesToCheck = images.slice(0, 25);
-        const filterPrompt = `You are an image quality filter for social media carousel posts.
-I will give you a list of image URLs. For EACH image, decide if it is a CLEAN PHOTOGRAPH suitable for use as a background in a carousel post.
-
-REJECT images that have:
-- Text overlays, captions, titles, watermarks, or any visible text/typography
-- Promotional banners, ads, "hosted by", event graphics
-- Collages, grids, montages, or multiple images combined
-- YouTube thumbnails, social media screenshots
-- Memes, reaction images, or joke images
-- Logos prominently displayed as the main subject
-- Listicle graphics ("Here are 10...", "Top 5...", "Must see...")
-
-ACCEPT images that are:
-- Clean photographs of people (actors, celebrities, athletes, politicians)
-- Red carpet photos, press photos, candid shots
-- Event photos showing real people
-- Professional portraits or headshots
-- Editorial photography without text overlays
-
-Image URLs to evaluate:
-${candidatesToCheck.map((url, i) => `[${i}] ${url}`).join('\n')}
-
-Return ONLY a JSON array of the indices of ACCEPTED (clean) images. Example: [0, 2, 5, 7]`;
-
-        const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-lite',
-            messages: [{ role: 'user', content: filterPrompt }],
-            temperature: 0.1,
-          }),
-        });
-
-        if (aiRes.ok) {
-          const aiData = await aiRes.json();
-          const aiText = aiData.choices?.[0]?.message?.content || '';
-          const arrMatch = aiText.match(/\[[\d,\s]*\]/);
-          if (arrMatch) {
-            const acceptedIndices: number[] = JSON.parse(arrMatch[0]);
-            const filteredImages = acceptedIndices
-              .filter(i => i >= 0 && i < candidatesToCheck.length)
-              .map(i => candidatesToCheck[i]);
-            // Add remaining unchecked images at the end
-            const remaining = images.slice(25);
-            images = [...filteredImages, ...remaining];
-            console.log('[IMAGES] AI filter: accepted', filteredImages.length, 'of', candidatesToCheck.length);
-          }
-        }
-      } catch (filterErr) {
-        console.error('[IMAGES] AI filter error:', filterErr);
-      }
-    }
     console.log('[IMAGES] Total clean images after filter:', images.length);
 
     const seenCandidateUrls = new Set<string>();

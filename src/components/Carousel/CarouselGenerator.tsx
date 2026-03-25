@@ -4299,8 +4299,9 @@ FORBIDDEN:
     }
   };
 
-  const rerenderTweetCards = async (cards: CarouselCard[]) => {
+  const rerenderTweetCards = async (cards: CarouselCard[], configOverride?: TweetConfig) => {
     if (!cards.some((card) => card.type === 'tweet')) return cards;
+    const cfg = configOverride || tweetConfig;
 
     const selectedWebPhotos = referenceImages
       .filter((ref) => ref.category === 'general')
@@ -4308,13 +4309,13 @@ FORBIDDEN:
       .filter(Boolean);
 
     const renderedImages = await renderAllTweetCards(
-      tweetConfig,
+      cfg,
       cards.map((card, i) => ({
         body: card.body || card.bodyTop || card.title || '',
-        photo: tweetConfig.photoMode === 'web'
+        photo: cfg.photoMode === 'web'
           ? selectedWebPhotos[i] || selectedWebPhotos[0] || null
-          : tweetConfig.photoMode !== 'none'
-            ? tweetConfig.tweetPhotos[i] || null
+          : cfg.photoMode !== 'none'
+            ? cfg.tweetPhotos[i] || null
             : null,
         fontScale: card.fontScale,
         paddingScale: card.paddingScale,

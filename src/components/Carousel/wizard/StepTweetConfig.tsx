@@ -11,6 +11,8 @@ export interface TweetEngagement {
   bookmarks: string;
 }
 
+export type TweetPhotoFit = 'cover' | 'contain' | 'fill';
+
 export interface TweetConfig {
   profilePhoto: string | null;
   displayName: string;
@@ -19,6 +21,7 @@ export interface TweetConfig {
   tweetTexts: string[];
   tweetPhotos: (string | null)[];
   photoMode: 'none' | 'manual' | 'web' | 'ai';
+  photoFit: TweetPhotoFit;
   autoSelectPhotos: boolean;
   contentMode: 'static' | 'carousel';
   cardCount: number;
@@ -35,6 +38,7 @@ export const DEFAULT_TWEET_CONFIG: TweetConfig = {
   tweetTexts: [''],
   tweetPhotos: [null],
   photoMode: 'none',
+  photoFit: 'cover',
   autoSelectPhotos: false,
   contentMode: 'static',
   cardCount: 1,

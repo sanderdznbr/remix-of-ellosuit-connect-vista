@@ -7,6 +7,7 @@ interface TweetRenderData {
   fontScale?: number;
   paddingScale?: number;
   textAlign?: 'left' | 'center' | 'right';
+  uniformFontSize?: number; // max text length across all cards for uniform sizing
 }
 
 /**

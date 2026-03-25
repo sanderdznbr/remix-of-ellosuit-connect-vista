@@ -1948,7 +1948,12 @@ const CarouselGenerator: React.FC = () => {
               },
             });
             if (!imgErr && imgData?.imageUrl) {
-              resolvedPhotos[i] = imgData.imageUrl;
+              try {
+                resolvedPhotos[i] = await resolveImageUrl(imgData.imageUrl);
+              } catch (normalizeError) {
+                console.warn(`[TweetPhoto AI] Card ${i}: failed to normalize generated image`, normalizeError);
+                resolvedPhotos[i] = imgData.imageUrl;
+              }
               console.log(`[TweetPhoto AI] Card ${i}: generated OK`);
             } else {
               console.warn(`[TweetPhoto AI] Card ${i}: generation failed`, imgErr);
@@ -5334,7 +5339,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     return (
       <span>
         {parts.map((part, i) => {
-          if (part.startsWith('**') && part.endsWith('**')) return <span key={i} style={{ color }}>{part.slice(2, -2)}</span>;
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <span key={i} style={{ color, fontWeight: 700 }}>
+                {part.slice(2, -2)}
+              </span>
+            );
+          }
+
           return <span key={i} style={{ color: baseColor }}>{part}</span>;
         })}
       </span>

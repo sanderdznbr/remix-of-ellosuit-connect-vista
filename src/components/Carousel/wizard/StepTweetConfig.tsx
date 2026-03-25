@@ -75,9 +75,15 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
   const handleCardPhotoUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const newPhotos = [...config.tweetPhotos];
-      newPhotos[index] = URL.createObjectURL(file);
-      update({ tweetPhotos: newPhotos });
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          const newPhotos = [...config.tweetPhotos];
+          newPhotos[index] = reader.result;
+          update({ tweetPhotos: newPhotos });
+        }
+      };
+      reader.readAsDataURL(file);
     }
     e.target.value = '';
   };

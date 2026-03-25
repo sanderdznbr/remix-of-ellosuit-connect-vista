@@ -124,8 +124,10 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
+import StepTweet2Config, { Tweet2Config, DEFAULT_TWEET2_CONFIG } from './wizard/StepTweet2Config';
 import { captureTweetCardElement, renderAllTweetCards } from './TweetCanvasRenderer';
 import TweetCard from './TweetCard';
+import TweetCard2 from './TweetCard2';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
@@ -252,6 +254,7 @@ const CarouselGenerator: React.FC = () => {
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
   const [tweetConfig, setTweetConfig] = useState<TweetConfig>(DEFAULT_TWEET_CONFIG);
+  const [tweet2Config, setTweet2Config] = useState<Tweet2Config>(DEFAULT_TWEET2_CONFIG);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

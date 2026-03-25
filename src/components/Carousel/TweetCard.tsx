@@ -307,8 +307,8 @@ const PhotoResizable: React.FC<{
       }}>
         <img
           src={photo}
-          crossOrigin={photo.startsWith('data:') || photo.startsWith('blob:') ? undefined : 'anonymous'}
           alt=""
+          referrerPolicy="no-referrer"
           style={{
             width: '100%',
             height: '100%',

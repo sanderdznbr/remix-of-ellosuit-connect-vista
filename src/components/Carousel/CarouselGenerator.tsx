@@ -499,18 +499,50 @@ const CarouselGenerator: React.FC = () => {
     const cached = tweetPhotoDataUrlCacheRef.current[url];
     if (cached) return cached;
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Falha ao carregar imagem do tweet: ${response.status}`);
-    const blob = await response.blob();
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-
-    tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
-    return dataUrl;
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      if (blob.type.includes('text/html')) throw new Error('Got HTML instead of image');
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
+      return dataUrl;
+    } catch {
+      // CORS blocked — use an img element to load and draw onto canvas
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const img = document.createElement('img');
+          img.crossOrigin = 'anonymous';
+          img.referrerPolicy = 'no-referrer';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { reject(new Error('No canvas context')); return; }
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/jpeg', 0.9));
+            } catch (canvasErr) {
+              reject(canvasErr);
+            }
+          };
+          img.onerror = () => reject(new Error('Image load failed'));
+          img.src = url;
+        });
+        tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
+        return dataUrl;
+      } catch {
+        // All attempts failed — return the raw URL as fallback for preview display
+        console.warn('[TweetPhoto] Could not convert to data URL, using raw URL:', url);
+        return url;
+      }
+    }
   }, []);
 
   const getResolvedTweetPhotoForCard = useCallback((index: number, cfg?: TweetConfig) => {

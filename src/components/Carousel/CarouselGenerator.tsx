@@ -435,11 +435,11 @@ const CarouselGenerator: React.FC = () => {
   const showRoteiroStep = contentMode === 'carousel' && cardCount > 1;
 
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
+    ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Tema', 'Estilo', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Estilo', 'Formato', 'Personalização', 'Ideia Visual', ...(showProductStep ? ['Produto'] : []), ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -3008,22 +3008,27 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
             const tweetText = updatedCards[i]?.body || updatedCards[i]?.bodyTop || updatedCards[i]?.title || '';
             const hasCardPhoto = tweetConfig.photoMode !== 'none' && tweetConfig.tweetPhotos[i];
             
+            const isDark = tweetConfig.theme === 'dark';
+            const bgColor = isDark ? '#15202B' : '#FFFFFF';
+            const textColor = isDark ? '#E7E9EA' : '#0F1419';
+            const subColor = isDark ? '#8B98A5' : '#536471';
+            
             cardPrompt = [
               `INSTRUÇÃO PRINCIPAL: Gere uma imagem que seja um SCREENSHOT PERFEITO de um tweet/post do Twitter/X.`,
-              `FORMATO: A imagem deve ter fundo BRANCO (#FFFFFF) e seguir EXATAMENTE o layout visual do Twitter/X.`,
+              `FORMATO: A imagem deve ter fundo ${isDark ? 'ESCURO (' + bgColor + ') no estilo DARK MODE do Twitter' : 'BRANCO (' + bgColor + ')'} e seguir EXATAMENTE o layout visual do Twitter/X.`,
               `LAYOUT DO TWEET (de cima para baixo):`,
-              `1. PERFIL: Foto redonda de perfil no canto superior esquerdo, nome "${tName}" em bold preto ao lado, abaixo "@${tUser}" em cinza${tVerified ? ', com badge azul de verificado ✓ ao lado do nome' : ''}`,
-              `2. TEXTO DO TWEET: "${tweetText}" — texto preto, fonte do sistema (San Francisco/Segoe UI), tamanho médio-grande, legível. O texto deve estar EXATAMENTE como escrito, sem alterações.`,
+              `1. PERFIL: Foto redonda de perfil no canto superior esquerdo, nome "${tName}" em bold ${isDark ? 'branco' : 'preto'} ao lado, abaixo "@${tUser}" em cinza (${subColor})${tVerified ? ', com badge azul de verificado ✓ ao lado do nome' : ''}`,
+              `2. TEXTO DO TWEET: "${tweetText}" — cor ${textColor}, fonte do sistema (San Francisco/Segoe UI), tamanho médio-grande, legível. O texto deve estar EXATAMENTE como escrito, sem alterações.`,
               hasCardPhoto ? `3. IMAGEM: Abaixo do texto, uma foto/imagem ilustrativa relacionada ao tema, com cantos arredondados, ocupando a largura do tweet.` : '',
               `REGRAS VISUAIS OBRIGATÓRIAS:`,
-              `- Fundo TOTALMENTE BRANCO`,  
+              `- Fundo TOTALMENTE ${isDark ? 'ESCURO (' + bgColor + ')' : 'BRANCO'}`,
               `- Tipografia limpa estilo Twitter (system font)`,
-              `- Nome em preto bold, @ em cinza (#536471)`,
-              `- Texto do tweet em preto (#0F1419), tamanho legível`,
+              `- Nome em ${isDark ? 'branco' : 'preto'} bold, @ em cinza (${subColor})`,
+              `- Texto do tweet em ${textColor}, tamanho legível`,
               `- Margens e espaçamentos idênticos ao Twitter real`,
               `- NÃO adicione bordas, sombras ou efeitos ao redor`,
               `- NÃO adicione rodapé com likes/retweets/etc`,
-              `- A imagem deve parecer um SCREENSHOT real do Twitter`,
+              `- A imagem deve parecer um SCREENSHOT real do Twitter${isDark ? ' em DARK MODE' : ''}`,
               `TEXTO EXATO DO TWEET (copie caractere por caractere): "${tweetText}"`,
             ].filter(Boolean).join('\n');
             

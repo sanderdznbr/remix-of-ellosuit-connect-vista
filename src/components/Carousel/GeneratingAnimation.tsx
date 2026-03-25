@@ -43,8 +43,9 @@ const GeneratingAnimation: React.FC<Props> = ({
   isCompleting = false,
   onCompleteAnimationDone,
 }) => {
-  // Use orange for extreme mode, red for advanced, purple otherwise
-  const loadingColor = isExtreme ? LOADING_ORANGE : wizardMode === 'advanced' ? LOADING_RED : LOADING_PURPLE;
+  // Use orange for extreme mode, red for advanced, light blue for tweet, purple otherwise
+  const LOADING_BLUE = '#38BDF8';
+  const loadingColor = wizardMode === 'tweet' ? LOADING_BLUE : isExtreme ? LOADING_ORANGE : wizardMode === 'advanced' ? LOADING_RED : LOADING_PURPLE;
   const [activeStep, setActiveStep] = useState(0);
   const [visibleLines, setVisibleLines] = useState(0);
   const [showMiniCards, setShowMiniCards] = useState<number[]>([]);

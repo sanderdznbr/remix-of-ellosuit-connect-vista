@@ -8716,8 +8716,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </button>
               )}
 
-              {/* Export Dialog */}
-              {showExportMenu && !isGuest && (
+            </div>
+
+            {/* Export Dialog - rendered outside mobile container so it works on all viewports */}
+            {showExportMenu && !isGuest && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60" onClick={() => setShowExportMenu(false)}>
                   <div className="rounded-2xl border border-white/10 p-6 w-72 flex flex-col gap-3"
                     style={{ backgroundColor: 'rgba(15,15,30,0.98)', backdropFilter: 'blur(20px)' }}
@@ -8760,7 +8762,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   </div>
                 </div>
               )}
-              {/* Hide editing controls when marketplace full-bleed is active */}
+
+            {/* Mobile action buttons continued */}
+            <div className="flex md:hidden items-center justify-center gap-2 sm:gap-3 relative z-10 flex-wrap px-4">
               {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
                 <>
                   <div className="w-px h-5 bg-white/10" />

@@ -110,7 +110,6 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
           {referenceImages.filter(r => r.category === 'general').length}{maxSelections ? `/${maxSelections}` : ''} imagens selecionadas
         </p>
       )}
-      )}
 
       {/* Skip / deselect all */}
       <button onClick={() => {

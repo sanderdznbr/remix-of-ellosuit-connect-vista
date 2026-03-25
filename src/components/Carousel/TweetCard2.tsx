@@ -12,9 +12,10 @@ interface TweetCard2Props {
   onClick?: () => void;
   cardRef?: React.Ref<HTMLDivElement>;
   fontScale?: number;
+  paddingScale?: number;
 }
 
-const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, height, editable = false, onTextChange, onClick, cardRef, fontScale }) => {
+const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, height, editable = false, onTextChange, onClick, cardRef, fontScale, paddingScale }) => {
   const textRef = useRef<HTMLDivElement>(null);
   const isDark = config.theme === 'dark';
   const scale = width / 1080;
@@ -45,9 +46,10 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
   }, [onTextChange]);
 
   // Sizing — matches real Twitter proportions at 1080px base
+  const ps = paddingScale ?? 1;
   const avatarSize = s(80);
-  const sidePad = s(56);
-  const topPad = s(56);
+  const sidePad = Math.round(s(56) * ps);
+  const topPad = Math.round(s(56) * ps);
   const photoHeight = photo ? Math.round(height * 0.38) : 0;
 
   // Font size: use fontScale if provided, otherwise auto-size based on text length

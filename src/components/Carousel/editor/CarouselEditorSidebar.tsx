@@ -273,10 +273,28 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadImage(cardIndex, f); }} />
-                <button onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed text-sm text-white/40 hover:bg-white/[0.04] transition-colors" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <Upload className="h-4 w-4" /> Upload de Foto
-                </button>
+                {card.imageUrl ? (
+                  <div className="relative rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <img src={card.imageUrl} alt="" className="w-full h-24 object-cover" />
+                    <button
+                      onClick={() => onUpdateCard(cardIndex, { imageUrl: undefined })}
+                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5 text-white" />
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-1.5 right-1.5 px-2 py-1 rounded-lg bg-black/70 text-[10px] text-white/80 hover:bg-white/20 transition-colors"
+                    >
+                      Trocar
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed text-sm text-white/40 hover:bg-white/[0.04] transition-colors" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <Upload className="h-4 w-4" /> Upload de Foto
+                  </button>
+                )}
               </div>
             </>
           ) : (

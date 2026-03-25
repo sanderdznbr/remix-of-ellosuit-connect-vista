@@ -95,7 +95,7 @@ export async function renderTweetToImage(
       height: format.h,
       photoHeight: card.photoHeight,
       fontSizeOverride,
-      headerOffsetY: 18,
+      headerOffsetY: 0,
     })
   );
 

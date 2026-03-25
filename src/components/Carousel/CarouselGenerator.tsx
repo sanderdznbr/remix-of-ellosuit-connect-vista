@@ -6386,9 +6386,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                       cardCount: tweetConfig.cardCount,
                                       isTweetMode: true,
                                       webSearchContent: (!skipWebSearch && webSearchResult) ? {
-                                        title: webSearchResult.title || '',
+                                        title: (webSearchResult as any).title || '',
                                         summary: webSearchResult.summary || '',
-                                        facts: webSearchResult.facts || [],
+                                        facts: (webSearchResult as any).facts || [],
                                       } : undefined,
                                       keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
                                     },

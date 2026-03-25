@@ -180,10 +180,25 @@ export async function renderAllTweetCards(
   const total = config.cardCount;
   const results: string[] = [];
 
+  // Only ~60% of cards get photos — skip photo on some cards for variety
+  const photoSlots = new Set<number>();
+  if (config.photoMode !== 'none') {
+    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
+    // Always include first card, then pick random others
+    photoSlots.add(0);
+    const candidates = Array.from({ length: total - 1 }, (_, i) => i + 1);
+    for (let j = candidates.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
+    }
+    candidates.slice(0, targetPhotoCount - 1).forEach(idx => photoSlots.add(idx));
+  }
+
   for (let i = 0; i < total; i++) {
     onProgress?.(i, total);
     const cardText = cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || config.tweetTexts[i] || '';
-    const cardPhoto = cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null);
+    const shouldHavePhoto = photoSlots.has(i);
+    const cardPhoto = shouldHavePhoto ? (cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null)) : null;
 
     const dataUrl = await renderTweetToImage(config, {
       text: cardText,

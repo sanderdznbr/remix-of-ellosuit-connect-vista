@@ -184,6 +184,7 @@ interface CarouselCard {
   layout?: 'dark' | 'light' | 'accent';
   fontScale?: number;
   paddingScale?: number;
+  gapScale?: number;
   textAlign?: 'left' | 'center' | 'right';
   cardFontIndex?: number;
 }
@@ -6194,9 +6195,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           <div
             ref={(el) => { cardRefs.current[index] = el; }}
             data-cover-capture={index === 0 ? 'true' : undefined}
-            style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+            style={{ width: cardW, height: cardH, position: 'relative', overflow: 'hidden' }}
           >
-            <TweetCard2 config={tweet2Config} text={cardText} photo={resolvedPhoto} width={w} height={h} fontScale={card.fontScale} paddingScale={card.paddingScale} />
+            <TweetCard2 config={tweet2Config} text={cardText} photo={resolvedPhoto} width={cardW} height={cardH} fontScale={card.fontScale} paddingScale={card.paddingScale} gapScale={card.gapScale} />
           </div>
         );
       }
@@ -6218,6 +6219,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               height={cardH}
               fontScale={card.fontScale}
               paddingScale={card.paddingScale}
+              gapScale={card.gapScale}
               editable={activeCardIndex === index}
               onTextChange={(newText) => {
                 updateCard(index, { body: newText });

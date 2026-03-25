@@ -8723,26 +8723,32 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <h3 className="text-sm font-semibold text-white text-center mb-1">
                       {contentMode === 'single-post' ? 'Exportar Post' : 'Exportar Carrossel'}
                     </h3>
+                    {/* Save current card only */}
+                    {carouselData && carouselData.cards.length > 1 && (
+                      <button onClick={() => exportSingleCard('png')}
+                        className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10"
+                        style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))` }}>
+                        <Download className="h-4 w-4" style={{ color: themeHex }} /> Salvar Card {activeCardIndex + 1}
+                      </button>
+                    )}
                     {contentMode !== 'single-post' && planLimits.allowedExportFormats.includes('zip') && (
                       <button onClick={() => exportAllCards('png', true)}
                         className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-white/10">
-                        <FileText className="h-4 w-4" style={{ color: themeHex }} /> Baixar ZIP
+                        <FileText className="h-4 w-4" style={{ color: themeHex }} /> Baixar tudo ZIP (PNG)
                       </button>
                     )}
                     <button onClick={() => exportAllCards('png')}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
-                      <ImageIcon className="h-4 w-4" /> Baixar PNG
+                      <ImageIcon className="h-4 w-4" /> Baixar tudo PNG
                     </button>
                     <button onClick={() => exportAllCards('jpg')}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
-                      <ImageIcon className="h-4 w-4" /> Baixar JPG
+                      <ImageIcon className="h-4 w-4" /> Baixar tudo JPG
                     </button>
-                    {planLimits.allowedExportFormats.includes('webp') && (
-                      <button onClick={() => exportAllCards('webp')}
-                        className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
-                        <ImageIcon className="h-4 w-4" /> Baixar WEBP
-                      </button>
-                    )}
+                    <button onClick={() => exportAllCards('webp')}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-3 border border-white/5">
+                      <ImageIcon className="h-4 w-4" /> Baixar tudo WEBP
+                    </button>
                     <div className="h-px bg-white/10 my-1" />
                     <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"

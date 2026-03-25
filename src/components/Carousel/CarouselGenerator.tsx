@@ -1211,16 +1211,18 @@ const CarouselGenerator: React.FC = () => {
         if (!companyData) return;
 
         let dataToPersist = carouselData;
-        if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
+        if ((wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some((card) => card.type === 'tweet' || card.type === 'tweet2')) {
           try {
             const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);
             dataToPersist = { ...carouselData, cards: previewCards };
             setCarouselData(prev => prev ? { ...prev, cards: previewCards } : prev);
           } catch (previewErr) {
             console.warn('[Tweet Save] Preview capture failed, falling back to rerender', previewErr);
-            const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
-            dataToPersist = { ...carouselData, cards: renderedCards };
-            setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+            if (wizardMode === 'tweet') {
+              const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+              dataToPersist = { ...carouselData, cards: renderedCards };
+              setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+            }
           }
         }
         
@@ -1718,16 +1720,18 @@ const CarouselGenerator: React.FC = () => {
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
       let dataToPersist = carouselData;
-      if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
+      if ((wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some((card) => card.type === 'tweet' || card.type === 'tweet2')) {
         try {
           const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);
           dataToPersist = { ...carouselData, cards: previewCards };
           setCarouselData(prev => prev ? { ...prev, cards: previewCards } : prev);
         } catch (previewErr) {
           console.warn('[Tweet Save] Preview capture failed, falling back to rerender', previewErr);
-          const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
-          dataToPersist = { ...carouselData, cards: renderedCards };
-          setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+          if (wizardMode === 'tweet') {
+            const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+            dataToPersist = { ...carouselData, cards: renderedCards };
+            setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+          }
         }
       }
 

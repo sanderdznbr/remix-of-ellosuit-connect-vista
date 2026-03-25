@@ -531,7 +531,15 @@ REGRAS:
         }
 
         parsedTweet.cards = parsedTweet.cards
-          .map((card: any) => ({ type: 'tweet', body: stripInternalBrands(String(card?.body || '')).trim() }))
+          .map((card: any) => {
+            let body = stripInternalBrands(String(card?.body || '')).trim();
+            // Fix all-caps text: convert to sentence case
+            if (body.replace(/\*\*/g, '').replace(/[^a-záàâãéêíóôõúç]/gi, '').length > 5 && 
+                body.replace(/\*\*/g, '') === body.replace(/\*\*/g, '').toUpperCase()) {
+              body = body.charAt(0).toUpperCase() + body.slice(1).toLowerCase();
+            }
+            return { type: 'tweet', body };
+          })
           .filter((card: any) => card.body);
 
         while (parsedTweet.cards.length < numCards) {

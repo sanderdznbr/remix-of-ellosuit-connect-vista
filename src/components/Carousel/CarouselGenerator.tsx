@@ -1795,6 +1795,17 @@ const CarouselGenerator: React.FC = () => {
 
       const formatDims = postFormat === 'square' ? { w: 1080, h: 1080 } : postFormat === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1350 };
 
+      console.log('[TweetCanvas] Config:', {
+        displayName: tweetConfig.displayName,
+        username: tweetConfig.username,
+        isVerified: tweetConfig.isVerified,
+        hasPhoto: !!tweetConfig.profilePhoto,
+        cardCount: tweetConfig.cardCount,
+        theme: tweetConfig.theme,
+        textsCount: tweetConfig.tweetTexts.length,
+        textsPreview: tweetConfig.tweetTexts.map(t => t.substring(0, 30)),
+      });
+
       // If no manual texts, generate tweet-native content first
       let cards: Array<{ body?: string; title?: string; bodyTop?: string; photo?: string | null; fontScale?: number; paddingScale?: number; textAlign?: 'left' | 'center' | 'right' }> = [];
       if (tweetConfig.tweetTexts.some(t => t.trim())) {
@@ -1808,10 +1819,11 @@ const CarouselGenerator: React.FC = () => {
               topic: cleanMentionsFromTopic(topic.trim()),
               cardCount: tweetConfig.cardCount,
               keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-              productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
+              productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.`,
             },
           });
           if (error) throw error;
+          console.log('[TweetCanvas] Generated content:', data?.data?.cards?.length, 'cards');
           if (data?.data?.cards?.length) {
             cards = data.data.cards.map((c: any) => ({ body: (c.body || c.bodyTop || c.title || '').trim() })).filter((c: any) => c.body);
           }
@@ -1846,8 +1858,10 @@ const CarouselGenerator: React.FC = () => {
             : null,
         fontScale: 1.15,
         paddingScale: 1.05,
-        textAlign: 'left',
+        textAlign: 'left' as const,
       }));
+
+      console.log('[TweetCanvas] Rendering', cards.length, 'cards:', cards.map(c => c.body?.substring(0, 40)));
 
       const images = await renderAllTweetCards(tweetConfig, cards, formatDims, (current, total) => {
         setImageGenProgress(`${current}/${total} tweets renderizados...`);

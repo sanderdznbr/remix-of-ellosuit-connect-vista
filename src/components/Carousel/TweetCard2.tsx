@@ -85,7 +85,7 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
         flexDirection: 'column',
         justifyContent: 'center',
         padding: `${topPad}px ${sidePad}px`,
-        gap: s(24),
+        gap: Math.round(s(24) * (gapScale ?? 1)),
         overflow: 'hidden',
       }}>
         {/* Header: avatar + name row */}

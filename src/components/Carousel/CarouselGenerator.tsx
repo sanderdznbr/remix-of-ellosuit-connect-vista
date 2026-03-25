@@ -6423,7 +6423,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             // Call generateSinglePost directly to avoid state timing issues
                             setTimeout(() => generateSinglePost(), 1200);
                           } else {
-                            if (cardCount === 1) {
+                            // Tweet mode: sync cardCount from tweetConfig
+                            if (wizardMode === 'tweet') {
+                              setCardCount(tweetConfig.cardCount);
+                              setImageCardCount(tweetConfig.cardCount);
+                              if (tweetConfig.cardCount === 1) {
+                                setContentMode('single-post');
+                              } else {
+                                setContentMode('carousel');
+                              }
+                            } else if (cardCount === 1) {
                               setContentMode('single-post');
                               setImageCardCount(1);
                             } else {

@@ -6212,13 +6212,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-generate tweet roteiro when entering Roteiro Tweet step
   const autoTweetRoteiroTriggered = useRef(false);
   useEffect(() => {
-    if (currentStepName !== 'Roteiro Tweet') {
+    if (currentStepName !== 'Roteiro Tweet' && currentStepName !== 'Roteiro Tweet2') {
       autoTweetRoteiroTriggered.current = false;
       return;
     }
     if (autoTweetRoteiroTriggered.current || generatingRoteiro) return;
     if (!topic.trim()) return;
-    if (tweetConfig.tweetTexts.some(t => t.trim())) return;
+    const isTweet2Step = currentStepName === 'Roteiro Tweet2';
+    const activeTexts = isTweet2Step ? tweet2Config.tweetTexts : tweetConfig.tweetTexts;
+    const activeCount = isTweet2Step ? tweet2Config.cardCount : tweetConfig.cardCount;
+    if (activeTexts.some(t => t.trim())) return;
 
     autoTweetRoteiroTriggered.current = true;
     (async () => {
@@ -6228,9 +6231,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           body: {
             action: 'generate-content',
             topic: cleanMentionsFromTopic(topic.trim()),
-            cardCount: tweetConfig.cardCount,
+            cardCount: activeCount,
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-            productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
+            productContext: `TWEET_POST_MODE: Gere ${activeCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
           },
         });
         if (error) throw error;
@@ -6240,14 +6243,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
             return t;
           }).filter(Boolean);
-          setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
+          if (isTweet2Step) {
+            setTweet2Config(prev => ({ ...prev, tweetTexts: texts }));
+          } else {
+            setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
+          }
         }
       } catch (e) {
         console.error('[TweetAutoRoteiro] Error:', e);
       }
       setGeneratingRoteiro(false);
     })();
-  }, [currentStepName, generatingRoteiro, topic, tweetConfig.cardCount]);
+  }, [currentStepName, generatingRoteiro, topic, tweetConfig.cardCount, tweet2Config.cardCount, tweet2Config.tweetTexts, tweetConfig.tweetTexts]);
 
 
   useEffect(() => {

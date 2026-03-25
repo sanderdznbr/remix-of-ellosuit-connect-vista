@@ -243,23 +243,34 @@ export async function renderAllTweetCards(
   const total = config.cardCount;
   const results: string[] = [];
 
-  // Only ~60% of cards get photos — skip photo on some cards for variety
+  // Determine which cards get photos:
+  // Cards with explicit photos from the caller always get them.
+  // For remaining slots, pick ~60% randomly.
   const photoSlots = new Set<number>();
   if (config.photoMode !== 'none') {
-    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
-    // Pick spread-out cards for photos (not always first)
-    const candidates = Array.from({ length: total }, (_, i) => i);
-    for (let j = candidates.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1));
-      [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
+    // First, include cards that have explicit photos
+    for (let i = 0; i < total; i++) {
+      if (cards[i]?.photo || config.tweetPhotos[i]) {
+        photoSlots.add(i);
+      }
     }
-    candidates.slice(0, targetPhotoCount).forEach(idx => photoSlots.add(idx));
+    // Then fill remaining to ~60%
+    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
+    if (photoSlots.size < targetPhotoCount) {
+      const candidates = Array.from({ length: total }, (_, i) => i).filter(i => !photoSlots.has(i));
+      for (let j = candidates.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
+      }
+      candidates.slice(0, targetPhotoCount - photoSlots.size).forEach(idx => photoSlots.add(idx));
+    }
   }
 
   for (let i = 0; i < total; i++) {
     onProgress?.(i, total);
     const cardText = cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || config.tweetTexts[i] || '';
-    const shouldHavePhoto = photoSlots.has(i);
+    const hasExplicitPhoto = !!(cards[i]?.photo || config.tweetPhotos[i]);
+    const shouldHavePhoto = hasExplicitPhoto || photoSlots.has(i);
     const cardPhoto = shouldHavePhoto ? (cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null)) : null;
 
     const dataUrl = await renderTweetToImage(config, {

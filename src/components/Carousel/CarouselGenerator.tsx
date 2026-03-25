@@ -5506,7 +5506,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const mimeType = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
       const quality = format === 'png' ? undefined : 0.92;
 
-      const isTweetExport = wizardMode === 'tweet' && carouselData.cards.some(c => c.type === 'tweet');
+      const isTweetExport = (wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some(c => c.type === 'tweet' || c.type === 'tweet2');
+      const tweetExportTheme = wizardMode === 'tweet2' ? tweet2Config.theme : tweetConfig.theme;
 
       if (asZip) {
         const JSZip = (await import('jszip')).default;
@@ -5523,7 +5524,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               scale: 2,
               useCORS: true,
               allowTaint: true,
-              backgroundColor: tweetConfig.theme === 'dark' ? '#000000' : '#FFFFFF',
+              backgroundColor: tweetExportTheme === 'dark' ? '#000000' : '#FFFFFF',
               logging: false,
               imageTimeout: 30000,
               onclone: (clonedDoc) => {
@@ -5570,7 +5571,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               scale: 1,
               useCORS: true,
               allowTaint: true,
-              backgroundColor: tweetConfig.theme === 'dark' ? '#000000' : '#FFFFFF',
+              backgroundColor: tweetExportTheme === 'dark' ? '#000000' : '#FFFFFF',
               logging: false,
               imageTimeout: 30000,
               onclone: (clonedDoc) => {

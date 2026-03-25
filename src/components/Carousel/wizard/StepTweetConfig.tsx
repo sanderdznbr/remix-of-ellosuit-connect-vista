@@ -175,7 +175,7 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
             { key: 'web' as const, icon: Globe, label: 'Buscar na web' },
             { key: 'ai' as const, icon: Sparkles, label: 'Gerar com IA' },
           ].map(opt => (
-            <button key={opt.key} onClick={() => update({ photoMode: opt.key })}
+            <button key={opt.key} onClick={() => update({ photoMode: opt.key, autoSelectPhotos: false })}
               className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${
                 config.photoMode === opt.key
                   ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'

@@ -70,6 +70,30 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
         <p className="text-sm text-white/40">Configure o visual do tweet</p>
       </div>
 
+      {/* Theme toggle */}
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-white/40 uppercase tracking-wider">Tema visual</p>
+        <div className="flex gap-2">
+          {[
+            { value: 'light' as const, icon: Sun, label: 'Claro', desc: 'Fundo branco' },
+            { value: 'dark' as const, icon: Moon, label: 'Escuro', desc: 'Dark mode' },
+          ].map(opt => (
+            <button key={opt.value} onClick={() => update({ theme: opt.value })}
+              className={`flex-1 flex items-center gap-3 p-4 rounded-xl text-left transition-all border ${
+                config.theme === opt.value
+                  ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
+                  : 'bg-white/[0.03] text-white/30 border-white/[0.06] hover:bg-white/[0.06]'
+              }`}>
+              <opt.icon className="w-5 h-5" />
+              <div>
+                <span className="text-sm font-medium block">{opt.label}</span>
+                <span className="text-[10px] opacity-60">{opt.desc}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Profile section */}
       <div className="space-y-4">
         <p className="text-xs font-medium text-white/40 uppercase tracking-wider">Perfil</p>

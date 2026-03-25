@@ -1863,19 +1863,30 @@ const CarouselGenerator: React.FC = () => {
           .map((ref) => ref.url)
           .filter(Boolean);
         // If autoSelectPhotos and no manual selection, use web search images directly
-        if (tweetConfig.autoSelectPhotos && selectedWebPhotos.length === 0 && webSearchResult?.images?.length) {
-          selectedWebPhotos = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+        if (tweetConfig.autoSelectPhotos && selectedWebPhotos.length === 0) {
+          // Combine imageCandidates and images for best coverage
+          const candidateUrls = (webSearchResult?.imageCandidates || [])
+            .filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
+            .map((c: any) => c.url);
+          const fallbackUrls = (webSearchResult?.images || []).filter((u: string) => u && u.startsWith('http'));
+          // Merge: candidates first (higher quality), then fallback, deduplicate
+          const seen = new Set<string>();
+          for (const url of [...candidateUrls, ...fallbackUrls]) {
+            if (!seen.has(url)) { seen.add(url); selectedWebPhotos.push(url); }
+          }
+          console.log('[TweetCanvas] Auto-selected', selectedWebPhotos.length, 'photos from web search');
         }
       }
 
-      // Determine which ~60% of cards get photos (not all)
-      const photoCardCount = Math.ceil(cards.length * 0.6);
+      // Determine which ~60% of cards get photos
+      const photoCardCount = Math.min(Math.ceil(cards.length * 0.6), selectedWebPhotos.length);
       const photoIndices = new Set<number>();
-      // Spread photo cards evenly, skip first card sometimes
-      for (let i = 0; i < photoCardCount && i < selectedWebPhotos.length; i++) {
-        // Distribute: 1, 3, 4, 6... (skip some)
-        const idx = Math.min(Math.round((i + 0.5) * (cards.length / photoCardCount)), cards.length - 1);
-        photoIndices.add(idx);
+      if (photoCardCount > 0) {
+        // Spread evenly across cards
+        for (let i = 0; i < photoCardCount; i++) {
+          const idx = Math.round(i * ((cards.length - 1) / Math.max(photoCardCount - 1, 1)));
+          photoIndices.add(idx);
+        }
       }
 
       // Find max text length to use uniform font size

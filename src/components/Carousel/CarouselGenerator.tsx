@@ -1905,6 +1905,24 @@ const CarouselGenerator: React.FC = () => {
         if (gc.tweetPhotoHeights) setTweetPhotoHeights(gc.tweetPhotoHeights);
         if (gc.tweetFontSizeOverride !== undefined) setTweetFontSizeOverride(gc.tweetFontSizeOverride);
         if (gc.tweetCardPhotoAssignments) setCardPhotoAssignments(gc.tweetCardPhotoAssignments);
+      } else if (gc.wizardMode === 'tweet2') {
+        setWizardMode('tweet2');
+        if (gc.tweet2Config) {
+          const restoredTweet2Config = { ...gc.tweet2Config };
+          if (restoredTweet2Config.photoMode !== 'none' && Array.isArray(restoredTweet2Config.tweetPhotos)) {
+            restoredTweet2Config.tweetPhotos = await Promise.all(
+              restoredTweet2Config.tweetPhotos.map(async (photoUrl: string | null) => {
+                if (!photoUrl) return null;
+                try {
+                  return await resolveTweetPhotoUrl(photoUrl);
+                } catch {
+                  return photoUrl;
+                }
+              })
+            );
+          }
+          setTweet2Config(restoredTweet2Config);
+        }
       } else {
         setWizardMode(gc.wizardMode || 'simple');
       }
@@ -6105,11 +6123,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       return (
         <div
-          ref={(el) => { tweetPreviewRefs.current[index] = el; }}
           data-cover-capture={index === 0 ? 'true' : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
         >
-          <div style={{ width: cardW, height: cardH, transform: `scale(${tweetPreviewScale})`, transformOrigin: 'top left' }}>
+          <div
+            ref={(el) => { tweetPreviewRefs.current[index] = el; }}
+            style={{ width: cardW, height: cardH, transform: `scale(${tweetPreviewScale})`, transformOrigin: 'top left' }}
+          >
             <TweetCard2
               config={tweet2Config}
               text={cardText}

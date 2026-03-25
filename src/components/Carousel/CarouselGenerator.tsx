@@ -395,6 +395,10 @@ const CarouselGenerator: React.FC = () => {
   // CarouselTour removed
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
+  const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
+  const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
+  const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [tweetPhotoUploadCardIndex, setTweetPhotoUploadCardIndex] = useState<number>(0);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const activeMarketplaceStyleRef = useRef<any>(null);
   const [isLoadedFullBleed, setIsLoadedFullBleed] = useState(false);

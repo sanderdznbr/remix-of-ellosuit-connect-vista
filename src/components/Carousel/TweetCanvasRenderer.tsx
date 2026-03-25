@@ -9,6 +9,7 @@ interface TweetRenderData {
   textAlign?: 'left' | 'center' | 'right';
   uniformFontSize?: number;
   cardPhoto?: string | null; // per-card photo override
+  photoFit?: 'cover' | 'contain' | 'fill';
 }
 
 /**
@@ -60,6 +61,10 @@ export async function renderTweetToImage(
   const nameFontSize = Math.round(34 * fontScale);
   const usernameFontSize = Math.round(28 * fontScale);
   const verifiedSize = Math.round(30 * fontScale);
+
+  // Photo fit mode
+  const photoFit = card.photoFit ?? 'cover';
+  const photoObjectFit = photoFit === 'fill' ? 'fill' : photoFit === 'contain' ? 'contain' : 'cover';
 
   // Photo height: constrain to a reasonable portion, like real Twitter
   const photoMaxH = hasPhoto ? Math.round(format.h * 0.35) : 0;
@@ -125,7 +130,7 @@ export async function renderTweetToImage(
             max-height: ${photoMaxH}px;
             flex-shrink: 0;
           ">
-            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: cover;" crossorigin="anonymous" />
+            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: ${photoObjectFit};" crossorigin="anonymous" />
           </div>
         ` : ''}
 

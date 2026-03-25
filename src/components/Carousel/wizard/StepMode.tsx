@@ -1,10 +1,10 @@
 import React from 'react';
-import { Zap, SlidersHorizontal, Sparkles, Lock } from 'lucide-react';
+import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
-  wizardMode: 'simple' | 'advanced' | 'extreme';
-  setWizardMode: (v: 'simple' | 'advanced' | 'extreme') => void;
+  wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet';
+  setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet') => void;
   allowAdvanced?: boolean;
   allowExtreme?: boolean;
   requiredPlanForAdvanced?: string;

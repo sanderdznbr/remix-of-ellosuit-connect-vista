@@ -5548,7 +5548,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return (
         <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
           data-cover-capture={index === 0 ? 'true' : undefined}
-          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: '#000000' }}>
+          onClick={!isExport ? () => { setActiveCardIndex(index); setShowTweetTextEditor(true); } : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: '#000000', cursor: isExport ? undefined : 'pointer' }}>
           {card.imageUrl && (
             <img
               src={card.imageUrl}

@@ -109,10 +109,10 @@ export async function renderTweetToImage(
           margin-bottom: ${hasPhoto ? Math.round(44 * paddingScale) : 0}px;
           word-wrap: break-word;
           white-space: pre-wrap;
-          font-weight: 700;
+          font-weight: 400;
           letter-spacing: -0.4px;
           text-align: ${textAlign};
-        ">${escapeHtml(card.text)}</div>
+        ">${formatTweetText(card.text)}</div>
 
         <!-- Photo -->
         ${hasPhoto && card.photo ? `
@@ -166,6 +166,14 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/\n/g, '<br/>');
+}
+
+/** Escapes HTML then converts **bold** markers to <strong> tags */
+function formatTweetText(text: string): string {
+  let html = escapeHtml(text);
+  // Convert **bold** to <strong>
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700">$1</strong>');
+  return html;
 }
 
 /**

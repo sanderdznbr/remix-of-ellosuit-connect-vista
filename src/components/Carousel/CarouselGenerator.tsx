@@ -7066,9 +7066,57 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         {/* Tweet-specific: Edit text inline */}
                         {!isGuest && carouselData.cards[activeCardIndex] && (
                           <button
-                            onClick={() => setEditingCard(activeCardIndex)}
+                            onClick={() => { setShowTweetTextEditor(true); }}
                             className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-sky-300 hover:text-sky-200 hover:bg-white/[0.06] transition-all w-full">
-                            <Edit3 className="h-4 w-4 text-sky-400" /> Editar Tweet
+                            <Edit3 className="h-4 w-4 text-sky-400" /> Editar Texto
+                          </button>
+                        )}
+
+                        {/* Insert/Remove photo on current card */}
+                        {!isGuest && carouselData.cards[activeCardIndex] && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setTweetPhotoUploadCardIndex(activeCardIndex);
+                                tweetCardPhotoInputRef.current?.click();
+                              }}
+                              className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-emerald-300 hover:text-emerald-200 hover:bg-white/[0.06] transition-all w-full">
+                              <ImagePlus className="h-4 w-4 text-emerald-400" /> {tweetConfig.tweetPhotos[activeCardIndex] ? 'Trocar Foto' : 'Inserir Foto'}
+                            </button>
+                            {tweetConfig.tweetPhotos[activeCardIndex] && (
+                              <button
+                                onClick={() => {
+                                  const newPhotos = [...tweetConfig.tweetPhotos];
+                                  newPhotos[activeCardIndex] = null;
+                                  setTweetConfig({ ...tweetConfig, tweetPhotos: newPhotos });
+                                  // re-render
+                                  if (carouselData) {
+                                    const newCards = [...carouselData.cards];
+                                    void rerenderTweetCards(newCards).then((rendered) => {
+                                      setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                                    });
+                                  }
+                                }}
+                                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-red-300 hover:text-red-200 hover:bg-white/[0.06] transition-all w-full">
+                                <ImageMinus className="h-4 w-4 text-red-400" /> Remover Foto
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Engagement metrics toggle */}
+                        <button
+                          onClick={() => setShowTweetEngagementEditor(!showTweetEngagementEditor)}
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-amber-300 hover:text-amber-200 hover:bg-white/[0.06] transition-all w-full">
+                          <BarChart3 className="h-4 w-4 text-amber-400" /> Métricas do Tweet
+                        </button>
+
+                        {/* Editar no editor completo */}
+                        {!isGuest && carouselData.cards[activeCardIndex] && (
+                          <button
+                            onClick={() => setEditingCard(activeCardIndex)}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-violet-300 hover:text-violet-200 hover:bg-white/[0.06] transition-all w-full">
+                            <SlidersHorizontal className="h-4 w-4 text-violet-400" /> Editor Avançado
                           </button>
                         )}
 

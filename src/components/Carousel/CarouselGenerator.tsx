@@ -7097,11 +7097,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 onClick={() => {
                                   const newPhotos = [...tweetConfig.tweetPhotos];
                                   newPhotos[activeCardIndex] = null;
-                                  setTweetConfig({ ...tweetConfig, tweetPhotos: newPhotos });
-                                  // re-render
+                                  const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos };
+                                  setTweetConfig(updatedConfig);
+                                  // re-render with updated config
                                   if (carouselData) {
                                     const newCards = [...carouselData.cards];
-                                    void rerenderTweetCards(newCards).then((rendered) => {
+                                    void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
                                       setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
                                     });
                                   }

@@ -42,8 +42,8 @@ export async function renderTweetToImage(
   const paddingScale = card.paddingScale ?? 1;
   const textAlign = card.textAlign ?? 'left';
   const horizontalPadding = Math.round(100 * paddingScale);
-  const avatarSize = Math.round(110 * paddingScale);
-  const headerGap = Math.round(20 * paddingScale);
+  const avatarSize = Math.round(80 * paddingScale);
+  const headerGap = Math.round(16 * paddingScale);
 
   // Calculate font sizes based on text length for optimal fill
   const textLen = card.text.length;

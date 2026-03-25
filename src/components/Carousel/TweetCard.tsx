@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import type { TweetConfig, TweetPhotoFit } from './wizard/StepTweetConfig';
 
 export interface TweetCardProps {
@@ -12,6 +12,8 @@ export interface TweetCardProps {
   onTextChange?: (newText: string) => void;
   onClick?: () => void;
   cardRef?: React.Ref<HTMLDivElement>;
+  photoHeight?: number;
+  onPhotoHeightChange?: (h: number) => void;
 }
 
 /** Live DOM tweet card — pixel-perfect X/Twitter layout, optionally editable */
@@ -26,6 +28,8 @@ const TweetCard: React.FC<TweetCardProps> = ({
   onTextChange,
   onClick,
   cardRef,
+  photoHeight: photoHeightProp,
+  onPhotoHeightChange,
 }) => {
   const isDark = config.theme === 'dark';
   const bg = isDark ? '#000000' : '#FFFFFF';
@@ -63,7 +67,8 @@ const TweetCard: React.FC<TweetCardProps> = ({
   const avatarSize = s(80);
   const headerGap = s(16);
   const horizontalPadding = s(80);
-  const photoMaxH = hasPhoto ? Math.round(height * 0.35) : 0;
+  const defaultPhotoH = hasPhoto ? Math.round(height * 0.35) : 0;
+  const photoMaxH = photoHeightProp ?? defaultPhotoH;
 
   const textRef = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
@@ -199,18 +204,19 @@ const TweetCard: React.FC<TweetCardProps> = ({
 
         {/* Photo */}
         {hasPhoto && (
-          <div style={{
-            borderRadius: s(16),
-            overflow: 'hidden',
-            border: `1px solid ${borderColor}`,
-            height: photoMaxH,
-            flexShrink: 0,
-            background: isDark ? '#000' : '#F7F9F9',
-            backgroundImage: `url('${photo}')`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center center',
-            backgroundSize: bgSizeMap[photoFit] || 'cover',
-          }} />
+          <PhotoResizable
+            photoMaxH={photoMaxH}
+            borderRadius={s(16)}
+            borderColor={borderColor}
+            isDark={isDark}
+            photo={photo!}
+            photoFit={photoFit}
+            bgSizeMap={bgSizeMap}
+            editable={editable}
+            minH={Math.round(height * 0.15)}
+            maxH={Math.round(height * 0.65)}
+            onHeightChange={onPhotoHeightChange}
+          />
         )}
 
         {/* Engagement */}

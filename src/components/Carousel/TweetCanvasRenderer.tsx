@@ -46,8 +46,8 @@ export async function renderTweetToImage(
   const avatarSize = Math.round(80 * paddingScale);
   const headerGap = Math.round(16 * paddingScale);
 
-  // Calculate font sizes based on text length for optimal fill
-  const textLen = card.text.length;
+  // Calculate font sizes — use uniformFontSize (max text length) for consistent sizing across all cards
+  const textLen = card.uniformFontSize ?? card.text.length;
   let tweetFontSize: number;
   if (textLen < 50) tweetFontSize = 82;
   else if (textLen < 100) tweetFontSize = 68;

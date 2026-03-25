@@ -1847,21 +1847,44 @@ const CarouselGenerator: React.FC = () => {
       }
       cards = cards.slice(0, tweetConfig.cardCount);
 
-      const selectedWebPhotos = referenceImages
-        .filter((ref) => ref.category === 'general')
-        .map((ref) => ref.url)
-        .filter(Boolean);
+      // Get photos: from manual selection OR auto from web search
+      let selectedWebPhotos: string[] = [];
+      if (tweetConfig.photoMode === 'web') {
+        // First try manually selected reference images
+        selectedWebPhotos = referenceImages
+          .filter((ref) => ref.category === 'general')
+          .map((ref) => ref.url)
+          .filter(Boolean);
+        // If autoSelectPhotos and no manual selection, use web search images directly
+        if (tweetConfig.autoSelectPhotos && selectedWebPhotos.length === 0 && webSearchResult?.images?.length) {
+          selectedWebPhotos = webSearchResult.images.filter((u: string) => u && u.startsWith('http'));
+        }
+      }
+
+      // Determine which ~60% of cards get photos (not all)
+      const photoCardCount = Math.ceil(cards.length * 0.6);
+      const photoIndices = new Set<number>();
+      // Spread photo cards evenly, skip first card sometimes
+      for (let i = 0; i < photoCardCount && i < selectedWebPhotos.length; i++) {
+        // Distribute: 1, 3, 4, 6... (skip some)
+        const idx = Math.min(Math.round((i + 0.5) * (cards.length / photoCardCount)), cards.length - 1);
+        photoIndices.add(idx);
+      }
+
+      // Find max text length to use uniform font size
+      const maxTextLen = Math.max(...cards.map(c => (c.body || '').length), 50);
 
       cards = cards.map((card, i) => ({
         ...card,
         photo: tweetConfig.photoMode === 'web'
-          ? selectedWebPhotos[i] || selectedWebPhotos[0] || null
+          ? (photoIndices.has(i) ? (selectedWebPhotos[i % selectedWebPhotos.length] || null) : null)
           : tweetConfig.photoMode !== 'none'
             ? tweetConfig.tweetPhotos[i] || null
             : null,
         fontScale: 1.15,
         paddingScale: 1.05,
         textAlign: 'left' as const,
+        uniformFontSize: maxTextLen, // pass to renderer for uniform sizing
       }));
 
       console.log('[TweetCanvas] Rendering', cards.length, 'cards:', cards.map(c => c.body?.substring(0, 40)));

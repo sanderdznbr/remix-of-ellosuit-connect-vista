@@ -127,17 +127,18 @@ const TweetCard: React.FC<TweetCardProps> = ({
         background: bg,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'stretch',
         fontFamily: "'TwitterChirp', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
         overflow: 'hidden',
         boxSizing: 'border-box',
-        padding: `${Math.round(height * 0.06)}px 0`,
+        paddingTop: `${Math.round(height * 0.28)}px`,
+        paddingBottom: `${Math.round(height * 0.06)}px`,
         cursor: editable ? 'text' : onClick ? 'pointer' : undefined,
         position: 'relative',
       }}
     >
-      <div style={{ padding: `0 ${horizontalPadding}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
+      <div style={{ padding: `0 ${horizontalPadding}px`, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', flex: 1 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: s(32), gap: headerGap }}>
           {config.profilePhoto ? (

@@ -5411,6 +5411,25 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }
 
+    // Tweet mode cards are already fully rendered images; do not wrap them in templates
+    if (card.type === 'tweet') {
+      return (
+        <div ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+          data-cover-capture={index === 0 ? 'true' : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden', borderRadius: 0, backgroundColor: '#000000' }}>
+          {card.imageUrl && (
+            <img
+              src={card.imageUrl}
+              alt=""
+              {...(isExport ? { crossOrigin: 'anonymous' } : {})}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          )}
+        </div>
+      );
+    }
+
     // Marketplace full-bleed mode: AI generates complete images with text baked in
     // Extreme mode also generates full-bleed images with text baked in by the AI
     const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';

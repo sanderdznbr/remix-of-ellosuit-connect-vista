@@ -6967,7 +6967,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           >
             {/* Header bar */}
-            <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0">
+            <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}

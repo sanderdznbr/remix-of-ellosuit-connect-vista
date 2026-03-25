@@ -1,11 +1,12 @@
 // Shared wizard accent theme utility
 // Used by all wizard step components to apply mode-specific colors
 
-export type WizardAccentTheme = 'purple' | 'red' | 'orange';
+export type WizardAccentTheme = 'purple' | 'red' | 'orange' | 'sky';
 
-export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme'): WizardAccentTheme {
+export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet'): WizardAccentTheme {
   if (wizardMode === 'extreme') return 'orange';
   if (wizardMode === 'advanced') return 'red';
+  if (wizardMode === 'tweet') return 'sky';
   return 'purple';
 }
 
@@ -92,6 +93,33 @@ const themeMap = {
     hex: '#E84D1A',
     rgb: '232,77,26',
     rgbaLight: 'rgba(232,77,26,0.15)',
+  },
+  sky: {
+    bg: 'bg-sky-500',
+    bgLight: 'bg-sky-500/20',
+    bgLighter: 'bg-sky-500/15',
+    bgSubtle: 'bg-sky-500/[0.08]',
+    bgFaint: 'bg-sky-500/[0.05]',
+    border: 'border-sky-500/40',
+    borderLight: 'border-sky-500/30',
+    borderSubtle: 'border-sky-500/20',
+    text: 'text-sky-400',
+    textLight: 'text-sky-300',
+    textLighter: 'text-sky-200',
+    ring: 'ring-sky-500/50',
+    ringFull: 'ring-sky-500',
+    accent: 'accent-sky-500',
+    shadow: 'shadow-[0_0_12px_rgba(14,165,233,0.15)]',
+    shadowStrong: 'shadow-[0_0_12px_rgba(14,165,233,0.4)]',
+    gradient: 'from-sky-600 to-cyan-600',
+    gradientHover: 'hover:from-sky-500 hover:to-cyan-500',
+    spinnerBorder: 'border-sky-500/30',
+    spinnerTop: 'border-t-sky-500',
+    dotBg: 'bg-sky-500/60',
+    dotBgActive: 'bg-sky-400',
+    hex: '#0EA5E9',
+    rgb: '14,165,233',
+    rgbaLight: 'rgba(14,165,233,0.15)',
   },
 } as const;
 

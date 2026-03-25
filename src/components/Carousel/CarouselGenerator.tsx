@@ -122,6 +122,7 @@ import PromptMediaConfirmDialog from './wizard/PromptMediaConfirmDialog';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
+import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
@@ -237,7 +238,7 @@ const CarouselGenerator: React.FC = () => {
   const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
 
   // Wizard mode: simple vs advanced
-  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme'>('simple');
+  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme' | 'tweet'>('simple');
   const [continuousMode, setContinuousMode] = useState(false);
   const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
   const [extremeVision, setExtremeVision] = useState('');
@@ -246,6 +247,7 @@ const CarouselGenerator: React.FC = () => {
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
+  const [tweetConfig, setTweetConfig] = useState<TweetConfig>(DEFAULT_TWEET_CONFIG);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -441,13 +443,16 @@ const CarouselGenerator: React.FC = () => {
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
-  const WIZARD_STEPS = wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', 'Velocidade'];
+  const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
   const modeTheme = wizardMode === 'extreme'
     ? { hex: '#E84D1A', hexDark: '#C43A0F', rgb: '232,77,26', rgb2: '200,60,20', gradient: 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)', tailwind: 'orange', loadingColor: '#F97316' }
     : wizardMode === 'advanced'
     ? { hex: '#DC2626', hexDark: '#B91C1C', rgb: '220,38,38', rgb2: '185,28,28', gradient: 'linear-gradient(135deg, #B91C1C 0%, #EF4444 50%, #DC2626 100%)', tailwind: 'red', loadingColor: '#EF4444' }
+    : wizardMode === 'tweet'
+    ? { hex: '#0EA5E9', hexDark: '#0284C7', rgb: '14,165,233', rgb2: '2,132,199', gradient: 'linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #0EA5E9 100%)', tailwind: 'sky', loadingColor: '#38BDF8' }
     : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
@@ -2376,20 +2381,37 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       console.log('[GENERATE_FLOW] Calling generate-carousel edge function...');
       console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: cleanMentionsFromTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
+      // Build tweet context for tweet mode
+      const tweetModeContext = wizardMode === 'tweet' ? {
+        isTweetMode: true,
+        tweetProfile: {
+          displayName: tweetConfig.displayName || 'User',
+          username: tweetConfig.username || 'user',
+          isVerified: tweetConfig.isVerified,
+          hasProfilePhoto: !!tweetConfig.profilePhoto,
+          photoMode: tweetConfig.photoMode,
+        },
+      } : undefined;
+
+      const tweetProductContext = wizardMode === 'tweet'
+        ? `TWEET_POST_MODE: Gere conteúdo no formato de um tweet/post do Twitter/X. Cada card deve ter um texto curto e impactante como um tweet real. O conteúdo deve ser envolvente, usar linguagem informal e direta. Cada "tweet" é independente mas relacionado ao tema. Gere textos curtos (máx 280 caracteres por tweet). NÃO gere títulos longos - cada card é um tweet separado com texto curto e direto.`
+        : undefined;
+
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
           topic: cleanMentionsFromTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-          cardCount,
+          cardCount: wizardMode === 'tweet' ? tweetConfig.cardCount : cardCount,
           brandName: brandName || undefined,
           userName: userName || undefined,
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
           imageCardIndices: imageCardIndices.sort((a, b) => a - b),
           ...(hasManualCardTexts ? { manualCardTexts } : {}),
           ...(webSearchResult?.content ? { webSearchContent: webSearchResult.content, webSearchCitations: webSearchResult.citations } : {}),
-          ...(wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : wizardMode === 'advanced' && advancedVisualIdea.trim() ? { productContext: `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}` } : productContext ? { productContext } : {}),
+          ...(tweetProductContext ? { productContext: tweetProductContext } : wizardMode === 'extreme' && extremeAnalysis ? { productContext: `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues })}` } : wizardMode === 'advanced' && advancedVisualIdea.trim() ? { productContext: `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}` } : productContext ? { productContext } : {}),
           ...(activeMarketplaceStyleRef.current ? { marketplaceStyleConfig: activeMarketplaceStyleRef.current } : {}),
+          ...(tweetModeContext || {}),
         },
       });
       console.log('[GENERATE_FLOW] generate-carousel response:', error ? 'ERROR' : 'OK', data?.success, data?.error);
@@ -2976,6 +2998,46 @@ com o ROSTO da referência em um corpo completo gerado, vestido de forma elegant
 A composição deve ser um retrato editorial premium que combine com a estética do post.
 NÃO use foto da web neste card — crie uma foto original com o rosto fornecido.
 Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`;
+          }
+
+          // === TWEET POST MODE: override prompt to render tweet UI ===
+          if (wizardMode === 'tweet') {
+            const tName = tweetConfig.displayName || 'User';
+            const tUser = tweetConfig.username || 'user';
+            const tVerified = tweetConfig.isVerified;
+            const tweetText = updatedCards[i]?.body || updatedCards[i]?.bodyTop || updatedCards[i]?.title || '';
+            const hasCardPhoto = tweetConfig.photoMode !== 'none' && tweetConfig.tweetPhotos[i];
+            
+            cardPrompt = [
+              `INSTRUÇÃO PRINCIPAL: Gere uma imagem que seja um SCREENSHOT PERFEITO de um tweet/post do Twitter/X.`,
+              `FORMATO: A imagem deve ter fundo BRANCO (#FFFFFF) e seguir EXATAMENTE o layout visual do Twitter/X.`,
+              `LAYOUT DO TWEET (de cima para baixo):`,
+              `1. PERFIL: Foto redonda de perfil no canto superior esquerdo, nome "${tName}" em bold preto ao lado, abaixo "@${tUser}" em cinza${tVerified ? ', com badge azul de verificado ✓ ao lado do nome' : ''}`,
+              `2. TEXTO DO TWEET: "${tweetText}" — texto preto, fonte do sistema (San Francisco/Segoe UI), tamanho médio-grande, legível. O texto deve estar EXATAMENTE como escrito, sem alterações.`,
+              hasCardPhoto ? `3. IMAGEM: Abaixo do texto, uma foto/imagem ilustrativa relacionada ao tema, com cantos arredondados, ocupando a largura do tweet.` : '',
+              `REGRAS VISUAIS OBRIGATÓRIAS:`,
+              `- Fundo TOTALMENTE BRANCO`,  
+              `- Tipografia limpa estilo Twitter (system font)`,
+              `- Nome em preto bold, @ em cinza (#536471)`,
+              `- Texto do tweet em preto (#0F1419), tamanho legível`,
+              `- Margens e espaçamentos idênticos ao Twitter real`,
+              `- NÃO adicione bordas, sombras ou efeitos ao redor`,
+              `- NÃO adicione rodapé com likes/retweets/etc`,
+              `- A imagem deve parecer um SCREENSHOT real do Twitter`,
+              `TEXTO EXATO DO TWEET (copie caractere por caractere): "${tweetText}"`,
+            ].filter(Boolean).join('\n');
+            
+            // Use profile photo as face reference if available
+            if (tweetConfig.profilePhoto) {
+              capturedProductRefs = [tweetConfig.profilePhoto];
+              cardPrompt += `\n\nFOTO DE PERFIL: Use a imagem de referência fornecida como a foto de perfil redonda do tweet. Mantenha-a pequena (48x48px visual) e circular.`;
+            }
+            // Use manual card photo if available
+            if (hasCardPhoto && tweetConfig.tweetPhotos[i]) {
+              const existingRefs = capturedProductRefs || [];
+              capturedProductRefs = [...existingRefs, tweetConfig.tweetPhotos[i]!];
+              cardPrompt += `\n\nFOTO DO TWEET: Use a segunda imagem de referência como a foto/mídia do tweet, exibida abaixo do texto com cantos arredondados.`;
+            }
           }
 
           imageFactories.push({
@@ -5467,7 +5529,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' ? true : !!activeMarketplaceStyle) : true;
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' ? true : !!activeMarketplaceStyle) : true;
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);
@@ -5725,6 +5787,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         requiredPlanForAdvanced="Pro"
                         requiredPlanForExtreme="Growth"
                       />
+                    )}
+                    {currentStepName === 'Tweet Config' && (
+                      <StepTweetConfig config={tweetConfig} setConfig={setTweetConfig} />
                     )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
@@ -6358,7 +6423,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             // Call generateSinglePost directly to avoid state timing issues
                             setTimeout(() => generateSinglePost(), 1200);
                           } else {
-                            if (cardCount === 1) {
+                            // Tweet mode: sync cardCount from tweetConfig
+                            if (wizardMode === 'tweet') {
+                              setCardCount(tweetConfig.cardCount);
+                              setImageCardCount(tweetConfig.cardCount);
+                              if (tweetConfig.cardCount === 1) {
+                                setContentMode('single-post');
+                              } else {
+                                setContentMode('carousel');
+                              }
+                            } else if (cardCount === 1) {
                               setContentMode('single-post');
                               setImageCardCount(1);
                             } else {

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Zap, SlidersHorizontal, Sparkles, Lock } from 'lucide-react';
+import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
-  wizardMode: 'simple' | 'advanced' | 'extreme';
-  setWizardMode: (v: 'simple' | 'advanced' | 'extreme') => void;
+  wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet';
+  setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet') => void;
   allowAdvanced?: boolean;
   allowExtreme?: boolean;
   requiredPlanForAdvanced?: string;
@@ -36,6 +36,15 @@ const modes = [
     desc: 'Descreva sua visão e a IA monta tudo para você',
     badge: 'NOVO',
     requiredPlan: 'Growth',
+  },
+  {
+    key: 'tweet' as const,
+    icon: Twitter,
+    label: 'Tweet Post',
+    steps: 'Tweet visual · Estático ou carrossel',
+    desc: 'Crie posts no formato de tweet com foto e engajamento',
+    badge: 'NOVO',
+    requiredPlan: null,
   },
 ] as const;
 
@@ -92,6 +101,8 @@ const StepMode: React.FC<Props> = ({
                     ? 'bg-orange-500/[0.08] border-orange-500/40'
                     : m.key === 'advanced'
                     ? 'bg-red-500/[0.08] border-red-500/40'
+                    : m.key === 'tweet'
+                    ? 'bg-sky-500/[0.08] border-sky-500/40'
                     : 'bg-purple-500/[0.08] border-purple-500/40'
                   : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
               }`}
@@ -100,7 +111,7 @@ const StepMode: React.FC<Props> = ({
                 locked
                   ? 'bg-white/[0.03]'
                   : selected
-                  ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : 'bg-purple-500/20'
+                  ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : m.key === 'tweet' ? 'bg-sky-500/20' : 'bg-purple-500/20'
                   : 'bg-white/[0.04]'
               }`}>
                 {locked ? (
@@ -108,7 +119,7 @@ const StepMode: React.FC<Props> = ({
                 ) : (
                   <Icon className={`h-6 w-6 ${
                     selected
-                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : 'text-purple-400'
+                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : m.key === 'tweet' ? 'text-sky-400' : 'text-purple-400'
                       : 'text-white/30'
                   }`} />
                 )}

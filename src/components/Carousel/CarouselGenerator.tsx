@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react'; // tweet2-refresh
 import { calculateCreditCost } from '@/utils/creditCost';
 import '@/styles/carousel-loader.css';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';

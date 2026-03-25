@@ -4,6 +4,7 @@ import type { TweetConfig } from './wizard/StepTweetConfig';
 interface TweetRenderData {
   text: string;
   photo?: string | null;
+  photoStyle?: string | null;
   fontScale?: number;
   paddingScale?: number;
   textAlign?: 'left' | 'center' | 'right';
@@ -40,7 +41,7 @@ export async function renderTweetToImage(
   const borderColor = isDark ? '#2F3336' : '#EFF3F4';
   const linkColor = '#1D9BF0';
 
-  const hasPhoto = !!card.photo;
+  const hasPhoto = !!(card.photo && card.photoStyle);
   const fontScale = card.fontScale ?? 1;
   const paddingScale = card.paddingScale ?? 1;
   const textAlign = card.textAlign ?? 'left';
@@ -71,10 +72,6 @@ export async function renderTweetToImage(
   const usernameFontSize = Math.round(28 * fontScale);
   const verifiedSize = Math.round(30 * fontScale);
 
-  // Photo fit mode
-  const photoFit = card.photoFit ?? 'cover';
-  const photoObjectFit = photoFit === 'contain' ? 'contain' : 'cover';
-
   // Photo height: constrain to a reasonable portion, like real Twitter
   const photoMaxH = hasPhoto ? Math.round(format.h * 0.35) : 0;
 
@@ -94,18 +91,18 @@ export async function renderTweetToImage(
     ">
       <div style="padding: 0 ${horizontalPadding}px; display: flex; flex-direction: column; justify-content: center; flex: 1;">
         <!-- Header: profile -->
-        <div style="display: flex; align-items: center; margin-bottom: ${Math.round(32 * paddingScale)}px; gap: ${headerGap}px;">
+        <div style="display: flex; align-items: flex-start; margin-bottom: ${Math.round(32 * paddingScale)}px; gap: ${headerGap}px;">
           ${config.profilePhoto
-            ? `<img src="${config.profilePhoto}" style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" ${config.profilePhoto.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />`
+            ? `<img src="${config.profilePhoto}" style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; object-fit: cover; flex-shrink: 0; margin-top: ${Math.max(0, Math.round(2 * paddingScale))}px;" ${config.profilePhoto.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />`
             : `<div style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; background: ${isDark ? '#2F3336' : '#CFD9DE'}; flex-shrink: 0;"></div>`
           }
-          <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+          <div style="display: flex; flex-direction: column; justify-content: flex-start; min-width: 0; padding-top: ${Math.max(0, Math.round(2 * paddingScale))}px;">
             <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
               <span style="font-weight: 700; font-size: ${nameFontSize}px; color: ${textColor}; line-height: 1.15;">
                 ${escapeHtml(config.displayName || 'User')}
               </span>
               ${config.isVerified ? `
-                <svg viewBox="0 0 22 22" width="${verifiedSize}" height="${verifiedSize}" style="flex-shrink: 0; align-self: center; margin-top: 0;">
+                <svg viewBox="0 0 22 22" width="${verifiedSize}" height="${verifiedSize}" style="flex-shrink: 0; display: block; margin-top: ${Math.max(0, Math.round(2 * paddingScale))}px;">
                   <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.855-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.69-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.636.433 1.221.878 1.69.47.446 1.055.752 1.69.883.635.13 1.294.083 1.902-.143.272.587.702 1.086 1.24 1.44.54.354 1.167.551 1.813.568.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.225 1.26.276 1.897.143.634-.131 1.217-.437 1.687-.883.445-.468.751-1.053.882-1.687.13-.633.083-1.29-.14-1.897.587-.273 1.084-.704 1.438-1.246.355-.54.552-1.17.57-1.817z" fill="${linkColor}"/>
                   <path d="M9.585 14.929l-3.28-3.28 1.168-1.168 2.112 2.112 4.716-4.716 1.168 1.168-5.884 5.884z" fill="white"/>
                 </svg>
@@ -131,19 +128,19 @@ export async function renderTweetToImage(
         ">${formatTweetText(card.text)}</div>
 
         <!-- Photo -->
-        ${hasPhoto && card.photo ? `
+        ${hasPhoto && card.photoStyle ? `
           <div style="
             border-radius: 20px;
             overflow: hidden;
             border: 1px solid ${borderColor};
             height: ${photoMaxH}px;
             flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             background: ${isDark ? '#000000' : '#F7F9F9'};
+            background-image: url('${card.photo}');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: ${card.photoStyle};
           ">
-            <img src="${card.photo}" style="width: 100%; height: 100%; display: block; object-fit: ${photoObjectFit}; object-position: center;" ${card.photo!.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />
           </div>
         ` : ''}
 
@@ -261,26 +258,23 @@ export async function renderAllTweetCards(
   const total = config.cardCount;
   const results: string[] = [];
 
-  // Determine which cards get photos: only explicit assignments should render images.
-  const photoSlots = new Set<number>();
-  if (config.photoMode !== 'none') {
-    for (let i = 0; i < total; i++) {
-      if (cards[i]?.photo || config.tweetPhotos[i]) {
-        photoSlots.add(i);
-      }
-    }
-  }
-
   for (let i = 0; i < total; i++) {
     onProgress?.(i, total);
     const cardText = cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || config.tweetTexts[i] || '';
-    const hasExplicitPhoto = !!(cards[i]?.photo || config.tweetPhotos[i]);
-    const shouldHavePhoto = hasExplicitPhoto || photoSlots.has(i);
-    const cardPhoto = shouldHavePhoto ? (cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null)) : null;
+    const cardPhoto = cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null) ?? null;
+    const photoFit = cards[i]?.photoFit ?? 'cover';
+    const photoStyle = cardPhoto
+      ? photoFit === 'contain'
+        ? 'contain'
+        : photoFit === 'fill'
+          ? '100% 100%'
+          : 'cover'
+      : null;
 
     const dataUrl = await renderTweetToImage(config, {
       text: cardText,
       photo: cardPhoto,
+      photoStyle,
       fontScale: cards[i]?.fontScale,
       paddingScale: cards[i]?.paddingScale,
       textAlign: cards[i]?.textAlign,

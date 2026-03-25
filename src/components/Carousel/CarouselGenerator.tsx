@@ -1903,24 +1903,24 @@ const CarouselGenerator: React.FC = () => {
             }
           }
           if (selectedWebPhotos.length > 0) {
-            const autoTweetPhotos = [...tweetConfig.tweetPhotos];
-            for (let i = 0; i < cards.length; i++) {
-              autoTweetPhotos[i] = selectedWebPhotos[i] || null;
-            }
-            configForRender = { ...tweetConfig, tweetPhotos: autoTweetPhotos, photoMode: 'manual' };
-            setTweetConfig(configForRender);
             console.log('[TweetCanvas] Auto-selected', selectedWebPhotos.length, 'photos from web search');
           }
         }
 
+        const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
+          cardPhotoAssignments[i] || tweetConfig.tweetPhotos[i] || selectedWebPhotos[i] || null
+        ));
+        configForRender = { ...tweetConfig, tweetPhotos: mergedTweetPhotos };
+        setTweetConfig(configForRender);
+
         for (let i = 0; i < cards.length; i++) {
-          const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || null;
+          const photoUrl = mergedTweetPhotos[i];
           if (!photoUrl) continue;
           try {
             resolvedPhotos[i] = await resolveImageUrl(photoUrl);
           } catch (error) {
             console.warn('[TweetPhoto] Failed to normalize web photo for card', i, error);
-            resolvedPhotos[i] = photoUrl;
+            resolvedPhotos[i] = null;
           }
         }
       } else if (tweetConfig.photoMode === 'ai') {
@@ -4391,14 +4391,18 @@ FORBIDDEN:
         .map((ref) => ref.url)
         .filter(Boolean);
 
+      const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
+        cardPhotoAssignments[i] || cfg.tweetPhotos[i] || selectedWebPhotos[i] || null
+      ));
+
       for (let i = 0; i < cards.length; i++) {
-        const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || null;
+        const photoUrl = mergedTweetPhotos[i];
         if (!photoUrl) continue;
         try {
           resolvedPhotos[i] = await resolveImageUrl(photoUrl);
         } catch (error) {
           console.warn('[TweetPhoto] Failed to normalize web photo for card', i, error);
-          resolvedPhotos[i] = photoUrl;
+          resolvedPhotos[i] = null;
         }
       }
     } else if (cfg.photoMode !== 'none') {

@@ -726,7 +726,7 @@ const CarouselGenerator: React.FC = () => {
     setClassifyingTopic(false);
     setWebSearchSuggestion(null);
     setWebSearchDecisionMade(false);
-    setForceWebSearch(false);
+    setForceWebSearch(true);
     setCurrentCarouselId(null);
     setPexelsImages([]);
     setShowImagePicker(null);

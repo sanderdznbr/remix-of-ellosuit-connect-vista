@@ -102,7 +102,11 @@ const TweetCard: React.FC<TweetCardProps> = ({
     return html;
   };
 
-  const bgSizeMap: Record<string, string> = { cover: 'cover', contain: 'contain', fill: '100% 100%' };
+  const objectFitMap: Record<TweetPhotoFit, React.CSSProperties['objectFit']> = {
+    cover: 'cover',
+    contain: 'contain',
+    fill: 'fill',
+  };
 
   const eng = config.engagement;
   const engagementItems = [
@@ -215,7 +219,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
             isDark={isDark}
             photo={photo!}
             photoFit={photoFit}
-            bgSizeMap={bgSizeMap}
+            objectFit={objectFitMap[photoFit] || 'cover'}
             editable={editable}
             minH={Math.round(height * 0.15)}
             maxH={Math.round(height * 0.65)}
@@ -254,12 +258,12 @@ const PhotoResizable: React.FC<{
   isDark: boolean;
   photo: string;
   photoFit: TweetPhotoFit;
-  bgSizeMap: Record<string, string>;
+  objectFit: React.CSSProperties['objectFit'];
   editable?: boolean;
   minH: number;
   maxH: number;
   onHeightChange?: (h: number) => void;
-}> = ({ photoMaxH, borderRadius, borderColor, isDark, photo, photoFit, bgSizeMap, editable, minH, maxH, onHeightChange }) => {
+}> = ({ photoMaxH, borderRadius, borderColor, isDark, photo, objectFit, editable, minH, maxH, onHeightChange }) => {
   const [localH, setLocalH] = useState(photoMaxH);
   const dragging = useRef(false);
   const startY = useRef(0);
@@ -299,11 +303,22 @@ const PhotoResizable: React.FC<{
         border: `1px solid ${borderColor}`,
         height: localH,
         background: isDark ? '#000' : '#F7F9F9',
-        backgroundImage: `url('${photo}')`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center center',
-        backgroundSize: bgSizeMap[photoFit] || 'cover',
-      }} />
+        position: 'relative',
+      }}>
+        <img
+          src={photo}
+          crossOrigin={photo.startsWith('data:') || photo.startsWith('blob:') ? undefined : 'anonymous'}
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            objectFit,
+            objectPosition: 'center center',
+            background: isDark ? '#000' : '#F7F9F9',
+          }}
+        />
+      </div>
       {editable && (
         <div
           onPointerDown={onPointerDown}

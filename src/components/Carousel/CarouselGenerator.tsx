@@ -1861,38 +1861,70 @@ const CarouselGenerator: React.FC = () => {
       }
       cards = cards.slice(0, tweetConfig.cardCount);
 
-      // Get photos: from manual selection OR auto from web search
-      let selectedWebPhotos: string[] = [];
+      const resolveImageUrl = async (url: string): Promise<string> => {
+        if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+        const cached = tweetPhotoDataUrlCacheRef.current[url];
+        if (cached) return cached;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Falha ao carregar imagem do tweet: ${response.status}`);
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
+        return dataUrl;
+      };
+
+      let configForRender = tweetConfig;
+      const resolvedPhotos = new Array<string | null>(cards.length).fill(null);
+
       if (tweetConfig.photoMode === 'web') {
-        // First try manually selected reference images
-        selectedWebPhotos = referenceImages
+        let selectedWebPhotos = referenceImages
           .filter((ref) => ref.category === 'general')
           .map((ref) => ref.url)
           .filter(Boolean);
-        // If autoSelectPhotos and no manual selection, use web search images directly
+
         if (tweetConfig.autoSelectPhotos && selectedWebPhotos.length === 0) {
-          // Combine imageCandidates and images for best coverage
           const candidateUrls = (webSearchResult?.imageCandidates || [])
             .filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
             .map((c: any) => c.url);
           const fallbackUrls = (webSearchResult?.images || []).filter((u: string) => u && u.startsWith('http'));
-          // Merge: candidates first (higher quality), then fallback, deduplicate
           const seen = new Set<string>();
+          selectedWebPhotos = [];
           for (const url of [...candidateUrls, ...fallbackUrls]) {
-            if (!seen.has(url)) { seen.add(url); selectedWebPhotos.push(url); }
+            if (!seen.has(url)) {
+              seen.add(url);
+              selectedWebPhotos.push(url);
+            }
           }
-          console.log('[TweetCanvas] Auto-selected', selectedWebPhotos.length, 'photos from web search');
+          if (selectedWebPhotos.length > 0) {
+            const autoTweetPhotos = [...tweetConfig.tweetPhotos];
+            for (let i = 0; i < cards.length; i++) {
+              autoTweetPhotos[i] = selectedWebPhotos[i] || selectedWebPhotos[i % selectedWebPhotos.length] || null;
+            }
+            configForRender = { ...tweetConfig, tweetPhotos: autoTweetPhotos, photoMode: 'manual' };
+            setTweetConfig(configForRender);
+            console.log('[TweetCanvas] Auto-selected', selectedWebPhotos.length, 'photos from web search');
+          }
         }
-      }
 
-      // Determine which ~60% of cards get photos
-      const photoCardCount = Math.min(Math.ceil(cards.length * 0.6), selectedWebPhotos.length);
-      const photoIndices = new Set<number>();
-      if (photoCardCount > 0) {
-        // Spread evenly across cards
-        for (let i = 0; i < photoCardCount; i++) {
-          const idx = Math.round(i * ((cards.length - 1) / Math.max(photoCardCount - 1, 1)));
-          photoIndices.add(idx);
+        for (let i = 0; i < cards.length; i++) {
+          const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || selectedWebPhotos[0] || null;
+          if (!photoUrl) continue;
+          try {
+            resolvedPhotos[i] = await resolveImageUrl(photoUrl);
+          } catch (error) {
+            console.warn('[TweetPhoto] Failed to normalize web photo for card', i, error);
+            resolvedPhotos[i] = photoUrl;
+          }
+        }
+      } else if (configForRender.photoMode !== 'none') {
+        for (let i = 0; i < cards.length; i++) {
+          resolvedPhotos[i] = configForRender.tweetPhotos[i] || null;
         }
       }
 
@@ -1901,21 +1933,17 @@ const CarouselGenerator: React.FC = () => {
 
       cards = cards.map((card, i) => ({
         ...card,
-        photo: tweetConfig.photoMode === 'web'
-          ? (photoIndices.has(i) ? (selectedWebPhotos[i % selectedWebPhotos.length] || null) : null)
-          : tweetConfig.photoMode !== 'none'
-            ? tweetConfig.tweetPhotos[i] || null
-            : null,
+        photo: resolvedPhotos[i] || null,
         fontScale: 1.15,
         paddingScale: 1.05,
         textAlign: 'left' as const,
         uniformFontSize: maxTextLen, // pass to renderer for uniform sizing
-        photoFit: tweetConfig.photoFit,
+        photoFit: configForRender.photoFit,
       }));
 
       console.log('[TweetCanvas] Rendering', cards.length, 'cards:', cards.map(c => c.body?.substring(0, 40)));
 
-      const images = await renderAllTweetCards(tweetConfig, cards, formatDims, (current, total) => {
+      const images = await renderAllTweetCards(configForRender, cards, formatDims, (current, total) => {
         setImageGenProgress(`${current}/${total} tweets renderizados...`);
       });
 

@@ -644,7 +644,11 @@ const CarouselGenerator: React.FC = () => {
         .map(r => r.url || r.thumb);
 
       // Process all cards in parallel for faster resolution
-      let webFallbackIdx = 0;
+      // Map photo indices to sequential fallback positions
+      const photoIndexList = Array.from(photoIndices).sort((a, b) => a - b);
+      const photoSlotMap = new Map<number, number>(); // cardIndex -> fallback position
+      photoIndexList.forEach((cardIdx, seqIdx) => photoSlotMap.set(cardIdx, seqIdx));
+
       const resolvePromises = Array.from({ length: totalCards }, async (_, i) => {
         if (cancelled) return { index: i, url: nextPhotos[i] ?? null };
 
@@ -653,9 +657,10 @@ const CarouselGenerator: React.FC = () => {
           return { index: i, url: null };
         }
 
+        const seqIdx = photoSlotMap.get(i) ?? 0;
         // For web mode: use referenceImages as source; for manual: use existing tweetPhotos
         const sourceUrl = tweet2Config.photoMode === 'web'
-          ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null)
+          ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[seqIdx] || null)
           : (tweet2Config.tweetPhotos[i] || null);
 
         if (!sourceUrl) return { index: i, url: null };

@@ -552,8 +552,8 @@ const CarouselGenerator: React.FC = () => {
     if (activeConfig.photoMode !== 'web') return null;
 
     const selectedWebPhotos = getSelectedTweetWebPhotos(activeConfig);
-    if (selectedWebPhotos.length === 0) return null;
-    return selectedWebPhotos[index % selectedWebPhotos.length] || null;
+    if (selectedWebPhotos.length === 0 || index >= selectedWebPhotos.length) return null;
+    return selectedWebPhotos[index] || null;
   }, [cardPhotoAssignments, getSelectedTweetWebPhotos, tweetConfig]);
 
   useEffect(() => {

@@ -404,7 +404,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Web search state (declared early for WIZARD_STEPS computation)
   const [searchingWeb, setSearchingWeb] = useState(false);
-  const [skipWebSearch, setSkipWebSearch] = useState(false);
+  const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[] } | null>(null);
 
   // Auto-detect product context from topic to show Produto step
@@ -6471,15 +6471,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
-                            // Tweet mode: only skip web search if toggle is OFF
-                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && !forceWebSearch) {
-                              setSkipWebSearch(true);
-                              setWebSearchDecisionMade(true);
-                              setWizardStep(wizardStep + 1);
-                              return;
-                            }
-                            // Tweet mode with web search toggle ON: do the search
-                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && forceWebSearch && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
+                            // Tweet mode: always search web (skip only if user explicitly turned off toggle)
+                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
                               setWebSearchDecisionMade(true);
                               await handleSearchWeb();
                               setWizardStep(wizardStep + 1);

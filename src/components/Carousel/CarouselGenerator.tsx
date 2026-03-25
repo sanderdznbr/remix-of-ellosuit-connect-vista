@@ -547,7 +547,7 @@ const CarouselGenerator: React.FC = () => {
   const [classifyingTopic, setClassifyingTopic] = useState(false);
   const [webSearchSuggestion, setWebSearchSuggestion] = useState<{ classification: string; reason: string } | null>(null);
   const [webSearchDecisionMade, setWebSearchDecisionMade] = useState(false);
-  const [forceWebSearch, setForceWebSearch] = useState(false);
+  const [forceWebSearch, setForceWebSearch] = useState(true);
 
   const assignPerCardWebPhotos = useCallback(async (
     outline: { title?: string; body?: string }[],
@@ -726,7 +726,7 @@ const CarouselGenerator: React.FC = () => {
     setClassifyingTopic(false);
     setWebSearchSuggestion(null);
     setWebSearchDecisionMade(false);
-    setForceWebSearch(false);
+    setForceWebSearch(true);
     setCurrentCarouselId(null);
     setPexelsImages([]);
     setShowImagePicker(null);
@@ -6615,35 +6615,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               await handleSearchWeb();
                               return;
                             }
-                            // Smart web search classification on Tema step
-                            if (currentStepName === 'Tema' && !webSearchResult && !skipWebSearch && topic.trim() && !hasManualText && !webSearchDecisionMade && !forceWebSearch) {
-                              // Classify the topic first
-                              setClassifyingTopic(true);
-                              let shouldSearch = true; // Default: always search on failure
-                              try {
-                                const { data, error } = await supabase.functions.invoke('generate-carousel', {
-                                  body: { action: 'classify-topic', topic: topic.trim() },
-                                });
-                                if (!error && data) {
-                                  shouldSearch = data.shouldSearch !== false; // Only skip if explicitly false
-                                  if (!shouldSearch) {
-                                    // Personal/opinion content - skip web search automatically
-                                    setSkipWebSearch(true);
-                                    setWebSearchDecisionMade(true);
-                                  }
-                                }
-                              } catch (err) {
-                                console.error('Classification error:', err);
-                                // On error, default to searching
-                                shouldSearch = true;
-                              }
-                              setClassifyingTopic(false);
-                              if (shouldSearch) {
-                                setWebSearchDecisionMade(true);
-                                await handleSearchWeb();
-                                // Don't advance — let user see results and click Continue again
-                                return;
-                              }
+                            // If web search toggle is OFF, skip web search entirely
+                            if (currentStepName === 'Tema' && !forceWebSearch && !webSearchDecisionMade) {
+                              setSkipWebSearch(true);
+                              setWebSearchDecisionMade(true);
                             }
                             if (currentStepName === 'Tema' && hasManualText && !topic.trim()) {
                               setTopic(manualPostText.trim());

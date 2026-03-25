@@ -14,6 +14,8 @@ export interface TweetCardProps {
   cardRef?: React.Ref<HTMLDivElement>;
   photoHeight?: number;
   onPhotoHeightChange?: (h: number) => void;
+  /** Override font size (unscaled, base 1080px). When set, ignores text-length auto-sizing */
+  fontSizeOverride?: number;
 }
 
 /** Live DOM tweet card — pixel-perfect X/Twitter layout, optionally editable */
@@ -30,6 +32,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
   cardRef,
   photoHeight: photoHeightProp,
   onPhotoHeightChange,
+  fontSizeOverride,
 }) => {
   const isDark = config.theme === 'dark';
   const bg = isDark ? '#000000' : '#FFFFFF';
@@ -44,22 +47,23 @@ const TweetCard: React.FC<TweetCardProps> = ({
   const scale = width / 1080;
   const s = (v: number) => Math.round(v * scale);
 
-  // Font sizing based on text length
+  // Font sizing: use override if provided, otherwise auto-size based on text length
   const textLen = text.length;
-  let tweetFontSize: number;
+  let autoFontSize: number;
   if (hasPhoto) {
-    if (textLen < 50) tweetFontSize = 72;
-    else if (textLen < 100) tweetFontSize = 58;
-    else if (textLen < 180) tweetFontSize = 48;
-    else if (textLen < 280) tweetFontSize = 40;
-    else tweetFontSize = 34;
+    if (textLen < 50) autoFontSize = 72;
+    else if (textLen < 100) autoFontSize = 58;
+    else if (textLen < 180) autoFontSize = 48;
+    else if (textLen < 280) autoFontSize = 40;
+    else autoFontSize = 34;
   } else {
-    if (textLen < 50) tweetFontSize = 82;
-    else if (textLen < 100) tweetFontSize = 68;
-    else if (textLen < 180) tweetFontSize = 56;
-    else if (textLen < 280) tweetFontSize = 46;
-    else tweetFontSize = 38;
+    if (textLen < 50) autoFontSize = 82;
+    else if (textLen < 100) autoFontSize = 68;
+    else if (textLen < 180) autoFontSize = 56;
+    else if (textLen < 280) autoFontSize = 46;
+    else autoFontSize = 38;
   }
+  const tweetFontSize = fontSizeOverride ?? autoFontSize;
 
   const nameFontSize = s(42);
   const usernameFontSize = s(34);

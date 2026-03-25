@@ -5663,7 +5663,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const cardText = card.body || card.bodyTop || card.title || '';
       // Resolve photo: check tweetConfig photos and cardPhotoAssignments
       const resolvedPhoto = cardPhotoAssignments[index] || tweetConfig.tweetPhotos[index] || null;
-      const cardPhoto = resolvedPhoto && !resolvedPhoto.startsWith('data:') ? resolvedPhoto : null;
+      const cardPhoto = resolvedPhoto || null;
 
       // For export: render at full resolution, capture via html2canvas
       if (isExport) {

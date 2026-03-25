@@ -130,7 +130,7 @@ export async function renderTweetToImage(
             max-height: ${photoMaxH}px;
             flex-shrink: 0;
           ">
-            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: ${photoObjectFit};" crossorigin="anonymous" />
+            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: ${photoObjectFit};" ${card.photo!.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />
           </div>
         ` : ''}
 

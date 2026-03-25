@@ -207,6 +207,7 @@ const CarouselGenerator: React.FC = () => {
   const { isMobile: isMobileView } = useIsMobile();
   const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tweetPreviewShellRef = useRef<HTMLDivElement | null>(null);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
   const planLimits = usePlanLimits();
@@ -5278,65 +5279,33 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const mimeType = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
       const quality = format === 'png' ? undefined : 0.92;
 
-      // Tweet mode: render each card at full resolution via off-screen DOM capture
       const isTweetExport = wizardMode === 'tweet' && carouselData.cards.some(c => c.type === 'tweet');
 
-      const captureTweetAtFullRes = async (cardIndex: number): Promise<HTMLCanvasElement> => {
-        const card = carouselData!.cards[cardIndex];
-        const cardText = card.body || card.bodyTop || card.title || '';
-        const resolvedPhoto = cardPhotoAssignments[cardIndex] || tweetConfig.tweetPhotos[cardIndex] || null;
+      const captureTweetPreviewShell = async (cardIndex: number): Promise<HTMLCanvasElement> => {
+        const previousIndex = activeCardIndex;
+        setActiveCardIndex(cardIndex);
 
-        // Create off-screen container with full resolution TweetCard
-        const container = document.createElement('div');
-        container.style.position = 'fixed';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = `${cardW}px`;
-        container.style.height = `${cardH}px`;
-        container.style.zIndex = '-1';
-        document.body.appendChild(container);
+        await new Promise(r => setTimeout(r, 450));
 
-        // Render TweetCard via ReactDOM
-        const { createRoot } = await import('react-dom/client');
-        const root = createRoot(container);
-        await new Promise<void>((resolve) => {
-          root.render(
-            React.createElement(TweetCard, {
-              config: tweetConfig,
-              text: cardText,
-              photo: resolvedPhoto,
-              photoFit: tweetConfig.photoFit,
-              width: cardW,
-              height: cardH,
-              photoHeight: tweetPhotoHeights[cardIndex],
-              fontSizeOverride: tweetFontSizeOverride ?? undefined,
-            })
-          );
-          setTimeout(resolve, 300);
-        });
+        const shell = tweetPreviewShellRef.current;
+        if (!shell) throw new Error('Tweet preview shell não encontrado');
 
-        // Wait for images inside
-        const imgs = container.querySelectorAll('img');
-        if (imgs.length > 0) {
-          await Promise.all(Array.from(imgs).map(img =>
-            img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-          ));
-        }
-
-        const isDark = tweetConfig.theme === 'dark';
-        const canvas = await html2canvas(container.firstElementChild as HTMLElement || container, {
-          width: cardW,
-          height: cardH,
+        const canvas = await html2canvas(shell, {
           scale: 2,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: isDark ? '#000000' : '#FFFFFF',
+          backgroundColor: '#000000',
           logging: false,
           imageTimeout: 30000,
+          onclone: (clonedDoc) => {
+            clonedDoc.querySelectorAll('img').forEach(img => {
+              img.crossOrigin = 'anonymous';
+            });
+          },
         });
 
-        root.unmount();
-        document.body.removeChild(container);
+        setActiveCardIndex(previousIndex);
+        await new Promise(r => setTimeout(r, 50));
         return canvas;
       };
 
@@ -5347,7 +5316,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let i = 0; i < carouselData.cards.length; i++) {
           let canvas: HTMLCanvasElement;
           if (isTweetExport) {
-            canvas = await captureTweetAtFullRes(i);
+            canvas = await captureTweetPreviewShell(i);
           } else {
             const el = cardRefs.current[i];
             if (!el) continue;
@@ -5378,7 +5347,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         for (let i = 0; i < carouselData.cards.length; i++) {
           let canvas: HTMLCanvasElement;
           if (isTweetExport) {
-            canvas = await captureTweetAtFullRes(i);
+            canvas = await captureTweetPreviewShell(i);
           } else {
             const el = cardRefs.current[i];
             if (!el) continue;
@@ -7524,6 +7493,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* Instagram Phone Mockup */}
             <motion.div
+              ref={wizardMode === 'tweet' ? tweetPreviewShellRef : undefined}
               className="relative flex-shrink-0"
               layout
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}

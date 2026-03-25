@@ -204,11 +204,19 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
         </div>
       </div>
 
-      {/* Web photos are manual-only for reliability */}
+      {/* Web photos info */}
       {config.photoMode === 'web' && (
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/10 p-3">
           <p className="text-sm font-medium text-sky-400">Seleção manual de fotos</p>
           <p className="text-xs text-white/50 mt-1">Após pesquisar o tema, você escolhe as fotos na próxima etapa.</p>
+        </div>
+      )}
+
+      {/* AI generate info */}
+      {config.photoMode === 'ai' && (
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/10 p-3">
+          <p className="text-sm font-medium text-purple-400">Fotos geradas por IA</p>
+          <p className="text-xs text-white/50 mt-1">Na próxima etapa você poderá enviar prints, logos ou referências do seu produto para a IA gerar fotos personalizadas.</p>
         </div>
       )}
 

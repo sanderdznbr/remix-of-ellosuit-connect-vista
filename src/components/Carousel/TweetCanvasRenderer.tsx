@@ -87,7 +87,7 @@ export async function renderTweetToImage(
         <!-- Header: profile -->
         <div style="display: flex; align-items: center; margin-bottom: ${Math.round(32 * paddingScale)}px; gap: ${headerGap}px;">
           ${config.profilePhoto
-            ? `<img src="${config.profilePhoto}" style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" crossorigin="anonymous" />`
+            ? `<img src="${config.profilePhoto}" style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" ${config.profilePhoto.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />`
             : `<div style="width: ${avatarSize}px; height: ${avatarSize}px; border-radius: 50%; background: ${isDark ? '#2F3336' : '#CFD9DE'}; flex-shrink: 0;"></div>`
           }
           <div style="display: flex; flex-direction: column;">
@@ -130,7 +130,7 @@ export async function renderTweetToImage(
             max-height: ${photoMaxH}px;
             flex-shrink: 0;
           ">
-            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: ${photoObjectFit};" crossorigin="anonymous" />
+            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: ${photoObjectFit};" ${card.photo!.startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />
           </div>
         ` : ''}
 

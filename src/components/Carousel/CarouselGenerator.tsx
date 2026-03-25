@@ -691,7 +691,18 @@ const CarouselGenerator: React.FC = () => {
       }
 
       if (!cancelled && changed) {
-        setTweet2Config((prev) => ({ ...prev, tweetPhotos: nextPhotos }));
+        setTweet2Config((prev) => {
+          // Merge: only set slots that normalization resolved, preserve any newer values
+          const merged = [...prev.tweetPhotos];
+          for (const { index, url } of results) {
+            // Don't overwrite a valid photo with null
+            if (url === null && merged[index] && (merged[index] as string).length > 5) continue;
+            if (merged[index] !== url) {
+              merged[index] = url;
+            }
+          }
+          return { ...prev, tweetPhotos: merged };
+        });
       }
     };
 

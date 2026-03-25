@@ -104,12 +104,12 @@ export async function renderTweetToImage(
         <!-- Tweet text -->
         <div style="
           font-size: ${tweetFontSize}px;
-          line-height: 1.25;
+          line-height: 1.3;
           color: ${textColor};
-          margin-bottom: ${hasPhoto ? Math.round(28 * paddingScale) : 0}px;
+          margin-bottom: ${hasPhoto ? Math.round(44 * paddingScale) : 0}px;
           word-wrap: break-word;
           white-space: pre-wrap;
-          font-weight: 400;
+          font-weight: 700;
           letter-spacing: -0.4px;
           text-align: ${textAlign};
         ">${escapeHtml(card.text)}</div>

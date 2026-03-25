@@ -126,11 +126,23 @@ const StepTweet2Config: React.FC<Props> = ({ config, setConfig }) => {
         </div>
       </div>
 
+      {config.cardCount > 1 && config.photoMode !== 'none' && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-white/40 uppercase tracking-wider">Quantos slides com foto?</p>
+          <div className="flex gap-2 flex-wrap">
+            {Array.from({ length: config.cardCount }, (_, i) => i + 1).map((count) => (
+              <button key={count} onClick={() => update({ photoCardCount: count })} className={`px-3 py-2 rounded-lg text-xs font-medium transition-all border ${config.photoCardCount === count ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06] hover:bg-white/[0.06]'}`}>{count}</button>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/25">{config.photoCardCount} de {config.cardCount} slides terão foto. Os demais serão apenas texto.</p>
+        </div>
+      )}
+
       <div className="space-y-3">
         <p className="text-xs font-medium text-white/40 uppercase tracking-wider">Fotos</p>
         <div className="flex gap-2 flex-wrap">
           {[{ key: 'none' as const, icon: X, label: 'Sem foto' }, { key: 'manual' as const, icon: Upload, label: 'Upload manual' }, { key: 'web' as const, icon: Globe, label: 'Buscar na web' }].map((option) => (
-            <button key={option.key} onClick={() => update({ photoMode: option.key })} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${config.photoMode === option.key ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06] hover:bg-white/[0.06]'}`}><option.icon className="w-3.5 h-3.5" />{option.label}</button>
+            <button key={option.key} onClick={() => update({ photoMode: option.key, photoCardCount: option.key === 'none' ? 0 : config.photoCardCount || config.cardCount })} className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all border ${config.photoMode === option.key ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' : 'bg-white/[0.03] text-white/30 border-white/[0.06] hover:bg-white/[0.06]'}`}><option.icon className="w-3.5 h-3.5" />{option.label}</button>
           ))}
         </div>
       </div>

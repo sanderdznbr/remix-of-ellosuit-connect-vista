@@ -41,23 +41,23 @@ export async function renderTweetToImage(
   const fontScale = card.fontScale ?? 1;
   const paddingScale = card.paddingScale ?? 1;
   const textAlign = card.textAlign ?? 'left';
-  const horizontalPadding = Math.round(80 * paddingScale);
-  const avatarSize = Math.round(72 * paddingScale);
-  const headerGap = Math.round(16 * paddingScale);
+  const horizontalPadding = Math.round(100 * paddingScale);
+  const avatarSize = Math.round(110 * paddingScale);
+  const headerGap = Math.round(20 * paddingScale);
 
   // Calculate font sizes based on text length for optimal fill
   const textLen = card.text.length;
   let tweetFontSize: number;
-  if (textLen < 50) tweetFontSize = 68;
-  else if (textLen < 100) tweetFontSize = 56;
-  else if (textLen < 180) tweetFontSize = 46;
-  else if (textLen < 280) tweetFontSize = 38;
-  else tweetFontSize = 32;
+  if (textLen < 50) tweetFontSize = 82;
+  else if (textLen < 100) tweetFontSize = 68;
+  else if (textLen < 180) tweetFontSize = 56;
+  else if (textLen < 280) tweetFontSize = 46;
+  else tweetFontSize = 38;
   tweetFontSize = Math.round(tweetFontSize * fontScale);
 
-  const nameFontSize = Math.round(28 * fontScale);
-  const usernameFontSize = Math.round(22 * fontScale);
-  const verifiedSize = Math.round(24 * fontScale);
+  const nameFontSize = Math.round(40 * fontScale);
+  const usernameFontSize = Math.round(32 * fontScale);
+  const verifiedSize = Math.round(34 * fontScale);
 
   // Photo height calculation
   const photoMaxH = hasPhoto ? Math.round(format.h * 0.40) : 0;

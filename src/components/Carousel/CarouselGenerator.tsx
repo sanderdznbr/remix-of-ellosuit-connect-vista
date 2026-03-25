@@ -613,10 +613,29 @@ const CarouselGenerator: React.FC = () => {
 
     let cancelled = false;
 
+    // Helper: distribute N photo slots evenly across totalCards indices
+    const getPhotoIndices = (totalCards: number, photoCount: number): Set<number> => {
+      if (photoCount >= totalCards) return new Set(Array.from({ length: totalCards }, (_, i) => i));
+      if (photoCount <= 0) return new Set();
+      const indices: number[] = [];
+      for (let i = 0; i < photoCount; i++) {
+        indices.push(Math.round(i * (totalCards - 1) / (photoCount - 1 || 1)));
+      }
+      // Deduplicate in case of rounding collisions
+      const set = new Set(indices);
+      let idx = 0;
+      while (set.size < photoCount && idx < totalCards) {
+        set.add(idx);
+        idx++;
+      }
+      return set;
+    };
+
     const normalizeTweet2Photos = async () => {
       const nextPhotos = [...tweet2Config.tweetPhotos];
       const totalCards = Math.max(tweet2Config.cardCount, nextPhotos.length);
       const maxPhotoCards = tweet2Config.photoCardCount || totalCards;
+      const photoIndices = getPhotoIndices(totalCards, maxPhotoCards);
       let changed = false;
 
       // Build web photo fallbacks from referenceImages
@@ -625,11 +644,12 @@ const CarouselGenerator: React.FC = () => {
         .map(r => r.url || r.thumb);
 
       // Process all cards in parallel for faster resolution
+      let webFallbackIdx = 0;
       const resolvePromises = Array.from({ length: totalCards }, async (_, i) => {
         if (cancelled) return { index: i, url: nextPhotos[i] ?? null };
 
-        // If this card exceeds the photoCardCount, set to null
-        if (i >= maxPhotoCards) {
+        // If this card is not a photo slot, set to null
+        if (!photoIndices.has(i)) {
           return { index: i, url: null };
         }
 

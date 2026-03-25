@@ -6006,6 +6006,51 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       );
     }
 
+    // Tweet2 mode: live React component preview = export (no canvas pre-render)
+    if (card.type === 'tweet2') {
+      const cardText = card.body || card.bodyTop || card.title || '';
+      const resolvedPhoto = tweet2Config.tweetPhotos[index] || null;
+      const tweetPreviewScale = w / cardW;
+
+      if (isExport) {
+        return (
+          <div
+            ref={(el) => { cardRefs.current[index] = el; }}
+            data-cover-capture={index === 0 ? 'true' : undefined}
+            style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+          >
+            <TweetCard2 config={tweet2Config} text={cardText} photo={resolvedPhoto} width={w} height={h} />
+          </div>
+        );
+      }
+
+      return (
+        <div
+          ref={(el) => { tweetPreviewRefs.current[index] = el; }}
+          data-cover-capture={index === 0 ? 'true' : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+        >
+          <div style={{ width: cardW, height: cardH, transform: `scale(${tweetPreviewScale})`, transformOrigin: 'top left' }}>
+            <TweetCard2
+              config={tweet2Config}
+              text={cardText}
+              photo={resolvedPhoto}
+              width={cardW}
+              height={cardH}
+              editable={activeCardIndex === index}
+              onTextChange={(newText) => {
+                updateCard(index, { body: newText });
+                const nextTexts = [...tweet2Config.tweetTexts];
+                nextTexts[index] = newText;
+                setTweet2Config(prev => ({ ...prev, tweetTexts: nextTexts }));
+              }}
+              onClick={() => { setActiveCardIndex(index); }}
+            />
+          </div>
+        </div>
+      );
+    }
+
     // Marketplace full-bleed mode: AI generates complete images with text baked in
     // Extreme mode also generates full-bleed images with text baked in by the AI
     const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';

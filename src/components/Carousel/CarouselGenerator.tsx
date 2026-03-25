@@ -457,14 +457,15 @@ const CarouselGenerator: React.FC = () => {
     : ['Modo', 'Visão'];
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
-  const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2'];
+  const WIZARD_STEPS = wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
   const modeTheme = wizardMode === 'extreme'
     ? { hex: '#E84D1A', hexDark: '#C43A0F', rgb: '232,77,26', rgb2: '200,60,20', gradient: 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)', tailwind: 'orange', loadingColor: '#F97316' }
     : wizardMode === 'advanced'
     ? { hex: '#DC2626', hexDark: '#B91C1C', rgb: '220,38,38', rgb2: '185,28,28', gradient: 'linear-gradient(135deg, #B91C1C 0%, #EF4444 50%, #DC2626 100%)', tailwind: 'red', loadingColor: '#EF4444' }
-    : wizardMode === 'tweet'
+    : wizardMode === 'tweet' || wizardMode === 'tweet2'
     ? { hex: '#0EA5E9', hexDark: '#0284C7', rgb: '14,165,233', rgb2: '2,132,199', gradient: 'linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #0EA5E9 100%)', tailwind: 'sky', loadingColor: '#38BDF8' }
     : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -6150,7 +6151,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' ? true : !!activeMarketplaceStyle) : true;
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : true;
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);

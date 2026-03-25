@@ -59,8 +59,8 @@ export async function renderTweetToImage(
   const usernameFontSize = Math.round(32 * fontScale);
   const verifiedSize = Math.round(34 * fontScale);
 
-  // Photo height calculation
-  const photoMaxH = hasPhoto ? Math.round(format.h * 0.40) : 0;
+  // Photo height: constrain to a reasonable portion, like real Twitter
+  const photoMaxH = hasPhoto ? Math.round(format.h * 0.35) : 0;
 
   container.innerHTML = `
     <div style="
@@ -120,8 +120,10 @@ export async function renderTweetToImage(
             border-radius: 20px;
             overflow: hidden;
             border: 1px solid ${borderColor};
+            max-height: ${photoMaxH}px;
+            flex-shrink: 0;
           ">
-            <img src="${card.photo}" style="width: 100%; display: block; object-fit: cover; max-height: ${photoMaxH}px;" crossorigin="anonymous" />
+            <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: cover;" crossorigin="anonymous" />
           </div>
         ` : ''}
       </div>

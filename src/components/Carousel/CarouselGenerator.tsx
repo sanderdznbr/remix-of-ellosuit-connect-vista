@@ -5552,7 +5552,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   const handleFileUpload = (cardIndex: number, file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => { if (e.target?.result) setCardImage(cardIndex, e.target.result as string); };
+    reader.onload = (e) => {
+      if (!e.target?.result) return;
+      const dataUrl = e.target.result as string;
+      setCardImage(cardIndex, dataUrl);
+      // Also update tweet2Config.tweetPhotos for tweet2 mode
+      if (wizardMode === 'tweet2') {
+        setTweet2Config(prev => {
+          const nextPhotos = [...prev.tweetPhotos];
+          nextPhotos[cardIndex] = dataUrl;
+          return { ...prev, tweetPhotos: nextPhotos };
+        });
+      }
+    };
     reader.readAsDataURL(file);
   };
 

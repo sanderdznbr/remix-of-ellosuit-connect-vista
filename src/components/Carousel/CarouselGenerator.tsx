@@ -496,7 +496,7 @@ const CarouselGenerator: React.FC = () => {
 
   const getResolvedTweetPhotoForCard = useCallback((index: number, cfg?: TweetConfig) => {
     const activeConfig = cfg || tweetConfig;
-    const explicitPhoto = cardPhotoAssignments[index] || activeConfig.tweetPhotos[index] || null;
+    const explicitPhoto = activeConfig.tweetPhotos[index] || cardPhotoAssignments[index] || null;
     if (explicitPhoto) return explicitPhoto;
     if (activeConfig.photoMode !== 'web') return null;
 
@@ -1068,7 +1068,8 @@ const CarouselGenerator: React.FC = () => {
     tweetConfig: wizardMode === 'tweet' ? tweetConfig : undefined,
     tweetPhotoHeights: wizardMode === 'tweet' ? tweetPhotoHeights : undefined,
     tweetFontSizeOverride: wizardMode === 'tweet' ? tweetFontSizeOverride : undefined,
-  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat, tweetConfig, tweetPhotoHeights, tweetFontSizeOverride]);
+    tweetCardPhotoAssignments: wizardMode === 'tweet' ? cardPhotoAssignments : undefined,
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat, tweetConfig, tweetPhotoHeights, tweetFontSizeOverride, cardPhotoAssignments]);
 
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1673,6 +1674,7 @@ const CarouselGenerator: React.FC = () => {
         if (gc.tweetConfig) setTweetConfig(gc.tweetConfig);
         if (gc.tweetPhotoHeights) setTweetPhotoHeights(gc.tweetPhotoHeights);
         if (gc.tweetFontSizeOverride !== undefined) setTweetFontSizeOverride(gc.tweetFontSizeOverride);
+        if (gc.tweetCardPhotoAssignments) setCardPhotoAssignments(gc.tweetCardPhotoAssignments);
       } else {
         setWizardMode(gc.wizardMode || 'simple');
       }
@@ -1940,8 +1942,6 @@ const CarouselGenerator: React.FC = () => {
         const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
           getResolvedTweetPhotoForCard(i, tweetConfig)
         ));
-        configForRender = { ...tweetConfig, tweetPhotos: mergedTweetPhotos };
-        setTweetConfig(configForRender);
 
         for (let i = 0; i < cards.length; i++) {
           const photoUrl = mergedTweetPhotos[i];
@@ -1953,6 +1953,8 @@ const CarouselGenerator: React.FC = () => {
             resolvedPhotos[i] = null;
           }
         }
+        const normalizedTweetPhotos = mergedTweetPhotos.map((photoUrl, i) => resolvedPhotos[i] || photoUrl || null);
+        configForRender = { ...tweetConfig, tweetPhotos: normalizedTweetPhotos };
       } else if (tweetConfig.photoMode === 'ai') {
         // Generate AI photos based on product images and topic context
         console.log('[TweetPhoto AI] Generating AI photos for', cards.length, 'cards');
@@ -1990,10 +1992,19 @@ const CarouselGenerator: React.FC = () => {
           }
         }
         setImageGenProgress('');
+        configForRender = { ...tweetConfig, tweetPhotos: resolvedPhotos.map((photoUrl, i) => photoUrl || tweetConfig.tweetPhotos[i] || null) };
       } else if (configForRender.photoMode !== 'none') {
         for (let i = 0; i < cards.length; i++) {
           resolvedPhotos[i] = configForRender.tweetPhotos[i] || null;
         }
+      }
+
+      if (configForRender.photoMode !== 'none') {
+        const normalizedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
+          resolvedPhotos[i] || configForRender.tweetPhotos[i] || null
+        ));
+        configForRender = { ...configForRender, tweetPhotos: normalizedTweetPhotos };
+        setTweetConfig(configForRender);
       }
 
       // Find max text length to use uniform font size
@@ -5740,11 +5751,29 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     // Tweet mode cards are already fully rendered images; do not wrap them in templates
     if (card.type === 'tweet') {
       const cardText = card.body || card.bodyTop || card.title || '';
-      // Resolve photo: check tweetConfig photos and cardPhotoAssignments
       const resolvedPhoto = getResolvedTweetPhotoForCard(index, tweetConfig);
       const cardPhoto = resolvedPhoto || null;
+      const shouldUseRenderedFallback = !cardPhoto && !!card.imageUrl;
+      const tweetPreviewScale = w / cardW;
 
-      // For export: render at full resolution, capture via html2canvas
+      if (shouldUseRenderedFallback) {
+        return (
+          <div
+            ref={isExport ? (el) => { cardRefs.current[index] = el; } : undefined}
+            data-cover-capture={index === 0 ? 'true' : undefined}
+            style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+          >
+            <img
+              src={card.imageUrl}
+              alt=""
+              {...(isExport ? { crossOrigin: 'anonymous' } : {})}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </div>
+        );
+      }
+
       if (isExport) {
         return (
           <div
@@ -5766,19 +5795,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         );
       }
 
-      // For preview: live editable card
       return (
         <div
           data-cover-capture={index === 0 ? 'true' : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
         >
+          <div
+            style={{
+              width: cardW,
+              height: cardH,
+              transform: `scale(${tweetPreviewScale})`,
+              transformOrigin: 'top left',
+            }}
+          >
             <TweetCard
               config={tweetConfig}
               text={cardText}
               photo={cardPhoto}
               photoFit={tweetConfig.photoFit}
-              width={w}
-              height={h}
+              width={cardW}
+              height={cardH}
               editable={activeCardIndex === index}
               photoHeight={tweetPhotoHeights[index]}
               fontSizeOverride={tweetFontSizeOverride ?? undefined}
@@ -5793,6 +5829,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               }}
               onClick={() => { setActiveCardIndex(index); }}
             />
+          </div>
         </div>
       );
     }

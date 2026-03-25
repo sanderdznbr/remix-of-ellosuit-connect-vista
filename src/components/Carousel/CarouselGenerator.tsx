@@ -7493,6 +7493,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* Instagram Phone Mockup */}
             <motion.div
+              ref={wizardMode === 'tweet' ? tweetPreviewShellRef : undefined}
               className="relative flex-shrink-0"
               layout
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}

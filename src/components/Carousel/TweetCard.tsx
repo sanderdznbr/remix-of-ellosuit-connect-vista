@@ -137,7 +137,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
         position: 'relative',
       }}
     >
-      <div style={{ padding: `0 ${horizontalPadding}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
+      <div style={{ padding: `0 ${horizontalPadding}px` }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: s(32), gap: headerGap }}>
           {config.profilePhoto ? (

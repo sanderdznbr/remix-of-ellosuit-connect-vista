@@ -21,6 +21,7 @@ export interface Tweet2Config {
   photoFit: 'cover' | 'contain' | 'fill';
   contentMode: 'static' | 'carousel';
   cardCount: number;
+  photoCardCount: number;
   theme: 'light' | 'dark';
   engagement: Tweet2Engagement;
   showEngagement: boolean;
@@ -37,6 +38,7 @@ export const DEFAULT_TWEET2_CONFIG: Tweet2Config = {
   photoFit: 'cover',
   contentMode: 'static',
   cardCount: 1,
+  photoCardCount: 1,
   theme: 'light',
   engagement: { likes: '', retweets: '', replies: '', views: '', bookmarks: '' },
   showEngagement: false,
@@ -67,7 +69,8 @@ const StepTweet2Config: React.FC<Props> = ({ config, setConfig }) => {
       nextTexts.push('');
       nextPhotos.push(null);
     }
-    update({ cardCount: count, contentMode: count > 1 ? 'carousel' : 'static', tweetTexts: nextTexts.slice(0, count), tweetPhotos: nextPhotos.slice(0, count) });
+    const newPhotoCount = Math.min(config.photoCardCount, count);
+    update({ cardCount: count, photoCardCount: newPhotoCount, contentMode: count > 1 ? 'carousel' : 'static', tweetTexts: nextTexts.slice(0, count), tweetPhotos: nextPhotos.slice(0, count) });
   };
 
   return (

@@ -6384,13 +6384,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                       action: 'generate-content',
                                       topic: cleanMentionsFromTopic(topic.trim()),
                                       cardCount: tweetConfig.cardCount,
+                                      isTweetMode: true,
+                                      webSearchContent: (!skipWebSearch && webSearchResult) ? {
+                                        title: webSearchResult.title || '',
+                                        summary: webSearchResult.summary || '',
+                                        facts: webSearchResult.facts || [],
+                                      } : undefined,
                                       keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-                                      productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
                                     },
                                   });
                                   if (error) throw error;
                                   if (data?.data?.cards?.length) {
-                                    const texts = data.data.cards.map((c: any) => (c.body || c.bodyTop || c.title || '').trim()).filter(Boolean);
+                                    const texts = data.data.cards.map((c: any) => (c.body || '').trim()).filter(Boolean);
                                     setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
                                   }
                                 } catch (e) {

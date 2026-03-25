@@ -6929,7 +6929,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Mode & Topic badge */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 text-[11px]" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.12)` }}>
                       <span className="font-bold uppercase tracking-wider" style={{ color: themeHex }}>
-                        {wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
+                        {wizardMode === 'tweet' ? 'Tweet Mode' : wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
                       </span>
                       <span className="text-white/20">•</span>
                       <span className="text-white/50 truncate flex-1">{topic || 'Sem tema'}</span>
@@ -6992,102 +6992,125 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </p>
                     )}
 
-                    {/* Regenerar foto completa */}
-                    {!isGuest && (
-                      <button
-                        onClick={() => setRegenDialogCard(activeCardIndex)}
-                        disabled={regeneratingCard === activeCardIndex}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                        {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
-                        Regenerar Foto
-                      </button>
-                    )}
+                    {wizardMode === 'tweet' ? (
+                      <>
+                        {/* Tweet-specific: Edit text inline */}
+                        {!isGuest && carouselData.cards[activeCardIndex] && (
+                          <button
+                            onClick={() => setEditingCard(activeCardIndex)}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-sky-300 hover:text-sky-200 hover:bg-white/[0.06] transition-all w-full">
+                            <Edit3 className="h-4 w-4 text-sky-400" /> Editar Tweet
+                          </button>
+                        )}
 
-                    {/* Corrigir área */}
-                    {!isGuest && (
-                      <button
-                        onClick={() => setCorrectionCardIndex(activeCardIndex)}
-                        disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                        <Pencil className="h-4 w-4 text-orange-400" /> Corrigir Área
-                      </button>
-                    )}
-
-                    {/* Retornar edição */}
-                    {!isGuest && (
-                      <button
-                        onClick={() => {
-                          if (correctionUndoStack.length === 0) return;
-                          const last = correctionUndoStack[correctionUndoStack.length - 1];
-                          if (!last) return;
-                          const newCards = carouselData ? [...carouselData.cards] : [];
-                          if (newCards[last.cardIndex]) {
-                            newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
-                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                          }
-                          if (last.cardIndex === 0 && currentCarouselId) {
-                            supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                          }
-                          setCorrectionUndoStack(prev => prev.slice(0, -1));
-                          toast({ title: 'Edição revertida!' });
-                        }}
-                        disabled={correctionUndoStack.length === 0}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                        <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
-                      </button>
-                    )}
-
-                    {/* Gerar Legenda */}
-                    <button
-                      onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
-                      disabled={isGuest}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-purple-300 hover:text-purple-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
-                      <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
-                    </button>
-
-                    <div className="h-px bg-white/[0.06] my-1" />
-
-                    {/* Regenerar Tudo */}
-                    {carouselData.cards.length >= 2 && !isGuest && (
-                      <div className="relative">
-                        <button onClick={() => {
-                          if (regeneratingAll || regeneratingCard !== null) return;
-                          setShowRegenModeMenu(prev => !prev);
-                        }} disabled={regeneratingAll || regeneratingCard !== null}
-                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-40 w-full">
-                          {regeneratingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 text-orange-400" />}
-                          {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
+                        {/* Gerar Legenda */}
+                        <button
+                          onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                          disabled={isGuest}
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-purple-300 hover:text-purple-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                          <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
                         </button>
-                        {showRegenModeMenu && !regeneratingAll && (
-                          <div className="mt-1 w-full rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
-                            <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
-                              className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                              <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
-                              <div>
-                                <p className="font-semibold">Normal</p>
-                                <p className="text-[10px] text-white/40 mt-0.5">Cada card com imagem independente</p>
-                              </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Regenerar foto completa */}
+                        {!isGuest && (
+                          <button
+                            onClick={() => setRegenDialogCard(activeCardIndex)}
+                            disabled={regeneratingCard === activeCardIndex}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                            {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 text-blue-400 animate-spin" /> : <Image className="h-4 w-4 text-blue-400" />}
+                            Regenerar Foto
+                          </button>
+                        )}
+
+                        {/* Corrigir área */}
+                        {!isGuest && (
+                          <button
+                            onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                            disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                            <Pencil className="h-4 w-4 text-orange-400" /> Corrigir Área
+                          </button>
+                        )}
+
+                        {/* Retornar edição */}
+                        {!isGuest && (
+                          <button
+                            onClick={() => {
+                              if (correctionUndoStack.length === 0) return;
+                              const last = correctionUndoStack[correctionUndoStack.length - 1];
+                              if (!last) return;
+                              const newCards = carouselData ? [...carouselData.cards] : [];
+                              if (newCards[last.cardIndex]) {
+                                newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
+                                setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                              }
+                              if (last.cardIndex === 0 && currentCarouselId) {
+                                supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+                              }
+                              setCorrectionUndoStack(prev => prev.slice(0, -1));
+                              toast({ title: 'Edição revertida!' });
+                            }}
+                            disabled={correctionUndoStack.length === 0}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                            <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
+                          </button>
+                        )}
+
+                        {/* Gerar Legenda */}
+                        <button
+                          onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                          disabled={isGuest}
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-purple-300 hover:text-purple-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                          <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
+                        </button>
+
+                        <div className="h-px bg-white/[0.06] my-1" />
+
+                        {/* Regenerar Tudo */}
+                        {carouselData.cards.length >= 2 && !isGuest && (
+                          <div className="relative">
+                            <button onClick={() => {
+                              if (regeneratingAll || regeneratingCard !== null) return;
+                              setShowRegenModeMenu(prev => !prev);
+                            }} disabled={regeneratingAll || regeneratingCard !== null}
+                              className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-orange-300 hover:text-orange-200 hover:bg-white/[0.06] transition-all disabled:opacity-40 w-full">
+                              {regeneratingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 text-orange-400" />}
+                              {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
                             </button>
-                            <div className="h-px bg-white/[0.06]" />
-                            <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
-                              className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                              <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
-                              <div>
-                                <p className="font-semibold">Contínuo</p>
-                                <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
+                            {showRegenModeMenu && !regeneratingAll && (
+                              <div className="mt-1 w-full rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
+                                <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
+                                  className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                                  <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
+                                  <div>
+                                    <p className="font-semibold">Normal</p>
+                                    <p className="text-[10px] text-white/40 mt-0.5">Cada card com imagem independente</p>
+                                  </div>
+                                </button>
+                                <div className="h-px bg-white/[0.06]" />
+                                <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
+                                  className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                                  <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
+                                  <div>
+                                    <p className="font-semibold">Contínuo</p>
+                                    <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
+                                  </div>
+                                </button>
                               </div>
-                            </button>
+                            )}
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {/* Adicionar Card */}
-                    {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                      <button onClick={() => setShowAddCardMenu(true)}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.06] transition-all w-full">
-                        <Plus className="h-4 w-4" /> Adicionar Card
-                      </button>
+                        {/* Adicionar Card */}
+                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                          <button onClick={() => setShowAddCardMenu(true)}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.06] transition-all w-full">
+                            <Plus className="h-4 w-4" /> Adicionar Card
+                          </button>
+                        )}
+                      </>
                     )}
 
                     <div className="flex-1" />

@@ -6496,7 +6496,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
-                            setTimeout(() => generateContent(), 1200);
+                            // Tweet static: call generateSinglePost directly to avoid stale closure
+                            if (wizardMode === 'tweet' && tweetConfig.cardCount === 1) {
+                              setTimeout(() => generateSinglePost(), 1200);
+                            } else {
+                              setTimeout(() => generateContent(), 1200);
+                            }
                           }
                         }} disabled={generating || transitionToGenerate || !topic.trim()}
                         className="flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-30"

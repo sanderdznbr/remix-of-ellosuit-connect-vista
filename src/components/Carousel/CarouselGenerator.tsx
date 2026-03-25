@@ -1822,7 +1822,7 @@ const CarouselGenerator: React.FC = () => {
               topic: cleanMentionsFromTopic(topic.trim()),
               cardCount: tweetConfig.cardCount,
               keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-              productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.`,
+              productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Escreva com capitalização normal (primeira letra maiúscula, resto minúsculo). Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.`,
             },
           });
           if (error) throw error;

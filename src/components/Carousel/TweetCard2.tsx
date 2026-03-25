@@ -13,9 +13,10 @@ interface TweetCard2Props {
   cardRef?: React.Ref<HTMLDivElement>;
   fontScale?: number;
   paddingScale?: number;
+  gapScale?: number;
 }
 
-const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, height, editable = false, onTextChange, onClick, cardRef, fontScale, paddingScale }) => {
+const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, height, editable = false, onTextChange, onClick, cardRef, fontScale, paddingScale, gapScale }) => {
   const textRef = useRef<HTMLDivElement>(null);
   const isDark = config.theme === 'dark';
   const scale = width / 1080;

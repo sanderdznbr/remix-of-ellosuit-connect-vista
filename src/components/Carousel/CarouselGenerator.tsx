@@ -1905,7 +1905,7 @@ const CarouselGenerator: React.FC = () => {
           if (selectedWebPhotos.length > 0) {
             const autoTweetPhotos = [...tweetConfig.tweetPhotos];
             for (let i = 0; i < cards.length; i++) {
-              autoTweetPhotos[i] = selectedWebPhotos[i] || selectedWebPhotos[i % selectedWebPhotos.length] || null;
+              autoTweetPhotos[i] = selectedWebPhotos[i] || null;
             }
             configForRender = { ...tweetConfig, tweetPhotos: autoTweetPhotos, photoMode: 'manual' };
             setTweetConfig(configForRender);
@@ -1914,7 +1914,7 @@ const CarouselGenerator: React.FC = () => {
         }
 
         for (let i = 0; i < cards.length; i++) {
-          const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || selectedWebPhotos[0] || null;
+          const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || null;
           if (!photoUrl) continue;
           try {
             resolvedPhotos[i] = await resolveImageUrl(photoUrl);
@@ -3241,7 +3241,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
             const hasCardPhoto = tweetConfig.photoMode !== 'none' && tweetConfig.tweetPhotos[i];
             
             const isDark = tweetConfig.theme === 'dark';
-            const bgColor = isDark ? '#15202B' : '#FFFFFF';
+            const bgColor = isDark ? '#000000' : '#FFFFFF';
             const textColor = isDark ? '#E7E9EA' : '#0F1419';
             const subColor = isDark ? '#8B98A5' : '#536471';
             
@@ -4392,7 +4392,7 @@ FORBIDDEN:
         .filter(Boolean);
 
       for (let i = 0; i < cards.length; i++) {
-        const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || selectedWebPhotos[0] || null;
+        const photoUrl = cardPhotoAssignments[i] || selectedWebPhotos[i] || null;
         if (!photoUrl) continue;
         try {
           resolvedPhotos[i] = await resolveImageUrl(photoUrl);

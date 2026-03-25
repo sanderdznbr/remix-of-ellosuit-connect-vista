@@ -9066,6 +9066,137 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       })()}
       </AnimatePresence>
 
+      {/* Hidden file input for tweet card photo upload */}
+      <input
+        ref={tweetCardPhotoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file && carouselData) {
+            const url = URL.createObjectURL(file);
+            const newPhotos = [...tweetConfig.tweetPhotos];
+            while (newPhotos.length <= tweetPhotoUploadCardIndex) newPhotos.push(null);
+            newPhotos[tweetPhotoUploadCardIndex] = url;
+            setTweetConfig({ ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' : tweetConfig.photoMode });
+            // re-render tweet cards
+            const newCards = [...carouselData.cards];
+            void rerenderTweetCards(newCards).then((rendered) => {
+              setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+            });
+          }
+          e.target.value = '';
+        }}
+      />
+
+      {/* Tweet inline text editor modal */}
+      {showTweetTextEditor && carouselData && carouselData.cards[activeCardIndex] && (() => {
+        const card = carouselData.cards[activeCardIndex];
+        const currentText = card.body || card.bodyTop || card.title || '';
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowTweetTextEditor(false)}>
+            <div className="rounded-2xl shadow-2xl max-w-lg w-full p-5 space-y-4" style={{ backgroundColor: '#1a1a2e' }} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white text-sm">Editar Texto — Card {activeCardIndex + 1}</h3>
+                <button onClick={() => setShowTweetTextEditor(false)} className="p-1 rounded-lg hover:bg-white/10"><X className="h-4 w-4 text-white/60" /></button>
+              </div>
+              <Textarea
+                defaultValue={currentText}
+                maxLength={280}
+                rows={5}
+                className="!bg-white/[0.05] !border-white/[0.1] !text-white !placeholder-white/30 rounded-xl text-sm focus:!border-sky-500/50 focus:!ring-0 resize-none"
+                placeholder="Digite o texto do tweet..."
+                onBlur={(e) => {
+                  const newText = e.target.value;
+                  updateCard(activeCardIndex, { body: newText, bodyTop: newText, title: newText });
+                }}
+              />
+              <p className="text-[10px] text-white/30 text-right">Máx. 280 caracteres</p>
+              <button
+                onClick={() => setShowTweetTextEditor(false)}
+                className="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-all"
+                style={{ background: 'linear-gradient(135deg, #1D9BF0, #0A66C2)' }}>
+                Salvar
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Tweet engagement metrics editor */}
+      {showTweetEngagementEditor && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowTweetEngagementEditor(false)}>
+          <div className="rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4" style={{ backgroundColor: '#1a1a2e' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-white text-sm">Métricas do Tweet</h3>
+              <button onClick={() => setShowTweetEngagementEditor(false)} className="p-1 rounded-lg hover:bg-white/10"><X className="h-4 w-4 text-white/60" /></button>
+            </div>
+
+            {/* Toggle show/hide */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-white/60">Exibir métricas no tweet</span>
+              <button
+                onClick={() => {
+                  const newConfig = { ...tweetConfig, showEngagement: !tweetConfig.showEngagement };
+                  setTweetConfig(newConfig);
+                  if (carouselData) {
+                    void rerenderTweetCards(carouselData.cards).then((rendered) => {
+                      setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                    });
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                  tweetConfig.showEngagement
+                    ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
+                    : 'bg-white/[0.03] text-white/30 border-white/[0.06]'
+                }`}>
+                {tweetConfig.showEngagement ? 'Ativado' : 'Desativado'}
+              </button>
+            </div>
+
+            {tweetConfig.showEngagement && (
+              <div className="space-y-3">
+                {[
+                  { key: 'replies' as const, icon: MessageCircle, label: 'Respostas', placeholder: '24' },
+                  { key: 'retweets' as const, icon: Repeat2, label: 'Retweets', placeholder: '1.2K' },
+                  { key: 'likes' as const, icon: Heart, label: 'Curtidas', placeholder: '5.4K' },
+                  { key: 'views' as const, icon: Eye, label: 'Visualizações', placeholder: '120K' },
+                  { key: 'bookmarks' as const, icon: Bookmark, label: 'Salvos', placeholder: '89' },
+                ].map(metric => (
+                  <div key={metric.key} className="flex items-center gap-3">
+                    <metric.icon className="h-4 w-4 text-white/40 flex-shrink-0" />
+                    <span className="text-xs text-white/50 w-24 flex-shrink-0">{metric.label}</span>
+                    <Input
+                      value={tweetConfig.engagement[metric.key]}
+                      onChange={(e) => {
+                        const newEngagement = { ...tweetConfig.engagement, [metric.key]: e.target.value };
+                        setTweetConfig({ ...tweetConfig, engagement: newEngagement });
+                      }}
+                      placeholder={metric.placeholder}
+                      className="!bg-white/[0.05] !border-white/[0.1] !text-white !placeholder-white/20 rounded-lg text-xs h-8 focus:!border-sky-500/50 focus:!ring-0 flex-1"
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    if (carouselData) {
+                      void rerenderTweetCards(carouselData.cards).then((rendered) => {
+                        setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
+                      });
+                    }
+                    setShowTweetEngagementEditor(false);
+                  }}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium text-white transition-all"
+                  style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                  Aplicar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Image Picker Modal */}
       {showImagePicker !== null && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowImagePicker(null)}>

@@ -6187,7 +6187,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     // Tweet2 mode: live React component preview = export (no canvas pre-render)
     if (card.type === 'tweet2') {
       const cardText = card.body || card.bodyTop || card.title || '';
-      const resolvedPhoto = tweet2Config.tweetPhotos[index] || null;
+      const resolvedPhoto = tweet2Config.tweetPhotos[index] || card.imageUrl || null;
       const tweetPreviewScale = w / cardW;
 
       if (isExport) {

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, X, Check, Image, Camera, Globe, Sparkles } from 'lucide-react';
+import { Upload, X, Check, Image, Camera, Globe, Sparkles, Sun, Moon } from 'lucide-react';
 
 export interface TweetConfig {
   profilePhoto: string | null;
@@ -13,6 +13,7 @@ export interface TweetConfig {
   photoMode: 'none' | 'manual' | 'web' | 'ai';
   contentMode: 'static' | 'carousel';
   cardCount: number;
+  theme: 'light' | 'dark';
 }
 
 export const DEFAULT_TWEET_CONFIG: TweetConfig = {

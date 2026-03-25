@@ -740,6 +740,10 @@ const CarouselGenerator: React.FC = () => {
     promptMediaQueueRef.current = [];
     promptMediaLoadingIdsRef.current.clear();
     promptMediaResolvedIdsRef.current.clear();
+    setTweetConfig(DEFAULT_TWEET_CONFIG);
+    setRoteiroGenerated(false);
+    setGeneratingRoteiro(false);
+    autoTweetRoteiroTriggered.current = false;
   }, []);
 
   const openNextPendingPromptMedia = useCallback(() => {

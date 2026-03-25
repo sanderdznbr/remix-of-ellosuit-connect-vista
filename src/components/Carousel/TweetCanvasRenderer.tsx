@@ -163,11 +163,17 @@ export async function renderTweetToImage(
             height: ${photoMaxH}px;
             flex-shrink: 0;
             background: ${isDark ? '#000000' : '#F7F9F9'};
-            background-image: url('${card.photo}');
-            background-repeat: no-repeat;
-            background-position: center center;
-            background-size: ${card.photoStyle};
+            display: flex;
+            align-items: center;
+            justify-content: center;
           ">
+            <img src="${card.photo}" style="
+              width: 100%;
+              height: 100%;
+              object-fit: ${card.photoFit === 'fill' ? 'fill' : card.photoFit === 'cover' ? 'cover' : 'contain'};
+              object-position: center center;
+              display: block;
+            " ${(card.photo || '').startsWith('data:') || (card.photo || '').startsWith('blob:') ? '' : 'crossorigin="anonymous"'} />
           </div>
         ` : ''}
 

@@ -168,6 +168,14 @@ function escapeHtml(text: string): string {
     .replace(/\n/g, '<br/>');
 }
 
+/** Escapes HTML then converts **bold** markers to <strong> tags */
+function formatTweetText(text: string): string {
+  let html = escapeHtml(text);
+  // Convert **bold** to <strong>
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700">$1</strong>');
+  return html;
+}
+
 /**
  * Renders all tweet cards and returns base64 image URLs.
  */

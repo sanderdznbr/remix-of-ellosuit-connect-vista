@@ -404,7 +404,7 @@ const CarouselGenerator: React.FC = () => {
 
   // Web search state (declared early for WIZARD_STEPS computation)
   const [searchingWeb, setSearchingWeb] = useState(false);
-  const [skipWebSearch, setSkipWebSearch] = useState(false);
+  const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[] } | null>(null);
 
   // Auto-detect product context from topic to show Produto step

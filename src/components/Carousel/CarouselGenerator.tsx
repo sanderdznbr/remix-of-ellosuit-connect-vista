@@ -644,10 +644,10 @@ const CarouselGenerator: React.FC = () => {
         .map(r => r.url || r.thumb);
 
       // Process all cards in parallel for faster resolution
-      // Map photo indices to sequential fallback positions
       const photoIndexList = Array.from(photoIndices).sort((a, b) => a - b);
-      const photoSlotMap = new Map<number, number>(); // cardIndex -> fallback position
-      photoIndexList.forEach((cardIdx, seqIdx) => photoSlotMap.set(cardIdx, seqIdx));
+
+      // Collect available photos sequentially (non-null entries)
+      const availablePhotos = tweet2Config.tweetPhotos.filter((p): p is string => !!p && p.length > 5);
 
       const resolvePromises = Array.from({ length: totalCards }, async (_, i) => {
         if (cancelled) return { index: i, url: nextPhotos[i] ?? null };
@@ -657,11 +657,12 @@ const CarouselGenerator: React.FC = () => {
           return { index: i, url: null };
         }
 
-        const seqIdx = photoSlotMap.get(i) ?? 0;
-        // For web mode: use referenceImages as source; for manual: use existing tweetPhotos
-        const sourceUrl = tweet2Config.photoMode === 'web'
-          ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[seqIdx] || null)
-          : (tweet2Config.tweetPhotos[i] || null);
+        const seqIdx = photoIndexList.indexOf(i);
+        // Try: 1) photo already at this exact index, 2) sequential available photo, 3) web fallback
+        const sourceUrl = tweet2Config.tweetPhotos[i]
+          || availablePhotos[seqIdx]
+          || (tweet2Config.photoMode === 'web' ? webPhotoFallbacks[seqIdx] : null)
+          || null;
 
         if (!sourceUrl) return { index: i, url: null };
 

@@ -1704,8 +1704,9 @@ const CarouselGenerator: React.FC = () => {
       if (!firstCardImage) {
         // For non-full-bleed styles (Content/layered), card 0 may have no imageUrl
         // Use html2canvas to capture the rendered preview card as cover
+        const isTweet2 = wizardMode === 'tweet2';
         const isNonFullBleed = !activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style && !isLoadedFullBleed && wizardMode !== 'extreme';
-        if (isNonFullBleed) {
+        if (isNonFullBleed || isTweet2) {
           // Try html2canvas on the preview card element
           const previewCard = document.querySelector('[data-cover-capture="true"]') as HTMLElement;
           if (previewCard) {

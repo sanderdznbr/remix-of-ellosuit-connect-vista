@@ -2021,6 +2021,54 @@ const CarouselGenerator: React.FC = () => {
 
       const formatDims = postFormat === 'square' ? { w: 1080, h: 1080 } : postFormat === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1350 };
 
+      // tweet2 mode: generate cards with type 'tweet2' (no canvas pre-render, preview = export)
+      if (wizardMode === 'tweet2') {
+        let texts = tweet2Config.tweetTexts.map(v => v.trim()).filter(Boolean);
+        if (texts.length === 0 && topic.trim()) {
+          setImageGenProgress('Gerando textos do tweet2...');
+          try {
+            const { data, error } = await supabase.functions.invoke('generate-carousel', {
+              body: {
+                action: 'generate-content',
+                topic: cleanMentionsFromTopic(topic.trim()),
+                cardCount: tweet2Config.cardCount,
+                keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+                productContext: `TWEET_POST_MODE: Gere ${tweet2Config.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Use capitalização normal. Sem título, sem CTA. Escreva como um post real, em português brasileiro, máximo 280 caracteres.`,
+              },
+            });
+            if (error) throw error;
+            texts = (data?.data?.cards || []).map((c: any) => {
+              let t = (c.body || c.bodyTop || c.title || '').trim();
+              if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+              return t;
+            }).filter(Boolean);
+          } catch (e) { console.warn('[tweet2] content generation fallback', e); }
+        }
+        if (texts.length === 0) texts = [cleanMentionsFromTopic(topic.trim()) || 'Tweet'];
+        while (texts.length < tweet2Config.cardCount) texts.push(texts[texts.length - 1] || 'Tweet');
+        texts = texts.slice(0, tweet2Config.cardCount);
+
+        // Resolve photos
+        const resolvedPhotos = await Promise.all(
+          Array.from({ length: tweet2Config.cardCount }, async (_, i) => {
+            const src = tweet2Config.tweetPhotos[i] || null;
+            if (!src) return null;
+            try { return await resolveTweetPhotoUrl(src); } catch { return src; }
+          })
+        );
+        const normalizedConfig: typeof tweet2Config = { ...tweet2Config, tweetTexts: texts, tweetPhotos: resolvedPhotos };
+        setTweet2Config(normalizedConfig);
+
+        const carouselCards: CarouselCard[] = texts.map((body) => ({ type: 'tweet2' as const, title: '', body }));
+        setCarouselData({ title: topic.trim() || 'tweet2', cards: carouselCards });
+        setImageGenProgress('');
+        setGeneratingAllImages(false);
+        setGenerating(false);
+        generationInFlightRef.current = false;
+        sonnerToast.success(normalizedConfig.cardCount === 1 ? 'tweet2 gerado!' : `${normalizedConfig.cardCount} cards gerados!`);
+        return;
+      }
+
       console.log('[TweetCanvas] Config:', {
         displayName: tweetConfig.displayName,
         username: tweetConfig.username,

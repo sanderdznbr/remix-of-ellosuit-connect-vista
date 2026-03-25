@@ -2169,10 +2169,16 @@ const CarouselGenerator: React.FC = () => {
         // Resolve photos — use tweet2Config.tweetPhotos, fallback to referenceImages from web search
         const webPhotoFallbacks = referenceImages.filter(r => r.category === 'general').map(r => r.url || r.thumb);
         const maxPhotoCards = tweet2Config.photoCardCount || tweet2Config.cardCount;
+        const photoIndicesGen = getPhotoIndices(tweet2Config.cardCount, maxPhotoCards);
+        const photoIndexListGen = Array.from(photoIndicesGen).sort((a, b) => a - b);
+        const photoSlotMapGen = new Map<number, number>();
+        photoIndexListGen.forEach((cardIdx, seqIdx) => photoSlotMapGen.set(cardIdx, seqIdx));
+
         const resolvedPhotos = await Promise.all(
           Array.from({ length: tweet2Config.cardCount }, async (_, i) => {
-            if (i >= maxPhotoCards) return null;
-            const src = tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null;
+            if (!photoIndicesGen.has(i)) return null;
+            const seqIdx = photoSlotMapGen.get(i) ?? 0;
+            const src = tweet2Config.tweetPhotos[i] || webPhotoFallbacks[seqIdx] || null;
             if (!src) return null;
             try { return await resolveTweetPhotoUrl(src); } catch { return src; }
           })

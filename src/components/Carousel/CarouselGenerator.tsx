@@ -1828,7 +1828,14 @@ const CarouselGenerator: React.FC = () => {
           if (error) throw error;
           console.log('[TweetCanvas] Generated content:', data?.data?.cards?.length, 'cards');
           if (data?.data?.cards?.length) {
-            cards = data.data.cards.map((c: any) => ({ body: (c.body || c.bodyTop || c.title || '').trim() })).filter((c: any) => c.body);
+            cards = data.data.cards.map((c: any) => {
+              let body = (c.body || c.bodyTop || c.title || '').trim();
+              // Fix: prevent all-caps text
+              if (body.length > 3 && body === body.toUpperCase()) {
+                body = body.charAt(0).toUpperCase() + body.slice(1).toLowerCase();
+              }
+              return { body };
+            }).filter((c: any) => c.body);
           }
         } catch (e) {
           console.error('[TweetCanvas] Content generation failed:', e);

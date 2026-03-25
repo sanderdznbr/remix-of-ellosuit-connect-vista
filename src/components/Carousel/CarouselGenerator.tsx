@@ -124,7 +124,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
-import { renderAllTweetCards } from './TweetCanvasRenderer';
+import { captureTweetCardElement, renderAllTweetCards } from './TweetCanvasRenderer';
 import TweetCard from './TweetCard';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
@@ -207,6 +207,7 @@ const CarouselGenerator: React.FC = () => {
   const { isMobile: isMobileView } = useIsMobile();
   const toast = useCallback((_opts: any) => { /* toasts disabled on carousel page */ }, []);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tweetPreviewRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
   const planLimits = usePlanLimits();
@@ -679,6 +680,22 @@ const CarouselGenerator: React.FC = () => {
     const url = URL.createObjectURL(file);
     setEditorRefImage(url);
   };
+
+  const buildPersistedTweetCardsFromPreview = useCallback(async (cards: CarouselCard[]) => {
+    const persistedCards = [...cards];
+
+    for (let i = 0; i < cards.length; i++) {
+      if (cards[i]?.type !== 'tweet') continue;
+
+      const previewEl = tweetPreviewRefs.current[i];
+      if (!previewEl) throw new Error(`Preview do card ${i + 1} não encontrado`);
+
+      const imageUrl = await captureTweetCardElement(previewEl, { w: cardW, h: cardH });
+      persistedCards[i] = { ...cards[i], imageUrl };
+    }
+
+    return persistedCards;
+  }, [cardW, cardH]);
 
   // Web search state (additional)
   const [classifyingTopic, setClassifyingTopic] = useState(false);
@@ -1191,9 +1208,16 @@ const CarouselGenerator: React.FC = () => {
 
         let dataToPersist = carouselData;
         if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
-          const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
-          dataToPersist = { ...carouselData, cards: renderedCards };
-          setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+          try {
+            const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);
+            dataToPersist = { ...carouselData, cards: previewCards };
+            setCarouselData(prev => prev ? { ...prev, cards: previewCards } : prev);
+          } catch (previewErr) {
+            console.warn('[Tweet Save] Preview capture failed, falling back to rerender', previewErr);
+            const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+            dataToPersist = { ...carouselData, cards: renderedCards };
+            setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+          }
         }
         
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
@@ -1691,9 +1715,16 @@ const CarouselGenerator: React.FC = () => {
       if (!companyData) throw new Error('Empresa não encontrada');
       let dataToPersist = carouselData;
       if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
-        const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
-        dataToPersist = { ...carouselData, cards: renderedCards };
-        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+        try {
+          const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);
+          dataToPersist = { ...carouselData, cards: previewCards };
+          setCarouselData(prev => prev ? { ...prev, cards: previewCards } : prev);
+        } catch (previewErr) {
+          console.warn('[Tweet Save] Preview capture failed, falling back to rerender', previewErr);
+          const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+          dataToPersist = { ...carouselData, cards: renderedCards };
+          setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+        }
       }
 
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
@@ -5870,6 +5901,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       return (
         <div
+          ref={(el) => { tweetPreviewRefs.current[index] = el; }}
           data-cover-capture={index === 0 ? 'true' : undefined}
           style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
         >

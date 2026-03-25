@@ -4326,15 +4326,24 @@ FORBIDDEN:
     return cards.map((card, i) => card.type === 'tweet' ? { ...card, imageUrl: renderedImages[i] || card.imageUrl } : card);
   };
 
+  const tweetRerenderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedRerenderTweet = useCallback((cards: CarouselCard[]) => {
+    if (tweetRerenderTimer.current) clearTimeout(tweetRerenderTimer.current);
+    tweetRerenderTimer.current = setTimeout(() => {
+      void rerenderTweetCards(cards).then((renderedCards) => {
+        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+      });
+    }, 400);
+  }, [tweetConfig, formatDims, referenceImages]);
+
   const updateCard = (index: number, updates: Partial<CarouselCard>) => {
     if (!carouselData) return;
     const newCards = [...carouselData.cards];
     newCards[index] = { ...newCards[index], ...updates };
     setCarouselData({ ...carouselData, cards: newCards });
     if (newCards[index]?.type === 'tweet') {
-      void rerenderTweetCards(newCards).then((renderedCards) => {
-        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
-      });
+      debouncedRerenderTweet(newCards);
     }
   };
 
@@ -4343,9 +4352,7 @@ FORBIDDEN:
     const newCards = carouselData.cards.map(c => ({ ...c, ...updates }));
     setCarouselData({ ...carouselData, cards: newCards });
     if (newCards.some((card) => card.type === 'tweet')) {
-      void rerenderTweetCards(newCards).then((renderedCards) => {
-        setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
-      });
+      debouncedRerenderTweet(newCards);
     }
   };
 

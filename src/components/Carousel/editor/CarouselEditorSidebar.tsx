@@ -198,6 +198,18 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                     className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-sky-500" />
                 </div>
 
+                {/* Gap / spacing between elements */}
+                <div>
+                  <label className="text-xs font-medium text-white/40 mb-1 flex items-center justify-between">
+                    <span>Espaçamento</span>
+                    <span className="text-[10px] font-mono text-white/50">{Math.round((card.gapScale ?? 1) * 100)}%</span>
+                  </label>
+                  <input type="range" min="30" max="300" step="10"
+                    value={Math.round((card.gapScale ?? 1) * 100)}
+                    onChange={(e) => onUpdateCard(cardIndex, { gapScale: parseInt(e.target.value) / 100 })}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-sky-500" />
+                </div>
+
                 {/* Alignment */}
                 <div>
                   <label className="text-xs font-medium text-white/40 mb-1.5 block">Alinhamento</label>

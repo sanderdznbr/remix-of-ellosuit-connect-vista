@@ -398,6 +398,7 @@ const CarouselGenerator: React.FC = () => {
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
+  const tweetPhotoUploadCardIndexRef = useRef<number>(0);
   const [tweetPhotoUploadCardIndex, setTweetPhotoUploadCardIndex] = useState<number>(0);
   const [activeMarketplaceStyle, setActiveMarketplaceStyle] = useState<any>(null);
   const activeMarketplaceStyleRef = useRef<any>(null);

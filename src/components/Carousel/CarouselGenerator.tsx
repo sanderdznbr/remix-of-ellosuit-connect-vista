@@ -1184,6 +1184,7 @@ const CarouselGenerator: React.FC = () => {
     postFormat,
     // Tweet mode settings
     tweetConfig: wizardMode === 'tweet' ? tweetConfig : undefined,
+    tweet2Config: wizardMode === 'tweet2' ? tweet2Config : undefined,
     tweetPhotoHeights: wizardMode === 'tweet' ? tweetPhotoHeights : undefined,
     tweetFontSizeOverride: wizardMode === 'tweet' ? tweetFontSizeOverride : undefined,
     tweetCardPhotoAssignments: wizardMode === 'tweet' ? cardPhotoAssignments : undefined,

@@ -241,7 +241,7 @@ function formatTweetText(text: string): string {
  */
 export async function renderAllTweetCards(
   config: TweetConfig,
-  cards: Array<{ body?: string; bodyTop?: string; title?: string; photo?: string | null; fontScale?: number; paddingScale?: number; textAlign?: 'left' | 'center' | 'right'; uniformFontSize?: number }>,
+  cards: Array<{ body?: string; bodyTop?: string; title?: string; photo?: string | null; fontScale?: number; paddingScale?: number; textAlign?: 'left' | 'center' | 'right'; uniformFontSize?: number; photoFit?: 'cover' | 'contain' | 'fill' }>,
   format: { w: number; h: number },
   onProgress?: (current: number, total: number) => void
 ): Promise<string[]> {
@@ -285,6 +285,7 @@ export async function renderAllTweetCards(
       paddingScale: cards[i]?.paddingScale,
       textAlign: cards[i]?.textAlign,
       uniformFontSize: cards[i]?.uniformFontSize,
+      photoFit: cards[i]?.photoFit,
     }, i, format);
     results.push(dataUrl);
 

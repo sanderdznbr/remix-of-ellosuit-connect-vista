@@ -3,6 +3,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Upload, X, Check, Image, Camera, Globe, Sparkles, Sun, Moon } from 'lucide-react';
 
+export interface TweetEngagement {
+  likes: string;
+  retweets: string;
+  replies: string;
+  views: string;
+  bookmarks: string;
+}
+
 export interface TweetConfig {
   profilePhoto: string | null;
   displayName: string;
@@ -15,6 +23,8 @@ export interface TweetConfig {
   contentMode: 'static' | 'carousel';
   cardCount: number;
   theme: 'light' | 'dark';
+  engagement: TweetEngagement;
+  showEngagement: boolean;
 }
 
 export const DEFAULT_TWEET_CONFIG: TweetConfig = {
@@ -29,6 +39,8 @@ export const DEFAULT_TWEET_CONFIG: TweetConfig = {
   contentMode: 'static',
   cardCount: 1,
   theme: 'light',
+  engagement: { likes: '', retweets: '', replies: '', views: '', bookmarks: '' },
+  showEngagement: false,
 };
 
 interface Props {

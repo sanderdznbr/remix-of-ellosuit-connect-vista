@@ -743,7 +743,6 @@ const CarouselGenerator: React.FC = () => {
     setTweetConfig(DEFAULT_TWEET_CONFIG);
     setRoteiroGenerated(false);
     setGeneratingRoteiro(false);
-    autoTweetRoteiroTriggered.current = false;
   }, []);
 
   const openNextPendingPromptMedia = useCallback(() => {

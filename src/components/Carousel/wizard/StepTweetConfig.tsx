@@ -26,6 +26,7 @@ export const DEFAULT_TWEET_CONFIG: TweetConfig = {
   photoMode: 'none',
   contentMode: 'static',
   cardCount: 1,
+  theme: 'light',
 };
 
 interface Props {

@@ -1836,11 +1836,9 @@ const CarouselGenerator: React.FC = () => {
         body: cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || '',
       }));
 
-      const newCarouselData = {
+      const newCarouselData: CarouselData = {
+        title: topic.trim(),
         cards: carouselCards,
-        topic: topic.trim(),
-        format: postFormat,
-        mode: 'tweet' as const,
       };
 
       setCarouselData(newCarouselData);

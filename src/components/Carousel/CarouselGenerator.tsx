@@ -6591,6 +6591,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             if (currentStepName === 'Tema' && hasManualText) {
                               setSkipWebSearch(true);
                             }
+                            // Tweet mode: auto-set photoMode when user selected web images
+                            if (currentStepName === 'Fotos' && wizardMode === 'tweet') {
+                              const selectedWebImgs = referenceImages.filter(r => r.category === 'general');
+                              if (selectedWebImgs.length > 0 && tweetConfig.photoMode === 'none') {
+                                setTweetConfig(prev => ({ ...prev, photoMode: 'web' }));
+                              }
+                            }
                             // Formato step (advanced)
                             if (currentStepName === 'Formato') {
                               if (cardCount === 1) {

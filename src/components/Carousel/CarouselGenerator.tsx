@@ -123,6 +123,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
+import { renderAllTweetCards } from './TweetCanvasRenderer';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
@@ -1777,6 +1778,84 @@ const CarouselGenerator: React.FC = () => {
         completed_at: new Date().toISOString(),
       } as any).eq('id', jobId);
     } catch (err) { console.warn('Failed to update cloud job:', err); }
+  };
+
+  // ===== GENERATE TWEET POST VIA CANVAS (no AI) =====
+  const generateTweetCanvas = async () => {
+    if (generationInFlightRef.current) return;
+    generationInFlightRef.current = true;
+    setGenerating(true);
+    setCarouselData(null);
+    setCurrentCarouselId(null);
+    setTimeout(() => setTransitionToGenerate(false), 500);
+
+    try {
+      setGeneratingAllImages(true);
+      setImageGenProgress('Renderizando tweet...');
+
+      const formatDims = postFormat === 'square' ? { w: 1080, h: 1080 } : postFormat === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1350 };
+
+      // If no manual texts, generate content via AI first
+      let cards: Array<{ body?: string; title?: string; bodyTop?: string }> = [];
+      if (tweetConfig.tweetTexts.some(t => t.trim())) {
+        cards = tweetConfig.tweetTexts.map(t => ({ body: t }));
+      } else if (topic.trim()) {
+        // Generate tweet texts via edge function
+        setImageGenProgress('Gerando textos dos tweets...');
+        try {
+          const { data } = await supabase.functions.invoke('generate-carousel', {
+            body: {
+              action: 'generate-content',
+              topic: topic.trim(),
+              cardCount: tweetConfig.cardCount,
+              keywords: [],
+              productContext: `TWEET_POST_MODE: Gere conteúdo no formato de tweet/post do Twitter/X. Cada card deve ter texto curto e impactante (máx 280 caracteres). Linguagem informal e direta.`,
+            },
+          });
+          if (data?.cards) {
+            cards = data.cards;
+          }
+        } catch (e) {
+          console.error('[TweetCanvas] Content generation failed:', e);
+        }
+        if (cards.length === 0) {
+          cards = [{ body: topic.trim() }];
+        }
+      } else {
+        cards = [{ body: 'Tweet de exemplo' }];
+      }
+
+      const images = await renderAllTweetCards(tweetConfig, cards, formatDims, (current, total) => {
+        setImageGenProgress(`${current}/${total} tweets renderizados...`);
+      });
+
+      // Build carousel data structure
+      const carouselCards: CarouselCard[] = images.map((imgUrl, i) => ({
+        type: 'content' as const,
+        imageUrl: imgUrl,
+        title: '',
+        body: cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || '',
+      }));
+
+      const newCarouselData: CarouselData = {
+        title: topic.trim(),
+        cards: carouselCards,
+      };
+
+      setCarouselData(newCarouselData);
+      setImageGenProgress('');
+      setGeneratingAllImages(false);
+      setGenerating(false);
+      generationInFlightRef.current = false;
+      sonnerToast.success(tweetConfig.cardCount === 1 ? 'Tweet gerado!' : `${tweetConfig.cardCount} tweets gerados!`);
+    } catch (err) {
+      console.error('[TweetCanvas] Error:', err);
+      sonnerToast.error('Erro ao renderizar tweet');
+      setGenerating(false);
+      setGeneratingAllImages(false);
+      setImageGenProgress('');
+      generationInFlightRef.current = false;
+    }
   };
 
   // ===== GENERATE SINGLE POST (1080x1350) =====
@@ -6496,9 +6575,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
-                            // Tweet static: call generateSinglePost directly to avoid stale closure
-                            if (wizardMode === 'tweet' && tweetConfig.cardCount === 1) {
-                              setTimeout(() => generateSinglePost(), 1200);
+                            // Tweet mode: use canvas renderer instead of AI
+                            if (wizardMode === 'tweet') {
+                              setTimeout(() => generateTweetCanvas(), 1200);
                             } else {
                               setTimeout(() => generateContent(), 1200);
                             }

@@ -616,6 +616,7 @@ const CarouselGenerator: React.FC = () => {
     const normalizeTweet2Photos = async () => {
       const nextPhotos = [...tweet2Config.tweetPhotos];
       const totalCards = Math.max(tweet2Config.cardCount, nextPhotos.length);
+      const maxPhotoCards = tweet2Config.photoCardCount || totalCards;
       let changed = false;
 
       // Build web photo fallbacks from referenceImages
@@ -623,34 +624,43 @@ const CarouselGenerator: React.FC = () => {
         .filter(r => r.category === 'general')
         .map(r => r.url || r.thumb);
 
-      for (let i = 0; i < totalCards; i++) {
-        if (cancelled) return;
+      // Process all cards in parallel for faster resolution
+      const resolvePromises = Array.from({ length: totalCards }, async (_, i) => {
+        if (cancelled) return { index: i, url: nextPhotos[i] ?? null };
+
+        // If this card exceeds the photoCardCount, set to null
+        if (i >= maxPhotoCards) {
+          return { index: i, url: null };
+        }
 
         // For web mode: use referenceImages as source; for manual: use existing tweetPhotos
         const sourceUrl = tweet2Config.photoMode === 'web'
           ? (tweet2Config.tweetPhotos[i] || webPhotoFallbacks[i] || null)
           : (tweet2Config.tweetPhotos[i] || null);
 
-        if (!sourceUrl) {
-          if (nextPhotos[i] !== null && nextPhotos[i] !== undefined) {
-            nextPhotos[i] = null;
-            changed = true;
-          }
-          continue;
+        if (!sourceUrl) return { index: i, url: null };
+
+        // Skip if already a data URL
+        if (sourceUrl.startsWith('data:') || sourceUrl.startsWith('blob:')) {
+          return { index: i, url: sourceUrl };
         }
 
         try {
           const normalizedUrl = await resolveTweetPhotoUrl(sourceUrl);
-          if (nextPhotos[i] !== normalizedUrl) {
-            nextPhotos[i] = normalizedUrl;
-            changed = true;
-          }
-        } catch (error) {
-          console.warn('[Tweet2Photo] Failed to normalize photo for card', i, error);
-          if (nextPhotos[i] !== sourceUrl) {
-            nextPhotos[i] = sourceUrl;
-            changed = true;
-          }
+          return { index: i, url: normalizedUrl };
+        } catch {
+          // Keep raw URL as fallback — TweetCard2 handles with referrerPolicy
+          return { index: i, url: sourceUrl };
+        }
+      });
+
+      const results = await Promise.all(resolvePromises);
+      if (cancelled) return;
+
+      for (const { index, url } of results) {
+        if (nextPhotos[index] !== url) {
+          nextPhotos[index] = url;
+          changed = true;
         }
       }
 
@@ -664,7 +674,7 @@ const CarouselGenerator: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [wizardMode, tweet2Config.photoMode, tweet2Config.cardCount, referenceImages, resolveTweetPhotoUrl]);
+  }, [wizardMode, tweet2Config.photoMode, tweet2Config.cardCount, tweet2Config.photoCardCount, referenceImages, resolveTweetPhotoUrl]);
 
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);

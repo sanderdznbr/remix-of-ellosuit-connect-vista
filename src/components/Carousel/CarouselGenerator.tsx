@@ -6158,7 +6158,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             data-cover-capture={index === 0 ? 'true' : undefined}
             style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
           >
-            <TweetCard2 config={tweet2Config} text={cardText} photo={resolvedPhoto} width={w} height={h} fontScale={card.fontScale} />
+            <TweetCard2 config={tweet2Config} text={cardText} photo={resolvedPhoto} width={w} height={h} fontScale={card.fontScale} paddingScale={card.paddingScale} />
           </div>
         );
       }
@@ -6179,6 +6179,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               width={cardW}
               height={cardH}
               fontScale={card.fontScale}
+              paddingScale={card.paddingScale}
               editable={activeCardIndex === index}
               onTextChange={(newText) => {
                 updateCard(index, { body: newText });

@@ -460,7 +460,7 @@ const CarouselGenerator: React.FC = () => {
     : ['Modo', 'Visão'];
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
-  const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2'];
+  const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
   const WIZARD_STEPS = wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -7152,6 +7152,61 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             </button>
                           </>
                         )}
+                      </div>
+                    )}
+                    {currentStepName === 'Fotos Tweet2' && (
+                      <div className="space-y-5">
+                        <div className="text-center mb-2">
+                          <h3 className="text-lg font-bold" style={{ color: modeTheme.hex }}>Fotos por Slide</h3>
+                          <p className="text-sm text-muted-foreground">Envie uma foto para cada card. Slides sem foto ficarão apenas com texto.</p>
+                        </div>
+                        <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+                          {Array.from({ length: tweet2Config.cardCount }).map((_, i) => (
+                            <div key={i} className="flex items-start gap-3 p-3 rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-white/50 mb-1">Card {i + 1}</p>
+                                <p className="text-xs text-white/30 line-clamp-2">{tweet2Config.tweetTexts[i] || '(sem texto)'}</p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                {tweet2Config.tweetPhotos[i] ? (
+                                  <div className="relative w-20 h-14 rounded-lg overflow-hidden border border-white/[0.08]">
+                                    <img src={tweet2Config.tweetPhotos[i] || ''} alt="" className="w-full h-full object-cover" />
+                                    <button onClick={() => {
+                                      const nextPhotos = [...tweet2Config.tweetPhotos];
+                                      nextPhotos[i] = null;
+                                      setTweet2Config(prev => ({ ...prev, tweetPhotos: nextPhotos }));
+                                    }} className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center">
+                                      <X className="w-2.5 h-2.5 text-white" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="w-20 h-14 rounded-lg border border-dashed border-white/[0.12] bg-white/[0.03] flex flex-col items-center justify-center gap-0.5 cursor-pointer hover:bg-white/[0.06] transition-colors">
+                                    <Upload className="w-4 h-4 text-white/25" />
+                                    <span className="text-[9px] text-white/25">Upload</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = () => {
+                                          if (typeof reader.result === 'string') {
+                                            const nextPhotos = [...tweet2Config.tweetPhotos];
+                                            nextPhotos[i] = reader.result;
+                                            setTweet2Config(prev => ({ ...prev, tweetPhotos: nextPhotos }));
+                                          }
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                      e.target.value = '';
+                                    }} />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-center text-white/25">
+                          {tweet2Config.tweetPhotos.filter(Boolean).length} de {tweet2Config.cardCount} slides com foto
+                        </p>
                       </div>
                     )}
                     {/* Logo step removed — merged into Personalização */}

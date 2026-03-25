@@ -6929,7 +6929,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Mode & Topic badge */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 text-[11px]" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.12)` }}>
                       <span className="font-bold uppercase tracking-wider" style={{ color: themeHex }}>
-                        {wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
+                        {wizardMode === 'tweet' ? 'Tweet Mode' : wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
                       </span>
                       <span className="text-white/20">•</span>
                       <span className="text-white/50 truncate flex-1">{topic || 'Sem tema'}</span>

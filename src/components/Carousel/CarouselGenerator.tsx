@@ -6511,8 +6511,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             };
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
-                            // Call generateSinglePost directly to avoid state timing issues
-                            setTimeout(() => generateSinglePost(), 1200);
+                            // Guest tweet mode: use canvas renderer
+                            if (wizardMode === 'tweet') {
+                              setTimeout(() => generateTweetCanvas(), 1200);
+                            } else {
+                              // Call generateSinglePost directly to avoid state timing issues
+                              setTimeout(() => generateSinglePost(), 1200);
+                            }
                           } else {
                             // Tweet mode: sync cardCount from tweetConfig
                             if (wizardMode === 'tweet') {

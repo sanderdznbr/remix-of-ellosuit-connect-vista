@@ -1719,17 +1719,32 @@ const CarouselGenerator: React.FC = () => {
         const isTweet2 = wizardMode === 'tweet2';
         const isNonFullBleed = !activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style && !isLoadedFullBleed && wizardMode !== 'extreme';
         if (isNonFullBleed || isTweet2) {
-          // Try html2canvas on the preview card element
-          const previewCard = document.querySelector('[data-cover-capture="true"]') as HTMLElement;
+          // For tweet2: capture the inner full-resolution element (not the scaled wrapper)
+          const previewCard = isTweet2
+            ? tweetPreviewRefs.current[0]
+            : document.querySelector('[data-cover-capture="true"]') as HTMLElement;
           if (previewCard) {
             try {
+              // Temporarily remove transform for accurate capture
+              const origTransform = previewCard.style.transform;
+              const origTransformOrigin = previewCard.style.transformOrigin;
+              if (isTweet2) {
+                previewCard.style.transform = 'none';
+              }
               const canvas = await html2canvas(previewCard, {
-                scale: 2,
+                scale: isTweet2 ? 1 : 2,
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: null,
                 logging: false,
+                width: isTweet2 ? cardW : undefined,
+                height: isTweet2 ? cardH : undefined,
               });
+              // Restore transform
+              if (isTweet2) {
+                previewCard.style.transform = origTransform;
+                previewCard.style.transformOrigin = origTransformOrigin;
+              }
               const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
               if (blob) {
                 const fileName = `${companyId}/${carouselId}.jpg`;

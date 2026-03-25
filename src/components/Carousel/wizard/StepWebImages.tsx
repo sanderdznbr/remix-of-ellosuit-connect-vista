@@ -11,6 +11,8 @@ interface Props {
   webImages?: string[];
   onSkip?: () => void;
   accentTheme?: WizardAccentTheme;
+  /** When set, limits the number of images the user can select */
+  maxSelections?: number;
 }
 
 const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages, onSkip, accentTheme = 'purple' }) => {

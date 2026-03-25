@@ -6453,6 +6453,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'Tweet Config' && (
                       <StepTweetConfig config={tweetConfig} setConfig={setTweetConfig} />
                     )}
+                    {currentStepName === 'tweet2' && (
+                      <StepTweet2Config config={tweet2Config} setConfig={setTweet2Config} />
+                    )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
                          onAnalysisComplete={(analysis, vision) => {
@@ -7145,23 +7148,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             // Guest tweet mode: use canvas renderer
-                            if (wizardMode === 'tweet') {
+                            if (wizardMode === 'tweet' || wizardMode === 'tweet2') {
                               setTimeout(() => generateTweetCanvas(), 1200);
                             } else {
-                              // Call generateSinglePost directly to avoid state timing issues
                               setTimeout(() => generateSinglePost(), 1200);
                             }
                           } else {
-                            // Tweet mode: sync cardCount from tweetConfig
                             if (wizardMode === 'tweet') {
                               const tweetCards = tweetConfig.cardCount;
                               setCardCount(tweetCards);
                               setImageCardCount(tweetCards);
-                              if (tweetCards === 1) {
-                                setContentMode('single-post');
-                              } else {
-                                setContentMode('carousel');
-                              }
+                              setContentMode(tweetCards === 1 ? 'single-post' : 'carousel');
+                            } else if (wizardMode === 'tweet2') {
+                              const tweetCards = tweet2Config.cardCount;
+                              setCardCount(tweetCards);
+                              setImageCardCount(tweetCards);
+                              setContentMode(tweetCards === 1 ? 'single-post' : 'carousel');
                             } else if (cardCount === 1) {
                               setContentMode('single-post');
                               setImageCardCount(1);
@@ -7214,7 +7216,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
                             // Tweet mode: use canvas renderer instead of AI
-                            if (wizardMode === 'tweet') {
+                            if (wizardMode === 'tweet' || wizardMode === 'tweet2') {
                               setTimeout(() => generateTweetCanvas(), 1200);
                             } else {
                               setTimeout(() => generateContent(), 1200);

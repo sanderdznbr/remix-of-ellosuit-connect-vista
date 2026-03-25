@@ -57,11 +57,11 @@ const TweetCard: React.FC<TweetCardProps> = ({
     else tweetFontSize = 38;
   }
 
-  const nameFontSize = s(34);
-  const usernameFontSize = s(28);
-  const verifiedSize = s(22);
-  const avatarSize = s(48);
-  const headerGap = s(12);
+  const nameFontSize = s(42);
+  const usernameFontSize = s(34);
+  const verifiedSize = s(28);
+  const avatarSize = s(80);
+  const headerGap = s(16);
   const horizontalPadding = s(80);
   const photoMaxH = hasPhoto ? Math.round(height * 0.35) : 0;
 
@@ -116,7 +116,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'stretch',
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        fontFamily: "'TwitterChirp', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
         overflow: 'hidden',
         boxSizing: 'border-box',
         padding: `${Math.round(height * 0.06)}px 0`,
@@ -126,7 +126,7 @@ const TweetCard: React.FC<TweetCardProps> = ({
     >
       <div style={{ padding: `0 ${horizontalPadding}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: s(24), gap: headerGap }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: s(32), gap: headerGap }}>
           {config.profilePhoto ? (
             <img
               src={config.profilePhoto}

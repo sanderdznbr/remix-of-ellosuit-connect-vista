@@ -5682,6 +5682,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               width={w}
               height={h}
               photoHeight={tweetPhotoHeights[index]}
+              fontSizeOverride={tweetFontSizeOverride ?? undefined}
             />
           </div>
         );
@@ -5702,6 +5703,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               height={h}
               editable={activeCardIndex === index}
               photoHeight={tweetPhotoHeights[index]}
+              fontSizeOverride={tweetFontSizeOverride ?? undefined}
               onPhotoHeightChange={(newH) => {
                 setTweetPhotoHeights(prev => ({ ...prev, [index]: newH }));
               }}

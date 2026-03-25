@@ -4308,6 +4308,10 @@ FORBIDDEN:
       .map((ref) => ref.url)
       .filter(Boolean);
 
+    // Calculate uniform font size across all cards (use max text length)
+    const allTexts = cards.map((card) => (card.body || card.bodyTop || card.title || '').length);
+    const maxTextLen = Math.max(...allTexts, 50);
+
     const renderedImages = await renderAllTweetCards(
       cfg,
       cards.map((card, i) => ({
@@ -4320,6 +4324,8 @@ FORBIDDEN:
         fontScale: card.fontScale,
         paddingScale: card.paddingScale,
         textAlign: card.textAlign,
+        uniformFontSize: maxTextLen,
+        photoFit: cfg.photoFit,
       })),
       formatDims,
     );

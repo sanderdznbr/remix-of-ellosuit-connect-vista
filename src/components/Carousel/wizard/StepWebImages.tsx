@@ -11,9 +11,11 @@ interface Props {
   webImages?: string[];
   onSkip?: () => void;
   accentTheme?: WizardAccentTheme;
+  /** When set, limits the number of images the user can select */
+  maxSelections?: number;
 }
 
-const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages, onSkip, accentTheme = 'purple' }) => {
+const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, webImages, onSkip, accentTheme = 'purple', maxSelections }) => {
   const t = getThemeClasses(accentTheme);
   const [refSearchQuery, setRefSearchQuery] = useState('');
   const [searchingReferences, setSearchingReferences] = useState(false);
@@ -49,13 +51,15 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
         <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto pr-1">
           {allImages.map((img, i) => {
             const alreadyAdded = referenceImages.some(r => r.url === img.url);
+            const currentCount = referenceImages.filter(r => r.category === 'general').length;
+            const isAtLimit = !!maxSelections && !alreadyAdded && currentCount >= maxSelections;
             return (
-              <div key={i} className="relative group">
+              <div key={i} className={`relative group ${isAtLimit ? 'opacity-30 cursor-not-allowed' : ''}`}>
                 <button onClick={() => {
                   try {
                     if (alreadyAdded) {
                       setReferenceImages(prev => prev.filter(r => r.url !== img.url));
-                    } else {
+                    } else if (!isAtLimit) {
                       setReferenceImages(prev => [...prev, {
                         url: img.url, thumb: img.thumb, label: img.label, source: 'web', category: 'general',
                       }]);
@@ -64,6 +68,7 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
                     console.error('Error selecting image:', err);
                   }
                 }}
+                  disabled={isAtLimit}
                   className={`w-full rounded-lg overflow-hidden aspect-video transition-all ${
                     alreadyAdded
                       ? `ring-2 ${t.ringFull} ${t.shadowStrong}`
@@ -101,7 +106,9 @@ const StepWebImages: React.FC<Props> = ({ referenceImages, setReferenceImages, w
       </div>
 
       {referenceImages.filter(r => r.category === 'general').length > 0 && (
-        <p className="text-xs text-white/30">{referenceImages.filter(r => r.category === 'general').length} imagens selecionadas</p>
+        <p className="text-xs text-white/30">
+          {referenceImages.filter(r => r.category === 'general').length}{maxSelections ? `/${maxSelections}` : ''} imagens selecionadas
+        </p>
       )}
 
       {/* Skip / deselect all */}

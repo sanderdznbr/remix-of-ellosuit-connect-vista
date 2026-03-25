@@ -6497,9 +6497,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
-                            // Tweet static: call generateSinglePost directly to avoid stale closure
-                            if (wizardMode === 'tweet' && tweetConfig.cardCount === 1) {
-                              setTimeout(() => generateSinglePost(), 1200);
+                            // Tweet mode: use canvas renderer instead of AI
+                            if (wizardMode === 'tweet') {
+                              setTimeout(() => generateTweetCanvas(), 1200);
                             } else {
                               setTimeout(() => generateContent(), 1200);
                             }

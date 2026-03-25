@@ -94,7 +94,7 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
               alt=""
               crossOrigin={crossOriginAttr}
               referrerPolicy="no-referrer"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => { const el = e.target as HTMLImageElement; if (!el.dataset.retried) { el.dataset.retried = '1'; el.crossOrigin = ''; el.referrerPolicy = 'no-referrer'; el.src = el.src; } }}
               style={{
                 width: avatarSize,
                 height: avatarSize,
@@ -198,7 +198,7 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
               alt=""
               crossOrigin={photo.startsWith('data:') || photo.startsWith('blob:') ? undefined : 'anonymous'}
               referrerPolicy="no-referrer"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => { const el = e.target as HTMLImageElement; if (!el.dataset.retried) { el.dataset.retried = '1'; el.removeAttribute('crossOrigin'); el.referrerPolicy = 'no-referrer'; const src = el.src; el.src = ''; setTimeout(() => { el.src = src; }, 50); } }}
               style={{
                 width: '100%',
                 height: '100%',

@@ -1028,7 +1028,11 @@ const CarouselGenerator: React.FC = () => {
     extremeFormValues: wizardMode === 'extreme' ? extremeFormValues : undefined,
     extremeSelectedFont: wizardMode === 'extreme' ? extremeSelectedFont : undefined,
     postFormat,
-  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat]);
+    // Tweet mode settings
+    tweetConfig: wizardMode === 'tweet' ? tweetConfig : undefined,
+    tweetPhotoHeights: wizardMode === 'tweet' ? tweetPhotoHeights : undefined,
+    tweetFontSizeOverride: wizardMode === 'tweet' ? tweetFontSizeOverride : undefined,
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat, tweetConfig, tweetPhotoHeights, tweetFontSizeOverride]);
 
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1628,6 +1632,11 @@ const CarouselGenerator: React.FC = () => {
         if (gc.extremeAnalysis) setExtremeAnalysis(gc.extremeAnalysis);
         if (gc.extremeFormValues) setExtremeFormValues(gc.extremeFormValues);
         if (gc.extremeSelectedFont) setExtremeSelectedFont(gc.extremeSelectedFont);
+      } else if (gc.wizardMode === 'tweet') {
+        setWizardMode('tweet');
+        if (gc.tweetConfig) setTweetConfig(gc.tweetConfig);
+        if (gc.tweetPhotoHeights) setTweetPhotoHeights(gc.tweetPhotoHeights);
+        if (gc.tweetFontSizeOverride !== undefined) setTweetFontSizeOverride(gc.tweetFontSizeOverride);
       } else {
         setWizardMode(gc.wizardMode || 'simple');
       }

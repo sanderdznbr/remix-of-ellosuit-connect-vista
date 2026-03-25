@@ -3000,6 +3000,46 @@ NÃO use foto da web neste card — crie uma foto original com o rosto fornecido
 Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`;
           }
 
+          // === TWEET POST MODE: override prompt to render tweet UI ===
+          if (wizardMode === 'tweet') {
+            const tName = tweetConfig.displayName || 'User';
+            const tUser = tweetConfig.username || 'user';
+            const tVerified = tweetConfig.isVerified;
+            const tweetText = updatedCards[i]?.body || updatedCards[i]?.bodyTop || updatedCards[i]?.title || '';
+            const hasCardPhoto = tweetConfig.photoMode !== 'none' && tweetConfig.tweetPhotos[i];
+            
+            cardPrompt = [
+              `INSTRUÇÃO PRINCIPAL: Gere uma imagem que seja um SCREENSHOT PERFEITO de um tweet/post do Twitter/X.`,
+              `FORMATO: A imagem deve ter fundo BRANCO (#FFFFFF) e seguir EXATAMENTE o layout visual do Twitter/X.`,
+              `LAYOUT DO TWEET (de cima para baixo):`,
+              `1. PERFIL: Foto redonda de perfil no canto superior esquerdo, nome "${tName}" em bold preto ao lado, abaixo "@${tUser}" em cinza${tVerified ? ', com badge azul de verificado ✓ ao lado do nome' : ''}`,
+              `2. TEXTO DO TWEET: "${tweetText}" — texto preto, fonte do sistema (San Francisco/Segoe UI), tamanho médio-grande, legível. O texto deve estar EXATAMENTE como escrito, sem alterações.`,
+              hasCardPhoto ? `3. IMAGEM: Abaixo do texto, uma foto/imagem ilustrativa relacionada ao tema, com cantos arredondados, ocupando a largura do tweet.` : '',
+              `REGRAS VISUAIS OBRIGATÓRIAS:`,
+              `- Fundo TOTALMENTE BRANCO`,  
+              `- Tipografia limpa estilo Twitter (system font)`,
+              `- Nome em preto bold, @ em cinza (#536471)`,
+              `- Texto do tweet em preto (#0F1419), tamanho legível`,
+              `- Margens e espaçamentos idênticos ao Twitter real`,
+              `- NÃO adicione bordas, sombras ou efeitos ao redor`,
+              `- NÃO adicione rodapé com likes/retweets/etc`,
+              `- A imagem deve parecer um SCREENSHOT real do Twitter`,
+              `TEXTO EXATO DO TWEET (copie caractere por caractere): "${tweetText}"`,
+            ].filter(Boolean).join('\n');
+            
+            // Use profile photo as face reference if available
+            if (tweetConfig.profilePhoto) {
+              capturedProductRefs = [tweetConfig.profilePhoto];
+              cardPrompt += `\n\nFOTO DE PERFIL: Use a imagem de referência fornecida como a foto de perfil redonda do tweet. Mantenha-a pequena (48x48px visual) e circular.`;
+            }
+            // Use manual card photo if available
+            if (hasCardPhoto && tweetConfig.tweetPhotos[i]) {
+              const existingRefs = capturedProductRefs || [];
+              capturedProductRefs = [...existingRefs, tweetConfig.tweetPhotos[i]!];
+              cardPrompt += `\n\nFOTO DO TWEET: Use a segunda imagem de referência como a foto/mídia do tweet, exibida abaixo do texto com cantos arredondados.`;
+            }
+          }
+
           imageFactories.push({
             index: i,
             prompt: cardPrompt,

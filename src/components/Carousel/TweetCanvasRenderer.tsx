@@ -47,6 +47,14 @@ export async function renderTweetToImage(
   index: number,
   format: { w: number; h: number }
 ): Promise<string> {
+  if ('fonts' in document) {
+    try {
+      await document.fonts.ready;
+    } catch {
+      // ignore font readiness failures and proceed with fallback fonts
+    }
+  }
+
   const mountHost = document.createElement('div');
   mountHost.style.position = 'fixed';
   mountHost.style.left = '-9999px';
@@ -87,6 +95,7 @@ export async function renderTweetToImage(
       height: format.h,
       photoHeight: card.photoHeight,
       fontSizeOverride,
+      headerOffsetY: 18,
     })
   );
 
@@ -96,9 +105,19 @@ export async function renderTweetToImage(
 
   const imgs = mountHost.querySelectorAll('img');
   if (imgs.length > 0) {
-    await Promise.all(Array.from(imgs).map(img =>
-      img.complete ? Promise.resolve() : new Promise(r => { img.onload = () => r(null); img.onerror = () => r(null); })
-    ));
+    await Promise.all(Array.from(imgs).map(async (img) => {
+      if (!img.complete) {
+        await new Promise((r) => { img.onload = () => r(null); img.onerror = () => r(null); });
+      }
+
+      if (typeof img.decode === 'function') {
+        try {
+          await img.decode();
+        } catch {
+          // ignore decode failures and let html2canvas attempt capture
+        }
+      }
+    }));
   }
 
   try {
@@ -111,6 +130,14 @@ export async function renderTweetToImage(
       allowTaint: true,
       backgroundColor: bg,
       logging: false,
+      imageTimeout: 30000,
+      onclone: (clonedDoc) => {
+        clonedDoc.querySelectorAll('img').forEach((img) => {
+          img.crossOrigin = 'anonymous';
+          img.referrerPolicy = 'no-referrer';
+          img.loading = 'eager';
+        });
+      },
     });
 
     const dataUrl = canvas.toDataURL('image/png');

@@ -6432,7 +6432,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   });
                                   if (error) throw error;
                                   if (data?.data?.cards?.length) {
-                                    const texts = data.data.cards.map((c: any) => (c.body || '').trim()).filter(Boolean);
+                                    const texts = data.data.cards.map((c: any) => {
+                                      let t = (c.body || '').trim();
+                                      if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+                                      return t;
+                                    }).filter(Boolean);
                                     setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
                                   }
                                 } catch (e) {

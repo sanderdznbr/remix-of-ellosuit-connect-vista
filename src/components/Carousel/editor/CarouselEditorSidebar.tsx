@@ -18,7 +18,7 @@ interface FontOption {
 }
 
 interface CarouselCard {
-  type: 'cover' | 'content' | 'cta' | 'tweet';
+  type: 'cover' | 'content' | 'cta' | 'tweet' | 'tweet2';
   title?: string;
   subtitle?: string;
   body?: string;

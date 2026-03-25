@@ -124,8 +124,10 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { ReferenceImage, FamousPerson, FacePerson, ImageSettings, DEFAULT_IMAGE_SETTINGS, FLOW_COLOR } from './wizard/types';
 import StepTweetConfig, { TweetConfig, DEFAULT_TWEET_CONFIG } from './wizard/StepTweetConfig';
+import StepTweet2Config, { Tweet2Config, DEFAULT_TWEET2_CONFIG } from './wizard/StepTweet2Config';
 import { captureTweetCardElement, renderAllTweetCards } from './TweetCanvasRenderer';
 import TweetCard from './TweetCard';
+import TweetCard2 from './TweetCard2';
 
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 
@@ -167,7 +169,7 @@ const FONT_OPTIONS = [
 ];
 
 interface CarouselCard {
-  type: 'cover' | 'content' | 'cta' | 'tweet';
+  type: 'cover' | 'content' | 'cta' | 'tweet' | 'tweet2';
   title?: string;
   subtitle?: string;
   body?: string;
@@ -252,6 +254,7 @@ const CarouselGenerator: React.FC = () => {
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
   const [tweetConfig, setTweetConfig] = useState<TweetConfig>(DEFAULT_TWEET_CONFIG);
+  const [tweet2Config, setTweet2Config] = useState<Tweet2Config>(DEFAULT_TWEET2_CONFIG);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -457,14 +460,15 @@ const CarouselGenerator: React.FC = () => {
     : ['Modo', 'Visão'];
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
-  const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2'];
+  const WIZARD_STEPS = wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
   const modeTheme = wizardMode === 'extreme'
     ? { hex: '#E84D1A', hexDark: '#C43A0F', rgb: '232,77,26', rgb2: '200,60,20', gradient: 'linear-gradient(135deg, #C2410C 0%, #F97316 50%, #EA580C 100%)', tailwind: 'orange', loadingColor: '#F97316' }
     : wizardMode === 'advanced'
     ? { hex: '#DC2626', hexDark: '#B91C1C', rgb: '220,38,38', rgb2: '185,28,28', gradient: 'linear-gradient(135deg, #B91C1C 0%, #EF4444 50%, #DC2626 100%)', tailwind: 'red', loadingColor: '#EF4444' }
-    : wizardMode === 'tweet'
+    : wizardMode === 'tweet' || wizardMode === 'tweet2'
     ? { hex: '#0EA5E9', hexDark: '#0284C7', rgb: '14,165,233', rgb2: '2,132,199', gradient: 'linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #0EA5E9 100%)', tailwind: 'sky', loadingColor: '#38BDF8' }
     : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -685,7 +689,7 @@ const CarouselGenerator: React.FC = () => {
     const persistedCards = [...cards];
 
     for (let i = 0; i < cards.length; i++) {
-      if (cards[i]?.type !== 'tweet') continue;
+      if (cards[i]?.type !== 'tweet' && cards[i]?.type !== 'tweet2') continue;
 
       const previewEl = tweetPreviewRefs.current[i];
       if (!previewEl) throw new Error(`Preview do card ${i + 1} não encontrado`);
@@ -1180,6 +1184,7 @@ const CarouselGenerator: React.FC = () => {
     postFormat,
     // Tweet mode settings
     tweetConfig: wizardMode === 'tweet' ? tweetConfig : undefined,
+    tweet2Config: wizardMode === 'tweet2' ? tweet2Config : undefined,
     tweetPhotoHeights: wizardMode === 'tweet' ? tweetPhotoHeights : undefined,
     tweetFontSizeOverride: wizardMode === 'tweet' ? tweetFontSizeOverride : undefined,
     tweetCardPhotoAssignments: wizardMode === 'tweet' ? cardPhotoAssignments : undefined,
@@ -1207,16 +1212,18 @@ const CarouselGenerator: React.FC = () => {
         if (!companyData) return;
 
         let dataToPersist = carouselData;
-        if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
+        if ((wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some((card) => card.type === 'tweet' || card.type === 'tweet2')) {
           try {
             const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);
             dataToPersist = { ...carouselData, cards: previewCards };
             setCarouselData(prev => prev ? { ...prev, cards: previewCards } : prev);
           } catch (previewErr) {
             console.warn('[Tweet Save] Preview capture failed, falling back to rerender', previewErr);
-            const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
-            dataToPersist = { ...carouselData, cards: renderedCards };
-            setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+            if (wizardMode === 'tweet') {
+              const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+              dataToPersist = { ...carouselData, cards: renderedCards };
+              setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+            }
           }
         }
         
@@ -1714,16 +1721,18 @@ const CarouselGenerator: React.FC = () => {
       const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!companyData) throw new Error('Empresa não encontrada');
       let dataToPersist = carouselData;
-      if (wizardMode === 'tweet' && carouselData.cards.some((card) => card.type === 'tweet')) {
+      if ((wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some((card) => card.type === 'tweet' || card.type === 'tweet2')) {
         try {
           const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);
           dataToPersist = { ...carouselData, cards: previewCards };
           setCarouselData(prev => prev ? { ...prev, cards: previewCards } : prev);
         } catch (previewErr) {
           console.warn('[Tweet Save] Preview capture failed, falling back to rerender', previewErr);
-          const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
-          dataToPersist = { ...carouselData, cards: renderedCards };
-          setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+          if (wizardMode === 'tweet') {
+            const renderedCards = await rerenderTweetCards(carouselData.cards, tweetConfig);
+            dataToPersist = { ...carouselData, cards: renderedCards };
+            setCarouselData(prev => prev ? { ...prev, cards: renderedCards } : prev);
+          }
         }
       }
 
@@ -2016,6 +2025,54 @@ const CarouselGenerator: React.FC = () => {
       setImageGenProgress('Renderizando tweet...');
 
       const formatDims = postFormat === 'square' ? { w: 1080, h: 1080 } : postFormat === 'story' ? { w: 1080, h: 1920 } : { w: 1080, h: 1350 };
+
+      // tweet2 mode: generate cards with type 'tweet2' (no canvas pre-render, preview = export)
+      if (wizardMode === 'tweet2') {
+        let texts = tweet2Config.tweetTexts.map(v => v.trim()).filter(Boolean);
+        if (texts.length === 0 && topic.trim()) {
+          setImageGenProgress('Gerando textos do tweet2...');
+          try {
+            const { data, error } = await supabase.functions.invoke('generate-carousel', {
+              body: {
+                action: 'generate-content',
+                topic: cleanMentionsFromTopic(topic.trim()),
+                cardCount: tweet2Config.cardCount,
+                keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+                productContext: `TWEET_POST_MODE: Gere ${tweet2Config.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Use capitalização normal. Sem título, sem CTA. Escreva como um post real, em português brasileiro, máximo 280 caracteres.`,
+              },
+            });
+            if (error) throw error;
+            texts = (data?.data?.cards || []).map((c: any) => {
+              let t = (c.body || c.bodyTop || c.title || '').trim();
+              if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+              return t;
+            }).filter(Boolean);
+          } catch (e) { console.warn('[tweet2] content generation fallback', e); }
+        }
+        if (texts.length === 0) texts = [cleanMentionsFromTopic(topic.trim()) || 'Tweet'];
+        while (texts.length < tweet2Config.cardCount) texts.push(texts[texts.length - 1] || 'Tweet');
+        texts = texts.slice(0, tweet2Config.cardCount);
+
+        // Resolve photos
+        const resolvedPhotos = await Promise.all(
+          Array.from({ length: tweet2Config.cardCount }, async (_, i) => {
+            const src = tweet2Config.tweetPhotos[i] || null;
+            if (!src) return null;
+            try { return await resolveTweetPhotoUrl(src); } catch { return src; }
+          })
+        );
+        const normalizedConfig: typeof tweet2Config = { ...tweet2Config, tweetTexts: texts, tweetPhotos: resolvedPhotos };
+        setTweet2Config(normalizedConfig);
+
+        const carouselCards: CarouselCard[] = texts.map((body) => ({ type: 'tweet2' as const, title: '', body }));
+        setCarouselData({ title: topic.trim() || 'tweet2', cards: carouselCards });
+        setImageGenProgress('');
+        setGeneratingAllImages(false);
+        setGenerating(false);
+        generationInFlightRef.current = false;
+        sonnerToast.success(normalizedConfig.cardCount === 1 ? 'tweet2 gerado!' : `${normalizedConfig.cardCount} cards gerados!`);
+        return;
+      }
 
       console.log('[TweetCanvas] Config:', {
         displayName: tweetConfig.displayName,
@@ -5449,7 +5506,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const mimeType = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
       const quality = format === 'png' ? undefined : 0.92;
 
-      const isTweetExport = wizardMode === 'tweet' && carouselData.cards.some(c => c.type === 'tweet');
+      const isTweetExport = (wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some(c => c.type === 'tweet' || c.type === 'tweet2');
+      const tweetExportTheme = wizardMode === 'tweet2' ? tweet2Config.theme : tweetConfig.theme;
 
       if (asZip) {
         const JSZip = (await import('jszip')).default;
@@ -5466,7 +5524,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               scale: 2,
               useCORS: true,
               allowTaint: true,
-              backgroundColor: tweetConfig.theme === 'dark' ? '#000000' : '#FFFFFF',
+              backgroundColor: tweetExportTheme === 'dark' ? '#000000' : '#FFFFFF',
               logging: false,
               imageTimeout: 30000,
               onclone: (clonedDoc) => {
@@ -5513,7 +5571,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               scale: 1,
               useCORS: true,
               allowTaint: true,
-              backgroundColor: tweetConfig.theme === 'dark' ? '#000000' : '#FFFFFF',
+              backgroundColor: tweetExportTheme === 'dark' ? '#000000' : '#FFFFFF',
               logging: false,
               imageTimeout: 30000,
               onclone: (clonedDoc) => {
@@ -5954,6 +6012,51 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       );
     }
 
+    // Tweet2 mode: live React component preview = export (no canvas pre-render)
+    if (card.type === 'tweet2') {
+      const cardText = card.body || card.bodyTop || card.title || '';
+      const resolvedPhoto = tweet2Config.tweetPhotos[index] || null;
+      const tweetPreviewScale = w / cardW;
+
+      if (isExport) {
+        return (
+          <div
+            ref={(el) => { cardRefs.current[index] = el; }}
+            data-cover-capture={index === 0 ? 'true' : undefined}
+            style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+          >
+            <TweetCard2 config={tweet2Config} text={cardText} photo={resolvedPhoto} width={w} height={h} />
+          </div>
+        );
+      }
+
+      return (
+        <div
+          ref={(el) => { tweetPreviewRefs.current[index] = el; }}
+          data-cover-capture={index === 0 ? 'true' : undefined}
+          style={{ width: w, height: h, position: 'relative', overflow: 'hidden' }}
+        >
+          <div style={{ width: cardW, height: cardH, transform: `scale(${tweetPreviewScale})`, transformOrigin: 'top left' }}>
+            <TweetCard2
+              config={tweet2Config}
+              text={cardText}
+              photo={resolvedPhoto}
+              width={cardW}
+              height={cardH}
+              editable={activeCardIndex === index}
+              onTextChange={(newText) => {
+                updateCard(index, { body: newText });
+                const nextTexts = [...tweet2Config.tweetTexts];
+                nextTexts[index] = newText;
+                setTweet2Config(prev => ({ ...prev, tweetTexts: nextTexts }));
+              }}
+              onClick={() => { setActiveCardIndex(index); }}
+            />
+          </div>
+        </div>
+      );
+    }
+
     // Marketplace full-bleed mode: AI generates complete images with text baked in
     // Extreme mode also generates full-bleed images with text baked in by the AI
     const isMarketplaceFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
@@ -6150,7 +6253,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' ? true : !!activeMarketplaceStyle) : true;
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : true;
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);
@@ -6208,13 +6311,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-generate tweet roteiro when entering Roteiro Tweet step
   const autoTweetRoteiroTriggered = useRef(false);
   useEffect(() => {
-    if (currentStepName !== 'Roteiro Tweet') {
+    if (currentStepName !== 'Roteiro Tweet' && currentStepName !== 'Roteiro Tweet2') {
       autoTweetRoteiroTriggered.current = false;
       return;
     }
     if (autoTweetRoteiroTriggered.current || generatingRoteiro) return;
     if (!topic.trim()) return;
-    if (tweetConfig.tweetTexts.some(t => t.trim())) return;
+    const isTweet2Step = currentStepName === 'Roteiro Tweet2';
+    const activeTexts = isTweet2Step ? tweet2Config.tweetTexts : tweetConfig.tweetTexts;
+    const activeCount = isTweet2Step ? tweet2Config.cardCount : tweetConfig.cardCount;
+    if (activeTexts.some(t => t.trim())) return;
 
     autoTweetRoteiroTriggered.current = true;
     (async () => {
@@ -6224,9 +6330,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           body: {
             action: 'generate-content',
             topic: cleanMentionsFromTopic(topic.trim()),
-            cardCount: tweetConfig.cardCount,
+            cardCount: activeCount,
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-            productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
+            productContext: `TWEET_POST_MODE: Gere ${activeCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
           },
         });
         if (error) throw error;
@@ -6236,14 +6342,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
             return t;
           }).filter(Boolean);
-          setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
+          if (isTweet2Step) {
+            setTweet2Config(prev => ({ ...prev, tweetTexts: texts }));
+          } else {
+            setTweetConfig(prev => ({ ...prev, tweetTexts: texts }));
+          }
         }
       } catch (e) {
         console.error('[TweetAutoRoteiro] Error:', e);
       }
       setGeneratingRoteiro(false);
     })();
-  }, [currentStepName, generatingRoteiro, topic, tweetConfig.cardCount]);
+  }, [currentStepName, generatingRoteiro, topic, tweetConfig.cardCount, tweet2Config.cardCount, tweet2Config.tweetTexts, tweetConfig.tweetTexts]);
 
 
   useEffect(() => {
@@ -6448,6 +6558,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     )}
                     {currentStepName === 'Tweet Config' && (
                       <StepTweetConfig config={tweetConfig} setConfig={setTweetConfig} />
+                    )}
+                    {currentStepName === 'tweet2' && (
+                      <StepTweet2Config config={tweet2Config} setConfig={setTweet2Config} />
                     )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
@@ -6862,6 +6975,79 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                       </div>
                     )}
+                    {currentStepName === 'Roteiro Tweet2' && (
+                      <div className="space-y-4">
+                        <div className="text-center mb-4">
+                          <h3 className="text-lg font-bold" style={{ color: modeTheme.hex }}>Roteiro dos Tweets</h3>
+                          <p className="text-sm text-muted-foreground">Edite os textos que serão renderizados nos tweets</p>
+                        </div>
+                        {generatingRoteiro ? (
+                          <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <Loader2 className="h-8 w-8 animate-spin" style={{ color: modeTheme.hex }} />
+                            <p className="text-sm text-white/50">Gerando roteiro dos tweets...</p>
+                          </div>
+                        ) : (
+                          <>
+                            {Array.from({ length: tweet2Config.cardCount }).map((_, i) => (
+                              <div key={i} className="space-y-1">
+                                <label className="text-xs font-semibold text-muted-foreground">Tweet {i + 1}</label>
+                                <Textarea
+                                  value={tweet2Config.tweetTexts[i] || ''}
+                                  onChange={(e) => {
+                                    const newTexts = [...tweet2Config.tweetTexts];
+                                    newTexts[i] = e.target.value;
+                                    setTweet2Config(prev => ({ ...prev, tweetTexts: newTexts }));
+                                  }}
+                                  placeholder={`Texto do tweet ${i + 1}...`}
+                                  className="min-h-[80px] text-sm resize-none"
+                                  maxLength={280}
+                                />
+                                <p className="text-[11px] text-muted-foreground text-right">{(tweet2Config.tweetTexts[i] || '').length}/280</p>
+                              </div>
+                            ))}
+                            <button
+                              onClick={async () => {
+                                if (!topic.trim()) return;
+                                setGeneratingRoteiro(true);
+                                try {
+                                  const { data, error } = await supabase.functions.invoke('generate-carousel', {
+                                    body: {
+                                      action: 'generate-content',
+                                      topic: cleanMentionsFromTopic(topic.trim()),
+                                      cardCount: tweet2Config.cardCount,
+                                      isTweetMode: true,
+                                      webSearchContent: (!skipWebSearch && webSearchResult) ? {
+                                        title: (webSearchResult as any).title || '',
+                                        summary: webSearchResult.summary || '',
+                                        facts: (webSearchResult as any).facts || [],
+                                      } : undefined,
+                                      keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
+                                    },
+                                  });
+                                  if (error) throw error;
+                                  if (data?.data?.cards?.length) {
+                                    const texts = data.data.cards.map((c: any) => {
+                                      let t = (c.body || '').trim();
+                                      if (t.length > 3 && t === t.toUpperCase()) t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+                                      return t;
+                                    }).filter(Boolean);
+                                    setTweet2Config(prev => ({ ...prev, tweetTexts: texts }));
+                                  }
+                                } catch (e) {
+                                  console.error('[Tweet2Roteiro] Error:', e);
+                                  sonnerToast.error('Erro ao gerar roteiro');
+                                }
+                                setGeneratingRoteiro(false);
+                              }}
+                              disabled={generatingRoteiro || !topic.trim()}
+                              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                              style={{ background: modeTheme.gradient }}>
+                              <Wand2 className="h-4 w-4" /> {tweet2Config.tweetTexts.some(t => t.trim()) ? 'Regenerar roteiro' : 'Gerar roteiro com IA'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {/* Logo step removed — merged into Personalização */}
                     {currentStepName === 'Ideia Visual' && (
                       <StepVisualIdea
@@ -6918,7 +7104,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
                             // Tweet mode: always search web (skip only if user explicitly turned off toggle)
-                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
+                            if (currentStepName === 'Tema' && (wizardMode === 'tweet' || wizardMode === 'tweet2') && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
                               setWebSearchDecisionMade(true);
                               await handleSearchWeb();
                               setWizardStep(wizardStep + 1);
@@ -7141,23 +7327,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             // Guest tweet mode: use canvas renderer
-                            if (wizardMode === 'tweet') {
+                            if (wizardMode === 'tweet' || wizardMode === 'tweet2') {
                               setTimeout(() => generateTweetCanvas(), 1200);
                             } else {
-                              // Call generateSinglePost directly to avoid state timing issues
                               setTimeout(() => generateSinglePost(), 1200);
                             }
                           } else {
-                            // Tweet mode: sync cardCount from tweetConfig
                             if (wizardMode === 'tweet') {
                               const tweetCards = tweetConfig.cardCount;
                               setCardCount(tweetCards);
                               setImageCardCount(tweetCards);
-                              if (tweetCards === 1) {
-                                setContentMode('single-post');
-                              } else {
-                                setContentMode('carousel');
-                              }
+                              setContentMode(tweetCards === 1 ? 'single-post' : 'carousel');
+                            } else if (wizardMode === 'tweet2') {
+                              const tweetCards = tweet2Config.cardCount;
+                              setCardCount(tweetCards);
+                              setImageCardCount(tweetCards);
+                              setContentMode(tweetCards === 1 ? 'single-post' : 'carousel');
                             } else if (cardCount === 1) {
                               setContentMode('single-post');
                               setImageCardCount(1);
@@ -7210,7 +7395,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
                             setTransitionToGenerate(true);
                             // Tweet mode: use canvas renderer instead of AI
-                            if (wizardMode === 'tweet') {
+                            if (wizardMode === 'tweet' || wizardMode === 'tweet2') {
                               setTimeout(() => generateTweetCanvas(), 1200);
                             } else {
                               setTimeout(() => generateContent(), 1200);
@@ -7326,7 +7511,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Home className="w-5 h-5 text-white/60" />
                 </button>
                 <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: themeHex, backgroundColor: `rgba(${themeRgb},0.12)`, border: `1px solid rgba(${themeRgb},0.25)` }}>
-                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : wizardMode === 'tweet' ? 'Tweet Mode' : 'Modo Simples'}
+                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : wizardMode === 'tweet' || wizardMode === 'tweet2' ? 'Tweet Mode' : 'Modo Simples'}
                   {activeMarketplaceStyle?.name && (
                     <>, tema {activeMarketplaceStyle.name}</>
                   )}
@@ -7372,7 +7557,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {/* Mode & Topic badge */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 text-[11px]" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.12)` }}>
                       <span className="font-bold uppercase tracking-wider" style={{ color: themeHex }}>
-                        {wizardMode === 'tweet' ? 'Tweet Mode' : wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
+                        {wizardMode === 'tweet' || wizardMode === 'tweet2' ? 'Tweet Mode' : wizardMode === 'extreme' ? 'Extreme' : wizardMode === 'advanced' ? 'Avançado' : 'Simples'}
                       </span>
                       <span className="text-white/20">•</span>
                       <span className="text-white/50 truncate flex-1">{topic || 'Sem tema'}</span>
@@ -7435,7 +7620,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </p>
                     )}
 
-                    {wizardMode === 'tweet' ? (
+                    {(wizardMode === 'tweet' || wizardMode === 'tweet2') ? (
                       <>
                         {/* Tweet-specific: Edit text inline */}
                         {!isGuest && carouselData.cards[activeCardIndex] && (

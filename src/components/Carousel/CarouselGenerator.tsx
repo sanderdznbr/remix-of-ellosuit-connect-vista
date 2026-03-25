@@ -7956,23 +7956,47 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <div className="px-3 py-2 space-y-1.5">
                           <span className="text-[11px] text-white/30 uppercase tracking-wider font-medium">Tamanho da fonte</span>
                           <div className="flex gap-1.5">
-                            {([
-                              { key: null, label: 'Auto' },
-                              { key: 38, label: 'P' },
-                              { key: 48, label: 'M' },
-                              { key: 58, label: 'G' },
-                              { key: 72, label: 'GG' },
-                            ] as { key: number | null; label: string }[]).map(opt => (
-                              <button key={opt.label}
-                                onClick={() => setTweetFontSizeOverride(opt.key)}
-                                className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all border ${
-                                  tweetFontSizeOverride === opt.key
-                                    ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                                    : 'bg-white/[0.04] text-white/40 border-white/[0.06] hover:bg-white/[0.08]'
-                                }`}>
-                                {opt.label}
-                              </button>
-                            ))}
+                            {wizardMode === 'tweet2' ? (
+                              ([
+                                { key: undefined, label: 'Auto' },
+                                { key: 0.76, label: 'P' },
+                                { key: 1.0, label: 'M' },
+                                { key: 1.2, label: 'G' },
+                                { key: 1.5, label: 'GG' },
+                              ] as { key: number | undefined; label: string }[]).map(opt => {
+                                const currentScale = carouselData.cards[activeCardIndex]?.fontScale;
+                                const isActive = opt.key === undefined ? !currentScale : currentScale === opt.key;
+                                return (
+                                  <button key={opt.label}
+                                    onClick={() => updateCard(activeCardIndex, { fontScale: opt.key })}
+                                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all border ${
+                                      isActive
+                                        ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
+                                        : 'bg-white/[0.04] text-white/40 border-white/[0.06] hover:bg-white/[0.08]'
+                                    }`}>
+                                    {opt.label}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              ([
+                                { key: null, label: 'Auto' },
+                                { key: 38, label: 'P' },
+                                { key: 48, label: 'M' },
+                                { key: 58, label: 'G' },
+                                { key: 72, label: 'GG' },
+                              ] as { key: number | null; label: string }[]).map(opt => (
+                                <button key={opt.label}
+                                  onClick={() => setTweetFontSizeOverride(opt.key)}
+                                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-medium transition-all border ${
+                                    tweetFontSizeOverride === opt.key
+                                      ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
+                                      : 'bg-white/[0.04] text-white/40 border-white/[0.06] hover:bg-white/[0.08]'
+                                  }`}>
+                                  {opt.label}
+                                </button>
+                              ))
+                            )}
                           </div>
                         </div>
 

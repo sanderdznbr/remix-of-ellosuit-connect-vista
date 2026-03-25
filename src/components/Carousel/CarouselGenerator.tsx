@@ -5731,6 +5731,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         requiredPlanForExtreme="Growth"
                       />
                     )}
+                    {currentStepName === 'Tweet Config' && (
+                      <StepTweetConfig config={tweetConfig} setConfig={setTweetConfig} />
+                    )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
                          onAnalysisComplete={(analysis, vision) => {

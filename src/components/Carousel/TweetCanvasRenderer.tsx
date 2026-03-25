@@ -7,7 +7,8 @@ interface TweetRenderData {
   fontScale?: number;
   paddingScale?: number;
   textAlign?: 'left' | 'center' | 'right';
-  uniformFontSize?: number; // max text length across all cards for uniform sizing
+  uniformFontSize?: number;
+  cardPhoto?: string | null; // per-card photo override
 }
 
 /**
@@ -127,6 +128,59 @@ export async function renderTweetToImage(
             <img src="${card.photo}" style="width: 100%; height: ${photoMaxH}px; display: block; object-fit: cover;" crossorigin="anonymous" />
           </div>
         ` : ''}
+
+        <!-- Engagement bar -->
+        ${config.showEngagement ? `
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: ${Math.round(48 * paddingScale)}px;
+            margin-top: ${Math.round(36 * paddingScale)}px;
+            padding-top: ${Math.round(20 * paddingScale)}px;
+            border-top: 1px solid ${borderColor};
+          ">
+            ${config.engagement.replies ? `
+              <div style="display: flex; align-items: center; gap: ${Math.round(8 * paddingScale)}px;">
+                <svg viewBox="0 0 24 24" width="${Math.round(22 * fontScale)}" height="${Math.round(22 * fontScale)}" fill="none" stroke="${subColor}" stroke-width="1.5">
+                  <path d="M1.751 10c.004-.192.0075-.39.015-.586A2.25 2.25 0 0 1 4.01 7.25h15.98a2.25 2.25 0 0 1 2.244 2.164c.019.495.028.998.028 1.586 0 .588-.009 1.09-.028 1.586a2.25 2.25 0 0 1-2.244 2.164H4.01a2.25 2.25 0 0 1-2.244-2.164c-.0075-.196-.011-.394-.015-.586m0 0V18a2.25 2.25 0 0 0 2.25 2.25h16a2.25 2.25 0 0 0 2.25-2.25V10" />
+                </svg>
+                <span style="font-size: ${Math.round(22 * fontScale)}px; color: ${subColor}; font-weight: 400;">${escapeHtml(config.engagement.replies)}</span>
+              </div>
+            ` : ''}
+            ${config.engagement.retweets ? `
+              <div style="display: flex; align-items: center; gap: ${Math.round(8 * paddingScale)}px;">
+                <svg viewBox="0 0 24 24" width="${Math.round(22 * fontScale)}" height="${Math.round(22 * fontScale)}" fill="none" stroke="${subColor}" stroke-width="1.5">
+                  <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2h6v2h-6c-2.209 0-4-1.791-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM19.5 20.12l-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2h-6V4h6c2.209 0 4 1.791 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14z" />
+                </svg>
+                <span style="font-size: ${Math.round(22 * fontScale)}px; color: ${subColor}; font-weight: 400;">${escapeHtml(config.engagement.retweets)}</span>
+              </div>
+            ` : ''}
+            ${config.engagement.likes ? `
+              <div style="display: flex; align-items: center; gap: ${Math.round(8 * paddingScale)}px;">
+                <svg viewBox="0 0 24 24" width="${Math.round(22 * fontScale)}" height="${Math.round(22 * fontScale)}" fill="none" stroke="${subColor}" stroke-width="1.5">
+                  <path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.45-4.92-.334-6.78C3.89 4.48 5.82 3.5 7.998 3.5c1.468 0 2.827.56 3.999 1.64 1.172-1.08 2.531-1.64 3.999-1.64 2.18 0 4.11.98 5.214 2.91 1.116 1.86 1.026 4.28-.334 6.78z" />
+                </svg>
+                <span style="font-size: ${Math.round(22 * fontScale)}px; color: ${subColor}; font-weight: 400;">${escapeHtml(config.engagement.likes)}</span>
+              </div>
+            ` : ''}
+            ${config.engagement.views ? `
+              <div style="display: flex; align-items: center; gap: ${Math.round(8 * paddingScale)}px;">
+                <svg viewBox="0 0 24 24" width="${Math.round(22 * fontScale)}" height="${Math.round(22 * fontScale)}" fill="none" stroke="${subColor}" stroke-width="1.5">
+                  <path d="M8.75 21V3m-4.5 3v12a3 3 0 0 0 3 3h9.5a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3h-9.5a3 3 0 0 0-3 3z" />
+                </svg>
+                <span style="font-size: ${Math.round(22 * fontScale)}px; color: ${subColor}; font-weight: 400;">${escapeHtml(config.engagement.views)}</span>
+              </div>
+            ` : ''}
+            ${config.engagement.bookmarks ? `
+              <div style="display: flex; align-items: center; gap: ${Math.round(8 * paddingScale)}px;">
+                <svg viewBox="0 0 24 24" width="${Math.round(22 * fontScale)}" height="${Math.round(22 * fontScale)}" fill="none" stroke="${subColor}" stroke-width="1.5">
+                  <path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z" />
+                </svg>
+                <span style="font-size: ${Math.round(22 * fontScale)}px; color: ${subColor}; font-weight: 400;">${escapeHtml(config.engagement.bookmarks)}</span>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -189,23 +243,34 @@ export async function renderAllTweetCards(
   const total = config.cardCount;
   const results: string[] = [];
 
-  // Only ~60% of cards get photos — skip photo on some cards for variety
+  // Determine which cards get photos:
+  // Cards with explicit photos from the caller always get them.
+  // For remaining slots, pick ~60% randomly.
   const photoSlots = new Set<number>();
   if (config.photoMode !== 'none') {
-    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
-    // Pick spread-out cards for photos (not always first)
-    const candidates = Array.from({ length: total }, (_, i) => i);
-    for (let j = candidates.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1));
-      [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
+    // First, include cards that have explicit photos
+    for (let i = 0; i < total; i++) {
+      if (cards[i]?.photo || config.tweetPhotos[i]) {
+        photoSlots.add(i);
+      }
     }
-    candidates.slice(0, targetPhotoCount).forEach(idx => photoSlots.add(idx));
+    // Then fill remaining to ~60%
+    const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
+    if (photoSlots.size < targetPhotoCount) {
+      const candidates = Array.from({ length: total }, (_, i) => i).filter(i => !photoSlots.has(i));
+      for (let j = candidates.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
+      }
+      candidates.slice(0, targetPhotoCount - photoSlots.size).forEach(idx => photoSlots.add(idx));
+    }
   }
 
   for (let i = 0; i < total; i++) {
     onProgress?.(i, total);
     const cardText = cards[i]?.body || cards[i]?.bodyTop || cards[i]?.title || config.tweetTexts[i] || '';
-    const shouldHavePhoto = photoSlots.has(i);
+    const hasExplicitPhoto = !!(cards[i]?.photo || config.tweetPhotos[i]);
+    const shouldHavePhoto = hasExplicitPhoto || photoSlots.has(i);
     const cardPhoto = shouldHavePhoto ? (cards[i]?.photo ?? (config.photoMode !== 'none' ? config.tweetPhotos[i] : null)) : null;
 
     const dataUrl = await renderTweetToImage(config, {

@@ -109,10 +109,10 @@ export async function renderTweetToImage(
           margin-bottom: ${hasPhoto ? Math.round(44 * paddingScale) : 0}px;
           word-wrap: break-word;
           white-space: pre-wrap;
-          font-weight: 700;
+          font-weight: 400;
           letter-spacing: -0.4px;
           text-align: ${textAlign};
-        ">${escapeHtml(card.text)}</div>
+        ">${formatTweetText(card.text)}</div>
 
         <!-- Photo -->
         ${hasPhoto && card.photo ? `

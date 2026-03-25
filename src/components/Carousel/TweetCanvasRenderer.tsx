@@ -7,6 +7,7 @@ interface TweetRenderData {
   fontScale?: number;
   paddingScale?: number;
   textAlign?: 'left' | 'center' | 'right';
+  uniformFontSize?: number; // max text length across all cards for uniform sizing
 }
 
 /**
@@ -45,8 +46,8 @@ export async function renderTweetToImage(
   const avatarSize = Math.round(80 * paddingScale);
   const headerGap = Math.round(16 * paddingScale);
 
-  // Calculate font sizes based on text length for optimal fill
-  const textLen = card.text.length;
+  // Calculate font sizes — use uniformFontSize (max text length) for consistent sizing across all cards
+  const textLen = card.uniformFontSize ?? card.text.length;
   let tweetFontSize: number;
   if (textLen < 50) tweetFontSize = 82;
   else if (textLen < 100) tweetFontSize = 68;
@@ -181,7 +182,7 @@ function formatTweetText(text: string): string {
  */
 export async function renderAllTweetCards(
   config: TweetConfig,
-  cards: Array<{ body?: string; bodyTop?: string; title?: string; photo?: string | null; fontScale?: number; paddingScale?: number; textAlign?: 'left' | 'center' | 'right' }>,
+  cards: Array<{ body?: string; bodyTop?: string; title?: string; photo?: string | null; fontScale?: number; paddingScale?: number; textAlign?: 'left' | 'center' | 'right'; uniformFontSize?: number }>,
   format: { w: number; h: number },
   onProgress?: (current: number, total: number) => void
 ): Promise<string[]> {
@@ -192,14 +193,13 @@ export async function renderAllTweetCards(
   const photoSlots = new Set<number>();
   if (config.photoMode !== 'none') {
     const targetPhotoCount = Math.max(1, Math.round(total * 0.6));
-    // Always include first card, then pick random others
-    photoSlots.add(0);
-    const candidates = Array.from({ length: total - 1 }, (_, i) => i + 1);
+    // Pick spread-out cards for photos (not always first)
+    const candidates = Array.from({ length: total }, (_, i) => i);
     for (let j = candidates.length - 1; j > 0; j--) {
       const k = Math.floor(Math.random() * (j + 1));
       [candidates[j], candidates[k]] = [candidates[k], candidates[j]];
     }
-    candidates.slice(0, targetPhotoCount - 1).forEach(idx => photoSlots.add(idx));
+    candidates.slice(0, targetPhotoCount).forEach(idx => photoSlots.add(idx));
   }
 
   for (let i = 0; i < total; i++) {
@@ -214,6 +214,7 @@ export async function renderAllTweetCards(
       fontScale: cards[i]?.fontScale,
       paddingScale: cards[i]?.paddingScale,
       textAlign: cards[i]?.textAlign,
+      uniformFontSize: cards[i]?.uniformFontSize,
     }, i, format);
     results.push(dataUrl);
 

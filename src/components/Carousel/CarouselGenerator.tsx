@@ -516,7 +516,7 @@ const CarouselGenerator: React.FC = () => {
       // CORS blocked — use an img element to load and draw onto canvas
       try {
         const dataUrl = await new Promise<string>((resolve, reject) => {
-          const img = new Image();
+          const img = document.createElement('img');
           img.crossOrigin = 'anonymous';
           img.referrerPolicy = 'no-referrer';
           img.onload = () => {

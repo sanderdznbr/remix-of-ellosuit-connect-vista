@@ -607,14 +607,28 @@ const CarouselGenerator: React.FC = () => {
     };
   }, [wizardMode, tweetConfig, getResolvedTweetPhotoForCard, resolveTweetPhotoUrl]);
 
+  // Helper: distribute N photo slots evenly across totalCards indices
+  const getPhotoIndices = (totalCards: number, photoCount: number): Set<number> => {
+    if (photoCount >= totalCards) return new Set(Array.from({ length: totalCards }, (_, i) => i));
+    if (photoCount <= 0) return new Set();
+    const indices: number[] = [];
+    for (let i = 0; i < photoCount; i++) {
+      indices.push(Math.round(i * (totalCards - 1) / (photoCount - 1 || 1)));
+    }
+    const set = new Set(indices);
+    let idx = 0;
+    while (set.size < photoCount && idx < totalCards) {
+      set.add(idx);
+      idx++;
+    }
+    return set;
+  };
+
   // Normalize tweet2 photos from web search referenceImages into tweet2Config.tweetPhotos
   useEffect(() => {
     if (wizardMode !== 'tweet2' || tweet2Config.photoMode === 'none') return;
 
     let cancelled = false;
-
-    // Helper: distribute N photo slots evenly across totalCards indices
-    const getPhotoIndices = (totalCards: number, photoCount: number): Set<number> => {
       if (photoCount >= totalCards) return new Set(Array.from({ length: totalCards }, (_, i) => i));
       if (photoCount <= 0) return new Set();
       const indices: number[] = [];

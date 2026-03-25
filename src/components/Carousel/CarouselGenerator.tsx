@@ -1908,7 +1908,7 @@ const CarouselGenerator: React.FC = () => {
         }
 
         const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
-          cardPhotoAssignments[i] || tweetConfig.tweetPhotos[i] || selectedWebPhotos[i] || null
+          cardPhotoAssignments[i] || tweetConfig.tweetPhotos[i] || null
         ));
         configForRender = { ...tweetConfig, tweetPhotos: mergedTweetPhotos };
         setTweetConfig(configForRender);
@@ -4392,7 +4392,7 @@ FORBIDDEN:
         .filter(Boolean);
 
       const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
-        cardPhotoAssignments[i] || cfg.tweetPhotos[i] || selectedWebPhotos[i] || null
+        cardPhotoAssignments[i] || cfg.tweetPhotos[i] || null
       ));
 
       for (let i = 0; i < cards.length; i++) {

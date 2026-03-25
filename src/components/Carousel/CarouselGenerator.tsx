@@ -7128,10 +7128,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               setSkipWebSearch(true);
                             }
                             // Tweet mode: auto-set photoMode when user selected web images
-                            if (currentStepName === 'Fotos' && wizardMode === 'tweet') {
+                            if (currentStepName === 'Fotos' && (wizardMode === 'tweet' || wizardMode === 'tweet2')) {
                               const selectedWebImgs = referenceImages.filter(r => r.category === 'general');
-                              if (selectedWebImgs.length > 0 && tweetConfig.photoMode === 'none') {
-                                setTweetConfig(prev => ({ ...prev, photoMode: 'web' }));
+                              if (selectedWebImgs.length > 0) {
+                                if (wizardMode === 'tweet' && tweetConfig.photoMode === 'none') {
+                                  setTweetConfig(prev => ({ ...prev, photoMode: 'web' }));
+                                }
+                                if (wizardMode === 'tweet2') {
+                                  // Assign web photos to tweet2Config.tweetPhotos
+                                  setTweet2Config(prev => {
+                                    const nextPhotos = [...prev.tweetPhotos];
+                                    selectedWebImgs.forEach((img, i) => {
+                                      if (i < nextPhotos.length && !nextPhotos[i]) {
+                                        nextPhotos[i] = img.url || img.thumb;
+                                      }
+                                    });
+                                    return { ...prev, tweetPhotos: nextPhotos, photoMode: 'web' };
+                                  });
+                                }
                               }
                             }
                             // Formato step (advanced)

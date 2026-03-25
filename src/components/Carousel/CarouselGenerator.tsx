@@ -4299,8 +4299,9 @@ FORBIDDEN:
     }
   };
 
-  const rerenderTweetCards = async (cards: CarouselCard[]) => {
+  const rerenderTweetCards = async (cards: CarouselCard[], configOverride?: TweetConfig) => {
     if (!cards.some((card) => card.type === 'tweet')) return cards;
+    const cfg = configOverride || tweetConfig;
 
     const selectedWebPhotos = referenceImages
       .filter((ref) => ref.category === 'general')
@@ -4308,13 +4309,13 @@ FORBIDDEN:
       .filter(Boolean);
 
     const renderedImages = await renderAllTweetCards(
-      tweetConfig,
+      cfg,
       cards.map((card, i) => ({
         body: card.body || card.bodyTop || card.title || '',
-        photo: tweetConfig.photoMode === 'web'
+        photo: cfg.photoMode === 'web'
           ? selectedWebPhotos[i] || selectedWebPhotos[0] || null
-          : tweetConfig.photoMode !== 'none'
-            ? tweetConfig.tweetPhotos[i] || null
+          : cfg.photoMode !== 'none'
+            ? cfg.tweetPhotos[i] || null
             : null,
         fontScale: card.fontScale,
         paddingScale: card.paddingScale,
@@ -7096,11 +7097,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                 onClick={() => {
                                   const newPhotos = [...tweetConfig.tweetPhotos];
                                   newPhotos[activeCardIndex] = null;
-                                  setTweetConfig({ ...tweetConfig, tweetPhotos: newPhotos });
-                                  // re-render
+                                  const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos };
+                                  setTweetConfig(updatedConfig);
+                                  // re-render with updated config
                                   if (carouselData) {
                                     const newCards = [...carouselData.cards];
-                                    void rerenderTweetCards(newCards).then((rendered) => {
+                                    void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
                                       setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
                                     });
                                   }
@@ -9087,10 +9089,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             const newPhotos = [...tweetConfig.tweetPhotos];
             while (newPhotos.length <= tweetPhotoUploadCardIndex) newPhotos.push(null);
             newPhotos[tweetPhotoUploadCardIndex] = url;
-            setTweetConfig({ ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' : tweetConfig.photoMode });
-            // re-render tweet cards
+            const updatedConfig = { ...tweetConfig, tweetPhotos: newPhotos, photoMode: tweetConfig.photoMode === 'none' ? 'manual' as const : tweetConfig.photoMode };
+            setTweetConfig(updatedConfig);
+            // re-render tweet cards with updated config
             const newCards = [...carouselData.cards];
-            void rerenderTweetCards(newCards).then((rendered) => {
+            void rerenderTweetCards(newCards, updatedConfig).then((rendered) => {
               setCarouselData(prev => prev ? { ...prev, cards: rendered } : prev);
             });
           }

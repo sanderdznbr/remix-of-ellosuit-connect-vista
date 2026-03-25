@@ -4544,8 +4544,8 @@ FORBIDDEN:
     const allTexts = cards.map((card) => (card.body || card.bodyTop || card.title || '').length);
     const maxTextLen = Math.max(...allTexts, 50);
 
-    const renderedImages = await renderAllTweetCards(
-      cfg,
+      const renderedImages = await renderAllTweetCards(
+      normalizedConfig,
       cards.map((card, i) => ({
         body: card.body || card.bodyTop || card.title || '',
         photo: normalizedTweetPhotos[i] || null,
@@ -4554,6 +4554,8 @@ FORBIDDEN:
         textAlign: card.textAlign,
         uniformFontSize: maxTextLen,
         photoFit: normalizedConfig.photoFit,
+        photoHeight: tweetPhotoHeights[i],
+        fontSizeOverride: tweetFontSizeOverride ?? undefined,
       })),
       formatDims,
     );

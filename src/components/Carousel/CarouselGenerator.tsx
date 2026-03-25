@@ -165,7 +165,7 @@ const FONT_OPTIONS = [
 ];
 
 interface CarouselCard {
-  type: 'cover' | 'content' | 'cta';
+  type: 'cover' | 'content' | 'cta' | 'tweet';
   title?: string;
   subtitle?: string;
   body?: string;

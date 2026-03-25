@@ -51,7 +51,8 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
   const avatarSize = s(80);
   const sidePad = Math.round(s(56) * ps);
   const topPad = Math.round(s(56) * ps);
-  const photoHeight = photo ? Math.round(height * 0.38) : 0;
+  const hasValidPhoto = !!(photo && photo.length > 5 && (photo.startsWith('data:') || photo.startsWith('blob:') || photo.startsWith('http')));
+  const photoHeight = hasValidPhoto ? Math.round(height * 0.38) : 0;
 
   // Font size: use fontScale if provided, otherwise auto-size based on text length
   const baseFontSize = text.length > 220 ? s(38) : text.length > 120 ? s(44) : s(50);
@@ -185,7 +186,7 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
         )}
 
         {/* Photo */}
-        {photo && (
+        {hasValidPhoto && (
           <div style={{
             width: '100%',
             height: photoHeight,
@@ -200,7 +201,7 @@ const TweetCard2: React.FC<TweetCard2Props> = ({ config, text, photo, width, hei
               alt=""
               crossOrigin={photo.startsWith('data:') || photo.startsWith('blob:') ? undefined : 'anonymous'}
               referrerPolicy="no-referrer"
-              onError={(e) => { const el = e.target as HTMLImageElement; if (!el.dataset.retried) { el.dataset.retried = '1'; el.removeAttribute('crossOrigin'); el.referrerPolicy = 'no-referrer'; const src = el.src; el.src = ''; setTimeout(() => { el.src = src; }, 50); } }}
+              onError={(e) => { const el = e.target as HTMLImageElement; if (!el.dataset.retried) { el.dataset.retried = '1'; el.removeAttribute('crossOrigin'); el.referrerPolicy = 'no-referrer'; const src = el.src; el.src = ''; setTimeout(() => { el.src = src; }, 50); } else { const container = el.parentElement; if (container) container.style.display = 'none'; } }}
               style={{
                 width: '100%',
                 height: '100%',

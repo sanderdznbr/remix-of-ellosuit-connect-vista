@@ -31,6 +31,7 @@ interface CarouselCard {
   layout?: 'dark' | 'light' | 'accent';
   fontScale?: number;
   paddingScale?: number;
+  gapScale?: number;
   textAlign?: 'left' | 'center' | 'right';
   cardFontIndex?: number;
 }

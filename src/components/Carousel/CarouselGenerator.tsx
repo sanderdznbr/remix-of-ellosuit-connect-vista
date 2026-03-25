@@ -468,6 +468,42 @@ const CarouselGenerator: React.FC = () => {
     : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
+
+  const getSelectedTweetWebPhotos = useCallback((cfg?: TweetConfig) => {
+    const activeConfig = cfg || tweetConfig;
+    let selectedWebPhotos = referenceImages
+      .filter((ref) => ref.category === 'general')
+      .map((ref) => ref.url)
+      .filter(Boolean);
+
+    if (activeConfig.autoSelectPhotos && selectedWebPhotos.length === 0) {
+      const candidateUrls = (webSearchResult?.imageCandidates || [])
+        .filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
+        .map((c: any) => c.url);
+      const fallbackUrls = (webSearchResult?.images || []).filter((u: string) => u && u.startsWith('http'));
+      const seen = new Set<string>();
+      selectedWebPhotos = [];
+      for (const url of [...candidateUrls, ...fallbackUrls]) {
+        if (!seen.has(url)) {
+          seen.add(url);
+          selectedWebPhotos.push(url);
+        }
+      }
+    }
+
+    return selectedWebPhotos;
+  }, [referenceImages, tweetConfig, webSearchResult]);
+
+  const getResolvedTweetPhotoForCard = useCallback((index: number, cfg?: TweetConfig) => {
+    const activeConfig = cfg || tweetConfig;
+    const explicitPhoto = cardPhotoAssignments[index] || activeConfig.tweetPhotos[index] || null;
+    if (explicitPhoto) return explicitPhoto;
+    if (activeConfig.photoMode !== 'web') return null;
+
+    const selectedWebPhotos = getSelectedTweetWebPhotos(activeConfig);
+    if (selectedWebPhotos.length === 0) return null;
+    return selectedWebPhotos[index % selectedWebPhotos.length] || null;
+  }, [cardPhotoAssignments, getSelectedTweetWebPhotos, tweetConfig]);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showCarouselFromCover, setShowCarouselFromCover] = useState(false);
   const [carouselFromCoverCount, setCarouselFromCoverCount] = useState(8);
@@ -1896,31 +1932,13 @@ const CarouselGenerator: React.FC = () => {
       const resolvedPhotos = new Array<string | null>(cards.length).fill(null);
 
       if (tweetConfig.photoMode === 'web') {
-        let selectedWebPhotos = referenceImages
-          .filter((ref) => ref.category === 'general')
-          .map((ref) => ref.url)
-          .filter(Boolean);
-
-        if (tweetConfig.autoSelectPhotos && selectedWebPhotos.length === 0) {
-          const candidateUrls = (webSearchResult?.imageCandidates || [])
-            .filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
-            .map((c: any) => c.url);
-          const fallbackUrls = (webSearchResult?.images || []).filter((u: string) => u && u.startsWith('http'));
-          const seen = new Set<string>();
-          selectedWebPhotos = [];
-          for (const url of [...candidateUrls, ...fallbackUrls]) {
-            if (!seen.has(url)) {
-              seen.add(url);
-              selectedWebPhotos.push(url);
-            }
-          }
-          if (selectedWebPhotos.length > 0) {
-            console.log('[TweetCanvas] Auto-selected', selectedWebPhotos.length, 'photos from web search');
-          }
+        const selectedWebPhotos = getSelectedTweetWebPhotos(tweetConfig);
+        if (tweetConfig.autoSelectPhotos && selectedWebPhotos.length > 0) {
+          console.log('[TweetCanvas] Auto-selected', selectedWebPhotos.length, 'photos from web search');
         }
 
         const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
-          cardPhotoAssignments[i] || tweetConfig.tweetPhotos[i] || null
+          getResolvedTweetPhotoForCard(i, tweetConfig)
         ));
         configForRender = { ...tweetConfig, tweetPhotos: mergedTweetPhotos };
         setTweetConfig(configForRender);
@@ -4403,13 +4421,8 @@ FORBIDDEN:
 
     const resolvedPhotos = new Array<string | null>(cards.length).fill(null);
     if (cfg.photoMode === 'web') {
-      const selectedWebPhotos = referenceImages
-        .filter((ref) => ref.category === 'general')
-        .map((ref) => ref.url)
-        .filter(Boolean);
-
       const mergedTweetPhotos = Array.from({ length: cards.length }, (_, i) => (
-        cardPhotoAssignments[i] || cfg.tweetPhotos[i] || null
+        getResolvedTweetPhotoForCard(i, cfg)
       ));
 
       for (let i = 0; i < cards.length; i++) {
@@ -5728,7 +5741,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     if (card.type === 'tweet') {
       const cardText = card.body || card.bodyTop || card.title || '';
       // Resolve photo: check tweetConfig photos and cardPhotoAssignments
-      const resolvedPhoto = cardPhotoAssignments[index] || tweetConfig.tweetPhotos[index] || null;
+      const resolvedPhoto = getResolvedTweetPhotoForCard(index, tweetConfig);
       const cardPhoto = resolvedPhoto || null;
 
       // For export: render at full resolution, capture via html2canvas

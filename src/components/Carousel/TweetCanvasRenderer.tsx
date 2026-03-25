@@ -111,7 +111,7 @@ export async function renderTweetToImage(
       box-sizing: border-box;
       padding: ${Math.round(format.h * 0.06)}px 0;
     ">
-      <div style="padding: 0 ${horizontalPadding}px; display: flex; flex-direction: column; justify-content: center; flex: 1;">
+      <div style="padding: 0 ${horizontalPadding}px;">
         <!-- Header: profile -->
         <div style="display: flex; align-items: center; margin-bottom: ${Math.round(32 * paddingScale)}px; gap: ${headerGap}px;">
           ${config.profilePhoto

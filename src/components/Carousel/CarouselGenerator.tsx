@@ -444,7 +444,7 @@ const CarouselGenerator: React.FC = () => {
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
-  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', 'Velocidade'];
+  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(tweetConfig.photoMode === 'web' ? ['Pesquisa'] : []), 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -6270,11 +6270,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                         <button onClick={async () => {
                             const hasManualText = manualPostText.trim().length > 0;
-                            // Tweet mode: skip all web search logic
-                            if (currentStepName === 'Tema' && wizardMode === 'tweet') {
+                            // Tweet mode: only skip web search if toggle is OFF
+                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && !forceWebSearch) {
                               setSkipWebSearch(true);
                               setWebSearchDecisionMade(true);
                               setWizardStep(wizardStep + 1);
+                              return;
+                            }
+                            // Tweet mode with web search toggle ON: do the search
+                            if (currentStepName === 'Tema' && wizardMode === 'tweet' && forceWebSearch && !webSearchResult && topic.trim() && !webSearchDecisionMade) {
+                              setWebSearchDecisionMade(true);
+                              await handleSearchWeb();
                               return;
                             }
                             // Force web search when toggle is ON
@@ -6511,8 +6517,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             };
                             propertyListRef.current = propertyList;
                             activeMarketplaceStyleRef.current = activeMarketplaceStyle;
-                            // Call generateSinglePost directly to avoid state timing issues
-                            setTimeout(() => generateSinglePost(), 1200);
+                            // Guest tweet mode: use canvas renderer
+                            if (wizardMode === 'tweet') {
+                              setTimeout(() => generateTweetCanvas(), 1200);
+                            } else {
+                              // Call generateSinglePost directly to avoid state timing issues
+                              setTimeout(() => generateSinglePost(), 1200);
+                            }
                           } else {
                             // Tweet mode: sync cardCount from tweetConfig
                             if (wizardMode === 'tweet') {

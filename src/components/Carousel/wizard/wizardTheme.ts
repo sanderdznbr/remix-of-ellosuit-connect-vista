@@ -3,10 +3,10 @@
 
 export type WizardAccentTheme = 'purple' | 'red' | 'orange' | 'sky';
 
-export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet'): WizardAccentTheme {
+export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2'): WizardAccentTheme {
   if (wizardMode === 'extreme') return 'orange';
   if (wizardMode === 'advanced') return 'red';
-  if (wizardMode === 'tweet') return 'sky';
+  if (wizardMode === 'tweet' || wizardMode === 'tweet2') return 'sky';
   return 'purple';
 }
 

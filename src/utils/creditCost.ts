@@ -16,7 +16,7 @@
  *   Carrossel 10 cards Avançado+Rosto: (10×4) + 1 = 41
  */
 
-export type WizardMode = 'simple' | 'advanced' | 'extreme' | 'tweet';
+export type WizardMode = 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
 
 export interface CreditCostParams {
   cardCount: number;

@@ -16,7 +16,7 @@ interface Props {
   skipWebSearch?: boolean;
   onGoHome?: () => void;
   isExtreme?: boolean;
-  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet';
+  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
   isCompleting?: boolean;
   onCompleteAnimationDone?: () => void;
 }

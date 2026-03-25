@@ -66,7 +66,7 @@ const StepTweetConfig: React.FC<Props> = ({ config, setConfig }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Tweet Post</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">Tweet Mode</h2>
         <p className="text-sm text-white/40">Configure o visual do tweet</p>
       </div>
 

@@ -370,6 +370,16 @@ const CarouselEditorSidebar: React.FC<Props> = ({
               </>
             )}
 
+            {card.type === 'tweet' && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-white/40 mb-1 block">Texto do tweet</label>
+                  <Textarea value={card.body || ''} onChange={(e) => onUpdateCard(cardIndex, { body: e.target.value })}
+                    placeholder="Escreva o tweet..." className="rounded-xl min-h-[140px] resize-none text-sm !bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/20" />
+                </div>
+              </>
+            )}
+
             {card.type === 'cta' && (
               <>
                 <div>
@@ -470,7 +480,7 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                   <span>Tamanho da Fonte</span>
                   <span className="text-[10px] font-mono text-white/50">{Math.round((card.fontScale ?? 1) * 100)}%</span>
                 </label>
-                <input type="range" min="50" max="200" step="5"
+                <input type="range" min="70" max="260" step="5"
                   value={Math.round((card.fontScale ?? 1) * 100)}
                   onChange={(e) => onUpdateCard(cardIndex, { fontScale: parseInt(e.target.value) / 100 })}
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
@@ -480,11 +490,29 @@ const CarouselEditorSidebar: React.FC<Props> = ({
                   <span>Margens</span>
                   <span className="text-[10px] font-mono text-white/50">{Math.round((card.paddingScale ?? 1) * 100)}%</span>
                 </label>
-                <input type="range" min="30" max="200" step="5"
+                <input type="range" min="60" max="220" step="5"
                   value={Math.round((card.paddingScale ?? 1) * 100)}
                   onChange={(e) => onUpdateCard(cardIndex, { paddingScale: parseInt(e.target.value) / 100 })}
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary" />
               </div>
+              {card.type === 'tweet' && (
+                <div>
+                  <label className="text-xs font-medium text-white/40 mb-1.5 block">Alinhamento</label>
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'left' as const, icon: AlignLeft, label: 'Esquerda' },
+                      { value: 'center' as const, icon: AlignCenter, label: 'Centro' },
+                      { value: 'right' as const, icon: AlignRight, label: 'Direita' },
+                    ]).map(({ value, icon: Icon, label }) => (
+                      <button key={value} onClick={() => onUpdateCard(cardIndex, { textAlign: value })}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs border transition-all ${currentAlign === value ? 'ring-2 ring-white/50 border-white/20 bg-white/[0.08] text-white' : 'border-white/[0.06] text-white/40 hover:bg-white/[0.04]'}`}>
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

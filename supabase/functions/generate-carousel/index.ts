@@ -481,6 +481,68 @@ REGRAS:
       }
 
       const numCards = cardCount || 7;
+      const isTweetMode = !!body.isTweetMode;
+
+      if (isTweetMode) {
+        const tweetSystemPrompt = `Você escreve posts curtos no estilo Twitter/X em português brasileiro. Gere EXATAMENTE ${numCards} textos curtos, publicáveis, humanos e variados sobre o tema. Não repita o prompt do usuário literalmente. Não escreva títulos de capa, não use CTA de carrossel, não use marca interna, não use hashtags em excesso. Se houver dados da web, incorpore-os com naturalidade. Cada texto deve ter no máximo 280 caracteres. Responda APENAS em JSON válido no formato {"title":"...","cards":[{"type":"tweet","body":"..."}]}.`;
+
+        const tweetUserMessage = `Tópico: ${stripInternalBrands(topic || '')}${body.webSearchContent ? `\n\nContexto real da web:\nTítulo: ${body.webSearchContent.title || ''}\nResumo: ${body.webSearchContent.summary || ''}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body}`).join('\n')}` : ''}`;
+
+        let parsedTweet = null;
+        let lastTweetRaw = '';
+        for (const model of ['google/gemini-2.5-flash', 'google/gemini-3-flash-preview']) {
+          try {
+            const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model,
+                messages: [
+                  { role: 'system', content: tweetSystemPrompt },
+                  { role: 'user', content: tweetUserMessage },
+                ],
+              }),
+            });
+
+            if (!response.ok) continue;
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+            lastTweetRaw = content;
+            const match = content.match(/\{[\s\S]*\}/);
+            parsedTweet = match ? JSON.parse(match[0]) : null;
+            if (parsedTweet?.cards?.length) break;
+          } catch (_err) {
+            parsedTweet = null;
+          }
+        }
+
+        if (!parsedTweet?.cards?.length) {
+          parsedTweet = {
+            title: stripInternalBrands(topic || 'Tweet'),
+            cards: Array.from({ length: numCards }, () => ({
+              type: 'tweet',
+              body: `Perspectiva sobre ${stripInternalBrands(topic || 'o tema')}.`,
+            })),
+            raw: lastTweetRaw,
+          };
+        }
+
+        parsedTweet.cards = parsedTweet.cards
+          .map((card: any) => ({ type: 'tweet', body: stripInternalBrands(String(card?.body || '')).trim() }))
+          .filter((card: any) => card.body);
+
+        while (parsedTweet.cards.length < numCards) {
+          parsedTweet.cards.push({ type: 'tweet', body: `Novo ângulo sobre ${stripInternalBrands(topic || 'o tema')}.` });
+        }
+        if (parsedTweet.cards.length > numCards) parsedTweet.cards = parsedTweet.cards.slice(0, numCards);
+
+        return new Response(JSON.stringify({ success: true, data: parsedTweet }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const imageCardIndices = body.imageCardIndices || []; // which cards should have images
       const textSizeHint = body.textSizeHint || 'short';
       const textSizeConfig = {

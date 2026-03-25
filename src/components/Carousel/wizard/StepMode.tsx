@@ -37,6 +37,15 @@ const modes = [
     badge: 'NOVO',
     requiredPlan: 'Growth',
   },
+  {
+    key: 'tweet' as const,
+    icon: Twitter,
+    label: 'Tweet Post',
+    steps: 'Tweet visual · Estático ou carrossel',
+    desc: 'Crie posts no formato de tweet com foto e engajamento',
+    badge: 'NOVO',
+    requiredPlan: null,
+  },
 ] as const;
 
 const StepMode: React.FC<Props> = ({ 

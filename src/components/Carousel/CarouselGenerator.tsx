@@ -444,7 +444,7 @@ const CarouselGenerator: React.FC = () => {
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
-  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(tweetConfig.photoMode === 'web' ? ['Pesquisa'] : []), ...(tweetConfig.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Velocidade'];
+  const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(tweetConfig.photoMode === 'web' ? ['Pesquisa'] : []), ...(tweetConfig.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet', 'Velocidade'];
   const WIZARD_STEPS = wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode

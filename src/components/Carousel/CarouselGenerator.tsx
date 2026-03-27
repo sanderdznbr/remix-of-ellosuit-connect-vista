@@ -4116,11 +4116,15 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     if (/logo|marca|logotipo|logomarca/i.test(visionLower)) {
       parts.push(`🏷️ LOGO: O usuário forneceu seu logo. NÃO renderize o logo/logomarca na imagem — ele será sobreposto automaticamente depois. Apenas deixe um espaço limpo no canto onde o logo será posicionado.`);
     }
+    // Art-based mode instruction
+    if (isArtBasedExtreme && extremeArtImages.length > 0) {
+      parts.push(`\n🎨 MODO ARTE-REFERÊNCIA: O usuário forneceu ${extremeArtImages.length} imagem(ns) de referência visual. Essas imagens são a BASE ABSOLUTA do estilo visual. Replique fielmente: cores, tipografia, composição, mood e layout. O resultado deve parecer que foi criado pelo mesmo designer. NÃO invente um estilo novo — COPIE o estilo visual das referências.`);
+    }
     // Always inject quality baseline for Extreme
     parts.push(`\n🎯 QUALIDADE OBRIGATÓRIA: O resultado deve parecer criado por uma agência de design premium. Tipografia elegante com hierarquia clara (título bold grande, subtítulo leve), composição limpa e respirada, paleta coesa de 3-4 cores, elementos gráficos sutis. Pense em posts de marcas como Apple, Nike, Nubank — design minimalista e impactante.`);
     parts.push(`\n🚫 REGRA CRÍTICA DE FORMATO — CARD ÚNICO: Cada imagem gerada é UM ÚNICO CARD de um carrossel do Instagram. Cada card deve ser UMA ÚNICA COMPOSIÇÃO VISUAL que ocupa 100% do espaço (${cardW}x${cardH}). NUNCA crie grids, colagens, mosaicos ou múltiplas imagens dentro de um card. NUNCA divida o card em 2x2, 2x1 ou qualquer grade. O card deve ter UMA ÚNICA CENA/COMPOSIÇÃO por imagem. Se o carrossel tem 3 cards, são 3 imagens SEPARADAS, cada uma com sua própria composição única e completa.`);
     return parts.join('\n');
-  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues, cardW, cardH]);
+  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues, cardW, cardH, isArtBasedExtreme, extremeArtImages]);
 
 
   // ===== FILL COVER MODAL TEXTS WITH AI =====

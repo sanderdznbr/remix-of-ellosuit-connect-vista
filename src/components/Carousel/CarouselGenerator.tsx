@@ -109,6 +109,7 @@ import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptCon
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
 import StepPropertyCrop from './wizard/StepPropertyCrop';
 import StepPropertyInfo from './wizard/StepPropertyInfo';
+import StepAppScreenshots, { DeviceType } from './wizard/StepAppScreenshots';
 import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import { PropertyCardData } from './RealEstateCardTemplates';
@@ -299,6 +300,10 @@ const CarouselGenerator: React.FC = () => {
   const [productSize, setProductSize] = useState<ProductSize>('medium');
   const [wantsProduct, setWantsProduct] = useState(false);
   const [autoProductDetected, setAutoProductDetected] = useState(false);
+
+  // Style-specific screenshots state (e.g. ELLOCONTENT EXCLUSIVE)
+  const [styleScreenshots, setStyleScreenshots] = useState<{ url: string; thumb: string; file: File }[]>([]);
+  const [styleDeviceType, setStyleDeviceType] = useState<DeviceType>('mobile');
 
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);

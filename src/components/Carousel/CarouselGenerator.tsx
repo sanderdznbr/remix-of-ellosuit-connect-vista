@@ -454,13 +454,15 @@ const CarouselGenerator: React.FC = () => {
   const showFontesStep = !hasMarketplaceStyle;
   // Skip Roteiro for single-post mode
   const showRoteiroStep = contentMode === 'carousel' && cardCount > 1;
+  // Style-specific screenshots step (e.g. ELLOCONTENT EXCLUSIVE)
+  const styleRequiresScreenshots = !!activeMarketplaceStyle?.requires_screenshots;
 
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];

@@ -359,6 +359,10 @@ async function processCarousel(job: any, jobId: string, timeLeft: () => number) 
   const styleRefUrls = (refImages as any[]).filter((r: any) => r.category === 'style').map((r: any) => r.url);
   const imageSettings = job.image_settings || {};
 
+  // Extract product/media images (screenshots, etc.)
+  const productRefUrls: string[] = job.product_context ? (() => { try { const pc = JSON.parse(job.product_context); return pc.productImageUrls || []; } catch { return []; } })() : [];
+  const hasProductImages = productRefUrls.length > 0;
+
   const hasFaceRefsForCarousel = faceRefUrls.length > 0;
 
   const marketplaceRefUrls: string[] = [];

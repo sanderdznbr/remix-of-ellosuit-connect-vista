@@ -359,6 +359,10 @@ async function processCarousel(job: any, jobId: string, timeLeft: () => number) 
   const styleRefUrls = (refImages as any[]).filter((r: any) => r.category === 'style').map((r: any) => r.url);
   const imageSettings = job.image_settings || {};
 
+  // Extract product/media images (screenshots, etc.)
+  const productRefUrls: string[] = job.product_context ? (() => { try { const pc = JSON.parse(job.product_context); return pc.productImageUrls || []; } catch { return []; } })() : [];
+  const hasProductImages = productRefUrls.length > 0;
+
   const hasFaceRefsForCarousel = faceRefUrls.length > 0;
 
   const marketplaceRefUrls: string[] = [];
@@ -527,6 +531,10 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       if (!cardGetsFace && hasFaceRefsForCarousel) {
         parts.push('NÃO inclua pessoas humanas neste card. Use elementos visuais, objetos, ícones ou cenários relacionados ao tema.');
       }
+      // Inject product/screenshot instructions when product images are provided
+      if (hasProductImages) {
+        parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista (iPhone para mobile, MacBook/iMac para desktop). O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
+      }
       imgPrompt = parts.join(' ');
     } else {
       imgPrompt = `${cleanTopic}: ${card.imagePrompt || card.title || card.bodyTop || ''}`;
@@ -573,7 +581,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
   }
 
   console.log('=== CAROUSEL IMAGE GENERATION ===');
-  console.log('Style refs:', allStyleRefs.length, 'Face refs:', faceRefUrls.length);
+  console.log('Style refs:', allStyleRefs.length, 'Face refs:', faceRefUrls.length, 'Product refs:', productRefUrls.length);
   console.log('isFullBleed:', isFullBleed, 'promptStyle length:', promptStyle.length);
   console.log('LOGO:', { url: job.logo_url ? job.logo_url.slice(0, 80) : null, position: job.logo_position });
   console.log('Total image tasks:', imageTasks.length, '/', cards.length, 'cards');
@@ -639,6 +647,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           topic: task.prompt.slice(0, 200),
           faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
           styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+          referenceImageUrls: hasProductImages ? productRefUrls : undefined,
           imageModel: imageSettings.model || 'auto',
           negativePrompt: task.negPrompt,
           fidelity: task.cardGetsFace ? 'high' : (isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced')),
@@ -658,6 +667,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 topic: task.prompt.slice(0, 200),
                 faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
                 styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+                referenceImageUrls: hasProductImages ? productRefUrls : undefined,
                 imageModel: imageSettings.model || 'auto',
                 negativePrompt: task.negPrompt + ', no borders, no frames, no white edges, no picture frame',
                 fidelity: task.cardGetsFace ? 'high' : 'high',

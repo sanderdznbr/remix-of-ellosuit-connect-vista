@@ -109,6 +109,7 @@ import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptCon
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
 import StepPropertyCrop from './wizard/StepPropertyCrop';
 import StepPropertyInfo from './wizard/StepPropertyInfo';
+import StepAppScreenshots, { DeviceType } from './wizard/StepAppScreenshots';
 import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import { PropertyCardData } from './RealEstateCardTemplates';
@@ -300,6 +301,10 @@ const CarouselGenerator: React.FC = () => {
   const [wantsProduct, setWantsProduct] = useState(false);
   const [autoProductDetected, setAutoProductDetected] = useState(false);
 
+  // Style-specific screenshots state (e.g. ELLOCONTENT EXCLUSIVE)
+  const [styleScreenshots, setStyleScreenshots] = useState<{ url: string; thumb: string; file: File }[]>([]);
+  const [styleDeviceType, setStyleDeviceType] = useState<DeviceType>('mobile');
+
   // Real estate property state
   const [propertyList, setPropertyList] = useState<PropertyData[]>([createEmptyProperty()]);
   const propertyListRef = useRef<PropertyData[]>(propertyList);
@@ -449,13 +454,15 @@ const CarouselGenerator: React.FC = () => {
   const showFontesStep = !hasMarketplaceStyle;
   // Skip Roteiro for single-post mode
   const showRoteiroStep = contentMode === 'carousel' && cardCount > 1;
+  // Style-specific screenshots step (e.g. ELLOCONTENT EXCLUSIVE)
+  const styleRequiresScreenshots = !!activeMarketplaceStyle?.requires_screenshots;
 
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', 'Personalização', ...(showProductStep ? ['Produto'] : []), 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
     : ['Modo', 'Visão'];
@@ -966,6 +973,8 @@ const CarouselGenerator: React.FC = () => {
     setFamousList([]);
     setFamousImages([]);
     setProductImages([]);
+    setStyleScreenshots([]);
+    setStyleDeviceType('mobile');
     setWantsProduct(false);
     setAutoProductDetected(false);
     setProductAnalysis(null);
@@ -2036,13 +2045,23 @@ const CarouselGenerator: React.FC = () => {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!cu) return null;
 
-      const productContext = productAnalysis?.confirmed ? JSON.stringify({
-        productType: productAnalysis.type,
-        productDescription: productAnalysis.description,
-        productImageUrls: productImages.map(p => p.url),
-        productSize,
-        productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
-      }) : null;
+      // Build product context — style screenshots override generic product analysis
+      const hasStyleScreenshots = styleScreenshots.length > 0 && styleRequiresScreenshots;
+      const productContext = hasStyleScreenshots
+        ? JSON.stringify({
+            productType: 'object',
+            productDescription: `App/Website screenshot for ${styleDeviceType === 'mobile' ? 'iPhone' : styleDeviceType === 'web' ? 'MacBook/iMac' : 'iPad'} mockup`,
+            productImageUrls: styleScreenshots.map(s => s.url),
+            deviceType: styleDeviceType,
+            isAppScreenshot: true,
+          })
+        : productAnalysis?.confirmed ? JSON.stringify({
+            productType: productAnalysis.type,
+            productDescription: productAnalysis.description,
+            productImageUrls: productImages.map(p => p.url),
+            productSize,
+            productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
+          }) : null;
 
       const extremeFormPhotoRefs: ReferenceImage[] = wizardMode === 'extreme' && extremeAnalysis
         ? extremeAnalysis.fields
@@ -7050,6 +7069,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         realEstateMode={realEstateMode}
                       />
                     )}
+                    {currentStepName === 'Screenshots' && (
+                      <StepAppScreenshots
+                        screenshots={styleScreenshots}
+                        setScreenshots={setStyleScreenshots}
+                        deviceType={styleDeviceType}
+                        setDeviceType={setStyleDeviceType}
+                      />
+                    )}
                     {currentStepName === 'Produto' && (
                       <StepProduct productImages={productImages} setProductImages={setProductImages}
                         productAnalysis={productAnalysis} setProductAnalysis={setProductAnalysis}
@@ -7359,7 +7386,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     ) : wizardStep < WIZARD_STEPS.length - 1 ? (
                       <div className="flex items-center gap-2">
                         {/* Skip button for optional steps */}
-                        {(currentStepName === 'Personalização' || currentStepName === 'Produto' || currentStepName === 'Imóvel' || currentStepName === 'Ideia Visual') && (
+                        {(currentStepName === 'Personalização' || currentStepName === 'Produto' || currentStepName === 'Imóvel' || currentStepName === 'Ideia Visual' || currentStepName === 'Screenshots') && (
                           <button onClick={() => setWizardStep(wizardStep + 1)}
                             className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all">
                             Pular

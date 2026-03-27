@@ -973,6 +973,8 @@ const CarouselGenerator: React.FC = () => {
     setFamousList([]);
     setFamousImages([]);
     setProductImages([]);
+    setStyleScreenshots([]);
+    setStyleDeviceType('mobile');
     setWantsProduct(false);
     setAutoProductDetected(false);
     setProductAnalysis(null);
@@ -7055,6 +7057,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         properties={propertyList}
                         setProperties={setPropertyList}
                         realEstateMode={realEstateMode}
+                      />
+                    )}
+                    {currentStepName === 'Screenshots' && (
+                      <StepAppScreenshots
+                        screenshots={styleScreenshots}
+                        setScreenshots={setStyleScreenshots}
+                        deviceType={styleDeviceType}
+                        setDeviceType={setStyleDeviceType}
                       />
                     )}
                     {currentStepName === 'Produto' && (

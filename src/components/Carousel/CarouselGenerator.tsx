@@ -104,6 +104,7 @@ import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
 import StepExtremeFonts from './wizard/StepExtremeFonts';
+import StepExtremeSource, { ExtremeSourceMode } from './wizard/StepExtremeSource';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
@@ -252,6 +253,8 @@ const CarouselGenerator: React.FC = () => {
   const [extremeVision, setExtremeVision] = useState('');
   const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
   const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
+  const [extremeSourceMode, setExtremeSourceMode] = useState<ExtremeSourceMode>('scratch');
+  const [extremeArtImages, setExtremeArtImages] = useState<string[]>([]);
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
@@ -463,9 +466,10 @@ const CarouselGenerator: React.FC = () => {
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
     : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+  const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
-    : ['Modo', 'Visão'];
+    ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
+    : ['Modo', 'Origem', 'Visão'];
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];

@@ -6895,6 +6895,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               });
                             }
 
+                            // Add art-based reference images (replaces Behance when art-based)
+                            if (isArtBasedExtreme && extremeArtImages.length > 0) {
+                              extremeArtImages.forEach((url, idx) => {
+                                newRefs.push({
+                                  url,
+                                  thumb: url,
+                                  label: `Arte Ref ${idx + 1}`,
+                                  source: 'upload' as const,
+                                  category: 'style' as const,
+                                });
+                              });
+                            }
+
                             // Add font reference if selected
                             if (extremeSelectedFont) {
                               newRefs.push({

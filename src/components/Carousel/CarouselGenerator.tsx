@@ -7505,6 +7505,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   newRefs.push({ url, thumb: url, label: `Behance Ref ${idx + 1}`, source: 'upload' as const, category: 'style' as const });
                                 });
                               }
+                              if (isArtBasedExtreme && extremeArtImages.length > 0) {
+                                extremeArtImages.forEach((url, idx) => {
+                                  newRefs.push({ url, thumb: url, label: `Arte Ref ${idx + 1}`, source: 'upload' as const, category: 'style' as const });
+                                });
+                              }
                               if (extremeSelectedFont) {
                                 newRefs.push({ url: extremeSelectedFont.previewUrl, thumb: extremeSelectedFont.previewUrl, label: `Fonte: ${extremeSelectedFont.name}`, source: 'upload' as const, category: 'style' as const });
                               }

@@ -2133,7 +2133,7 @@ const CarouselGenerator: React.FC = () => {
         product_context: isRealEstateStyle
           ? `REAL_ESTATE_DATA:${JSON.stringify({ properties: propertyList.map(p => ({ ...p, photos: p.photos.map(ph => ph.url) })), mode: realEstateMode })}`
           : wizardMode === 'extreme' && extremeAnalysis
-            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual. Replique o estilo, peso e proporções da fonte mostrada na imagem de referência.' } : null })}`
+            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, artBased: isArtBasedExtreme, artImageUrls: isArtBasedExtreme ? extremeArtImages : undefined, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual. Replique o estilo, peso e proporções da fonte mostrada na imagem de referência.' } : null })}`
             : wizardMode === 'advanced' && advancedVisualIdea.trim()
               ? `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}`
               : productContext,

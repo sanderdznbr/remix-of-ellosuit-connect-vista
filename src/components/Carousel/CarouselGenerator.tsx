@@ -6795,6 +6795,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'tweet2' && (
                       <StepTweet2Config config={tweet2Config} setConfig={setTweet2Config} />
                     )}
+                    {currentStepName === 'Origem' && wizardMode === 'extreme' && (
+                      <StepExtremeSource
+                        sourceMode={extremeSourceMode}
+                        setSourceMode={setExtremeSourceMode}
+                        artImages={extremeArtImages}
+                        setArtImages={setExtremeArtImages}
+                        onContinue={() => setWizardStep(prev => prev + 1)}
+                      />
+                    )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
                          onAnalysisComplete={(analysis, vision) => {
@@ -6802,9 +6811,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setExtremeVision(vision);
                           if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
                           setExtremeFormValues({});
-                          // Auto-advance: after analysis, Detalhes will be at index 2
-                          // After analysis, advance to Logo step (Modo=0, Visão=1, Logo=2, Detalhes=3)
-                          setWizardStep(2);
+                          setWizardStep(prev => prev + 1);
                         }}
                       />
                     )}

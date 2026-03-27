@@ -2045,13 +2045,23 @@ const CarouselGenerator: React.FC = () => {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
       if (!cu) return null;
 
-      const productContext = productAnalysis?.confirmed ? JSON.stringify({
-        productType: productAnalysis.type,
-        productDescription: productAnalysis.description,
-        productImageUrls: productImages.map(p => p.url),
-        productSize,
-        productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
-      }) : null;
+      // Build product context — style screenshots override generic product analysis
+      const hasStyleScreenshots = styleScreenshots.length > 0 && styleRequiresScreenshots;
+      const productContext = hasStyleScreenshots
+        ? JSON.stringify({
+            productType: 'object',
+            productDescription: `App/Website screenshot for ${styleDeviceType === 'mobile' ? 'iPhone' : styleDeviceType === 'web' ? 'MacBook/iMac' : 'iPad'} mockup`,
+            productImageUrls: styleScreenshots.map(s => s.url),
+            deviceType: styleDeviceType,
+            isAppScreenshot: true,
+          })
+        : productAnalysis?.confirmed ? JSON.stringify({
+            productType: productAnalysis.type,
+            productDescription: productAnalysis.description,
+            productImageUrls: productImages.map(p => p.url),
+            productSize,
+            productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
+          }) : null;
 
       const extremeFormPhotoRefs: ReferenceImage[] = wizardMode === 'extreme' && extremeAnalysis
         ? extremeAnalysis.fields

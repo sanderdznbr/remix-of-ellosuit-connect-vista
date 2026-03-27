@@ -104,6 +104,7 @@ import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
 import StepExtremeFonts from './wizard/StepExtremeFonts';
+import StepExtremeSource, { ExtremeSourceMode } from './wizard/StepExtremeSource';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
@@ -252,6 +253,8 @@ const CarouselGenerator: React.FC = () => {
   const [extremeVision, setExtremeVision] = useState('');
   const [extremeFormValues, setExtremeFormValues] = useState<Record<string, any>>({});
   const [extremeBehanceRefs, setExtremeBehanceRefs] = useState<string[]>([]);
+  const [extremeSourceMode, setExtremeSourceMode] = useState<ExtremeSourceMode>('scratch');
+  const [extremeArtImages, setExtremeArtImages] = useState<string[]>([]);
   const [extremeSelectedFont, setExtremeSelectedFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedEnvatoFont, setAdvancedEnvatoFont] = useState<{ name: string; previewUrl: string; pageUrl: string } | null>(null);
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
@@ -463,9 +466,10 @@ const CarouselGenerator: React.FC = () => {
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', 'Velocidade']
     : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), 'Velocidade'];
+  const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
-    ? ['Modo', 'Visão', 'Detalhes', 'Fontes', 'Referências', 'Estilo', 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
-    : ['Modo', 'Visão'];
+    ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : [])]
+    : ['Modo', 'Origem', 'Visão'];
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
@@ -962,6 +966,8 @@ const CarouselGenerator: React.FC = () => {
     setExtremeVision('');
     setExtremeFormValues({});
     setExtremeSelectedFont(null);
+    setExtremeSourceMode('scratch');
+    setExtremeArtImages([]);
     setKeywords('');
     setCardCount(5);
     setImageCardCount(4);
@@ -2127,7 +2133,7 @@ const CarouselGenerator: React.FC = () => {
         product_context: isRealEstateStyle
           ? `REAL_ESTATE_DATA:${JSON.stringify({ properties: propertyList.map(p => ({ ...p, photos: p.photos.map(ph => ph.url) })), mode: realEstateMode })}`
           : wizardMode === 'extreme' && extremeAnalysis
-            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual. Replique o estilo, peso e proporções da fonte mostrada na imagem de referência.' } : null })}`
+            ? `EXTREME_VISION:${JSON.stringify({ vision: extremeVision, analysis: extremeAnalysis, formValues: extremeFormValues, artBased: isArtBasedExtreme, artImageUrls: isArtBasedExtreme ? extremeArtImages : undefined, fontReference: extremeSelectedFont ? { name: extremeSelectedFont.name, previewUrl: extremeSelectedFont.previewUrl, instruction: 'OBRIGATÓRIO: Use EXATAMENTE esta fonte tipográfica como referência visual. Replique o estilo, peso e proporções da fonte mostrada na imagem de referência.' } : null })}`
             : wizardMode === 'advanced' && advancedVisualIdea.trim()
               ? `ADVANCED_VISUAL_IDEA:${advancedVisualIdea.trim()}${productContext ? `\n\nPRODUCT_CONTEXT:${productContext}` : ''}`
               : productContext,
@@ -4110,11 +4116,15 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     if (/logo|marca|logotipo|logomarca/i.test(visionLower)) {
       parts.push(`🏷️ LOGO: O usuário forneceu seu logo. NÃO renderize o logo/logomarca na imagem — ele será sobreposto automaticamente depois. Apenas deixe um espaço limpo no canto onde o logo será posicionado.`);
     }
+    // Art-based mode instruction
+    if (isArtBasedExtreme && extremeArtImages.length > 0) {
+      parts.push(`\n🎨 MODO ARTE-REFERÊNCIA: O usuário forneceu ${extremeArtImages.length} imagem(ns) de referência visual. Essas imagens são a BASE ABSOLUTA do estilo visual. Replique fielmente: cores, tipografia, composição, mood e layout. O resultado deve parecer que foi criado pelo mesmo designer. NÃO invente um estilo novo — COPIE o estilo visual das referências.`);
+    }
     // Always inject quality baseline for Extreme
     parts.push(`\n🎯 QUALIDADE OBRIGATÓRIA: O resultado deve parecer criado por uma agência de design premium. Tipografia elegante com hierarquia clara (título bold grande, subtítulo leve), composição limpa e respirada, paleta coesa de 3-4 cores, elementos gráficos sutis. Pense em posts de marcas como Apple, Nike, Nubank — design minimalista e impactante.`);
     parts.push(`\n🚫 REGRA CRÍTICA DE FORMATO — CARD ÚNICO: Cada imagem gerada é UM ÚNICO CARD de um carrossel do Instagram. Cada card deve ser UMA ÚNICA COMPOSIÇÃO VISUAL que ocupa 100% do espaço (${cardW}x${cardH}). NUNCA crie grids, colagens, mosaicos ou múltiplas imagens dentro de um card. NUNCA divida o card em 2x2, 2x1 ou qualquer grade. O card deve ter UMA ÚNICA CENA/COMPOSIÇÃO por imagem. Se o carrossel tem 3 cards, são 3 imagens SEPARADAS, cada uma com sua própria composição única e completa.`);
     return parts.join('\n');
-  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues, cardW, cardH]);
+  }, [wizardMode, extremeAnalysis, extremeVision, extremeFormValues, cardW, cardH, isArtBasedExtreme, extremeArtImages]);
 
 
   // ===== FILL COVER MODAL TEXTS WITH AI =====
@@ -6789,6 +6799,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     {currentStepName === 'tweet2' && (
                       <StepTweet2Config config={tweet2Config} setConfig={setTweet2Config} />
                     )}
+                    {currentStepName === 'Origem' && wizardMode === 'extreme' && (
+                      <StepExtremeSource
+                        sourceMode={extremeSourceMode}
+                        setSourceMode={setExtremeSourceMode}
+                        artImages={extremeArtImages}
+                        setArtImages={setExtremeArtImages}
+                        onContinue={() => setWizardStep(prev => prev + 1)}
+                      />
+                    )}
                     {currentStepName === 'Visão' && (
                       <StepExtremeVision
                          onAnalysisComplete={(analysis, vision) => {
@@ -6796,9 +6815,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setExtremeVision(vision);
                           if (analysis.suggestedTopic) setTopic(analysis.suggestedTopic);
                           setExtremeFormValues({});
-                          // Auto-advance: after analysis, Detalhes will be at index 2
-                          // After analysis, advance to Logo step (Modo=0, Visão=1, Logo=2, Detalhes=3)
-                          setWizardStep(2);
+                          setWizardStep(prev => prev + 1);
                         }}
                       />
                     )}
@@ -6876,6 +6893,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   url,
                                   thumb: url,
                                   label: `Behance Ref ${idx + 1}`,
+                                  source: 'upload' as const,
+                                  category: 'style' as const,
+                                });
+                              });
+                            }
+
+                            // Add art-based reference images (replaces Behance when art-based)
+                            if (isArtBasedExtreme && extremeArtImages.length > 0) {
+                              extremeArtImages.forEach((url, idx) => {
+                                newRefs.push({
+                                  url,
+                                  thumb: url,
+                                  label: `Arte Ref ${idx + 1}`,
                                   source: 'upload' as const,
                                   category: 'style' as const,
                                 });
@@ -7477,6 +7507,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               if (extremeBehanceRefs.length > 0) {
                                 extremeBehanceRefs.forEach((url, idx) => {
                                   newRefs.push({ url, thumb: url, label: `Behance Ref ${idx + 1}`, source: 'upload' as const, category: 'style' as const });
+                                });
+                              }
+                              if (isArtBasedExtreme && extremeArtImages.length > 0) {
+                                extremeArtImages.forEach((url, idx) => {
+                                  newRefs.push({ url, thumb: url, label: `Arte Ref ${idx + 1}`, source: 'upload' as const, category: 'style' as const });
                                 });
                               }
                               if (extremeSelectedFont) {

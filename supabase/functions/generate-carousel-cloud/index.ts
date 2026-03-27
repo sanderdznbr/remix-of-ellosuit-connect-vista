@@ -360,8 +360,11 @@ async function processCarousel(job: any, jobId: string, timeLeft: () => number) 
   const imageSettings = job.image_settings || {};
 
   // Extract product/media images (screenshots, etc.)
-  const productRefUrls: string[] = job.product_context ? (() => { try { const pc = JSON.parse(job.product_context); return pc.productImageUrls || []; } catch { return []; } })() : [];
+  let parsedProductContext: any = null;
+  const productRefUrls: string[] = job.product_context ? (() => { try { const pc = JSON.parse(job.product_context); parsedProductContext = pc; return pc.productImageUrls || []; } catch { return []; } })() : [];
   const hasProductImages = productRefUrls.length > 0;
+  const isAppScreenshot = !!parsedProductContext?.isAppScreenshot;
+  const screenshotDeviceType = parsedProductContext?.deviceType || 'mobile';
 
   const hasFaceRefsForCarousel = faceRefUrls.length > 0;
 

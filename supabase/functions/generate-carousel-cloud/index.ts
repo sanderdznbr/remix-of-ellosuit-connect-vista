@@ -510,7 +510,7 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       const parts: string[] = [];
       parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
-      parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt.');
+      parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias, nomes de templates ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt. NUNCA renderize nomes como "EXCLUSIVE", "PREMIUM", "TEMPLATE", ou qualquer nome de coleção/estilo.');
       // Logo is now sent to AI — only prohibit if no logo provided
       if (!job.logo_url) {
         parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem.');
@@ -536,13 +536,43 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       }
       // Inject product/screenshot instructions when product images are provided
       if (hasProductImages && isAppScreenshot) {
-        const deviceMap: Record<string, string> = {
-          mobile: 'iPhone (último modelo) — mockup 3D realista, segurado por uma mão ou flutuando em ângulo',
-          web: 'MacBook ou iMac — mockup 3D realista, em mesa ou flutuando',
-          tablet: 'iPad — mockup 3D realista, em ângulo ou segurado',
+        // Randomize mockup presentation for variety across cards
+        const mobileVariations = [
+          'iPhone 15 Pro Max segurado elegantemente por uma mão feminina com unhas pintadas, ângulo 30° inclinado para a esquerda',
+          'iPhone 16 Pro flutuando em ângulo dinâmico 45° com reflexos e sombra dramática, sem mãos',
+          'iPhone 15 Pro em perspectiva isométrica 3D sobre uma superfície de mármore escuro com iluminação neon roxa',
+          'iPhone 16 segurado por uma mão masculina casual, visto de frente levemente inclinado para a direita',
+          'Dois iPhones flutuando em ângulos complementares com efeito parallax e partículas de luz',
+          'iPhone 15 Pro Max em ângulo frontal com leve rotação 3D, flutuando sobre fundo com bokeh',
+        ];
+        const webVariations = [
+          'MacBook Pro aberto em ângulo 3/4 sobre uma mesa de madeira escura com iluminação ambiente quente',
+          'iMac 27" em perspectiva frontal levemente inclinada com reflexo sutil na tela',
+          'MacBook Air flutuando em ângulo isométrico com sombra suave e elementos decorativos ao redor',
+          'MacBook Pro visto de cima em ângulo 60° sobre uma mesa minimalista branca',
+          'Monitor ultrawide em setup gaming/profissional com iluminação RGB ambiente',
+          'MacBook Pro em perspectiva lateral dramática com profundidade de campo',
+        ];
+        const tabletVariations = [
+          'iPad Pro segurado por duas mãos em modo paisagem com ângulo natural de uso',
+          'iPad Air flutuando em ângulo 3D com Apple Pencil ao lado',
+          'iPad Pro em modo retrato apoiado no Magic Keyboard com iluminação lateral',
+          'iPad mini segurado por uma mão em ângulo casual, como se o usuário mostrasse a tela',
+          'iPad Pro em perspectiva isométrica flutuando com sombra longa dramática',
+        ];
+        const variationMap: Record<string, string[]> = {
+          mobile: mobileVariations,
+          web: webVariations,
+          tablet: tabletVariations,
         };
-        const deviceInstruction = deviceMap[screenshotDeviceType] || deviceMap.mobile;
-        parts.push(`OBRIGATÓRIO — SCREENSHOT DO APP: Coloque o screenshot fornecido na referência de produto EXATAMENTE na tela de um ${deviceInstruction}. O screenshot DEVE aparecer visível e legível na tela do dispositivo. NÃO invente uma UI fake — use o screenshot real fornecido.`);
+        const variations = variationMap[screenshotDeviceType] || mobileVariations;
+        const variation = variations[i % variations.length];
+        parts.push(`OBRIGATÓRIO — MOCKUP COM SCREENSHOT REAL: A imagem de referência de produto contém um SCREENSHOT REAL do aplicativo. Você DEVE:
+1. Criar um mockup 3D fotorrealista: ${variation}
+2. INSERIR o screenshot EXATAMENTE como ele é na tela do dispositivo — NÃO redesenhe, NÃO invente uma UI nova, NÃO modifique o conteúdo da tela
+3. O screenshot deve ser CLARAMENTE VISÍVEL e LEGÍVEL na tela do dispositivo
+4. A composição deve ser cinematográfica com iluminação profissional e profundidade de campo
+5. CADA CARD deve ter um ÂNGULO e COMPOSIÇÃO DIFERENTES — NUNCA repita o mesmo mockup`);
       } else if (hasProductImages) {
         parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista. O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
       }

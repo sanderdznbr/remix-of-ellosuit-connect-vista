@@ -535,8 +535,16 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
         parts.push('NÃO inclua pessoas humanas neste card. Use elementos visuais, objetos, ícones ou cenários relacionados ao tema.');
       }
       // Inject product/screenshot instructions when product images are provided
-      if (hasProductImages) {
-        parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista (iPhone para mobile, MacBook/iMac para desktop). O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
+      if (hasProductImages && isAppScreenshot) {
+        const deviceMap: Record<string, string> = {
+          mobile: 'iPhone (último modelo) — mockup 3D realista, segurado por uma mão ou flutuando em ângulo',
+          web: 'MacBook ou iMac — mockup 3D realista, em mesa ou flutuando',
+          tablet: 'iPad — mockup 3D realista, em ângulo ou segurado',
+        };
+        const deviceInstruction = deviceMap[screenshotDeviceType] || deviceMap.mobile;
+        parts.push(`OBRIGATÓRIO — SCREENSHOT DO APP: Coloque o screenshot fornecido na referência de produto EXATAMENTE na tela de um ${deviceInstruction}. O screenshot DEVE aparecer visível e legível na tela do dispositivo. NÃO invente uma UI fake — use o screenshot real fornecido.`);
+      } else if (hasProductImages) {
+        parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista. O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
       }
       imgPrompt = parts.join(' ');
     } else {

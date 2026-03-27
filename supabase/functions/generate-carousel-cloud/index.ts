@@ -531,6 +531,10 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       if (!cardGetsFace && hasFaceRefsForCarousel) {
         parts.push('NÃO inclua pessoas humanas neste card. Use elementos visuais, objetos, ícones ou cenários relacionados ao tema.');
       }
+      // Inject product/screenshot instructions when product images are provided
+      if (hasProductImages) {
+        parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista (iPhone para mobile, MacBook/iMac para desktop). O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
+      }
       imgPrompt = parts.join(' ');
     } else {
       imgPrompt = `${cleanTopic}: ${card.imagePrompt || card.title || card.bodyTop || ''}`;

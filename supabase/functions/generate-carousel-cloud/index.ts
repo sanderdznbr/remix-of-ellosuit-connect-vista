@@ -667,6 +667,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 topic: task.prompt.slice(0, 200),
                 faceReferenceUrls: task.cardGetsFace && faceRefUrls.length > 0 ? faceRefUrls : undefined,
                 styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+                referenceImageUrls: hasProductImages ? productRefUrls : undefined,
                 imageModel: imageSettings.model || 'auto',
                 negativePrompt: task.negPrompt + ', no borders, no frames, no white edges, no picture frame',
                 fidelity: task.cardGetsFace ? 'high' : 'high',

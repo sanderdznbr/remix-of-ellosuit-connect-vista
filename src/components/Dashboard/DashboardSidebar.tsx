@@ -353,15 +353,25 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                 </span>
               </div>
 
-              {/* Gradient progress bar with monthly marker */}
-              <div className="relative w-full h-2 rounded-full overflow-visible" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              {/* Gradient progress bar with animated shimmer */}
+              <div className="relative w-full h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
                 <div
-                  className="h-full rounded-full transition-all duration-700"
+                  className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
                   style={{
                     width: `${balancePct}%`,
-                    background: `linear-gradient(90deg, ${planColor}, ${planColor}AA)`,
+                    background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)`,
                   }}
-                />
+                >
+                  {/* Animated shimmer overlay */}
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer-credit 2s ease-in-out infinite',
+                    }}
+                  />
+                </div>
                 {/* Monthly credits marker line */}
                 {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
                   <div
@@ -373,6 +383,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                     title={`${monthlyCredits} créditos mensais`}
                   />
                 )}
+                <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
               </div>
 
               {/* Monthly credits label */}

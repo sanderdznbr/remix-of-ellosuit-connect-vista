@@ -2743,9 +2743,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               if (lp.includes('center')) lx = (W - lw) / 2;
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
-              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             } catch (e) { console.warn('[SINGLE_BLEND] Logo draw failed:', e); }
           }
 
@@ -2815,7 +2813,6 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               // On dark bg with no dark variant, brighten
               canvasCtx.filter = 'brightness(0) invert(1)';
             }
-            canvasCtx.shadowColor = 'rgba(0,0,0,0.6)'; canvasCtx.shadowBlur = 12;
             canvasCtx.drawImage(logoImg, lx, ly, lw, lh);
             canvasCtx.restore();
           };
@@ -3478,10 +3475,17 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem.`);
             
-            // LOGO: Do NOT ask AI to render logo — it's overlaid programmatically via Canvas afterwards.
-            // Only mention brand name for textual context, NOT for rendering.
-            if (brandName) {
-              cardTextParts.push(`CONTEXTO DA MARCA: Este post é da marca "${brandName}". NÃO renderize logomarca ou logotipo na imagem — a logo será adicionada automaticamente depois. Apenas use o nome da marca como contexto textual se necessário no conteúdo.`);
+            // LOGO: Send logo URL to AI so it renders the logo naturally in the image
+            if (logoUrl) {
+              const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-right': 'canto superior direito', 'top-center': 'centro superior', 'bottom-left': 'canto inferior esquerdo', 'bottom-right': 'canto inferior direito', 'bottom-center': 'centro inferior' };
+              const posLabel = posMap[logoPosition || 'top-left'] || 'canto superior esquerdo';
+              cardTextParts.push(`LOGOMARCA OBRIGATÓRIA: Renderize a logomarca fornecida na imagem de referência no ${posLabel}. A logo deve ocupar cerca de 8-12% da largura da imagem. Mantenha a logo EXATAMENTE como na referência — NÃO modifique, NÃO distorça, NÃO adicione sombras ou efeitos. Apenas posicione-a limpa e nítida. Se o fundo na posição for escuro, use a logo em branco; se claro, use em preto/original.`);
+              // Include logo as reference image for the AI
+              if (logoUrl.startsWith('http')) {
+                capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
+              }
+            } else if (brandName) {
+              cardTextParts.push(`CONTEXTO DA MARCA: Este post é da marca "${brandName}". NÃO renderize logomarca ou logotipo na imagem. Apenas use o nome da marca como contexto textual se necessário no conteúdo.`);
             }
             
             cardTextParts.push(`REGRA CRÍTICA DE TEXTO: Copie os textos abaixo LETRA POR LETRA, EXATAMENTE como escritos. NÃO invente, NÃO altere, NÃO troque letras, NÃO adicione acentos incorretos.`);
@@ -3883,9 +3887,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('middle')) ly = (H - lh) / 2;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
-              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             } catch (e) { console.warn('[BLEND] Logo draw failed:', e); }
           }
           
@@ -3972,9 +3974,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('middle')) ly = (H - lh) / 2;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
-              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
               updatedCards[i] = { ...updatedCards[i], imageUrl: canvas.toDataURL('image/jpeg', 0.92) };
             } catch (e) { console.warn('[LOGO_OVERLAY] Card', i, 'failed:', e); }
           }
@@ -5370,9 +5370,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 if (lp.includes('center')) lx = (W - lw) / 2;
                 if (lp.includes('right')) lx = W - lw - pad;
                 if (lp.includes('bottom')) ly = H - lh - pad;
-                ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
                 ctx.drawImage(logoImg, lx, ly, lw, lh);
-                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
               } catch (e) { console.warn('[REGEN_BLEND] Logo failed:', e); }
             }
 
@@ -5416,9 +5414,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           if (lp.includes('right')) lx = W - lw - pad;
           if (lp.includes('middle')) ly = (H - lh) / 2;
           if (lp.includes('bottom')) ly = H - lh - pad;
-          ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
           ctx.drawImage(logoImg, lx, ly, lw, lh);
-          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
           newImageUrl = canvas.toDataURL('image/jpeg', 0.92);
           console.log('[REGEN_LOGO] ✅ Logo applied!');
         } catch (logoErr) {

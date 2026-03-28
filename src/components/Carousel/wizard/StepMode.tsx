@@ -9,6 +9,7 @@ interface Props {
   allowExtreme?: boolean;
   requiredPlanForAdvanced?: string;
   requiredPlanForExtreme?: string;
+  isAdminMaster?: boolean;
 }
 
 const modes = [

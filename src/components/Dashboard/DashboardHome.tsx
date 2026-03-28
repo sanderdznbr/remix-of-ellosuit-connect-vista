@@ -265,10 +265,70 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
 
-      {/* Background gradient */}
+      {/* Background purple glow animation */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-[600px] h-[600px] rounded-full opacity-[0.12] blur-[130px]" style={{ background: '#3f3f46', top: '15%', left: '50%', transform: 'translateX(-50%)' }} />
-        <div className="absolute w-[400px] h-[400px] rounded-full opacity-[0.08] blur-[100px]" style={{ background: '#27272a', bottom: '10%', left: '20%' }} />
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            width: '700px',
+            height: '700px',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(88,28,135,0.18) 40%, transparent 70%)',
+            top: '5%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            filter: 'blur(80px)',
+          }}
+          animate={{
+            scale: [1, 1.08, 1],
+            opacity: [0.6, 0.85, 0.6],
+          }}
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            width: '400px',
+            height: '400px',
+            background: 'radial-gradient(circle, rgba(124,58,237,0.25) 0%, transparent 70%)',
+            top: '20%',
+            left: '30%',
+            filter: 'blur(100px)',
+          }}
+          animate={{
+            x: [0, 30, 0],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            width: '350px',
+            height: '350px',
+            background: 'radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)',
+            top: '10%',
+            right: '15%',
+            filter: 'blur(90px)',
+          }}
+          animate={{
+            x: [0, -20, 0],
+            scale: [1, 1.1, 1],
+            opacity: [0.25, 0.45, 0.25],
+          }}
+          transition={{
+            duration: 7,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
       </div>
 
       {/* Center content — title + input */}

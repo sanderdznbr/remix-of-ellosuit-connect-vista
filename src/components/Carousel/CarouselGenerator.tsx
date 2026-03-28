@@ -8821,30 +8821,39 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* Action buttons below - mobile only */}
-            <div className="flex md:hidden items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap px-4">
-              {/* Auto-save indicator */}
-              <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 border border-white/5">
-                {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
-                {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
-              </div>
-              {/* Export button */}
+            {/* Action buttons below - mobile only: primary row */}
+            <div className="flex md:hidden items-center justify-center gap-2 mt-4 w-full relative z-10 px-4">
+              {/* Edit */}
+              {!isGuest && (
+                <button onClick={() => setShowInlineEditor(!showInlineEditor)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                  style={{ borderColor: showInlineEditor ? `rgba(${themeRgb},0.5)` : 'rgba(255,255,255,0.1)', backgroundColor: showInlineEditor ? `rgba(${themeRgb},0.15)` : 'rgba(255,255,255,0.04)' }}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {/* Export */}
               <button data-tour="btn-export" onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
                 style={{ borderColor: `rgba(${themeRgb},0.4)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))` }}>
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-                {isGuest ? 'Assine para baixar' : 'Exportar'}
+                {isGuest ? 'Assine' : 'Exportar'}
               </button>
-              {/* Generate Stories */}
+              {/* Stories */}
               {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
                 <button onClick={generateStoriesImage} disabled={generatingStories}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
                   style={{ borderColor: 'rgba(59,130,246,0.3)', backgroundColor: 'rgba(59,130,246,0.08)' }}>
                   {generatingStories ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
-                  {generatingStories ? 'Gerando...' : 'Stories'}
                 </button>
               )}
-
+              {/* More actions toggle */}
+              {!isGuest && (
+                <button onClick={() => setShowMobileMoreActions(prev => !prev)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/50 hover:text-white/80 border transition-all"
+                  style={{ borderColor: showMobileMoreActions ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)', backgroundColor: showMobileMoreActions ? 'rgba(255,255,255,0.08)' : 'transparent' }}>
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Export Dialog - rendered outside mobile container so it works on all viewports */}

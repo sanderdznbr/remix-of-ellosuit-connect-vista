@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -50,6 +51,7 @@ interface DashboardHomeProps {
 
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects, onResumeJob }) => {
   const { user } = useAuth();
+  const { isMobile } = useIsMobile();
   const [inputValue, setInputValue] = useState('');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
@@ -474,49 +476,53 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       >
 
         <div className="max-w-[1200px] mx-auto">
-          <div className="flex items-center justify-between mb-4">
+          <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-end' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
+              {(!isMobile || showRecent) && (
+                <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
+              )}
               <button
                 onClick={() => setShowRecent(prev => !prev)}
-                className="w-6 h-6 rounded-md flex items-center justify-center transition-all cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer"
                 style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
                 title={showRecent ? 'Ocultar recentes' : 'Mostrar recentes'}
               >
                 <motion.div animate={{ rotate: showRecent ? 0 : 180 }} transition={{ duration: 0.3 }}>
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <ChevronUp className="w-4 h-4" />
                 </motion.div>
               </button>
             </div>
-            <div className="flex items-center gap-2">
-              {showRecent && recentCarousels.length > 4 && (
-                <>
+            {showRecent && (
+              <div className="flex items-center gap-2">
+                {recentCarousels.length > 4 && (
+                  <>
+                    <button
+                      onClick={() => scrollContainerRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => scrollContainerRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+                {recentCarousels.length > 0 && onViewAllProjects && (
                   <button
-                    onClick={() => scrollContainerRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                    onClick={onViewAllProjects}
+                    className="text-xs font-medium transition-colors cursor-pointer ml-2"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    Ver todos →
                   </button>
-                  <button
-                    onClick={() => scrollContainerRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-              {showRecent && recentCarousels.length > 0 && onViewAllProjects && (
-                <button
-                  onClick={onViewAllProjects}
-                  className="text-xs font-medium transition-colors cursor-pointer ml-2"
-                  style={{ color: 'rgba(255,255,255,0.3)' }}
-                >
-                  Ver todos →
-                </button>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           <AnimatePresence initial={false}>

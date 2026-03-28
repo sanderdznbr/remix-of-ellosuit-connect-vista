@@ -275,13 +275,22 @@ const StepPersonalization: React.FC<Props> = ({
                 ))}
               </div>
             )}
-            <button
-              onClick={handleFaceUpload}
-              className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-            >
-              <Upload className="h-4 w-4" />
-              {facePhotos.length > 0 ? 'Adicionar mais fotos' : 'Enviar foto do rosto'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleFaceUpload}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                {facePhotos.length > 0 ? 'Adicionar' : 'Enviar foto'}
+              </button>
+              <button
+                onClick={() => setGalleryTarget('face')}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Folder className="h-4 w-4" />
+                Galeria
+              </button>
+            </div>
             <div className="flex gap-2">
               {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
                 <button
@@ -318,17 +327,27 @@ const StepPersonalization: React.FC<Props> = ({
                   </div>
                   <div className="flex gap-1.5">
                     <button onClick={handleLogoUpload} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors text-xs">Trocar</button>
+                    <button onClick={() => setGalleryTarget('logo')} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors text-xs"><Folder className="h-3 w-3 inline mr-1" />Galeria</button>
                     <button onClick={() => setLogoUrl('')} className="p-2 rounded-lg bg-white/[0.06] hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-colors text-xs">Remover</button>
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={handleLogoUpload}
-                  className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-                >
-                  <Upload className="h-4 w-4" />
-                  Enviar logomarca
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleLogoUpload}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Enviar logo
+                  </button>
+                  <button
+                    onClick={() => setGalleryTarget('logo')}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+                  >
+                    <Folder className="h-4 w-4" />
+                    Galeria
+                  </button>
+                </div>
               )}
             </div>
 
@@ -451,13 +470,22 @@ const StepPersonalization: React.FC<Props> = ({
                 ))}
               </div>
             )}
-            <button
-              onClick={handleMediaUpload}
-              className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-            >
-              <Upload className="h-4 w-4" />
-              {mediaRefs.length > 0 ? 'Adicionar mais mídias' : 'Enviar fotos de referência'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleMediaUpload}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                {mediaRefs.length > 0 ? 'Adicionar' : 'Enviar fotos'}
+              </button>
+              <button
+                onClick={() => setGalleryTarget('media')}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Folder className="h-4 w-4" />
+                Galeria
+              </button>
+            </div>
           </div>
         )}
       </div>

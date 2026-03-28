@@ -3480,10 +3480,6 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-right': 'canto superior direito', 'top-center': 'centro superior', 'bottom-left': 'canto inferior esquerdo', 'bottom-right': 'canto inferior direito', 'bottom-center': 'centro inferior' };
               const posLabel = posMap[logoPosition || 'top-left'] || 'canto superior esquerdo';
               cardTextParts.push(`LOGOMARCA OBRIGATÓRIA: Renderize a logomarca fornecida na imagem de referência no ${posLabel}. A logo deve ocupar cerca de 8-12% da largura da imagem. Mantenha a logo EXATAMENTE como na referência — NÃO modifique, NÃO distorça, NÃO adicione sombras ou efeitos. Apenas posicione-a limpa e nítida. Se o fundo na posição for escuro, use a logo em branco; se claro, use em preto/original.`);
-              // Include logo as reference image for the AI
-              if (logoUrl.startsWith('http')) {
-                capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
-              }
             } else if (brandName) {
               cardTextParts.push(`CONTEXTO DA MARCA: Este post é da marca "${brandName}". NÃO renderize logomarca ou logotipo na imagem. Apenas use o nome da marca como contexto textual se necessário no conteúdo.`);
             }

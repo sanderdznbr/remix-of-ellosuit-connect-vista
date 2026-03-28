@@ -528,6 +528,7 @@ const CarouselGenerator: React.FC = () => {
     const cached = tweetPhotoDataUrlCacheRef.current[url];
     if (cached) return cached;
 
+    // Attempt 1: Direct fetch with CORS
     try {
       const response = await fetch(url, { mode: 'cors' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -542,7 +543,7 @@ const CarouselGenerator: React.FC = () => {
       tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
       return dataUrl;
     } catch {
-      // CORS blocked — use an img element to load and draw onto canvas
+      // Attempt 2: img element + canvas (may be tainted)
       try {
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const img = document.createElement('img');
@@ -567,9 +568,23 @@ const CarouselGenerator: React.FC = () => {
         tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
         return dataUrl;
       } catch {
-        // All attempts failed — return the raw URL as fallback for preview display
-        console.warn('[TweetPhoto] Could not convert to data URL, using raw URL:', url);
-        return url;
+        // Attempt 3: Server-side proxy via edge function
+        try {
+          console.log('[TweetPhoto] Using server proxy for:', url.substring(0, 80));
+          const { data, error } = await supabase.functions.invoke('image-proxy', {
+            body: { url },
+          });
+          if (error) throw error;
+          if (data?.dataUrl) {
+            tweetPhotoDataUrlCacheRef.current[url] = data.dataUrl;
+            return data.dataUrl;
+          }
+          throw new Error('No dataUrl in response');
+        } catch (proxyErr) {
+          console.warn('[TweetPhoto] All attempts failed for:', url.substring(0, 80), proxyErr);
+          // Return raw URL as final fallback
+          return url;
+        }
       }
     }
   }, []);
@@ -2250,6 +2265,19 @@ const CarouselGenerator: React.FC = () => {
         const photoIndicesGen = getPhotoIndices(tweet2Config.cardCount, maxPhotoCards);
         const photoIndexListGen = Array.from(photoIndicesGen).sort((a, b) => a - b);
 
+        console.log('[Tweet2Gen] Photo resolution debug:', {
+          photoMode: tweet2Config.photoMode,
+          cardCount: tweet2Config.cardCount,
+          photoCardCount: tweet2Config.photoCardCount,
+          maxPhotoCards,
+          photoIndices: Array.from(photoIndicesGen),
+          tweetPhotosCount: tweet2Config.tweetPhotos.filter(Boolean).length,
+          webFallbacksCount: webPhotoFallbacks.length,
+          referenceImagesCount: referenceImages.length,
+          referenceImagesGeneral: referenceImages.filter(r => r.category === 'general').length,
+          webFallbackUrls: webPhotoFallbacks.slice(0, 3),
+        });
+
         // Collect all available photos (non-null) from wizard in order
         const availablePhotos = tweet2Config.tweetPhotos.filter((p): p is string => !!p && p.length > 5);
 
@@ -2260,8 +2288,18 @@ const CarouselGenerator: React.FC = () => {
             const seqIdx = photoIndexListGen.indexOf(i);
             // Try: 1) photo already at this exact index, 2) sequential available photo, 3) web fallback
             const src = tweet2Config.tweetPhotos[i] || availablePhotos[seqIdx] || webPhotoFallbacks[seqIdx] || null;
-            if (!src) return null;
-            try { return await resolveTweetPhotoUrl(src); } catch { return src; }
+            if (!src) {
+              console.warn(`[Tweet2Gen] Card ${i}: no photo source found (seqIdx=${seqIdx}, availablePhotos=${availablePhotos.length}, webFallbacks=${webPhotoFallbacks.length})`);
+              return null;
+            }
+            try {
+              const resolved = await resolveTweetPhotoUrl(src);
+              console.log(`[Tweet2Gen] Card ${i}: resolved photo (${src.substring(0, 60)}... → ${resolved.substring(0, 30)}...)`);
+              return resolved;
+            } catch (err) {
+              console.warn(`[Tweet2Gen] Card ${i}: resolve failed, using raw URL`, err);
+              return src;
+            }
           })
         );
         const normalizedConfig: typeof tweet2Config = { ...tweet2Config, tweetTexts: texts, tweetPhotos: resolvedPhotos };

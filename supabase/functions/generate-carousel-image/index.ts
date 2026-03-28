@@ -455,13 +455,11 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       console.log('Font reference injected:', fontLabel, 'base64 length:', fontReferenceImage.length);
     }
 
-    // === LOGO IMAGE: Send to AI for placement ===
-    if (logoImageUrl && typeof logoImageUrl === 'string' && (logoImageUrl.startsWith('http') || logoImageUrl.startsWith('data:'))) {
-      const posLabel = logoPosition === 'top-left' ? 'superior esquerdo' : logoPosition === 'top-right' ? 'superior direito' : logoPosition === 'bottom-left' ? 'inferior esquerdo' : 'inferior direito';
-      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DO USUÁRIO ABAIXO — Posicione esta logo EXATAMENTE no canto ${posLabel} da imagem. NÃO redesenhe, NÃO altere cores, NÃO modifique. APLIQUE a imagem da logo tal como ela é, apenas redimensionada para caber (8-12% da largura). Mantenha fidelidade TOTAL:` });
-      messageContent.push({ type: 'image_url', image_url: { url: logoImageUrl } });
-      messageContent.push({ type: 'text', text: `REGRA DA LOGO: A logo acima DEVE aparecer no resultado final EXATAMENTE como fornecida. Apenas reduza o tamanho para ficar proporcional. NÃO invente uma logo diferente. NÃO omita a logo. NÃO adicione efeitos.` });
-      console.log('Logo image injected for AI placement, position:', posLabel);
+    // === LOGO IMAGE: Disabled — logo is now handled exclusively via Canvas overlay in frontend ===
+    // AI logo rendering caused shadow/distortion artifacts, so it's been removed entirely.
+    // The logo will be composited by the frontend after image generation.
+    if (logoImageUrl) {
+      console.log('Logo provided but NOT sent to AI — will be overlaid via Canvas. Position:', logoPosition);
     }
 
     // === DIAGNOSTIC: Log total message size ===

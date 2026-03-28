@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Loader2, Pencil, X, MessageSquareText, Image as ImageIcon, ChevronDown, Upload, Monitor, User, Palette } from 'lucide-react';
+import { Plus, Trash2, Loader2, Pencil, X, MessageSquareText, Image as ImageIcon, ChevronDown, Upload, Monitor, User, Palette, Sparkles, HelpCircle, Camera, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ interface PromptMedia {
   prompt_id: string;
   file_url: string;
   file_name: string;
-  media_type: string; // 'screenshot' | 'logo' | 'face' | 'reference'
+  media_type: string;
   sort_order: number;
 }
 
@@ -23,10 +23,10 @@ interface SavedPrompt {
 }
 
 const MEDIA_TYPES = [
-  { value: 'screenshot', label: 'Screenshot / Print', icon: Monitor },
-  { value: 'logo', label: 'Logomarca', icon: Palette },
-  { value: 'face', label: 'Pessoa / Rosto', icon: User },
-  { value: 'reference', label: 'Referência visual', icon: ImageIcon },
+  { value: 'screenshot', label: 'Screenshot / Print', icon: Monitor, description: 'Prints do app ou site para mockups' },
+  { value: 'logo', label: 'Logomarca', icon: Palette, description: 'Logo da marca para branding' },
+  { value: 'face', label: 'Pessoa / Rosto', icon: User, description: 'Foto de rosto para personalizar' },
+  { value: 'reference', label: 'Referência / Produto', icon: Package, description: 'Fotos de produto ou referência visual' },
 ];
 
 const PromptGallery: React.FC = () => {
@@ -35,7 +35,7 @@ const PromptGallery: React.FC = () => {
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
   const [promptMedia, setPromptMedia] = useState<Record<string, PromptMedia[]>>({});
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -45,6 +45,10 @@ const PromptGallery: React.FC = () => {
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [uploadingMediaFor, setUploadingMediaFor] = useState<string | null>(null);
   const [selectedMediaType, setSelectedMediaType] = useState('screenshot');
+  // For modal media uploads (before prompt is saved)
+  const [modalMedia, setModalMedia] = useState<{ file: File; type: string; preview: string }[]>([]);
+  const [uploadingModalMedia, setUploadingModalMedia] = useState(false);
+  const [showTips, setShowTips] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -64,7 +68,6 @@ const PromptGallery: React.FC = () => {
         supabase.from('saved_prompt_media').select('*').eq('company_id', companyId).order('sort_order', { ascending: true }),
       ]);
       setPrompts((promptsData as any[]) || []);
-      // Group media by prompt_id
       const grouped: Record<string, PromptMedia[]> = {};
       ((mediaData as any[]) || []).forEach((m: PromptMedia) => {
         if (!grouped[m.prompt_id]) grouped[m.prompt_id] = [];
@@ -85,7 +88,15 @@ const PromptGallery: React.FC = () => {
     setContent('');
     setAvatarUrl('');
     setEditingId(null);
-    setShowForm(false);
+    setShowModal(false);
+    setModalMedia([]);
+    setShowTips(false);
+    setSelectedMediaType('screenshot');
+  };
+
+  const openNewPrompt = () => {
+    resetForm();
+    setShowModal(true);
   };
 
   const handleUploadAvatar = async (file: File) => {
@@ -105,6 +116,45 @@ const PromptGallery: React.FC = () => {
     }
   };
 
+  const handleAddModalMedia = (files: FileList) => {
+    const newMedia = Array.from(files).map(file => ({
+      file,
+      type: selectedMediaType,
+      preview: URL.createObjectURL(file),
+    }));
+    setModalMedia(prev => [...prev, ...newMedia]);
+  };
+
+  const handleRemoveModalMedia = (index: number) => {
+    setModalMedia(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  const uploadMediaForPrompt = async (promptId: string, mediaItems: { file: File; type: string }[]) => {
+    if (!companyId || mediaItems.length === 0) return;
+    for (let i = 0; i < mediaItems.length; i++) {
+      const item = mediaItems[i];
+      const ext = item.file.name.split('.').pop();
+      const path = `${companyId}/prompt-media/${promptId}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('brand-assets').upload(path, item.file);
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from('brand-assets').getPublicUrl(path);
+      const { error: insertError } = await supabase.from('saved_prompt_media').insert({
+        prompt_id: promptId,
+        company_id: companyId,
+        file_url: publicUrl,
+        file_name: item.file.name,
+        media_type: item.type,
+        sort_order: i,
+      } as any);
+      if (insertError) throw insertError;
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !content.trim() || !companyId || !user) return;
     setSaving(true);
@@ -115,16 +165,25 @@ const PromptGallery: React.FC = () => {
           content: content.trim(),
           avatar_url: avatarUrl || null,
         } as any).eq('id', editingId);
+        // Upload any new modal media
+        if (modalMedia.length > 0) {
+          await uploadMediaForPrompt(editingId, modalMedia);
+        }
         toast.success('Prompt atualizado!');
       } else {
-        await supabase.from('saved_prompts').insert({
+        const { data: newPrompt, error } = await supabase.from('saved_prompts').insert({
           company_id: companyId,
           user_id: user.id,
           title: title.trim(),
           content: content.trim(),
           avatar_url: avatarUrl || null,
-        } as any);
-        toast.success('Prompt salvo!');
+        } as any).select().single();
+        if (error) throw error;
+        // Upload modal media for the new prompt
+        if (modalMedia.length > 0 && newPrompt) {
+          await uploadMediaForPrompt((newPrompt as any).id, modalMedia);
+        }
+        toast.success('Prompt criado!');
       }
       resetForm();
       fetchPrompts();
@@ -140,7 +199,8 @@ const PromptGallery: React.FC = () => {
     setTitle(p.title);
     setContent(p.content);
     setAvatarUrl(p.avatar_url || '');
-    setShowForm(true);
+    setModalMedia([]);
+    setShowModal(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -159,12 +219,8 @@ const PromptGallery: React.FC = () => {
         const file = files[i];
         const ext = file.name.split('.').pop();
         const path = `${companyId}/prompt-media/${promptId}/${crypto.randomUUID()}.${ext}`;
-        console.log('[PromptMedia] Uploading file:', file.name, 'to path:', path, 'size:', file.size);
         const { error: uploadError } = await supabase.storage.from('brand-assets').upload(path, file);
-        if (uploadError) {
-          console.error('[PromptMedia] Upload error:', uploadError);
-          throw uploadError;
-        }
+        if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('brand-assets').getPublicUrl(path);
         const { error: insertError } = await supabase.from('saved_prompt_media').insert({
           prompt_id: promptId,
@@ -174,10 +230,7 @@ const PromptGallery: React.FC = () => {
           media_type: selectedMediaType,
           sort_order: existingCount + i,
         } as any);
-        if (insertError) {
-          console.error('[PromptMedia] Insert error:', insertError);
-          throw insertError;
-        }
+        if (insertError) throw insertError;
       }
       toast.success(`${files.length} arquivo(s) adicionado(s)`);
       fetchPrompts();
@@ -193,88 +246,254 @@ const PromptGallery: React.FC = () => {
     fetchPrompts();
   };
 
+  const existingMedia = editingId ? (promptMedia[editingId] || []) : [];
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Header */}
       <div className="px-6 pt-6 pb-4 shrink-0">
         <h1 className="text-xl font-bold text-white mb-1">Galeria de Prompts</h1>
-        <p className="text-sm text-white/30">Salve prompts reutilizáveis com mídias e use com @ no wizard.</p>
+        <p className="text-sm text-white/30">Salve prompts reutilizáveis com mídias e use com <span className="text-purple-400">@</span> no wizard.</p>
       </div>
 
       {/* Action bar */}
       <div className="px-6 pb-4 shrink-0">
         <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all cursor-pointer"
+          onClick={openNewPrompt}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 transition-all cursor-pointer shadow-lg shadow-purple-600/20"
         >
           <Plus className="w-4 h-4" /> Novo prompt
         </button>
       </div>
 
-      {/* Form */}
+      {/* Modal */}
       <AnimatePresence>
-        {showForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="px-6 pb-4 shrink-0 overflow-hidden"
-          >
-            <div className="p-4 rounded-xl border border-white/[0.08] space-y-3" style={{ backgroundColor: '#111118' }}>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white/70">{editingId ? 'Editar prompt' : 'Novo prompt'}</p>
-                <button onClick={resetForm} className="p-1 text-white/30 hover:text-white/60 cursor-pointer">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {showModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999]"
+              onClick={resetForm}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div
+                className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.08] shadow-2xl"
+                style={{ backgroundColor: '#111118' }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <h2 className="text-base font-semibold text-white">{editingId ? 'Editar prompt' : 'Novo prompt'}</h2>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setShowTips(prev => !prev)}
+                      className="p-1.5 rounded-lg text-white/30 hover:text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+                      title="Dicas"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                    <button onClick={resetForm} className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
 
-              {/* Avatar */}
-              <div className="flex items-center gap-3">
-                <label className="w-12 h-12 rounded-full border border-white/[0.08] flex items-center justify-center cursor-pointer overflow-hidden hover:border-white/20 transition-colors shrink-0"
-                  style={{ backgroundColor: '#0d0d12' }}>
-                  {uploading ? (
-                    <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
-                  ) : avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <ImageIcon className="w-5 h-5 text-white/20" />
+                {/* Tips section */}
+                <AnimatePresence>
+                  {showTips && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mx-5 mb-3 p-3 rounded-xl border border-purple-500/20" style={{ backgroundColor: 'rgba(123,80,220,0.06)' }}>
+                        <p className="text-xs font-medium text-purple-300 mb-2">💡 Como usar prompts</p>
+                        <ul className="text-[11px] text-white/40 space-y-1.5">
+                          <li>• <span className="text-white/60">Título:</span> Nome da marca, persona ou contexto (ex: "Clínica Saury")</li>
+                          <li>• <span className="text-white/60">Conteúdo:</span> Descreva tudo sobre a marca — tom de voz, público, valores, serviços</li>
+                          <li>• <span className="text-white/60">Mídias:</span> Vincule logo, prints do app, fotos de produto ou rosto. Serão usadas automaticamente na geração</li>
+                          <li>• <span className="text-white/60">Uso:</span> No wizard, digite <span className="text-purple-400">@</span> para mencionar e aplicar o contexto completo</li>
+                        </ul>
+                      </div>
+                    </motion.div>
                   )}
-                  <input type="file" accept="image/*" className="hidden" onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) handleUploadAvatar(f);
-                  }} />
-                </label>
-                <input
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Título do prompt (ex: Saury, Empresa X...)"
-                  className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/15"
-                />
-              </div>
+                </AnimatePresence>
 
-              {/* Content */}
-              <textarea
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                placeholder="Conteúdo do prompt (informações, contexto, descrições...)"
-                rows={4}
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/15 resize-none"
-              />
+                {/* Form body */}
+                <div className="px-5 pb-5 space-y-4">
+                  {/* Avatar + Title */}
+                  <div className="flex items-center gap-3">
+                    <label className="w-14 h-14 rounded-2xl border border-white/[0.08] flex items-center justify-center cursor-pointer overflow-hidden hover:border-purple-500/30 transition-colors shrink-0"
+                      style={{ backgroundColor: '#0d0d12' }}>
+                      {uploading ? (
+                        <Loader2 className="w-5 h-5 text-white/30 animate-spin" />
+                      ) : avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="w-5 h-5 text-white/15" />
+                      )}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUploadAvatar(f);
+                      }} />
+                    </label>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1 block">Título / Marca</label>
+                      <input
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        placeholder="Ex: Clínica Saury, Empresa X..."
+                        className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-purple-500/30 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-end gap-2">
-                <button onClick={resetForm} className="px-4 py-2 rounded-lg text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer">
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={!title.trim() || !content.trim() || saving}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-30 transition-all cursor-pointer"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editingId ? 'Salvar' : 'Criar'}
-                </button>
+                  {/* Content */}
+                  <div>
+                    <label className="text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1 block">Contexto do prompt</label>
+                    <textarea
+                      value={content}
+                      onChange={e => setContent(e.target.value)}
+                      placeholder="Descreva o contexto: informações da marca, tom de voz, público-alvo, serviços, diferenciais..."
+                      rows={5}
+                      className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-purple-500/30 resize-none transition-colors"
+                    />
+                  </div>
+
+                  {/* Media section */}
+                  <div>
+                    <label className="text-[11px] font-medium text-white/30 uppercase tracking-wider mb-2 block">Mídias vinculadas</label>
+
+                    {/* Existing media (when editing) */}
+                    {existingMedia.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        {existingMedia.map(m => {
+                          const typeInfo = MEDIA_TYPES.find(t => t.value === m.media_type);
+                          return (
+                            <div key={m.id} className="relative group/media rounded-lg overflow-hidden border border-white/[0.06]" style={{ aspectRatio: '1' }}>
+                              <img src={m.file_url} alt={m.file_name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                <button
+                                  onClick={() => handleDeleteMedia(m.id)}
+                                  className="p-1 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                                <span className="text-[8px] text-white/50 truncate block">{typeInfo?.label || m.media_type}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* New modal media previews */}
+                    {modalMedia.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        {modalMedia.map((m, idx) => {
+                          const typeInfo = MEDIA_TYPES.find(t => t.value === m.type);
+                          return (
+                            <div key={idx} className="relative group/media rounded-lg overflow-hidden border border-purple-500/20" style={{ aspectRatio: '1' }}>
+                              <img src={m.preview} alt={m.file.name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                <button
+                                  onClick={() => handleRemoveModalMedia(idx)}
+                                  className="p-1 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                                <span className="text-[8px] text-white/50 truncate block">{typeInfo?.label || m.type}</span>
+                              </div>
+                              <div className="absolute top-1 right-1">
+                                <span className="text-[7px] px-1 py-0.5 rounded bg-purple-500/30 text-purple-200">novo</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Media type picker + upload */}
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {MEDIA_TYPES.map(t => {
+                        const Icon = t.icon;
+                        const isSelected = selectedMediaType === t.value;
+                        return (
+                          <button
+                            key={t.value}
+                            onClick={() => setSelectedMediaType(t.value)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all cursor-pointer"
+                            style={{
+                              backgroundColor: isSelected ? 'rgba(123,80,220,0.1)' : 'rgba(255,255,255,0.02)',
+                              border: `1px solid ${isSelected ? 'rgba(123,80,220,0.25)' : 'rgba(255,255,255,0.04)'}`,
+                            }}
+                          >
+                            <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: isSelected ? '#a78bfa' : 'rgba(255,255,255,0.25)' }} />
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-medium truncate" style={{ color: isSelected ? '#c4b5fd' : 'rgba(255,255,255,0.5)' }}>{t.label}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <label
+                      className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed transition-all cursor-pointer hover:border-purple-500/30 hover:bg-purple-500/[0.03]"
+                      style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                      onDragOver={e => { e.preventDefault(); e.stopPropagation(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.5)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(168,85,247,0.05)'; }}
+                      onDragLeave={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+                      onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; if (e.dataTransfer.files?.length) handleAddModalMedia(e.dataTransfer.files); }}
+                    >
+                      <Upload className="w-4 h-4 text-white/20" />
+                      <span className="text-xs text-white/30">Arraste ou clique para adicionar {MEDIA_TYPES.find(t => t.value === selectedMediaType)?.label.toLowerCase()}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={e => {
+                          if (e.target.files?.length) handleAddModalMedia(e.target.files);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={resetForm} className="px-4 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer">
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={!title.trim() || !content.trim() || saving}
+                      className="px-5 py-2.5 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-30 transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      {editingId ? 'Salvar alterações' : 'Criar prompt'}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -306,7 +525,6 @@ const PromptGallery: React.FC = () => {
                 >
                   {/* Main row */}
                   <div className="flex items-start gap-3 p-3 group">
-                    {/* Avatar */}
                     <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#1a1a24' }}>
                       {p.avatar_url ? (
                         <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -315,11 +533,9 @@ const PromptGallery: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white/80 truncate">{p.title}</p>
                       <p className="text-xs text-white/30 mt-0.5 line-clamp-2">{p.content}</p>
-                      {/* Media count badge */}
                       {media.length > 0 && (
                         <div className="flex items-center gap-1 mt-1.5">
                           <ImageIcon className="w-3 h-3 text-purple-400/60" />
@@ -328,7 +544,6 @@ const PromptGallery: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button
                         onClick={() => setExpandedPromptId(isExpanded ? null : p.id)}
@@ -361,7 +576,6 @@ const PromptGallery: React.FC = () => {
                             <p className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Mídias vinculadas</p>
                           </div>
 
-                          {/* Media grid */}
                           {media.length > 0 && (
                             <div className="grid grid-cols-4 gap-2 mb-3">
                               {media.map(m => {
@@ -386,7 +600,7 @@ const PromptGallery: React.FC = () => {
                             </div>
                           )}
 
-                          {/* Upload area */}
+                          {/* Quick upload in expanded view */}
                           <div className="flex items-center gap-2">
                             <div className="relative">
                               <select

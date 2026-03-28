@@ -35,6 +35,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [monthlyCredits, setMonthlyCredits] = useState<number>(0);
+  const [planName, setPlanName] = useState<string>('free');
   const [behanceFiles, setBehanceFiles] = useState<File[] | undefined>(undefined);
   const { isMobile } = useIsMobile();
   const { user, signOut } = useAuth();
@@ -60,8 +62,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       try {
         const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
         if (!cu) return;
-        const { data } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle();
+        const [{ data }, { data: elloSub }] = await Promise.all([
+          supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
+          supabase.from('ellocontent_subscriptions').select('plan_name, monthly_credits, status').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        ]);
         setCreditBalance(data?.balance ?? 0);
+        if (elloSub && (elloSub.status === 'active' || elloSub.status === 'trialing')) {
+          setMonthlyCredits(elloSub.monthly_credits || 0);
+          setPlanName(elloSub.plan_name || 'free');
+        }
       } catch {}
     };
     fetchCredits();
@@ -187,15 +196,67 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                 <p className="text-sm text-white/70 font-medium truncate">{email}</p>
               </div>
               <div className="py-1">
-                <div className="px-4 py-3 border-b border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => { setProfileOpen(false); navigate('/precos'); }}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-white/40">Créditos</span>
-                    <span className="text-white/70 font-medium">{creditBalance !== null ? `${Math.floor(creditBalance)} restantes` : '...'}</span>
-                  </div>
-                  <div className="w-full h-1 rounded-full bg-white/[0.06] mt-1.5">
-                    <div className="h-full rounded-full bg-purple-500/60" style={{ width: `${Math.min(100, ((creditBalance ?? 0) / 100) * 100)}%` }} />
-                  </div>
-                </div>
+                {(() => {
+                  const balance = creditBalance ?? 0;
+                  const planNameLower = planName.toLowerCase();
+                  const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
+                  const planColor = '#8B5CF6';
+                  const maxBar = Math.max(balance, monthlyCredits, 50);
+                  const balancePct = Math.min(100, (balance / maxBar) * 100);
+                  const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
+                  const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
+
+                  return (
+                    <div className="px-4 py-3 border-b border-white/[0.06] cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => { setProfileOpen(false); navigate('/precos'); }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                            style={{ backgroundColor: `${planColor}20`, color: planColor }}
+                          >
+                            {planLabel}
+                          </span>
+                        </div>
+                        <span className="text-white/70 text-xs font-medium">
+                          {Math.floor(balance)} restantes
+                        </span>
+                      </div>
+                      <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
+                          style={{
+                            width: `${balancePct}%`,
+                            background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)`,
+                          }}
+                        >
+                          <div
+                            className="absolute inset-0 rounded-full"
+                            style={{
+                              background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                              backgroundSize: '200% 100%',
+                              animation: 'shimmer-credit 2s ease-in-out infinite',
+                            }}
+                          />
+                        </div>
+                        {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
+                          <div
+                            className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full"
+                            style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.5)' }}
+                          />
+                        )}
+                        <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+                      </div>
+                      {monthlyCredits > 0 && (
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-[10px] text-white/25">{monthlyCredits} mensais</span>
+                          {bonusCredits > 0 && (
+                            <span className="text-[10px]" style={{ color: `${planColor}99` }}>+{Math.floor(bonusCredits)} bônus</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <button onClick={() => { setProfileOpen(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                   <User className="w-4 h-4" /> Perfil
                 </button>

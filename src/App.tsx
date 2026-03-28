@@ -47,12 +47,22 @@ function AffiliateTracker({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Minimal loading fallback — uses the same purple orb from DashboardHome
+// Simple purple pulse loader
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0f' }}>
-    <div className="carousel-loader-wrapper w-[80px] h-[80px]">
-      <div className="carousel-loader-spinner" />
+    <div className="flex gap-1.5">
+      {[0, 1, 2].map(i => (
+        <div
+          key={i}
+          className="w-2 h-2 rounded-full"
+          style={{
+            backgroundColor: '#8B5CF6',
+            animation: `page-dot-pulse 1s ease-in-out ${i * 0.15}s infinite`,
+          }}
+        />
+      ))}
     </div>
+    <style>{`@keyframes page-dot-pulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }`}</style>
   </div>
 );
 

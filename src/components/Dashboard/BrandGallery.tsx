@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FolderPlus, Upload, ArrowLeft, Trash2, Loader2, 
-  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check, ChevronRight
+  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check, ChevronRight, HardDrive
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+import ElloDriveModal from './ElloDriveModal';
 
 interface BrandFolder {
   id: string;
@@ -135,6 +136,7 @@ const BrandGallery: React.FC = () => {
   const [draggingFiles, setDraggingFiles] = useState<string[]>([]);
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
   const [dropTargetFolder, setDropTargetFolder] = useState<string | null>(null);
+  const [showElloDrive, setShowElloDrive] = useState(false);
   const dragCounter = useRef(0);
 
   const currentFolder = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
@@ -534,6 +536,12 @@ const BrandGallery: React.FC = () => {
           Upload
           <input id="brand-gallery-upload" type="file" accept="image/*,video/*,.pdf" multiple className="hidden" onChange={e => uploadFiles(e.target.files)} disabled={uploading} />
         </label>
+        <button
+          onClick={() => setShowElloDrive(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-purple-300 hover:text-purple-200 bg-purple-500/[0.08] hover:bg-purple-500/[0.14] border border-purple-500/20 transition-all cursor-pointer"
+        >
+          <HardDrive className="w-4 h-4" /> ElloDrive
+        </button>
         {hasSelection && (
           <button onClick={() => setSelectedFiles(new Set())}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/40 hover:text-white/70 transition-all cursor-pointer">
@@ -721,6 +729,31 @@ const BrandGallery: React.FC = () => {
       {/* Preview modal */}
       <AnimatePresence>
         {previewFile && <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
+      </AnimatePresence>
+
+      {/* ElloDrive modal */}
+      <AnimatePresence>
+        {showElloDrive && companyId && (
+          <ElloDriveModal
+            open={showElloDrive}
+            onClose={() => setShowElloDrive(false)}
+            companyId={companyId}
+            onImport={async (importedFiles) => {
+              if (!companyId) return;
+              for (const f of importedFiles) {
+                await supabase.from('brand_assets').insert({
+                  company_id: companyId,
+                  name: f.name,
+                  file_url: f.url,
+                  file_type: f.type,
+                  category: 'gallery',
+                  folder_id: currentFolderId || null,
+                });
+              }
+              fetchData();
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

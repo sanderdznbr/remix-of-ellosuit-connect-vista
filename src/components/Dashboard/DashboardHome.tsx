@@ -78,6 +78,14 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
+
+  // Rotate greeting text every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGreetingIndex(prev => (prev + 1) % GREETINGS.length);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
   const isUserTyping = inputValue.length > 0;
 
   const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'Usuário';

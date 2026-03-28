@@ -197,11 +197,8 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     promptParts.push(`TEMA: "${job.topic}"`);
   }
   promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-  // Logo is now sent to AI as an image reference — remove the prohibition
-  const hasLogoForAI = !!job.logo_url;
-  if (!hasLogoForAI) {
-    promptParts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem.');
-  }
+  // Logo is ALWAYS handled via Canvas overlay — never sent to AI
+  promptParts.push('PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
   const isMarketplaceStyle = !!singlePromptStyle;
   if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 

@@ -286,17 +286,45 @@ const StepPersonalization: React.FC<Props> = ({
                 Galeria
               </button>
             </div>
-            <div className="flex gap-2">
-              {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setFaceGender(opt.value as 'male' | 'female' | 'auto')}
-                  className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${faceGender === opt.value ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            {facePhotos.length > 0 && (
+              <div className="space-y-3 p-3 rounded-xl border border-blue-500/10 bg-blue-500/[0.03]">
+                <p className="text-[11px] text-blue-300/60 font-medium uppercase tracking-wider">Atributos faciais</p>
+                <div>
+                  <label className="text-[11px] text-white/40 mb-1.5 block">Gênero</label>
+                  <div className="flex gap-2">
+                    {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setFaceGender(opt.value as 'male' | 'female' | 'auto')}
+                        className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${faceGender === opt.value ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] text-white/40 mb-1.5 block">Usa óculos?</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setWearsGlasses(false)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${!wearsGlasses ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                    >
+                      Sem óculos
+                    </button>
+                    <button
+                      onClick={() => setWearsGlasses(true)}
+                      className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${wearsGlasses ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                    >
+                      Com óculos
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-white/25 leading-relaxed">
+                  ⭐ O rosto será priorizado na geração — a IA criará um corpo fiel com os atributos acima, integrando o produto caso exista.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

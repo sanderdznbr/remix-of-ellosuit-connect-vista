@@ -7029,7 +7029,41 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         searchingWeb={searchingWeb}
                         onSearchWeb={handleSearchWeb}
                         skipWebSearch={skipWebSearch}
-                        onToggleSkipWebSearch={() => { setSkipWebSearch(true); setWebSearchResult(null); setWizardStep(wizardStep + 1); }}
+                        onToggleSkipWebSearch={() => { setSkipWebSearch(true); setWebSearchResult(null); setSelectedWebSourceIndex(null); setWizardStep(wizardStep + 1); }}
+                        selectedSourceIndex={selectedWebSourceIndex}
+                        onSelectSource={setSelectedWebSourceIndex}
+                        extractingUrl={extractingUrl}
+                        onExtractUrl={async (url: string) => {
+                          setExtractingUrl(true);
+                          try {
+                            const data = await resilientInvoke('search-news', { topic: url, language: 'pt-BR' });
+                            if (data?.success && data?.content) {
+                              setWebSearchResult(prev => prev ? {
+                                ...prev,
+                                content: data.content,
+                                summary: data.content?.summary || prev.summary,
+                                citations: [...(prev.citations || []), url],
+                                sources: [...(prev.sources || []), { title: url, summary: data.content?.summary || 'Conteúdo extraído do link', angle: 'Link manual' }],
+                              } : {
+                                summary: data.content?.summary || 'Conteúdo extraído',
+                                citations: [url],
+                                content: data.content,
+                                images: data.images || [],
+                                sources: [{ title: url, summary: data.content?.summary || 'Conteúdo extraído do link', angle: 'Link manual' }],
+                              });
+                              // Auto-select the newly added source
+                              setSelectedWebSourceIndex((webSearchResult?.sources?.length || webSearchResult?.citations?.length || 0));
+                              sonnerToast.success('Conteúdo extraído com sucesso!');
+                            } else {
+                              sonnerToast.error('Não foi possível extrair conteúdo deste link');
+                            }
+                          } catch (err) {
+                            console.error('URL extraction error:', err);
+                            sonnerToast.error('Erro ao extrair conteúdo do link');
+                          } finally {
+                            setExtractingUrl(false);
+                          }
+                        }}
                       />
                     )}
                     {currentStepName === 'Formato' && (

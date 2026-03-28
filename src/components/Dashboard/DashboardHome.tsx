@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, Square, RectangleVertical, Smartphone } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -60,6 +60,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [postFormat, setPostFormat] = useState<PostFormat>('portrait');
   const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
+  const [showRecent, setShowRecent] = useState(true);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
@@ -368,9 +369,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           <div
             className="relative w-full rounded-2xl overflow-visible"
             style={{
-              backgroundColor: 'rgba(20, 20, 28, 0.95)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
+              backgroundColor: 'rgba(20, 20, 28, 0.5)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              boxShadow: '0 4px 30px rgba(0,0,0,0.3)',
+              backdropFilter: 'blur(12px)',
             }}
           >
             <div className="relative">
@@ -473,11 +475,21 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
         <div className="max-w-[1200px] mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
               <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
+              <button
+                onClick={() => setShowRecent(prev => !prev)}
+                className="w-6 h-6 rounded-md flex items-center justify-center transition-all cursor-pointer"
+                style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                title={showRecent ? 'Ocultar recentes' : 'Mostrar recentes'}
+              >
+                <motion.div animate={{ rotate: showRecent ? 0 : 180 }} transition={{ duration: 0.3 }}>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </motion.div>
+              </button>
             </div>
             <div className="flex items-center gap-2">
-              {recentCarousels.length > 4 && (
+              {showRecent && recentCarousels.length > 4 && (
                 <>
                   <button
                     onClick={() => scrollContainerRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
@@ -495,7 +507,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   </button>
                 </>
               )}
-              {recentCarousels.length > 0 && onViewAllProjects && (
+              {showRecent && recentCarousels.length > 0 && onViewAllProjects && (
                 <button
                   onClick={onViewAllProjects}
                   className="text-xs font-medium transition-colors cursor-pointer ml-2"

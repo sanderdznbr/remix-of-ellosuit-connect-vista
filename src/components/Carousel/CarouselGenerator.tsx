@@ -2080,13 +2080,18 @@ const CarouselGenerator: React.FC = () => {
             deviceType: styleDeviceType,
             isAppScreenshot: true,
           })
-        : productAnalysis?.confirmed ? JSON.stringify({
-            productType: productAnalysis.type,
-            productDescription: productAnalysis.description,
-            productImageUrls: productImages.map(p => p.url),
-            productSize,
-            productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
-          }) : null;
+        : productAnalysis?.confirmed ? (() => {
+            const detectedCtx = detectContext(topic, mentionedPrompts);
+            const isDetectedApp = detectedCtx === 'app' || detectedCtx === 'website';
+            return JSON.stringify({
+              productType: productAnalysis.type,
+              productDescription: productAnalysis.description,
+              productImageUrls: productImages.map(p => p.url),
+              productSize,
+              productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
+              ...(isDetectedApp ? { isAppScreenshot: true, deviceType: detectedCtx === 'app' ? 'mobile' : 'web' } : {}),
+            });
+          })() : null;
 
       const extremeFormPhotoRefs: ReferenceImage[] = wizardMode === 'extreme' && extremeAnalysis
         ? extremeAnalysis.fields
@@ -2915,7 +2920,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
   // ===== GENERATE (CLOUD-BASED) =====
   // Strip mention tags from topic: (@Title) → Title
-  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]+)\)/g, '$1').replace(/@(\w+)/g, '$1');
+  const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]*)\)/g, '$1').replace(/@(\w+)/g, '$1').replace(/@/g, '');
 
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');
@@ -3048,12 +3053,15 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         }
       }
 
+      const detectedCtx = detectContext(topic, mentionedPrompts);
+      const isDetectedApp = detectedCtx === 'app' || detectedCtx === 'website';
       const productContext = productAnalysis?.confirmed ? {
         productType: productAnalysis.type,
         productDescription: productAnalysis.description,
         productImageUrls: productImages.map(p => p.url),
         productSize,
         productSizeLabel: PRODUCT_SIZE_OPTIONS.find(o => o.value === productSize)?.desc || '',
+        ...(isDetectedApp ? { isAppScreenshot: true, deviceType: detectedCtx === 'app' ? 'mobile' : 'web' } : {}),
       } : undefined;
 
       const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());

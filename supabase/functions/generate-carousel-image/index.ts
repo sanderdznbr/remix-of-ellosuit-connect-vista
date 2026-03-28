@@ -152,8 +152,8 @@ Deno.serve(async (req) => {
 
     // Hard rebalance: face > general > style priority
     const willAddFont = !!fontReferenceImage;
-    const willAddLogo = !!(logoImageUrl && typeof logoImageUrl === 'string' && (logoImageUrl.startsWith('http') || logoImageUrl.startsWith('data:')));
-    const fixedSlots = (willAddFont ? 1 : 0) + (willAddLogo ? 1 : 0);
+    const willAddLogo = false; // Logo is now handled via Canvas overlay, never sent to AI
+    const fixedSlots = (willAddFont ? 1 : 0);
     const availableForRefs = BUDGET.maxTotal - fixedSlots;
 
     // Step 1: cap face refs
@@ -239,11 +239,9 @@ Deno.serve(async (req) => {
     }
 
     // Anti-border + anti-text-copy + anti-grid instruction for ALL modes
-    // Logo handling: if logoImageUrl is provided, instruct AI to place it; otherwise prohibit logo rendering
-    const logoInstruction = logoImageUrl
-      ? `LOGOMARCA DO USUÁRIO: A imagem da logomarca do usuário será fornecida separadamente. Você DEVE posicioná-la no canto ${logoPosition === 'top-left' ? 'SUPERIOR ESQUERDO' : logoPosition === 'top-right' ? 'SUPERIOR DIREITO' : logoPosition === 'bottom-left' ? 'INFERIOR ESQUERDO' : 'INFERIOR DIREITO'} da imagem. REGRAS DA LOGO:\n- Mantenha o DESENHO e FORMATO da logo exatamente como fornecida.\n- A logo deve ser pequena (cerca de 8-12% da largura) e com espaçamento adequado das bordas.\n- NÃO adicione fundo, borda, sombra ou efeito à logo — ela deve flutuar naturalmente sobre o design.\n- CONTRASTE OBRIGATÓRIO: Se o fundo da região onde a logo será posicionada for ESCURO, renderize a logo em BRANCO (versão monocromática branca). Se o fundo for CLARO, renderize a logo em PRETO ou na cor original. A logo DEVE ser SEMPRE LEGÍVEL contra o fundo.\n- Mantenha a FORMA/SILHUETA da logo 100% fiel à imagem fornecida, apenas adaptando a COR para garantir visibilidade.`
-      : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte.`;
-    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM: Cada card DEVE ser UMA ÚNICA composição visual contínua. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens ou sub-quadros. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. A imagem deve ser UMA CENA ÚNICA e UNIFICADA que preenche todo o canvas.`;
+    // Logo is ALWAYS handled via Canvas overlay — NEVER sent to AI to avoid shadow/distortion artifacts
+    const logoInstruction = `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
+    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM/MOSAICO: Cada card DEVE ser UMA ÚNICA composição visual contínua e UNIFICADA. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens, sub-quadros ou painéis lado a lado. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. PROIBIDO dividir a imagem em seções ou quadrantes. A imagem INTEIRA deve ser UMA CENA ÚNICA, CONTÍNUA e COESA que preenche todo o canvas de ponta a ponta. Se precisar mostrar múltiplos elementos, componha-os organicamente em UMA ÚNICA CENA — NUNCA em grades separadas.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity
@@ -457,13 +455,11 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       console.log('Font reference injected:', fontLabel, 'base64 length:', fontReferenceImage.length);
     }
 
-    // === LOGO IMAGE: Send to AI for placement ===
-    if (logoImageUrl && typeof logoImageUrl === 'string' && (logoImageUrl.startsWith('http') || logoImageUrl.startsWith('data:'))) {
-      const posLabel = logoPosition === 'top-left' ? 'superior esquerdo' : logoPosition === 'top-right' ? 'superior direito' : logoPosition === 'bottom-left' ? 'inferior esquerdo' : 'inferior direito';
-      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DO USUÁRIO ABAIXO — Posicione esta logo EXATAMENTE no canto ${posLabel} da imagem. NÃO redesenhe, NÃO altere cores, NÃO modifique. APLIQUE a imagem da logo tal como ela é, apenas redimensionada para caber (8-12% da largura). Mantenha fidelidade TOTAL:` });
-      messageContent.push({ type: 'image_url', image_url: { url: logoImageUrl } });
-      messageContent.push({ type: 'text', text: `REGRA DA LOGO: A logo acima DEVE aparecer no resultado final EXATAMENTE como fornecida. Apenas reduza o tamanho para ficar proporcional. NÃO invente uma logo diferente. NÃO omita a logo. NÃO adicione efeitos.` });
-      console.log('Logo image injected for AI placement, position:', posLabel);
+    // === LOGO IMAGE: Disabled — logo is now handled exclusively via Canvas overlay in frontend ===
+    // AI logo rendering caused shadow/distortion artifacts, so it's been removed entirely.
+    // The logo will be composited by the frontend after image generation.
+    if (logoImageUrl) {
+      console.log('Logo provided but NOT sent to AI — will be overlaid via Canvas. Position:', logoPosition);
     }
 
     // === DIAGNOSTIC: Log total message size ===

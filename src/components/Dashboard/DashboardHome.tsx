@@ -351,8 +351,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             'Sua próxima criação começa aqui',
             'Inspire-se e crie agora',
           ];
-          // Pick one based on the day so it changes each login/day
-          const dayIndex = new Date().getDate() % greetings.length;
+          // Pick one based on day + hour + a random seed per session so it changes each visit
+          const dayIndex = (new Date().getDate() + new Date().getHours() + Math.floor(Math.random() * greetings.length)) % greetings.length;
           return (
             <motion.h1
               className="text-2xl md:text-4xl font-semibold leading-snug mb-3"

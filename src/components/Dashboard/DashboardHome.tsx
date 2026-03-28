@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';

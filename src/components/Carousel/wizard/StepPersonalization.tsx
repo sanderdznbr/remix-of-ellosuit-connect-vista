@@ -100,32 +100,27 @@ const StepPersonalization: React.FC<Props> = ({
 
   const [galleryTarget, setGalleryTarget] = useState<'face' | 'logo' | 'media' | null>(null);
 
-  const handleGallerySelect = (files: File[]) => {
+  const handleGallerySelect = (files: { url: string; name: string }[]) => {
     if (!galleryTarget) return;
     files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (!ev.target?.result) return;
-        const url = ev.target.result as string;
-        if (galleryTarget === 'face') {
-          setFacePersons(prev => {
-            const updated = [...prev];
-            if (updated.length === 0) {
-              updated.push({ id: crypto.randomUUID(), label: 'Pessoa 1', gender: 'auto', wearsGlasses: false, photos: [] });
-            }
-            updated[0] = { ...updated[0], photos: [...updated[0].photos, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'face' as const }] };
-            const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
-            const allFaceRefs = updated.flatMap(p => p.photos);
-            setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
-            return updated;
-          });
-        } else if (galleryTarget === 'logo') {
-          setLogoUrl(url);
-        } else if (galleryTarget === 'media') {
-          setReferenceImages(prev => [...prev, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'style' as const }]);
-        }
-      };
-      reader.readAsDataURL(file);
+      const url = file.url;
+      if (galleryTarget === 'face') {
+        setFacePersons(prev => {
+          const updated = [...prev];
+          if (updated.length === 0) {
+            updated.push({ id: crypto.randomUUID(), label: 'Pessoa 1', gender: 'auto', wearsGlasses: false, photos: [] });
+          }
+          updated[0] = { ...updated[0], photos: [...updated[0].photos, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'face' as const }] };
+          const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
+          const allFaceRefs = updated.flatMap(p => p.photos);
+          setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
+          return updated;
+        });
+      } else if (galleryTarget === 'logo') {
+        setLogoUrl(url);
+      } else if (galleryTarget === 'media') {
+        setReferenceImages(prev => [...prev, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'style' as const }]);
+      }
     });
     setGalleryTarget(null);
   };

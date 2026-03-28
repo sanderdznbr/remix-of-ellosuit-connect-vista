@@ -528,6 +528,7 @@ const CarouselGenerator: React.FC = () => {
     const cached = tweetPhotoDataUrlCacheRef.current[url];
     if (cached) return cached;
 
+    // Attempt 1: Direct fetch with CORS
     try {
       const response = await fetch(url, { mode: 'cors' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -542,7 +543,7 @@ const CarouselGenerator: React.FC = () => {
       tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
       return dataUrl;
     } catch {
-      // CORS blocked — use an img element to load and draw onto canvas
+      // Attempt 2: img element + canvas (may be tainted)
       try {
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const img = document.createElement('img');
@@ -567,9 +568,23 @@ const CarouselGenerator: React.FC = () => {
         tweetPhotoDataUrlCacheRef.current[url] = dataUrl;
         return dataUrl;
       } catch {
-        // All attempts failed — return the raw URL as fallback for preview display
-        console.warn('[TweetPhoto] Could not convert to data URL, using raw URL:', url);
-        return url;
+        // Attempt 3: Server-side proxy via edge function
+        try {
+          console.log('[TweetPhoto] Using server proxy for:', url.substring(0, 80));
+          const { data, error } = await supabase.functions.invoke('image-proxy', {
+            body: { url },
+          });
+          if (error) throw error;
+          if (data?.dataUrl) {
+            tweetPhotoDataUrlCacheRef.current[url] = data.dataUrl;
+            return data.dataUrl;
+          }
+          throw new Error('No dataUrl in response');
+        } catch (proxyErr) {
+          console.warn('[TweetPhoto] All attempts failed for:', url.substring(0, 80), proxyErr);
+          // Return raw URL as final fallback
+          return url;
+        }
       }
     }
   }, []);

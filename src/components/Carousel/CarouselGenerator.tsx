@@ -216,9 +216,18 @@ const CarouselGenerator: React.FC = () => {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const isGuest = !user;
   const planLimits = usePlanLimits();
+  const [isAdminMaster, setIsAdminMaster] = useState(false);
   const isCardLocked = (index: number) => isGuest && index > 0 && !!carouselData;
   const [showLoginGate, setShowLoginGate] = useState(false);
   const [showGuestPaywall, setShowGuestPaywall] = useState(false);
+
+  // Check adminmaster role
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc('is_adminmaster', { _user_id: user.id }).then(({ data }) => {
+      if (data === true) setIsAdminMaster(true);
+    });
+  }, [user]);
 
   // Welcome screen state
   const [showWelcome, setShowWelcome] = useState(true);
@@ -6791,6 +6800,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         allowExtreme={planLimits.allowExtreme}
                         requiredPlanForAdvanced="Pro"
                         requiredPlanForExtreme="Growth"
+                        isAdminMaster={isAdminMaster}
                       />
                     )}
                     {currentStepName === 'Tweet Config' && (

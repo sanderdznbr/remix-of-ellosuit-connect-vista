@@ -1710,6 +1710,7 @@ const CarouselGenerator: React.FC = () => {
     if (generatingCaption) return;
     setGeneratingCaption(true);
     setShowCaptionPanel(true);
+    setShowInlineEditor(false);
     try {
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {

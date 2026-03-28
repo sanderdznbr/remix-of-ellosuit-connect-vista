@@ -511,6 +511,14 @@ const StepPersonalization: React.FC<Props> = ({
       >
         Pular personalização
       </button>
+
+      <GalleryPicker
+        open={!!galleryTarget}
+        onClose={() => setGalleryTarget(null)}
+        onSelectFiles={handleGallerySelect}
+        label={galleryTarget === 'face' ? 'Selecionar foto do rosto' : galleryTarget === 'logo' ? 'Selecionar logomarca' : 'Selecionar mídias'}
+        maxFiles={galleryTarget === 'logo' ? 1 : undefined}
+      />
     </div>
   );
 };

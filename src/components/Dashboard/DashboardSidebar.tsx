@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import ellocontentIcon from '@/assets/ellocontent2.svg';
+import faviconIcon from '@/assets/favicon.png';
 
 interface DashboardSidebarProps {
   activeTab: string;
@@ -126,7 +126,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
       {/* Logo */}
       <div className="px-4 pt-4 pb-3">
-        <img src={ellocontentIcon} alt="elloContent" className="h-8" />
+        <img src={faviconIcon} alt="Logo" className="h-8 w-8" />
       </div>
 
       {/* Nav */}

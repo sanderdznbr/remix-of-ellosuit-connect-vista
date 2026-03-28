@@ -117,10 +117,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
   return (
     <aside className="relative w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
-      {/* Purple animated background with blur */}
+      {/* Purple ambient glow background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] rounded-full opacity-[0.12] blur-[80px] animate-pulse" style={{ background: 'radial-gradient(circle, #8B5CF6 0%, #4C1D95 50%, transparent 70%)' }} />
-        <div className="absolute bottom-0 left-0 w-[200px] h-[200px] rounded-full opacity-[0.08] blur-[60px]" style={{ background: 'radial-gradient(circle, #6D28D9 0%, transparent 70%)', animation: 'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite' }} />
+        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[400px] h-[250px] opacity-[0.18]" style={{ background: 'radial-gradient(ellipse at center, #7C3AED 0%, #4C1D95 40%, transparent 70%)', filter: 'blur(50px)' }} />
+        <div className="absolute top-1/3 -right-10 w-[150px] h-[150px] opacity-[0.06]" style={{ background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)', filter: 'blur(40px)' }} />
       </div>
       {/* Scrollable nav area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>

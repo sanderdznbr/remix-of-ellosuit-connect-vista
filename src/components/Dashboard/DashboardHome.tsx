@@ -385,11 +385,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 mentionedPrompts={mentionedPrompts}
                 onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
                 onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
-                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px]"
+                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px] text-left"
               />
               {!isUserTyping && mentionedPrompts.length === 0 && (
                 <div
-                  className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0"
+                  className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0 text-left"
                   style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}
                 >
                   {animatedPlaceholder}

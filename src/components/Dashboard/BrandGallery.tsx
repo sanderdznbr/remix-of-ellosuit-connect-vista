@@ -730,6 +730,31 @@ const BrandGallery: React.FC = () => {
       <AnimatePresence>
         {previewFile && <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
       </AnimatePresence>
+
+      {/* ElloDrive modal */}
+      <AnimatePresence>
+        {showElloDrive && companyId && (
+          <ElloDriveModal
+            open={showElloDrive}
+            onClose={() => setShowElloDrive(false)}
+            companyId={companyId}
+            onImport={async (importedFiles) => {
+              if (!companyId) return;
+              for (const f of importedFiles) {
+                await supabase.from('brand_assets').insert({
+                  company_id: companyId,
+                  name: f.name,
+                  file_url: f.url,
+                  file_type: f.type,
+                  category: 'gallery',
+                  folder_id: currentFolderId || null,
+                });
+              }
+              fetchData();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

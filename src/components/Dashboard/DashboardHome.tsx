@@ -51,6 +51,7 @@ interface DashboardHomeProps {
 
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects, onResumeJob }) => {
   const { user } = useAuth();
+  const { isMobile } = useIsMobile();
   const [inputValue, setInputValue] = useState('');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');

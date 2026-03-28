@@ -8251,8 +8251,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             >
               {!isGuest && carouselData.cards.length > 0 && (
                 <>
-                {/* Edit button - left side */}
-                <div className="absolute top-1/2 left-2 md:-left-14 -translate-y-1/2 z-40">
+                {/* Edit button - left side (hidden on mobile, shown in bottom bar instead) */}
+                <div className="hidden md:block absolute top-1/2 -left-14 -translate-y-1/2 z-40">
                   <button
                     onClick={() => setShowInlineEditor(!showInlineEditor)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all hover:scale-110"

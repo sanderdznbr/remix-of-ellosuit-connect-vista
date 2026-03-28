@@ -1046,6 +1046,9 @@ const CarouselGenerator: React.FC = () => {
     setTweetConfig(DEFAULT_TWEET_CONFIG);
     setRoteiroGenerated(false);
     setGeneratingRoteiro(false);
+    // Reset logo so it re-fetches from brand assets on next personalization step
+    setLogoUrl(null);
+    setLogoDarkUrl(null);
   }, []);
 
   const openNextPendingPromptMedia = useCallback(() => {

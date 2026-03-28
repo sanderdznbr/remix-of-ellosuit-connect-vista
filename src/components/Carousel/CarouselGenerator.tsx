@@ -418,6 +418,7 @@ const CarouselGenerator: React.FC = () => {
   // CarouselTour removed
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
+  const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -2656,6 +2657,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           }
         } catch (e) { console.warn('[SINGLE_POST] Font base64 conversion failed:', e); }
       }
+      // Include logo as reference image for AI
+      if (logoUrl && logoUrl.startsWith('http')) {
+        effectiveProductRefs = [...(effectiveProductRefs || []), logoUrl];
+      }
 
       const imageUrl = await generateImage({
         prompt: finalPrompt,
@@ -2743,9 +2748,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               if (lp.includes('center')) lx = (W - lw) / 2;
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
-              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             } catch (e) { console.warn('[SINGLE_BLEND] Logo draw failed:', e); }
           }
 
@@ -2815,7 +2818,6 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               // On dark bg with no dark variant, brighten
               canvasCtx.filter = 'brightness(0) invert(1)';
             }
-            canvasCtx.shadowColor = 'rgba(0,0,0,0.6)'; canvasCtx.shadowBlur = 12;
             canvasCtx.drawImage(logoImg, lx, ly, lw, lh);
             canvasCtx.restore();
           };
@@ -3478,10 +3480,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             cardTextParts.push(`SEM BORDAS: A imagem deve ser full bleed, sem barras ou bordas no topo ou na base.`);
             cardTextParts.push(`MARGENS DE SEGURANÇA: Todo texto e elementos tipográficos devem respeitar uma margem interna de pelo menos 8% em cada borda (topo, base, esquerda, direita). NENHUM texto deve encostar ou ficar próximo das bordas da imagem.`);
             
-            // LOGO: Do NOT ask AI to render logo — it's overlaid programmatically via Canvas afterwards.
-            // Only mention brand name for textual context, NOT for rendering.
-            if (brandName) {
-              cardTextParts.push(`CONTEXTO DA MARCA: Este post é da marca "${brandName}". NÃO renderize logomarca ou logotipo na imagem — a logo será adicionada automaticamente depois. Apenas use o nome da marca como contexto textual se necessário no conteúdo.`);
+            // LOGO: Send logo URL to AI so it renders the logo naturally in the image
+            if (logoUrl) {
+              const posMap: Record<string, string> = { 'top-left': 'canto superior esquerdo', 'top-right': 'canto superior direito', 'top-center': 'centro superior', 'bottom-left': 'canto inferior esquerdo', 'bottom-right': 'canto inferior direito', 'bottom-center': 'centro inferior' };
+              const posLabel = posMap[logoPosition || 'top-left'] || 'canto superior esquerdo';
+              cardTextParts.push(`LOGOMARCA OBRIGATÓRIA: Renderize a logomarca fornecida na imagem de referência no ${posLabel}. A logo deve ocupar cerca de 8-12% da largura da imagem. Mantenha a logo EXATAMENTE como na referência — NÃO modifique, NÃO distorça, NÃO adicione sombras ou efeitos. Apenas posicione-a limpa e nítida. Se o fundo na posição for escuro, use a logo em branco; se claro, use em preto/original.`);
+            } else if (brandName) {
+              cardTextParts.push(`CONTEXTO DA MARCA: Este post é da marca "${brandName}". NÃO renderize logomarca ou logotipo na imagem. Apenas use o nome da marca como contexto textual se necessário no conteúdo.`);
             }
             
             cardTextParts.push(`REGRA CRÍTICA DE TEXTO: Copie os textos abaixo LETRA POR LETRA, EXATAMENTE como escritos. NÃO invente, NÃO altere, NÃO troque letras, NÃO adicione acentos incorretos.`);
@@ -3612,6 +3617,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             }
           }
           
+          // Include logo as reference image for the AI to render
+          if (logoUrl && logoUrl.startsWith('http')) {
+            capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
+          }
+
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
            const capturedNegative = isFullBleedMkt 
               ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
@@ -3883,9 +3893,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('middle')) ly = (H - lh) / 2;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
-              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             } catch (e) { console.warn('[BLEND] Logo draw failed:', e); }
           }
           
@@ -3972,9 +3980,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               if (lp.includes('right')) lx = W - lw - pad;
               if (lp.includes('middle')) ly = (H - lh) / 2;
               if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
               ctx.drawImage(logoImg, lx, ly, lw, lh);
-              ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
               updatedCards[i] = { ...updatedCards[i], imageUrl: canvas.toDataURL('image/jpeg', 0.92) };
             } catch (e) { console.warn('[LOGO_OVERLAY] Card', i, 'failed:', e); }
           }
@@ -5370,9 +5376,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 if (lp.includes('center')) lx = (W - lw) / 2;
                 if (lp.includes('right')) lx = W - lw - pad;
                 if (lp.includes('bottom')) ly = H - lh - pad;
-                ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
                 ctx.drawImage(logoImg, lx, ly, lw, lh);
-                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
               } catch (e) { console.warn('[REGEN_BLEND] Logo failed:', e); }
             }
 
@@ -5416,9 +5420,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           if (lp.includes('right')) lx = W - lw - pad;
           if (lp.includes('middle')) ly = (H - lh) / 2;
           if (lp.includes('bottom')) ly = H - lh - pad;
-          ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
           ctx.drawImage(logoImg, lx, ly, lw, lh);
-          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
           newImageUrl = canvas.toDataURL('image/jpeg', 0.92);
           console.log('[REGEN_LOGO] ✅ Logo applied!');
         } catch (logoErr) {
@@ -8250,8 +8252,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             >
               {!isGuest && carouselData.cards.length > 0 && (
                 <>
-                {/* Edit button - left side */}
-                <div className="absolute top-1/2 left-2 md:-left-14 -translate-y-1/2 z-40">
+                {/* Edit button - left side (hidden on mobile, shown in bottom bar instead) */}
+                <div className="hidden md:block absolute top-1/2 -left-14 -translate-y-1/2 z-40">
                   <button
                     onClick={() => setShowInlineEditor(!showInlineEditor)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all hover:scale-110"
@@ -8261,8 +8263,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <Pencil className="h-4.5 w-4.5" />
                   </button>
                 </div>
-                {/* Add button - right side */}
-                <div className="absolute top-1/2 right-2 md:-right-14 -translate-y-1/2 z-40">
+                {/* Add button - right side (hidden on mobile) */}
+                <div className="hidden md:block absolute top-1/2 -right-14 -translate-y-1/2 z-40">
                   <button
                     onClick={() => setShowAddCardMenu((prev) => !prev)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all"
@@ -8819,30 +8821,39 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* Action buttons below - mobile only */}
-            <div className="flex md:hidden items-center justify-center gap-2 sm:gap-3 mt-6 w-full relative z-10 flex-wrap px-4">
-              {/* Auto-save indicator */}
-              <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 border border-white/5">
-                {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
-                {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
-              </div>
-              {/* Export button */}
+            {/* Action buttons below - mobile only: primary row */}
+            <div className="flex md:hidden items-center justify-center gap-2 mt-4 w-full relative z-10 px-4">
+              {/* Edit */}
+              {!isGuest && (
+                <button onClick={() => setShowInlineEditor(!showInlineEditor)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all"
+                  style={{ borderColor: showInlineEditor ? `rgba(${themeRgb},0.5)` : 'rgba(255,255,255,0.1)', backgroundColor: showInlineEditor ? `rgba(${themeRgb},0.15)` : 'rgba(255,255,255,0.04)' }}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {/* Export */}
               <button data-tour="btn-export" onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white border transition-all disabled:opacity-50"
                 style={{ borderColor: `rgba(${themeRgb},0.4)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))` }}>
                 {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isGuest ? <Lock className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
-                {isGuest ? 'Assine para baixar' : 'Exportar'}
+                {isGuest ? 'Assine' : 'Exportar'}
               </button>
-              {/* Generate Stories */}
+              {/* Stories */}
               {carouselData.cards[activeCardIndex]?.imageUrl && !isGuest && (
                 <button onClick={generateStoriesImage} disabled={generatingStories}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-50"
                   style={{ borderColor: 'rgba(59,130,246,0.3)', backgroundColor: 'rgba(59,130,246,0.08)' }}>
                   {generatingStories ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Smartphone className="h-3.5 w-3.5" />}
-                  {generatingStories ? 'Gerando...' : 'Stories'}
                 </button>
               )}
-
+              {/* More actions toggle */}
+              {!isGuest && (
+                <button onClick={() => setShowMobileMoreActions(prev => !prev)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/50 hover:text-white/80 border transition-all"
+                  style={{ borderColor: showMobileMoreActions ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)', backgroundColor: showMobileMoreActions ? 'rgba(255,255,255,0.08)' : 'transparent' }}>
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Export Dialog - rendered outside mobile container so it works on all viewports */}
@@ -8890,122 +8901,112 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
               )}
 
-            {/* Mobile action buttons continued */}
-            <div className="flex md:hidden items-center justify-center gap-2 sm:gap-3 relative z-10 flex-wrap px-4">
-              {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
-                <>
-                  <div className="w-px h-5 bg-white/10" />
-                  <button data-tour="btn-add" onClick={() => setShowAddCardMenu(true)} disabled={isGuest}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                    <Plus className="h-3.5 w-3.5" /> Adicionar Card
-                  </button>
-                  <button data-tour="btn-style" onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(!showStylePanel); }} disabled={isGuest}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                    style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
-                    <Palette className="h-3.5 w-3.5" /> Estilo
-                  </button>
-                </>
-              )}
-              
-              {/* Generate carousel from cover */}
-              {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
-                <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium border transition-all"
-                  style={{ color: themeHex, borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
-                  <Sparkles className="h-3.5 w-3.5" style={{ color: themeHex }} /> Gerar Carrossel
-                </button>
-              )}
-              {/* Regenerate All button with mode selector */}
-              {carouselData.cards.length >= 2 && !isGuest && (
-                <div className="relative">
-                  <button onClick={() => {
-                    if (regeneratingAll || regeneratingCard !== null) return;
-                    setShowRegenModeMenu(prev => !prev);
-                  }} disabled={regeneratingAll || regeneratingCard !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
-                    style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
-                    {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                    {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
-                  </button>
-                  {showRegenModeMenu && !regeneratingAll && (
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
-                      <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
-                        className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                        <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
-                        <div>
-                          <p className="font-semibold">Normal</p>
-                          <p className="text-[10px] text-white/40 mt-0.5">Cada card com imagem independente</p>
-                        </div>
+            {/* Mobile expanded actions */}
+            <AnimatePresence>
+              {showMobileMoreActions && (
+                <motion.div
+                  className="flex md:hidden items-center justify-center gap-2 relative z-10 flex-wrap px-4 mt-2"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                    <>
+                      <button data-tour="btn-add" onClick={() => setShowAddCardMenu(true)} disabled={isGuest}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
+                        style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                        <Plus className="h-3.5 w-3.5" /> Card
                       </button>
-                      <div className="h-px bg-white/[0.06]" />
-                      <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
-                        className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                        <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
-                        <div>
-                          <p className="font-semibold">Contínuo</p>
-                          <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
-                        </div>
+                    </>
+                  )}
+                  {/* Generate carousel from cover */}
+                  {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
+                    <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all"
+                      style={{ color: themeHex, borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
+                      <Sparkles className="h-3.5 w-3.5" /> Carrossel
+                    </button>
+                  )}
+                  {/* Regenerate All */}
+                  {carouselData.cards.length >= 2 && !isGuest && (
+                    <div className="relative">
+                      <button onClick={() => {
+                        if (regeneratingAll || regeneratingCard !== null) return;
+                        setShowRegenModeMenu(prev => !prev);
+                      }} disabled={regeneratingAll || regeneratingCard !== null}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
+                        style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                        {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        {regeneratingAll ? `${regenAllProgress?.current || ''}/${regenAllProgress?.total || ''}` : 'Regenerar'}
                       </button>
+                      {showRegenModeMenu && !regeneratingAll && (
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
+                          <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
+                            className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                            <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
+                            <div><p className="font-semibold">Normal</p><p className="text-[10px] text-white/40 mt-0.5">Imagens independentes</p></div>
+                          </button>
+                          <div className="h-px bg-white/[0.06]" />
+                          <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
+                            className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                            <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
+                            <div><p className="font-semibold">Contínuo</p><p className="text-[10px] text-white/40 mt-0.5">Panorama dividido</p></div>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                  {!isGuest && (
+                    <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
+                      style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
+                      <Palette className="h-3.5 w-3.5" /> Estilo
+                    </button>
+                  )}
+                  <button onClick={() => { if (!showCaptionPanel) { setShowCaptionPanel(true); if (!postCaption) openCaptionConfigDialog(); } else { setShowCaptionPanel(false); } }} disabled={isGuest}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
+                    style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: showCaptionPanel ? `rgba(${themeRgb},0.15)` : `rgba(${themeRgb},0.08)` }}>
+                    <FileText className="h-3.5 w-3.5" /> Legenda
+                  </button>
+                  {!isGuest && (
+                    <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                      disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                      <Pencil className="h-3.5 w-3.5" /> Corrigir
+                    </button>
+                  )}
+                  {!isGuest && correctionUndoStack.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const last = correctionUndoStack[correctionUndoStack.length - 1];
+                        if (!last) return;
+                        const newCards = carouselData ? [...carouselData.cards] : [];
+                        if (newCards[last.cardIndex]) {
+                          newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
+                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                        }
+                        if (last.cardIndex === 0 && currentCarouselId) {
+                          supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+                        }
+                        setCorrectionUndoStack(prev => prev.slice(0, -1));
+                        toast({ title: 'Edição revertida!' });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
+                      style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}>
+                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    </button>
+                  )}
+                  <button onClick={() => { resetWizardState(); }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    Novo
+                  </button>
+                </motion.div>
               )}
-              {/* Recriar em outro estilo - always visible */}
-              {!isGuest && (
-                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
-                  style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
-                  <Palette className="h-3.5 w-3.5" /> Mudar Estilo
-                </button>
-              )}
-              <button onClick={() => { if (!showCaptionPanel) { setShowCaptionPanel(true); if (!postCaption) openCaptionConfigDialog(); } else { setShowCaptionPanel(false); } }} disabled={isGuest}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: showCaptionPanel ? `rgba(${themeRgb},0.15)` : `rgba(${themeRgb},0.08)` }}>
-                <FileText className="h-3.5 w-3.5" /> Legenda
-              </button>
-              {/* Corrigir área button */}
-              {!isGuest && (
-                <button
-                  onClick={() => setCorrectionCardIndex(activeCardIndex)}
-                  disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Corrigir área
-                </button>
-              )}
-              {/* Undo correction button - always visible when logged in */}
-              {!isGuest && (
-                <button
-                  onClick={() => {
-                    if (correctionUndoStack.length === 0) return;
-                    const last = correctionUndoStack[correctionUndoStack.length - 1];
-                    if (!last) return;
-                    const newCards = carouselData ? [...carouselData.cards] : [];
-                    if (newCards[last.cardIndex]) {
-                      newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
-                      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                    }
-                    if (last.cardIndex === 0 && currentCarouselId) {
-                      supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                    }
-                    setCorrectionUndoStack(prev => prev.slice(0, -1));
-                    toast({ title: 'Edição revertida!' });
-                  }}
-                  disabled={correctionUndoStack.length === 0}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}
-                >
-                  <Undo2 className="h-3.5 w-3.5" /> Retornar edição {correctionUndoStack.length > 0 && <span className="ml-1 text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
-                </button>
-              )}
-              <button onClick={() => { resetWizardState(); }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
-                style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                Novo
-              </button>
-            </div>
+            </AnimatePresence>
 
             {/* Carousel from cover modal - enhanced */}
             {showCarouselFromCover && (

@@ -500,19 +500,21 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       >
 
         <div className="max-w-[1200px] mx-auto">
-          <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-end' : 'justify-between'}`}>
+          <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
-              {(!isMobile || showRecent) && (
-                <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Recentes</span>
-              )}
               <button
                 onClick={() => setShowRecent(prev => !prev)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer"
-                style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer"
+                style={{
+                  backgroundColor: showRecent ? 'rgba(123,80,220,0.15)' : 'rgba(255,255,255,0.06)',
+                  border: showRecent ? '1px solid rgba(123,80,220,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                  color: showRecent ? 'rgba(123,80,220,0.9)' : 'rgba(255,255,255,0.5)',
+                }}
                 title={showRecent ? 'Ocultar recentes' : 'Mostrar recentes'}
               >
+                <span className="text-xs font-medium">Recentes</span>
                 <motion.div animate={{ rotate: showRecent ? 0 : 180 }} transition={{ duration: 0.3 }}>
-                  <ChevronUp className="w-4 h-4" />
+                  <ChevronUp className="w-3.5 h-3.5" />
                 </motion.div>
               </button>
             </div>

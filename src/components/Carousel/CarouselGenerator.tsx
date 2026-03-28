@@ -438,7 +438,9 @@ const CarouselGenerator: React.FC = () => {
   // Web search state (declared early for WIZARD_STEPS computation)
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
-  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[] } | null>(null);
+  const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[]; sources?: { title: string; summary: string; angle: string }[] } | null>(null);
+  const [selectedWebSourceIndex, setSelectedWebSourceIndex] = useState<number | null>(null);
+  const [extractingUrl, setExtractingUrl] = useState(false);
 
   // Auto-detect product context from topic to show Produto step
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -929,13 +931,15 @@ const CarouselGenerator: React.FC = () => {
       const imageCandidates = Array.isArray(data.image_candidates)
         ? data.image_candidates.filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
         : [];
-      setWebSearchResult({
+       setWebSearchResult({
         summary: content?.summary || 'Conteúdo encontrado com sucesso',
         citations: data.citations || [],
         content,
         images,
         imageCandidates,
+        sources: content?.sources || [],
       });
+      setSelectedWebSourceIndex(null);
 
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
@@ -1013,6 +1017,8 @@ const CarouselGenerator: React.FC = () => {
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setWebSearchResult(null);
+    setSelectedWebSourceIndex(null);
+    setExtractingUrl(false);
     setClassifyingTopic(false);
     setWebSearchSuggestion(null);
     setWebSearchDecisionMade(false);
@@ -6501,7 +6507,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : true;
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : currentStepName === 'Pesquisa' ? (selectedWebSourceIndex !== null) : true;
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);
@@ -7027,7 +7033,41 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         searchingWeb={searchingWeb}
                         onSearchWeb={handleSearchWeb}
                         skipWebSearch={skipWebSearch}
-                        onToggleSkipWebSearch={() => { setSkipWebSearch(true); setWebSearchResult(null); setWizardStep(wizardStep + 1); }}
+                        onToggleSkipWebSearch={() => { setSkipWebSearch(true); setWebSearchResult(null); setSelectedWebSourceIndex(null); setWizardStep(wizardStep + 1); }}
+                        selectedSourceIndex={selectedWebSourceIndex}
+                        onSelectSource={setSelectedWebSourceIndex}
+                        extractingUrl={extractingUrl}
+                        onExtractUrl={async (url: string) => {
+                          setExtractingUrl(true);
+                          try {
+                            const data = await resilientInvoke('search-news', { topic: url, language: 'pt-BR' });
+                            if (data?.success && data?.content) {
+                              setWebSearchResult(prev => prev ? {
+                                ...prev,
+                                content: data.content,
+                                summary: data.content?.summary || prev.summary,
+                                citations: [...(prev.citations || []), url],
+                                sources: [...(prev.sources || []), { title: url, summary: data.content?.summary || 'Conteúdo extraído do link', angle: 'Link manual' }],
+                              } : {
+                                summary: data.content?.summary || 'Conteúdo extraído',
+                                citations: [url],
+                                content: data.content,
+                                images: data.images || [],
+                                sources: [{ title: url, summary: data.content?.summary || 'Conteúdo extraído do link', angle: 'Link manual' }],
+                              });
+                              // Auto-select the newly added source
+                              setSelectedWebSourceIndex((webSearchResult?.sources?.length || webSearchResult?.citations?.length || 0));
+                              sonnerToast.success('Conteúdo extraído com sucesso!');
+                            } else {
+                              sonnerToast.error('Não foi possível extrair conteúdo deste link');
+                            }
+                          } catch (err) {
+                            console.error('URL extraction error:', err);
+                            sonnerToast.error('Erro ao extrair conteúdo do link');
+                          } finally {
+                            setExtractingUrl(false);
+                          }
+                        }}
                       />
                     )}
                     {currentStepName === 'Formato' && (

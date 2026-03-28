@@ -250,8 +250,16 @@ Return ONLY a JSON object mapping card index to the chosen option index. Example
   "cta_body": "Call to action message (max 120 chars)",
   "image_search_terms": ["term1", "term2", "term3", "term4", "term5"],
   "clean_topic": "The extracted main subject/topic name only (e.g. 'CS2', 'Tesla', 'Bitcoin')",
-  "summary": "A brief 2-sentence summary of the key findings"
+  "summary": "A brief 2-sentence summary of the key findings",
+  "sources": [
+    {
+      "title": "Article/source title (max 80 chars)",
+      "summary": "One-paragraph summary of what this source says about the topic (80-150 chars)",
+      "angle": "The unique angle/perspective this source brings (max 60 chars)"
+    }
+  ]
 }
+CRITICAL for sources: You MUST return exactly 3 sources, each representing a DIFFERENT angle or article about the topic. Each source must correspond to one of the citations/URLs you used. The sources array MUST have exactly 3 items.
 Provide 4-6 facts. All content must be in ${language === 'pt-BR' ? 'Brazilian Portuguese' : language}. Base everything on REAL, current, verified information.
 
 CRITICAL for clean_topic: Preserve the REAL searchable subject exactly when qualifiers are essential. Keep year, edition, award category, event name, franchise name, person name, movie title, or location whenever they are important to identify the correct subject. Example: if user says "Crie um post sobre Oscar 2026", the clean_topic should be "Oscar 2026". If user says "Melhor ator no Oscar 2026", the clean_topic should be "Oscar 2026 melhor ator". Remove only filler verbs/instructions.

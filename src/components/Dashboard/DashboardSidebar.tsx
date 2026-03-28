@@ -354,7 +354,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               </div>
 
               {/* Gradient progress bar with animated shimmer */}
-              <div className="relative w-full h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
                 <div
                   className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
                   style={{

@@ -8262,8 +8262,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <Pencil className="h-4.5 w-4.5" />
                   </button>
                 </div>
-                {/* Add button - right side */}
-                <div className="absolute top-1/2 right-2 md:-right-14 -translate-y-1/2 z-40">
+                {/* Add button - right side (hidden on mobile) */}
+                <div className="hidden md:block absolute top-1/2 -right-14 -translate-y-1/2 z-40">
                   <button
                     onClick={() => setShowAddCardMenu((prev) => !prev)}
                     className="w-11 h-11 rounded-full flex items-center justify-center border text-white/80 hover:text-white transition-all"

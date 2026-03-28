@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ExpiringCreditsBanner } from '@/components/ExpiringCreditsBanner';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';

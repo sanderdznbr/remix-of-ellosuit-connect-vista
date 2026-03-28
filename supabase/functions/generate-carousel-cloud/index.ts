@@ -220,7 +220,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-    ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
+    // Logo is NOT sent to AI — handled via Canvas overlay on frontend
   });
 
   if (!imageUrl) {
@@ -508,10 +508,8 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
       parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias, nomes de templates ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt. NUNCA renderize nomes como "EXCLUSIVE", "PREMIUM", "TEMPLATE", ou qualquer nome de coleção/estilo.');
-      // Logo is now sent to AI — only prohibit if no logo provided
-      if (!job.logo_url) {
-        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem.');
-      }
+      // Logo is ALWAYS handled via Canvas overlay — NEVER sent to AI
+      parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
 
       if (isCover) {
         parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);
@@ -692,7 +690,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-          ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
+          // Logo NOT sent to AI — Canvas overlay only
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {
@@ -711,7 +709,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 fidelity: task.cardGetsFace ? 'high' : 'high',
                 facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
                 ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
-                ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
+                // Logo NOT sent to AI — Canvas overlay only
               });
               if (retryUrl) return { index: task.index, url: retryUrl };
             }

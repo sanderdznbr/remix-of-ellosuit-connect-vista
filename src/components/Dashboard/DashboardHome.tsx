@@ -519,12 +519,21 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             </div>
           </div>
 
-          <div className="-mr-4 md:-mr-8">
-            <div
-              ref={scrollContainerRef}
-              className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
-            >
+          <AnimatePresence initial={false}>
+            {showRecent && (
+              <motion.div
+                className="-mr-4 md:-mr-8"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div
+                  ref={scrollContainerRef}
+                  className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any, scrollSnapType: 'x proximity' }}
+                >
             {/* Placeholder cards for active generation jobs */}
             {activeJobs.map((job) => {
               const isExtreme = job.product_context?.startsWith('EXTREME_VISION:');

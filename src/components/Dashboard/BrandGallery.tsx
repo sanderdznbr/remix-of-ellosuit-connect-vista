@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FolderPlus, Upload, ArrowLeft, Trash2, Loader2, 
-  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check, ChevronRight
+  Image as ImageIcon, Pencil, X, Folder, Eye, Download, Check, ChevronRight, HardDrive
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+import ElloDriveModal from './ElloDriveModal';
 
 interface BrandFolder {
   id: string;

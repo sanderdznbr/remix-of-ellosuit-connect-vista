@@ -340,31 +340,19 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         layout
         transition={{ layout: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } }}
       >
-        {(() => {
-          const greetings = [
-            'O que vamos criar hoje?',
-            'Qual é a ideia de hoje?',
-            'Pronto para criar algo incrível?',
-            'Transforme suas ideias em posts',
-            'Vamos produzir conteúdo?',
-            'Hora de criar conteúdo',
-            'Sua próxima criação começa aqui',
-            'Inspire-se e crie agora',
-          ];
-          // Stable random per component mount using useRef seed
-          const dayIndex = (Date.now() % greetings.length + new Date().getMinutes()) % greetings.length;
-          return (
-            <motion.h1
-              className="text-2xl md:text-4xl font-semibold leading-snug mb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              style={{ fontFamily: "'Inter', sans-serif", color: '#ffffff' }}
-            >
-              {greetings[dayIndex]}
-            </motion.h1>
-          );
-        })()}
+        <AnimatePresence mode="wait">
+          <motion.h1
+            key={greetingIndex}
+            className="text-2xl md:text-4xl font-semibold leading-snug mb-3"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4 }}
+            style={{ fontFamily: "'Inter', sans-serif", color: '#ffffff' }}
+          >
+            {GREETINGS[greetingIndex]}
+          </motion.h1>
+        </AnimatePresence>
 
         <motion.p
           className="text-xs md:text-sm max-w-xs mb-4"

@@ -136,6 +136,7 @@ const BrandGallery: React.FC = () => {
   const [draggingFiles, setDraggingFiles] = useState<string[]>([]);
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
   const [dropTargetFolder, setDropTargetFolder] = useState<string | null>(null);
+  const [showElloDrive, setShowElloDrive] = useState(false);
   const dragCounter = useRef(0);
 
   const currentFolder = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
@@ -535,6 +536,12 @@ const BrandGallery: React.FC = () => {
           Upload
           <input id="brand-gallery-upload" type="file" accept="image/*,video/*,.pdf" multiple className="hidden" onChange={e => uploadFiles(e.target.files)} disabled={uploading} />
         </label>
+        <button
+          onClick={() => setShowElloDrive(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-purple-300 hover:text-purple-200 bg-purple-500/[0.08] hover:bg-purple-500/[0.14] border border-purple-500/20 transition-all cursor-pointer"
+        >
+          <HardDrive className="w-4 h-4" /> ElloDrive
+        </button>
         {hasSelection && (
           <button onClick={() => setSelectedFiles(new Set())}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/40 hover:text-white/70 transition-all cursor-pointer">

@@ -123,7 +123,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <div className="absolute bottom-0 left-0 w-[200px] h-[200px] rounded-full opacity-[0.08] blur-[60px]" style={{ background: 'radial-gradient(circle, #6D28D9 0%, transparent 70%)', animation: 'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite' }} />
       </div>
       {/* Scrollable nav area */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
       {/* Logo */}
       <div className="px-4 pt-4 pb-3">
         <img src={ellocontentIcon} alt="elloContent" className="h-8" />
@@ -323,7 +323,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
 
       {/* Bottom: Profile — fixed at bottom */}
-      <div className="shrink-0 border-t border-white/[0.06]">
+      <div className="shrink-0 border-t border-white/[0.04] relative z-10">
         {/* Credits with gradient bar and plan marker */}
         {(() => {
           const balance = displayBalance ?? 0;

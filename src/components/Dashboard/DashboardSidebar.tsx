@@ -329,7 +329,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           const balance = displayBalance ?? 0;
           const planNameLower = planName.toLowerCase();
           const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
-          const planColor = planNameLower.includes('growth') ? '#10B981' : planNameLower.includes('pro') ? '#8B5CF6' : planNameLower.includes('starter') ? '#3B82F6' : '#6B7280';
+          const planColor = '#8B5CF6';
           // Total bar represents max(balance, monthlyCredits) + some headroom
           const maxBar = Math.max(balance, monthlyCredits, 50);
           const balancePct = Math.min(100, (balance / maxBar) * 100);

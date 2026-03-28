@@ -84,10 +84,11 @@ const StepMode: React.FC<Props> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-2">
-        {modes.map((m) => {
+        {modes.filter(m => !m.adminOnly || isAdminMaster).map((m) => {
           const Icon = m.icon;
           const selected = wizardMode === m.key;
           const isExtreme = m.key === 'extreme';
+          const isTweet = m.key === 'tweet2';
           const locked = isLocked(m.key);
           return (
             <button
@@ -107,7 +108,7 @@ const StepMode: React.FC<Props> = ({
                     ? 'bg-orange-500/[0.08] border-orange-500/40'
                     : m.key === 'advanced'
                     ? 'bg-red-500/[0.08] border-red-500/40'
-                    : m.key === 'tweet' || m.key === 'tweet2'
+                    : isTweet
                     ? 'bg-sky-500/[0.08] border-sky-500/40'
                     : 'bg-purple-500/[0.08] border-purple-500/40'
                   : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
@@ -117,7 +118,7 @@ const StepMode: React.FC<Props> = ({
                 locked
                   ? 'bg-white/[0.03]'
                   : selected
-                   ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : m.key === 'tweet' || m.key === 'tweet2' ? 'bg-sky-500/20' : 'bg-purple-500/20'
+                   ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : isTweet ? 'bg-sky-500/20' : 'bg-purple-500/20'
                   : 'bg-white/[0.04]'
               }`}>
                 {locked ? (
@@ -125,7 +126,7 @@ const StepMode: React.FC<Props> = ({
                 ) : (
                   <Icon className={`h-6 w-6 ${
                     selected
-                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : m.key === 'tweet' || m.key === 'tweet2' ? 'text-sky-400' : 'text-purple-400'
+                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : isTweet ? 'text-sky-400' : 'text-purple-400'
                       : 'text-white/30'
                   }`} />
                 )}

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette, ImagePlus } from 'lucide-react';
+import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette, ImagePlus, Folder } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { FacePerson, ReferenceImage } from './types';
 import { LogoPosition } from './StepStyle';
+import GalleryPicker from './GalleryPicker';
 
 interface Props {
   // Face
@@ -95,6 +96,33 @@ const StepPersonalization: React.FC<Props> = ({
       else next.add(section);
       return next;
     });
+  };
+
+  const [galleryTarget, setGalleryTarget] = useState<'face' | 'logo' | 'media' | null>(null);
+
+  const handleGallerySelect = (files: { url: string; name: string }[]) => {
+    if (!galleryTarget) return;
+    files.forEach(file => {
+      const url = file.url;
+      if (galleryTarget === 'face') {
+        setFacePersons(prev => {
+          const updated = [...prev];
+          if (updated.length === 0) {
+            updated.push({ id: crypto.randomUUID(), label: 'Pessoa 1', gender: 'auto', wearsGlasses: false, photos: [] });
+          }
+          updated[0] = { ...updated[0], photos: [...updated[0].photos, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'face' as const }] };
+          const nonFaceRefs = referenceImages.filter(r => r.category !== 'face');
+          const allFaceRefs = updated.flatMap(p => p.photos);
+          setReferenceImages([...nonFaceRefs, ...allFaceRefs]);
+          return updated;
+        });
+      } else if (galleryTarget === 'logo') {
+        setLogoUrl(url);
+      } else if (galleryTarget === 'media') {
+        setReferenceImages(prev => [...prev, { url, thumb: url, label: file.name, source: 'upload' as const, category: 'style' as const }]);
+      }
+    });
+    setGalleryTarget(null);
   };
 
   const facePhotos = facePersons.flatMap(p => p.photos);
@@ -242,13 +270,22 @@ const StepPersonalization: React.FC<Props> = ({
                 ))}
               </div>
             )}
-            <button
-              onClick={handleFaceUpload}
-              className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-            >
-              <Upload className="h-4 w-4" />
-              {facePhotos.length > 0 ? 'Adicionar mais fotos' : 'Enviar foto do rosto'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleFaceUpload}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                {facePhotos.length > 0 ? 'Adicionar' : 'Enviar foto'}
+              </button>
+              <button
+                onClick={() => setGalleryTarget('face')}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Folder className="h-4 w-4" />
+                Galeria
+              </button>
+            </div>
             <div className="flex gap-2">
               {[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Feminino' }, { value: 'auto', label: 'Auto' }].map(opt => (
                 <button
@@ -285,17 +322,27 @@ const StepPersonalization: React.FC<Props> = ({
                   </div>
                   <div className="flex gap-1.5">
                     <button onClick={handleLogoUpload} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors text-xs">Trocar</button>
+                    <button onClick={() => setGalleryTarget('logo')} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 hover:text-white/80 transition-colors text-xs"><Folder className="h-3 w-3 inline mr-1" />Galeria</button>
                     <button onClick={() => setLogoUrl('')} className="p-2 rounded-lg bg-white/[0.06] hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-colors text-xs">Remover</button>
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={handleLogoUpload}
-                  className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-                >
-                  <Upload className="h-4 w-4" />
-                  Enviar logomarca
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleLogoUpload}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Enviar logo
+                  </button>
+                  <button
+                    onClick={() => setGalleryTarget('logo')}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+                  >
+                    <Folder className="h-4 w-4" />
+                    Galeria
+                  </button>
+                </div>
               )}
             </div>
 
@@ -418,13 +465,22 @@ const StepPersonalization: React.FC<Props> = ({
                 ))}
               </div>
             )}
-            <button
-              onClick={handleMediaUpload}
-              className="flex items-center gap-2 px-4 py-3 w-full rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
-            >
-              <Upload className="h-4 w-4" />
-              {mediaRefs.length > 0 ? 'Adicionar mais mídias' : 'Enviar fotos de referência'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleMediaUpload}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Upload className="h-4 w-4" />
+                {mediaRefs.length > 0 ? 'Adicionar' : 'Enviar fotos'}
+              </button>
+              <button
+                onClick={() => setGalleryTarget('media')}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-white/[0.12] text-sm text-white/40 hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+              >
+                <Folder className="h-4 w-4" />
+                Galeria
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -450,6 +506,14 @@ const StepPersonalization: React.FC<Props> = ({
       >
         Pular personalização
       </button>
+
+      <GalleryPicker
+        open={!!galleryTarget}
+        onClose={() => setGalleryTarget(null)}
+        onSelectFiles={handleGallerySelect}
+        label={galleryTarget === 'face' ? 'Selecionar foto do rosto' : galleryTarget === 'logo' ? 'Selecionar logomarca' : 'Selecionar mídias'}
+        maxFiles={galleryTarget === 'logo' ? 1 : undefined}
+      />
     </div>
   );
 };

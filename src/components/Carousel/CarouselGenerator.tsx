@@ -8901,122 +8901,112 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
               )}
 
-            {/* Mobile action buttons continued */}
-            <div className="flex md:hidden items-center justify-center gap-2 sm:gap-3 relative z-10 flex-wrap px-4">
-              {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
-                <>
-                  <div className="w-px h-5 bg-white/10" />
-                  <button data-tour="btn-add" onClick={() => setShowAddCardMenu(true)} disabled={isGuest}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                    style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                    <Plus className="h-3.5 w-3.5" /> Adicionar Card
-                  </button>
-                  <button data-tour="btn-style" onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(!showStylePanel); }} disabled={isGuest}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                    style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
-                    <Palette className="h-3.5 w-3.5" /> Estilo
-                  </button>
-                </>
-              )}
-              
-              {/* Generate carousel from cover */}
-              {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
-                <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium border transition-all"
-                  style={{ color: themeHex, borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
-                  <Sparkles className="h-3.5 w-3.5" style={{ color: themeHex }} /> Gerar Carrossel
-                </button>
-              )}
-              {/* Regenerate All button with mode selector */}
-              {carouselData.cards.length >= 2 && !isGuest && (
-                <div className="relative">
-                  <button onClick={() => {
-                    if (regeneratingAll || regeneratingCard !== null) return;
-                    setShowRegenModeMenu(prev => !prev);
-                  }} disabled={regeneratingAll || regeneratingCard !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
-                    style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
-                    {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                    {regeneratingAll ? (regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...') : 'Regenerar Tudo'}
-                  </button>
-                  {showRegenModeMenu && !regeneratingAll && (
-                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
-                      <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
-                        className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                        <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
-                        <div>
-                          <p className="font-semibold">Normal</p>
-                          <p className="text-[10px] text-white/40 mt-0.5">Cada card com imagem independente</p>
-                        </div>
+            {/* Mobile expanded actions */}
+            <AnimatePresence>
+              {showMobileMoreActions && (
+                <motion.div
+                  className="flex md:hidden items-center justify-center gap-2 relative z-10 flex-wrap px-4 mt-2"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {!activeMarketplaceStyle?.imageGeneration?.prompt_style && (
+                    <>
+                      <button data-tour="btn-add" onClick={() => setShowAddCardMenu(true)} disabled={isGuest}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
+                        style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                        <Plus className="h-3.5 w-3.5" /> Card
                       </button>
-                      <div className="h-px bg-white/[0.06]" />
-                      <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
-                        className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
-                        <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
-                        <div>
-                          <p className="font-semibold">Contínuo</p>
-                          <p className="text-[10px] text-white/40 mt-0.5">Panorama único dividido em slides</p>
-                        </div>
+                    </>
+                  )}
+                  {/* Generate carousel from cover */}
+                  {carouselData.cards.length === 1 && carouselData.cards[0]?.imageUrl && !isGuest && (
+                    <button onClick={() => { setShowCarouselFromCover(true); setCoverModalTab('config'); setCoverCardTexts(Array.from({ length: carouselFromCoverCount }, () => ({ title: '', body: '' }))); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all"
+                      style={{ color: themeHex, borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: `rgba(${themeRgb},0.08)` }}>
+                      <Sparkles className="h-3.5 w-3.5" /> Carrossel
+                    </button>
+                  )}
+                  {/* Regenerate All */}
+                  {carouselData.cards.length >= 2 && !isGuest && (
+                    <div className="relative">
+                      <button onClick={() => {
+                        if (regeneratingAll || regeneratingCard !== null) return;
+                        setShowRegenModeMenu(prev => !prev);
+                      }} disabled={regeneratingAll || regeneratingCard !== null}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-40"
+                        style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                        {regeneratingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        {regeneratingAll ? `${regenAllProgress?.current || ''}/${regenAllProgress?.total || ''}` : 'Regenerar'}
                       </button>
+                      {showRegenModeMenu && !regeneratingAll && (
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 rounded-xl border border-white/10 bg-[#1a1a2e] shadow-2xl overflow-hidden z-50">
+                          <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(false); regenerateAll(); }}
+                            className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                            <RotateCcw className="h-3.5 w-3.5 text-orange-400" />
+                            <div><p className="font-semibold">Normal</p><p className="text-[10px] text-white/40 mt-0.5">Imagens independentes</p></div>
+                          </button>
+                          <div className="h-px bg-white/[0.06]" />
+                          <button onClick={() => { setShowRegenModeMenu(false); setContinuousMode(true); regenerateAll(); }}
+                            className="w-full px-4 py-3 text-left text-xs font-medium text-white/80 hover:bg-white/[0.06] transition-colors flex items-center gap-2">
+                            <Layers className="h-3.5 w-3.5" style={{ color: themeHex }} />
+                            <div><p className="font-semibold">Contínuo</p><p className="text-[10px] text-white/40 mt-0.5">Panorama dividido</p></div>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                  {!isGuest && (
+                    <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
+                      style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
+                      <Palette className="h-3.5 w-3.5" /> Estilo
+                    </button>
+                  )}
+                  <button onClick={() => { if (!showCaptionPanel) { setShowCaptionPanel(true); if (!postCaption) openCaptionConfigDialog(); } else { setShowCaptionPanel(false); } }} disabled={isGuest}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
+                    style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: showCaptionPanel ? `rgba(${themeRgb},0.15)` : `rgba(${themeRgb},0.08)` }}>
+                    <FileText className="h-3.5 w-3.5" /> Legenda
+                  </button>
+                  {!isGuest && (
+                    <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                      disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}>
+                      <Pencil className="h-3.5 w-3.5" /> Corrigir
+                    </button>
+                  )}
+                  {!isGuest && correctionUndoStack.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const last = correctionUndoStack[correctionUndoStack.length - 1];
+                        if (!last) return;
+                        const newCards = carouselData ? [...carouselData.cards] : [];
+                        if (newCards[last.cardIndex]) {
+                          newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
+                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                        }
+                        if (last.cardIndex === 0 && currentCarouselId) {
+                          supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+                        }
+                        setCorrectionUndoStack(prev => prev.slice(0, -1));
+                        toast({ title: 'Edição revertida!' });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
+                      style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}>
+                      <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    </button>
+                  )}
+                  <button onClick={() => { resetWizardState(); }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    Novo
+                  </button>
+                </motion.div>
               )}
-              {/* Recriar em outro estilo - always visible */}
-              {!isGuest && (
-                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-emerald-300 hover:text-emerald-200 border transition-all"
-                  style={{ borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }}>
-                  <Palette className="h-3.5 w-3.5" /> Mudar Estilo
-                </button>
-              )}
-              <button onClick={() => { if (!showCaptionPanel) { setShowCaptionPanel(true); if (!postCaption) openCaptionConfigDialog(); } else { setShowCaptionPanel(false); } }} disabled={isGuest}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white border transition-all disabled:opacity-30"
-                style={{ borderColor: `rgba(${themeRgb},0.3)`, backgroundColor: showCaptionPanel ? `rgba(${themeRgb},0.15)` : `rgba(${themeRgb},0.08)` }}>
-                <FileText className="h-3.5 w-3.5" /> Legenda
-              </button>
-              {/* Corrigir área button */}
-              {!isGuest && (
-                <button
-                  onClick={() => setCorrectionCardIndex(activeCardIndex)}
-                  disabled={!carouselData.cards[activeCardIndex]?.imageUrl}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-orange-300 hover:text-orange-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ borderColor: 'rgba(251,146,60,0.3)', backgroundColor: 'rgba(251,146,60,0.08)' }}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Corrigir área
-                </button>
-              )}
-              {/* Undo correction button - always visible when logged in */}
-              {!isGuest && (
-                <button
-                  onClick={() => {
-                    if (correctionUndoStack.length === 0) return;
-                    const last = correctionUndoStack[correctionUndoStack.length - 1];
-                    if (!last) return;
-                    const newCards = carouselData ? [...carouselData.cards] : [];
-                    if (newCards[last.cardIndex]) {
-                      newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
-                      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                    }
-                    if (last.cardIndex === 0 && currentCarouselId) {
-                      supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                    }
-                    setCorrectionUndoStack(prev => prev.slice(0, -1));
-                    toast({ title: 'Edição revertida!' });
-                  }}
-                  disabled={correctionUndoStack.length === 0}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}
-                >
-                  <Undo2 className="h-3.5 w-3.5" /> Retornar edição {correctionUndoStack.length > 0 && <span className="ml-1 text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
-                </button>
-              )}
-              <button onClick={() => { resetWizardState(); }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 border transition-all"
-                style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                Novo
-              </button>
-            </div>
+            </AnimatePresence>
 
             {/* Carousel from cover modal - enhanced */}
             {showCarouselFromCover && (

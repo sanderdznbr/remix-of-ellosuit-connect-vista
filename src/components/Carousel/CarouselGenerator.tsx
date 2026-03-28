@@ -931,13 +931,15 @@ const CarouselGenerator: React.FC = () => {
       const imageCandidates = Array.isArray(data.image_candidates)
         ? data.image_candidates.filter((c: any) => c?.url && typeof c.url === 'string' && c.url.startsWith('http'))
         : [];
-      setWebSearchResult({
+       setWebSearchResult({
         summary: content?.summary || 'Conteúdo encontrado com sucesso',
         citations: data.citations || [],
         content,
         images,
         imageCandidates,
+        sources: content?.sources || [],
       });
+      setSelectedWebSourceIndex(null);
 
       if (content?.image_search_terms?.length > 0) {
         setKeywords(content.image_search_terms.join(', '));
@@ -1015,6 +1017,8 @@ const CarouselGenerator: React.FC = () => {
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setWebSearchResult(null);
+    setSelectedWebSourceIndex(null);
+    setExtractingUrl(false);
     setClassifyingTopic(false);
     setWebSearchSuggestion(null);
     setWebSearchDecisionMade(false);
@@ -6503,7 +6507,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
 
-  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : true;
+  const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : currentStepName === 'Pesquisa' ? (selectedWebSourceIndex !== null) : true;
 
   // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
   const autoRoteiroTriggered = useRef(false);

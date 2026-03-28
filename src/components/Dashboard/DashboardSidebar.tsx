@@ -151,7 +151,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <button
           onClick={() => { onTabChange('projects'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeTab === 'projects'
+            activeTab === 'projects' || activeTab === 'starred'
               ? 'bg-white/[0.08] text-white font-medium'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
@@ -159,17 +159,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <FolderOpen className="w-4 h-4" />
           Conteúdos
         </button>
-        <button
-          onClick={() => { onTabChange('starred'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeTab === 'starred'
-              ? 'bg-white/[0.08] text-white font-medium'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-        >
-          <Star className="w-4 h-4" />
-          Favoritos
-        </button>
+        {(activeTab === 'projects' || activeTab === 'starred') && (
+          <button
+            onClick={() => { onTabChange(activeTab === 'starred' ? 'projects' : 'starred'); closeSearch(); }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 ml-5 rounded-lg text-xs transition-colors cursor-pointer"
+            style={{
+              color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.35)',
+            }}
+          >
+            <Star className="w-3 h-3" fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
+            {activeTab === 'starred' ? 'Mostrando favoritos' : 'Ver favoritos'}
+          </button>
+        )}
         <button
           onClick={() => { onTabChange('gallery'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${

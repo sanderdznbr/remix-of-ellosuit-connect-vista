@@ -20,6 +20,7 @@ const modes = [
     steps: '6 etapas · Rápido e direto',
     desc: 'Ideal para quem quer resultados rápidos',
     requiredPlan: null,
+    adminOnly: false,
   },
   {
     key: 'advanced' as const,
@@ -28,6 +29,7 @@ const modes = [
     steps: '12 etapas · Controle total',
     desc: 'Cores, fontes, roteiro, produto e mais',
     requiredPlan: 'Pro',
+    adminOnly: false,
   },
   {
     key: 'extreme' as const,
@@ -37,24 +39,17 @@ const modes = [
     desc: 'Descreva sua visão e a IA monta tudo para você',
     badge: 'NOVO',
     requiredPlan: 'Growth',
-  },
-  {
-    key: 'tweet' as const,
-    icon: Twitter,
-    label: 'Tweet Post',
-    steps: 'Tweet visual · Estático ou carrossel',
-    desc: 'Crie posts no formato de tweet com foto e engajamento',
-    badge: 'NOVO',
-    requiredPlan: null,
+    adminOnly: false,
   },
   {
     key: 'tweet2' as const,
     icon: Twitter,
-    label: 'tweet2',
-    steps: 'Fluxo novo · Preview = save',
-    desc: 'Nova implementação isolada, refeita do zero',
+    label: 'Tweet Post',
+    steps: 'Tweet visual · Estático ou carrossel',
+    desc: 'Crie posts no formato de tweet com foto e engajamento',
     badge: 'BETA',
     requiredPlan: null,
+    adminOnly: true,
   },
 ] as const;
 
@@ -65,6 +60,7 @@ const StepMode: React.FC<Props> = ({
   allowExtreme = true,
   requiredPlanForAdvanced = 'Pro',
   requiredPlanForExtreme = 'Growth',
+  isAdminMaster = false,
 }) => {
   const navigate = useNavigate();
 

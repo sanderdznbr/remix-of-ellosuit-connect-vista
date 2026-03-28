@@ -220,7 +220,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-    ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
+    // Logo is NOT sent to AI — handled via Canvas overlay on frontend
   });
 
   if (!imageUrl) {
@@ -690,7 +690,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-          ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
+          // Logo NOT sent to AI — Canvas overlay only
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {
@@ -709,7 +709,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 fidelity: task.cardGetsFace ? 'high' : 'high',
                 facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
                 ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
-                ...(job.logo_url ? { logoImageUrl: job.logo_url, logoPosition: job.logo_position || 'top-left' } : {}),
+                // Logo NOT sent to AI — Canvas overlay only
               });
               if (retryUrl) return { index: task.index, url: retryUrl };
             }

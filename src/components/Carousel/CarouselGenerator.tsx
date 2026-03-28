@@ -1110,9 +1110,9 @@ const CarouselGenerator: React.FC = () => {
       const { data } = await supabase.from('brand_assets').select('id, name, file_url, category').eq('company_id', cu.company_id).eq('file_type', 'image').order('created_at', { ascending: false });
       if (data) {
         setBrandAssets(data);
-        // Auto-load logo from brand assets if not already set
+        // Auto-load logo from brand assets if not already set (skip ellosuit logos)
         if (!logoUrl) {
-          const logo = data.find(a => a.category === 'logo');
+          const logo = data.find(a => a.category === 'logo' && !/ellosuit/i.test(a.file_url) && !/ellosuit/i.test(a.name));
           if (logo) {
             setLogoUrl(logo.file_url);
             console.log('[AutoBrand] Logo auto-loaded from brand assets:', logo.file_url);

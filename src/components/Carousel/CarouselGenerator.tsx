@@ -2656,6 +2656,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           }
         } catch (e) { console.warn('[SINGLE_POST] Font base64 conversion failed:', e); }
       }
+      // Include logo as reference image for AI
+      if (logoUrl && logoUrl.startsWith('http')) {
+        effectiveProductRefs = [...(effectiveProductRefs || []), logoUrl];
+      }
 
       const imageUrl = await generateImage({
         prompt: finalPrompt,

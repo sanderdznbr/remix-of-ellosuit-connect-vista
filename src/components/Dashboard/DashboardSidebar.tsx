@@ -116,9 +116,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   };
 
   return (
-    <aside className="w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#111116', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <aside className="relative w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
+      {/* Purple animated background with blur */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] rounded-full opacity-[0.12] blur-[80px] animate-pulse" style={{ background: 'radial-gradient(circle, #8B5CF6 0%, #4C1D95 50%, transparent 70%)' }} />
+        <div className="absolute bottom-0 left-0 w-[200px] h-[200px] rounded-full opacity-[0.08] blur-[60px]" style={{ background: 'radial-gradient(circle, #6D28D9 0%, transparent 70%)', animation: 'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite' }} />
+      </div>
       {/* Scrollable nav area */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
       {/* Logo */}
       <div className="px-4 pt-4 pb-3">
         <img src={ellocontentIcon} alt="elloContent" className="h-8" />
@@ -318,7 +323,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
 
       {/* Bottom: Profile — fixed at bottom */}
-      <div className="shrink-0 border-t border-white/[0.06]">
+      <div className="shrink-0 border-t border-white/[0.04] relative z-10">
         {/* Credits with gradient bar and plan marker */}
         {(() => {
           const balance = displayBalance ?? 0;

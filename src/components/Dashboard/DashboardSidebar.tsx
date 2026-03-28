@@ -135,7 +135,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           onClick={() => { onTabChange('home'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
             activeTab === 'home' && !searchOpen
-              ? 'bg-white/[0.08] text-white'
+              ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
         >
@@ -152,7 +152,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           onClick={() => { onTabChange('projects'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'projects' || activeTab === 'starred'
-              ? 'bg-white/[0.08] text-white font-medium'
+              ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
         >
@@ -175,7 +175,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           onClick={() => { onTabChange('gallery'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'gallery'
-              ? 'bg-white/[0.08] text-white font-medium'
+              ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
         >
@@ -186,7 +186,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           onClick={() => { onTabChange('prompts'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'prompts'
-              ? 'bg-white/[0.08] text-white font-medium'
+              ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
         >
@@ -197,7 +197,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           onClick={() => { onTabChange('marketplace'); closeSearch(); }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'marketplace'
-              ? 'bg-white/[0.08] text-white font-medium'
+              ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
         >
@@ -230,7 +230,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                   onClick={() => { onTabChange(tab); closeSearch(); }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
                     activeTab === tab
-                      ? 'bg-white/[0.08] text-white font-medium'
+                      ? 'text-white'
                       : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
                   }`}
                 >
@@ -258,7 +258,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               onClick={() => { navigate('/comunidade'); closeSearch(); }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
                 location.pathname === '/comunidade'
-                  ? 'bg-white/[0.08] text-white font-medium'
+                  ? 'text-white'
                   : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
               }`}
             >
@@ -269,7 +269,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               onClick={() => { navigate('/perfil'); closeSearch(); }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
                 location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
-                  ? 'bg-white/[0.08] text-white font-medium'
+                  ? 'text-white'
                   : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
               }`}
             >
@@ -295,7 +295,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
                 location.pathname === '/area/parceiros'
-                  ? 'bg-white/[0.08] text-white font-medium'
+                  ? 'text-white'
                   : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
               }`}
             >
@@ -307,7 +307,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                 onClick={() => { navigate('/admin'); closeSearch(); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
                   location.pathname === '/admin'
-                    ? 'bg-purple-500/20 text-purple-400 font-medium'
+                    ? 'text-white'
                     : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
                 }`}
               >

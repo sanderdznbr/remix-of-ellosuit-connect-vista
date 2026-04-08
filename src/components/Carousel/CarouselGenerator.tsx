@@ -2854,7 +2854,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
           // Draw logo with smart color adaptation
           const smartDrawLogo = async (canvasCtx: CanvasRenderingContext2D, canvasW: number, canvasH: number, primaryLogo: string, darkLogo: string | null, pos: string) => {
-            const pad = 50;
+            const pad = Math.max(56, Math.round(Math.min(canvasW, canvasH) * 0.065));
             // Sample background luminance at logo position
             let sampleX = pad + 40, sampleY = pad + 20;
             if (pos.includes('right')) sampleX = canvasW - pad - 40;
@@ -2873,7 +2873,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
             })();
             const logoImg = await loadImg(logoB64);
-            const maxLW = 180, maxLH = 80;
+            const maxLW = Math.min(170, canvasW * 0.18), maxLH = Math.min(72, canvasH * 0.065);
             const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
             const lw = logoImg.width * ls, lh = logoImg.height * ls;
             let lx = pad, ly = pad;
@@ -3958,10 +3958,10 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
                 return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
               })();
               const logoImg = await loadImg(logoB64);
-              const maxLW = 180, maxLH = 80;
+              const maxLW = Math.min(170, W * 0.18), maxLH = Math.min(72, H * 0.065);
               const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
               const lw = logoImg.width * ls, lh = logoImg.height * ls;
-              const pad = 50;
+              const pad = Math.max(56, Math.round(Math.min(W, H) * 0.065));
               let lx = pad, ly = pad;
               const lp = logoPosition || 'top-left';
               if (lp.includes('center')) lx = (W - lw) / 2;

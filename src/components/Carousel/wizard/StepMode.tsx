@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // animated mode fix
 import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

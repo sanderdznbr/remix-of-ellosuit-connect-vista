@@ -1,12 +1,13 @@
 // Shared wizard accent theme utility
 // Used by all wizard step components to apply mode-specific colors
 
-export type WizardAccentTheme = 'purple' | 'red' | 'orange' | 'sky';
+export type WizardAccentTheme = 'purple' | 'red' | 'orange' | 'sky' | 'violet';
 
-export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2'): WizardAccentTheme {
+export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated'): WizardAccentTheme {
   if (wizardMode === 'extreme') return 'orange';
   if (wizardMode === 'advanced') return 'red';
   if (wizardMode === 'tweet' || wizardMode === 'tweet2') return 'sky';
+  if (wizardMode === 'animated') return 'violet';
   return 'purple';
 }
 

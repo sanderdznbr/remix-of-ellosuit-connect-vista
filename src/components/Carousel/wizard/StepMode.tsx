@@ -42,6 +42,16 @@ const modes = [
     adminOnly: false,
   },
   {
+    key: 'animated' as const,
+    icon: Film,
+    label: 'Animado',
+    steps: 'HTML/CSS · Cada card vira vídeo',
+    desc: 'A IA cria animações em HTML/CSS e você grava como vídeo',
+    badge: 'NOVO',
+    requiredPlan: 'Growth',
+    adminOnly: false,
+  },
+  {
     key: 'tweet2' as const,
     icon: Twitter,
     label: 'Tweet Post',

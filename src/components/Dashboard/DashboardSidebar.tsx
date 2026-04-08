@@ -28,6 +28,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [ferramentasOpen, setFerramentasOpen] = useState(false);
   const [comunidadeOpen, setComunidadeOpen] = useState(false);
   const [parceirosOpen, setParceirosOpen] = useState(false);
+  const [isAffiliate, setIsAffiliate] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevBalanceRef = useRef<number | null>(null);
 
@@ -37,14 +38,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     try {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
-      const [{ data: carousels }, { data: credits }, { data: elloSub }] = await Promise.all([
+      const [{ data: carousels }, { data: credits }, { data: elloSub }, { data: affiliateData }] = await Promise.all([
         supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
         supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
         supabase.from('ellocontent_subscriptions').select('plan_name, monthly_credits, status').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('affiliate_partners').select('id').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
       ]);
       setRecentProjects(carousels || []);
       const newBalance = credits?.balance ?? 0;
       setCreditBalance(newBalance);
+      setIsAffiliate(!!affiliateData);
       if (elloSub && (elloSub.status === 'active' || elloSub.status === 'trialing')) {
         setMonthlyCredits(elloSub.monthly_credits || 0);
         setPlanName(elloSub.plan_name || 'free');
@@ -280,44 +283,46 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         )}
       </div>
 
-      {/* Parceiros section — collapsible */}
-      <div className="px-2 mt-5">
-        <button
-          onClick={() => setParceirosOpen(!parceirosOpen)}
-          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-        >
-          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Parceiros</span>
-          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${parceirosOpen ? 'rotate-90' : ''}`} />
-        </button>
-        {parceirosOpen && (
-          <div className="mt-1 space-y-0.5">
-            <button
-              onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                location.pathname === '/area/parceiros'
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              <Handshake className="w-4 h-4" />
-              Afiliados
-            </button>
-            {email === 'admin@gmail.com' && (
+      {/* Parceiros section — only for affiliates or admin */}
+      {(isAffiliate || email === 'admin@gmail.com') && (
+        <div className="px-2 mt-5">
+          <button
+            onClick={() => setParceirosOpen(!parceirosOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
+          >
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Parceiros</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${parceirosOpen ? 'rotate-90' : ''}`} />
+          </button>
+          {parceirosOpen && (
+            <div className="mt-1 space-y-0.5">
               <button
-                onClick={() => { navigate('/admin'); closeSearch(); }}
+                onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  location.pathname === '/admin'
+                  location.pathname === '/area/parceiros'
                     ? 'text-white'
                     : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
                 }`}
               >
-                <Shield className="w-4 h-4" />
-                Painel Admin
+                <Handshake className="w-4 h-4" />
+                Afiliados
               </button>
-            )}
-          </div>
-        )}
-      </div>
+              {email === 'admin@gmail.com' && (
+                <button
+                  onClick={() => { navigate('/admin'); closeSearch(); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                    location.pathname === '/admin'
+                      ? 'text-white'
+                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  Painel Admin
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
 
       </div>{/* end scrollable nav area */}

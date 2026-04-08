@@ -665,6 +665,7 @@ serve(async (req) => {
       logoUrl,
       logoPosition = "bottom-right",
       backgroundImageUrl,
+      backgroundStyle = 'solid',
       generateAiBg = false,
       generateAiMockup = false,
       mockupScreenshots = [],
@@ -740,6 +741,7 @@ serve(async (req) => {
       mockupDeviceType,
       cardIndex,
       totalCards,
+      backgroundStyle,
     });
 
     console.log(`✅ Animated card ${cardIndex + 1}/${totalCards} generated (${htmlContent.length} chars)${finalBgImageUrl ? ' [with editorial bg]' : ''}${mockupImageUrl ? ' [with screenshot mockup]' : ''}`);

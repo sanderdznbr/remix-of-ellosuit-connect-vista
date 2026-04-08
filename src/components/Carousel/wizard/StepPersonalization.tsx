@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette, ImagePlus, Folder } from 'lucide-react';
+import { User, Building2, ChevronDown, ChevronUp, Upload, X, Loader2, ShoppingBag, Palette, ImagePlus, Folder, Sparkles, Monitor } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,6 +66,10 @@ interface Props {
   // Animated mode extras
   animatedBgImageUrl?: string;
   setAnimatedBgImageUrl?: (v: string) => void;
+  generateAiBg?: boolean;
+  setGenerateAiBg?: (v: boolean) => void;
+  generateAiMockup?: boolean;
+  setGenerateAiMockup?: (v: boolean) => void;
 }
 
 const StepPersonalization: React.FC<Props> = ({
@@ -82,6 +86,8 @@ const StepPersonalization: React.FC<Props> = ({
   useCustomColors, setUseCustomColors, customColors, setCustomColors,
   wizardMode, logoMode, setLogoMode,
   animatedBgImageUrl, setAnimatedBgImageUrl,
+  generateAiBg, setGenerateAiBg,
+  generateAiMockup, setGenerateAiMockup,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();

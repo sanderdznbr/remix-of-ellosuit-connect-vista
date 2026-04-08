@@ -1,9 +1,9 @@
 import React from 'react';
-import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter } from 'lucide-react';
+import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
-  wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
+  wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated';
   setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2') => void;
   allowAdvanced?: boolean;
   allowExtreme?: boolean;

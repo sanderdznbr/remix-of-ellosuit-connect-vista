@@ -394,13 +394,13 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         for (const ref of validStyleRefs.slice(0, maxStyleRefs)) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte (serif, sans-serif, display, script, bold, condensed etc.) é usada nas referências e REPLIQUE-A fielmente. NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário.` });
+        messageContent.push({ type: 'text', text: `As ${maxStyleRefs} imagens acima (após as fotos do rosto) são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte (serif, sans-serif, display, script, bold, condensed etc.) é usada nas referências e REPLIQUE-A fielmente. NÃO copie rostos, textos, títulos, nomes ou @handles das referências. O rosto DEVE ser EXCLUSIVAMENTE o da pessoa nas fotos de identidade facial. Os textos DEVEM vir APENAS do prompt do usuário. PROIBIÇÃO CRÍTICA: NUNCA use uma imagem de referência de estilo como CONTEÚDO dentro de mockups, telas de celular/computador ou qualquer dispositivo. As referências de estilo existem APENAS para inspiração estética — NUNCA devem aparecer como screenshots, fotos ou conteúdo visual dentro da arte final.` });
       } else {
         // No face refs — send all style refs
         for (const ref of validStyleRefs) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte é usada nas referências e REPLIQUE-A fielmente — mesma família, peso, estilo e hierarquia tipográfica. NÃO copie textos, títulos, nomes, @handles ou qualquer texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no prompt do usuário.` });
+        messageContent.push({ type: 'text', text: `As ${validStyleRefs.length} imagens acima são REFERÊNCIAS DE ESTILO. Copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout, elementos gráficos). Analise EXATAMENTE qual família de fonte é usada nas referências e REPLIQUE-A fielmente — mesma família, peso, estilo e hierarquia tipográfica. NÃO copie textos, títulos, nomes, @handles ou qualquer texto visível nas referências. Use EXCLUSIVAMENTE os textos fornecidos no prompt do usuário. PROIBIÇÃO CRÍTICA: NUNCA use uma imagem de referência de estilo como CONTEÚDO dentro de mockups, telas de celular/computador ou qualquer dispositivo. As referências de estilo existem APENAS para inspiração estética — NUNCA devem aparecer como screenshots, fotos ou conteúdo visual dentro da arte final.` });
       }
 
       messageContent.push({ type: 'text', text: textPrompt });
@@ -444,7 +444,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout). Analise e replique EXATAMENTE a mesma família de fonte das referências. NÃO copie textos visíveis nas referências:` });
+        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout). Analise e replique EXATAMENTE a mesma família de fonte das referências. NÃO copie textos visíveis nas referências. PROIBIÇÃO CRÍTICA: NUNCA use uma referência de estilo como CONTEÚDO dentro de mockups, telas de dispositivos ou qualquer frame. Elas são APENAS inspiração estética:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 
@@ -464,7 +464,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, TIPOGRAFIA/FONTES exatas, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. A FONTE usada nos textos DEVE ser a MESMA família tipográfica das referências. Renderize APENAS os textos fornecidos no prompt.` });
+        messageContent.push({ type: 'text', text: `LEMBRETE: Copie o ESTILO VISUAL das referências (cores, TIPOGRAFIA/FONTES exatas, decoração, layout) mas NUNCA copie textos/títulos/nomes visíveis nelas. A FONTE usada nos textos DEVE ser a MESMA família tipográfica das referências. Renderize APENAS os textos fornecidos no prompt. NUNCA coloque uma imagem de referência de estilo como conteúdo dentro de telas de celular, computador ou qualquer mockup de dispositivo.` });
       }
       if (validFaceRefs.length > 0) {
         messageContent.push({ type: 'text', text: `LEMBRETE FINAL: A prioridade #1 é a FIDELIDADE FACIAL. O rosto DEVE ser idêntico às fotos de referência.` });

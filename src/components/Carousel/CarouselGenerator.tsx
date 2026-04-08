@@ -357,6 +357,7 @@ const CarouselGenerator: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
+  const [logoMode, setLogoMode] = useState<'ai' | 'manual'>('ai');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
   const [useBrandColors, setUseBrandColors] = useState(true);
   const [useCustomColors, setUseCustomColors] = useState(false);
@@ -1344,7 +1345,7 @@ const CarouselGenerator: React.FC = () => {
     tweetPhotoHeights: wizardMode === 'tweet' ? tweetPhotoHeights : undefined,
     tweetFontSizeOverride: wizardMode === 'tweet' ? tweetFontSizeOverride : undefined,
     tweetCardPhotoAssignments: wizardMode === 'tweet' ? cardPhotoAssignments : undefined,
-  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat, tweetConfig, tweetPhotoHeights, tweetFontSizeOverride, cardPhotoAssignments]);
+  }), [topic, keywords, cardCount, imageCardCount, contentMode, manualPostText, referenceImages, facePersons, allPeopleOnCover, faceGender, wearsGlasses, imageSettings, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, activePresetId, logoUrl, logoPosition, logoMode, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, wizardMode, extremeVision, extremeAnalysis, extremeFormValues, extremeSelectedFont, postFormat, tweetConfig, tweetPhotoHeights, tweetFontSizeOverride, cardPhotoAssignments]);
 
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1384,7 +1385,7 @@ const CarouselGenerator: React.FC = () => {
         }
         
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
-        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
         
         if (currentCarouselIdRef.current) {
           await supabase.from('generated_carousels').update({ 
@@ -1437,7 +1438,7 @@ const CarouselGenerator: React.FC = () => {
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
-  }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig]);
+  }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig]);
 
 
   // Export dialog is now a centered modal, no outside-click handler needed
@@ -1685,6 +1686,7 @@ const CarouselGenerator: React.FC = () => {
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
         ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
+        ...(logoMode === 'ai' && logoUrl ? { logoImageUrl: logoUrl, logoMode: 'ai' } : {}),
       },
     });
     
@@ -1910,7 +1912,7 @@ const CarouselGenerator: React.FC = () => {
       }
 
       const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover, continuousMode };
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover, continuousMode };
       const effectiveId = currentCarouselIdRef.current;
       if (effectiveId) {
         await supabase.from('generated_carousels').update({ title: dataToPersist.title || topic, topic, keywords: keywords.split(',').map(k => k.trim()).filter(Boolean), carousel_data: dataToPersist as any, style_config: styleConfig as any, card_count: dataToPersist.cards.length, marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null, generation_config: buildGenerationConfig() } as any).eq('id', effectiveId);
@@ -1971,6 +1973,7 @@ const CarouselGenerator: React.FC = () => {
       if (sc.activePresetId) setActivePresetId(sc.activePresetId);
       if (sc.logoUrl !== undefined) setLogoUrl(sc.logoUrl);
       if (sc.logoPosition) setLogoPosition(sc.logoPosition);
+      if (sc.logoMode) setLogoMode(sc.logoMode);
       if (sc.showHeader !== undefined) setShowHeader(sc.showHeader);
       // Restore reference images (face, style, product refs)
       if (sc.referenceImages?.length) setReferenceImages(sc.referenceImages);
@@ -2147,7 +2150,7 @@ const CarouselGenerator: React.FC = () => {
           .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
       }
 
-      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, contentMode: mode, manualPostText: mode === 'single-post' ? manualPostText : undefined };
+      const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, contentMode: mode, manualPostText: mode === 'single-post' ? manualPostText : undefined };
 
       const { data: jobData, error: jobError } = await supabase.from('carousel_generation_jobs').insert({
         user_id: userData.user.id,
@@ -2785,7 +2788,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           ctx.globalCompositeOperation = 'source-over';
 
           // STEP 4: Draw logo
-          if (logoUrl) {
+          if (logoMode === 'manual' && logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
                 const r = await fetch(logoUrl); const b = await r.blob();
@@ -2813,7 +2816,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay via Canvas ===
-      if (!useRealEstateBlend && logoUrl && finalImageUrl) {
+      if (!useRealEstateBlend && logoMode === 'manual' && logoUrl && finalImageUrl) {
         try {
           console.log('[LOGO_OVERLAY] Adding logo to single post...');
           const W = cardW, H = cardH;
@@ -2912,7 +2915,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: creditAmount, p_description: `Post único (${wizardMode}): ${topic} — ${creditAmount} créditos` });
             } catch { /* ignore */ }
             const isFullBleed = true;
-            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, isFullBleed, contentMode: 'single-post', manualPostText };
             isSavingRef.current = true;
             try {
               if (currentCarouselIdRef.current) {
@@ -3361,7 +3364,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                     p_description: `Carrossel Contínuo (${wizardMode}): ${finalData.title || topic} (${finalData.cards.length} cards) — ${creditAmount} créditos`,
                   });
                 } catch { /* ignore */ }
-                const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader, continuousMode: true };
+                const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, continuousMode: true };
                 isSavingRef.current = true;
                 try {
                   if (currentCarouselIdRef.current) {
@@ -3932,7 +3935,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           ctx.globalCompositeOperation = 'source-over';
           
           // === STEP 4: Draw logo ===
-          if (logoUrl) {
+          if (logoMode === 'manual' && logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
                 const r = await fetch(logoUrl); const b = await r.blob();
@@ -4000,7 +4003,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for ALL carousel cards ===
-      if (!useRealEstateBlend && logoUrl && updatedCards.length > 0) {
+      if (!useRealEstateBlend && logoMode === 'manual' && logoUrl && updatedCards.length > 0) {
         console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards...');
         const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
           const img = document.createElement('img') as HTMLImageElement;
@@ -4067,7 +4070,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               });
             } catch { /* ignore */ }
 
-            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader };
             isSavingRef.current = true;
             try {
               if (currentCarouselIdRef.current) {
@@ -4645,7 +4648,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
           if (companyData) {
             try { const creditAmount = calculateCreditCost({ cardCount: totalCards, wizardMode, hasFaceRef: facePersons.some(p => p.photos.length > 0) }); await supabase.rpc('consume_ai_credits', { p_company_id: companyData.company_id, p_agent_id: null, p_amount: creditAmount, p_description: `Carrossel da capa (${wizardMode}): ${topic} (${totalCards} cards) — ${creditAmount} créditos` }); } catch { /* ignore */ }
-            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, showHeader };
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader };
             isSavingRef.current = true;
             try {
               if (currentCarouselIdRef.current) {
@@ -5445,7 +5448,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for regenerated card ===
-      if (!regenHasPhotos && logoUrl && newImageUrl) {
+      if (!regenHasPhotos && logoMode === 'manual' && logoUrl && newImageUrl) {
         try {
           console.log('[REGEN_LOGO] Adding logo to regenerated card', cardIndex);
           const W = cardW, H = cardH;
@@ -7172,6 +7175,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         hasProduct={wantsProduct}
                         useCustomColors={useCustomColors} setUseCustomColors={setUseCustomColors}
                         customColors={customColors} setCustomColors={setCustomColors}
+                        wizardMode={wizardMode}
+                        logoMode={logoMode} setLogoMode={setLogoMode}
                         setHasProduct={wizardMode === 'advanced' ? setWantsProduct : undefined}
                         onOpenProductStep={() => {
                           setWantsProduct(true);

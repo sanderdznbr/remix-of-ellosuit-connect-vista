@@ -197,8 +197,13 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     promptParts.push(`TEMA: "${job.topic}"`);
   }
   promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-  // Logo is ALWAYS handled via Canvas overlay — never sent to AI
-  promptParts.push('PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+  // Logo handling depends on logoMode
+  const isAiLogo = styleConfig.logoMode === 'ai' && job.logo_url;
+  if (isAiLogo) {
+    promptParts.push('LOGOMARCA: A logomarca da marca será fornecida como imagem de referência. Posicione-a de forma DISCRETA e PROFISSIONAL no design.');
+  } else {
+    promptParts.push('PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+  }
   const isMarketplaceStyle = !!singlePromptStyle;
   if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
@@ -220,7 +225,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-    // Logo is NOT sent to AI — handled via Canvas overlay on frontend
+    ...(isAiLogo ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
   });
 
   if (!imageUrl) {
@@ -510,7 +515,12 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
       parts.push(`Texto em PORTUGUÊS BRASILEIRO correto e fluente. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
       parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias, nomes de templates ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt. NUNCA renderize nomes como "EXCLUSIVE", "PREMIUM", "TEMPLATE", ou qualquer nome de coleção/estilo.');
-      parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+      const carouselIsAiLogo = styleConfig.logoMode === 'ai' && job.logo_url;
+      if (carouselIsAiLogo) {
+        parts.push('LOGOMARCA: A logomarca será fornecida como referência. Posicione-a DISCRETAMENTE no design.');
+      } else {
+        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+      }
       parts.push('QUALIDADE ANTI-IA: Use paleta de cores RESTRITA e COESA (3-4 cores máx). Tipografia com HIERARQUIA CLARA (título bold grande + corpo leve). ESPAÇAMENTO GENEROSO entre elementos. ALINHAMENTO PRECISO em grid editorial. Cores REALISTAS sem saturação exagerada. Iluminação DIRECIONAL com sombras reais. Textura NATURAL com grão sutil. Composição ASSIMÉTRICA intencional. O post deve parecer parte de um feed de marca premium.');
 
       if (isCover) {
@@ -692,7 +702,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-          // Logo NOT sent to AI — Canvas overlay only
+          ...(styleConfig.logoMode === 'ai' && job.logo_url ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {
@@ -711,7 +721,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 fidelity: task.cardGetsFace ? 'high' : 'high',
                 facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
                 ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
-                // Logo NOT sent to AI — Canvas overlay only
+                ...(styleConfig.logoMode === 'ai' && job.logo_url ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
               });
               if (retryUrl) return { index: task.index, url: retryUrl };
             }

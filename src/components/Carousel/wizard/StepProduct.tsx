@@ -7,6 +7,15 @@ import { useAuth } from '@/components/AuthProvider';
 import { ImageSettings } from './types';
 
 export type ProductSize = 'tiny' | 'small' | 'medium' | 'large' | 'extra-large';
+export type ProductMockupDeviceType = 'mobile' | 'web' | 'tablet';
+
+export interface ProductImageItem {
+  url: string;
+  thumb: string;
+  file: File;
+  aspectRatio?: number;
+  detectedDeviceType?: ProductMockupDeviceType;
+}
 
 export const PRODUCT_SIZE_OPTIONS: { value: ProductSize; label: string; desc: string }[] = [
   { value: 'tiny', label: 'Muito pequeno', desc: '~5 cm — cápsulas, pen drives, brincos' },
@@ -25,6 +34,41 @@ export interface ProductAnalysis {
 
 type DetectedContext = 'app' | 'website' | 'food' | 'physical' | null;
 
+const detectDeviceTypeFromAspectRatio = (aspectRatio: number): ProductMockupDeviceType => {
+  if (aspectRatio >= 1.35) return 'web';
+  if (aspectRatio <= 0.75) return 'mobile';
+  return 'tablet';
+};
+
+export { detectDeviceTypeFromAspectRatio };
+
+const readImageAspectRatio = (file: File): Promise<number | null> => new Promise((resolve) => {
+  const objectUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : null;
+    URL.revokeObjectURL(objectUrl);
+    resolve(ratio);
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    resolve(null);
+  };
+  img.src = objectUrl;
+});
+
+const DEVICE_HAND_OBJECT: Record<ProductMockupDeviceType, string> = {
+  mobile: 'smartphone',
+  web: 'laptop',
+  tablet: 'tablet',
+};
+
+const DEVICE_LABEL: Record<ProductMockupDeviceType, string> = {
+  mobile: 'celular',
+  web: 'notebook/computador',
+  tablet: 'tablet',
+};
+
 interface MentionedPrompt {
   id: string;
   title: string;
@@ -33,8 +77,8 @@ interface MentionedPrompt {
 }
 
 interface Props {
-  productImages: { url: string; thumb: string; file: File }[];
-  setProductImages: React.Dispatch<React.SetStateAction<{ url: string; thumb: string; file: File }[]>>;
+  productImages: ProductImageItem[];
+  setProductImages: React.Dispatch<React.SetStateAction<ProductImageItem[]>>;
   productAnalysis: ProductAnalysis | null;
   setProductAnalysis: React.Dispatch<React.SetStateAction<ProductAnalysis | null>>;
   analyzingProduct: boolean;
@@ -138,34 +182,45 @@ const StepProduct: React.FC<Props> = ({
 
   const detectedContext = useMemo(() => detectContext(topic, mentionedPrompts), [topic, mentionedPrompts]);
   const hint = detectedContext ? CONTEXT_HINTS[detectedContext] : null;
+  const autoDetectedDevice = productImages.find(img => img.detectedDeviceType)?.detectedDeviceType;
 
   // Auto-apply hand object setting when context is detected and user uploads
-  const applyContextSettings = () => {
-    if (hint?.autoHandObject && imageSettings && onUpdateImageSettings && !contextApplied) {
+  const applyContextSettings = (deviceType?: ProductMockupDeviceType) => {
+    const autoHandObject = deviceType ? DEVICE_HAND_OBJECT[deviceType] : hint?.autoHandObject;
+    if (autoHandObject && imageSettings && onUpdateImageSettings) {
       onUpdateImageSettings({
         ...imageSettings,
-        handObject: hint.autoHandObject,
+        handObject: autoHandObject,
       });
       setContextApplied(true);
     }
   };
 
-  const handleUpload = (files: FileList | null) => {
+  const handleUpload = async (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setProductImages(prev => [...prev, {
-            url: e.target!.result as string,
-            thumb: e.target!.result as string,
+    const uploadedImages = await Promise.all(Array.from(files).map(async (file) => {
+      const aspectRatio = await readImageAspectRatio(file);
+      return await new Promise<ProductImageItem>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const url = (e.target?.result as string) || '';
+          resolve({
+            url,
+            thumb: url,
             file,
-          }]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    applyContextSettings();
+            aspectRatio: aspectRatio || undefined,
+            detectedDeviceType: aspectRatio ? detectDeviceTypeFromAspectRatio(aspectRatio) : undefined,
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }));
+
+    setProductImages(prev => [...prev, ...uploadedImages.filter(img => img.url)]);
+
+    const shouldInferDevice = detectedContext === 'app' || detectedContext === 'website';
+    const inferredDevice = uploadedImages.find(img => img.detectedDeviceType)?.detectedDeviceType;
+    applyContextSettings(shouldInferDevice ? inferredDevice : undefined);
   };
 
   const handleGalleryFiles = (files: { url: string; name: string }[]) => {
@@ -292,14 +347,14 @@ const StepProduct: React.FC<Props> = ({
           </div>
 
           {/* Auto-applied context badge */}
-          {contextApplied && hint?.autoHandObject && (
+          {contextApplied && (hint?.autoHandObject || autoDetectedDevice) && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{
               backgroundColor: 'rgba(34,197,94,0.08)',
               border: '1px solid rgba(34,197,94,0.15)',
             }}>
               <Check className="h-3.5 w-3.5 text-green-400" />
               <span className="text-green-300/80">
-                Mockup de {hint.autoHandObject === 'smartphone' ? 'celular' : 'notebook'} configurado automaticamente
+                Mockup de {autoDetectedDevice ? DEVICE_LABEL[autoDetectedDevice] : hint?.autoHandObject === 'smartphone' ? 'celular' : 'notebook'} configurado automaticamente
               </span>
             </div>
           )}

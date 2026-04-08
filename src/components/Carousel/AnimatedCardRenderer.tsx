@@ -40,7 +40,7 @@ interface EmbeddedAssetMap {
 }
 
 interface SupportedWebCodecsEncoder {
-  encoderConfig: Record<string, unknown>;
+  encoderConfig: VideoEncoderConfig;
   muxerCodec: 'V_VP8' | 'V_VP9' | 'V_AV1';
 }
 
@@ -472,13 +472,8 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     fps: number,
   ): Promise<SupportedWebCodecsEncoder | null> => {
     const webCodecsApi = globalThis as typeof globalThis & {
-      VideoEncoder?: {
-        isConfigSupported?: (config: Record<string, unknown>) => Promise<{ supported: boolean }>;
-      };
-      VideoFrame?: new (
-        image: CanvasImageSource,
-        init?: { timestamp?: number; duration?: number },
-      ) => { close: () => void };
+      VideoEncoder?: typeof VideoEncoder;
+      VideoFrame?: typeof VideoFrame;
     };
 
     if (!webCodecsApi.VideoEncoder?.isConfigSupported || !webCodecsApi.VideoFrame) {
@@ -517,19 +512,8 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     renderFrame: (frameIndex: number) => Promise<void>;
   }): Promise<Blob | null> => {
     const webCodecsApi = globalThis as typeof globalThis & {
-      VideoEncoder?: new (init: {
-        output: (chunk: unknown, meta?: unknown) => void;
-        error: (error: Error) => void;
-      }) => {
-        configure: (config: Record<string, unknown>) => void;
-        encode: (frame: { close?: () => void }, options?: { keyFrame?: boolean }) => void;
-        flush: () => Promise<void>;
-        close?: () => void;
-      };
-      VideoFrame?: new (
-        image: CanvasImageSource,
-        init?: { timestamp?: number; duration?: number },
-      ) => { close: () => void };
+      VideoEncoder?: typeof VideoEncoder;
+      VideoFrame?: typeof VideoFrame;
     };
 
     const supportedEncoder = await getSupportedWebCodecsEncoder(options.width, options.height, options.fps);

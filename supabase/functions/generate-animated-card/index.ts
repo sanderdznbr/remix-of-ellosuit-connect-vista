@@ -281,7 +281,7 @@ function buildFallbackAnimatedHtml(params: {
     .overlay {
       position: absolute; inset: 0;
       background:
-        linear-gradient(135deg, rgba(0,0,0,0.12), rgba(0,0,0,0.46)),
+        linear-gradient(${preset.overlayAngle}, rgba(0,0,0,0.12), rgba(0,0,0,0.46)),
         linear-gradient(180deg, rgba(0,0,0,0.00) 0%, rgba(0,0,0,0.34) 100%);
       z-index: 1;
     }
@@ -651,6 +651,7 @@ serve(async (req) => {
       mockupScreenshots = [],
       mockupDeviceType = "mobile",
       format = "4:5",
+      promptContexts = [],
     } = body;
 
     if (!topic || cardIndex === undefined || !totalCards) {

@@ -274,6 +274,8 @@ const CarouselGenerator: React.FC = () => {
   const [animationStyle, setAnimationStyle] = useState<'slide-fade' | 'scale-bounce' | 'typewriter' | 'cinematic' | 'kinetic' | 'elegant'>('slide-fade');
   const [animatedCards, setAnimatedCards] = useState<{ html: string; cardIndex: number; dimensions: { w: number; h: number } }[]>([]);
   const [animatedBgImageUrl, setAnimatedBgImageUrl] = useState('');
+  const [generateAiBg, setGenerateAiBg] = useState(false);
+  const [generateAiMockup, setGenerateAiMockup] = useState(false);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -3032,6 +3034,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           logoUrl,
           logoPosition,
           backgroundImageUrl: animatedBgImageUrl || undefined,
+          generateAiBg: generateAiBg && !animatedBgImageUrl,
+          generateAiMockup,
           format: formatStr,
         };
 
@@ -3046,9 +3050,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           sonnerToast.error(`Erro no card ${i + 1}: ${err.message}`);
         }
 
-        // Small delay between cards to avoid rate limiting
+        // Delay between cards — longer when generating AI images
+        const hasAiImages = (generateAiBg && !animatedBgImageUrl) || generateAiMockup;
         if (i < cardCount - 1) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, hasAiImages ? 3000 : 1500));
         }
       }
 
@@ -7277,6 +7282,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         }}
                         animatedBgImageUrl={animatedBgImageUrl}
                         setAnimatedBgImageUrl={setAnimatedBgImageUrl}
+                        generateAiBg={generateAiBg}
+                        setGenerateAiBg={setGenerateAiBg}
+                        generateAiMockup={generateAiMockup}
+                        setGenerateAiMockup={setGenerateAiMockup}
                       />
                     )}
                     {currentStepName === 'Fotos Imóvel' && (

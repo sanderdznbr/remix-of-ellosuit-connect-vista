@@ -7351,7 +7351,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           }
                           setBrandSuggestedPalette(null);
                         }}
-                        onDismissBrandPalette={() => setBrandSuggestedPalette(null)} />
+                        onDismissBrandPalette={() => setBrandSuggestedPalette(null)}
+                        wizardMode={wizardMode}
+                        setLogoUrl={setLogoUrl} />
                     )}
                     {currentStepName === 'Fontes' && !isFullBleedMarketplace && wizardMode !== 'extreme' && (
                       <StepFonts

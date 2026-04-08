@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HardDrive, X, Loader2, FolderOpen, ArrowLeft, Check, Download, FileIcon, ImageIcon, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StorageFile {
   name: string;

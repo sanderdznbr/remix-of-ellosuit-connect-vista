@@ -96,7 +96,8 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     // Create the render root inside the container
     const renderRoot = document.createElement('div');
     renderRoot.className = CAPTURE_ROOT_CLASS;
-    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;display:block;isolation:isolate;`;
+    renderRoot.setAttribute('data-animated-capture-root', 'true');
+    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;display:block;isolation:isolate;margin:0;padding:0;contain:layout paint style;`;
     container.appendChild(renderRoot);
 
     // Inject <link> tags (Google Fonts, etc.) into the main document <head>
@@ -117,6 +118,34 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       renderRoot.appendChild(clone);
     });
 
+    const baseStyle = document.createElement('style');
+    baseStyle.textContent = `
+      .${CAPTURE_ROOT_CLASS} {
+        width: ${w}px;
+        height: ${h}px;
+        min-width: ${w}px;
+        min-height: ${h}px;
+        max-width: ${w}px;
+        max-height: ${h}px;
+        overflow: hidden;
+        position: relative;
+        display: block;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        line-height: 1;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+      }
+
+      .${CAPTURE_ROOT_CLASS} *,
+      .${CAPTURE_ROOT_CLASS} *::before,
+      .${CAPTURE_ROOT_CLASS} *::after {
+        box-sizing: border-box;
+      }
+    `;
+    renderRoot.appendChild(baseStyle);
+
     // Copy body attributes (inline style, class, etc.)
     const parsedBody = parsed.body;
     if (parsedBody) {
@@ -134,6 +163,8 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       renderRoot.style.position = 'relative';
       renderRoot.style.display = 'block';
       renderRoot.style.isolation = 'isolate';
+      renderRoot.style.margin = '0';
+      renderRoot.style.padding = '0';
 
       // Copy body innerHTML
       renderRoot.insertAdjacentHTML('beforeend', parsedBody.innerHTML);

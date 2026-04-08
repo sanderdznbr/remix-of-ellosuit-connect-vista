@@ -479,7 +479,7 @@ function buildFallbackAnimatedHtml(params: {
   <div class="line"></div>
   ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" />` : ''}
   <main class="content">
-    <div class="eyebrow">${safeTopic}</div>
+    <div class="eyebrow">${safeBrand || ''}</div>
     <section class="main">
       <div class="copy">
         <h1>${safeTitle}</h1>
@@ -492,7 +492,7 @@ function buildFallbackAnimatedHtml(params: {
     <footer class="footer">
       <div>
         ${safeBrand ? `<div class="brand">${safeBrand}</div>` : ''}
-        <div class="meta">${safeTopic}</div>
+        <div class="meta">${safeBrand || ''}</div>
       </div>
       <div class="counter">${String(cardIndex + 1).padStart(2, '0')} / ${String(totalCards).padStart(2, '0')}</div>
     </footer>

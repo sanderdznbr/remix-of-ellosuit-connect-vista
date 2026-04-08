@@ -515,7 +515,12 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
       parts.push(`Texto em PORTUGUÊS BRASILEIRO correto e fluente. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
       parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias, nomes de templates ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt. NUNCA renderize nomes como "EXCLUSIVE", "PREMIUM", "TEMPLATE", ou qualquer nome de coleção/estilo.');
-      parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+      const carouselIsAiLogo = styleConfig.logoMode === 'ai' && job.logo_url;
+      if (carouselIsAiLogo) {
+        parts.push('LOGOMARCA: A logomarca será fornecida como referência. Posicione-a DISCRETAMENTE no design.');
+      } else {
+        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+      }
       parts.push('QUALIDADE ANTI-IA: Use paleta de cores RESTRITA e COESA (3-4 cores máx). Tipografia com HIERARQUIA CLARA (título bold grande + corpo leve). ESPAÇAMENTO GENEROSO entre elementos. ALINHAMENTO PRECISO em grid editorial. Cores REALISTAS sem saturação exagerada. Iluminação DIRECIONAL com sombras reais. Textura NATURAL com grão sutil. Composição ASSIMÉTRICA intencional. O post deve parecer parte de um feed de marca premium.');
 
       if (isCover) {

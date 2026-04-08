@@ -191,13 +191,36 @@ function buildFallbackAnimatedHtml(params: {
   const safeTopic = escapeHtml(cleanedTopic.slice(0, 40).toUpperCase());
   const safeBrand = cleanedBrand ? escapeHtml(cleanedBrand.slice(0, 24)) : "";
   const mockupMarkup = buildMockupMarkup(mockupImageUrl || "", mockupDeviceType || "mobile");
+  // 12 distinct gradient presets so each card gets a unique background
   const gradientPresets = [
-    { a: '18% 18%', b: '82% 18%', c: '50% 82%', angle: '145deg', gridOpacity: 0.14 },
-    { a: '14% 26%', b: '78% 16%', c: '62% 80%', angle: '128deg', gridOpacity: 0.08 },
-    { a: '24% 12%', b: '86% 24%', c: '38% 84%', angle: '162deg', gridOpacity: 0.12 },
-    { a: '12% 20%', b: '88% 34%', c: '54% 78%', angle: '136deg', gridOpacity: 0.1 },
+    { a: '18% 18%', b: '82% 18%', c: '50% 82%', angle: '145deg', gridOpacity: 0.14, overlayAngle: '135deg', bgShiftDir: 'translate3d(0,-10px,0)' },
+    { a: '14% 26%', b: '78% 16%', c: '62% 80%', angle: '128deg', gridOpacity: 0.08, overlayAngle: '225deg', bgShiftDir: 'translate3d(10px,0,0)' },
+    { a: '24% 12%', b: '86% 24%', c: '38% 84%', angle: '162deg', gridOpacity: 0.12, overlayAngle: '180deg', bgShiftDir: 'translate3d(-8px,-6px,0)' },
+    { a: '12% 20%', b: '88% 34%', c: '54% 78%', angle: '136deg', gridOpacity: 0.10, overlayAngle: '315deg', bgShiftDir: 'translate3d(0,8px,0)' },
+    { a: '72% 8%',  b: '28% 88%', c: '84% 56%', angle: '198deg', gridOpacity: 0.11, overlayAngle: '90deg',  bgShiftDir: 'translate3d(6px,-10px,0)' },
+    { a: '8% 72%',  b: '92% 48%', c: '44% 14%', angle: '112deg', gridOpacity: 0.09, overlayAngle: '270deg', bgShiftDir: 'translate3d(-10px,4px,0)' },
+    { a: '50% 8%',  b: '14% 68%', c: '88% 72%', angle: '175deg', gridOpacity: 0.13, overlayAngle: '45deg',  bgShiftDir: 'translate3d(4px,-12px,0)' },
+    { a: '36% 88%', b: '64% 12%', c: '18% 48%', angle: '152deg', gridOpacity: 0.07, overlayAngle: '200deg', bgShiftDir: 'translate3d(-6px,8px,0)' },
+    { a: '82% 42%', b: '18% 82%', c: '62% 18%', angle: '118deg', gridOpacity: 0.15, overlayAngle: '160deg', bgShiftDir: 'translate3d(8px,6px,0)' },
+    { a: '42% 14%', b: '58% 86%', c: '14% 58%', angle: '142deg', gridOpacity: 0.06, overlayAngle: '340deg', bgShiftDir: 'translate3d(-4px,-8px,0)' },
+    { a: '68% 28%', b: '32% 72%', c: '78% 62%', angle: '188deg', gridOpacity: 0.10, overlayAngle: '110deg', bgShiftDir: 'translate3d(12px,0,0)' },
+    { a: '28% 68%', b: '72% 32%', c: '42% 42%', angle: '155deg', gridOpacity: 0.12, overlayAngle: '250deg', bgShiftDir: 'translate3d(0,12px,0)' },
   ];
   const preset = gradientPresets[cardIndex % gradientPresets.length];
+
+  // Decorative element variations per card
+  const decorVariants = [
+    { type: 'ring-blob', ringPos: 'right:-70px;top:-70px;', blobPos: 'left:-60px;bottom:-70px;', ringSize: 320, blobSize: 280 },
+    { type: 'ring-blob', ringPos: 'left:-80px;bottom:-50px;', blobPos: 'right:-50px;top:-80px;', ringSize: 280, blobSize: 240 },
+    { type: 'ring-blob', ringPos: 'right:20%;top:-90px;', blobPos: 'left:10%;bottom:-40px;', ringSize: 260, blobSize: 300 },
+    { type: 'ring-blob', ringPos: 'left:30%;top:-60px;', blobPos: 'right:-70px;bottom:20%;', ringSize: 340, blobSize: 220 },
+    { type: 'ring-blob', ringPos: 'right:-40px;bottom:15%;', blobPos: 'left:-90px;top:10%;', ringSize: 300, blobSize: 260 },
+    { type: 'ring-blob', ringPos: 'left:-60px;top:30%;', blobPos: 'right:5%;bottom:-80px;', ringSize: 250, blobSize: 310 },
+  ];
+  const decor = decorVariants[cardIndex % decorVariants.length];
+  const gridSizes = [64, 80, 48, 72, 56, 96];
+  const gridSize = gridSizes[cardIndex % gridSizes.length];
+
   const accentSoft = hexToRgba(accentColor, 0.18);
   const accentGlow = hexToRgba(accentColor, 0.28);
   const accentGhost = hexToRgba(accentColor, 0.08);

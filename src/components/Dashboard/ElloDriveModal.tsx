@@ -31,6 +31,7 @@ const BROWSABLE_BUCKETS = [
 ];
 
 const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyId, onImport }) => {
+  const { user } = useAuth();
   const [currentBucket, setCurrentBucket] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [items, setItems] = useState<StorageFile[]>([]);
@@ -41,11 +42,22 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
 
   const fullPath = currentPath.join('/');
 
+  // Build the storage path scoped to the current user
+  const getUserScopedPath = useCallback((bucket: string, path: string) => {
+    if (!user?.id) return path;
+    // Most buckets store files under {user_id}/ or {company_id}/
+    // When at root level (no path), scope to user's folder
+    const userPrefix = user.id;
+    if (!path) return userPrefix;
+    return path;
+  }, [user?.id]);
+
   const fetchContents = useCallback(async (bucket: string, path: string) => {
     setLoading(true);
     setSelected(new Set());
     try {
-      const { data, error } = await supabase.storage.from(bucket).list(path || '', {
+      const scopedPath = getUserScopedPath(bucket, path);
+      const { data, error } = await supabase.storage.from(bucket).list(scopedPath || '', {
         limit: 200,
         sortBy: { column: 'name', order: 'asc' },
       });

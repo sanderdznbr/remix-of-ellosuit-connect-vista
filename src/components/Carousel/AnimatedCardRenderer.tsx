@@ -176,7 +176,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     const { html } = await buildEmbeddableHtml(card.html);
 
     const container = document.createElement('div');
-    container.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;pointer-events:none;overflow:hidden;z-index:-9999;`;
+    container.style.cssText = `position:fixed;left:-${w + 96}px;top:0;width:${w}px;height:${h}px;pointer-events:none;overflow:hidden;z-index:-9999;`;
     document.body.appendChild(container);
 
     // Parse the card HTML to extract styles and body content
@@ -187,7 +187,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     const renderRoot = document.createElement('div');
     renderRoot.className = CAPTURE_ROOT_CLASS;
     renderRoot.setAttribute('data-animated-capture-root', 'true');
-    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;display:block;isolation:isolate;margin:0;padding:0;contain:layout paint style;`;
+    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;display:block;isolation:isolate;margin:0;padding:0;`;
     container.appendChild(renderRoot);
 
     // Inject <link> tags (Google Fonts, etc.) into the main document <head>
@@ -279,7 +279,19 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       });
     }));
 
+    await Promise.all(images.map(async (img) => {
+      if (typeof img.decode !== 'function') return;
+      try {
+        await img.decode();
+      } catch {
+        // noop
+      }
+    }));
+
     restartCssAnimations(renderRoot);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
 
     const cleanup = () => {
       injectedLinks.forEach((link) => {
@@ -398,14 +410,14 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       let targetNode: HTMLElement;
 
       try {
+        const recordingSurface = await createRecordingContainer(card);
+        cleanup = recordingSurface.cleanup;
+        targetNode = recordingSurface.renderRoot;
+      } catch (containerError) {
+        console.warn('Container capture fallback:', containerError);
         const recordingSurface = await createRecordingIframe(card);
         cleanup = recordingSurface.cleanup;
         targetNode = recordingSurface.targetNode;
-      } catch (iframeError) {
-        console.warn('Iframe capture fallback:', iframeError);
-        const recordingContainer = await createRecordingContainer(card);
-        cleanup = recordingContainer.cleanup;
-        targetNode = recordingContainer.renderRoot;
       }
 
       const canvas = document.createElement('canvas');

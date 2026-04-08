@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'; // tweet2-refresh
 import { calculateCreditCost } from '@/utils/creditCost';
 import '@/styles/carousel-loader.css';
-import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
+import { buildPaletteFromColors, extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';
 import ellocontentProfile from '@/assets/ellocontent-profile.jpg';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
@@ -383,12 +383,37 @@ const CarouselGenerator: React.FC = () => {
 
   // Auto-extract colors from logo when it changes
   useEffect(() => {
-    if (!logoUrl) { setLogoBrandColors([]); return; }
+    let cancelled = false;
+
+    if (!logoUrl) {
+      setLogoBrandColors([]);
+      setBrandSuggestedPalette(null);
+      return;
+    }
+
     extractColorsFromImage(logoUrl, 4).then(colors => {
+      if (cancelled) return;
       console.log('Logo brand colors extracted:', colors);
       setLogoBrandColors(colors);
-    }).catch(() => setLogoBrandColors([]));
-  }, [logoUrl]);
+
+      const palette = buildPaletteFromColors(colors);
+      setBrandSuggestedPalette(palette);
+
+      if (wizardMode === 'animated' && useBrandColors && palette) {
+        setBgColor(palette.bg);
+        setAccentColor(palette.accent);
+        setTextColor(palette.text);
+      }
+    }).catch(() => {
+      if (cancelled) return;
+      setLogoBrandColors([]);
+      setBrandSuggestedPalette(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [logoUrl, useBrandColors, wizardMode]);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -504,7 +529,13 @@ const CarouselGenerator: React.FC = () => {
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
-  const animatedHasBrandColors = wizardMode === 'animated' && useBrandColors && logoBrandColors.length > 0;
+  const derivedBrandPalette = buildPaletteFromColors(logoBrandColors);
+  const animatedHasBrandColors = wizardMode === 'animated'
+    && useBrandColors
+    && !!derivedBrandPalette
+    && bgColor === derivedBrandPalette.bg
+    && accentColor === derivedBrandPalette.accent
+    && textColor === derivedBrandPalette.text;
   const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Fontes', ...(generateAiMockup ? ['Screenshots'] : [])];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
@@ -3120,7 +3151,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           logoUrl,
           logoPosition,
           backgroundImageUrl: animatedBgImageUrl || undefined,
-          generateAiBg: !animatedBgImageUrl,
+          generateAiBg: generateAiBg && !animatedBgImageUrl,
           generateAiMockup,
           mockupScreenshots: generateAiMockup ? styleScreenshots.map((s) => s.url) : [],
           mockupDeviceType: styleDeviceType,
@@ -3244,7 +3275,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         logoUrl,
         logoPosition,
         backgroundImageUrl: animatedBgImageUrl || undefined,
-        generateAiBg: !animatedBgImageUrl,
+        generateAiBg: generateAiBg && !animatedBgImageUrl,
         generateAiMockup,
         mockupScreenshots: generateAiMockup ? styleScreenshots.map((s) => s.url) : [],
         mockupDeviceType: styleDeviceType,

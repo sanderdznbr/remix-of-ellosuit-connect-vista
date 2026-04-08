@@ -109,6 +109,19 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = (hex || '').replace('#', '').trim();
+  const safeHex = normalized.length === 3
+    ? normalized.split('').map((char) => `${char}${char}`).join('')
+    : normalized.padEnd(6, '0').slice(0, 6);
+
+  const r = parseInt(safeHex.slice(0, 2), 16);
+  const g = parseInt(safeHex.slice(2, 4), 16);
+  const b = parseInt(safeHex.slice(4, 6), 16);
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function hasMeaningfulHtml(html: string) {
   const trimmed = html.trim();
   if (!trimmed || trimmed.length < 280) return false;
@@ -176,6 +189,38 @@ function buildFallbackAnimatedHtml(params: {
   const safeTopic = escapeHtml(cleanedTopic.slice(0, 40).toUpperCase());
   const safeBrand = cleanedBrand ? escapeHtml(cleanedBrand.slice(0, 24)) : "";
   const mockupMarkup = buildMockupMarkup(mockupImageUrl || "", mockupDeviceType || "mobile");
+  const gradientPresets = [
+    { a: '18% 18%', b: '82% 18%', c: '50% 82%', angle: '145deg', gridOpacity: 0.14 },
+    { a: '14% 26%', b: '78% 16%', c: '62% 80%', angle: '128deg', gridOpacity: 0.08 },
+    { a: '24% 12%', b: '86% 24%', c: '38% 84%', angle: '162deg', gridOpacity: 0.12 },
+    { a: '12% 20%', b: '88% 34%', c: '54% 78%', angle: '136deg', gridOpacity: 0.1 },
+  ];
+  const preset = gradientPresets[cardIndex % gradientPresets.length];
+  const accentSoft = hexToRgba(accentColor, 0.18);
+  const accentGlow = hexToRgba(accentColor, 0.28);
+  const accentGhost = hexToRgba(accentColor, 0.08);
+  const textTitleAnimation = animationStyle === 'scale-bounce'
+    ? 'popIn 1s cubic-bezier(.18,1.2,.32,1) both'
+    : animationStyle === 'typewriter'
+      ? 'clipReveal 1.05s cubic-bezier(.22,1,.36,1) both'
+      : animationStyle === 'cinematic'
+        ? 'cinematicLift 1.15s cubic-bezier(.19,1,.22,1) both'
+        : animationStyle === 'kinetic'
+          ? 'kineticIn 0.95s cubic-bezier(.2,.9,.2,1) both'
+          : animationStyle === 'elegant'
+            ? 'elegantRise 1.1s cubic-bezier(.23,1,.32,1) both'
+            : 'revealUp 1s cubic-bezier(.22,1,.36,1) both';
+  const textBodyAnimation = animationStyle === 'scale-bounce'
+    ? 'popInSoft 1s .14s cubic-bezier(.18,1.2,.32,1) both'
+    : animationStyle === 'typewriter'
+      ? 'clipReveal 1s .16s cubic-bezier(.22,1,.36,1) both'
+      : animationStyle === 'cinematic'
+        ? 'cinematicLift 1.1s .18s cubic-bezier(.19,1,.22,1) both'
+        : animationStyle === 'kinetic'
+          ? 'kineticInSoft .9s .14s cubic-bezier(.2,.9,.2,1) both'
+          : animationStyle === 'elegant'
+            ? 'elegantRise 1s .18s cubic-bezier(.23,1,.32,1) both'
+            : 'revealUp 1s .18s cubic-bezier(.22,1,.36,1) both';
 
   return `<!DOCTYPE html>
 <html lang="pt-br">
@@ -198,10 +243,10 @@ function buildFallbackAnimatedHtml(params: {
       isolation: isolate;
       background-image:
         linear-gradient(180deg, rgba(3,3,6,0.28), rgba(3,3,6,0.74)),
-        radial-gradient(circle at 18% 18%, ${accentColor}2d 0%, transparent 33%),
-        radial-gradient(circle at 82% 18%, rgba(255,255,255,0.06) 0%, transparent 22%),
-        radial-gradient(circle at 50% 82%, ${accentColor}12 0%, transparent 34%),
-        linear-gradient(145deg, ${bgColor}, rgba(8,8,12,0.96))
+        radial-gradient(circle at ${preset.a}, ${accentGlow} 0%, transparent 34%),
+        radial-gradient(circle at ${preset.b}, rgba(255,255,255,0.05) 0%, transparent 24%),
+        radial-gradient(circle at ${preset.c}, ${accentGhost} 0%, transparent 36%),
+        linear-gradient(${preset.angle}, ${bgColor}, rgba(8,8,12,0.96))
         ${finalBgImageUrl ? `, url('${finalBgImageUrl}')` : ''};
       background-color: ${bgColor};
       background-size: cover, cover, cover, cover, cover${finalBgImageUrl ? ', cover' : ''};
@@ -216,23 +261,36 @@ function buildFallbackAnimatedHtml(params: {
       z-index: 1;
     }
     .grid {
-      position: absolute; inset: 0; z-index: 2; opacity: 0.18;
+      position: absolute; inset: 0; z-index: 2; opacity: ${preset.gridOpacity};
       background-image:
         linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
       background-size: 64px 64px;
       mask-image: radial-gradient(circle at center, black 0%, transparent 85%);
     }
-    .line {
+    .glowRing {
       position: absolute;
-      width: 2px;
-      height: 56%;
-      right: 7.5%;
-      top: 22%;
-      background: linear-gradient(180deg, transparent, ${accentColor}, transparent);
+      width: 320px;
+      height: 320px;
+      right: -70px;
+      top: -70px;
+      border-radius: 999px;
+      border: 1px solid ${accentSoft};
+      box-shadow: 0 0 0 1px ${accentGhost} inset;
       z-index: 3;
-      box-shadow: 0 0 30px ${accentColor}66;
-      animation: pulseLine 3s ease-in-out infinite;
+      animation: haloDrift 6.5s ease-in-out infinite;
+    }
+    .glowBlob {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      left: -60px;
+      bottom: -70px;
+      border-radius: 999px;
+      background: radial-gradient(circle, ${accentSoft} 0%, transparent 72%);
+      filter: blur(8px);
+      z-index: 3;
+      animation: drift 7.5s ease-in-out infinite;
     }
     .content {
       position: relative;
@@ -272,7 +330,7 @@ function buildFallbackAnimatedHtml(params: {
       text-transform: uppercase;
       color: ${textColor};
       text-wrap: balance;
-      animation: revealUp 1s cubic-bezier(.22,1,.36,1) both;
+      animation: ${textTitleAnimation};
       text-shadow: 0 12px 40px rgba(0,0,0,0.28);
     }
     .body {
@@ -282,7 +340,7 @@ function buildFallbackAnimatedHtml(params: {
       line-height: 1.28;
       color: ${textColor};
       opacity: 0.92;
-      animation: revealUp 1s .18s cubic-bezier(.22,1,.36,1) both;
+      animation: ${textBodyAnimation};
     }
     .mockupWrap {
       position: relative;
@@ -432,8 +490,8 @@ function buildFallbackAnimatedHtml(params: {
     .logo {
       position: absolute;
       ${logoCss}
-      max-width: 140px;
-      max-height: 64px;
+      max-width: 168px;
+      max-height: 72px;
       object-fit: contain;
       z-index: 7;
       filter: drop-shadow(0 8px 18px rgba(0,0,0,0.28));
@@ -459,6 +517,10 @@ function buildFallbackAnimatedHtml(params: {
       0%,100% { opacity: .45; transform: scaleY(.96); }
       50% { opacity: 1; transform: scaleY(1.04); }
     }
+    @keyframes haloDrift {
+      0%,100% { transform: translate3d(0,0,0) scale(1); opacity: .72; }
+      50% { transform: translate3d(-12px,10px,0) scale(1.04); opacity: 1; }
+    }
     @keyframes floatMockup {
       0%,100% { transform: translateY(0) rotate(-3deg); }
       50% { transform: translateY(-18px) rotate(-1deg); }
@@ -471,13 +533,44 @@ function buildFallbackAnimatedHtml(params: {
       from { transform: scale(1) translate3d(0,0,0); }
       to { transform: scale(1.04) translate3d(0,-10px,0); }
     }
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(38px) scale(.9); filter: blur(12px); }
+      60% { opacity: 1; transform: translateY(-4px) scale(1.03); filter: blur(0); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes popInSoft {
+      from { opacity: 0; transform: translateY(26px) scale(.96); filter: blur(8px); }
+      to { opacity: .92; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+    @keyframes clipReveal {
+      from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(14px); }
+      to { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+    }
+    @keyframes cinematicLift {
+      from { opacity: 0; transform: translateY(44px) scale(.98); letter-spacing: -0.02em; filter: blur(12px); }
+      to { opacity: 1; transform: translateY(0) scale(1); letter-spacing: -0.06em; filter: blur(0); }
+    }
+    @keyframes kineticIn {
+      0% { opacity: 0; transform: translateX(-54px) translateY(14px) skewX(8deg); filter: blur(10px); }
+      65% { opacity: 1; transform: translateX(6px) translateY(0) skewX(0deg); filter: blur(0); }
+      100% { opacity: 1; transform: translateX(0) translateY(0) skewX(0deg); }
+    }
+    @keyframes kineticInSoft {
+      from { opacity: 0; transform: translateX(-28px) translateY(10px); filter: blur(8px); }
+      to { opacity: .92; transform: translateX(0) translateY(0); filter: blur(0); }
+    }
+    @keyframes elegantRise {
+      from { opacity: 0; transform: translateY(28px); filter: blur(6px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
   </style>
 </head>
 <body>
   <div class="overlay"></div>
   <div class="grid"></div>
-  <div class="line"></div>
-  ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" />` : ''}
+  <div class="glowRing"></div>
+  <div class="glowBlob"></div>
+  ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="Logo" loading="eager" decoding="sync" />` : ''}
   <main class="content">
     <div class="eyebrow">${safeBrand || ''}</div>
     <section class="main">

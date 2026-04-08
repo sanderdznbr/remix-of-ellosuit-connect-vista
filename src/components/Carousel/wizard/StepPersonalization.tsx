@@ -63,6 +63,9 @@ interface Props {
   // Logo mode
   logoMode: 'ai' | 'manual';
   setLogoMode: (v: 'ai' | 'manual') => void;
+  // Animated mode extras
+  animatedBgImageUrl?: string;
+  setAnimatedBgImageUrl?: (v: string) => void;
 }
 
 const StepPersonalization: React.FC<Props> = ({

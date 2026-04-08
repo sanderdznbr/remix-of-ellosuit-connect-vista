@@ -675,6 +675,11 @@ serve(async (req) => {
     };
     const logoCss = logoPositionMap[logoPosition] || logoPositionMap["bottom-right"];
 
+    // Build prompt context string from gallery mentions
+    const promptContextStr = Array.isArray(promptContexts) && promptContexts.length > 0
+      ? promptContexts.map((ctx: { title: string; content: string }) => `[${ctx.title}]: ${ctx.content}`).join('\n')
+      : '';
+
     const safeTopic = sanitizePromptText(topic) || "Editorial Motion";
     const safeTitle = sanitizePromptText(cardTitle) || safeTopic;
     const safeBody = sanitizePromptText(cardBody);

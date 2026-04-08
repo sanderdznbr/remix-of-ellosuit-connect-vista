@@ -269,6 +269,8 @@ const CarouselGenerator: React.FC = () => {
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
   const [tweetConfig, setTweetConfig] = useState<TweetConfig>(DEFAULT_TWEET_CONFIG);
   const [tweet2Config, setTweet2Config] = useState<Tweet2Config>(DEFAULT_TWEET2_CONFIG);
+  const [animationStyle, setAnimationStyle] = useState<'slide-fade' | 'scale-bounce' | 'typewriter' | 'cinematic' | 'kinetic' | 'elegant'>('slide-fade');
+  const [animatedCards, setAnimatedCards] = useState<{ html: string; cardIndex: number; dimensions: { w: number; h: number } }[]>([]);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

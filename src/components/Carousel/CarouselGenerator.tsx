@@ -3383,6 +3383,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             if (cardIndex === 0 && data?.html) {
               captureAnimatedCover(currentCarouselIdRef.current, companyData.company_id, data.html).catch(() => {});
             }
+          }
         }
       } catch (saveErr) {
         console.error('Error saving regenerated animated card:', saveErr);

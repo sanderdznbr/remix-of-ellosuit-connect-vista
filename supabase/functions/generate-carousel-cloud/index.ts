@@ -458,7 +458,7 @@ No markdown, pure JSON only.` });
 Keep text within these limits to match the style's visual density.`
           : '';
 
-        promptStyle = `REPLICATE THIS EXACT VISUAL STYLE (from the reference images):
+        promptStyle = `REPLIQUE ESTE ESTILO VISUAL EXATO (das imagens de referência). O resultado DEVE ser INDISTINGUÍVEL de um post feito por um designer humano profissional — NUNCA pode parecer "gerado por IA":
 
 BACKGROUND: ${dna.background}
 MAIN TYPOGRAPHY: ${dna.typography_main || dna.typography}
@@ -470,7 +470,8 @@ DECORATIVE ELEMENTS: ${dna.decorative}
 PHOTO TREATMENT: ${dna.photo_treatment}
 SIGNATURE: ${dna.signature}${textLimitSection}
 
-RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.`;
+RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.
+QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipografia com HIERARQUIA CLARA e letras PERFEITAS (kerning correto, sem deformações). Espaçamento GENEROSO. Alinhamento PRECISO como design editorial. Iluminação direcional com sombras reais. ZERO aspecto artificial/plástico. O post deve parecer que foi criado manualmente em Photoshop por um designer sênior.`;
 
         if (marketplaceStyle?.imageGeneration) {
           marketplaceStyle.imageGeneration.prompt_style = promptStyle;

@@ -380,37 +380,56 @@ const StepPersonalization: React.FC<Props> = ({
               )}
             </div>
 
-            {/* Logo position */}
-            {logoUrl && (
+            {/* Logo positioning mode */}
+            {logoUrl && wizardMode === 'advanced' && (
               <div>
                 <label className="text-[11px] text-white/40 uppercase tracking-wider mb-2 block">Posição do logo</label>
-                <div className="relative w-full aspect-[4/5] max-w-[160px] rounded-xl border border-white/[0.10] bg-white/[0.03] mx-auto">
-                  {[
-                    { value: 'top-left', style: 'top-2 left-2' },
-                    { value: 'top-right', style: 'top-2 right-2' },
-                    { value: 'bottom-left', style: 'bottom-2 left-2' },
-                    { value: 'bottom-right', style: 'bottom-2 right-2' },
-                  ].map(pos => (
-                    <button
-                      key={pos.value}
-                      onClick={() => setLogoPosition(pos.value as LogoPosition)}
-                      className={`absolute ${pos.style} w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                        logoPosition === pos.value
-                          ? 'bg-purple-500 ring-2 ring-purple-400/50 scale-110'
-                          : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.10]'
-                      }`}
-                    >
-                      {logoPosition === pos.value ? (
-                        <img src={logoUrl} alt="" className="w-4 h-4 object-contain" />
-                      ) : (
-                        <div className="w-2.5 h-2.5 rounded-sm bg-white/20" />
-                      )}
-                    </button>
-                  ))}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-[10px] text-white/15 font-medium">POST</span>
-                  </div>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setLogoMode('ai')}
+                    className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${logoMode === 'ai' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                  >
+                    IA posiciona
+                  </button>
+                  <button
+                    onClick={() => setLogoMode('manual')}
+                    className={`flex-1 py-2 rounded-xl text-xs font-medium transition-all ${logoMode === 'manual' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}
+                  >
+                    Manual
+                  </button>
                 </div>
+                {logoMode === 'manual' && (
+                  <div className="relative w-full aspect-[4/5] max-w-[160px] rounded-xl border border-white/[0.10] bg-white/[0.03] mx-auto">
+                    {[
+                      { value: 'top-left', style: 'top-2 left-2' },
+                      { value: 'top-right', style: 'top-2 right-2' },
+                      { value: 'bottom-left', style: 'bottom-2 left-2' },
+                      { value: 'bottom-right', style: 'bottom-2 right-2' },
+                    ].map(pos => (
+                      <button
+                        key={pos.value}
+                        onClick={() => setLogoPosition(pos.value as LogoPosition)}
+                        className={`absolute ${pos.style} w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                          logoPosition === pos.value
+                            ? 'bg-purple-500 ring-2 ring-purple-400/50 scale-110'
+                            : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.10]'
+                        }`}
+                      >
+                        {logoPosition === pos.value ? (
+                          <img src={logoUrl} alt="" className="w-4 h-4 object-contain" />
+                        ) : (
+                          <div className="w-2.5 h-2.5 rounded-sm bg-white/20" />
+                        )}
+                      </button>
+                    ))}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="text-[10px] text-white/15 font-medium">POST</span>
+                    </div>
+                  </div>
+                )}
+                {logoMode === 'ai' && (
+                  <p className="text-[10px] text-white/25 leading-relaxed mt-1">A IA posicionará o logo automaticamente no melhor local do design.</p>
+                )}
               </div>
             )}
 

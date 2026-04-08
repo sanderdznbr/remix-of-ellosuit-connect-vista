@@ -83,7 +83,7 @@ const StepMode: React.FC<Props> = ({
 
   const getRequiredPlan = (key: string) => {
     if (key === 'advanced') return requiredPlanForAdvanced;
-    if (key === 'extreme') return requiredPlanForExtreme;
+    if (key === 'extreme' || key === 'animated') return requiredPlanForExtreme;
     return '';
   };
 

@@ -170,6 +170,17 @@ const FONT_OPTIONS = [
   { label: 'Source Serif Pro', value: "'Source Serif Pro', 'Georgia', serif", google: 'Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400;1,700' },
   { label: 'Archivo Black', value: "'Archivo Black', 'Impact', sans-serif", google: 'Archivo+Black' },
   { label: 'Anton', value: "'Anton', 'Impact', sans-serif", google: 'Anton' },
+  // Animated-friendly display fonts
+  { label: 'Dela Gothic One', value: "'Dela Gothic One', 'Impact', sans-serif", google: 'Dela+Gothic+One' },
+  { label: 'Righteous', value: "'Righteous', 'Impact', sans-serif", google: 'Righteous' },
+  { label: 'Teko', value: "'Teko', 'Impact', sans-serif", google: 'Teko:wght@400;500;600;700' },
+  { label: 'Unbounded', value: "'Unbounded', 'Helvetica Neue', sans-serif", google: 'Unbounded:wght@400;500;600;700;800;900' },
+  { label: 'Lexend', value: "'Lexend', 'Helvetica Neue', sans-serif", google: 'Lexend:wght@400;500;600;700;800;900' },
+  { label: 'Plus Jakarta Sans', value: "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif", google: 'Plus+Jakarta+Sans:wght@400;500;600;700;800' },
+  { label: 'Rubik', value: "'Rubik', 'Helvetica Neue', sans-serif", google: 'Rubik:wght@400;500;600;700;800;900' },
+  { label: 'Bungee', value: "'Bungee', 'Impact', sans-serif", google: 'Bungee' },
+  { label: 'Secular One', value: "'Secular One', 'Impact', sans-serif", google: 'Secular+One' },
+  { label: 'Black Ops One', value: "'Black Ops One', 'Impact', sans-serif", google: 'Black+Ops+One' },
 ];
 
 interface CarouselCard {
@@ -493,7 +504,8 @@ const CarouselGenerator: React.FC = () => {
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Cores', 'Fontes', 'Personalização', ...(generateAiMockup ? ['Screenshots'] : [])];
+  const animatedHasBrandColors = wizardMode === 'animated' && useBrandColors && logoBrandColors.length > 0;
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Fontes', ...(generateAiMockup ? ['Screenshots'] : [])];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -3108,7 +3120,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           logoUrl,
           logoPosition,
           backgroundImageUrl: animatedBgImageUrl || undefined,
-          generateAiBg: generateAiBg && !animatedBgImageUrl,
+          generateAiBg: !animatedBgImageUrl,
           generateAiMockup,
           mockupScreenshots: generateAiMockup ? styleScreenshots.map((s) => s.url) : [],
           mockupDeviceType: styleDeviceType,

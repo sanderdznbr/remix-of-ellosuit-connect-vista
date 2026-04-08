@@ -688,7 +688,8 @@ serve(async (req) => {
     let finalBgImageUrl = backgroundImageUrl || "";
     if (generateAiBg && !backgroundImageUrl) {
       console.log(`🎨 Generating AI background for card ${cardIndex + 1}...`);
-      const bgPrompt = `Create a premium abstract editorial backdrop for a social media motion card about "${safeTopic}". Card ${cardIndex + 1} of ${totalCards}. Use ${bgColor} as the base and ${accentColor} as subtle accent lighting. IMPORTANT: the background must feel solid, minimal, refined and expensive — NOT photorealistic, NOT obvious AI, NOT surreal, NOT a scene, NOT people, NOT devices, NOT objects, NOT text, NOT logos. Prefer deep color fields, subtle gradients, soft light beams, tasteful texture, luxury poster background. Aspect ratio: ${format === "9:16" ? "9:16 portrait" : format === "1:1" ? "1:1 square" : "4:5 portrait"}.`;
+      const contextHint = promptContextStr ? ` Brand context: ${promptContextStr.slice(0, 200)}.` : '';
+      const bgPrompt = `Create a premium abstract editorial backdrop for a social media motion card about "${safeTopic}".${contextHint} Card ${cardIndex + 1} of ${totalCards}. Use ${bgColor} as the base and ${accentColor} as subtle accent lighting. IMPORTANT: the background must feel solid, minimal, refined and expensive — NOT photorealistic, NOT obvious AI, NOT surreal, NOT a scene, NOT people, NOT devices, NOT objects, NOT text, NOT logos. Prefer deep color fields, subtle gradients, soft light beams, tasteful texture, luxury poster background. Aspect ratio: ${format === "9:16" ? "9:16 portrait" : format === "1:1" ? "1:1 square" : "4:5 portrait"}.`;
       const bgImage = await generateImage(LOVABLE_API_KEY, bgPrompt);
       if (bgImage) {
         finalBgImageUrl = bgImage;

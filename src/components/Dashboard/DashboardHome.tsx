@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ export const POST_FORMAT_OPTIONS = [
   { value: 'portrait' as PostFormat, label: 'Post Retrato', sublabel: '4:5 (1080×1350)', icon: RectangleVertical, w: 1080, h: 1350 },
   { value: 'square' as PostFormat, label: 'Post Quadrado', sublabel: '1:1 (1080×1080)', icon: Square, w: 1080, h: 1080 },
   { value: 'story' as PostFormat, label: 'Stories', sublabel: '9:16 (1080×1920)', icon: Smartphone, w: 1080, h: 1920 },
+  { value: 'video' as const, label: 'Vídeo', sublabel: 'Em breve', icon: Film, w: 1080, h: 1920, disabled: true },
 ];
 
 const PLACEHOLDER_SUGGESTIONS = [
@@ -448,20 +449,23 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                         {POST_FORMAT_OPTIONS.map((opt) => {
                           const Icon = opt.icon;
                           const isActive = postFormat === opt.value;
+                          const isDisabled = !!(opt as any).disabled;
                           return (
                             <button
                               key={opt.value}
-                              onClick={() => { setPostFormat(opt.value); setFormatDropdownOpen(false); }}
-                              className="w-full flex items-center gap-3 px-3.5 py-2.5 transition-colors cursor-pointer"
+                              onClick={() => { if (!isDisabled) { setPostFormat(opt.value as PostFormat); setFormatDropdownOpen(false); } }}
+                              className={`w-full flex items-center gap-3 px-3.5 py-2.5 transition-colors ${isDisabled ? 'opacity-40 cursor-default' : 'cursor-pointer'}`}
                               style={{
                                 backgroundColor: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
                                 color: isActive ? '#a78bfa' : 'rgba(255,255,255,0.5)',
                               }}
                             >
                               <Icon className="w-4 h-4 shrink-0" />
-                              <div className="text-left">
-                                <p className="text-xs font-medium" style={{ color: isActive ? '#c4b5fd' : 'rgba(255,255,255,0.7)' }}>{opt.label}</p>
-                                <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{opt.sublabel}</p>
+                              <div className="text-left flex items-center gap-2">
+                                <div>
+                                  <p className="text-xs font-medium" style={{ color: isDisabled ? 'rgba(255,255,255,0.3)' : isActive ? '#c4b5fd' : 'rgba(255,255,255,0.7)' }}>{opt.label}</p>
+                                  <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{opt.sublabel}</p>
+                                </div>
                               </div>
                             </button>
                           );

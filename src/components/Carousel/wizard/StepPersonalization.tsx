@@ -81,6 +81,7 @@ const StepPersonalization: React.FC<Props> = ({
   hasProduct, setHasProduct, onOpenProductStep,
   useCustomColors, setUseCustomColors, customColors, setCustomColors,
   wizardMode, logoMode, setLogoMode,
+  animatedBgImageUrl, setAnimatedBgImageUrl,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();

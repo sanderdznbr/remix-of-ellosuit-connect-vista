@@ -67,7 +67,7 @@ function freezeAnimatedStyles(originalRoot: HTMLElement, clonedRoot: HTMLElement
     target.style.transformOrigin = computed.transformOrigin;
     target.style.filter = computed.filter;
     target.style.clipPath = computed.clipPath;
-    target.style.webkitClipPath = computed.getPropertyValue('-webkit-clip-path') || computed.clipPath;
+    target.style.setProperty('-webkit-clip-path', computed.getPropertyValue('-webkit-clip-path') || computed.clipPath);
     target.style.visibility = computed.visibility;
     target.style.mixBlendMode = computed.mixBlendMode;
     target.style.background = computed.background;
@@ -78,9 +78,9 @@ function freezeAnimatedStyles(originalRoot: HTMLElement, clonedRoot: HTMLElement
     target.style.backgroundRepeat = computed.backgroundRepeat;
     target.style.backgroundBlendMode = computed.backgroundBlendMode;
     target.style.backdropFilter = computed.backdropFilter;
-    target.style.webkitBackdropFilter = computed.getPropertyValue('-webkit-backdrop-filter') || computed.backdropFilter;
+    target.style.setProperty('-webkit-backdrop-filter', computed.getPropertyValue('-webkit-backdrop-filter') || computed.backdropFilter);
     target.style.maskImage = computed.maskImage;
-    target.style.webkitMaskImage = computed.getPropertyValue('-webkit-mask-image') || computed.maskImage;
+    target.style.setProperty('-webkit-mask-image', computed.getPropertyValue('-webkit-mask-image') || computed.maskImage);
     target.style.color = computed.color;
     target.style.textShadow = computed.textShadow;
     target.style.letterSpacing = computed.letterSpacing;

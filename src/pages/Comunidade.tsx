@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MessageCircle, Loader2, User, Send, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Heart, Loader2, User } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 interface Post {
@@ -16,111 +15,134 @@ interface Post {
   likes_count: number;
   created_at: string;
   profile?: { display_name: string | null; username: string | null; avatar_url: string | null };
-  carousel_cards?: { imageUrl?: string; title?: string; body?: string }[];
 }
 
-interface Comment {
-  id: string;
-  post_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  profile?: { display_name: string | null; username: string | null; avatar_url: string | null };
-}
+function BentoGrid({ posts }: { posts: Post[] }) {
+  const navigate = useNavigate();
 
-function PostImageSlider({ post, onClick }: { post: Post; onClick: () => void }) {
-  const cards = post.carousel_cards || [];
-  const hasMultipleCards = cards.length > 1;
-  const [activeIndex, setActiveIndex] = useState(0);
+  // Distribute posts into columns for masonry effect
+  const getColumns = (count: number) => {
+    const cols: Post[][] = Array.from({ length: count }, () => []);
+    posts.forEach((post, i) => {
+      cols[i % count].push(post);
+    });
+    return cols;
+  };
 
-  // If no carousel cards, show cover image
-  if (cards.length === 0) {
-    if (!post.cover_url) return null;
-    return (
-      <div className="w-full cursor-pointer" style={{ aspectRatio: '4/5' }} onClick={onClick}>
-        <img src={post.cover_url} alt={post.caption || ''} className="w-full h-full object-cover" loading="lazy" />
-      </div>
-    );
-  }
-
-  const currentCard = cards[activeIndex];
-  const imageUrl = currentCard?.imageUrl || post.cover_url;
+  const columns = getColumns(3);
 
   return (
-    <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
-      {/* Image */}
-      <div className="w-full h-full cursor-pointer" onClick={onClick}>
-        {imageUrl ? (
-          <img src={imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center p-6 text-center bg-white/[0.03]">
-            <div>
-              <p className="text-white font-bold text-base mb-1">{currentCard?.title || ''}</p>
-              <p className="text-white/50 text-sm">{currentCard?.body || ''}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Navigation arrows */}
-      {hasMultipleCards && (
-        <>
-          {activeIndex > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setActiveIndex(prev => prev - 1); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all cursor-pointer"
+    <div className="flex gap-3 w-full">
+      {columns.map((col, colIdx) => (
+        <div key={colIdx} className="flex-1 flex flex-col gap-3">
+          {col.map((post) => (
+            <motion.div
+              key={post.id}
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="group relative rounded-xl overflow-hidden cursor-pointer bg-white/[0.03]"
+              onClick={() => navigate(`/post/${post.id}`)}
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-          {activeIndex < cards.length - 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setActiveIndex(prev => prev + 1); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/70 transition-all cursor-pointer"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
-        </>
-      )}
+              {post.cover_url ? (
+                <img
+                  src={post.cover_url}
+                  alt={post.caption || ''}
+                  className="w-full object-cover block"
+                  loading="lazy"
+                  style={{ minHeight: '180px' }}
+                />
+              ) : (
+                <div className="w-full flex items-center justify-center text-white/10 text-xs" style={{ aspectRatio: '4/5' }}>
+                  Sem capa
+                </div>
+              )}
 
-      {/* Dots indicator */}
-      {hasMultipleCards && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
-          {cards.map((_, idx) => (
-            <div
-              key={idx}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${
-                idx === activeIndex ? 'bg-white w-3' : 'bg-white/40'
-              }`}
-            />
+              {/* Hover overlay — author + likes */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden shrink-0">
+                    {post.profile?.avatar_url ? (
+                      <img src={post.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-3 h-3 text-white/70" />
+                    )}
+                  </div>
+                  <span className="text-white text-xs font-medium truncate">
+                    {post.profile?.display_name || 'Usuário'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 mt-1.5 text-white/60">
+                  <Heart className="w-3 h-3" />
+                  <span className="text-[11px]">{post.likes_count || 0}</span>
+                </div>
+              </div>
+            </motion.div>
           ))}
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
 
-      {/* Card counter badge */}
-      {hasMultipleCards && (
-        <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/80 text-[11px] font-medium">
-          {activeIndex + 1}/{cards.length}
+function BentoGridMobile({ posts }: { posts: Post[] }) {
+  const navigate = useNavigate();
+
+  const columns = [
+    posts.filter((_, i) => i % 2 === 0),
+    posts.filter((_, i) => i % 2 === 1),
+  ];
+
+  return (
+    <div className="flex gap-2 w-full">
+      {columns.map((col, colIdx) => (
+        <div key={colIdx} className="flex-1 flex flex-col gap-2">
+          {col.map((post) => (
+            <div
+              key={post.id}
+              className="relative rounded-lg overflow-hidden cursor-pointer bg-white/[0.03]"
+              onClick={() => navigate(`/post/${post.id}`)}
+            >
+              {post.cover_url ? (
+                <img
+                  src={post.cover_url}
+                  alt=""
+                  className="w-full object-cover block"
+                  loading="lazy"
+                  style={{ minHeight: '120px' }}
+                />
+              ) : (
+                <div className="w-full flex items-center justify-center text-white/10 text-xs" style={{ aspectRatio: '4/5' }}>
+                  Sem capa
+                </div>
+              )}
+              {/* Always visible small author bar on mobile */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
+                  {post.profile?.avatar_url ? (
+                    <img src={post.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-2.5 h-2.5 text-white/70" />
+                  )}
+                </div>
+                <span className="text-white text-[10px] font-medium truncate flex-1">{post.profile?.display_name || 'Usuário'}</span>
+                <div className="flex items-center gap-0.5 text-white/50">
+                  <Heart className="w-2.5 h-2.5" />
+                  <span className="text-[9px]">{post.likes_count || 0}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }
 
 function CommunityContent() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
-
-  // Comments
-  const [openCommentsId, setOpenCommentsId] = useState<string | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [sendingComment, setSendingComment] = useState(false);
+  const { user } = useAuth();
 
   const loadPosts = useCallback(async () => {
     setLoading(true);
@@ -129,45 +151,26 @@ function CommunityContent() {
         .from('community_posts')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50) as any;
+        .limit(60) as any;
 
       if (!postsData || postsData.length === 0) { setPosts([]); return; }
 
       const userIds = [...new Set((postsData as Post[]).map(p => p.user_id))];
-      const carouselIds = [...new Set((postsData as Post[]).map(p => p.carousel_id).filter(Boolean))];
 
-      // Fetch profiles and carousel data in parallel
-      const [{ data: profiles }, carouselResult] = await Promise.all([
-        supabase.from('profiles').select('id, display_name, username, avatar_url').in('id', userIds),
-        carouselIds.length > 0
-          ? (supabase.from('generated_carousels').select('id, carousel_data').in('id', carouselIds) as any)
-          : { data: [] },
-      ]);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, username, avatar_url')
+        .in('id', userIds);
 
       const profileMap: Record<string, any> = {};
       (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
 
-      const carouselMap: Record<string, any[]> = {};
-      ((carouselResult?.data || []) as any[]).forEach((c: any) => {
-        carouselMap[c.id] = c.carousel_data?.cards || [];
-      });
-
       const enriched = (postsData as Post[]).map(p => ({
         ...p,
         profile: profileMap[p.user_id] || null,
-        carousel_cards: carouselMap[p.carousel_id] || [],
       }));
 
       setPosts(enriched);
-
-      // Load user likes
-      if (user) {
-        const { data: likes } = await supabase
-          .from('community_post_likes')
-          .select('post_id')
-          .eq('user_id', user.id) as any;
-        setLikedPosts(new Set((likes || []).map((l: any) => l.post_id)));
-      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -177,99 +180,11 @@ function CommunityContent() {
 
   useEffect(() => { loadPosts(); }, [loadPosts]);
 
-  const toggleLike = async (postId: string) => {
-    if (!user) { toast.error('Faça login para curtir'); return; }
-    const isLiked = likedPosts.has(postId);
-
-    setLikedPosts(prev => {
-      const n = new Set(prev);
-      isLiked ? n.delete(postId) : n.add(postId);
-      return n;
-    });
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: p.likes_count + (isLiked ? -1 : 1) } : p));
-
-    try {
-      if (isLiked) {
-        await supabase.from('community_post_likes').delete().eq('post_id', postId).eq('user_id', user.id);
-      } else {
-        await supabase.from('community_post_likes').insert({ post_id: postId, user_id: user.id } as any);
-      }
-    } catch {
-      setLikedPosts(prev => {
-        const n = new Set(prev);
-        isLiked ? n.add(postId) : n.delete(postId);
-        return n;
-      });
-      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: p.likes_count + (isLiked ? 1 : -1) } : p));
-    }
-  };
-
-  const openComments = async (postId: string) => {
-    setOpenCommentsId(postId);
-    setCommentsLoading(true);
-    setComments([]);
-    try {
-      const { data } = await supabase
-        .from('community_post_comments')
-        .select('*')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true }) as any;
-
-      if (data && data.length > 0) {
-        const userIds = [...new Set((data as Comment[]).map(c => c.user_id))];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, display_name, username, avatar_url')
-          .in('id', userIds);
-        const profileMap: Record<string, any> = {};
-        (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
-        setComments((data as Comment[]).map(c => ({ ...c, profile: profileMap[c.user_id] || null })));
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCommentsLoading(false);
-    }
-  };
-
-  const sendComment = async () => {
-    if (!user || !openCommentsId || !newComment.trim()) return;
-    setSendingComment(true);
-    try {
-      const { data, error } = await supabase
-        .from('community_post_comments')
-        .insert({ post_id: openCommentsId, user_id: user.id, content: newComment.trim() } as any)
-        .select('*')
-        .single();
-      if (error) throw error;
-
-      const { data: profile } = await supabase.from('profiles').select('id, display_name, username, avatar_url').eq('id', user.id).single();
-      setComments(prev => [...prev, { ...(data as Comment), profile: profile || null }]);
-      setNewComment('');
-    } catch (err: any) {
-      toast.error('Erro ao comentar');
-    } finally {
-      setSendingComment(false);
-    }
-  };
-
-  const fmtDate = (d: string) => {
-    const date = new Date(d);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffH = Math.floor(diffMs / 3600000);
-    if (diffH < 1) return 'agora há pouco';
-    if (diffH < 24) return `${diffH}h atrás`;
-    const diffD = Math.floor(diffH / 24);
-    if (diffD < 7) return `${diffD}d atrás`;
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  };
-
   return (
-    <div className="max-w-lg mx-auto py-8 px-4">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+    <div className="max-w-5xl mx-auto py-6 px-4">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <h1 className="text-xl font-bold text-white mb-1">Comunidade</h1>
-        <p className="text-white/30 text-xs mb-8">Descubra e inspire-se com criações de outros usuários</p>
+        <p className="text-white/30 text-xs">Descubra e inspire-se com criações de outros usuários</p>
       </motion.div>
 
       {loading ? (
@@ -277,147 +192,17 @@ function CommunityContent() {
       ) : posts.length === 0 ? (
         <div className="text-center py-20 text-white/20 text-sm">Nenhum post na comunidade ainda. Seja o primeiro!</div>
       ) : (
-        <div className="space-y-6">
-          {posts.map((post, i) => (
-            <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              {/* Header */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <button
-                  onClick={() => post.profile?.username && navigate(`/perfil/${post.profile.username}`)}
-                  className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center overflow-hidden shrink-0">
-                    {post.profile?.avatar_url ? (
-                      <img src={post.profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-4 h-4 text-purple-400" />
-                    )}
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-white/80 font-medium">{post.profile?.display_name || 'Usuário'}</p>
-                    <p className="text-[10px] text-white/25">@{post.profile?.username || '?'} · {fmtDate(post.created_at)}</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Image / Carousel Slider */}
-              <PostImageSlider post={post} onClick={() => navigate(`/post/${post.id}`)} />
-
-              {/* Actions */}
-              <div className="px-4 py-3">
-                <div className="flex items-center gap-4 mb-2">
-                  <button
-                    onClick={() => toggleLike(post.id)}
-                    className="flex items-center gap-1.5 cursor-pointer transition-colors"
-                    style={{ color: likedPosts.has(post.id) ? '#ef4444' : 'rgba(255,255,255,0.4)' }}
-                  >
-                    <Heart className="w-5 h-5" fill={likedPosts.has(post.id) ? '#ef4444' : 'none'} />
-                    <span className="text-sm font-medium">{post.likes_count || 0}</span>
-                  </button>
-                  <button
-                    onClick={() => openComments(post.id)}
-                    className="flex items-center gap-1.5 cursor-pointer text-white/40 hover:text-white/70 transition-colors"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="text-sm">Comentar</span>
-                  </button>
-                </div>
-                {post.caption && (
-                  <p className="text-sm text-white/60 leading-relaxed">
-                    <span className="font-medium text-white/80 mr-1.5">{post.profile?.username}</span>
-                    {post.caption}
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <>
+          {/* Desktop: 3-column masonry */}
+          <div className="hidden sm:block">
+            <BentoGrid posts={posts} />
+          </div>
+          {/* Mobile: 2-column */}
+          <div className="block sm:hidden">
+            <BentoGridMobile posts={posts} />
+          </div>
+        </>
       )}
-
-      {/* Comments Drawer */}
-      <AnimatePresence>
-        {openCommentsId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setOpenCommentsId(null)}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25 }}
-              className="w-full max-w-lg rounded-t-2xl border-t border-white/[0.08] max-h-[70vh] flex flex-col"
-              style={{ backgroundColor: '#111116' }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-                <h3 className="text-sm font-semibold text-white">Comentários</h3>
-                <button onClick={() => setOpenCommentsId(null)} className="text-white/30 hover:text-white/60 cursor-pointer"><X className="w-5 h-5" /></button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-                {commentsLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-white/20" /></div>
-                ) : comments.length === 0 ? (
-                  <p className="text-center text-white/20 text-xs py-8">Nenhum comentário ainda. Seja o primeiro!</p>
-                ) : (
-                  comments.map(c => (
-                    <div key={c.id} className="flex gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 overflow-hidden">
-                        {c.profile?.avatar_url ? (
-                          <img src={c.profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-[10px] font-bold text-purple-400">{(c.profile?.display_name || '?')[0]?.toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs">
-                          <button onClick={() => c.profile?.username && navigate(`/perfil/${c.profile.username}`)} className="font-medium text-white/70 hover:text-white cursor-pointer mr-1.5">
-                            {c.profile?.display_name || 'Usuário'}
-                          </button>
-                          <span className="text-white/50">{c.content}</span>
-                        </p>
-                        <p className="text-[10px] text-white/20 mt-0.5">{fmtDate(c.created_at)}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {user && (
-                <div className="px-4 py-3 border-t border-white/[0.06] flex gap-2">
-                  <input
-                    value={newComment}
-                    onChange={e => setNewComment(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendComment()}
-                    placeholder="Escreva um comentário..."
-                    className="flex-1 px-3 py-2 rounded-xl text-sm text-white placeholder-white/20 outline-none"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-                  />
-                  <button
-                    onClick={sendComment}
-                    disabled={!newComment.trim() || sendingComment}
-                    className="p-2.5 rounded-xl cursor-pointer disabled:opacity-30 transition-opacity"
-                    style={{ backgroundColor: '#7B50DC' }}
-                  >
-                    {sendingComment ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Send className="w-4 h-4 text-white" />}
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

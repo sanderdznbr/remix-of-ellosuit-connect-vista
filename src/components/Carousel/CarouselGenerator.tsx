@@ -493,7 +493,7 @@ const CarouselGenerator: React.FC = () => {
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Cores', 'Fontes', 'Personalização'];
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Cores', 'Fontes', 'Personalização', ...(generateAiMockup ? ['Screenshots'] : [])];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -3001,6 +3001,12 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   // ===== GENERATE (CLOUD-BASED) =====
   // Strip mention tags from topic: (@Title) → Title
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]*)\)/g, '$1').replace(/@(\w+)/g, '$1').replace(/@/g, '');
+  const sanitizeAnimatedTopic = (raw: string) => cleanMentionsFromTopic(raw)
+    .replace(/^\s*(crie|criar|gere|gerar|faça|fazer|monte|montar)\s+(um|uma|o|a)?\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)?\s*(sobre|para)?\s*/i, '')
+    .replace(/^\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)\s*(sobre|para)\s*/i, '')
+    .replace(/\b(ellocontent|ellosuit)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   // ===== GENERATE ANIMATED CARDS =====
   const generateAnimatedCards = async () => {
@@ -3009,6 +3015,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     setGenerating(true);
     setAnimatedCards([]);
     setTransitionToGenerate(false);
+
+    if (generateAiMockup && styleScreenshots.length === 0) {
+      sonnerToast.error('Envie pelo menos 1 screenshot real para montar os mockups do post animado.');
+      setGenerating(false);
+      generationInFlightRef.current = false;
+      return;
+    }
 
     const dims = postFormat === 'story' ? { w: 1080, h: 1920 } : postFormat === 'square' ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
     const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
@@ -3019,8 +3032,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       for (let i = 0; i < cardCount; i++) {
         
         const cardData = manualCardTexts[i] || {};
+        const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
+        const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
         const payload = {
-          topic: cleanMentionsFromTopic(topic),
+          topic: cleanTopic,
           cardIndex: i,
           totalCards: cardCount,
           cardTitle: cardData.title || '',
@@ -3030,12 +3045,15 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           bgColor,
           accentColor,
           textColor,
-          fontFamily: ['Playfair Display','Merriweather','Lora','DM Serif Display','Cormorant Garamond','Montserrat','Poppins','Bebas Neue','Oswald','Raleway','Inter','Space Grotesk','Sora','Outfit','Clash Display','Crimson Text'][selectedFont] || 'Playfair Display',
+          fontFamily: selectedAnimatedFont?.label === 'Clash Display' ? 'Archivo Black' : (selectedAnimatedFont?.label || 'Playfair Display'),
+          fontGoogleFamily: selectedAnimatedFont?.google || 'Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700',
           logoUrl,
           logoPosition,
           backgroundImageUrl: animatedBgImageUrl || undefined,
           generateAiBg: generateAiBg && !animatedBgImageUrl,
           generateAiMockup,
+          mockupScreenshots: generateAiMockup ? styleScreenshots.map((s) => s.url) : [],
+          mockupDeviceType: styleDeviceType,
           format: formatStr,
         };
 
@@ -3079,7 +3097,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 title: topic,
                 animationStyle,
               };
-              const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, logoUrl, logoPosition, logoMode, animationStyle, animatedBgImageUrl, generateAiBg, generateAiMockup };
+              const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, logoUrl, logoPosition, logoMode, animationStyle, animatedBgImageUrl, generateAiBg, generateAiMockup, mockupScreenshots: styleScreenshots.map((s) => s.url), mockupDeviceType: styleDeviceType };
               
               if (currentCarouselIdRef.current) {
                 await supabase.from('generated_carousels').update({

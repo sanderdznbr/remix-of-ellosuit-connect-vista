@@ -556,6 +556,56 @@ const StepPersonalization: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Background image for animated mode */}
+      {wizardMode === 'animated' && setAnimatedBgImageUrl && (
+        <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+          <button
+            onClick={() => toggleSection('bg-image')}
+            className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+          >
+            <ImagePlus className="h-4 w-4 text-violet-400" />
+            <span className="text-sm font-medium text-white/80">Foto de Fundo</span>
+            {animatedBgImageUrl && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">ok</span>}
+            <span className="ml-auto text-white/20 text-xs">{expandedSections.has('bg-image') ? '▲' : '▼'}</span>
+          </button>
+          {expandedSections.has('bg-image') && (
+            <div className="px-4 pb-4 space-y-3">
+              <p className="text-[11px] text-white/30">Adicione uma imagem para usar como fundo nos cards animados. A IA aplicará um overlay escuro para manter a legibilidade.</p>
+              {animatedBgImageUrl ? (
+                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/[0.08]">
+                  <img src={animatedBgImageUrl} alt="Background" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setAnimatedBgImageUrl('')}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5 text-white/80" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-28 rounded-lg border-2 border-dashed border-white/[0.08] hover:border-violet-500/30 cursor-pointer transition-all bg-white/[0.02] hover:bg-violet-500/[0.03]">
+                  <Upload className="h-6 w-6 text-white/20 mb-1.5" />
+                  <span className="text-xs text-white/30">Clique para enviar</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !user) return;
+                    try {
+                      const ext = file.name.split('.').pop() || 'jpg';
+                      const path = `${user.id}/animated-bg/${Date.now()}.${ext}`;
+                      const { error } = await supabase.storage.from('brand-assets').upload(path, file);
+                      if (error) throw error;
+                      const { data: urlData } = supabase.storage.from('brand-assets').getPublicUrl(path);
+                      setAnimatedBgImageUrl(urlData.publicUrl);
+                    } catch (err) {
+                      console.error('Upload bg error:', err);
+                    }
+                  }} />
+                </label>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Skip */}
       <button
         onClick={onSkipAll}

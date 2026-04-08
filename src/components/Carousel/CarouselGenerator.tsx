@@ -3378,7 +3378,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               card_count: nextAnimatedCards.length,
               post_format: 'animated',
             } as any).eq('id', currentCarouselIdRef.current);
-          }
+
+            // Re-capture cover if we regenerated card 0
+            if (cardIndex === 0 && data?.html) {
+              captureAnimatedCover(currentCarouselIdRef.current, companyData.company_id, data.html).catch(() => {});
+            }
         }
       } catch (saveErr) {
         console.error('Error saving regenerated animated card:', saveErr);

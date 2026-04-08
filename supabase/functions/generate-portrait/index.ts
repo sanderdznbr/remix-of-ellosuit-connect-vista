@@ -53,6 +53,7 @@ serve(async (req) => {
       });
     }
 
+    const body = await req.json();
     const { mode } = body;
     const variationIndex = body.variationIndex || 0;
 

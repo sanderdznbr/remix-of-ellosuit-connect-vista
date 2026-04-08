@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
     // Logo handling depends on logoMode: 'ai' = AI renders it, 'manual'/default = Canvas overlay
     const isAiLogoMode = logoMode === 'ai' && logoImageUrl;
     const logoInstruction = isAiLogoMode
-      ? `LOGOMARCA OBRIGATÓRIA: A imagem de referência da logomarca foi fornecida. Você DEVE posicionar esta logomarca de forma elegante e profissional no design, escolhendo o melhor canto ou posição que harmonize com a composição. A logo deve ser PEQUENA e DISCRETA (não dominante), mas claramente visível e legível. Mantenha as proporções originais da logo. NÃO distorça, recrie ou redesenhe a logo — use EXATAMENTE como fornecida.`
+      ? `LOGOMARCA OBRIGATÓRIA: A imagem de referência da logomarca foi fornecida. Você DEVE posicionar esta logomarca de forma elegante e profissional no design, escolhendo o melhor canto ou posição que harmonize com a composição. A logo deve ser PEQUENA e DISCRETA (não dominante), mas claramente visível e legível. Mantenha as proporções originais da logo. NÃO distorça, recrie ou redesenhe a logo — use EXATAMENTE como fornecida. REGRA CRÍTICA: Use a logomarca COMPLETA e INTEIRA como fornecida — se a logo contém símbolo + texto (wordmark), INCLUA AMBOS. NUNCA recorte, fragmente ou use apenas parte da logo (como só o ícone/isotipo sem o nome). A logo deve aparecer EXATAMENTE como o arquivo original, na íntegra.`
       : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
     const antiAiAesthetic = `
 ESTÉTICA ANTI-IA (PRIORIDADE CRÍTICA — LEIA COM ATENÇÃO):
@@ -482,7 +482,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
 
     // === LOGO IMAGE: Send to AI when logoMode is 'ai', otherwise handled via Canvas overlay ===
     if (logoImageUrl && logoMode === 'ai') {
-      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DA MARCA — A imagem abaixo é a logomarca oficial que DEVE ser posicionada no design. Coloque-a de forma DISCRETA e PROFISSIONAL em um canto que harmonize com a composição. Mantenha-a PEQUENA mas LEGÍVEL. NÃO altere, redesenhe ou distorça a logo — use EXATAMENTE como fornecida:` });
+      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DA MARCA — A imagem abaixo é a logomarca oficial que DEVE ser posicionada no design. Coloque-a de forma DISCRETA e PROFISSIONAL em um canto que harmonize com a composição. Mantenha-a PEQUENA mas LEGÍVEL. NÃO altere, redesenhe, recorte ou distorça a logo — use EXATAMENTE como fornecida, COMPLETA E INTEIRA (símbolo + texto/wordmark se houver). NUNCA use apenas parte da logo (ex: só o ícone sem o nome):` });
       messageContent.push({ type: 'image_url', image_url: { url: logoImageUrl } });
       console.log('Logo sent to AI for positioning (logoMode=ai), length:', logoImageUrl.length);
     } else if (logoImageUrl) {

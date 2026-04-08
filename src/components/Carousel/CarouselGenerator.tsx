@@ -3139,6 +3139,98 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     }
   };
 
+  const regenerateAnimatedCard = async (cardIndex: number) => {
+    if (generationInFlightRef.current) return;
+    const currentCard = animatedCards[cardIndex];
+    if (!currentCard) return;
+
+    if (generateAiMockup && styleScreenshots.length === 0) {
+      sonnerToast.error('Envie pelo menos 1 screenshot real para montar os mockups do post animado.');
+      return;
+    }
+
+    generationInFlightRef.current = true;
+    setRegeneratingCard(cardIndex);
+
+    try {
+      const cardData = manualCardTexts[cardIndex] || {};
+      const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
+      const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
+      const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
+
+      const payload = {
+        topic: cleanTopic,
+        cardIndex,
+        totalCards: cardCount,
+        cardTitle: cardData.title || '',
+        cardBody: cardData.body || '',
+        animationStyle,
+        brandName,
+        bgColor,
+        accentColor,
+        textColor,
+        fontFamily: selectedAnimatedFont?.label === 'Clash Display' ? 'Archivo Black' : (selectedAnimatedFont?.label || 'Playfair Display'),
+        fontGoogleFamily: selectedAnimatedFont?.google || 'Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700',
+        logoUrl,
+        logoPosition,
+        backgroundImageUrl: animatedBgImageUrl || undefined,
+        generateAiBg: generateAiBg && !animatedBgImageUrl,
+        generateAiMockup,
+        mockupScreenshots: generateAiMockup ? styleScreenshots.map((s) => s.url) : [],
+        mockupDeviceType: styleDeviceType,
+        format: formatStr,
+      };
+
+      const data = await resilientInvoke('generate-animated-card', payload);
+      if (!data?.html) throw new Error('Não foi possível regenerar o card');
+
+      const nextAnimatedCards = animatedCards.map((item, index) => (
+        index === cardIndex ? { ...item, html: data.html, dimensions: data.dimensions || item.dimensions } : item
+      ));
+      setAnimatedCards(nextAnimatedCards);
+
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+          if (companyData && currentCarouselIdRef.current) {
+            const animatedCarouselData = {
+              cards: nextAnimatedCards.map((r, idx) => ({
+                cardIndex: r.cardIndex,
+                html: r.html,
+                dimensions: r.dimensions,
+                title: manualCardTexts[idx]?.title || '',
+                body: manualCardTexts[idx]?.body || '',
+              })),
+              title: topic,
+              animationStyle,
+            };
+            const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, logoUrl, logoPosition, logoMode, animationStyle, animatedBgImageUrl, generateAiBg, generateAiMockup, mockupScreenshots: styleScreenshots.map((s) => s.url), mockupDeviceType: styleDeviceType };
+
+            await supabase.from('generated_carousels').update({
+              title: topic,
+              topic,
+              carousel_data: animatedCarouselData as any,
+              style_config: styleConfig as any,
+              card_count: nextAnimatedCards.length,
+              post_format: 'animated',
+            } as any).eq('id', currentCarouselIdRef.current);
+          }
+        }
+      } catch (saveErr) {
+        console.error('Error saving regenerated animated card:', saveErr);
+      }
+
+      sonnerToast.success(`Card ${cardIndex + 1} regenerado com sucesso!`);
+    } catch (err: any) {
+      console.error('regenerateAnimatedCard error:', err);
+      sonnerToast.error(err.message || 'Erro ao regenerar card animado');
+    } finally {
+      setRegeneratingCard(null);
+      generationInFlightRef.current = false;
+    }
+  };
+
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');
     console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', contentMode, 'cardCount:', cardCount);

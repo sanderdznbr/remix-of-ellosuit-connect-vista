@@ -3200,7 +3200,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               };
               const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, logoUrl, logoPosition, logoMode, animationStyle, animatedBgImageUrl, generateAiBg, generateAiMockup, mockupScreenshots: styleScreenshots.map((s) => s.url), mockupDeviceType: styleDeviceType };
               
-              if (currentCarouselIdRef.current) {
+              let effectiveCarouselId = currentCarouselIdRef.current;
+              if (effectiveCarouselId) {
                 await supabase.from('generated_carousels').update({
                   title: topic,
                   topic,
@@ -3208,7 +3209,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                   style_config: styleConfig as any,
                   card_count: results.length,
                   post_format: postFormat,
-                } as any).eq('id', currentCarouselIdRef.current);
+                } as any).eq('id', effectiveCarouselId);
               } else {
                 const { data: inserted } = await supabase.from('generated_carousels').insert({
                   company_id: companyData.company_id,
@@ -3222,7 +3223,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 } as any).select('id').single();
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
+                  effectiveCarouselId = inserted.id;
                 }
+              }
+
+              // Capture cover from the first animated card's HTML
+              if (effectiveCarouselId && results[0]?.html) {
+                captureAnimatedCover(effectiveCarouselId, companyData.company_id, results[0].html).catch((e) => console.error('Animated cover capture failed:', e));
               }
             }
           }

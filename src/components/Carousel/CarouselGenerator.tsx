@@ -490,7 +490,7 @@ const CarouselGenerator: React.FC = () => {
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', 'Velocidade'];
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização'];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -6864,7 +6864,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
-        {!carouselData && !generating && !generatingAllImages && !loadingCarousel && (
+        {!carouselData && !generating && !generatingAllImages && !loadingCarousel && animatedCards.length === 0 && (
           <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#0A0A0A', paddingTop: 'env(safe-area-inset-top)' }}>
             {/* Subtle ambient glow accents */}
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
@@ -7989,6 +7989,27 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
               </AnimatePresence>
 
+            </div>
+          </div>
+        )}
+
+        {/* Animated cards result view */}
+        {animatedCards.length > 0 && !generating && (
+          <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto p-6" style={{ backgroundColor: '#0A0A0A' }}>
+            <div className="max-w-2xl mx-auto w-full space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Cards Animados</h2>
+                  <p className="text-sm text-white/40 mt-1">{animatedCards.length} cards gerados · Grave como vídeo ou faça download</p>
+                </div>
+                <button
+                  onClick={() => { setAnimatedCards([]); setWizardStep(0); }}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all"
+                >
+                  Novo carrossel
+                </button>
+              </div>
+              <AnimatedCardRenderer cards={animatedCards} />
             </div>
           </div>
         )}

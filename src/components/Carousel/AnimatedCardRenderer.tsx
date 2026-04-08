@@ -420,6 +420,10 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         targetNode = recordingSurface.targetNode;
       }
 
+      const ownerWindow = targetNode.ownerDocument.defaultView ?? window;
+      const computedBackground = ownerWindow.getComputedStyle(targetNode).backgroundColor;
+      const documentBackground = ownerWindow.getComputedStyle(targetNode.ownerDocument.documentElement).backgroundColor;
+      const captureBackground = [computedBackground, documentBackground].find((value) => value && value !== 'rgba(0, 0, 0, 0)');
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
@@ -448,11 +452,6 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const recordingPromise = new Promise<Blob>((resolve) => {
         mediaRecorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
       });
-
-      const ownerWindow = targetNode.ownerDocument.defaultView ?? window;
-      const computedBackground = ownerWindow.getComputedStyle(targetNode).backgroundColor;
-      const documentBackground = ownerWindow.getComputedStyle(targetNode.ownerDocument.documentElement).backgroundColor;
-      const captureBackground = [computedBackground, documentBackground].find((value) => value && value !== 'rgba(0, 0, 0, 0)');
       const fontEmbedCSS = await getEmbeddedFontCss(targetNode);
       const captureFrame = async () => await captureAnimatedNodeFrame(targetNode, {
         width: w,

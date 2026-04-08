@@ -27,8 +27,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName, logoImageUrl, logoPosition, isCarousel } = body;
-    console.log('LOGO DEBUG:', { logoImageUrl: logoImageUrl ? logoImageUrl.slice(0, 80) : null, logoPosition, hasLogo: !!logoImageUrl, isCarousel: !!isCarousel });
+    const { prompt, topic, referenceImageUrls, faceReferenceUrls, styleReferenceUrls, imageModel, negativePrompt, fidelity, stylePrompt, brandColors, customColors, editSourceImage, faceGender, facePersonsMetadata, imageSize, panoramic, panoramicCardCount, fontReferenceImage, fontReferenceName, logoImageUrl, logoPosition, isCarousel, logoMode } = body;
+    console.log('LOGO DEBUG:', { logoImageUrl: logoImageUrl ? logoImageUrl.slice(0, 80) : null, logoPosition, hasLogo: !!logoImageUrl, isCarousel: !!isCarousel, logoMode });
 
     // === FACE REGENERATION MODE (Image Editing) ===
     if (editSourceImage) {
@@ -238,8 +238,11 @@ Deno.serve(async (req) => {
     }
 
     // Anti-border + anti-text-copy + anti-grid + anti-AI-aesthetic instruction for ALL modes
-    // Logo is ALWAYS handled via Canvas overlay — NEVER sent to AI to avoid shadow/distortion artifacts
-    const logoInstruction = `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
+    // Logo handling depends on logoMode: 'ai' = AI renders it, 'manual'/default = Canvas overlay
+    const isAiLogoMode = logoMode === 'ai' && logoImageUrl;
+    const logoInstruction = isAiLogoMode
+      ? `LOGOMARCA OBRIGATÓRIA: A imagem de referência da logomarca foi fornecida. Você DEVE posicionar esta logomarca de forma elegante e profissional no design, escolhendo o melhor canto ou posição que harmonize com a composição. A logo deve ser PEQUENA e DISCRETA (não dominante), mas claramente visível e legível. Mantenha as proporções originais da logo. NÃO distorça, recrie ou redesenhe a logo — use EXATAMENTE como fornecida.`
+      : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
     const antiAiAesthetic = `
 ESTÉTICA ANTI-IA (PRIORIDADE CRÍTICA — LEIA COM ATENÇÃO):
 O resultado DEVE parecer um post criado por um designer humano profissional em Photoshop/Illustrator, NÃO uma imagem gerada por IA.
@@ -477,10 +480,12 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       console.log('Font reference injected:', fontLabel, 'base64 length:', fontReferenceImage.length);
     }
 
-    // === LOGO IMAGE: Disabled — logo is now handled exclusively via Canvas overlay in frontend ===
-    // AI logo rendering caused shadow/distortion artifacts, so it's been removed entirely.
-    // The logo will be composited by the frontend after image generation.
-    if (logoImageUrl) {
+    // === LOGO IMAGE: Send to AI when logoMode is 'ai', otherwise handled via Canvas overlay ===
+    if (logoImageUrl && logoMode === 'ai') {
+      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DA MARCA — A imagem abaixo é a logomarca oficial que DEVE ser posicionada no design. Coloque-a de forma DISCRETA e PROFISSIONAL em um canto que harmonize com a composição. Mantenha-a PEQUENA mas LEGÍVEL. NÃO altere, redesenhe ou distorça a logo — use EXATAMENTE como fornecida:` });
+      messageContent.push({ type: 'image_url', image_url: { url: logoImageUrl } });
+      console.log('Logo sent to AI for positioning (logoMode=ai), length:', logoImageUrl.length);
+    } else if (logoImageUrl) {
       console.log('Logo provided but NOT sent to AI — will be overlaid via Canvas. Position:', logoPosition);
     }
 

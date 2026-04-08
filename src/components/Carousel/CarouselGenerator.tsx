@@ -1634,7 +1634,7 @@ The image must look like it was shot by a professional photographer or designed 
           action: 'generate-and-wait',
           prompt: opts.prompt,
           model_id: imageSettings.higgsFieldModel || 'higgsfield-ai/soul/standard',
-          aspect_ratio: '3:4',
+          aspect_ratio: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '4:5',
           resolution: '720p',
           max_wait_seconds: 120,
         },
@@ -1687,7 +1687,7 @@ The image must look like it was shot by a professional photographer or designed 
     const invokePromise = supabase.functions.invoke('generate-carousel-image', {
       body: {
         prompt: opts.prompt,
-        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '3:4',
+        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '4:5',
         topic: opts.prompt,
         faceReferenceUrls: cappedFaceRefs.length > 0 ? cappedFaceRefs : undefined,
         styleReferenceUrls: cappedStyleRefs.length > 0 ? cappedStyleRefs : undefined,
@@ -1715,6 +1715,28 @@ The image must look like it was shot by a professional photographer or designed 
     if (data?.error) throw new Error(data.error);
     return null;
   };
+
+  const getLogoOverlayBounds = useCallback((canvasW: number, canvasH: number, logoW: number, logoH: number, position: string) => {
+    const safePad = Math.max(72, Math.round(Math.min(canvasW, canvasH) * 0.08));
+    const maxLW = Math.min(170, canvasW * 0.16, canvasW - safePad * 2);
+    const maxLH = Math.min(72, canvasH * 0.055, canvasH - safePad * 2);
+    const scale = Math.min(maxLW / logoW, maxLH / logoH, 1);
+    const width = logoW * scale;
+    const height = logoH * scale;
+
+    let x = safePad;
+    let y = safePad;
+
+    if (position.includes('center')) x = (canvasW - width) / 2;
+    if (position.includes('right')) x = canvasW - width - safePad;
+    if (position.includes('middle')) y = (canvasH - height) / 2;
+    if (position.includes('bottom')) y = canvasH - height - safePad;
+
+    x = Math.min(Math.max(x, safePad), Math.max(safePad, canvasW - width - safePad));
+    y = Math.min(Math.max(y, safePad), Math.max(safePad, canvasH - height - safePad));
+
+    return { x, y, width, height, safePad };
+  }, []);
 
   // ===== ENHANCE PROMPT =====
   const enhancePrompt = async (inputTopic?: string) => {
@@ -2854,12 +2876,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
           // Draw logo with smart color adaptation
           const smartDrawLogo = async (canvasCtx: CanvasRenderingContext2D, canvasW: number, canvasH: number, primaryLogo: string, darkLogo: string | null, pos: string) => {
-            const pad = Math.max(56, Math.round(Math.min(canvasW, canvasH) * 0.065));
+            const probeBounds = getLogoOverlayBounds(canvasW, canvasH, 220, 90, pos);
             // Sample background luminance at logo position
-            let sampleX = pad + 40, sampleY = pad + 20;
-            if (pos.includes('right')) sampleX = canvasW - pad - 40;
-            if (pos.includes('bottom')) sampleY = canvasH - pad - 20;
-            if (pos.includes('center')) sampleX = canvasW / 2;
+            let sampleX = Math.round(probeBounds.x + probeBounds.width / 2), sampleY = Math.round(probeBounds.y + probeBounds.height / 2);
             const pixel = canvasCtx.getImageData(sampleX, sampleY, 1, 1).data;
             const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
             const bgIsDark = lum < 0.45;
@@ -2873,14 +2892,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
             })();
             const logoImg = await loadImg(logoB64);
-            const maxLW = Math.min(170, canvasW * 0.18), maxLH = Math.min(72, canvasH * 0.065);
-            const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-            const lw = logoImg.width * ls, lh = logoImg.height * ls;
-            let lx = pad, ly = pad;
-            if (pos.includes('center')) lx = (canvasW - lw) / 2;
-            if (pos.includes('right')) lx = canvasW - lw - pad;
-            if (pos.includes('middle')) ly = (canvasH - lh) / 2;
-            if (pos.includes('bottom')) ly = canvasH - lh - pad;
+            const bounds = getLogoOverlayBounds(canvasW, canvasH, logoImg.width, logoImg.height, pos);
 
             canvasCtx.save();
             if (needsInvert) {
@@ -2890,7 +2902,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               // On dark bg with no dark variant, brighten
               canvasCtx.filter = 'brightness(0) invert(1)';
             }
-            canvasCtx.drawImage(logoImg, lx, ly, lw, lh);
+            canvasCtx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
             canvasCtx.restore();
           };
 
@@ -4035,10 +4047,6 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           })();
           const logoImg = await loadImg(logoB64);
           const W = cardW, H = cardH;
-          const maxLW = 180, maxLH = 80;
-          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-          const lw = logoImg.width * ls, lh = logoImg.height * ls;
-          const pad = 50;
           const lp = logoPosition || 'top-left';
 
           for (let i = 0; i < updatedCards.length; i++) {
@@ -4050,12 +4058,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               const ctx = canvas.getContext('2d')!;
               const baseImg = await loadImg(cardImgUrl);
               ctx.drawImage(baseImg, 0, 0, baseImg.width, baseImg.height, 0, 0, W, H);
-              let lx = pad, ly = pad;
-              if (lp.includes('center')) lx = (W - lw) / 2;
-              if (lp.includes('right')) lx = W - lw - pad;
-              if (lp.includes('middle')) ly = (H - lh) / 2;
-              if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, lp);
+              ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
               updatedCards[i] = { ...updatedCards[i], imageUrl: canvas.toDataURL('image/jpeg', 0.92) };
             } catch (e) { console.warn('[LOGO_OVERLAY] Card', i, 'failed:', e); }
           }
@@ -5485,17 +5489,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
           })();
           const logoImg = await loadImg(logoB64);
-          const maxLW = 180, maxLH = 80;
-          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-          const lw = logoImg.width * ls, lh = logoImg.height * ls;
-          const pad = 50;
-          let lx = pad, ly = pad;
           const lp = logoPosition || 'top-left';
-          if (lp.includes('center')) lx = (W - lw) / 2;
-          if (lp.includes('right')) lx = W - lw - pad;
-          if (lp.includes('middle')) ly = (H - lh) / 2;
-          if (lp.includes('bottom')) ly = H - lh - pad;
-          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, lp);
+          ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
           newImageUrl = canvas.toDataURL('image/jpeg', 0.92);
           console.log('[REGEN_LOGO] ✅ Logo applied!');
         } catch (logoErr) {

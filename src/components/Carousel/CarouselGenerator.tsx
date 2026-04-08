@@ -3007,14 +3007,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     setAnimatedCards([]);
     setTransitionToGenerate(false);
 
-    const dims = postFormat === '9:16' ? { w: 1080, h: 1920 } : postFormat === '1:1' ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
-    const formatStr = postFormat === '9:16' ? '9:16' : postFormat === '1:1' ? '1:1' : '4:5';
+    const dims = postFormat === 'story' ? { w: 1080, h: 1920 } : postFormat === 'square' ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
+    const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
 
     try {
       const results: { html: string; cardIndex: number; dimensions: { w: number; h: number } }[] = [];
       
       for (let i = 0; i < cardCount; i++) {
-        setProgress(Math.round(((i) / cardCount) * 100));
         
         const cardData = manualCardTexts[i] || {};
         const payload = {

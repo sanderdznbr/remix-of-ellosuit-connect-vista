@@ -32,7 +32,9 @@ serve(async (req) => {
       textColor = "#ffffff",
       fontFamily = "Inter",
       logoUrl,
-      format = "4:5", // 4:5 = 1080x1350, 1:1 = 1080x1080, 9:16 = 1080x1920
+      logoPosition = "bottom-right", // top-left, top-right, bottom-left, bottom-right
+      backgroundImageUrl,
+      format = "4:5",
     } = body;
 
     if (!topic || cardIndex === undefined || !totalCards) {
@@ -44,6 +46,15 @@ serve(async (req) => {
 
     const dimensions = format === "9:16" ? { w: 1080, h: 1920 } : format === "1:1" ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
 
+    // Logo position CSS mapping
+    const logoPositionMap: Record<string, string> = {
+      "top-left": "top: 40px; left: 40px;",
+      "top-right": "top: 40px; right: 40px;",
+      "bottom-left": "bottom: 40px; left: 40px;",
+      "bottom-right": "bottom: 40px; right: 40px;",
+    };
+    const logoCss = logoPositionMap[logoPosition] || logoPositionMap["bottom-right"];
+
     const systemPrompt = `You are an expert motion graphics designer who creates stunning animated social media cards using pure HTML and CSS.
 
 You MUST return ONLY valid HTML code. No markdown, no explanation, no code fences. Just the raw HTML starting with <!DOCTYPE html>.
@@ -53,17 +64,20 @@ CRITICAL RULES:
 - Canvas size: exactly ${dimensions.w}px × ${dimensions.h}px (use width/height on body and overflow:hidden)
 - Use ONLY CSS @keyframes animations — NO JavaScript
 - All animations must loop infinitely OR complete within 4 seconds
-- Use Google Fonts via @import if needed (prefer: ${fontFamily}, Montserrat, Playfair Display, Space Grotesk)
+- Use Google Fonts via @import for the font: ${fontFamily} (and optionally Montserrat, Playfair Display, Space Grotesk as secondary)
 - Background color: ${bgColor}
 - Accent/highlight color: ${accentColor}
 - Text color: ${textColor}
+- Font family: "${fontFamily}" — use this as the PRIMARY font for all text
 - Brand name: ${brandName || 'none'}
-${logoUrl ? `- Include the logo as an <img> element with src="${logoUrl}"` : ''}
+${logoUrl ? `- Include the logo as an <img> element with src="${logoUrl}" — position it with: position:absolute; ${logoCss} max-width:120px; max-height:60px; object-fit:contain; z-index:100;` : ''}
+${backgroundImageUrl ? `- Use this background image: url("${backgroundImageUrl}") — set it as background-image on the main container with background-size:cover; background-position:center; Add a dark overlay (rgba(0,0,0,0.4) to rgba(0,0,0,0.7)) on top to ensure text readability` : ''}
 - Make it visually STUNNING — think motion graphics, not PowerPoint
 - Use creative layouts: asymmetric grids, overlapping elements, rotated text
 - Add subtle background animations: moving gradients, floating shapes, particle-like dots
 - Typography should be bold and impactful — vary sizes dramatically
 - Include the card number indicator (${cardIndex + 1}/${totalCards}) subtly
+- SAFE AREA: Keep all text and important elements at least 8% away from edges
 
 ANIMATION STYLE: "${animationStyle}"
 - "slide-fade": Elements slide in from different directions with fade
@@ -90,7 +104,7 @@ Make each card feel unique but part of a cohesive series. Use the animation styl
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create an animated HTML/CSS card for: "${topic}". Card ${cardIndex + 1}/${totalCards}.${cardTitle ? ` Title: "${cardTitle}".` : ''}${cardBody ? ` Content: "${cardBody}".` : ''} Make it visually spectacular with the "${animationStyle}" animation style.` },
+          { role: "user", content: `Create an animated HTML/CSS card for: "${topic}". Card ${cardIndex + 1}/${totalCards}.${cardTitle ? ` Title: "${cardTitle}".` : ''}${cardBody ? ` Content: "${cardBody}".` : ''} Make it visually spectacular with the "${animationStyle}" animation style. Use "${fontFamily}" as the primary font.${backgroundImageUrl ? ' Use the background image with a dark overlay for readability.' : ''}` },
         ],
         temperature: 0.8,
       }),
@@ -125,7 +139,6 @@ Make each card feel unique but part of a cohesive series. Use the animation styl
 
     // Validate it starts with HTML
     if (!htmlContent.includes("<html") && !htmlContent.includes("<!DOCTYPE")) {
-      // Try to wrap it
       htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;width:${dimensions.w}px;height:${dimensions.h}px;overflow:hidden;background:${bgColor};}</style></head><body>${htmlContent}</body></html>`;
     }
 

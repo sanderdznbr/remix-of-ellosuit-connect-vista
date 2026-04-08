@@ -3174,7 +3174,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         try {
           const cleanTopic = sanitizeAnimatedTopic(topic) || cleanMentionsFromTopic(topic).trim();
           const { data: outlineData, error: outlineError } = await supabase.functions.invoke('generate-carousel', {
-            body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel' },
+            body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel', ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}) },
           });
           if (!outlineError && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
             effectiveCardTexts = outlineData.outline;
@@ -3190,7 +3190,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         const cardData = effectiveCardTexts[i] || {};
         const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
         const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
-        const payload = {
+        const payload: Record<string, any> = {
           topic: cleanTopic,
           cardIndex: i,
           totalCards: cardCount,
@@ -3212,6 +3212,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           mockupDeviceType: styleDeviceType,
           format: formatStr,
         };
+
+        // Pass prompt gallery mentions so the edge function can use brand context
+        if (mentionedPrompts.length > 0) {
+          payload.promptContexts = mentionedPrompts.map(m => ({ title: m.title, content: m.content }));
+        }
 
         try {
           const data = await resilientInvoke('generate-animated-card', payload);

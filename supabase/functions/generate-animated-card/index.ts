@@ -6,6 +6,35 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function generateImage(apiKey: string, prompt: string): Promise<string | null> {
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Image generation failed: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    return imageUrl || null;
+  } catch (err) {
+    console.error("Image generation error:", err);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -32,8 +61,10 @@ serve(async (req) => {
       textColor = "#ffffff",
       fontFamily = "Inter",
       logoUrl,
-      logoPosition = "bottom-right", // top-left, top-right, bottom-left, bottom-right
+      logoPosition = "bottom-right",
       backgroundImageUrl,
+      generateAiBg = false,
+      generateAiMockup = false,
       format = "4:5",
     } = body;
 
@@ -55,6 +86,30 @@ serve(async (req) => {
     };
     const logoCss = logoPositionMap[logoPosition] || logoPositionMap["bottom-right"];
 
+    // ===== AI-GENERATED BACKGROUND IMAGE =====
+    let finalBgImageUrl = backgroundImageUrl || "";
+    if (generateAiBg && !backgroundImageUrl) {
+      console.log(`🎨 Generating AI background for card ${cardIndex + 1}...`);
+      const bgPrompt = `Create a stunning, cinematic background image for a social media post about "${topic}". Card ${cardIndex + 1} of ${totalCards}. Style: dark, moody, professional. Colors: use ${accentColor} as accent. The image should be abstract/environmental — NO text, NO people, NO logos. Think: textures, gradients, light effects, architectural elements, nature scenes, technology visuals. High quality, editorial look. Aspect ratio: ${format === "9:16" ? "9:16 portrait" : format === "1:1" ? "1:1 square" : "4:5 portrait"}.`;
+      const bgImage = await generateImage(LOVABLE_API_KEY, bgPrompt);
+      if (bgImage) {
+        finalBgImageUrl = bgImage;
+        console.log(`✅ AI background generated for card ${cardIndex + 1}`);
+      }
+    }
+
+    // ===== AI-GENERATED MOCKUP =====
+    let mockupImageUrl = "";
+    if (generateAiMockup) {
+      console.log(`📱 Generating AI mockup for card ${cardIndex + 1}...`);
+      const mockupPrompt = `Create a clean, professional 3D mockup related to "${topic}" for a social media post. Examples: a floating smartphone showing an app, a laptop with a website, a product packaging, a tablet with a dashboard, a book cover — choose whatever fits the topic best. The mockup should be on a transparent/dark background with subtle shadows and reflections. Dramatic lighting, high quality render. No text on the mockup. The object should be angled elegantly. Aspect ratio: 1:1.`;
+      const mockupImage = await generateImage(LOVABLE_API_KEY, mockupPrompt);
+      if (mockupImage) {
+        mockupImageUrl = mockupImage;
+        console.log(`✅ AI mockup generated for card ${cardIndex + 1}`);
+      }
+    }
+
     const systemPrompt = `You are an expert motion graphics designer who creates stunning animated social media cards using pure HTML and CSS.
 
 You MUST return ONLY valid HTML code. No markdown, no explanation, no code fences. Just the raw HTML starting with <!DOCTYPE html>.
@@ -71,7 +126,8 @@ CRITICAL RULES:
 - Font family: "${fontFamily}" — use this as the PRIMARY font for all text
 - Brand name: ${brandName || 'none'}
 ${logoUrl ? `- Include the logo as an <img> element with src="${logoUrl}" — position it with: position:absolute; ${logoCss} max-width:120px; max-height:60px; object-fit:contain; z-index:100;` : ''}
-${backgroundImageUrl ? `- Use this background image: url("${backgroundImageUrl}") — set it as background-image on the main container with background-size:cover; background-position:center; Add a dark overlay (rgba(0,0,0,0.4) to rgba(0,0,0,0.7)) on top to ensure text readability` : ''}
+${finalBgImageUrl ? `- Use this background image: url("${finalBgImageUrl}") — set it as background-image on the main container with background-size:cover; background-position:center; Add a dark overlay (rgba(0,0,0,0.4) to rgba(0,0,0,0.65)) on top to ensure text readability. Animate the background subtly (slow zoom or pan).` : ''}
+${mockupImageUrl ? `- IMPORTANT: Include this mockup image as a floating element: <img src="${mockupImageUrl}" /> — position it as a prominent visual element in the card. Apply a CSS animation to it (float, subtle rotation, scale pulse, or slide-in). Size it to about 40-60% of the card width. Add a subtle drop-shadow. Position it to complement the text layout (e.g., right side, bottom area, or as a hero element).` : ''}
 - Make it visually STUNNING — think motion graphics, not PowerPoint
 - Use creative layouts: asymmetric grids, overlapping elements, rotated text
 - Add subtle background animations: moving gradients, floating shapes, particle-like dots
@@ -104,7 +160,7 @@ Make each card feel unique but part of a cohesive series. Use the animation styl
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create an animated HTML/CSS card for: "${topic}". Card ${cardIndex + 1}/${totalCards}.${cardTitle ? ` Title: "${cardTitle}".` : ''}${cardBody ? ` Content: "${cardBody}".` : ''} Make it visually spectacular with the "${animationStyle}" animation style. Use "${fontFamily}" as the primary font.${backgroundImageUrl ? ' Use the background image with a dark overlay for readability.' : ''}` },
+          { role: "user", content: `Create an animated HTML/CSS card for: "${topic}". Card ${cardIndex + 1}/${totalCards}.${cardTitle ? ` Title: "${cardTitle}".` : ''}${cardBody ? ` Content: "${cardBody}".` : ''} Make it visually spectacular with the "${animationStyle}" animation style. Use "${fontFamily}" as the primary font.${finalBgImageUrl ? ' Use the background image with a dark overlay for readability.' : ''}${mockupImageUrl ? ' Include the mockup image as a floating animated element.' : ''}` },
         ],
         temperature: 0.8,
       }),
@@ -142,7 +198,7 @@ Make each card feel unique but part of a cohesive series. Use the animation styl
       htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;width:${dimensions.w}px;height:${dimensions.h}px;overflow:hidden;background:${bgColor};}</style></head><body>${htmlContent}</body></html>`;
     }
 
-    console.log(`✅ Animated card ${cardIndex + 1}/${totalCards} generated (${htmlContent.length} chars)`);
+    console.log(`✅ Animated card ${cardIndex + 1}/${totalCards} generated (${htmlContent.length} chars)${finalBgImageUrl ? ' [with AI bg]' : ''}${mockupImageUrl ? ' [with mockup]' : ''}`);
 
     return new Response(
       JSON.stringify({ 

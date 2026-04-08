@@ -27,6 +27,7 @@ const RECORD_DURATION = 5000;
 const CAPTURE_FPS = 18;
 const FRAME_INTERVAL = 1000 / CAPTURE_FPS;
 const CAPTURE_SCALE = 2;
+const CAPTURE_ROOT_CLASS = 'animated-card-capture-root';
 
 const AnimatedCardRenderer: React.FC<Props> = ({
   cards,
@@ -63,6 +64,15 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     setPreviewNonce((prev) => ({ ...prev, [cardIndex]: (prev[cardIndex] ?? 0) + 1 }));
   }, []);
 
+  const normalizeCardCssForCapture = useCallback((cssText: string) => {
+    return cssText
+      .replace(/\bhtml\s*,\s*body\b/g, `.${CAPTURE_ROOT_CLASS}`)
+      .replace(/\bbody\s*,\s*html\b/g, `.${CAPTURE_ROOT_CLASS}`)
+      .replace(/(^|}|,)\s*body(?=\s*[{,:.#>])/g, `$1 .${CAPTURE_ROOT_CLASS}`)
+      .replace(/(^|}|,)\s*html(?=\s*[{,:.#>])/g, `$1 .${CAPTURE_ROOT_CLASS}`)
+      .replace(/:root/g, `.${CAPTURE_ROOT_CLASS}`);
+  }, []);
+
   /**
    * Creates a recording container by injecting the card HTML into a hidden
    * <div> in the main document instead of an iframe. This allows html-to-image
@@ -85,7 +95,8 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
     // Create the render root inside the container
     const renderRoot = document.createElement('div');
-    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;`;
+    renderRoot.className = CAPTURE_ROOT_CLASS;
+    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;display:block;isolation:isolate;`;
     container.appendChild(renderRoot);
 
     // Inject <link> tags (Google Fonts, etc.) into the main document <head>
@@ -102,26 +113,30 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     // Inject <style> tags from the parsed HTML into the render root
     parsed.querySelectorAll('style').forEach((style) => {
       const clone = document.createElement('style');
-      clone.textContent = style.textContent;
+      clone.textContent = normalizeCardCssForCapture(style.textContent || '');
       renderRoot.appendChild(clone);
     });
 
     // Copy body attributes (inline style, class, etc.)
     const parsedBody = parsed.body;
     if (parsedBody) {
+      renderRoot.className = [CAPTURE_ROOT_CLASS, parsedBody.className].filter(Boolean).join(' ');
+
       // Copy background and font styles from body
       const bodyStyle = parsedBody.getAttribute('style');
       if (bodyStyle) {
-        renderRoot.style.cssText += bodyStyle;
+        renderRoot.style.cssText += `;${bodyStyle}`;
       }
       // Ensure dimensions are fixed
       renderRoot.style.width = `${w}px`;
       renderRoot.style.height = `${h}px`;
       renderRoot.style.overflow = 'hidden';
       renderRoot.style.position = 'relative';
+      renderRoot.style.display = 'block';
+      renderRoot.style.isolation = 'isolate';
 
       // Copy body innerHTML
-      renderRoot.innerHTML += parsedBody.innerHTML;
+      renderRoot.insertAdjacentHTML('beforeend', parsedBody.innerHTML);
     }
 
     // Wait for fonts to load

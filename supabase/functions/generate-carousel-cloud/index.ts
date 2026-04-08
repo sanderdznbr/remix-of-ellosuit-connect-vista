@@ -197,8 +197,13 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     promptParts.push(`TEMA: "${job.topic}"`);
   }
   promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-  // Logo is ALWAYS handled via Canvas overlay — never sent to AI
-  promptParts.push('PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+  // Logo handling depends on logoMode
+  const isAiLogo = styleConfig.logoMode === 'ai' && job.logo_url;
+  if (isAiLogo) {
+    promptParts.push('LOGOMARCA: A logomarca da marca será fornecida como imagem de referência. Posicione-a de forma DISCRETA e PROFISSIONAL no design.');
+  } else {
+    promptParts.push('PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+  }
   const isMarketplaceStyle = !!singlePromptStyle;
   if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
@@ -220,7 +225,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-    // Logo is NOT sent to AI — handled via Canvas overlay on frontend
+    ...(isAiLogo ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
   });
 
   if (!imageUrl) {

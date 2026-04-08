@@ -9576,6 +9576,34 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
               )}
 
+              {/* Screenshots */}
+              {styleScreenshots.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Screenshots</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {styleScreenshots.map((s, i) => (
+                      <div key={i} className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
+                        <img src={s.thumb || s.url} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Product images */}
+              {productImages.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Produto</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {productImages.map((p, i) => (
+                      <div key={i} className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
+                        <img src={p.thumb || p.url} alt={`Produto ${i + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Use brand colors toggle */}
               {logoBrandColors.length > 0 && (
                 <div className="flex items-center justify-between py-3 px-4 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>

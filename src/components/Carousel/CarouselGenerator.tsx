@@ -102,6 +102,7 @@ import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
 import StepVisualIdea from './wizard/StepVisualIdea';
 import StepAnimationStyle from './wizard/StepAnimationStyle';
 import AnimatedCardRenderer from './AnimatedCardRenderer';
+import StepBackgroundStyles, { BACKGROUND_STYLES } from './wizard/StepBackgroundStyles';
 import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
@@ -287,6 +288,7 @@ const CarouselGenerator: React.FC = () => {
   const [animatedBgImageUrl, setAnimatedBgImageUrl] = useState('');
   const [generateAiBg, setGenerateAiBg] = useState(false);
   const [generateAiMockup, setGenerateAiMockup] = useState(false);
+  const [animatedBgStyle, setAnimatedBgStyle] = useState('solid');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -536,7 +538,7 @@ const CarouselGenerator: React.FC = () => {
     && bgColor === derivedBrandPalette.bg
     && accentColor === derivedBrandPalette.accent
     && textColor === derivedBrandPalette.text;
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Fontes', ...(generateAiMockup ? ['Screenshots'] : [])];
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Estilos de Fundo', 'Fontes', ...(generateAiMockup ? ['Screenshots'] : [])];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode

@@ -3208,6 +3208,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           logoUrl,
           logoPosition,
           backgroundImageUrl: animatedBgImageUrl || undefined,
+          backgroundStyle: animatedBgStyle,
           generateAiBg: generateAiBg && !animatedBgImageUrl,
           generateAiMockup,
           mockupScreenshots: generateAiMockup ? styleScreenshots.map((s) => s.url) : [],

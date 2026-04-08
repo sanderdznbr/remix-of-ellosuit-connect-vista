@@ -160,6 +160,7 @@ function buildFallbackAnimatedHtml(params: {
   mockupDeviceType?: string;
   cardIndex: number;
   totalCards: number;
+  backgroundStyle?: string;
 }) {
   const {
     dimensions,
@@ -180,6 +181,7 @@ function buildFallbackAnimatedHtml(params: {
     mockupDeviceType,
     cardIndex,
     totalCards,
+    backgroundStyle = 'solid',
   } = params;
 
   const cleanedTopic = sanitizePromptText(topic) || "Editorial Motion";
@@ -247,6 +249,23 @@ function buildFallbackAnimatedHtml(params: {
             ? 'elegantRise 1s .18s cubic-bezier(.23,1,.32,1) both'
             : 'revealUp 1s .18s cubic-bezier(.22,1,.36,1) both';
 
+  // --- Background style CSS based on user selection ---
+  const bgStyleMap: Record<string, string> = {
+    'solid': `background: ${bgColor};`,
+    'gradient-linear': `background: linear-gradient(${preset.angle}, ${bgColor} 0%, ${accentColor} 100%);`,
+    'gradient-radial': `background: radial-gradient(circle at ${preset.a}, ${accentColor}44 0%, ${bgColor} 70%);`,
+    'gradient-mesh': `background: ${bgColor}; background-image: radial-gradient(at ${preset.a}, ${accentColor}55 0%, transparent 50%), radial-gradient(at ${preset.b}, ${accentColor}33 0%, transparent 50%), radial-gradient(at ${preset.c}, ${bgColor} 0%, transparent 80%);`,
+    'dots': `background-color: ${bgColor}; background-image: radial-gradient(${accentColor}22 1.5px, transparent 1.5px); background-size: 24px 24px;`,
+    'grid': `background-color: ${bgColor}; background-image: linear-gradient(${accentColor}15 1px, transparent 1px), linear-gradient(90deg, ${accentColor}15 1px, transparent 1px); background-size: ${gridSize}px ${gridSize}px;`,
+    'diagonal-lines': `background-color: ${bgColor}; background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, ${accentColor}12 20px, ${accentColor}12 21px);`,
+    'noise-grain': `background: linear-gradient(160deg, ${bgColor} 0%, ${accentColor}18 100%);`,
+    'circles': `background-color: ${bgColor}; background-image: radial-gradient(circle at ${preset.a}, ${accentColor}20 0%, transparent 40%), radial-gradient(circle at ${preset.b}, ${accentColor}15 0%, transparent 35%), radial-gradient(circle at ${preset.c}, ${accentColor}10 0%, transparent 30%);`,
+    'aurora': `background: ${bgColor}; background-image: linear-gradient(180deg, ${accentColor}25 0%, transparent 40%), radial-gradient(ellipse at 70% 80%, ${accentColor}18 0%, transparent 50%);`,
+    'zigzag': `background-color: ${bgColor}; background-image: linear-gradient(135deg, ${accentColor}15 25%, transparent 25%), linear-gradient(225deg, ${accentColor}15 25%, transparent 25%), linear-gradient(315deg, ${accentColor}15 25%, transparent 25%), linear-gradient(45deg, ${accentColor}15 25%, transparent 25%); background-size: 32px 32px; background-position: 0 0, 0 16px, 16px -8px, -16px 8px;`,
+    'spotlight': `background: radial-gradient(ellipse at 50% 0%, ${accentColor}30 0%, ${bgColor} 70%);`,
+  };
+  const userBgStyleCss = bgStyleMap[backgroundStyle] || bgStyleMap['solid'];
+
   return `<!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -266,6 +285,7 @@ function buildFallbackAnimatedHtml(params: {
     body {
       position: relative;
       isolation: isolate;
+      ${userBgStyleCss}
       background-image:
         linear-gradient(180deg, rgba(3,3,6,0.28), rgba(3,3,6,0.74)),
         radial-gradient(circle at ${preset.a}, ${accentGlow} 0%, transparent 34%),
@@ -273,7 +293,6 @@ function buildFallbackAnimatedHtml(params: {
         radial-gradient(circle at ${preset.c}, ${accentGhost} 0%, transparent 36%),
         linear-gradient(${preset.angle}, ${bgColor}, rgba(8,8,12,0.96))
         ${finalBgImageUrl ? `, url('${finalBgImageUrl}')` : ''};
-      background-color: ${bgColor};
       background-size: cover, cover, cover, cover, cover${finalBgImageUrl ? ', cover' : ''};
       background-position: center, center, center, center, center${finalBgImageUrl ? ', center' : ''};
       animation: bgShift 18s ease-in-out infinite alternate;
@@ -646,6 +665,7 @@ serve(async (req) => {
       logoUrl,
       logoPosition = "bottom-right",
       backgroundImageUrl,
+      backgroundStyle = 'solid',
       generateAiBg = false,
       generateAiMockup = false,
       mockupScreenshots = [],
@@ -721,6 +741,7 @@ serve(async (req) => {
       mockupDeviceType,
       cardIndex,
       totalCards,
+      backgroundStyle,
     });
 
     console.log(`✅ Animated card ${cardIndex + 1}/${totalCards} generated (${htmlContent.length} chars)${finalBgImageUrl ? ' [with editorial bg]' : ''}${mockupImageUrl ? ' [with screenshot mockup]' : ''}`);

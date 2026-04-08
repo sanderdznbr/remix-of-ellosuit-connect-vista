@@ -440,6 +440,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         backgroundColor: captureBackground,
         fontEmbedCSS,
         scale: CAPTURE_SCALE,
+        foreignObjectRendering: true,
       });
 
       const paintFrameToCanvas = (frameCanvas: HTMLCanvasElement) => {

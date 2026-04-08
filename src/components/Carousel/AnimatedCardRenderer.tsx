@@ -8,6 +8,7 @@ import {
   triggerBlobDownload,
   writeBlobToVideoFile,
 } from './animatedFrameCapture';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AnimatedCard {
   html: string;
@@ -26,6 +27,10 @@ interface Props {
 interface RecordingSurface {
   targetNode: HTMLElement;
   cleanup: () => void;
+}
+
+interface EmbeddedAssetMap {
+  [originalUrl: string]: string;
 }
 
 const RECORD_DURATION = 5000;
@@ -65,6 +70,85 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  const convertImageToDataUrl = useCallback(async (url: string): Promise<string> => {
+    const img = document.createElement('img');
+    img.crossOrigin = 'anonymous';
+    img.referrerPolicy = 'no-referrer';
+
+    const loaded = await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = url;
+    });
+
+    void loaded;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('No canvas context');
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
+  }, []);
+
+  const resolveImageAsDataUrl = useCallback(async (url: string): Promise<string> => {
+    if (!url || url.startsWith('data:')) return url;
+
+    try {
+      return await convertImageToDataUrl(url);
+    } catch {
+      try {
+        const { data, error } = await supabase.functions.invoke('image-proxy', {
+          body: { url },
+        });
+        if (error) throw error;
+        return data?.dataUrl || url;
+      } catch {
+        return url;
+      }
+    }
+  }, [convertImageToDataUrl]);
+
+  const buildEmbeddableHtml = useCallback(async (html: string) => {
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(html, 'text/html');
+    const images = Array.from(parsed.querySelectorAll('img'));
+    const assetMap: EmbeddedAssetMap = {};
+
+    await Promise.all(images.map(async (img) => {
+      const src = img.getAttribute('src');
+      if (!src || src.startsWith('data:') || assetMap[src]) return;
+      assetMap[src] = await resolveImageAsDataUrl(src);
+    }));
+
+    images.forEach((img) => {
+      const src = img.getAttribute('src');
+      if (!src) return;
+      const embedded = assetMap[src];
+      if (embedded) img.setAttribute('src', embedded);
+    });
+
+    return {
+      html: `<!DOCTYPE html>\n${parsed.documentElement.outerHTML}`,
+      assetMap,
+    };
+  }, [resolveImageAsDataUrl]);
+
+  const restartCssAnimations = useCallback((root: ParentNode) => {
+    const elements = Array.from(root.querySelectorAll<HTMLElement>('*'));
+    elements.forEach((element) => {
+      const computed = window.getComputedStyle(element);
+      const animationName = computed.animationName;
+      if (!animationName || animationName === 'none') return;
+
+      const inlineAnimation = element.style.animation;
+      element.style.animation = 'none';
+      void element.offsetWidth;
+      element.style.animation = inlineAnimation || '';
+    });
+  }, []);
+
   const restartPreview = useCallback((cardIndex: number) => {
     setPreviewNonce((prev) => ({ ...prev, [cardIndex]: (prev[cardIndex] ?? 0) + 1 }));
   }, []);
@@ -89,6 +173,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
    */
   const createRecordingContainer = useCallback(async (card: AnimatedCard) => {
     const { w, h } = card.dimensions;
+    const { html } = await buildEmbeddableHtml(card.html);
 
     const container = document.createElement('div');
     container.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;pointer-events:none;overflow:hidden;z-index:-9999;`;
@@ -96,7 +181,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
     // Parse the card HTML to extract styles and body content
     const parser = new DOMParser();
-    const parsed = parser.parseFromString(card.html, 'text/html');
+    const parsed = parser.parseFromString(html, 'text/html');
 
     // Create the render root inside the container
     const renderRoot = document.createElement('div');
@@ -194,8 +279,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       });
     }));
 
-    // Give animations a moment to start
-    await delay(800);
+    restartCssAnimations(renderRoot);
 
     const cleanup = () => {
       injectedLinks.forEach((link) => {
@@ -205,10 +289,11 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     };
 
     return { renderRoot, cleanup };
-  }, []);
+  }, [buildEmbeddableHtml, restartCssAnimations]);
 
   const createRecordingIframe = useCallback(async (card: AnimatedCard): Promise<RecordingSurface> => {
     const { w, h } = card.dimensions;
+    const { html } = await buildEmbeddableHtml(card.html);
 
     const iframe = document.createElement('iframe');
     iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
@@ -233,7 +318,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       };
 
       iframe.addEventListener('load', handleLoad, { once: true });
-      iframe.srcdoc = card.html;
+      iframe.srcdoc = html;
     });
 
     const frameDoc = iframe.contentDocument;
@@ -268,16 +353,16 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       }
     }));
 
-    await delay(800);
-
     const targetNode = frameDoc.body as HTMLBodyElement;
     targetNode.style.width = `${w}px`;
     targetNode.style.height = `${h}px`;
     targetNode.style.margin = '0';
     targetNode.style.overflow = 'hidden';
 
+    restartCssAnimations(frameDoc);
+
     return { targetNode, cleanup };
-  }, [delay]);
+  }, [buildEmbeddableHtml, restartCssAnimations]);
 
   const updateRecordedUrl = useCallback((cardIndex: number, blob: Blob) => {
     const url = URL.createObjectURL(blob);

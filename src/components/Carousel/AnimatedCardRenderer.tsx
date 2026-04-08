@@ -420,13 +420,18 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         targetNode = recordingSurface.targetNode;
       }
 
+      const ownerWindow = targetNode.ownerDocument.defaultView ?? window;
+      const computedBackground = ownerWindow.getComputedStyle(targetNode).backgroundColor;
+      const documentBackground = ownerWindow.getComputedStyle(targetNode.ownerDocument.documentElement).backgroundColor;
+      const captureBackground = [computedBackground, documentBackground].find((value) => value && value !== 'rgba(0, 0, 0, 0)');
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
-      const ctx = canvas.getContext('2d');
+      canvas.style.backgroundColor = captureBackground || '#000000';
+      const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) throw new Error('Falha ao iniciar canvas de gravação');
 
-      const stream = canvas.captureStream(CAPTURE_FPS);
+      const stream = canvas.captureStream(0);
       const captureTrack = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
         ? 'video/webm;codecs=vp9'
@@ -447,11 +452,6 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const recordingPromise = new Promise<Blob>((resolve) => {
         mediaRecorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
       });
-
-      const ownerWindow = targetNode.ownerDocument.defaultView ?? window;
-      const computedBackground = ownerWindow.getComputedStyle(targetNode).backgroundColor;
-      const documentBackground = ownerWindow.getComputedStyle(targetNode.ownerDocument.documentElement).backgroundColor;
-      const captureBackground = [computedBackground, documentBackground].find((value) => value && value !== 'rgba(0, 0, 0, 0)');
       const fontEmbedCSS = await getEmbeddedFontCss(targetNode);
       const captureFrame = async () => await captureAnimatedNodeFrame(targetNode, {
         width: w,
@@ -461,12 +461,18 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         scale: CAPTURE_SCALE,
       });
 
-      const firstFrame = await captureFrame();
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(firstFrame, 0, 0, w, h);
-      captureTrack.requestFrame?.();
-
       mediaRecorder.start(250);
+
+      const paintFrameToCanvas = (frameCanvas: HTMLCanvasElement) => {
+        ctx.fillStyle = captureBackground || '#000000';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(frameCanvas, 0, 0, w, h);
+      };
+
+      const firstFrame = await captureFrame();
+      paintFrameToCanvas(firstFrame);
+      captureTrack.requestFrame?.();
+      await delay(32);
 
       const startedAt = performance.now();
       while (performance.now() - startedAt < RECORD_DURATION) {
@@ -476,8 +482,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
         const frameCanvas = await captureFrame();
 
-        ctx.clearRect(0, 0, w, h);
-        ctx.drawImage(frameCanvas, 0, 0, w, h);
+        paintFrameToCanvas(frameCanvas);
         captureTrack.requestFrame?.();
 
         const remaining = FRAME_INTERVAL - (performance.now() - frameStartedAt);
@@ -485,16 +490,15 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       }
 
       const finalFrame = await captureFrame();
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(finalFrame, 0, 0, w, h);
+      paintFrameToCanvas(finalFrame);
       captureTrack.requestFrame?.();
 
-      await delay(80);
+      await delay(150);
 
       mediaRecorder.stop();
-      stream.getTracks().forEach((track) => track.stop());
 
       const blob = await recordingPromise;
+      stream.getTracks().forEach((track) => track.stop());
       if (!blob.size) throw new Error('O vídeo foi gerado vazio');
       updateRecordedUrl(cardIndex, blob);
 

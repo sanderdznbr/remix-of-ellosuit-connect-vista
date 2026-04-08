@@ -106,9 +106,11 @@ export function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[
       /lancamento.*(app|aplicativo)|app.*(lancamento|lancar|divulgar)/.test(t) ||
       /divulgar.*(app|aplicativo|plataforma)/.test(t)) return 'app';
   
-  // Website / system / dashboard
-  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|portal|web app|ferramenta online|software|erp|crm)\b/.test(t) ||
-      /lancamento.*(sistema|plataforma|software|ferramenta|portal)|divulgar.*(sistema|plataforma|software)/.test(t)) return 'website';
+  // Website / system / dashboard — expanded to catch more software terms
+  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|plataforma|portal|web app|ferramenta online|ferramenta|software|erp|crm|saas|ia|inteligencia artificial|automacao|gestao empresarial|gestao|solucao digital|solucao|tecnologia)\b/.test(t) ||
+      /lancamento.*(sistema|plataforma|software|ferramenta|portal|solucao|produto digital)|divulgar.*(sistema|plataforma|software|solucao)/.test(t) ||
+      /\b(lancar|lancamento|vai ser lancad|sera lancad|novo sistema|nova plataforma|nova ferramenta|novo software)\b/.test(t) ||
+      /funcoes de ia|inteligencia artificial|machine learning|deep learning/.test(t)) return 'website';
   
   // Food
   if (/\b(receita|prato|comida|alimento|restaurante|lanche|pizza|hamburguer|bolo|doce|bebida|suco|cafe|cardapio|menu|delivery)\b/.test(t)) return 'food';

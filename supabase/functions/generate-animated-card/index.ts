@@ -290,15 +290,14 @@ function buildFallbackAnimatedHtml(params: {
       background-image:
         linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-      background-size: 64px 64px;
+      background-size: ${gridSize}px ${gridSize}px;
       mask-image: radial-gradient(circle at center, black 0%, transparent 85%);
     }
     .glowRing {
       position: absolute;
-      width: 320px;
-      height: 320px;
-      right: -70px;
-      top: -70px;
+      width: ${decor.ringSize}px;
+      height: ${decor.ringSize}px;
+      ${decor.ringPos}
       border-radius: 999px;
       border: 1px solid ${accentSoft};
       box-shadow: 0 0 0 1px ${accentGhost} inset;
@@ -307,10 +306,9 @@ function buildFallbackAnimatedHtml(params: {
     }
     .glowBlob {
       position: absolute;
-      width: 280px;
-      height: 280px;
-      left: -60px;
-      bottom: -70px;
+      width: ${decor.blobSize}px;
+      height: ${decor.blobSize}px;
+      ${decor.blobPos}
       border-radius: 999px;
       background: radial-gradient(circle, ${accentSoft} 0%, transparent 72%);
       filter: blur(8px);

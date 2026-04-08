@@ -274,6 +274,8 @@ const CarouselGenerator: React.FC = () => {
   const [animationStyle, setAnimationStyle] = useState<'slide-fade' | 'scale-bounce' | 'typewriter' | 'cinematic' | 'kinetic' | 'elegant'>('slide-fade');
   const [animatedCards, setAnimatedCards] = useState<{ html: string; cardIndex: number; dimensions: { w: number; h: number } }[]>([]);
   const [animatedBgImageUrl, setAnimatedBgImageUrl] = useState('');
+  const [generateAiBg, setGenerateAiBg] = useState(false);
+  const [generateAiMockup, setGenerateAiMockup] = useState(false);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);

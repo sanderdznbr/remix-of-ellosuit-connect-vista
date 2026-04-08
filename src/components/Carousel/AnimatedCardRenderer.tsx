@@ -23,6 +23,11 @@ interface Props {
   onGoHome?: () => void;
 }
 
+interface RecordingSurface {
+  targetNode: HTMLElement;
+  cleanup: () => void;
+}
+
 const RECORD_DURATION = 5000;
 const CAPTURE_FPS = 18;
 const FRAME_INTERVAL = 1000 / CAPTURE_FPS;
@@ -202,6 +207,78 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     return { renderRoot, cleanup };
   }, []);
 
+  const createRecordingIframe = useCallback(async (card: AnimatedCard): Promise<RecordingSurface> => {
+    const { w, h } = card.dimensions;
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.tabIndex = -1;
+    iframe.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;border:0;pointer-events:none;opacity:0;z-index:-9999;background:transparent;`;
+    document.body.appendChild(iframe);
+
+    const cleanup = () => {
+      iframe.srcdoc = '<!doctype html><html><body></body></html>';
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    };
+
+    await new Promise<void>((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        reject(new Error('Tempo esgotado ao preparar o iframe de gravação'));
+      }, 8000);
+
+      const handleLoad = () => {
+        window.clearTimeout(timeoutId);
+        resolve();
+      };
+
+      iframe.addEventListener('load', handleLoad, { once: true });
+      iframe.srcdoc = card.html;
+    });
+
+    const frameDoc = iframe.contentDocument;
+    if (!frameDoc?.body) {
+      cleanup();
+      throw new Error('Falha ao acessar o conteúdo renderizado do card');
+    }
+
+    if (frameDoc.fonts?.ready) {
+      try {
+        await frameDoc.fonts.ready;
+      } catch {
+        // noop
+      }
+    }
+
+    const images = Array.from(frameDoc.querySelectorAll('img'));
+    await Promise.all(images.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    }));
+
+    await Promise.all(images.map(async (img) => {
+      if (typeof img.decode !== 'function') return;
+      try {
+        await img.decode();
+      } catch {
+        // noop
+      }
+    }));
+
+    await delay(800);
+
+    const targetNode = frameDoc.body as HTMLBodyElement;
+    targetNode.style.width = `${w}px`;
+    targetNode.style.height = `${h}px`;
+    targetNode.style.margin = '0';
+    targetNode.style.overflow = 'hidden';
+
+    return { targetNode, cleanup };
+  }, [delay]);
+
   const updateRecordedUrl = useCallback((cardIndex: number, blob: Blob) => {
     const url = URL.createObjectURL(blob);
     setRecordedVideos((prev) => {
@@ -233,9 +310,18 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         }
       }
 
-      const recordingContainer = await createRecordingContainer(card);
-      cleanup = recordingContainer.cleanup;
-      const targetNode = recordingContainer.renderRoot;
+      let targetNode: HTMLElement;
+
+      try {
+        const recordingSurface = await createRecordingIframe(card);
+        cleanup = recordingSurface.cleanup;
+        targetNode = recordingSurface.targetNode;
+      } catch (iframeError) {
+        console.warn('Iframe capture fallback:', iframeError);
+        const recordingContainer = await createRecordingContainer(card);
+        cleanup = recordingContainer.cleanup;
+        targetNode = recordingContainer.renderRoot;
+      }
 
       const canvas = document.createElement('canvas');
       canvas.width = w;
@@ -244,6 +330,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       if (!ctx) throw new Error('Falha ao iniciar canvas de gravação');
 
       const stream = canvas.captureStream(CAPTURE_FPS);
+      const captureTrack = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
         ? 'video/webm;codecs=vp9'
         : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
@@ -264,10 +351,10 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         mediaRecorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
       });
 
-      const computedBackground = window.getComputedStyle(targetNode).backgroundColor;
-      const captureBackground = computedBackground && computedBackground !== 'rgba(0, 0, 0, 0)'
-        ? computedBackground
-        : undefined;
+      const ownerWindow = targetNode.ownerDocument.defaultView ?? window;
+      const computedBackground = ownerWindow.getComputedStyle(targetNode).backgroundColor;
+      const documentBackground = ownerWindow.getComputedStyle(targetNode.ownerDocument.documentElement).backgroundColor;
+      const captureBackground = [computedBackground, documentBackground].find((value) => value && value !== 'rgba(0, 0, 0, 0)');
       const fontEmbedCSS = await getEmbeddedFontCss(targetNode);
       const captureFrame = async () => await captureAnimatedNodeFrame(targetNode, {
         width: w,
@@ -280,6 +367,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const firstFrame = await captureFrame();
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(firstFrame, 0, 0, w, h);
+      captureTrack.requestFrame?.();
 
       mediaRecorder.start(250);
 
@@ -293,6 +381,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
         ctx.clearRect(0, 0, w, h);
         ctx.drawImage(frameCanvas, 0, 0, w, h);
+        captureTrack.requestFrame?.();
 
         const remaining = FRAME_INTERVAL - (performance.now() - frameStartedAt);
         if (remaining > 0) await delay(remaining);
@@ -301,6 +390,9 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const finalFrame = await captureFrame();
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(finalFrame, 0, 0, w, h);
+      captureTrack.requestFrame?.();
+
+      await delay(80);
 
       mediaRecorder.stop();
       stream.getTracks().forEach((track) => track.stop());
@@ -329,7 +421,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       setRecording(false);
       setRecordingProgress(0);
     }
-  }, [cards, createRecordingContainer, onRecordComplete, updateRecordedUrl]);
+  }, [cards, createRecordingContainer, createRecordingIframe, delay, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);

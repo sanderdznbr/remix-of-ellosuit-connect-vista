@@ -30,6 +30,10 @@ interface RecordingSurface {
   cleanup: () => void;
 }
 
+interface ControlledAnimationTimeline {
+  setTime: (timeMs: number) => Promise<void>;
+}
+
 interface EmbeddedAssetMap {
   [originalUrl: string]: string;
 }
@@ -154,6 +158,57 @@ const AnimatedCardRenderer: React.FC<Props> = ({
   const restartPreview = useCallback((cardIndex: number) => {
     setPreviewNonce((prev) => ({ ...prev, [cardIndex]: (prev[cardIndex] ?? 0) + 1 }));
   }, []);
+
+  const waitForAnimationPaint = useCallback(async (root: HTMLElement, frames = 1) => {
+    const ownerWindow = root.ownerDocument.defaultView ?? window;
+
+    for (let frame = 0; frame < frames; frame += 1) {
+      await new Promise<void>((resolve) => {
+        ownerWindow.requestAnimationFrame(() => resolve());
+      });
+    }
+  }, []);
+
+  const createControlledAnimationTimeline = useCallback(async (root: HTMLElement): Promise<ControlledAnimationTimeline> => {
+    await waitForAnimationPaint(root, 2);
+
+    const animations = typeof root.getAnimations === 'function'
+      ? root.getAnimations({ subtree: true })
+      : [];
+
+    await Promise.allSettled(
+      animations.map(async (animation) => {
+        try {
+          await animation.ready;
+        } catch {
+          // noop
+        }
+      }),
+    );
+
+    const setTime = async (timeMs: number) => {
+      animations.forEach((animation) => {
+        try {
+          animation.pause();
+        } catch {
+          // noop
+        }
+
+        try {
+          animation.currentTime = timeMs;
+        } catch {
+          // noop
+        }
+      });
+
+      void root.offsetHeight;
+      await waitForAnimationPaint(root);
+    };
+
+    await setTime(0);
+
+    return { setTime };
+  }, [waitForAnimationPaint]);
 
   const normalizeCardCssForCapture = useCallback((cssText: string) => {
     return cssText
@@ -397,7 +452,6 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     const { w, h } = card.dimensions;
     const filename = `card-${cardIndex + 1}.webm`;
     let cleanup = () => {};
-    let mediaRecorder: MediaRecorder | null = null;
     let saveTarget: SaveFileHandleLike | null = null;
 
     try {
@@ -423,6 +477,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       }
 
       const ownerWindow = targetNode.ownerDocument.defaultView ?? window;
+      const animationTimeline = await createControlledAnimationTimeline(targetNode);
       const computedBackground = ownerWindow.getComputedStyle(targetNode).backgroundColor;
       const documentBackground = ownerWindow.getComputedStyle(targetNode.ownerDocument.documentElement).backgroundColor;
       const captureBackground = [computedBackground, documentBackground].find((value) => value && value !== 'rgba(0, 0, 0, 0)');
@@ -458,6 +513,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         frameRate: fps,
       });
 
+      await animationTimeline.setTime(0);
       const firstFrame = await captureFrame();
       paintFrameToCanvas(firstFrame);
       writer.addFrame(canvas, frameDurationMs);
@@ -466,6 +522,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         const progress = frameIndex / (totalFrames - 1);
         setRecordingProgress(progress * 100);
 
+        await animationTimeline.setTime(frameIndex * frameDurationMs);
         const frameCanvas = await captureFrame();
         paintFrameToCanvas(frameCanvas);
         writer.addFrame(canvas, frameDurationMs);
@@ -495,7 +552,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       setRecording(false);
       setRecordingProgress(0);
     }
-  }, [cards, selectedFps, createRecordingContainer, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
+  }, [cards, selectedFps, createControlledAnimationTimeline, createRecordingContainer, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);

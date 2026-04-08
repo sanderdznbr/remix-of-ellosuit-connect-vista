@@ -4530,7 +4530,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       const updatedCards = [...cards];
       const isFullBleedStyle = !!activeMarketplaceStyle?.imageGeneration?.prompt_style;
       const styleNeg = activeMarketplaceStyle?.imageGeneration?.negative_prompt || '';
-      const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing';
+      const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no glowing particles, no floating orbs, no network lines, no hexagonal grid, no digital matrix, no abstract tech background, no bokeh circles, no constellation pattern, no holographic effect';
 
       // Generate images only for cards 1+ (skip cover at index 0)
       const imageFactories: { index: number; factory: () => Promise<string | null> }[] = [];

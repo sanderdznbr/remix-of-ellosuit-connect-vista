@@ -32,7 +32,7 @@ interface Props {
   contentMode?: 'carousel' | 'single-post';
   manualPostText?: string;
   setManualPostText?: (v: string) => void;
-  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
+  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated';
   setContentMode?: (mode: 'carousel' | 'single-post') => void;
   guestMode?: boolean;
   webSearchSuggestion?: { classification: string; reason: string } | null;

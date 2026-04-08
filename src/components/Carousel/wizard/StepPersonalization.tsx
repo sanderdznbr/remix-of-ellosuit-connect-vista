@@ -59,7 +59,7 @@ interface Props {
   customColors: string[];
   setCustomColors: React.Dispatch<React.SetStateAction<string[]>>;
   // Wizard mode
-  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
+  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated';
   // Logo mode
   logoMode: 'ai' | 'manual';
   setLogoMode: (v: 'ai' | 'manual') => void;

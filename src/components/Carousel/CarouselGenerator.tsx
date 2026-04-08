@@ -7174,6 +7174,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         hasProduct={wantsProduct}
                         useCustomColors={useCustomColors} setUseCustomColors={setUseCustomColors}
                         customColors={customColors} setCustomColors={setCustomColors}
+                        wizardMode={wizardMode}
+                        logoMode={logoMode} setLogoMode={setLogoMode}
                         setHasProduct={wizardMode === 'advanced' ? setWantsProduct : undefined}
                         onOpenProductStep={() => {
                           setWantsProduct(true);

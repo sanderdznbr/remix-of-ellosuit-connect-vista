@@ -8183,7 +8183,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   Novo carrossel
                 </button>
               </div>
-              <AnimatedCardRenderer cards={animatedCards} />
+              <AnimatedCardRenderer
+                cards={animatedCards}
+                onRegenerateCard={regenerateAnimatedCard}
+                regeneratingCardIndex={regeneratingCard}
+                onGoHome={() => {
+                  setAnimatedCards([]);
+                  setShowWelcome(true);
+                  navigate('/', { replace: true });
+                }}
+              />
             </div>
           </div>
         )}

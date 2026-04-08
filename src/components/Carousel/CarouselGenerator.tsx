@@ -3013,6 +3013,12 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     console.log('[GENERATE_FLOW] refs: activeMarketplaceStyleRef.is_real_estate:', !!activeMarketplaceStyleRef.current?.is_real_estate, 'propertyListRef photos:', propertyListRef.current.map(p => p.photos.length));
     if (!topic.trim()) { sonnerToast.error('Insira um tópico para gerar'); setTransitionToGenerate(false); return; }
 
+    // === ANIMATED MODE ===
+    if (wizardMode === 'animated') {
+      console.log('[GENERATE_FLOW] Routing to generateAnimatedCards()');
+      return generateAnimatedCards();
+    }
+
     // === SINGLE POST MODE ===
     if (contentMode === 'single-post') {
       console.log('[GENERATE_FLOW] Routing to generateSinglePost()');

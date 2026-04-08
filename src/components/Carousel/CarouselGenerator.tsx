@@ -3061,6 +3061,55 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         sonnerToast.error('Nenhum card animado foi gerado');
       } else {
         sonnerToast.success(`${results.length} cards animados gerados!`);
+        
+        // Save animated post to generated_carousels so it appears in Recentes
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData.user) {
+            const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
+            if (companyData) {
+              const animatedCarouselData = {
+                cards: results.map((r, idx) => ({
+                  cardIndex: r.cardIndex,
+                  html: r.html,
+                  dimensions: r.dimensions,
+                  title: manualCardTexts[idx]?.title || '',
+                  body: manualCardTexts[idx]?.body || '',
+                })),
+                title: topic,
+                animationStyle,
+              };
+              const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, logoUrl, logoPosition, logoMode, animationStyle, animatedBgImageUrl, generateAiBg, generateAiMockup };
+              
+              if (currentCarouselIdRef.current) {
+                await supabase.from('generated_carousels').update({
+                  title: topic,
+                  topic,
+                  carousel_data: animatedCarouselData as any,
+                  style_config: styleConfig as any,
+                  card_count: results.length,
+                  post_format: postFormat,
+                } as any).eq('id', currentCarouselIdRef.current);
+              } else {
+                const { data: inserted } = await supabase.from('generated_carousels').insert({
+                  company_id: companyData.company_id,
+                  user_id: userData.user.id,
+                  title: topic,
+                  topic,
+                  carousel_data: animatedCarouselData as any,
+                  style_config: styleConfig as any,
+                  card_count: results.length,
+                  post_format: 'animated',
+                } as any).select('id').single();
+                if (inserted) {
+                  setCurrentCarouselId(inserted.id);
+                }
+              }
+            }
+          }
+        } catch (saveErr) {
+          console.error('Error saving animated carousel:', saveErr);
+        }
       }
     } catch (err: any) {
       console.error('generateAnimatedCards error:', err);

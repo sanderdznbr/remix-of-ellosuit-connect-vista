@@ -1973,6 +1973,7 @@ const CarouselGenerator: React.FC = () => {
       if (sc.activePresetId) setActivePresetId(sc.activePresetId);
       if (sc.logoUrl !== undefined) setLogoUrl(sc.logoUrl);
       if (sc.logoPosition) setLogoPosition(sc.logoPosition);
+      if (sc.logoMode) setLogoMode(sc.logoMode);
       if (sc.showHeader !== undefined) setShowHeader(sc.showHeader);
       // Restore reference images (face, style, product refs)
       if (sc.referenceImages?.length) setReferenceImages(sc.referenceImages);

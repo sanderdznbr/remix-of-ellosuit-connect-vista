@@ -562,21 +562,81 @@ const StepPersonalization: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Background image for animated mode */}
-      {wizardMode === 'animated' && setAnimatedBgImageUrl && (
+      {/* AI Image Generation for animated mode */}
+      {wizardMode === 'animated' && (setGenerateAiBg || setGenerateAiMockup) && (
+        <div className="rounded-xl border border-violet-500/20 overflow-hidden bg-violet-500/[0.03]">
+          <button
+            onClick={() => toggleSection('ai-images')}
+            className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+          >
+            <Sparkles className="h-4 w-4 text-violet-400" />
+            <span className="text-sm font-medium text-white/80">Imagens com IA</span>
+            {(generateAiBg || generateAiMockup) && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">ativo</span>}
+            <span className="ml-auto text-white/20 text-xs">{expandedSections.has('ai-images') ? '▲' : '▼'}</span>
+          </button>
+          {expandedSections.has('ai-images') && (
+            <div className="px-4 pb-4 space-y-3">
+              <p className="text-[11px] text-white/30">A IA gera imagens únicas para cada card, tornando o resultado mais profissional. Consome mais créditos e tempo de geração.</p>
+              
+              {/* AI Background toggle */}
+              {setGenerateAiBg && (
+                <button
+                  onClick={() => { setGenerateAiBg(!generateAiBg); if (!generateAiBg && setAnimatedBgImageUrl) setAnimatedBgImageUrl(''); }}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${generateAiBg ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'}`}
+                >
+                  <ImagePlus className={`h-5 w-5 ${generateAiBg ? 'text-violet-400' : 'text-white/20'}`} />
+                  <div className="text-left flex-1">
+                    <div className={`text-xs font-medium ${generateAiBg ? 'text-violet-300' : 'text-white/60'}`}>Fundo IA</div>
+                    <div className="text-[10px] text-white/30">Gera fotos de fundo temáticas para cada card</div>
+                  </div>
+                  <div className={`w-8 h-4.5 rounded-full transition-colors ${generateAiBg ? 'bg-violet-500' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 rounded-full bg-white mt-0.5 transition-transform ${generateAiBg ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </div>
+                </button>
+              )}
+
+              {/* AI Mockup toggle */}
+              {setGenerateAiMockup && (
+                <button
+                  onClick={() => setGenerateAiMockup(!generateAiMockup)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${generateAiMockup ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'}`}
+                >
+                  <Monitor className={`h-5 w-5 ${generateAiMockup ? 'text-violet-400' : 'text-white/20'}`} />
+                  <div className="text-left flex-1">
+                    <div className={`text-xs font-medium ${generateAiMockup ? 'text-violet-300' : 'text-white/60'}`}>Mockups IA</div>
+                    <div className="text-[10px] text-white/30">Gera mockups 3D relacionados ao tema (celular, laptop, etc)</div>
+                  </div>
+                  <div className={`w-8 h-4.5 rounded-full transition-colors ${generateAiMockup ? 'bg-violet-500' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 rounded-full bg-white mt-0.5 transition-transform ${generateAiMockup ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </div>
+                </button>
+              )}
+
+              {(generateAiBg || generateAiMockup) && (
+                <p className="text-[10px] text-amber-300/60 flex items-center gap-1">
+                  ⚡ Geração mais lenta (~15-30s por card) — cada card terá imagens únicas
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Manual Background image for animated mode */}
+      {wizardMode === 'animated' && setAnimatedBgImageUrl && !generateAiBg && (
         <div className="rounded-xl border border-white/[0.06] overflow-hidden">
           <button
             onClick={() => toggleSection('bg-image')}
             className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
           >
             <ImagePlus className="h-4 w-4 text-violet-400" />
-            <span className="text-sm font-medium text-white/80">Foto de Fundo</span>
+            <span className="text-sm font-medium text-white/80">Foto de Fundo Manual</span>
             {animatedBgImageUrl && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300">ok</span>}
             <span className="ml-auto text-white/20 text-xs">{expandedSections.has('bg-image') ? '▲' : '▼'}</span>
           </button>
           {expandedSections.has('bg-image') && (
             <div className="px-4 pb-4 space-y-3">
-              <p className="text-[11px] text-white/30">Adicione uma imagem para usar como fundo nos cards animados. A IA aplicará um overlay escuro para manter a legibilidade.</p>
+              <p className="text-[11px] text-white/30">Envie uma imagem sua para usar como fundo. A IA aplicará overlay escuro para legibilidade.</p>
               {animatedBgImageUrl ? (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/[0.08]">
                   <img src={animatedBgImageUrl} alt="Background" className="w-full h-full object-cover" />

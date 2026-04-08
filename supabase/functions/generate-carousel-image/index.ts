@@ -120,6 +120,9 @@ Deno.serve(async (req) => {
       if (outputAspectRatio === '21:9' || outputAspectRatio === '16:9') {
         return `Formato horizontal ${outputAspectRatio}, ocupando todo o quadro.`;
       }
+      if (outputAspectRatio === '4:5') {
+        return 'FORMATO OBRIGATÓRIO 4:5 RETRATO (1080x1350): gere exatamente em proporção vertical 4:5 para Instagram feed, preenchendo todo o canvas sem cortes.';
+      }
       if (outputAspectRatio === '3:4') {
         return 'Formato retrato 3:4 (1080x1440).';
       }
@@ -134,7 +137,7 @@ Deno.serve(async (req) => {
 - Todo texto visível deve caber integralmente dentro da imagem com padding consistente.
 - Mockups e dispositivos também devem ficar completamente contidos dentro do canvas; não corte topo, base ou laterais do aparelho se isso comprometer legibilidade ou proporção.
 - Para screenshots em mockups, a tela deve ficar centralizada e corretamente encaixada no dispositivo, sem escapar da moldura.`;
-    const compactSafeAreaReminder = 'SAFE AREA OBRIGATÓRIA: mantenha texto, mockup, tela e logo 100% dentro do canvas, com margens internas mínimas de 8% em todos os lados; nada pode tocar ou ultrapassar as bordas.';
+    const compactSafeAreaReminder = 'SAFE AREA OBRIGATÓRIA: mantenha texto, mockup, tela e logo 100% dentro do canvas, com margens internas mínimas de 8% em todos os lados; nada pode tocar ou ultrapassar as bordas. PRIORIZE RESPIRO EXTRA NO TOPO E NOS CANTOS SUPERIORES.';
 
     // Filter out URLs from domains that block hotlinking
     const BLOCKED_DOMAINS = ['shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'alamy.com', 'depositphotos.com', 'dreamstime.com', '123rf.com', 'stock.adobe.com'];

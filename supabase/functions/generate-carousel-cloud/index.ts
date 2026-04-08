@@ -702,7 +702,7 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-          // Logo NOT sent to AI — Canvas overlay only
+          ...(styleConfig.logoMode === 'ai' && job.logo_url ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {

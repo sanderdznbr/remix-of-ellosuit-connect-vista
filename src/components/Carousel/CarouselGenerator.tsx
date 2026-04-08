@@ -7689,6 +7689,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         wizardMode={wizardMode}
                         setLogoUrl={setLogoUrl} />
                     )}
+                    {currentStepName === 'Estilos de Fundo' && (
+                      <StepBackgroundStyles
+                        selectedStyle={animatedBgStyle}
+                        setSelectedStyle={setAnimatedBgStyle}
+                        bgColor={bgColor}
+                        accentColor={accentColor}
+                        textColor={textColor}
+                      />
+                    )}
                     {currentStepName === 'Fontes' && !isFullBleedMarketplace && wizardMode !== 'extreme' && (
                       <StepFonts
                         selectedFont={selectedFont}

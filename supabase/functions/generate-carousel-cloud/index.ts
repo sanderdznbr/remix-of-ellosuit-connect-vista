@@ -181,7 +181,7 @@ Be EXTREMELY specific. No markdown, pure JSON only.` });
         const textLimitHint = singleTextLimits.title_max_chars 
           ? `\n\n=== TEXT LENGTH LIMITS (from style analysis) ===\nTitle: max ${singleTextLimits.title_max_chars} characters\nSubtitle: max ${singleTextLimits.subtitle_max_chars || 60} characters\nIMPORTANT: Keep ALL text within these limits to match the style's visual density.`
           : '';
-        singlePromptStyle = `Create an Instagram post with MAXIMUM FIDELITY to the reference style.\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===${textLimitHint}\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.`;
+        singlePromptStyle = `Crie um post para Instagram com MÁXIMA FIDELIDADE ao estilo das referências. O resultado DEVE parecer feito por um designer humano profissional em Photoshop — NUNCA pode parecer "gerado por IA".\n\n=== BACKGROUND ===\n${dna.background}\n\n=== TYPOGRAPHY ===\n${dna.typography}\n\n=== LAYOUT ===\n${dna.layout}\n\n=== COLORS (MANDATORY) ===\n${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}\n\n=== DECORATIVE ===\n${dna.decorative}\n\n=== PHOTO ===\n${dna.photo_treatment}\n\n=== MOOD: ${dna.mood} ===\n=== SIGNATURE: ${dna.signature} ===${textLimitHint}\n\nRULES: NÃO copie @handles/marcas. Texto em PORTUGUÊS BRASILEIRO. Full bleed. Deve parecer da MESMA SÉRIE que as referências.\nQUALIDADE ANTI-IA: Cores coesas sem saturação artificial. Tipografia perfeita com hierarquia clara. Espaçamento generoso. Alinhamento editorial preciso. Zero aspecto plástico/artificial.`;
       }
     } catch (dnaErr) { console.error('Single-post DNA analysis failed:', dnaErr); }
   }
@@ -458,7 +458,7 @@ No markdown, pure JSON only.` });
 Keep text within these limits to match the style's visual density.`
           : '';
 
-        promptStyle = `REPLICATE THIS EXACT VISUAL STYLE (from the reference images):
+        promptStyle = `REPLIQUE ESTE ESTILO VISUAL EXATO (das imagens de referência). O resultado DEVE ser INDISTINGUÍVEL de um post feito por um designer humano profissional — NUNCA pode parecer "gerado por IA":
 
 BACKGROUND: ${dna.background}
 MAIN TYPOGRAPHY: ${dna.typography_main || dna.typography}
@@ -470,7 +470,8 @@ DECORATIVE ELEMENTS: ${dna.decorative}
 PHOTO TREATMENT: ${dna.photo_treatment}
 SIGNATURE: ${dna.signature}${textLimitSection}
 
-RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.`;
+RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.
+QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipografia com HIERARQUIA CLARA e letras PERFEITAS (kerning correto, sem deformações). Espaçamento GENEROSO. Alinhamento PRECISO como design editorial. Iluminação direcional com sombras reais. ZERO aspecto artificial/plástico. O post deve parecer que foi criado manualmente em Photoshop por um designer sênior.`;
 
         if (marketplaceStyle?.imageGeneration) {
           marketplaceStyle.imageGeneration.prompt_style = promptStyle;
@@ -505,11 +506,12 @@ RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado
       const isCover = card.type === 'cover' || i === 0;
       const isCta = card.type === 'cta' || i === cards.length - 1;
       const parts: string[] = [];
-      parts.push(`Texto em PORTUGUÊS BRASILEIRO. Tema: "${cleanTopic}".`);
+      parts.push(`Você é um designer gráfico SÊNIOR de uma agência premium. O resultado DEVE parecer um post profissional feito por um humano em Photoshop/Illustrator — NUNCA pode parecer "gerado por IA".`);
+      parts.push(`Texto em PORTUGUÊS BRASILEIRO correto e fluente. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
       parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias, nomes de templates ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt. NUNCA renderize nomes como "EXCLUSIVE", "PREMIUM", "TEMPLATE", ou qualquer nome de coleção/estilo.');
-      // Logo is ALWAYS handled via Canvas overlay — NEVER sent to AI
       parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
+      parts.push('QUALIDADE ANTI-IA: Use paleta de cores RESTRITA e COESA (3-4 cores máx). Tipografia com HIERARQUIA CLARA (título bold grande + corpo leve). ESPAÇAMENTO GENEROSO entre elementos. ALINHAMENTO PRECISO em grid editorial. Cores REALISTAS sem saturação exagerada. Iluminação DIRECIONAL com sombras reais. Textura NATURAL com grão sutil. Composição ASSIMÉTRICA intencional. O post deve parecer parte de um feed de marca premium.');
 
       if (isCover) {
         parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);

@@ -273,6 +273,7 @@ const CarouselGenerator: React.FC = () => {
   const [tweet2Config, setTweet2Config] = useState<Tweet2Config>(DEFAULT_TWEET2_CONFIG);
   const [animationStyle, setAnimationStyle] = useState<'slide-fade' | 'scale-bounce' | 'typewriter' | 'cinematic' | 'kinetic' | 'elegant'>('slide-fade');
   const [animatedCards, setAnimatedCards] = useState<{ html: string; cardIndex: number; dimensions: { w: number; h: number } }[]>([]);
+  const [animatedBgImageUrl, setAnimatedBgImageUrl] = useState('');
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -490,7 +491,7 @@ const CarouselGenerator: React.FC = () => {
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização'];
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Cores', 'Fontes', 'Personalização'];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
@@ -3029,6 +3030,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           textColor,
           fontFamily: ['Playfair Display','Merriweather','Lora','DM Serif Display','Cormorant Garamond','Montserrat','Poppins','Bebas Neue','Oswald','Raleway','Inter','Space Grotesk','Sora','Outfit','Clash Display','Crimson Text'][selectedFont] || 'Playfair Display',
           logoUrl,
+          logoPosition,
+          backgroundImageUrl: animatedBgImageUrl || undefined,
           format: formatStr,
         };
 
@@ -7270,9 +7273,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setHasProduct={wizardMode === 'advanced' ? setWantsProduct : undefined}
                         onOpenProductStep={() => {
                           setWantsProduct(true);
-                          // Jump to next step which will now be 'Produto'
                           setTimeout(() => setWizardStep(wizardStep + 1), 100);
                         }}
+                        animatedBgImageUrl={animatedBgImageUrl}
+                        setAnimatedBgImageUrl={setAnimatedBgImageUrl}
                       />
                     )}
                     {currentStepName === 'Fotos Imóvel' && (

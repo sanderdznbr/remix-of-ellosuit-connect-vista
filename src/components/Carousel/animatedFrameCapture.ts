@@ -1,4 +1,5 @@
-import { getFontEmbedCSS, toCanvas } from 'html-to-image';
+import { getFontEmbedCSS } from 'html-to-image';
+import html2canvas from 'html2canvas';
 
 const DEFAULT_CAPTURE_SCALE = 2;
 const IMAGE_REQUEST_INIT: RequestInit = {
@@ -51,25 +52,37 @@ export async function captureAnimatedNodeFrame(
 ): Promise<HTMLCanvasElement> {
   const scale = Math.max(1, Math.min(options.scale ?? DEFAULT_CAPTURE_SCALE, 3));
 
-  return await toCanvas(node, {
+  return await html2canvas(node, {
     width: options.width,
     height: options.height,
-    canvasWidth: Math.round(options.width * scale),
-    canvasHeight: Math.round(options.height * scale),
-    pixelRatio: 1,
-    backgroundColor: options.backgroundColor,
-    cacheBust: true,
-    includeQueryParams: true,
-    skipAutoScale: true,
-    preferredFontFormat: 'woff2',
-    fontEmbedCSS: options.fontEmbedCSS,
-    fetchRequestInit: IMAGE_REQUEST_INIT,
-    style: {
-      width: `${options.width}px`,
-      height: `${options.height}px`,
-      margin: '0',
-      transform: 'none',
-      transformOrigin: 'top left',
+    scale,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: options.backgroundColor ?? null,
+    logging: false,
+    imageTimeout: 30000,
+    foreignObjectRendering: true,
+    onclone: (clonedDoc) => {
+      if (options.fontEmbedCSS) {
+        const style = clonedDoc.createElement('style');
+        style.textContent = options.fontEmbedCSS;
+        clonedDoc.head.appendChild(style);
+      }
+
+      clonedDoc.querySelectorAll('img').forEach((img) => {
+        img.crossOrigin = 'anonymous';
+        img.referrerPolicy = 'no-referrer';
+        img.loading = 'eager';
+      });
+
+      const clonedNode = clonedDoc.body.firstElementChild as HTMLElement | null;
+      if (clonedNode) {
+        clonedNode.style.width = `${options.width}px`;
+        clonedNode.style.height = `${options.height}px`;
+        clonedNode.style.margin = '0';
+        clonedNode.style.transform = 'none';
+        clonedNode.style.transformOrigin = 'top left';
+      }
     },
   });
 }

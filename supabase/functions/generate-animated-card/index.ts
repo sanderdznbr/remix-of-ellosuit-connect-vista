@@ -554,7 +554,7 @@ function buildFallbackAnimatedHtml(params: {
     }
     @keyframes bgShift {
       from { transform: scale(1) translate3d(0,0,0); }
-      to { transform: scale(1.04) translate3d(0,-10px,0); }
+      to { transform: scale(1.04) ${preset.bgShiftDir}; }
     }
     @keyframes popIn {
       from { opacity: 0; transform: translateY(38px) scale(.9); filter: blur(12px); }

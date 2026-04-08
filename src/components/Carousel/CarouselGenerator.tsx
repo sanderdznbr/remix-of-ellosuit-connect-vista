@@ -3028,10 +3028,28 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
     try {
       const results: { html: string; cardIndex: number; dimensions: { w: number; h: number } }[] = [];
-      
+
+      // Auto-generate outline if user didn't provide manual card texts
+      let effectiveCardTexts = [...manualCardTexts];
+      const hasManualTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
+      if (!hasManualTexts) {
+        try {
+          const cleanTopic = sanitizeAnimatedTopic(topic) || cleanMentionsFromTopic(topic).trim();
+          const { data: outlineData, error: outlineError } = await supabase.functions.invoke('generate-carousel', {
+            body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel' },
+          });
+          if (!outlineError && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+            effectiveCardTexts = outlineData.outline;
+            setManualCardTexts(outlineData.outline);
+            console.log('[ANIMATED] Auto-generated outline:', outlineData.outline.length, 'cards');
+          }
+        } catch (outlineErr) {
+          console.error('[ANIMATED] Failed to auto-generate outline:', outlineErr);
+        }
+      }
+
       for (let i = 0; i < cardCount; i++) {
-        
-        const cardData = manualCardTexts[i] || {};
+        const cardData = effectiveCardTexts[i] || {};
         const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
         const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
         const payload = {

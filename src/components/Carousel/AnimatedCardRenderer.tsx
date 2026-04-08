@@ -482,7 +482,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
     for (const candidate of WEB_CODECS_CANDIDATES) {
       try {
-        const config = {
+        const config: VideoEncoderConfig = {
           ...candidate.encoderConfig,
           width,
           height,
@@ -548,7 +548,12 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       },
     });
 
-    encoder.configure(supportedEncoder.encoderConfig);
+    encoder.configure({
+      ...supportedEncoder.encoderConfig,
+      width: options.width,
+      height: options.height,
+      framerate: options.fps,
+    });
 
     try {
       for (let frameIndex = 0; frameIndex < options.totalFrames; frameIndex += 1) {

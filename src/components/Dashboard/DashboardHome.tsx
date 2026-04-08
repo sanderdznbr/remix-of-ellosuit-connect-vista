@@ -246,7 +246,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       if (!erasing) {
         ci++;
         setAnimatedPlaceholder(text.slice(0, ci));
-        if (ci >= text.length) { erasing = true; timeoutRef.current = setTimeout(tick, 2200); }
+        if (ci >= text.length) { erasing = true; timeoutRef.current = setTimeout(tick, 5000); }
         else { timeoutRef.current = setTimeout(tick, 55 + Math.random() * 35); }
       } else {
         ci--;

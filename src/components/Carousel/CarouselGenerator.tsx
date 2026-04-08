@@ -3511,7 +3511,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const usedImageUrls = new Set<string>();
 
       const styleNeg = activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '';
-      const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements';
+      const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements, no glowing particles, no floating orbs, no network lines, no hexagonal grid, no digital matrix, no abstract tech background, no bokeh circles, no constellation pattern, no holographic effect, no neural network visual';
       const isFullBleedStyle = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
 
       for (let i = 0; i < updatedCards.length; i++) {

@@ -63,29 +63,78 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     setPreviewNonce((prev) => ({ ...prev, [cardIndex]: (prev[cardIndex] ?? 0) + 1 }));
   }, []);
 
-  const getIframeCaptureNode = useCallback((iframe: HTMLIFrameElement) => {
-    const doc = iframe.contentDocument;
-    if (!doc) throw new Error('Não foi possível acessar o preview do card');
+  /**
+   * Creates a recording container by injecting the card HTML into a hidden
+   * <div> in the main document instead of an iframe. This allows html-to-image
+   * to fully access all DOM nodes, fonts, and styles for accurate capture.
+   *
+   * The card HTML (a full <!DOCTYPE html> document) is parsed: <style> and
+   * <link> tags from <head> are injected, and the <body> innerHTML is placed
+   * inside the container. CSS animations run normally in the main document.
+   */
+  const createRecordingContainer = useCallback(async (card: AnimatedCard) => {
+    const { w, h } = card.dimensions;
 
-    const node = (doc.body || doc.documentElement) as HTMLElement | null;
-    if (!node) throw new Error('Não foi possível localizar o conteúdo do card para gravação');
+    const container = document.createElement('div');
+    container.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;pointer-events:none;overflow:hidden;z-index:-9999;`;
+    document.body.appendChild(container);
 
-    return { doc, node };
-  }, []);
+    // Parse the card HTML to extract styles and body content
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(card.html, 'text/html');
 
-  const waitForIframeReady = useCallback(async (iframe: HTMLIFrameElement) => {
-    const doc = iframe.contentDocument;
-    if (!doc) throw new Error('Não foi possível acessar o preview do card');
+    // Create the render root inside the container
+    const renderRoot = document.createElement('div');
+    renderRoot.style.cssText = `width:${w}px;height:${h}px;overflow:hidden;position:relative;`;
+    container.appendChild(renderRoot);
 
-    if (doc.fonts?.ready) {
+    // Inject <link> tags (Google Fonts, etc.) into the main document <head>
+    const injectedLinks: HTMLElement[] = [];
+    parsed.querySelectorAll('head link[rel="stylesheet"]').forEach((link) => {
+      const clone = document.createElement('link');
+      clone.rel = 'stylesheet';
+      clone.href = (link as HTMLLinkElement).href;
+      clone.crossOrigin = 'anonymous';
+      document.head.appendChild(clone);
+      injectedLinks.push(clone);
+    });
+
+    // Inject <style> tags from the parsed HTML into the render root
+    parsed.querySelectorAll('style').forEach((style) => {
+      const clone = document.createElement('style');
+      clone.textContent = style.textContent;
+      renderRoot.appendChild(clone);
+    });
+
+    // Copy body attributes (inline style, class, etc.)
+    const parsedBody = parsed.body;
+    if (parsedBody) {
+      // Copy background and font styles from body
+      const bodyStyle = parsedBody.getAttribute('style');
+      if (bodyStyle) {
+        renderRoot.style.cssText += bodyStyle;
+      }
+      // Ensure dimensions are fixed
+      renderRoot.style.width = `${w}px`;
+      renderRoot.style.height = `${h}px`;
+      renderRoot.style.overflow = 'hidden';
+      renderRoot.style.position = 'relative';
+
+      // Copy body innerHTML
+      renderRoot.innerHTML += parsedBody.innerHTML;
+    }
+
+    // Wait for fonts to load
+    if (document.fonts?.ready) {
       try {
-        await doc.fonts.ready;
+        await document.fonts.ready;
       } catch {
         // noop
       }
     }
 
-    const images = Array.from(doc.images || []);
+    // Wait for images to load
+    const images = Array.from(renderRoot.querySelectorAll('img'));
     await Promise.all(images.map((img) => {
       if (img.complete) return Promise.resolve();
       return new Promise<void>((resolve) => {
@@ -94,44 +143,18 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       });
     }));
 
-    await delay(600);
+    // Give animations a moment to start
+    await delay(800);
+
+    const cleanup = () => {
+      injectedLinks.forEach((link) => {
+        if (link.parentNode) link.parentNode.removeChild(link);
+      });
+      if (container.parentNode) container.parentNode.removeChild(container);
+    };
+
+    return { renderRoot, cleanup };
   }, []);
-
-  const createRecordingIframe = useCallback(async (card: AnimatedCard) => {
-    const { w, h } = card.dimensions;
-
-    return await new Promise<{ iframe: HTMLIFrameElement; cleanup: () => void }>((resolve, reject) => {
-      const container = document.createElement('div');
-      container.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;opacity:0;pointer-events:none;overflow:hidden;`;
-
-      const iframe = document.createElement('iframe');
-      iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
-      iframe.style.cssText = `width:${w}px;height:${h}px;border:none;display:block;background:#000;`;
-
-      const cleanup = () => {
-        if (container.parentNode) container.parentNode.removeChild(container);
-      };
-
-      iframe.onload = async () => {
-        try {
-          await waitForIframeReady(iframe);
-          resolve({ iframe, cleanup });
-        } catch (error) {
-          cleanup();
-          reject(error);
-        }
-      };
-
-      iframe.onerror = () => {
-        cleanup();
-        reject(new Error('Falha ao montar o iframe de gravação'));
-      };
-
-      iframe.srcdoc = card.html;
-      container.appendChild(iframe);
-      document.body.appendChild(container);
-    });
-  }, [waitForIframeReady]);
 
   const updateRecordedUrl = useCallback((cardIndex: number, blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -164,10 +187,9 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         }
       }
 
-      const recordingFrame = await createRecordingIframe(card);
-      cleanup = recordingFrame.cleanup;
-
-      const { doc: targetDoc, node: targetNode } = getIframeCaptureNode(recordingFrame.iframe);
+      const recordingContainer = await createRecordingContainer(card);
+      cleanup = recordingContainer.cleanup;
+      const targetNode = recordingContainer.renderRoot;
 
       const canvas = document.createElement('canvas');
       canvas.width = w;
@@ -196,7 +218,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         mediaRecorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
       });
 
-      const computedBackground = targetDoc.defaultView?.getComputedStyle(targetNode).backgroundColor;
+      const computedBackground = window.getComputedStyle(targetNode).backgroundColor;
       const captureBackground = computedBackground && computedBackground !== 'rgba(0, 0, 0, 0)'
         ? computedBackground
         : undefined;
@@ -261,7 +283,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       setRecording(false);
       setRecordingProgress(0);
     }
-  }, [cards, createRecordingIframe, getIframeCaptureNode, onRecordComplete, updateRecordedUrl]);
+  }, [cards, createRecordingContainer, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);

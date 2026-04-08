@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HardDrive, X, Loader2, FolderOpen, ArrowLeft, Check, Download, FileIcon, ImageIcon, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StorageFile {
   name: string;
@@ -30,6 +31,7 @@ const BROWSABLE_BUCKETS = [
 ];
 
 const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyId, onImport }) => {
+  const { user } = useAuth();
   const [currentBucket, setCurrentBucket] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [items, setItems] = useState<StorageFile[]>([]);
@@ -40,11 +42,22 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
 
   const fullPath = currentPath.join('/');
 
+  // Build the storage path scoped to the current user
+  const getUserScopedPath = useCallback((bucket: string, path: string) => {
+    if (!user?.id) return path;
+    // Most buckets store files under {user_id}/ or {company_id}/
+    // When at root level (no path), scope to user's folder
+    const userPrefix = user.id;
+    if (!path) return userPrefix;
+    return path;
+  }, [user?.id]);
+
   const fetchContents = useCallback(async (bucket: string, path: string) => {
     setLoading(true);
     setSelected(new Set());
     try {
-      const { data, error } = await supabase.storage.from(bucket).list(path || '', {
+      const scopedPath = getUserScopedPath(bucket, path);
+      const { data, error } = await supabase.storage.from(bucket).list(scopedPath || '', {
         limit: 200,
         sortBy: { column: 'name', order: 'asc' },
       });
@@ -71,7 +84,7 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getUserScopedPath]);
 
   useEffect(() => {
     if (open && currentBucket) {
@@ -122,8 +135,9 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
     setImporting(true);
     try {
       const filesToImport: { name: string; url: string; type: string }[] = [];
+      const scopedBase = getUserScopedPath(currentBucket, fullPath);
       for (const name of selected) {
-        const filePath = fullPath ? `${fullPath}/${name}` : name;
+        const filePath = scopedBase ? `${scopedBase}/${name}` : name;
         const { data: { publicUrl } } = supabase.storage.from(currentBucket).getPublicUrl(filePath);
         const item = items.find(i => i.name === name);
         const mimetype = item?.metadata?.mimetype || '';
@@ -144,7 +158,8 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
 
   const getFileUrl = (name: string) => {
     if (!currentBucket) return '';
-    const filePath = fullPath ? `${fullPath}/${name}` : name;
+    const scopedBase = getUserScopedPath(currentBucket, fullPath);
+    const filePath = scopedBase ? `${scopedBase}/${name}` : name;
     return supabase.storage.from(currentBucket).getPublicUrl(filePath).data.publicUrl;
   };
 

@@ -357,6 +357,7 @@ const CarouselGenerator: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
+  const [logoMode, setLogoMode] = useState<'ai' | 'manual'>('ai');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
   const [useBrandColors, setUseBrandColors] = useState(true);
   const [useCustomColors, setUseCustomColors] = useState(false);

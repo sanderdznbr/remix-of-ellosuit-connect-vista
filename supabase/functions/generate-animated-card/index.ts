@@ -182,8 +182,8 @@ function buildFallbackAnimatedHtml(params: {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=${dimensions.w}, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${fontGoogleFamily}&display=swap" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=${fontGoogleFamily}&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       width: ${dimensions.w}px;

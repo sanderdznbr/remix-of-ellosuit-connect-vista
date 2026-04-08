@@ -76,7 +76,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       });
     }));
 
-    await delay(250);
+    await delay(600);
   }, []);
 
   const createRecordingIframe = useCallback(async (card: AnimatedCard) => {
@@ -87,7 +87,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       container.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;opacity:0;pointer-events:none;overflow:hidden;`;
 
       const iframe = document.createElement('iframe');
-      iframe.setAttribute('sandbox', 'allow-same-origin');
+      iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
       iframe.style.cssText = `width:${w}px;height:${h}px;border:none;display:block;background:#000;`;
 
       const cleanup = () => {
@@ -187,7 +187,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
           allowTaint: true,
           backgroundColor: null,
           scale: 1,
-          foreignObjectRendering: true,
+          foreignObjectRendering: false,
           logging: false,
           scrollX: 0,
           scrollY: 0,
@@ -209,7 +209,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         allowTaint: true,
         backgroundColor: null,
         scale: 1,
-        foreignObjectRendering: true,
+        foreignObjectRendering: false,
         logging: false,
         scrollX: 0,
         scrollY: 0,
@@ -297,7 +297,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
             transform: `scale(${previewH / h})`,
             transformOrigin: 'top left',
           }}
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts"
           title={`Card ${activeCard + 1}`}
         />
 

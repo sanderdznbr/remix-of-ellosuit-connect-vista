@@ -58,6 +58,11 @@ interface Props {
   setUseCustomColors: (v: boolean) => void;
   customColors: string[];
   setCustomColors: React.Dispatch<React.SetStateAction<string[]>>;
+  // Wizard mode
+  wizardMode?: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
+  // Logo mode
+  logoMode: 'ai' | 'manual';
+  setLogoMode: (v: 'ai' | 'manual') => void;
 }
 
 const StepPersonalization: React.FC<Props> = ({
@@ -72,6 +77,7 @@ const StepPersonalization: React.FC<Props> = ({
   onSkipAll, activeMarketplaceStyle, isExtreme,
   hasProduct, setHasProduct, onOpenProductStep,
   useCustomColors, setUseCustomColors, customColors, setCustomColors,
+  wizardMode, logoMode, setLogoMode,
 }) => {
   const isMobile = useIsMobile();
   const { user } = useAuth();

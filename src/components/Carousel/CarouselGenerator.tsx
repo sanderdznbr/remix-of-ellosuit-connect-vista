@@ -496,6 +496,8 @@ const CarouselGenerator: React.FC = () => {
     ? { hex: '#DC2626', hexDark: '#B91C1C', rgb: '220,38,38', rgb2: '185,28,28', gradient: 'linear-gradient(135deg, #B91C1C 0%, #EF4444 50%, #DC2626 100%)', tailwind: 'red', loadingColor: '#EF4444' }
     : wizardMode === 'tweet' || wizardMode === 'tweet2'
     ? { hex: '#0EA5E9', hexDark: '#0284C7', rgb: '14,165,233', rgb2: '2,132,199', gradient: 'linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #0EA5E9 100%)', tailwind: 'sky', loadingColor: '#38BDF8' }
+    : wizardMode === 'animated'
+    ? { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '109,40,217', gradient: 'linear-gradient(135deg, #6D28D9 0%, #A78BFA 50%, #8B5CF6 100%)', tailwind: 'violet', loadingColor: '#A78BFA' }
     : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');

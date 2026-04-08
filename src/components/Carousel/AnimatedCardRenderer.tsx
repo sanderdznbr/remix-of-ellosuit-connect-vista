@@ -53,6 +53,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
   const [recordedVideos, setRecordedVideos] = useState<Record<number, string>>({});
   const [recordingAll, setRecordingAll] = useState(false);
   const [previewNonce, setPreviewNonce] = useState<Record<number, number>>({});
+  const [selectedFps, setSelectedFps] = useState<FpsOption>(30);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const currentCard = cards[activeCard];
@@ -447,22 +448,26 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         ctx.drawImage(frameCanvas, 0, 0, w, h);
       };
 
+      const fps = selectedFps;
+      const totalFrames = Math.round((RECORD_DURATION / 1000) * fps);
+      const frameDurationMs = 1000 / fps;
+
       const writer = new WebMWriter({
         quality: 0.95,
-        frameRate: EXPORT_FPS,
+        frameRate: fps,
       });
 
       const firstFrame = await captureFrame();
       paintFrameToCanvas(firstFrame);
-      writer.addFrame(canvas, FRAME_DURATION_MS);
+      writer.addFrame(canvas, frameDurationMs);
 
-      for (let frameIndex = 1; frameIndex < TOTAL_FRAMES; frameIndex += 1) {
-        const progress = frameIndex / (TOTAL_FRAMES - 1);
+      for (let frameIndex = 1; frameIndex < totalFrames; frameIndex += 1) {
+        const progress = frameIndex / (totalFrames - 1);
         setRecordingProgress(progress * 100);
 
         const frameCanvas = await captureFrame();
         paintFrameToCanvas(frameCanvas);
-        writer.addFrame(canvas, FRAME_DURATION_MS);
+        writer.addFrame(canvas, frameDurationMs);
       }
 
       const blob = await writer.complete();
@@ -489,7 +494,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       setRecording(false);
       setRecordingProgress(0);
     }
-  }, [cards, createRecordingContainer, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
+  }, [cards, selectedFps, createRecordingContainer, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);
@@ -599,6 +604,23 @@ const AnimatedCardRenderer: React.FC<Props> = ({
           </button>
         )}
 
+        <div className="flex items-center gap-1 rounded-lg bg-white/[0.04] border border-white/[0.08] p-0.5">
+          {FPS_OPTIONS.map((fps) => (
+            <button
+              key={fps}
+              onClick={() => setSelectedFps(fps)}
+              disabled={recording || isRegeneratingCurrent}
+              className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-all disabled:opacity-30 ${
+                selectedFps === fps
+                  ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
+                  : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {fps}fps
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => recordCard(activeCard, { promptSave: true })}
           disabled={recording || isRegeneratingCurrent}
@@ -608,7 +630,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
           {recording ? (
             <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Gravando...</>
           ) : (
-            <><Play className="w-3.5 h-3.5" /> Gravar como vídeo</>
+            <><Play className="w-3.5 h-3.5" /> Gravar {selectedFps}fps</>
           )}
         </button>
 

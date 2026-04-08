@@ -38,14 +38,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     try {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
-      const [{ data: carousels }, { data: credits }, { data: elloSub }] = await Promise.all([
+      const [{ data: carousels }, { data: credits }, { data: elloSub }, { data: affiliateData }] = await Promise.all([
         supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
         supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
         supabase.from('ellocontent_subscriptions').select('plan_name, monthly_credits, status').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('affiliate_partners').select('id').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
       ]);
       setRecentProjects(carousels || []);
       const newBalance = credits?.balance ?? 0;
       setCreditBalance(newBalance);
+      setIsAffiliate(!!affiliateData);
       if (elloSub && (elloSub.status === 'active' || elloSub.status === 'trialing')) {
         setMonthlyCredits(elloSub.monthly_credits || 0);
         setPlanName(elloSub.plan_name || 'free');

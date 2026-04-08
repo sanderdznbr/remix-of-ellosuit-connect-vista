@@ -283,44 +283,46 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         )}
       </div>
 
-      {/* Parceiros section — collapsible */}
-      <div className="px-2 mt-5">
-        <button
-          onClick={() => setParceirosOpen(!parceirosOpen)}
-          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-        >
-          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Parceiros</span>
-          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${parceirosOpen ? 'rotate-90' : ''}`} />
-        </button>
-        {parceirosOpen && (
-          <div className="mt-1 space-y-0.5">
-            <button
-              onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                location.pathname === '/area/parceiros'
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              <Handshake className="w-4 h-4" />
-              Afiliados
-            </button>
-            {email === 'admin@gmail.com' && (
+      {/* Parceiros section — only for affiliates or admin */}
+      {(isAffiliate || email === 'admin@gmail.com') && (
+        <div className="px-2 mt-5">
+          <button
+            onClick={() => setParceirosOpen(!parceirosOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
+          >
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Parceiros</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${parceirosOpen ? 'rotate-90' : ''}`} />
+          </button>
+          {parceirosOpen && (
+            <div className="mt-1 space-y-0.5">
               <button
-                onClick={() => { navigate('/admin'); closeSearch(); }}
+                onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  location.pathname === '/admin'
+                  location.pathname === '/area/parceiros'
                     ? 'text-white'
                     : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
                 }`}
               >
-                <Shield className="w-4 h-4" />
-                Painel Admin
+                <Handshake className="w-4 h-4" />
+                Afiliados
               </button>
-            )}
-          </div>
-        )}
-      </div>
+              {email === 'admin@gmail.com' && (
+                <button
+                  onClick={() => { navigate('/admin'); closeSearch(); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                    location.pathname === '/admin'
+                      ? 'text-white'
+                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  Painel Admin
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
 
       </div>{/* end scrollable nav area */}

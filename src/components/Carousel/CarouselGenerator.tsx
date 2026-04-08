@@ -1634,7 +1634,7 @@ The image must look like it was shot by a professional photographer or designed 
           action: 'generate-and-wait',
           prompt: opts.prompt,
           model_id: imageSettings.higgsFieldModel || 'higgsfield-ai/soul/standard',
-          aspect_ratio: '3:4',
+          aspect_ratio: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '4:5',
           resolution: '720p',
           max_wait_seconds: 120,
         },
@@ -1687,7 +1687,7 @@ The image must look like it was shot by a professional photographer or designed 
     const invokePromise = supabase.functions.invoke('generate-carousel-image', {
       body: {
         prompt: opts.prompt,
-        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '3:4',
+        imageSize: postFormat === 'square' ? '1:1' : postFormat === 'story' ? '9:16' : '4:5',
         topic: opts.prompt,
         faceReferenceUrls: cappedFaceRefs.length > 0 ? cappedFaceRefs : undefined,
         styleReferenceUrls: cappedStyleRefs.length > 0 ? cappedStyleRefs : undefined,
@@ -1715,6 +1715,28 @@ The image must look like it was shot by a professional photographer or designed 
     if (data?.error) throw new Error(data.error);
     return null;
   };
+
+  const getLogoOverlayBounds = useCallback((canvasW: number, canvasH: number, logoW: number, logoH: number, position: string) => {
+    const safePad = Math.max(72, Math.round(Math.min(canvasW, canvasH) * 0.08));
+    const maxLW = Math.min(170, canvasW * 0.16, canvasW - safePad * 2);
+    const maxLH = Math.min(72, canvasH * 0.055, canvasH - safePad * 2);
+    const scale = Math.min(maxLW / logoW, maxLH / logoH, 1);
+    const width = logoW * scale;
+    const height = logoH * scale;
+
+    let x = safePad;
+    let y = safePad;
+
+    if (position.includes('center')) x = (canvasW - width) / 2;
+    if (position.includes('right')) x = canvasW - width - safePad;
+    if (position.includes('middle')) y = (canvasH - height) / 2;
+    if (position.includes('bottom')) y = canvasH - height - safePad;
+
+    x = Math.min(Math.max(x, safePad), Math.max(safePad, canvasW - width - safePad));
+    y = Math.min(Math.max(y, safePad), Math.max(safePad, canvasH - height - safePad));
+
+    return { x, y, width, height, safePad };
+  }, []);
 
   // ===== ENHANCE PROMPT =====
   const enhancePrompt = async (inputTopic?: string) => {

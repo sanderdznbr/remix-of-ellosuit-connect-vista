@@ -37,7 +37,7 @@ interface EmbeddedAssetMap {
 const RECORD_DURATION = 5000;
 const FPS_OPTIONS = [25, 30, 60] as const;
 type FpsOption = typeof FPS_OPTIONS[number];
-const CAPTURE_SCALE = 2;
+const CAPTURE_SCALE = 1;
 const CAPTURE_ROOT_CLASS = 'animated-card-capture-root';
 
 const AnimatedCardRenderer: React.FC<Props> = ({
@@ -440,6 +440,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         backgroundColor: captureBackground,
         fontEmbedCSS,
         scale: CAPTURE_SCALE,
+        foreignObjectRendering: true,
       });
 
       const paintFrameToCanvas = (frameCanvas: HTMLCanvasElement) => {

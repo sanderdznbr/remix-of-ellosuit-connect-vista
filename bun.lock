@@ -85,6 +85,7 @@
         "tailwindcss-animate": "^1.0.7",
         "vaul": "^0.9.3",
         "vite-plugin-pwa": "^1.2.0",
+        "webm-writer": "^1.0.0",
         "zod": "^3.23.8",
       },
       "devDependencies": {
@@ -1828,6 +1829,8 @@
     "w3c-xmlserializer": ["w3c-xmlserializer@4.0.0", "", { "dependencies": { "xml-name-validator": "^4.0.0" } }, "sha512-d+BFHzbiCx6zGfz0HyQ6Rg69w9k19nviJspaj4yNscGjrHu94sVP+aRm75yEbCh+r2/yR+7q6hux9LVtbuTGBw=="],
 
     "webidl-conversions": ["webidl-conversions@7.0.0", "", {}, "sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g=="],
+
+    "webm-writer": ["webm-writer@1.0.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/webm-writer/-/webm-writer-1.0.0.tgz", {}, "sha512-xafP4mzUqht03HBXP0Ov2YGsxfD08uncad9fQeshYwQXrcP6Z/4uxd1IUaGKqKigFPAgaD9xb6JEKA8SXLQMLA=="],
 
     "webrtc-adapter": ["webrtc-adapter@9.0.3", "", { "dependencies": { "sdp": "^3.2.0" } }, "sha512-5fALBcroIl31OeXAdd1YUntxiZl1eHlZZWzNg3U4Fn+J9/cGL3eT80YlrsWGvj2ojuz1rZr2OXkgCzIxAZ7vRQ=="],
 

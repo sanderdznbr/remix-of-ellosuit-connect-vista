@@ -3059,7 +3059,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       sonnerToast.error(err.message || 'Erro ao gerar cards animados');
     } finally {
       setGenerating(false);
-      setProgress(100);
+      // progress done
       generationInFlightRef.current = false;
     }
   };

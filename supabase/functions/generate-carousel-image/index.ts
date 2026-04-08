@@ -238,10 +238,33 @@ Deno.serve(async (req) => {
       textPrompt += `\n\nFORMATO OBRIGATÓRIO 9:16 STORIES: ${formatInstruction}`;
     }
 
-    // Anti-border + anti-text-copy + anti-grid instruction for ALL modes
+    // Anti-border + anti-text-copy + anti-grid + anti-AI-aesthetic instruction for ALL modes
     // Logo is ALWAYS handled via Canvas overlay — NEVER sent to AI to avoid shadow/distortion artifacts
     const logoInstruction = `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
-    textPrompt += `\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM/MOSAICO: Cada card DEVE ser UMA ÚNICA composição visual contínua e UNIFICADA. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens, sub-quadros ou painéis lado a lado. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. PROIBIDO dividir a imagem em seções ou quadrantes. A imagem INTEIRA deve ser UMA CENA ÚNICA, CONTÍNUA e COESA que preenche todo o canvas de ponta a ponta. Se precisar mostrar múltiplos elementos, componha-os organicamente em UMA ÚNICA CENA — NUNCA em grades separadas.`;
+    const antiAiAesthetic = `
+ESTÉTICA ANTI-IA (PRIORIDADE CRÍTICA — LEIA COM ATENÇÃO):
+O resultado DEVE parecer um post criado por um designer humano profissional em Photoshop/Illustrator, NÃO uma imagem gerada por IA.
+PROIBIDO — sinais típicos de IA que DESTROEM a qualidade:
+- Cores SUPER-SATURADAS ou neon exageradas sem propósito — use paletas REALISTAS e COESAS como um diretor de arte faria.
+- Iluminação ARTIFICIAL e UNIFORME demais — use iluminação DIRECIONAL com sombras reais, como uma foto de estúdio ou editorial.
+- Texturas LISAS e PLÁSTICAS (pele de boneco, superfícies sem grão) — adicione TEXTURA NATURAL: grão fotográfico sutil, imperfeições reais, profundidade de campo.
+- Composições SIMÉTRICAS PERFEITAS e GENÉRICAS — use composição ASSIMÉTRICA intencional como design editorial profissional.
+- Tipografia com KERNING IRREGULAR ou letras levemente deformadas — cada letra DEVE ser PERFEITA e LEGÍVEL como se fosse uma fonte vetorial real.
+- Texto com ERROS ORTOGRÁFICOS, palavras inventadas ou letras faltando — VERIFIQUE cada palavra antes de renderizar.
+- Gradientes GENÉRICOS roxo-azul-rosa que parecem "filtro de IA" — use gradientes INTENCIONAIS e SOFISTICADOS.
+- Mãos com dedos a mais/menos ou proporções estranhas.
+- Elementos flutuando sem contexto ou gravidade.
+
+OBRIGATÓRIO — características de um post PROFISSIONAL REAL:
+- Hierarquia visual CLARA: um elemento dominante, elementos de suporte, espaço negativo intencional.
+- Paleta de cores RESTRITA (3-4 cores máx) com PROPÓSITO — cada cor tem uma função (fundo, texto, destaque, acento).
+- Tipografia com PESO e CONTRASTE: título BOLD grande + corpo leve pequeno. Nunca tudo do mesmo tamanho.
+- ESPAÇAMENTO GENEROSO entre elementos (breathing room) — nunca amontoado.
+- ALINHAMENTO PRECISO: elementos alinhados em um grid invisível, como design editorial de revista.
+- Imagens/fotos com TRATAMENTO profissional: color grading coeso, contraste calibrado, profundidade de campo.
+- O post deve parecer que faz parte de um FEED COESO de Instagram de uma marca premium.`;
+
+    textPrompt += `\n\n${antiAiAesthetic}\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM/MOSAICO: Cada card DEVE ser UMA ÚNICA composição visual contínua e UNIFICADA. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens, sub-quadros ou painéis lado a lado. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. PROIBIDO dividir a imagem em seções ou quadrantes. A imagem INTEIRA deve ser UMA CENA ÚNICA, CONTÍNUA e COESA que preenche todo o canvas de ponta a ponta. Se precisar mostrar múltiplos elementos, componha-os organicamente em UMA ÚNICA CENA — NUNCA em grades separadas.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity

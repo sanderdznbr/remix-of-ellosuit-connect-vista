@@ -3174,7 +3174,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         try {
           const cleanTopic = sanitizeAnimatedTopic(topic) || cleanMentionsFromTopic(topic).trim();
           const { data: outlineData, error: outlineError } = await supabase.functions.invoke('generate-carousel', {
-            body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel' },
+            body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel', ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}) },
           });
           if (!outlineError && outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
             effectiveCardTexts = outlineData.outline;

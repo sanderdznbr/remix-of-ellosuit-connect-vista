@@ -310,6 +310,19 @@ const GalleryPicker: React.FC<GalleryPickerProps> = ({ open, onClose, onSelectFi
               </div>
             )}
           </div>
+
+          {/* Sticky confirm footer */}
+          {isSelectingFiles && selectedFileIds.size > 0 && (
+            <div className="px-4 py-3 border-t border-white/[0.06]">
+              <button
+                onClick={confirmSelection}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all cursor-pointer"
+                style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' }}
+              >
+                Confirmar {selectedFileIds.size} foto(s)
+              </button>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

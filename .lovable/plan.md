@@ -1,145 +1,57 @@
 
+# 🎬 Carrossel Animado — Plano de Integração
 
-# Wizard Redesign: Modo Simples + Avancado com Edicao de Texto por Card
+## Conceito
+Novo modo no wizard onde a IA gera código HTML/CSS animado para cada card do carrossel, que é renderizado como vídeo no browser do usuário.
 
-## Resumo
+## Arquitetura
 
-Reorganizar o wizard de criacao em dois modos: **Simples** (fluxo rapido, menos etapas) e **Avancado** (controle total, incluindo edicao de texto por card). Ambos os modos suportam Post Unico e Carrossel, com a nova funcionalidade de definir o texto exato de cada card antes da geracao.
+### 1. Nova Edge Function: `generate-animated-card`
+- Recebe: tema, estilo, número do card, branding (cores, logo, fontes)
+- Usa Lovable AI para gerar código HTML/CSS completo com animações (keyframes, transitions)
+- Retorna: código HTML/CSS autocontido para cada card
+- A IA é instruída a criar animações de 3-5 segundos em formato 4:5 (1080x1350)
 
----
+### 2. Novo componente: `AnimatedCardRenderer`
+- Renderiza o HTML/CSS em um iframe invisível (sandboxed)
+- Usa **MediaRecorder API** + `canvas.captureStream()` para gravar como WebM
+- Cada card gera um vídeo de ~4 segundos
+- Processamento 100% client-side (sem servidor de renderização)
 
-## Fluxo Proposto
+### 3. Integração no Wizard
+- Novo modo "Animado" no `StepMode` (ao lado de Simples/Avançado/Extreme)
+- Reutiliza etapas existentes: Tópico, Cores, Branding
+- Etapa especial de "Estilo de Animação" (fade-in, slide, bounce, etc.)
+- Na geração, mostra preview em tempo real de cada card sendo animado
 
-### Tela Inicial do Wizard (Step 0) - NOVO
+### 4. Fluxo do Usuário
+1. Escolhe modo "Animado" ✨
+2. Define tópico (reutiliza StepTopic)
+3. Escolhe estilo de animação (novo step)
+4. Define branding (reutiliza StepPersonalization)
+5. Gera → IA cria HTML/CSS para cada card
+6. Preview animado → usuário vê cada card rodando
+7. Download como vídeos MP4/WebM individuais ou ZIP
 
-Antes de comecar, o usuario escolhe:
+### 5. Prompt Engineering (IA)
+A IA recebe instruções para gerar:
+- HTML/CSS puro (sem JS, sem libs externas)
+- Animações via `@keyframes` CSS
+- Duração fixa de 4 segundos
+- Canvas de 1080x1350px (4:5)
+- Tipografia, cores e logo integrados
+- Estilo visual coerente entre todos os cards
 
-```text
-+------------------------------------------+
-|  Como voce quer criar?                    |
-|                                           |
-|  [  Simples  ]    [  Avancado  ]          |
-|  Rapido, a IA       Controle total:       |
-|  cuida de tudo      textos, rosto,        |
-|                     produto, cores...     |
-+------------------------------------------+
-```
+### 6. Limitações e Considerações
+- **MediaRecorder** gera WebM (Chrome) — conversão para MP4 pode precisar de ffmpeg.wasm
+- Cards complexos podem ficar pesados no mobile
+- Primeira versão: apenas desktop
+- Créditos: custo maior que carrossel estático (1 chamada AI por card)
 
-Um toggle/chip no topo do wizard que pode ser alternado a qualquer momento.
-
-### Modo Simples (4 etapas)
-
-| Step | Conteudo |
-|------|----------|
-| 0 | Tema + Formato (Post Unico / Carrossel + slider de quantidade) |
-| 1 | Rosto (opcional, com botao "Pular") |
-| 2 | Logo + Marca (upload logo, nome da marca) |
-| 3 | Velocidade (Flash vs Pro) -> Gerar |
-
-- Cores, fontes e estilo sao aplicados automaticamente (paleta aleatoria ou da marca)
-- Sem etapa de produto, sem referencias de marca, sem cores/fontes manuais
-- Web search fica ativo por padrao (sem toggle visivel)
-
-### Modo Avancado (manter as 11 etapas atuais + nova etapa de texto por card)
-
-| Step | Conteudo |
-|------|----------|
-| 0 | Tema (com engrenagem de texto exato e toggle de web search) |
-| 1 | Formato (Post Unico / Carrossel + slider) |
-| 2 | Imagens da Web (skip automatico se desativado) |
-| 3 | Rosto (multi-pessoa, ate 4) |
-| 4 | Produto |
-| 5 | Referencias de Marca |
-| 6 | Estilo (presets / marketplace) |
-| 7 | Cores |
-| 8 | Fontes |
-| 9 | **Roteiro por Card** (NOVO) |
-| 10 | Logo + Marca |
-| 11 | Velocidade -> Gerar |
-
-### Nova Etapa: Roteiro por Card (Step 9 no modo avancado)
-
-```text
-+------------------------------------------+
-|  Defina o texto de cada card              |
-|  (opcional - a IA preenche o que faltar)  |
-|                                           |
-|  Card 1 (Capa)                            |
-|  [____________________________]           |
-|  [____________________________]           |
-|                                           |
-|  Card 2                                   |
-|  [____________________________]           |
-|  [____________________________]           |
-|                                           |
-|  ...                                      |
-|                                           |
-|  [+ Preencher todos com IA]              |
-+------------------------------------------+
-```
-
-- Cada card tera campos para titulo e corpo
-- Campos pre-preenchidos pela IA (via prompt) OU deixados vazios para a IA decidir
-- Botao "Preencher com IA" gera sugestoes para todos os cards de uma vez
-- O texto definido aqui sera enviado ao `generate-carousel` como `manualCardTexts`
-- No post unico, mostra apenas 1 card com titulo, subtitulo e CTA
-
----
-
-## Detalhes Tecnicos
-
-### 1. Novo estado `wizardMode`
-
-```typescript
-const [wizardMode, setWizardMode] = useState<'simple' | 'advanced'>('simple');
-```
-
-### 2. Mapeamento de steps dinamico
-
-Criar duas constantes de steps:
-
-```typescript
-const SIMPLE_STEPS = ['Tema', 'Rosto', 'Logo', 'Velocidade'];
-const ADVANCED_STEPS = ['Tema', 'Formato', 'Fotos', 'Rosto', 'Produto', 'Marca', 'Estilo', 'Cores', 'Fontes', 'Roteiro', 'Logo', 'Velocidade'];
-```
-
-A constante `WIZARD_STEPS` sera derivada do `wizardMode`.
-
-### 3. Navegacao condicional
-
-A logica de `next`/`prev` no wizard usara o array de steps correto. No modo simples, o step 0 (Tema) incluira o seletor de formato embutido (Post Unico/Carrossel + slider), eliminando a necessidade de um step separado.
-
-### 4. Novo estado `manualCardTexts`
-
-```typescript
-const [manualCardTexts, setManualCardTexts] = useState<
-  { title?: string; body?: string }[]
->([]);
-```
-
-### 5. Novo componente `StepCardTexts.tsx`
-
-- Recebe `cardCount`, `contentMode`, `manualCardTexts`, `setManualCardTexts`
-- Renderiza um accordion/lista de cards com campos de titulo e corpo
-- Botao "Preencher com IA" chama `generate-carousel` com action `generate-outline`
-- Cada card editavel individualmente
-
-### 6. Integracao com geracao
-
-No `generateContent()`, enviar `manualCardTexts` ao `generate-carousel` edge function. O backend usara esses textos como base, preenchendo apenas os que estiverem vazios.
-
-### 7. Toggle simples/avancado
-
-Um chip no canto superior direito do wizard que permite alternar entre modos a qualquer momento. Ao mudar de avancado para simples, os dados preenchidos sao preservados (nao resetados).
-
----
-
-## Arquivos a Criar/Editar
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/Carousel/wizard/StepCardTexts.tsx` | **Criar** - novo componente de roteiro por card |
-| `src/components/Carousel/CarouselGenerator.tsx` | **Editar** - adicionar wizardMode, manualCardTexts, logica de steps condicional, toggle de modo |
-| `src/components/Carousel/wizard/StepTopic.tsx` | **Editar** - no modo simples, embutir seletor de formato |
-| `supabase/functions/generate-carousel/index.ts` | **Editar** - aceitar `manualCardTexts` e usa-los na geracao |
-
+## Etapas de Implementação
+1. ✅ Criar edge function `generate-animated-card`
+2. ✅ Criar componente `AnimatedCardRenderer` (iframe + MediaRecorder)
+3. ✅ Adicionar modo "Animado" no StepMode
+4. ✅ Criar StepAnimationStyle (escolha do tipo de animação)
+5. ✅ Integrar no CarouselGenerator
+6. ✅ Testar com diferentes temas e estilos

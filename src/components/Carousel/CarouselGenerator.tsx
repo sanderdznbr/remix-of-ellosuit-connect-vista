@@ -100,6 +100,8 @@ import StepCardTexts from './wizard/StepCardTexts';
 import StepMode from './wizard/StepMode';
 import StepExtremeVision, { ExtremeAnalysis } from './wizard/StepExtremeVision';
 import StepVisualIdea from './wizard/StepVisualIdea';
+import StepAnimationStyle from './wizard/StepAnimationStyle';
+import AnimatedCardRenderer from './AnimatedCardRenderer';
 import StepExtremeForm from './wizard/StepExtremeForm';
 import StepExtremeResumo from './wizard/StepExtremeResumo';
 import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
@@ -256,7 +258,7 @@ const CarouselGenerator: React.FC = () => {
   const [webFacePosition, setWebFacePosition] = useState<'cover' | 'last' | 'none'>('cover');
 
   // Wizard mode: simple vs advanced
-  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2'>('simple');
+  const [wizardMode, setWizardMode] = useState<'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated'>('simple');
   const [continuousMode, setContinuousMode] = useState(false);
   const [extremeAnalysis, setExtremeAnalysis] = useState<ExtremeAnalysis | null>(null);
   const [extremeVision, setExtremeVision] = useState('');
@@ -269,6 +271,8 @@ const CarouselGenerator: React.FC = () => {
   const [advancedVisualIdea, setAdvancedVisualIdea] = useState('');
   const [tweetConfig, setTweetConfig] = useState<TweetConfig>(DEFAULT_TWEET_CONFIG);
   const [tweet2Config, setTweet2Config] = useState<Tweet2Config>(DEFAULT_TWEET2_CONFIG);
+  const [animationStyle, setAnimationStyle] = useState<'slide-fade' | 'scale-bounce' | 'typewriter' | 'cinematic' | 'kinetic' | 'elegant'>('slide-fade');
+  const [animatedCards, setAnimatedCards] = useState<{ html: string; cardIndex: number; dimensions: { w: number; h: number } }[]>([]);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState(0);
@@ -486,7 +490,8 @@ const CarouselGenerator: React.FC = () => {
   const showTweetProductStep = tweetConfig.photoMode === 'ai';
   const TWEET_STEPS = ['Modo', 'Tweet Config', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(showTweetProductStep ? ['Produto'] : []), 'Roteiro Tweet'];
   const TWEET2_STEPS = ['Modo', 'tweet2', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(tweet2Config.photoMode === 'web' && showFotosWebStep ? ['Fotos'] : []), 'Roteiro Tweet2', ...(tweet2Config.photoMode === 'manual' ? ['Fotos Tweet2'] : [])];
-  const WIZARD_STEPS = wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', 'Velocidade'];
+  const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode
   const modeTheme = wizardMode === 'extreme'
@@ -495,6 +500,8 @@ const CarouselGenerator: React.FC = () => {
     ? { hex: '#DC2626', hexDark: '#B91C1C', rgb: '220,38,38', rgb2: '185,28,28', gradient: 'linear-gradient(135deg, #B91C1C 0%, #EF4444 50%, #DC2626 100%)', tailwind: 'red', loadingColor: '#EF4444' }
     : wizardMode === 'tweet' || wizardMode === 'tweet2'
     ? { hex: '#0EA5E9', hexDark: '#0284C7', rgb: '14,165,233', rgb2: '2,132,199', gradient: 'linear-gradient(135deg, #0284C7 0%, #38BDF8 50%, #0EA5E9 100%)', tailwind: 'sky', loadingColor: '#38BDF8' }
+    : wizardMode === 'animated'
+    ? { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '109,40,217', gradient: 'linear-gradient(135deg, #6D28D9 0%, #A78BFA 50%, #8B5CF6 100%)', tailwind: 'violet', loadingColor: '#A78BFA' }
     : { hex: '#8B5CF6', hexDark: '#6D28D9', rgb: '139,92,246', rgb2: '99,102,241', gradient: 'linear-gradient(135deg, #7B50DC 0%, #9B6BFF 50%, #6B3FA0 100%)', tailwind: 'purple', loadingColor: '#A855F7' };
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpg' | 'webp'>('png');
@@ -2992,6 +2999,71 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   // Strip mention tags from topic: (@Title) → Title
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]*)\)/g, '$1').replace(/@(\w+)/g, '$1').replace(/@/g, '');
 
+  // ===== GENERATE ANIMATED CARDS =====
+  const generateAnimatedCards = async () => {
+    if (generationInFlightRef.current) return;
+    generationInFlightRef.current = true;
+    setGenerating(true);
+    setAnimatedCards([]);
+    setTransitionToGenerate(false);
+
+    const dims = postFormat === 'story' ? { w: 1080, h: 1920 } : postFormat === 'square' ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
+    const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
+
+    try {
+      const results: { html: string; cardIndex: number; dimensions: { w: number; h: number } }[] = [];
+      
+      for (let i = 0; i < cardCount; i++) {
+        
+        const cardData = manualCardTexts[i] || {};
+        const payload = {
+          topic: cleanMentionsFromTopic(topic),
+          cardIndex: i,
+          totalCards: cardCount,
+          cardTitle: cardData.title || '',
+          cardBody: cardData.body || '',
+          animationStyle,
+          brandName,
+          bgColor,
+          accentColor,
+          textColor,
+          fontFamily: ['Playfair Display','Merriweather','Lora','DM Serif Display','Cormorant Garamond','Montserrat','Poppins','Bebas Neue','Oswald','Raleway','Inter','Space Grotesk','Sora','Outfit','Clash Display','Crimson Text'][selectedFont] || 'Playfair Display',
+          logoUrl,
+          format: formatStr,
+        };
+
+        try {
+          const data = await resilientInvoke('generate-animated-card', payload);
+          if (data?.html) {
+            results.push({ html: data.html, cardIndex: i, dimensions: dims });
+            setAnimatedCards([...results]);
+          }
+        } catch (err: any) {
+          console.error(`Error generating animated card ${i}:`, err);
+          sonnerToast.error(`Erro no card ${i + 1}: ${err.message}`);
+        }
+
+        // Small delay between cards to avoid rate limiting
+        if (i < cardCount - 1) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      if (results.length === 0) {
+        sonnerToast.error('Nenhum card animado foi gerado');
+      } else {
+        sonnerToast.success(`${results.length} cards animados gerados!`);
+      }
+    } catch (err: any) {
+      console.error('generateAnimatedCards error:', err);
+      sonnerToast.error(err.message || 'Erro ao gerar cards animados');
+    } finally {
+      setGenerating(false);
+      // progress done
+      generationInFlightRef.current = false;
+    }
+  };
+
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');
     console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', contentMode, 'cardCount:', cardCount);
@@ -3005,6 +3077,12 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     console.log('[GENERATE_FLOW] direct state: isRealEstateStyle:', isRealEstateStyle, 'propertyList photos:', propertyList.map(p => p.photos.length));
     console.log('[GENERATE_FLOW] refs: activeMarketplaceStyleRef.is_real_estate:', !!activeMarketplaceStyleRef.current?.is_real_estate, 'propertyListRef photos:', propertyListRef.current.map(p => p.photos.length));
     if (!topic.trim()) { sonnerToast.error('Insira um tópico para gerar'); setTransitionToGenerate(false); return; }
+
+    // === ANIMATED MODE ===
+    if (wizardMode === 'animated') {
+      console.log('[GENERATE_FLOW] Routing to generateAnimatedCards()');
+      return generateAnimatedCards();
+    }
 
     // === SINGLE POST MODE ===
     if (contentMode === 'single-post') {
@@ -7493,6 +7571,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <StepVisualIdea
                         visualIdea={advancedVisualIdea}
                         setVisualIdea={setAdvancedVisualIdea}
+                      />
+                    )}
+                    {currentStepName === 'Animação' && (
+                      <StepAnimationStyle
+                        selected={animationStyle}
+                        onChange={setAnimationStyle}
                       />
                     )}
                     {currentStepName === 'Velocidade' && (

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter } from 'lucide-react';
+import { Zap, SlidersHorizontal, Sparkles, Lock, Twitter, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
-  wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2';
-  setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2') => void;
+  wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated';
+  setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated') => void;
   allowAdvanced?: boolean;
   allowExtreme?: boolean;
   requiredPlanForAdvanced?: string;
@@ -42,6 +42,16 @@ const modes = [
     adminOnly: false,
   },
   {
+    key: 'animated' as const,
+    icon: Film,
+    label: 'Animado',
+    steps: 'HTML/CSS · Cada card vira vídeo',
+    desc: 'A IA cria animações em HTML/CSS e você grava como vídeo',
+    badge: 'NOVO',
+    requiredPlan: 'Growth',
+    adminOnly: false,
+  },
+  {
     key: 'tweet2' as const,
     icon: Twitter,
     label: 'Tweet Post',
@@ -67,12 +77,13 @@ const StepMode: React.FC<Props> = ({
   const isLocked = (key: string) => {
     if (key === 'advanced') return !allowAdvanced;
     if (key === 'extreme') return !allowExtreme;
+    if (key === 'animated') return !allowExtreme; // same as extreme
     return false;
   };
 
   const getRequiredPlan = (key: string) => {
     if (key === 'advanced') return requiredPlanForAdvanced;
-    if (key === 'extreme') return requiredPlanForExtreme;
+    if (key === 'extreme' || key === 'animated') return requiredPlanForExtreme;
     return '';
   };
 
@@ -89,7 +100,16 @@ const StepMode: React.FC<Props> = ({
           const selected = wizardMode === m.key;
           const isExtreme = m.key === 'extreme';
           const isTweet = m.key === 'tweet2';
+          const isAnimated = m.key === 'animated';
           const locked = isLocked(m.key);
+          const getColor = () => {
+            if (isExtreme) return 'orange';
+            if (isAnimated) return 'violet';
+            if (m.key === 'advanced') return 'red';
+            if (isTweet) return 'sky';
+            return 'purple';
+          };
+          const color = getColor();
           return (
             <button
               key={m.key}
@@ -104,29 +124,25 @@ const StepMode: React.FC<Props> = ({
                 locked
                   ? 'bg-white/[0.01] border-white/[0.04] opacity-60 cursor-pointer'
                   : selected
-                  ? isExtreme
-                    ? 'bg-orange-500/[0.08] border-orange-500/40'
-                    : m.key === 'advanced'
-                    ? 'bg-red-500/[0.08] border-red-500/40'
-                    : isTweet
-                    ? 'bg-sky-500/[0.08] border-sky-500/40'
-                    : 'bg-purple-500/[0.08] border-purple-500/40'
+                  ? `bg-${color}-500/[0.08] border-${color}-500/40`
                   : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
               }`}
+              style={selected && !locked ? { 
+                backgroundColor: `rgba(${isExtreme ? '249,115,22' : isAnimated ? '139,92,246' : m.key === 'advanced' ? '220,38,38' : isTweet ? '14,165,233' : '139,92,246'}, 0.08)`,
+                borderColor: `rgba(${isExtreme ? '249,115,22' : isAnimated ? '139,92,246' : m.key === 'advanced' ? '220,38,38' : isTweet ? '14,165,233' : '139,92,246'}, 0.4)`,
+              } : undefined}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                locked
-                  ? 'bg-white/[0.03]'
-                  : selected
-                   ? isExtreme ? 'bg-orange-500/20' : m.key === 'advanced' ? 'bg-red-500/20' : isTweet ? 'bg-sky-500/20' : 'bg-purple-500/20'
-                  : 'bg-white/[0.04]'
-              }`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center`}
+                style={{
+                  backgroundColor: locked ? 'rgba(255,255,255,0.03)' : selected ? `rgba(${isExtreme ? '249,115,22' : isAnimated ? '139,92,246' : m.key === 'advanced' ? '220,38,38' : isTweet ? '14,165,233' : '139,92,246'}, 0.2)` : 'rgba(255,255,255,0.04)',
+                }}
+              >
                 {locked ? (
                   <Lock className="h-5 w-5 text-white/20" />
                 ) : (
                   <Icon className={`h-6 w-6 ${
                     selected
-                      ? isExtreme ? 'text-orange-400' : m.key === 'advanced' ? 'text-red-400' : isTweet ? 'text-sky-400' : 'text-purple-400'
+                      ? isExtreme ? 'text-orange-400' : isAnimated ? 'text-violet-400' : m.key === 'advanced' ? 'text-red-400' : isTweet ? 'text-sky-400' : 'text-purple-400'
                       : 'text-white/30'
                   }`} />
                 )}

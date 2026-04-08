@@ -1,12 +1,13 @@
 // Shared wizard accent theme utility
 // Used by all wizard step components to apply mode-specific colors
 
-export type WizardAccentTheme = 'purple' | 'red' | 'orange' | 'sky';
+export type WizardAccentTheme = 'purple' | 'red' | 'orange' | 'sky' | 'violet';
 
-export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2'): WizardAccentTheme {
+export function getAccentTheme(wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated'): WizardAccentTheme {
   if (wizardMode === 'extreme') return 'orange';
   if (wizardMode === 'advanced') return 'red';
   if (wizardMode === 'tweet' || wizardMode === 'tweet2') return 'sky';
+  if (wizardMode === 'animated') return 'violet';
   return 'purple';
 }
 
@@ -120,6 +121,33 @@ const themeMap = {
     hex: '#0EA5E9',
     rgb: '14,165,233',
     rgbaLight: 'rgba(14,165,233,0.15)',
+  },
+  violet: {
+    bg: 'bg-violet-500',
+    bgLight: 'bg-violet-500/20',
+    bgLighter: 'bg-violet-500/15',
+    bgSubtle: 'bg-violet-500/[0.08]',
+    bgFaint: 'bg-violet-500/[0.05]',
+    border: 'border-violet-500/40',
+    borderLight: 'border-violet-500/30',
+    borderSubtle: 'border-violet-500/20',
+    text: 'text-violet-400',
+    textLight: 'text-violet-300',
+    textLighter: 'text-violet-200',
+    ring: 'ring-violet-500/50',
+    ringFull: 'ring-violet-500',
+    accent: 'accent-violet-500',
+    shadow: 'shadow-[0_0_12px_rgba(139,92,246,0.15)]',
+    shadowStrong: 'shadow-[0_0_12px_rgba(139,92,246,0.4)]',
+    gradient: 'from-violet-600 to-purple-600',
+    gradientHover: 'hover:from-violet-500 hover:to-purple-500',
+    spinnerBorder: 'border-violet-500/30',
+    spinnerTop: 'border-t-violet-500',
+    dotBg: 'bg-violet-500/60',
+    dotBgActive: 'bg-violet-400',
+    hex: '#8B5CF6',
+    rgb: '139,92,246',
+    rgbaLight: 'rgba(139,92,246,0.15)',
   },
 } as const;
 

@@ -3034,6 +3034,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           logoUrl,
           logoPosition,
           backgroundImageUrl: animatedBgImageUrl || undefined,
+          generateAiBg: generateAiBg && !animatedBgImageUrl,
+          generateAiMockup,
           format: formatStr,
         };
 

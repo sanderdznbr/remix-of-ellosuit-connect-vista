@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Download, Play, RotateCcw, Home, Sparkles } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import {
+  captureAnimatedNodeFrame,
+  createVideoSaveTarget,
+  getEmbeddedFontCss,
+  type SaveFileHandleLike,
+  triggerBlobDownload,
+  writeBlobToVideoFile,
+} from './animatedFrameCapture';
 
 interface AnimatedCard {
   html: string;
@@ -19,6 +26,7 @@ interface Props {
 const RECORD_DURATION = 5000;
 const CAPTURE_FPS = 18;
 const FRAME_INTERVAL = 1000 / CAPTURE_FPS;
+const CAPTURE_SCALE = 2;
 
 const AnimatedCardRenderer: React.FC<Props> = ({
   cards,
@@ -53,6 +61,16 @@ const AnimatedCardRenderer: React.FC<Props> = ({
 
   const restartPreview = useCallback((cardIndex: number) => {
     setPreviewNonce((prev) => ({ ...prev, [cardIndex]: (prev[cardIndex] ?? 0) + 1 }));
+  }, []);
+
+  const getIframeCaptureNode = useCallback((iframe: HTMLIFrameElement) => {
+    const doc = iframe.contentDocument;
+    if (!doc) throw new Error('Não foi possível acessar o preview do card');
+
+    const node = (doc.body || doc.documentElement) as HTMLElement | null;
+    if (!node) throw new Error('Não foi possível localizar o conteúdo do card para gravação');
+
+    return { doc, node };
   }, []);
 
   const waitForIframeReady = useCallback(async (iframe: HTMLIFrameElement) => {
@@ -123,19 +141,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     });
   }, []);
 
-  const saveBlob = useCallback((blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.rel = 'noopener';
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }, []);
-
-  const recordCard = useCallback(async (cardIndex: number) => {
+  const recordCard = useCallback(async (cardIndex: number, options?: { promptSave?: boolean }) => {
     const card = cards[cardIndex];
     if (!card) return;
 
@@ -144,16 +150,24 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     setRecordingProgress(0);
 
     const { w, h } = card.dimensions;
+    const filename = `card-${cardIndex + 1}.webm`;
     let cleanup = () => {};
     let mediaRecorder: MediaRecorder | null = null;
+    let saveTarget: SaveFileHandleLike | null = null;
 
     try {
+      if (options?.promptSave !== false) {
+        try {
+          saveTarget = await createVideoSaveTarget(filename);
+        } catch (error) {
+          console.error('Save picker error:', error);
+        }
+      }
+
       const recordingFrame = await createRecordingIframe(card);
       cleanup = recordingFrame.cleanup;
 
-      const targetDoc = recordingFrame.iframe.contentDocument;
-      const targetNode = targetDoc?.documentElement as HTMLElement | null;
-      if (!targetDoc || !targetNode) throw new Error('Preview do card não disponível para gravação');
+      const { doc: targetDoc, node: targetNode } = getIframeCaptureNode(recordingFrame.iframe);
 
       const canvas = document.createElement('canvas');
       canvas.width = w;
@@ -182,6 +196,23 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         mediaRecorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
       });
 
+      const computedBackground = targetDoc.defaultView?.getComputedStyle(targetNode).backgroundColor;
+      const captureBackground = computedBackground && computedBackground !== 'rgba(0, 0, 0, 0)'
+        ? computedBackground
+        : undefined;
+      const fontEmbedCSS = await getEmbeddedFontCss(targetNode);
+      const captureFrame = async () => await captureAnimatedNodeFrame(targetNode, {
+        width: w,
+        height: h,
+        backgroundColor: captureBackground,
+        fontEmbedCSS,
+        scale: CAPTURE_SCALE,
+      });
+
+      const firstFrame = await captureFrame();
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(firstFrame, 0, 0, w, h);
+
       mediaRecorder.start(250);
 
       const startedAt = performance.now();
@@ -190,20 +221,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         const elapsed = frameStartedAt - startedAt;
         setRecordingProgress((elapsed / RECORD_DURATION) * 100);
 
-        const frameCanvas = await html2canvas(targetNode, {
-          width: w,
-          height: h,
-          windowWidth: w,
-          windowHeight: h,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          scale: 1,
-          foreignObjectRendering: false,
-          logging: false,
-          scrollX: 0,
-          scrollY: 0,
-        });
+        const frameCanvas = await captureFrame();
 
         ctx.clearRect(0, 0, w, h);
         ctx.drawImage(frameCanvas, 0, 0, w, h);
@@ -212,20 +230,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         if (remaining > 0) await delay(remaining);
       }
 
-      const finalFrame = await html2canvas(targetNode, {
-        width: w,
-        height: h,
-        windowWidth: w,
-        windowHeight: h,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        scale: 1,
-        foreignObjectRendering: false,
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-      });
+      const finalFrame = await captureFrame();
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(finalFrame, 0, 0, w, h);
 
@@ -235,7 +240,18 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const blob = await recordingPromise;
       if (!blob.size) throw new Error('O vídeo foi gerado vazio');
       updateRecordedUrl(cardIndex, blob);
-      saveBlob(blob, `card-${cardIndex + 1}.webm`);
+
+      if (saveTarget) {
+        try {
+          await writeBlobToVideoFile(saveTarget, blob);
+        } catch (error) {
+          console.error('File save error:', error);
+          triggerBlobDownload(blob, filename);
+        }
+      } else {
+        triggerBlobDownload(blob, filename);
+      }
+
       onRecordComplete?.(cardIndex, blob);
       setRecordingProgress(100);
     } catch (error) {
@@ -243,14 +259,15 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     } finally {
       cleanup();
       setRecording(false);
+      setRecordingProgress(0);
     }
-  }, [cards, createRecordingIframe, onRecordComplete, saveBlob, updateRecordedUrl]);
+  }, [cards, createRecordingIframe, getIframeCaptureNode, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);
     try {
       for (let i = 0; i < cards.length; i++) {
-        await recordCard(i);
+        await recordCard(i, { promptSave: false });
         if (i < cards.length - 1) await delay(250);
       }
     } finally {
@@ -355,7 +372,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         )}
 
         <button
-          onClick={() => recordCard(activeCard)}
+          onClick={() => recordCard(activeCard, { promptSave: true })}
           disabled={recording || isRegeneratingCurrent}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-30 cursor-pointer"
           style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: 'white' }}

@@ -3030,6 +3030,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           textColor,
           fontFamily: ['Playfair Display','Merriweather','Lora','DM Serif Display','Cormorant Garamond','Montserrat','Poppins','Bebas Neue','Oswald','Raleway','Inter','Space Grotesk','Sora','Outfit','Clash Display','Crimson Text'][selectedFont] || 'Playfair Display',
           logoUrl,
+          logoPosition,
+          backgroundImageUrl: animatedBgImageUrl || undefined,
           format: formatStr,
         };
 

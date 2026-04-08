@@ -2876,12 +2876,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
           // Draw logo with smart color adaptation
           const smartDrawLogo = async (canvasCtx: CanvasRenderingContext2D, canvasW: number, canvasH: number, primaryLogo: string, darkLogo: string | null, pos: string) => {
-            const pad = Math.max(56, Math.round(Math.min(canvasW, canvasH) * 0.065));
+            const probeBounds = getLogoOverlayBounds(canvasW, canvasH, 220, 90, pos);
             // Sample background luminance at logo position
-            let sampleX = pad + 40, sampleY = pad + 20;
-            if (pos.includes('right')) sampleX = canvasW - pad - 40;
-            if (pos.includes('bottom')) sampleY = canvasH - pad - 20;
-            if (pos.includes('center')) sampleX = canvasW / 2;
+            let sampleX = Math.round(probeBounds.x + probeBounds.width / 2), sampleY = Math.round(probeBounds.y + probeBounds.height / 2);
             const pixel = canvasCtx.getImageData(sampleX, sampleY, 1, 1).data;
             const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
             const bgIsDark = lum < 0.45;
@@ -2895,14 +2892,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
             })();
             const logoImg = await loadImg(logoB64);
-            const maxLW = Math.min(170, canvasW * 0.18), maxLH = Math.min(72, canvasH * 0.065);
-            const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-            const lw = logoImg.width * ls, lh = logoImg.height * ls;
-            let lx = pad, ly = pad;
-            if (pos.includes('center')) lx = (canvasW - lw) / 2;
-            if (pos.includes('right')) lx = canvasW - lw - pad;
-            if (pos.includes('middle')) ly = (canvasH - lh) / 2;
-            if (pos.includes('bottom')) ly = canvasH - lh - pad;
+            const bounds = getLogoOverlayBounds(canvasW, canvasH, logoImg.width, logoImg.height, pos);
 
             canvasCtx.save();
             if (needsInvert) {
@@ -2912,7 +2902,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               // On dark bg with no dark variant, brighten
               canvasCtx.filter = 'brightness(0) invert(1)';
             }
-            canvasCtx.drawImage(logoImg, lx, ly, lw, lh);
+            canvasCtx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
             canvasCtx.restore();
           };
 
@@ -4057,10 +4047,6 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           })();
           const logoImg = await loadImg(logoB64);
           const W = cardW, H = cardH;
-          const maxLW = 180, maxLH = 80;
-          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-          const lw = logoImg.width * ls, lh = logoImg.height * ls;
-          const pad = 50;
           const lp = logoPosition || 'top-left';
 
           for (let i = 0; i < updatedCards.length; i++) {
@@ -4072,12 +4058,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
               const ctx = canvas.getContext('2d')!;
               const baseImg = await loadImg(cardImgUrl);
               ctx.drawImage(baseImg, 0, 0, baseImg.width, baseImg.height, 0, 0, W, H);
-              let lx = pad, ly = pad;
-              if (lp.includes('center')) lx = (W - lw) / 2;
-              if (lp.includes('right')) lx = W - lw - pad;
-              if (lp.includes('middle')) ly = (H - lh) / 2;
-              if (lp.includes('bottom')) ly = H - lh - pad;
-              ctx.drawImage(logoImg, lx, ly, lw, lh);
+              const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, lp);
+              ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
               updatedCards[i] = { ...updatedCards[i], imageUrl: canvas.toDataURL('image/jpeg', 0.92) };
             } catch (e) { console.warn('[LOGO_OVERLAY] Card', i, 'failed:', e); }
           }
@@ -5507,17 +5489,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
           })();
           const logoImg = await loadImg(logoB64);
-          const maxLW = 180, maxLH = 80;
-          const ls = Math.min(maxLW / logoImg.width, maxLH / logoImg.height, 1);
-          const lw = logoImg.width * ls, lh = logoImg.height * ls;
-          const pad = 50;
-          let lx = pad, ly = pad;
           const lp = logoPosition || 'top-left';
-          if (lp.includes('center')) lx = (W - lw) / 2;
-          if (lp.includes('right')) lx = W - lw - pad;
-          if (lp.includes('middle')) ly = (H - lh) / 2;
-          if (lp.includes('bottom')) ly = H - lh - pad;
-          ctx.drawImage(logoImg, lx, ly, lw, lh);
+          const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, lp);
+          ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
           newImageUrl = canvas.toDataURL('image/jpeg', 0.92);
           console.log('[REGEN_LOGO] ✅ Logo applied!');
         } catch (logoErr) {

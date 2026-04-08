@@ -1977,6 +1977,61 @@ The image must look like it was shot by a professional photographer or designed 
     }
   };
 
+  // ===== CAPTURE COVER FROM ANIMATED HTML CARD =====
+  const captureAnimatedCover = async (carouselId: string, companyId: string, html: string) => {
+    try {
+      // Create a hidden container, render the HTML, capture with html2canvas
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1080px;height:1350px;overflow:hidden;z-index:-1;';
+      // Create an iframe to isolate styles
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'width:1080px;height:1350px;border:none;';
+      container.appendChild(iframe);
+      document.body.appendChild(container);
+
+      await new Promise<void>((resolve) => {
+        iframe.onload = () => resolve();
+        iframe.srcdoc = html;
+      });
+
+      // Wait for images/fonts to load
+      await new Promise(r => setTimeout(r, 1500));
+
+      const iframeDoc = iframe.contentDocument;
+      if (!iframeDoc?.body) {
+        document.body.removeChild(container);
+        return;
+      }
+
+      const canvas = await html2canvas(iframeDoc.body, {
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        width: 1080,
+        height: 1350,
+      });
+
+      document.body.removeChild(container);
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+      if (!blob) return;
+
+      const fileName = `${companyId}/${carouselId}.jpg`;
+      const { error: uploadError } = await supabase.storage.from('covers').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+        if (urlData?.publicUrl) {
+          const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+          await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
+        }
+      }
+    } catch (err) {
+      console.error('captureAnimatedCover error:', err);
+    }
+  };
+
   // ===== SAVE / LOAD =====
   const saveCarousel = async () => {
     if (!carouselData) return;
@@ -3200,7 +3255,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               };
               const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, logoUrl, logoPosition, logoMode, animationStyle, animatedBgImageUrl, generateAiBg, generateAiMockup, mockupScreenshots: styleScreenshots.map((s) => s.url), mockupDeviceType: styleDeviceType };
               
-              if (currentCarouselIdRef.current) {
+              let effectiveCarouselId = currentCarouselIdRef.current;
+              if (effectiveCarouselId) {
                 await supabase.from('generated_carousels').update({
                   title: topic,
                   topic,
@@ -3208,7 +3264,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                   style_config: styleConfig as any,
                   card_count: results.length,
                   post_format: postFormat,
-                } as any).eq('id', currentCarouselIdRef.current);
+                } as any).eq('id', effectiveCarouselId);
               } else {
                 const { data: inserted } = await supabase.from('generated_carousels').insert({
                   company_id: companyData.company_id,
@@ -3222,7 +3278,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
                 } as any).select('id').single();
                 if (inserted) {
                   setCurrentCarouselId(inserted.id);
+                  effectiveCarouselId = inserted.id;
                 }
+              }
+
+              // Capture cover from the first animated card's HTML
+              if (effectiveCarouselId && results[0]?.html) {
+                captureAnimatedCover(effectiveCarouselId, companyData.company_id, results[0].html).catch((e) => console.error('Animated cover capture failed:', e));
               }
             }
           }
@@ -3316,6 +3378,11 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               card_count: nextAnimatedCards.length,
               post_format: 'animated',
             } as any).eq('id', currentCarouselIdRef.current);
+
+            // Re-capture cover if we regenerated card 0
+            if (cardIndex === 0 && data?.html) {
+              captureAnimatedCover(currentCarouselIdRef.current, companyData.company_id, data.html).catch(() => {});
+            }
           }
         }
       } catch (saveErr) {

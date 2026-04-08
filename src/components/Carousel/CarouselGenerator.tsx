@@ -1997,6 +1997,46 @@ The image must look like it was shot by a professional photographer or designed 
   const loadCarousel = async (item: any) => {
     // CRITICAL: Set ID FIRST to prevent auto-save from creating a duplicate INSERT
     setCurrentCarouselId(item.id);
+    if (item.post_format === 'animated') {
+      const sc = item.style_config || {};
+      const restoredAnimatedCards = Array.isArray(item.carousel_data?.cards)
+        ? item.carousel_data.cards
+            .filter((card: any) => card?.html)
+            .map((card: any, index: number) => ({
+              html: card.html,
+              cardIndex: typeof card.cardIndex === 'number' ? card.cardIndex : index,
+              dimensions: card.dimensions || FORMAT_DIMENSIONS.portrait,
+            }))
+        : [];
+
+      setWizardMode('animated');
+      setAnimatedCards(restoredAnimatedCards);
+      setManualCardTexts(
+        Array.isArray(item.carousel_data?.cards)
+          ? item.carousel_data.cards.map((card: any) => ({
+              title: card?.title || '',
+              body: card?.body || '',
+            }))
+          : []
+      );
+      setAnimationStyle(sc.animationStyle || item.carousel_data?.animationStyle || 'slide-fade');
+      setAnimatedBgImageUrl(sc.animatedBgImageUrl || '');
+      setGenerateAiBg(!!sc.generateAiBg);
+      setGenerateAiMockup(!!sc.generateAiMockup);
+      setStyleDeviceType(sc.mockupDeviceType || 'mobile');
+      setStyleScreenshots(
+        Array.isArray(sc.mockupScreenshots)
+          ? sc.mockupScreenshots
+              .filter((url: string) => !!url)
+              .map((url: string) => ({ url, thumb: url, file: new File([], 'restored-screenshot') }))
+          : []
+      );
+      setShowWelcome(false);
+      setShowHistory(false);
+      setActiveCardIndex(0);
+      return;
+    }
+
     lastSavedDataRef.current = JSON.stringify({ cards: (item.carousel_data?.cards || []).map((c: any) => ({ ...c })), title: item.carousel_data?.title });
     setCarouselData(item.carousel_data);
     setTopic(item.topic);

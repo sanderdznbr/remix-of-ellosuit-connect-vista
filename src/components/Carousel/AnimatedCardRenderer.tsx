@@ -123,6 +123,18 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     });
   }, []);
 
+  const saveBlob = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }, []);
+
   const recordCard = useCallback(async (cardIndex: number) => {
     const card = cards[cardIndex];
     if (!card) return;
@@ -221,7 +233,9 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       stream.getTracks().forEach((track) => track.stop());
 
       const blob = await recordingPromise;
+      if (!blob.size) throw new Error('O vídeo foi gerado vazio');
       updateRecordedUrl(cardIndex, blob);
+      saveBlob(blob, `card-${cardIndex + 1}.webm`);
       onRecordComplete?.(cardIndex, blob);
       setRecordingProgress(100);
     } catch (error) {
@@ -230,7 +244,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       cleanup();
       setRecording(false);
     }
-  }, [cards, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
+  }, [cards, createRecordingIframe, onRecordComplete, saveBlob, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);
@@ -250,7 +264,10 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = `card-${cardIndex + 1}.webm`;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
     anchor.click();
+    document.body.removeChild(anchor);
   }, [recordedVideos]);
 
   const downloadAll = useCallback(() => {

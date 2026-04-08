@@ -135,8 +135,9 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
     setImporting(true);
     try {
       const filesToImport: { name: string; url: string; type: string }[] = [];
+      const scopedBase = getUserScopedPath(currentBucket, fullPath);
       for (const name of selected) {
-        const filePath = fullPath ? `${fullPath}/${name}` : name;
+        const filePath = scopedBase ? `${scopedBase}/${name}` : name;
         const { data: { publicUrl } } = supabase.storage.from(currentBucket).getPublicUrl(filePath);
         const item = items.find(i => i.name === name);
         const mimetype = item?.metadata?.mimetype || '';
@@ -157,7 +158,8 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
 
   const getFileUrl = (name: string) => {
     if (!currentBucket) return '';
-    const filePath = fullPath ? `${fullPath}/${name}` : name;
+    const scopedBase = getUserScopedPath(currentBucket, fullPath);
+    const filePath = scopedBase ? `${scopedBase}/${name}` : name;
     return supabase.storage.from(currentBucket).getPublicUrl(filePath).data.publicUrl;
   };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ export const POST_FORMAT_OPTIONS = [
   { value: 'portrait' as PostFormat, label: 'Post Retrato', sublabel: '4:5 (1080×1350)', icon: RectangleVertical, w: 1080, h: 1350 },
   { value: 'square' as PostFormat, label: 'Post Quadrado', sublabel: '1:1 (1080×1080)', icon: Square, w: 1080, h: 1080 },
   { value: 'story' as PostFormat, label: 'Stories', sublabel: '9:16 (1080×1920)', icon: Smartphone, w: 1080, h: 1920 },
+  { value: 'video' as const, label: 'Vídeo', sublabel: 'Em breve', icon: Film, w: 1080, h: 1920, disabled: true },
 ];
 
 const PLACEHOLDER_SUGGESTIONS = [

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Download, Play, RotateCcw, Home, Sparkles } from 'lucide-react';
+import WebMWriter from 'webm-writer';
 import {
   captureAnimatedNodeFrame,
   createVideoSaveTarget,
@@ -34,8 +35,9 @@ interface EmbeddedAssetMap {
 }
 
 const RECORD_DURATION = 5000;
-const CAPTURE_FPS = 18;
-const FRAME_INTERVAL = 1000 / CAPTURE_FPS;
+const EXPORT_FPS = 60;
+const TOTAL_FRAMES = Math.round((RECORD_DURATION / 1000) * EXPORT_FPS);
+const FRAME_DURATION_MS = 1000 / EXPORT_FPS;
 const CAPTURE_SCALE = 2;
 const CAPTURE_ROOT_CLASS = 'animated-card-capture-root';
 
@@ -431,27 +433,6 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) throw new Error('Falha ao iniciar canvas de gravação');
 
-      const stream = canvas.captureStream(0);
-      const captureTrack = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void };
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-          ? 'video/webm;codecs=vp8'
-          : 'video/webm';
-
-      mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 8_000_000,
-      });
-
-      const chunks: Blob[] = [];
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunks.push(event.data);
-      };
-
-      const recordingPromise = new Promise<Blob>((resolve) => {
-        mediaRecorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
-      });
       const fontEmbedCSS = await getEmbeddedFontCss(targetNode);
       const captureFrame = async () => await captureAnimatedNodeFrame(targetNode, {
         width: w,
@@ -461,44 +442,31 @@ const AnimatedCardRenderer: React.FC<Props> = ({
         scale: CAPTURE_SCALE,
       });
 
-      mediaRecorder.start(250);
-
       const paintFrameToCanvas = (frameCanvas: HTMLCanvasElement) => {
         ctx.fillStyle = captureBackground || '#000000';
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(frameCanvas, 0, 0, w, h);
       };
 
+      const writer = new WebMWriter({
+        quality: 0.95,
+        frameRate: EXPORT_FPS,
+      });
+
       const firstFrame = await captureFrame();
       paintFrameToCanvas(firstFrame);
-      captureTrack.requestFrame?.();
-      await delay(32);
+      writer.addFrame(canvas, FRAME_DURATION_MS);
 
-      const startedAt = performance.now();
-      while (performance.now() - startedAt < RECORD_DURATION) {
-        const frameStartedAt = performance.now();
-        const elapsed = frameStartedAt - startedAt;
-        setRecordingProgress((elapsed / RECORD_DURATION) * 100);
+      for (let frameIndex = 1; frameIndex < TOTAL_FRAMES; frameIndex += 1) {
+        const progress = frameIndex / (TOTAL_FRAMES - 1);
+        setRecordingProgress(progress * 100);
 
         const frameCanvas = await captureFrame();
-
         paintFrameToCanvas(frameCanvas);
-        captureTrack.requestFrame?.();
-
-        const remaining = FRAME_INTERVAL - (performance.now() - frameStartedAt);
-        if (remaining > 0) await delay(remaining);
+        writer.addFrame(canvas, FRAME_DURATION_MS);
       }
 
-      const finalFrame = await captureFrame();
-      paintFrameToCanvas(finalFrame);
-      captureTrack.requestFrame?.();
-
-      await delay(150);
-
-      mediaRecorder.stop();
-
-      const blob = await recordingPromise;
-      stream.getTracks().forEach((track) => track.stop());
+      const blob = await writer.complete();
       if (!blob.size) throw new Error('O vídeo foi gerado vazio');
       updateRecordedUrl(cardIndex, blob);
 
@@ -522,7 +490,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       setRecording(false);
       setRecordingProgress(0);
     }
-  }, [cards, createRecordingContainer, createRecordingIframe, delay, onRecordComplete, updateRecordedUrl]);
+  }, [cards, createRecordingContainer, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Download, Play, RotateCcw, Home, Sparkles } from 'lucide-react';
 import WebMWriter from 'webm-writer';
+import { ArrayBufferTarget, Muxer } from 'webm-muxer';
 import {
   captureAnimatedNodeFrame,
   createVideoSaveTarget,
@@ -38,11 +39,35 @@ interface EmbeddedAssetMap {
   [originalUrl: string]: string;
 }
 
+interface SupportedWebCodecsEncoder {
+  encoderConfig: Omit<VideoEncoderConfig, 'width' | 'height' | 'framerate'>;
+  muxerCodec: 'V_VP8' | 'V_VP9' | 'V_AV1';
+}
+
 const RECORD_DURATION = 5000;
 const FPS_OPTIONS = [25, 30, 60] as const;
 type FpsOption = typeof FPS_OPTIONS[number];
 const CAPTURE_SCALE = 1;
 const CAPTURE_ROOT_CLASS = 'animated-card-capture-root';
+
+const WEB_CODECS_CANDIDATES: SupportedWebCodecsEncoder[] = [
+  {
+    encoderConfig: {
+      codec: 'vp8',
+      bitrate: 8_000_000,
+      latencyMode: 'realtime',
+    },
+    muxerCodec: 'V_VP8',
+  },
+  {
+    encoderConfig: {
+      codec: 'vp09.00.10.08',
+      bitrate: 10_000_000,
+      latencyMode: 'realtime',
+    },
+    muxerCodec: 'V_VP9',
+  },
+];
 
 const AnimatedCardRenderer: React.FC<Props> = ({
   cards,
@@ -441,6 +466,152 @@ const AnimatedCardRenderer: React.FC<Props> = ({
     });
   }, []);
 
+  const getSupportedWebCodecsEncoder = useCallback(async (
+    width: number,
+    height: number,
+    fps: number,
+  ): Promise<SupportedWebCodecsEncoder | null> => {
+    const webCodecsApi = globalThis as typeof globalThis & {
+      VideoEncoder?: typeof VideoEncoder;
+      VideoFrame?: typeof VideoFrame;
+    };
+
+    if (!webCodecsApi.VideoEncoder?.isConfigSupported || !webCodecsApi.VideoFrame) {
+      return null;
+    }
+
+    for (const candidate of WEB_CODECS_CANDIDATES) {
+      try {
+        const config: VideoEncoderConfig = {
+          ...candidate.encoderConfig,
+          width,
+          height,
+          framerate: fps,
+        };
+        const support = await webCodecsApi.VideoEncoder.isConfigSupported(config);
+        if (support.supported) {
+          return {
+            encoderConfig: config,
+            muxerCodec: candidate.muxerCodec,
+          };
+        }
+      } catch {
+        // noop
+      }
+    }
+
+    return null;
+  }, []);
+
+  const encodeWithWebCodecs = useCallback(async (options: {
+    width: number;
+    height: number;
+    fps: number;
+    canvas: HTMLCanvasElement;
+    totalFrames: number;
+    renderFrame: (frameIndex: number) => Promise<void>;
+  }): Promise<Blob | null> => {
+    const webCodecsApi = globalThis as typeof globalThis & {
+      VideoEncoder?: typeof VideoEncoder;
+      VideoFrame?: typeof VideoFrame;
+    };
+
+    const supportedEncoder = await getSupportedWebCodecsEncoder(options.width, options.height, options.fps);
+    if (!supportedEncoder || !webCodecsApi.VideoEncoder || !webCodecsApi.VideoFrame) {
+      return null;
+    }
+
+    const target = new ArrayBufferTarget();
+    const muxer = new Muxer({
+      target,
+      video: {
+        codec: supportedEncoder.muxerCodec,
+        width: options.width,
+        height: options.height,
+        frameRate: options.fps,
+      },
+      firstTimestampBehavior: 'offset',
+    });
+
+    let encodeError: Error | null = null;
+
+    const encoder = new webCodecsApi.VideoEncoder({
+      output: (chunk, meta) => {
+        try {
+          muxer.addVideoChunk(chunk as never, meta as never);
+        } catch (error) {
+          encodeError = error instanceof Error ? error : new Error('Falha ao muxar vídeo');
+        }
+      },
+      error: (error) => {
+        encodeError = error instanceof Error ? error : new Error('Falha ao codificar vídeo');
+      },
+    });
+
+    encoder.configure({
+      ...supportedEncoder.encoderConfig,
+      width: options.width,
+      height: options.height,
+      framerate: options.fps,
+    });
+
+    try {
+      for (let frameIndex = 0; frameIndex < options.totalFrames; frameIndex += 1) {
+        if (encodeError) throw encodeError;
+
+        await options.renderFrame(frameIndex);
+
+        const timestamp = Math.round((frameIndex * 1_000_000) / options.fps);
+        const nextTimestamp = Math.round(((frameIndex + 1) * 1_000_000) / options.fps);
+        const duration = nextTimestamp - timestamp;
+        const frame = new webCodecsApi.VideoFrame(options.canvas, { timestamp, duration });
+
+        encoder.encode(frame, {
+          keyFrame: frameIndex === 0 || frameIndex % options.fps === 0,
+        });
+
+        frame.close();
+
+        if ((frameIndex + 1) % Math.max(options.fps, 1) === 0) {
+          await encoder.flush();
+        }
+      }
+
+      await encoder.flush();
+      if (encodeError) throw encodeError;
+
+      muxer.finalize();
+      return new Blob([target.buffer], { type: 'video/webm' });
+    } finally {
+      try {
+        encoder.close?.();
+      } catch {
+        // noop
+      }
+    }
+  }, [getSupportedWebCodecsEncoder]);
+
+  const encodeWithLegacyWriter = useCallback(async (options: {
+    canvas: HTMLCanvasElement;
+    fps: number;
+    totalFrames: number;
+    renderFrame: (frameIndex: number) => Promise<void>;
+  }) => {
+    const writer = new WebMWriter({
+      quality: 0.95,
+      frameRate: options.fps,
+    });
+
+    const frameDurationMs = 1000 / options.fps;
+
+    for (let frameIndex = 0; frameIndex < options.totalFrames; frameIndex += 1) {
+      await options.renderFrame(frameIndex);
+      writer.addFrame(options.canvas, frameDurationMs);
+    }
+
+    return await writer.complete();
+  }, []);
+
   const recordCard = useCallback(async (cardIndex: number, options?: { promptSave?: boolean }) => {
     const card = cards[cardIndex];
     if (!card) return;
@@ -508,27 +679,34 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       const totalFrames = Math.round((RECORD_DURATION / 1000) * fps);
       const frameDurationMs = 1000 / fps;
 
-      const writer = new WebMWriter({
-        quality: 0.95,
-        frameRate: fps,
-      });
-
-      await animationTimeline.setTime(0);
-      const firstFrame = await captureFrame();
-      paintFrameToCanvas(firstFrame);
-      writer.addFrame(canvas, frameDurationMs);
-
-      for (let frameIndex = 1; frameIndex < totalFrames; frameIndex += 1) {
+      const renderFrame = async (frameIndex: number) => {
         const progress = frameIndex / (totalFrames - 1);
         setRecordingProgress(progress * 100);
 
         await animationTimeline.setTime(frameIndex * frameDurationMs);
         const frameCanvas = await captureFrame();
         paintFrameToCanvas(frameCanvas);
-        writer.addFrame(canvas, frameDurationMs);
+      };
+
+      let blob = await encodeWithWebCodecs({
+        width: w,
+        height: h,
+        fps,
+        canvas,
+        totalFrames,
+        renderFrame,
+      });
+
+      if (!blob) {
+        console.warn('WebCodecs indisponível, usando fallback legada de exportação');
+        blob = await encodeWithLegacyWriter({
+          canvas,
+          fps,
+          totalFrames,
+          renderFrame,
+        });
       }
 
-      const blob = await writer.complete();
       if (!blob.size) throw new Error('O vídeo foi gerado vazio');
       updateRecordedUrl(cardIndex, blob);
 
@@ -552,7 +730,7 @@ const AnimatedCardRenderer: React.FC<Props> = ({
       setRecording(false);
       setRecordingProgress(0);
     }
-  }, [cards, selectedFps, createControlledAnimationTimeline, createRecordingContainer, createRecordingIframe, onRecordComplete, updateRecordedUrl]);
+  }, [cards, selectedFps, createControlledAnimationTimeline, createRecordingContainer, createRecordingIframe, encodeWithLegacyWriter, encodeWithWebCodecs, onRecordComplete, updateRecordedUrl]);
 
   const recordAllCards = useCallback(async () => {
     setRecordingAll(true);

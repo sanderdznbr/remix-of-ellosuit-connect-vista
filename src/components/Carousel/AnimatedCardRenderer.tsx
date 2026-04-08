@@ -40,7 +40,7 @@ interface EmbeddedAssetMap {
 }
 
 interface SupportedWebCodecsEncoder {
-  encoderConfig: VideoEncoderConfig;
+  encoderConfig: Omit<VideoEncoderConfig, 'width' | 'height' | 'framerate'>;
   muxerCodec: 'V_VP8' | 'V_VP9' | 'V_AV1';
 }
 

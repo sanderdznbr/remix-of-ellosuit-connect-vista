@@ -3050,9 +3050,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           sonnerToast.error(`Erro no card ${i + 1}: ${err.message}`);
         }
 
-        // Small delay between cards to avoid rate limiting
+        // Delay between cards — longer when generating AI images
+        const hasAiImages = (generateAiBg && !animatedBgImageUrl) || generateAiMockup;
         if (i < cardCount - 1) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, hasAiImages ? 3000 : 1500));
         }
       }
 

@@ -2999,6 +2999,72 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   // Strip mention tags from topic: (@Title) → Title
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]*)\)/g, '$1').replace(/@(\w+)/g, '$1').replace(/@/g, '');
 
+  // ===== GENERATE ANIMATED CARDS =====
+  const generateAnimatedCards = async () => {
+    if (generationInFlightRef.current) return;
+    generationInFlightRef.current = true;
+    setGenerating(true);
+    setAnimatedCards([]);
+    setTransitionToGenerate(false);
+
+    const dims = postFormat === '9:16' ? { w: 1080, h: 1920 } : postFormat === '1:1' ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
+    const formatStr = postFormat === '9:16' ? '9:16' : postFormat === '1:1' ? '1:1' : '4:5';
+
+    try {
+      const results: { html: string; cardIndex: number; dimensions: { w: number; h: number } }[] = [];
+      
+      for (let i = 0; i < cardCount; i++) {
+        setProgress(Math.round(((i) / cardCount) * 100));
+        
+        const cardData = manualCardTexts[i] || {};
+        const payload = {
+          topic: cleanMentionsFromTopic(topic),
+          cardIndex: i,
+          totalCards: cardCount,
+          cardTitle: cardData.title || '',
+          cardBody: cardData.body || '',
+          animationStyle,
+          brandName,
+          bgColor,
+          accentColor,
+          textColor,
+          fontFamily: ['Playfair Display','Merriweather','Lora','DM Serif Display','Cormorant Garamond','Montserrat','Poppins','Bebas Neue','Oswald','Raleway','Inter','Space Grotesk','Sora','Outfit','Clash Display','Crimson Text'][selectedFont] || 'Playfair Display',
+          logoUrl,
+          format: formatStr,
+        };
+
+        try {
+          const data = await resilientInvoke('generate-animated-card', payload);
+          if (data?.html) {
+            results.push({ html: data.html, cardIndex: i, dimensions: dims });
+            setAnimatedCards([...results]);
+          }
+        } catch (err: any) {
+          console.error(`Error generating animated card ${i}:`, err);
+          sonnerToast.error(`Erro no card ${i + 1}: ${err.message}`);
+        }
+
+        // Small delay between cards to avoid rate limiting
+        if (i < cardCount - 1) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      if (results.length === 0) {
+        sonnerToast.error('Nenhum card animado foi gerado');
+      } else {
+        sonnerToast.success(`${results.length} cards animados gerados!`);
+      }
+    } catch (err: any) {
+      console.error('generateAnimatedCards error:', err);
+      sonnerToast.error(err.message || 'Erro ao gerar cards animados');
+    } finally {
+      setGenerating(false);
+      setProgress(100);
+      generationInFlightRef.current = false;
+    }
+  };
+
   const generateContent = async () => {
     console.log('[GENERATE_FLOW] generateContent() called');
     console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', contentMode, 'cardCount:', cardCount);

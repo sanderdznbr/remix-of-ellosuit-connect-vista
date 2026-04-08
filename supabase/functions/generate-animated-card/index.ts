@@ -148,6 +148,7 @@ function buildFallbackAnimatedHtml(params: {
   textColor: string;
   fontFamily: string;
   fontGoogleFamily: string;
+  animationStyle?: string;
   topic: string;
   cardTitle?: string;
   cardBody?: string;
@@ -167,6 +168,7 @@ function buildFallbackAnimatedHtml(params: {
     textColor,
     fontFamily,
     fontGoogleFamily,
+    animationStyle = 'slide-fade',
     topic,
     cardTitle,
     cardBody,
@@ -679,6 +681,7 @@ serve(async (req) => {
       textColor,
       fontFamily,
       fontGoogleFamily,
+      animationStyle,
       topic: safeTopic,
       cardTitle: safeTitle,
       cardBody: safeBody,

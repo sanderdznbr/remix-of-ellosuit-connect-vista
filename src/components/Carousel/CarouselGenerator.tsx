@@ -7993,6 +7993,27 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           </div>
         )}
 
+        {/* Animated cards result view */}
+        {animatedCards.length > 0 && !generating && (
+          <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto p-6" style={{ backgroundColor: '#0A0A0A' }}>
+            <div className="max-w-2xl mx-auto w-full space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Cards Animados</h2>
+                  <p className="text-sm text-white/40 mt-1">{animatedCards.length} cards gerados · Grave como vídeo ou faça download</p>
+                </div>
+                <button
+                  onClick={() => { setAnimatedCards([]); setWizardStep(0); }}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white/40 hover:text-white/60 border border-white/[0.06] hover:border-white/10 transition-all"
+                >
+                  Novo carrossel
+                </button>
+              </div>
+              <AnimatedCardRenderer cards={animatedCards} />
+            </div>
+          </div>
+        )}
+
         {/* Generating state - fullscreen split animation */}
         {(generating || generatingAllImages || completingGeneration) && !transitionToGenerate && (
           <GeneratingAnimation

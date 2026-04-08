@@ -2788,7 +2788,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           ctx.globalCompositeOperation = 'source-over';
 
           // STEP 4: Draw logo
-          if (logoUrl) {
+          if (logoMode === 'manual' && logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
                 const r = await fetch(logoUrl); const b = await r.blob();
@@ -3935,7 +3935,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           ctx.globalCompositeOperation = 'source-over';
           
           // === STEP 4: Draw logo ===
-          if (logoUrl) {
+          if (logoMode === 'manual' && logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
                 const r = await fetch(logoUrl); const b = await r.blob();

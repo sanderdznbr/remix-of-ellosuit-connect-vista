@@ -126,6 +126,16 @@ Deno.serve(async (req) => {
       return `Formato ${outputAspectRatio}, preenchendo 100% da imagem.`;
     })();
 
+    const safeAreaInstruction = `ÁREA SEGURA OBRIGATÓRIA (PRIORIDADE MÁXIMA):
+- TODOS os elementos importantes (título, subtítulo, CTA, mockup, tela, produto, pessoa e logo) DEVEM ficar 100% dentro do canvas.
+- Reserve margens internas mínimas de 8% da largura nas laterais e 8% da altura no topo e na base. Nenhuma letra, palavra, logo, aparelho, tela ou detalhe importante pode tocar, encostar ou ultrapassar as bordas.
+- NUNCA posicione texto nos cantos extremos. Os quatro cantos devem ter respiro visual real.
+- Se houver muito conteúdo, REDUZA a quantidade de texto, diminua a escala tipográfica ou reorganize o layout. NUNCA permita texto cortado, truncado, vazando ou saindo da arte.
+- Todo texto visível deve caber integralmente dentro da imagem com padding consistente.
+- Mockups e dispositivos também devem ficar completamente contidos dentro do canvas; não corte topo, base ou laterais do aparelho se isso comprometer legibilidade ou proporção.
+- Para screenshots em mockups, a tela deve ficar centralizada e corretamente encaixada no dispositivo, sem escapar da moldura.`;
+    const compactSafeAreaReminder = 'SAFE AREA OBRIGATÓRIA: mantenha texto, mockup, tela e logo 100% dentro do canvas, com margens internas mínimas de 8% em todos os lados; nada pode tocar ou ultrapassar as bordas.';
+
     // Filter out URLs from domains that block hotlinking
     const BLOCKED_DOMAINS = ['shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'alamy.com', 'depositphotos.com', 'dreamstime.com', '123rf.com', 'stock.adobe.com'];
     const isUrlAccessible = (url: string) => {
@@ -241,8 +251,8 @@ Deno.serve(async (req) => {
     // Logo handling depends on logoMode: 'ai' = AI renders it, 'manual'/default = Canvas overlay
     const isAiLogoMode = logoMode === 'ai' && logoImageUrl;
     const logoInstruction = isAiLogoMode
-      ? `LOGOMARCA OBRIGATÓRIA: A imagem de referência da logomarca foi fornecida. Você DEVE posicionar esta logomarca de forma elegante e profissional no design, escolhendo o melhor canto ou posição que harmonize com a composição. A logo deve ser PEQUENA e DISCRETA (não dominante), mas claramente visível e legível. Mantenha as proporções originais da logo. NÃO distorça, recrie ou redesenhe a logo — use EXATAMENTE como fornecida. REGRA CRÍTICA: Use a logomarca COMPLETA e INTEIRA como fornecida — se a logo contém símbolo + texto (wordmark), INCLUA AMBOS. NUNCA recorte, fragmente ou use apenas parte da logo (como só o ícone/isotipo sem o nome). A logo deve aparecer EXATAMENTE como o arquivo original, na íntegra.`
-      : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
+      ? `LOGOMARCA OBRIGATÓRIA: A imagem de referência da logomarca foi fornecida. Você DEVE posicionar esta logomarca de forma elegante e profissional no design, escolhendo o melhor canto ou posição que harmonize com a composição. A logo deve ser PEQUENA e DISCRETA (não dominante), mas claramente visível e legível. Mantenha as proporções originais da logo. NÃO distorça, recrie ou redesenhe a logo — use EXATAMENTE como fornecida. REGRA CRÍTICA: Use a logomarca COMPLETA e INTEIRA como fornecida — se a logo contém símbolo + texto (wordmark), INCLUA AMBOS. NUNCA recorte, fragmente ou use apenas parte da logo (como só o ícone/isotipo sem o nome). A logo deve aparecer EXATAMENTE como o arquivo original, na íntegra. A logomarca DEVE ficar totalmente contida dentro da SAFE AREA, com folga visível ao redor. Nunca cole a logo na borda e nunca deixe a logo parcialmente para fora do canvas.`
+      : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Reserve o canto ${logoPosition || 'top-left'} com folga generosa dentro da SAFE AREA, sem títulos, mockups, telas, texturas pesadas ou elementos importantes competindo com a futura logo. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
     const antiAiAesthetic = `
 ESTÉTICA ANTI-IA (PRIORIDADE CRÍTICA — LEIA COM ATENÇÃO):
 O resultado DEVE parecer um post criado por um designer humano profissional em Photoshop/Illustrator, NÃO uma imagem gerada por IA.
@@ -266,7 +276,7 @@ OBRIGATÓRIO — características de um post PROFISSIONAL REAL:
 - Imagens/fotos com TRATAMENTO profissional: color grading coeso, contraste calibrado, profundidade de campo.
 - O post deve parecer que faz parte de um FEED COESO de Instagram de uma marca premium.`;
 
-    textPrompt += `\n\n${antiAiAesthetic}\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM/MOSAICO: Cada card DEVE ser UMA ÚNICA composição visual contínua e UNIFICADA. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens, sub-quadros ou painéis lado a lado. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. PROIBIDO dividir a imagem em seções ou quadrantes. A imagem INTEIRA deve ser UMA CENA ÚNICA, CONTÍNUA e COESA que preenche todo o canvas de ponta a ponta. Se precisar mostrar múltiplos elementos, componha-os organicamente em UMA ÚNICA CENA — NUNCA em grades separadas.`;
+    textPrompt += `\n\n${antiAiAesthetic}\n\n${safeAreaInstruction}\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM/MOSAICO: Cada card DEVE ser UMA ÚNICA composição visual contínua e UNIFICADA. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens, sub-quadros ou painéis lado a lado. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. PROIBIDO dividir a imagem em seções ou quadrantes. A imagem INTEIRA deve ser UMA CENA ÚNICA, CONTÍNUA e COESA que preenche todo o canvas de ponta a ponta. Se precisar mostrar múltiplos elementos, componha-os organicamente em UMA ÚNICA CENA — NUNCA em grades separadas.`;
 
     // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
     // For visual clone mode, negative prompts can actively hurt fidelity
@@ -349,8 +359,9 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
 - NUNCA reproduza nomes de marca, nomes de app, logos, @handles ou qualquer texto institucional presente na screenshot.
 - Se a screenshot contiver “Ellocontent”, “Ellosuit” ou variações, REMOVA/IGNORE completamente esse texto ao compor a tela.
 - Adicione reflexos sutis no vidro da tela e sombra realista embaixo do celular.
-- O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
-- O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
+        - O fundo deve complementar a composição: gradiente escuro premium, elementos gráficos sutis, ou ambiente clean.
+        - O aparelho e a tela DEVEM ficar totalmente dentro da SAFE AREA, com respiro nas quatro bordas.
+        - O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
 - NÃO gere uma interface genérica ou inventada, mas também NÃO copie literalmente textos de branding da screenshot.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
       textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup de celular profissional; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
@@ -612,11 +623,11 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       if (isVisualCloneMode) {
-        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências de estilo. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction}` });
+        retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências de estilo. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction} ${compactSafeAreaReminder}` });
       } else if (stylePrompt) {
-        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
+        retryContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO. ${compactSafeAreaReminder}` });
       } else {
-        retryContent.push({ type: 'text', text: `Professional editorial photograph: ${imagePrompt}. ${formatInstruction}.` });
+        retryContent.push({ type: 'text', text: `Professional editorial photograph: ${imagePrompt}. ${formatInstruction}. ${compactSafeAreaReminder}` });
       }
       for (const ref of validGeneralRefs) { if (!blockedUrls.has(ref)) retryContent.push({ type: 'image_url', image_url: { url: ref } }); }
       try { generatedImage = await tryGenerate(primaryModel, retryContent, 2); } catch (e2: any) {
@@ -636,9 +647,9 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
-        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
+        textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO. ${compactSafeAreaReminder}` });
       } else {
-        textOnlyContent.push({ type: 'text', text: `Professional editorial photograph: ${imagePrompt}. ${formatInstruction}.` });
+        textOnlyContent.push({ type: 'text', text: `Professional editorial photograph: ${imagePrompt}. ${formatInstruction}. ${compactSafeAreaReminder}` });
       }
       try { generatedImage = await tryGenerate(primaryModel, textOnlyContent, 3); } catch (e3: any) {
         if (e3?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }
@@ -654,9 +665,9 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
       }
       if (stylePrompt) {
-        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO.` });
+        fallbackContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO. ${compactSafeAreaReminder}` });
       } else {
-        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. ${formatInstruction}.` });
+        fallbackContent.push({ type: 'text', text: `Beautiful professional editorial image: ${imagePrompt.split(/[.,;:!?]/)[0]?.trim() || 'professional scene'}. ${formatInstruction}. ${compactSafeAreaReminder}` });
       }
       try { generatedImage = await tryGenerate('google/gemini-2.5-flash-image', fallbackContent, 4); } catch (e4: any) {
         if (e4?.reason === 'nsfw') { return new Response(JSON.stringify({ error: 'Conteúdo bloqueado pelos filtros de segurança.', code: 'CONTENT_BLOCKED' }), { status: 451, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); }

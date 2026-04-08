@@ -7502,6 +7502,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setVisualIdea={setAdvancedVisualIdea}
                       />
                     )}
+                    {currentStepName === 'Animação' && (
+                      <StepAnimationStyle
+                        selected={animationStyle}
+                        onChange={setAnimationStyle}
+                      />
+                    )}
                     {currentStepName === 'Velocidade' && (
                       <StepSpeed
                         imageModel={imageSettings.model === 'nano-banana' ? 'nano-banana' : 'gemini'}

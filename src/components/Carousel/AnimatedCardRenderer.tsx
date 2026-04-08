@@ -35,9 +35,8 @@ interface EmbeddedAssetMap {
 }
 
 const RECORD_DURATION = 5000;
-const EXPORT_FPS = 60;
-const TOTAL_FRAMES = Math.round((RECORD_DURATION / 1000) * EXPORT_FPS);
-const FRAME_DURATION_MS = 1000 / EXPORT_FPS;
+const FPS_OPTIONS = [25, 30, 60] as const;
+type FpsOption = typeof FPS_OPTIONS[number];
 const CAPTURE_SCALE = 2;
 const CAPTURE_ROOT_CLASS = 'animated-card-capture-root';
 

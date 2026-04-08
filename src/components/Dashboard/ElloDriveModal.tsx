@@ -84,7 +84,7 @@ const ElloDriveModal: React.FC<ElloDriveModalProps> = ({ open, onClose, companyI
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getUserScopedPath]);
 
   useEffect(() => {
     if (open && currentBucket) {

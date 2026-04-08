@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface Props {
   wizardMode: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated';
-  setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2') => void;
+  setWizardMode: (v: 'simple' | 'advanced' | 'extreme' | 'tweet' | 'tweet2' | 'animated') => void;
   allowAdvanced?: boolean;
   allowExtreme?: boolean;
   requiredPlanForAdvanced?: string;

@@ -3217,9 +3217,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
 
       const payload = {
-        topic: cleanTopic,
+        topic: cleanTopic || topic.trim() || 'Post animado',
         cardIndex,
-        totalCards: cardCount,
+        totalCards: animatedCards.length || cardCount,
         cardTitle: cardData.title || '',
         cardBody: cardData.body || '',
         animationStyle,

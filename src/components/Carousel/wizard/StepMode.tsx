@@ -77,6 +77,7 @@ const StepMode: React.FC<Props> = ({
   const isLocked = (key: string) => {
     if (key === 'advanced') return !allowAdvanced;
     if (key === 'extreme') return !allowExtreme;
+    if (key === 'animated') return !allowExtreme; // same as extreme
     return false;
   };
 

@@ -49,7 +49,7 @@ const modes = [
     desc: 'A IA cria animações em HTML/CSS e você grava como vídeo',
     badge: 'NOVO',
     requiredPlan: 'Growth',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     key: 'tweet2' as const,

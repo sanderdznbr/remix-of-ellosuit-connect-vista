@@ -5757,6 +5757,7 @@ export type Database = {
           billing_cycle: Database["public"]["Enums"]["billing_cycle"]
           company_id: string
           created_at: string
+          credits_last_reset_at: string | null
           current_period_end: string
           current_period_start: string
           id: string
@@ -5775,6 +5776,7 @@ export type Database = {
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
           company_id: string
           created_at?: string
+          credits_last_reset_at?: string | null
           current_period_end?: string
           current_period_start?: string
           id?: string
@@ -5793,6 +5795,7 @@ export type Database = {
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
           company_id?: string
           created_at?: string
+          credits_last_reset_at?: string | null
           current_period_end?: string
           current_period_start?: string
           id?: string

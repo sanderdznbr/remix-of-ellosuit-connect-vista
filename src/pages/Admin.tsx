@@ -239,13 +239,80 @@ function AdminContent() {
     }
   }, []);
 
+  // Load all posts
+  const loadAllPosts = useCallback(async () => {
+    setPostsLoading(true);
+    try {
+      const { data } = await supabase
+        .from('generated_carousels')
+        .select('id, title, topic, post_format, card_count, cover_url, created_at, user_id, company_id')
+        .order('created_at', { ascending: false })
+        .range(postsPage * 50, (postsPage + 1) * 50 - 1);
+
+      if (data && data.length > 0) {
+        // Enrich with profile names
+        const userIds = [...new Set(data.map((p: any) => p.user_id))];
+        const { data: profiles } = await supabase.from('profiles').select('id, display_name, username').in('id', userIds);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        setAllPosts(data.map((p: any) => ({
+          ...p,
+          user_name: profileMap.get(p.user_id)?.display_name || profileMap.get(p.user_id)?.username || '—',
+        })));
+      } else {
+        setAllPosts([]);
+      }
+    } catch (err) { console.error(err); }
+    finally { setPostsLoading(false); }
+  }, [postsPage]);
+
+  // Load support conversations
+  const loadSupport = useCallback(async () => {
+    setSupportLoading(true);
+    try {
+      const { data } = await supabase
+        .from('support_chat_conversations')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(100);
+
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map((c: any) => c.user_id))];
+        const { data: profiles } = await supabase.from('profiles').select('id, display_name, username').in('id', userIds);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        setSupportConvos(data.map((c: any) => ({
+          ...c,
+          user_name: profileMap.get(c.user_id)?.display_name || profileMap.get(c.user_id)?.username || '—',
+        })));
+      } else {
+        setSupportConvos([]);
+      }
+    } catch (err) { console.error(err); }
+    finally { setSupportLoading(false); }
+  }, []);
+
+  // Load conversation messages
+  const loadConvoMessages = async (convoId: string) => {
+    setConvoMsgsLoading(true);
+    try {
+      const { data } = await supabase
+        .from('support_chat_messages')
+        .select('*')
+        .eq('conversation_id', convoId)
+        .order('created_at', { ascending: true });
+      setConvoMessages(data || []);
+    } catch (err) { console.error(err); }
+    finally { setConvoMsgsLoading(false); }
+  };
+
   // Tab change handler
   useEffect(() => {
     if (tab === 'users') loadUsers();
     else if (tab === 'subscriptions') loadSubscriptions();
     else if (tab === 'payments') loadPayments();
     else if (tab === 'coupons') loadCoupons();
-  }, [tab, loadUsers, loadSubscriptions, loadPayments, loadCoupons]);
+    else if (tab === 'posts') loadAllPosts();
+    else if (tab === 'support') loadSupport();
+  }, [tab, loadUsers, loadSubscriptions, loadPayments, loadCoupons, loadAllPosts, loadSupport]);
 
   // Search action users (by email via edge function, or by name/username locally)
   const searchUsers = async () => {

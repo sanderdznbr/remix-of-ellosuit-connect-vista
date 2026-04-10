@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import { 
   Users, CreditCard, Activity, Search, Loader2, 
   DollarSign, UserCheck, UserX, Clock, Gift, 
-  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText, Tag, Plus, Trash2
+  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText, Tag, Plus, Trash2,
+  Image, MessageSquare, BarChart3, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +15,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 const ADMIN_EMAIL = 'admin@gmail.com';
 
-type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'coupons' | 'actions' | 'content';
+type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'posts' | 'support' | 'coupons' | 'actions' | 'content';
 
 // ── Helpers ──
 const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
@@ -64,6 +65,18 @@ function AdminContent() {
   const [newCoupon, setNewCoupon] = useState({ code: '', discount_percent: 25, max_uses: 10, description: '' });
   const [creatingCoupon, setCreatingCoupon] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
+
+  // All Posts
+  const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [postsPage, setPostsPage] = useState(0);
+
+  // Support conversations
+  const [supportConvos, setSupportConvos] = useState<any[]>([]);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [selectedConvo, setSelectedConvo] = useState<any>(null);
+  const [convoMessages, setConvoMessages] = useState<any[]>([]);
+  const [convoMsgsLoading, setConvoMsgsLoading] = useState(false);
 
   // Auth guard — only block non-admin AFTER auth loads
   useEffect(() => {
@@ -226,13 +239,80 @@ function AdminContent() {
     }
   }, []);
 
+  // Load all posts
+  const loadAllPosts = useCallback(async () => {
+    setPostsLoading(true);
+    try {
+      const { data } = await supabase
+        .from('generated_carousels')
+        .select('id, title, topic, post_format, card_count, cover_url, created_at, user_id, company_id')
+        .order('created_at', { ascending: false })
+        .range(postsPage * 50, (postsPage + 1) * 50 - 1);
+
+      if (data && data.length > 0) {
+        // Enrich with profile names
+        const userIds = [...new Set(data.map((p: any) => p.user_id))];
+        const { data: profiles } = await supabase.from('profiles').select('id, display_name, username').in('id', userIds);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        setAllPosts(data.map((p: any) => ({
+          ...p,
+          user_name: profileMap.get(p.user_id)?.display_name || profileMap.get(p.user_id)?.username || '—',
+        })));
+      } else {
+        setAllPosts([]);
+      }
+    } catch (err) { console.error(err); }
+    finally { setPostsLoading(false); }
+  }, [postsPage]);
+
+  // Load support conversations
+  const loadSupport = useCallback(async () => {
+    setSupportLoading(true);
+    try {
+      const { data } = await supabase
+        .from('support_chat_conversations')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(100);
+
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map((c: any) => c.user_id))];
+        const { data: profiles } = await supabase.from('profiles').select('id, display_name, username').in('id', userIds);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        setSupportConvos(data.map((c: any) => ({
+          ...c,
+          user_name: profileMap.get(c.user_id)?.display_name || profileMap.get(c.user_id)?.username || '—',
+        })));
+      } else {
+        setSupportConvos([]);
+      }
+    } catch (err) { console.error(err); }
+    finally { setSupportLoading(false); }
+  }, []);
+
+  // Load conversation messages
+  const loadConvoMessages = async (convoId: string) => {
+    setConvoMsgsLoading(true);
+    try {
+      const { data } = await supabase
+        .from('support_chat_messages')
+        .select('*')
+        .eq('conversation_id', convoId)
+        .order('created_at', { ascending: true });
+      setConvoMessages(data || []);
+    } catch (err) { console.error(err); }
+    finally { setConvoMsgsLoading(false); }
+  };
+
   // Tab change handler
   useEffect(() => {
     if (tab === 'users') loadUsers();
     else if (tab === 'subscriptions') loadSubscriptions();
     else if (tab === 'payments') loadPayments();
     else if (tab === 'coupons') loadCoupons();
-  }, [tab, loadUsers, loadSubscriptions, loadPayments, loadCoupons]);
+    else if (tab === 'posts') loadAllPosts();
+    else if (tab === 'support') loadSupport();
+  }, [tab, loadUsers, loadSubscriptions, loadPayments, loadCoupons, loadAllPosts, loadSupport]);
 
   // Search action users (by email via edge function, or by name/username locally)
   const searchUsers = async () => {
@@ -437,8 +517,10 @@ function AdminContent() {
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'overview', label: 'Visão Geral', icon: Activity },
     { key: 'users', label: 'Usuários', icon: Users },
+    { key: 'posts', label: 'Posts', icon: Image },
     { key: 'subscriptions', label: 'Assinaturas', icon: UserCheck },
     { key: 'payments', label: 'Pagamentos', icon: DollarSign },
+    { key: 'support', label: 'Suporte', icon: MessageSquare },
     { key: 'coupons', label: 'Cupons', icon: Tag },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
     { key: 'content', label: 'Conteúdo', icon: FileText },
@@ -731,6 +813,162 @@ function AdminContent() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ ALL POSTS ═══ */}
+        {tab === 'posts' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white/40 text-xs">{allPosts.length} post(s) carregados</p>
+              <button onClick={loadAllPosts} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {postsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+            ) : (
+              <>
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                          <th className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase">Post</th>
+                          <th className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase">Usuário</th>
+                          <th className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase">Formato</th>
+                          <th className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase">Cards</th>
+                          <th className="text-left px-4 py-3 text-[11px] font-medium text-white/30 uppercase">Data</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allPosts.map(p => (
+                          <tr key={p.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                {p.cover_url ? (
+                                  <img src={p.cover_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" loading="lazy" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                                    <Image className="w-4 h-4 text-purple-400/50" />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-white/80 text-sm font-medium truncate max-w-[200px]">{p.title || p.topic || '—'}</p>
+                                  <p className="text-white/25 text-[11px] truncate max-w-[200px]">{p.topic}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-white/50 text-xs">{p.user_name}</td>
+                            <td className="px-4 py-3 text-white/40 text-xs capitalize">{p.post_format || '—'}</td>
+                            <td className="px-4 py-3 text-white/50 text-xs">{p.card_count}</td>
+                            <td className="px-4 py-3 text-white/30 text-[11px]">{fmtDateTime(p.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <button disabled={postsPage === 0} onClick={() => setPostsPage(p => Math.max(0, p - 1))} className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-30">
+                    ← Anterior
+                  </button>
+                  <span className="text-white/30 text-xs">Página {postsPage + 1}</span>
+                  <button disabled={allPosts.length < 50} onClick={() => setPostsPage(p => p + 1)} className="px-3 py-1.5 rounded-lg text-xs text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer disabled:opacity-30">
+                    Próxima →
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ═══ SUPPORT ═══ */}
+        {tab === 'support' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white/40 text-xs">{supportConvos.length} conversa(s)</p>
+              <button onClick={loadSupport} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {supportLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {/* Conversation list */}
+                <div className="space-y-2">
+                  {supportConvos.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setSelectedConvo(c); loadConvoMessages(c.id); }}
+                      className={`w-full text-left rounded-xl p-4 transition-all cursor-pointer ${
+                        selectedConvo?.id === c.id ? 'ring-1 ring-purple-500/40' : 'hover:bg-white/[0.04]'
+                      }`}
+                      style={{ backgroundColor: selectedConvo?.id === c.id ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-white/80 text-sm font-medium">{c.user_name}</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColor(c.status)}`}>{c.status}</span>
+                      </div>
+                      <p className="text-white/30 text-[11px] truncate">{c.last_message_preview || 'Sem mensagens'}</p>
+                      <div className="flex items-center gap-3 mt-2 text-[10px] text-white/20">
+                        <span>{c.message_count} msg</span>
+                        <span>{fmtDateTime(c.updated_at)}</span>
+                      </div>
+                    </button>
+                  ))}
+                  {supportConvos.length === 0 && (
+                    <p className="text-center text-white/20 text-xs py-8">Nenhuma conversa de suporte</p>
+                  )}
+                </div>
+
+                {/* Message thread */}
+                <div>
+                  {selectedConvo ? (
+                    <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                        <div>
+                          <p className="text-white/80 text-sm font-medium">{selectedConvo.user_name}</p>
+                          <p className="text-white/30 text-[10px]">{fmtDateTime(selectedConvo.created_at)}</p>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColor(selectedConvo.status)}`}>{selectedConvo.status}</span>
+                      </div>
+                      <div className="max-h-[500px] overflow-y-auto px-4 py-4 space-y-2" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+                        {convoMsgsLoading ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-4 h-4 animate-spin text-white/30" /></div>
+                        ) : convoMessages.length === 0 ? (
+                          <p className="text-center text-white/20 text-xs py-4">Nenhuma mensagem</p>
+                        ) : (
+                          convoMessages.map(m => (
+                            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-[13px] leading-relaxed ${
+                                  m.role === 'user' ? 'text-white rounded-br-md' : 'text-white/80 rounded-bl-md'
+                                }`}
+                                style={{ backgroundColor: m.role === 'user' ? '#7C3AED' : 'rgba(255,255,255,0.06)' }}
+                              >
+                                {m.content}
+                                <p className={`text-[9px] mt-1 ${m.role === 'user' ? 'text-white/40' : 'text-white/20'}`}>
+                                  {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl p-8 text-center" style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <MessageSquare className="w-8 h-8 text-white/10 mx-auto mb-2" />
+                      <p className="text-white/20 text-xs">Selecione uma conversa para ver as mensagens</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

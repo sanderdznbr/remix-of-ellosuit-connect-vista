@@ -202,6 +202,12 @@ Deno.serve(async (req) => {
 
       console.log(`[SUBSCRIBE] Plan: ${plan_id}, Company: ${companyId}`);
 
+      // Apply coupon discount server-side
+      const { finalPrice, couponId, discountApplied } = await applyCouponDiscount(
+        adminClient, body.coupon_code, userId, plan.price,
+      );
+      console.log(`[SUBSCRIBE] Original: ${plan.price}, Discount: ${discountApplied}, Final: ${finalPrice}`);
+
       const subscriptionPayload = {
         customer_id: customerId,
         payment_method: 'credit_card',
@@ -228,7 +234,7 @@ Deno.serve(async (req) => {
         items: [{
           description: `elloContent - Plano ${plan.name} (Mensal)`,
           quantity: 1,
-          pricing_scheme: { scheme_type: 'unit', price: plan.price },
+          pricing_scheme: { scheme_type: 'unit', price: finalPrice },
         }],
         metadata: {
           company_id: companyId,
@@ -236,6 +242,7 @@ Deno.serve(async (req) => {
           plan_id,
           credits: plan.credits,
           action: 'subscribe',
+          coupon_id: couponId || undefined,
         },
       };
 

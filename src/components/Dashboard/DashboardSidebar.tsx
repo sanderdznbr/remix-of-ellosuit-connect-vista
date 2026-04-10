@@ -325,8 +325,120 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
       )}
 
+      {/* Ajuda section — collapsible */}
+      <div className="px-2 mt-5 mb-3">
+        <button
+          onClick={() => setAjudaOpen(!ajudaOpen)}
+          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
+        >
+          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Ajuda</span>
+          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${ajudaOpen ? 'rotate-90' : ''}`} />
+        </button>
+        {ajudaOpen && (
+          <div className="mt-1 space-y-0.5">
+            <button
+              onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Preciso de ajuda com o elloContent.', '_blank')}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Contatar via WhatsApp
+            </button>
+            <button
+              onClick={() => setShowFaq(true)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
+            >
+              <BookOpen className="w-4 h-4" />
+              Dúvidas & Créditos
+            </button>
+          </div>
+        )}
+      </div>
 
       </div>{/* end scrollable nav area */}
+
+      {/* FAQ Modal */}
+      {showFaq && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setShowFaq(false)}>
+          <div className="w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl p-6" style={{ backgroundColor: '#12121a', border: '1px solid rgba(255,255,255,0.08)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-white font-bold text-lg flex items-center gap-2"><HelpCircle className="w-5 h-5" style={{ color: '#8B5CF6' }} /> Central de Ajuda</h2>
+              <button onClick={() => setShowFaq(false)} className="text-white/30 hover:text-white/60 cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Credit costs */}
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-white font-semibold text-sm mb-2">💰 Como funcionam os créditos?</h3>
+                <p className="text-white/50 text-xs leading-relaxed">
+                  Cada geração consome créditos baseado no modo e quantidade de cards. Os créditos do seu plano são renovados mensalmente na data de contratação.
+                </p>
+              </div>
+
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-white font-semibold text-sm mb-3">📊 Tabela de consumo por card</h3>
+                <div className="space-y-2">
+                  {[
+                    { mode: 'Simples (Flash)', cost: '1 crédito/card', color: '#3B82F6' },
+                    { mode: 'Avançado (Pro)', cost: '2 créditos/card', color: '#8B5CF6' },
+                    { mode: 'Extreme', cost: '2 créditos/card', color: '#F59E0B' },
+                    { mode: 'Avançado + Rosto', cost: '4 créditos/card', color: '#EF4444' },
+                  ].map(item => (
+                    <div key={item.mode} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                      <span className="text-white/70 text-xs flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                        {item.mode}
+                      </span>
+                      <span className="text-white/50 text-xs font-mono">{item.cost}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-white/30 text-[11px] mt-2">+ 1 crédito fixo por pesquisa web (incluído em toda geração)</p>
+              </div>
+
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-white font-semibold text-sm mb-2">🧮 Exemplos práticos</h3>
+                <div className="space-y-1.5 text-xs text-white/50">
+                  <p>• Post único Simples: (1×1) + 1 = <span className="text-white/80 font-semibold">2 créditos</span></p>
+                  <p>• Carrossel 6 cards Simples: (6×1) + 1 = <span className="text-white/80 font-semibold">7 créditos</span></p>
+                  <p>• Carrossel 6 cards Avançado: (6×2) + 1 = <span className="text-white/80 font-semibold">13 créditos</span></p>
+                  <p>• Carrossel 6 cards Avançado+Rosto: (6×4) + 1 = <span className="text-white/80 font-semibold">25 créditos</span></p>
+                  <p>• Carrossel 10 cards Avançado+Rosto: (10×4) + 1 = <span className="text-white/80 font-semibold">41 créditos</span></p>
+                </div>
+              </div>
+
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-white font-semibold text-sm mb-2">🔄 Renovação de créditos</h3>
+                <p className="text-white/50 text-xs leading-relaxed">
+                  Os créditos do plano são renovados automaticamente a cada mês, na mesma data e horário da contratação. Créditos avulsos não expiram enquanto o plano estiver ativo.
+                </p>
+              </div>
+
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-white font-semibold text-sm mb-2">⬆️ Upgrade de plano</h3>
+                <p className="text-white/50 text-xs leading-relaxed">
+                  Ao fazer upgrade, você paga apenas a diferença proporcional ao tempo restante do ciclo. Seus créditos atuais são sempre mantidos — nunca são apagados.
+                </p>
+              </div>
+
+              <div className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <h3 className="text-white font-semibold text-sm mb-2">🛒 Créditos avulsos</h3>
+                <p className="text-white/50 text-xs leading-relaxed">
+                  Você pode comprar pacotes de créditos extras a qualquer momento na página de Plano & Créditos. O preço por crédito varia de acordo com o seu plano atual.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => window.open('https://wa.me/5511999999999?text=Olá! Preciso de ajuda com o elloContent.', '_blank')}
+              className="w-full flex items-center justify-center gap-2 mt-5 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all"
+              style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', border: '1px solid rgba(37, 211, 102, 0.25)', color: '#25D366' }}
+            >
+              <MessageCircle className="w-4 h-4" />
+              Ainda tem dúvidas? Fale conosco
+            </button>
+          </div>
+        </div>
+      )}
 
 
       {/* Bottom: Profile — fixed at bottom */}

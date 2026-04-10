@@ -142,6 +142,7 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
                 Consumirá ~{calculateCreditCost({ cardCount: contentMode === 'single-post' ? 1 : cardCount, wizardMode: (wizardMode || 'simple') as WizardMode, hasFaceRef: !!hasFacePhotos, includeWebSearch: true })} créditos
               </span>
             </div>
+          </>
         )}
 
         {/* Continuous mode toggle (advanced only, carousel only) */}

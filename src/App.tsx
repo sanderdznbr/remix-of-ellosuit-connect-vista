@@ -29,6 +29,7 @@ const Parceiros = lazy(() => import('./pages/Parceiros'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AreaParceiros = lazy(() => import('./pages/AreaParceiros'));
 const Comunidade = lazy(() => import('./pages/Comunidade'));
+const Ajuda = lazy(() => import('./pages/Ajuda'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient({
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="/area/parceiros" element={<AreaParceiros />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/comunidade" element={<Comunidade />} />
+                <Route path="/ajuda" element={<Ajuda />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

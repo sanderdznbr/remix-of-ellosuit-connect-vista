@@ -337,13 +337,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <BookOpen className="w-4 h-4" />
           Dúvidas & Créditos
         </button>
-        <button
-          onClick={() => { navigate('/ajuda'); closeSearch(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
-        >
-          <MessageCircle className="w-4 h-4" />
-          Contatar Suporte
-        </button>
       </div>
 
 

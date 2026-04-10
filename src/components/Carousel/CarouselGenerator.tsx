@@ -5064,7 +5064,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         } else if (!skipWebSearch && webSearchResult?.content && !loop2ProductRefs && productImages.length === 0) {
           // User skipped web photos — give AI creative freedom
           const cardDescL2 = updatedCards[i]?.title || updatedCards[i]?.bodyTop || cleanTopic;
-          loop2Prompt += `\n\n🎨 LIBERDADE CRIATIVA: Crie elementos visuais fotorrealistas relacionados ao tema "${cardDesc}". Inclua objetos, cenários e composições que remetam diretamente ao tema. A imagem deve ser rica e temática.`;
+          loop2Prompt += `\n\n🎨 LIBERDADE CRIATIVA: Crie elementos visuais fotorrealistas relacionados ao tema "${cardDescL2}". Inclua objetos, cenários e composições que remetam diretamente ao tema. A imagem deve ser rica e temática.`;
         }
 
         imageFactories.push({

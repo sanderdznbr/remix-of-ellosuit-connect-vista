@@ -134,7 +134,14 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
                 </div>
               </>
             )}
-          </>
+
+            {/* Credit estimate */}
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              <Zap className="w-3 h-3 text-purple-400/40" />
+              <span className="text-[11px] text-white/20">
+                Consumirá ~{calculateCreditCost({ cardCount: contentMode === 'single-post' ? 1 : cardCount, wizardMode: (wizardMode || 'simple') as WizardMode, hasFaceRef: !!hasFacePhotos, includeWebSearch: true })} créditos
+              </span>
+            </div>
         )}
 
         {/* Continuous mode toggle (advanced only, carousel only) */}

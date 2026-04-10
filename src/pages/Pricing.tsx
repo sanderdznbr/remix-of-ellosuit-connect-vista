@@ -625,6 +625,34 @@ function LoggedInPricing() {
                       style={{ width: `${maxCredits > 0 ? Math.min(100, (creditBalance / maxCredits) * 100) : 0}%` }}
                     />
                   </div>
+                  {/* Next credit reset info */}
+                  {isActive && subscription?.current_period_start && (() => {
+                    const start = new Date(subscription.credits_last_reset_at || subscription.current_period_start);
+                    const nextReset = new Date(start);
+                    nextReset.setMonth(nextReset.getMonth() + 1);
+                    const now = new Date();
+                    while (nextReset <= now) {
+                      nextReset.setMonth(nextReset.getMonth() + 1);
+                    }
+                    const daysLeft = Math.ceil((nextReset.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(123, 80, 220, 0.08)', border: '1px solid rgba(123, 80, 220, 0.15)' }}>
+                        <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#7B50DC' }} />
+                        <div className="flex-1">
+                          <p className="text-white/60 text-[11px]">
+                            Próximo reset: <span className="text-white/80 font-medium">
+                              {nextReset.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às {nextReset.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span className="text-white/30 ml-1">({daysLeft} dia{daysLeft !== 1 ? 's' : ''})</span>
+                          </p>
+                          <p className="text-white/30 text-[10px]">
+                            Seus {maxCredits} créditos serão renovados automaticamente
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-white/50">
                       <Check className="w-3 h-3" /> {maxCredits} créditos mensais inclusos

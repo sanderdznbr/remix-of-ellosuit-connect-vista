@@ -56,6 +56,15 @@ function AdminContent() {
   const [actionTarget, setActionTarget] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
 
+  // Coupons
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponUsages, setCouponUsages] = useState<any[]>([]);
+  const [couponsLoading, setCouponsLoading] = useState(false);
+  const [showCreateCoupon, setShowCreateCoupon] = useState(false);
+  const [newCoupon, setNewCoupon] = useState({ code: '', discount_percent: 25, max_uses: 10, description: '' });
+  const [creatingCoupon, setCreatingCoupon] = useState(false);
+  const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
+
   // Auth guard — only block non-admin AFTER auth loads
   useEffect(() => {
     if (!authLoading && user && user.email !== ADMIN_EMAIL) {

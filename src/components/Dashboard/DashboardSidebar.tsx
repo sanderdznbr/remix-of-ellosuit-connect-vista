@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
@@ -322,6 +322,29 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           )}
         </div>
       )}
+
+      {/* Ajuda section */}
+      <div className="px-2 mt-5">
+        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ajuda</p>
+        <button
+          onClick={() => { navigate('/ajuda'); closeSearch(); }}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            location.pathname === '/ajuda'
+              ? 'text-white'
+              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          Dúvidas & Créditos
+        </button>
+        <button
+          onClick={() => { navigate('/ajuda'); closeSearch(); }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer"
+        >
+          <MessageCircle className="w-4 h-4" />
+          Contatar Suporte
+        </button>
+      </div>
 
 
       </div>{/* end scrollable nav area */}

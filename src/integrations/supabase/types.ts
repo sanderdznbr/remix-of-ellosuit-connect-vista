@@ -7597,6 +7597,10 @@ export type Database = {
           cover_image: string
         }[]
       }
+      increment_coupon_uses: {
+        Args: { p_coupon_id: string }
+        Returns: undefined
+      }
       increment_email_count: {
         Args: { p_company_id: string; p_user_id: string }
         Returns: undefined

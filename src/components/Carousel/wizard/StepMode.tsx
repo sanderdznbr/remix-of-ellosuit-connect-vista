@@ -147,7 +147,7 @@ const StepMode: React.FC<Props> = ({
                   }`} />
                 )}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold text-white/90">{m.label}</span>
                   {'badge' in m && m.badge && !locked && (
@@ -165,13 +165,14 @@ const StepMode: React.FC<Props> = ({
                 <span className="text-[10px] text-white/25 block mt-0.5">
                   {locked ? `Disponível a partir do plano ${getRequiredPlan(m.key)}` : m.desc}
                 </span>
-                {!locked && (
-                  <span className="text-[10px] text-white/15 block mt-1">
-                    {m.key === 'simple' ? '~1 crédito/card' : m.key === 'tweet2' ? '~1 crédito/card' : m.key === 'advanced' ? '~2 créditos/card · com rosto ~4' : m.key === 'extreme' ? '~2 créditos/card' : m.key === 'animated' ? '~2 créditos/card' : '~1 crédito/card'}
-                    {' + 1 pesquisa'}
-                  </span>
-                )}
               </div>
+              {!locked && (
+                <div className="flex-shrink-0 text-right pl-2">
+                  <span className="text-[11px] font-medium tabular-nums" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                    ~{m.key === 'simple' || m.key === 'tweet2' ? '1' : '2'} créd/card
+                  </span>
+                </div>
+              )}
             </button>
           );
         })}

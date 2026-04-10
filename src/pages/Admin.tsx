@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import { 
   Users, CreditCard, Activity, Search, Loader2, 
   DollarSign, UserCheck, UserX, Clock, Gift, 
-  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText, Tag, Plus, Trash2
+  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText, Tag, Plus, Trash2,
+  Image, MessageSquare, BarChart3, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +15,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 const ADMIN_EMAIL = 'admin@gmail.com';
 
-type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'coupons' | 'actions' | 'content';
+type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'posts' | 'support' | 'coupons' | 'actions' | 'content';
 
 // ── Helpers ──
 const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;

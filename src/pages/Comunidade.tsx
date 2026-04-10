@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Loader2, User } from 'lucide-react';
+import { Heart, Loader2, User, Plus, X, Search } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
+import { toast } from 'sonner';
 
 interface Post {
   id: string;
@@ -20,7 +21,6 @@ interface Post {
 function BentoGrid({ posts }: { posts: Post[] }) {
   const navigate = useNavigate();
 
-  // Distribute posts into columns for masonry effect
   const getColumns = (count: number) => {
     const cols: Post[][] = Array.from({ length: count }, () => []);
     posts.forEach((post, i) => {
@@ -57,8 +57,6 @@ function BentoGrid({ posts }: { posts: Post[] }) {
                   Sem capa
                 </div>
               )}
-
-              {/* Hover overlay — author + likes */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden shrink-0">
@@ -116,7 +114,6 @@ function BentoGridMobile({ posts }: { posts: Post[] }) {
                   Sem capa
                 </div>
               )}
-              {/* Always visible small author bar on mobile */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 flex items-center gap-1.5">
                 <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
                   {post.profile?.avatar_url ? (
@@ -139,9 +136,165 @@ function BentoGridMobile({ posts }: { posts: Post[] }) {
   );
 }
 
+function CreatePostModal({ open, onClose, onPublished }: { open: boolean; onClose: () => void; onPublished: () => void }) {
+  const { user } = useAuth();
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<any>(null);
+  const [caption, setCaption] = useState('');
+  const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    if (!open || !user) return;
+    const load = async () => {
+      setLoading(true);
+      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+      if (!cu) { setLoading(false); return; }
+      const { data } = await supabase
+        .from('generated_carousels')
+        .select('id, title, topic, cover_url, card_count, created_at, carousel_data')
+        .eq('company_id', cu.company_id)
+        .order('created_at', { ascending: false })
+        .limit(100) as any;
+      setProjects(data || []);
+      setLoading(false);
+    };
+    load();
+  }, [open, user]);
+
+  const filtered = projects.filter(p => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (p.title || '').toLowerCase().includes(q) || (p.topic || '').toLowerCase().includes(q);
+  });
+
+  const handlePublish = async () => {
+    if (!user || !selected) return;
+    setPublishing(true);
+    try {
+      const coverUrl = selected.cover_url || selected.carousel_data?.cards?.[0]?.imageUrl || null;
+      const { error } = await supabase.from('community_posts').insert({
+        user_id: user.id,
+        carousel_id: selected.id,
+        cover_url: coverUrl,
+        caption: caption || selected.title || selected.topic || '',
+      } as any);
+      if (error) {
+        if (error.message?.includes('duplicate') || error.code === '23505') {
+          toast.info('Este projeto já foi publicado na comunidade');
+        } else throw error;
+      } else {
+        toast.success('Publicado na comunidade! 🎉');
+        onPublished();
+      }
+    } catch (err: any) {
+      toast.error('Erro ao publicar: ' + err.message);
+    } finally {
+      setPublishing(false);
+      onClose();
+      setSelected(null);
+      setCaption('');
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center" onClick={onClose}>
+      <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl max-w-lg w-full mx-4 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-white/[0.06] flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-bold text-lg">Criar Post</h3>
+            <p className="text-white/40 text-xs mt-0.5">Selecione um projeto para publicar</p>
+          </div>
+          <button onClick={onClose} className="text-white/40 hover:text-white p-1"><X className="w-5 h-5" /></button>
+        </div>
+
+        {!selected ? (
+          <>
+            <div className="px-5 pt-4 pb-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar projeto..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-white/20"
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2" style={{ maxHeight: '400px' }}>
+              {loading ? (
+                <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-white/20" /></div>
+              ) : filtered.length === 0 ? (
+                <p className="text-white/20 text-sm text-center py-10">Nenhum projeto encontrado</p>
+              ) : (
+                filtered.map(p => {
+                  const cover = p.cover_url || p.carousel_data?.cards?.[0]?.imageUrl;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => { setSelected(p); setCaption(p.title || p.topic || ''); }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.15] transition-all text-left"
+                    >
+                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-white/[0.05] shrink-0">
+                        {cover ? (
+                          <img src={cover} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/10 text-[9px]">Sem capa</div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{p.title || p.topic || 'Sem título'}</p>
+                        <p className="text-white/30 text-[11px] mt-0.5">{p.card_count || 1} cards · {new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-20 h-20 rounded-xl overflow-hidden bg-white/[0.05] shrink-0">
+                {(selected.cover_url || selected.carousel_data?.cards?.[0]?.imageUrl) ? (
+                  <img src={selected.cover_url || selected.carousel_data?.cards?.[0]?.imageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/10 text-xs">Sem capa</div>
+                )}
+              </div>
+              <div>
+                <p className="text-white font-medium text-sm">{selected.title || selected.topic || 'Sem título'}</p>
+                <button onClick={() => setSelected(null)} className="text-blue-400 text-xs mt-1 hover:underline">Trocar projeto</button>
+              </div>
+            </div>
+            <textarea
+              value={caption}
+              onChange={e => setCaption(e.target.value)}
+              placeholder="Legenda (opcional)"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm resize-none h-20 focus:outline-none focus:border-white/20"
+            />
+            <button
+              disabled={publishing}
+              onClick={handlePublish}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+            >
+              {publishing ? 'Publicando...' : 'Publicar na Comunidade'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CommunityContent() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const { user } = useAuth();
 
   const loadPosts = useCallback(async () => {
@@ -182,9 +335,20 @@ function CommunityContent() {
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-xl font-bold text-white mb-1">Comunidade</h1>
-        <p className="text-white/30 text-xs">Descubra e inspire-se com criações de outros usuários</p>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-white mb-1">Comunidade</h1>
+          <p className="text-white/30 text-xs">Descubra e inspire-se com criações de outros usuários</p>
+        </div>
+        {user && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105"
+            style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+          >
+            <Plus className="w-4 h-4" /> Criar Post
+          </button>
+        )}
       </motion.div>
 
       {loading ? (
@@ -193,16 +357,20 @@ function CommunityContent() {
         <div className="text-center py-20 text-white/20 text-sm">Nenhum post na comunidade ainda. Seja o primeiro!</div>
       ) : (
         <>
-          {/* Desktop: 3-column masonry */}
           <div className="hidden sm:block">
             <BentoGrid posts={posts} />
           </div>
-          {/* Mobile: 2-column */}
           <div className="block sm:hidden">
             <BentoGridMobile posts={posts} />
           </div>
         </>
       )}
+
+      <CreatePostModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onPublished={() => { setShowCreateModal(false); loadPosts(); }}
+      />
     </div>
   );
 }

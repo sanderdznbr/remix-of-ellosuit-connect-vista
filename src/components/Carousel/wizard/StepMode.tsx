@@ -185,13 +185,6 @@ const StepMode: React.FC<Props> = ({
                   {locked ? `Disponível a partir do plano ${getRequiredPlan(m.key)}` : m.desc}
                 </span>
               </div>
-              {!locked && (
-                <div className="flex-shrink-0 text-right pl-2">
-                  <span className="text-[11px] font-medium tabular-nums" style={{ color: 'rgba(255,255,255,0.18)' }}>
-                    {m.credPerCard} créd/card
-                  </span>
-                </div>
-              )}
             </button>
           );
         })}

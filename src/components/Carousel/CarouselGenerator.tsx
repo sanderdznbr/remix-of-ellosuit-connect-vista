@@ -229,6 +229,9 @@ const CarouselGenerator: React.FC = () => {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tweetPreviewRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showCommunityPublish, setShowCommunityPublish] = useState(false);
+  const [communityCaption, setCommunityCaption] = useState('');
+  const [publishingCommunity, setPublishingCommunity] = useState(false);
   const isGuest = !user;
   const planLimits = usePlanLimits();
   const [isAdminMaster, setIsAdminMaster] = useState(false);
@@ -11005,26 +11008,34 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
 
-            // Update cover_url in DB if we edited the first card (cover)
-            if (correctionCardIndex === 0 && currentCarouselId) {
+            if (currentCarouselId) {
               try {
-                // Upload the base64 image to storage to get a proper URL
                 const { data: userData } = await supabase.auth.getUser();
                 if (!userData?.user) return;
                 const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
                 if (!cu) return;
-                
-                // Convert base64 to blob
-                const res = await fetch(newUrl);
-                const blob = await res.blob();
-                const ext = blob.type.includes('png') ? 'png' : 'jpg';
-                const fileName = `${cu.company_id}/${currentCarouselId}.${ext}`;
-                
-                await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
-                const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
-                if (urlData?.publicUrl) {
-                  const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-                  await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', currentCarouselId);
+
+                // Update carousel_data in DB with the new image
+                const updatedCards = [...(carouselData?.cards || [])];
+                updatedCards[correctionCardIndex] = { ...updatedCards[correctionCardIndex], imageUrl: newUrl };
+                const updatedData = { ...carouselData, cards: updatedCards };
+                await supabase.from('generated_carousels').update({ carousel_data: updatedData as any }).eq('id', currentCarouselId);
+
+                // Update cover_url if we edited the first card (cover)
+                if (correctionCardIndex === 0) {
+                  const res = await fetch(newUrl);
+                  const blob = await res.blob();
+                  const ext = blob.type.includes('png') ? 'png' : 'jpg';
+                  const fileName = `${cu.company_id}/${currentCarouselId}.${ext}`;
+                  
+                  await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
+                  const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+                  if (urlData?.publicUrl) {
+                    const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                    await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', currentCarouselId);
+                    // Update local history cache
+                    setCarouselHistory(prev => prev.map(h => h.id === currentCarouselId ? { ...h, cover_url: coverUrl } : h));
+                  }
                 }
               } catch (err) {
                 console.error('Cover update after correction failed:', err);

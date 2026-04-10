@@ -187,7 +187,7 @@ function CheckoutContent() {
 
       let body: any;
       if (mode === 'plan') {
-        body = { action: 'subscribe', plan_id: planKey, customer, card: cardData };
+        body = { action: 'subscribe', plan_id: planKey, payment_method: paymentMethod, billing_period: billingPeriod, customer, card: cardData };
       } else if (mode === 'style') {
         body = { action: 'buy_style', style_id: styleId, price_cents: Math.round(stylePrice * 100), payment_method: paymentMethod, customer, card: cardData };
       } else if (mode === 'gift') {

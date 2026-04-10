@@ -461,7 +461,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
 
       if (validStyleRefs.length > 0) {
-        messageContent.push({ type: 'text', text: `REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — copie APENAS o estilo visual (cores, TIPOGRAFIA/FONTES, layout). Analise e replique EXATAMENTE a mesma família de fonte das referências. NÃO copie textos visíveis nas referências. PROIBIÇÃO CRÍTICA: NUNCA use uma referência de estilo como CONTEÚDO dentro de mockups, telas de dispositivos ou qualquer frame. Elas são APENAS inspiração estética:` });
+        messageContent.push({ type: 'text', text: `⚠️ REFERÊNCIAS DE ESTILO (${validStyleRefs.length} imagens) — IGNORE TODO TEXTO visível nelas. Copie APENAS: cores, TIPOGRAFIA/FONTES, layout, elementos decorativos. NUNCA reproduza títulos, nomes, placares, frases ou qualquer conteúdo textual das referências:` });
         for (const ref of validStyleRefs) messageContent.push({ type: 'image_url', image_url: { url: ref } });
       }
 

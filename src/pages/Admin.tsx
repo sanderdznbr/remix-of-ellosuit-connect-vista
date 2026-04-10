@@ -14,7 +14,7 @@ import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 const ADMIN_EMAIL = 'admin@gmail.com';
 
-type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'actions' | 'content';
+type Tab = 'overview' | 'users' | 'subscriptions' | 'payments' | 'coupons' | 'actions' | 'content';
 
 // ── Helpers ──
 const fmt = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;

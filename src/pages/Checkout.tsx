@@ -99,6 +99,7 @@ function CheckoutContent() {
   const [cardCvv, setCardCvv] = useState('');
 
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  const [existingSub, setExistingSub] = useState<{ plan_type: string; status: string; monthly_price: number; current_period_start: string; current_period_end: string } | null>(null);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
@@ -106,16 +107,40 @@ function CheckoutContent() {
 
   const isAdmin = user?.email === 'admin@gmail.com';
 
+  // Plan tier for upgrade detection
+  const PLAN_TIERS: Record<string, number> = { free: 0, test: 0, starter: 1, pro: 2, growth: 3 };
+  const isUpgrade = mode === 'plan' && existingSub && existingSub.status === 'active' && existingSub.plan_type !== 'free' && existingSub.plan_type !== planKey && (PLAN_TIERS[planKey] || 0) > (PLAN_TIERS[existingSub.plan_type] || 0);
+
+  // Calculate prorated upgrade price
+  const getUpgradePrice = () => {
+    if (!isUpgrade || !existingSub) return planPrice;
+    const now = new Date();
+    const periodEnd = new Date(existingSub.current_period_end);
+    const periodStart = new Date(existingSub.current_period_start);
+    const totalDays = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000));
+    const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / 86400000));
+    const dailyRateOld = existingSub.monthly_price / totalDays;
+    const dailyRateNew = planPrice / totalDays;
+    return Math.max(1, parseFloat(((dailyRateNew - dailyRateOld) * remainingDays).toFixed(2)));
+  };
+
+  const upgradePrice = isUpgrade ? getUpgradePrice() : null;
+
   useEffect(() => {
     if (!user) return;
-    const fetchBalance = async () => {
+    const fetchData = async () => {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
       if (!cu) return;
-      const { data } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
-      setCurrentBalance(data?.balance || 0);
+      const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
+      setCurrentBalance(balance?.balance || 0);
+      
+      if (mode === 'plan') {
+        const { data: sub } = await supabase.from('subscriptions').select('plan_type, status, monthly_price, current_period_start, current_period_end').eq('company_id', cu.company_id).maybeSingle();
+        if (sub) setExistingSub(sub as any);
+      }
     };
-    fetchBalance();
-  }, [user]);
+    fetchData();
+  }, [user, mode]);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;

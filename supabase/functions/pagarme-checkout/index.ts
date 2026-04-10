@@ -293,6 +293,17 @@ Deno.serve(async (req) => {
           p_description: `Plano ${plan.name} - ${plan.credits} créditos mensais`,
         });
         console.log(`[SUBSCRIBE] Added ${plan.credits} credits`);
+
+        // Record coupon usage
+        if (couponId) {
+          await adminClient.from('coupon_redemptions').insert({
+            coupon_id: couponId, user_id: userId, company_id: companyId,
+          });
+          await adminClient.rpc('increment_coupon_uses', { p_coupon_id: couponId }).catch(() => {
+            // Fallback: direct update
+            adminClient.from('coupons').update({ current_uses: adminClient.raw('current_uses + 1') }).eq('id', couponId);
+          });
+        }
       }
 
       return new Response(JSON.stringify({

@@ -556,8 +556,14 @@ const StepPersonalization: React.FC<Props> = ({
             className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
           >
             <ShoppingBag className="h-4 w-4 text-amber-400" />
-            <span className="text-sm font-medium text-white/80">Produto</span>
-            {hasProduct && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300">ok</span>}
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-white/80">Fotos de Produto</span>
+              <p className="text-[10px] text-white/30 leading-tight mt-0.5">
+                Envie fotos de um produto, app ou prato — a IA recria em mockups e cenas no carrossel
+              </p>
+            </div>
+            {hasProduct && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 shrink-0">✓ enviado</span>}
+            {!hasProduct && <span className="text-[10px] text-white/20 shrink-0">opcional</span>}
           </button>
         </div>
       )}

@@ -20,6 +20,7 @@ const ChatWidget: React.FC<{ open: boolean; onClose: () => void }> = ({ open, on
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -73,9 +74,10 @@ const ChatWidget: React.FC<{ open: boolean; onClose: () => void }> = ({ open, on
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-support-chat', {
-        body: { messages: allMessages },
+        body: { messages: allMessages, conversation_id: conversationId },
       });
       if (error) throw error;
+      if (data?.conversation_id) setConversationId(data.conversation_id);
       setTyping(false);
       await addAssistantMessages(data?.reply || 'Ops, tive um probleminha aqui. Pode repetir? 😅');
     } catch {

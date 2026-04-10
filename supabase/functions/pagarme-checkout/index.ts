@@ -5,12 +5,56 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Plan pricing (cents)
+// Plan pricing (cents) — monthly prices
 const PLANS: Record<string, { name: string; price: number; credits: number }> = {
-  starter: { name: 'Starter', price: 6700, credits: 50 },
-  pro: { name: 'Pro', price: 12700, credits: 120 },
-  growth: { name: 'Growth', price: 24700, credits: 300 },
+  test: { name: 'Teste', price: 100, credits: 5 },
+  starter: { name: 'Starter', price: 8990, credits: 50 },
+  pro: { name: 'Pro', price: 15990, credits: 100 },
+  growth: { name: 'Growth', price: 26990, credits: 200 },
 };
+
+// Helper to apply coupon discount server-side
+async function applyCouponDiscount(
+  adminClient: any,
+  couponCode: string | undefined,
+  userId: string,
+  priceInCents: number,
+): Promise<{ finalPrice: number; couponId: string | null; discountApplied: number }> {
+  if (!couponCode) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
+
+  const { data: coupon } = await adminClient
+    .from('coupons')
+    .select('id, code, discount_percent, discount_fixed, max_uses, current_uses, expires_at, is_active')
+    .eq('code', couponCode.toUpperCase())
+    .eq('is_active', true)
+    .eq('coupon_type', 'discount')
+    .maybeSingle();
+
+  if (!coupon) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
+
+  // Validate expiry and usage
+  if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
+  if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
+
+  // Check if user already used
+  const { data: existing } = await adminClient
+    .from('coupon_redemptions')
+    .select('id')
+    .eq('coupon_id', coupon.id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (existing) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
+
+  let discount = 0;
+  if (coupon.discount_percent > 0) {
+    discount = Math.round(priceInCents * (coupon.discount_percent / 100));
+  } else if (coupon.discount_fixed > 0) {
+    discount = Math.round(coupon.discount_fixed * 100);
+  }
+
+  const finalPrice = Math.max(100, priceInCents - discount); // min 1 real
+  return { finalPrice, couponId: coupon.id, discountApplied: discount };
+}
 
 function getPagarmeAuth(): string {
   const key = Deno.env.get('PAGARME_SECRET_KEY');
@@ -158,6 +202,12 @@ Deno.serve(async (req) => {
 
       console.log(`[SUBSCRIBE] Plan: ${plan_id}, Company: ${companyId}`);
 
+      // Apply coupon discount server-side
+      const { finalPrice, couponId, discountApplied } = await applyCouponDiscount(
+        adminClient, body.coupon_code, userId, plan.price,
+      );
+      console.log(`[SUBSCRIBE] Original: ${plan.price}, Discount: ${discountApplied}, Final: ${finalPrice}`);
+
       const subscriptionPayload = {
         customer_id: customerId,
         payment_method: 'credit_card',
@@ -184,7 +234,7 @@ Deno.serve(async (req) => {
         items: [{
           description: `elloContent - Plano ${plan.name} (Mensal)`,
           quantity: 1,
-          pricing_scheme: { scheme_type: 'unit', price: plan.price },
+          pricing_scheme: { scheme_type: 'unit', price: finalPrice },
         }],
         metadata: {
           company_id: companyId,
@@ -192,6 +242,7 @@ Deno.serve(async (req) => {
           plan_id,
           credits: plan.credits,
           action: 'subscribe',
+          coupon_id: couponId || undefined,
         },
       };
 
@@ -242,6 +293,17 @@ Deno.serve(async (req) => {
           p_description: `Plano ${plan.name} - ${plan.credits} créditos mensais`,
         });
         console.log(`[SUBSCRIBE] Added ${plan.credits} credits`);
+
+        // Record coupon usage
+        if (couponId) {
+          await adminClient.from('coupon_redemptions').insert({
+            coupon_id: couponId, user_id: userId, company_id: companyId,
+          });
+          await adminClient.rpc('increment_coupon_uses', { p_coupon_id: couponId }).catch(() => {
+            // Fallback: direct update
+            adminClient.from('coupons').update({ current_uses: adminClient.raw('current_uses + 1') }).eq('id', couponId);
+          });
+        }
       }
 
       return new Response(JSON.stringify({
@@ -277,10 +339,15 @@ Deno.serve(async (req) => {
 
       console.log(`[BUY_CREDITS] ${credits} credits, method: ${payment_method}, company: ${companyId}`);
 
+      // Apply coupon discount server-side
+      const { finalPrice: creditFinalPrice, couponId: creditCouponId } = await applyCouponDiscount(
+        adminClient, body.coupon_code, userId, price_cents,
+      );
+
       const orderPayload: any = {
         customer_id: customerId,
         items: [{
-          amount: price_cents,
+          amount: creditFinalPrice,
           description: `elloContent - ${credits} créditos avulsos`,
           quantity: 1,
         }],
@@ -299,7 +366,7 @@ Deno.serve(async (req) => {
           pix: {
             expires_in: 3600, // 1 hour
           },
-          amount: price_cents,
+          amount: creditFinalPrice,
         });
       } else {
         orderPayload.payments.push({
@@ -322,7 +389,7 @@ Deno.serve(async (req) => {
             installments: 1,
             statement_descriptor: 'ELLOCONTENT',
           },
-          amount: price_cents,
+          amount: creditFinalPrice,
         });
       }
 

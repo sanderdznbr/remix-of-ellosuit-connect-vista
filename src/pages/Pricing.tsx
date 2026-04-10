@@ -685,6 +685,33 @@ function LoggedInPricing() {
                 })}
               </div>
 
+              {/* Admin-only test plan */}
+              {user?.email === 'admin@gmail.com' && (
+                <div className="mt-4">
+                  <motion.div
+                    className="rounded-2xl p-4 border border-yellow-500/30"
+                    style={{ backgroundColor: 'rgba(234, 179, 8, 0.05)' }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold">Admin Only</span>
+                        <h3 className="text-white font-bold text-sm mt-1">Plano Teste — R$1,00</h3>
+                        <p className="text-white/40 text-xs">5 créditos • Para testar pagamento com cartão real</p>
+                      </div>
+                      <button
+                        onClick={() => navigate('/checkout?plano=test&billing=monthly')}
+                        className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all"
+                        style={{ backgroundColor: 'rgba(234, 179, 8, 0.2)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.3)' }}
+                      >
+                        Testar R$1,00
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="mt-8 flex gap-3">
                 <button

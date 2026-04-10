@@ -81,8 +81,9 @@ function CheckoutContent() {
   const stylePrice = parseFloat(searchParams.get('style_price') || '9.90');
 
   const metodoParam = searchParams.get('metodo');
+  const isMonthlyPlan = mode === 'plan' && !isAnnual;
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(
-    metodoParam === 'pix' ? 'pix' : metodoParam === 'credit_card' ? 'credit_card' : 'pix'
+    isMonthlyPlan ? 'credit_card' : (metodoParam === 'pix' ? 'pix' : metodoParam === 'credit_card' ? 'credit_card' : 'pix')
   );
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'pix'>('form');

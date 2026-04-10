@@ -197,12 +197,42 @@ function AdminContent() {
     }
   }, []);
 
+  // Load coupons
+  const loadCoupons = useCallback(async () => {
+    setCouponsLoading(true);
+    try {
+      const { data } = await supabase.from('coupons').select('*').order('created_at', { ascending: false });
+      setCoupons(data || []);
+      // Load usages
+      const { data: usages } = await supabase.from('coupon_redemptions').select('*').order('redeemed_at', { ascending: false }).limit(200);
+      // Enrich usages with profile names
+      if (usages && usages.length > 0) {
+        const userIds = [...new Set(usages.map((u: any) => u.user_id))];
+        const { data: profiles } = await supabase.from('profiles').select('id, display_name, username').in('id', userIds);
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+        const couponMap = new Map((data || []).map((c: any) => [c.id, c.code]));
+        setCouponUsages(usages.map((u: any) => ({
+          ...u,
+          user_name: profileMap.get(u.user_id)?.display_name || profileMap.get(u.user_id)?.username || '—',
+          coupon_code: couponMap.get(u.coupon_id) || '—',
+        })));
+      } else {
+        setCouponUsages([]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCouponsLoading(false);
+    }
+  }, []);
+
   // Tab change handler
   useEffect(() => {
     if (tab === 'users') loadUsers();
     else if (tab === 'subscriptions') loadSubscriptions();
     else if (tab === 'payments') loadPayments();
-  }, [tab, loadUsers, loadSubscriptions, loadPayments]);
+    else if (tab === 'coupons') loadCoupons();
+  }, [tab, loadUsers, loadSubscriptions, loadPayments, loadCoupons]);
 
   // Search action users (by email via edge function, or by name/username locally)
   const searchUsers = async () => {

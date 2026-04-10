@@ -75,7 +75,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Instagram,
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Instagram,
   Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -229,6 +229,9 @@ const CarouselGenerator: React.FC = () => {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tweetPreviewRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [showCommunityPublish, setShowCommunityPublish] = useState(false);
+  const [communityCaption, setCommunityCaption] = useState('');
+  const [publishingCommunity, setPublishingCommunity] = useState(false);
   const isGuest = !user;
   const planLimits = usePlanLimits();
   const [isAdminMaster, setIsAdminMaster] = useState(false);
@@ -9505,6 +9508,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.15), rgba(225,48,108,0.15))' }}>
                       <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
                     </button>
+                    <button onClick={() => { setShowExportMenu(false); setCommunityCaption(topic || ''); setShowCommunityPublish(true); }}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-blue-500/20"
+                      style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15))' }}>
+                      <Users className="h-4 w-4 text-blue-400" /> Postar na Comunidade
+                    </button>
                   </div>
                 </div>
               )}
@@ -10910,6 +10918,58 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         topic={topic}
       />
 
+      {/* Community Publish Modal */}
+      {showCommunityPublish && (
+        <div className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center" onClick={() => setShowCommunityPublish(false)}>
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold text-lg mb-1">Postar na Comunidade</h3>
+            <p className="text-white/40 text-xs mb-4">Compartilhe esta criação com outros usuários</p>
+            {carouselData?.cards[0]?.imageUrl && (
+              <img src={carouselData.cards[0].imageUrl} alt="" className="w-full aspect-square object-cover rounded-xl mb-4" />
+            )}
+            <textarea
+              value={communityCaption}
+              onChange={e => setCommunityCaption(e.target.value)}
+              placeholder="Legenda (opcional)"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm resize-none h-20 mb-4 focus:outline-none focus:border-white/20"
+            />
+            <button
+              disabled={publishingCommunity}
+              onClick={async () => {
+                if (!user || !currentCarouselId) return;
+                setPublishingCommunity(true);
+                try {
+                  const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselId).single();
+                  const finalCover = existing?.cover_url || carouselData?.cards[0]?.imageUrl || null;
+                  const { error } = await supabase.from('community_posts').insert({
+                    user_id: user.id,
+                    carousel_id: currentCarouselId,
+                    cover_url: finalCover,
+                    caption: communityCaption || topic || '',
+                  } as any);
+                  if (error) {
+                    if (error.message?.includes('duplicate') || error.code === '23505') {
+                      sonnerToast.info('Este post já foi publicado na comunidade');
+                    } else throw error;
+                  } else {
+                    sonnerToast.success('Publicado na comunidade! 🎉');
+                  }
+                } catch (err: any) {
+                  sonnerToast.error('Erro ao publicar: ' + err.message);
+                } finally {
+                  setPublishingCommunity(false);
+                  setShowCommunityPublish(false);
+                }
+              }}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+            >
+              {publishingCommunity ? 'Publicando...' : 'Publicar'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tour removed */}
 
       {/* Guest Paywall Modal - now non-blocking, dismissable */}
@@ -11005,26 +11065,34 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             setCorrectionCardIndex(null);
             toast({ title: 'Correção aplicada!' });
 
-            // Update cover_url in DB if we edited the first card (cover)
-            if (correctionCardIndex === 0 && currentCarouselId) {
+            if (currentCarouselId) {
               try {
-                // Upload the base64 image to storage to get a proper URL
                 const { data: userData } = await supabase.auth.getUser();
                 if (!userData?.user) return;
                 const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
                 if (!cu) return;
-                
-                // Convert base64 to blob
-                const res = await fetch(newUrl);
-                const blob = await res.blob();
-                const ext = blob.type.includes('png') ? 'png' : 'jpg';
-                const fileName = `${cu.company_id}/${currentCarouselId}.${ext}`;
-                
-                await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
-                const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
-                if (urlData?.publicUrl) {
-                  const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-                  await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', currentCarouselId);
+
+                // Update carousel_data in DB with the new image
+                const updatedCards = [...(carouselData?.cards || [])];
+                updatedCards[correctionCardIndex] = { ...updatedCards[correctionCardIndex], imageUrl: newUrl };
+                const updatedData = { ...carouselData, cards: updatedCards };
+                await supabase.from('generated_carousels').update({ carousel_data: updatedData as any }).eq('id', currentCarouselId);
+
+                // Update cover_url if we edited the first card (cover)
+                if (correctionCardIndex === 0) {
+                  const res = await fetch(newUrl);
+                  const blob = await res.blob();
+                  const ext = blob.type.includes('png') ? 'png' : 'jpg';
+                  const fileName = `${cu.company_id}/${currentCarouselId}.${ext}`;
+                  
+                  await supabase.storage.from('covers').upload(fileName, blob, { contentType: blob.type, upsert: true });
+                  const { data: urlData } = supabase.storage.from('covers').getPublicUrl(fileName);
+                  if (urlData?.publicUrl) {
+                    const coverUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                    await supabase.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', currentCarouselId);
+                    // Update local history cache
+                    setCarouselHistory(prev => prev.map(h => h.id === currentCarouselId ? { ...h, cover_url: coverUrl } : h));
+                  }
                 }
               } catch (err) {
                 console.error('Cover update after correction failed:', err);

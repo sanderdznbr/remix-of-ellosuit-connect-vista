@@ -1,5 +1,6 @@
 import React from 'react';
-import { User, Sparkles, Lock, Layers } from 'lucide-react';
+import { User, Sparkles, Lock, Layers, Zap } from 'lucide-react';
+import { calculateCreditCost, type WizardMode } from '@/utils/creditCost';
 
 interface Props {
   cardCount: number;

@@ -737,6 +737,132 @@ function AdminContent() {
           </div>
         )}
 
+        {/* ═══ COUPONS ═══ */}
+        {tab === 'coupons' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white/40 text-xs">{coupons.length} cupom(ns)</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowCreateCoupon(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white cursor-pointer hover:opacity-90 transition-opacity" style={{ backgroundColor: '#7B50DC' }}>
+                  <Plus className="w-3.5 h-3.5" /> Novo Cupom
+                </button>
+                <button onClick={loadCoupons} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {showCreateCoupon && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl p-5 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <h3 className="text-white font-semibold text-sm mb-4">Criar Cupom</h3>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-white/40 text-[11px] uppercase font-medium mb-1 block">Código</label>
+                    <input value={newCoupon.code} onChange={e => setNewCoupon(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="EX: PROMO50" className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  </div>
+                  <div>
+                    <label className="text-white/40 text-[11px] uppercase font-medium mb-1 block">Desconto %</label>
+                    <input type="number" value={newCoupon.discount_percent} onChange={e => setNewCoupon(p => ({ ...p, discount_percent: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  </div>
+                  <div>
+                    <label className="text-white/40 text-[11px] uppercase font-medium mb-1 block">Limite de usos</label>
+                    <input type="number" value={newCoupon.max_uses} onChange={e => setNewCoupon(p => ({ ...p, max_uses: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  </div>
+                  <div>
+                    <label className="text-white/40 text-[11px] uppercase font-medium mb-1 block">Descrição</label>
+                    <input value={newCoupon.description} onChange={e => setNewCoupon(p => ({ ...p, description: e.target.value }))} placeholder="Opcional" className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/20 outline-none" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                  </div>
+                </div>
+                <button disabled={creatingCoupon || !newCoupon.code} onClick={async () => {
+                  setCreatingCoupon(true);
+                  try {
+                    const { error } = await supabase.from('coupons').insert({
+                      code: newCoupon.code,
+                      coupon_type: 'discount',
+                      discount_percent: newCoupon.discount_percent,
+                      max_uses: newCoupon.max_uses,
+                      is_active: true,
+                      description: newCoupon.description || null,
+                    });
+                    if (error) throw error;
+                    toast.success(`Cupom ${newCoupon.code} criado!`);
+                    setNewCoupon({ code: '', discount_percent: 25, max_uses: 10, description: '' });
+                    setShowCreateCoupon(false);
+                    loadCoupons();
+                  } catch (err: any) {
+                    toast.error('Erro: ' + err.message);
+                  } finally {
+                    setCreatingCoupon(false);
+                  }
+                }} className="w-full py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer hover:opacity-90 disabled:opacity-50 transition-all" style={{ backgroundColor: '#7B50DC' }}>
+                  {creatingCoupon ? 'Criando...' : 'Criar Cupom'}
+                </button>
+              </motion.div>
+            )}
+
+            {couponsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-white/30" /></div>
+            ) : (
+              <div className="space-y-2">
+                {coupons.map(c => (
+                  <div key={c.id} className="rounded-xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <Tag className="w-4 h-4 text-purple-400" />
+                        <div>
+                          <span className="text-white font-bold text-sm">{c.code}</span>
+                          {c.description && <p className="text-white/30 text-[11px]">{c.description}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.is_active ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                          {c.is_active ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <button onClick={async () => {
+                          await supabase.from('coupons').update({ is_active: !c.is_active }).eq('id', c.id);
+                          loadCoupons();
+                        }} className="text-white/30 hover:text-white/60 text-[11px] cursor-pointer">
+                          {c.is_active ? 'Desativar' : 'Ativar'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-[11px] text-white/40">
+                      {c.discount_percent > 0 && <span className="text-purple-400 font-medium">-{c.discount_percent}%</span>}
+                      {c.discount_fixed > 0 && <span className="text-purple-400 font-medium">-R${c.discount_fixed?.toFixed(2).replace('.', ',')}</span>}
+                      <span>Usos: <strong className="text-white/60">{c.current_uses || 0}</strong>{c.max_uses ? ` / ${c.max_uses}` : ' (ilimitado)'}</span>
+                      <span>Tipo: {c.coupon_type}</span>
+                      {c.expires_at && <span>Expira: {fmtDate(c.expires_at)}</span>}
+                      <span>Criado: {fmtDate(c.created_at)}</span>
+                    </div>
+                    <button onClick={() => setSelectedCouponId(selectedCouponId === c.id ? null : c.id)} className="text-white/30 hover:text-white/50 text-[11px] mt-2 cursor-pointer">
+                      {selectedCouponId === c.id ? '▼ Ocultar usos' : '▶ Ver quem usou'}
+                    </button>
+                    {selectedCouponId === c.id && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-2 overflow-hidden">
+                        {couponUsages.filter(u => u.coupon_id === c.id).length === 0 ? (
+                          <p className="text-white/20 text-[11px] py-2">Nenhum uso registrado</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {couponUsages.filter(u => u.coupon_id === c.id).map(u => (
+                              <div key={u.id} className="flex items-center justify-between px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                <span className="text-white/60 text-[11px]">{u.user_name}</span>
+                                <span className="text-white/30 text-[10px]">{fmtDateTime(u.redeemed_at)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                ))}
+                {coupons.length === 0 && (
+                  <p className="text-center text-white/20 text-xs py-8">Nenhum cupom encontrado</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ═══ MANUAL ACTIONS ═══ */}
         {tab === 'actions' && (
           <div className="max-w-xl">

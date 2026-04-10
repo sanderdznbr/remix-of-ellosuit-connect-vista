@@ -99,6 +99,7 @@ function CheckoutContent() {
   const [cardCvv, setCardCvv] = useState('');
 
   const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  const [existingSub, setExistingSub] = useState<{ plan_type: string; status: string; monthly_price: number; current_period_start: string; current_period_end: string } | null>(null);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
@@ -106,16 +107,40 @@ function CheckoutContent() {
 
   const isAdmin = user?.email === 'admin@gmail.com';
 
+  // Plan tier for upgrade detection
+  const PLAN_TIERS: Record<string, number> = { free: 0, test: 0, starter: 1, pro: 2, growth: 3 };
+  const isUpgrade = mode === 'plan' && existingSub && existingSub.status === 'active' && existingSub.plan_type !== 'free' && existingSub.plan_type !== planKey && (PLAN_TIERS[planKey] || 0) > (PLAN_TIERS[existingSub.plan_type] || 0);
+
+  // Calculate prorated upgrade price
+  const getUpgradePrice = () => {
+    if (!isUpgrade || !existingSub) return planPrice;
+    const now = new Date();
+    const periodEnd = new Date(existingSub.current_period_end);
+    const periodStart = new Date(existingSub.current_period_start);
+    const totalDays = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000));
+    const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / 86400000));
+    const dailyRateOld = existingSub.monthly_price / totalDays;
+    const dailyRateNew = planPrice / totalDays;
+    return Math.max(1, parseFloat(((dailyRateNew - dailyRateOld) * remainingDays).toFixed(2)));
+  };
+
+  const upgradePrice = isUpgrade ? getUpgradePrice() : null;
+
   useEffect(() => {
     if (!user) return;
-    const fetchBalance = async () => {
+    const fetchData = async () => {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
       if (!cu) return;
-      const { data } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
-      setCurrentBalance(data?.balance || 0);
+      const { data: balance } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).single();
+      setCurrentBalance(balance?.balance || 0);
+      
+      if (mode === 'plan') {
+        const { data: sub } = await supabase.from('subscriptions').select('plan_type, status, monthly_price, current_period_start, current_period_end').eq('company_id', cu.company_id).maybeSingle();
+        if (sub) setExistingSub(sub as any);
+      }
     };
-    fetchBalance();
-  }, [user]);
+    fetchData();
+  }, [user, mode]);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -220,7 +245,7 @@ function CheckoutContent() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const basePrice = mode === 'plan' ? planPrice : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
+  const basePrice = mode === 'plan' ? (isUpgrade && upgradePrice !== null ? upgradePrice : planPrice) : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
   const discount = appliedCoupon ? (appliedCoupon.discount_percent > 0 ? basePrice * (appliedCoupon.discount_percent / 100) : appliedCoupon.discount_fixed) : 0;
   const displayPrice = Math.max(0, basePrice - discount);
   const PlanIcon = plan.icon;
@@ -320,18 +345,30 @@ function CheckoutContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-white text-lg font-bold leading-tight">
-                      {mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? styleName : mode === 'gift' ? `Presente ${giftCredits} créditos` : `${creditPack.credits} créditos`}
+                      {mode === 'plan' ? (isUpgrade ? `Upgrade para ${plan.name}` : `Plano ${plan.name}`) : mode === 'style' ? styleName : mode === 'gift' ? `Presente ${giftCredits} créditos` : `${creditPack.credits} créditos`}
                     </h2>
                     <p className="text-white/40 text-xs mt-0.5">
-                      {mode === 'plan' ? `${isAnnual ? 'Anual' : 'Mensal'} • ${plan.credits} créditos/mês` : mode === 'style' ? 'Estilo do Marketplace' : mode === 'gift' ? 'Chave presente' : 'Créditos avulsos'}
+                      {mode === 'plan' 
+                        ? isUpgrade 
+                          ? `De ${existingSub?.plan_type?.charAt(0).toUpperCase()}${existingSub?.plan_type?.slice(1)} → ${plan.name} • Pague apenas a diferença proporcional`
+                          : `${isAnnual ? 'Anual' : 'Mensal'} • ${plan.credits} créditos/mês`
+                        : mode === 'style' ? 'Estilo do Marketplace' : mode === 'gift' ? 'Chave presente' : 'Créditos avulsos'}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
+                    {isUpgrade && <span className="text-green-400/60 text-[10px] block mb-0.5">Diferença proporcional</span>}
                     {discount > 0 && <span className="text-white/25 text-xs line-through block">{formatBRL(basePrice)}</span>}
                     <span className="text-white text-2xl font-bold">{formatBRL(displayPrice)}</span>
-                    {mode === 'plan' && <span className="text-white/30 text-[10px] block">/mês</span>}
+                    {mode === 'plan' && !isUpgrade && <span className="text-white/30 text-[10px] block">/mês</span>}
+                    {isUpgrade && <span className="text-white/30 text-[10px] block">pagamento único</span>}
                   </div>
                 </div>
+                {isUpgrade && (
+                  <div className="flex items-center gap-1.5 mt-3 px-3 py-2 rounded-lg text-[11px]" style={{ backgroundColor: 'rgba(74, 222, 128, 0.06)', border: '1px solid rgba(74, 222, 128, 0.15)', color: 'rgba(74, 222, 128, 0.8)' }}>
+                    <Zap className="w-3 h-3 flex-shrink-0" />
+                    <span>Seus créditos atuais serão mantidos. Serão adicionados +{plan.credits - (PLANS[existingSub?.plan_type || '']?.credits || 0)} créditos do novo plano.</span>
+                  </div>
+                )}
                 {currentBalance !== null && mode !== 'gift' && (
                   <div className="flex items-center gap-1.5 mt-3 text-[11px]" style={{ color: 'rgba(123, 80, 220, 0.7)' }}>
                     <Sparkles className="w-3 h-3" /> Saldo atual: {Math.floor(currentBalance)} créditos

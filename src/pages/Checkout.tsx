@@ -356,11 +356,19 @@ function CheckoutContent() {
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
+                    {isUpgrade && <span className="text-green-400/60 text-[10px] block mb-0.5">Diferença proporcional</span>}
                     {discount > 0 && <span className="text-white/25 text-xs line-through block">{formatBRL(basePrice)}</span>}
                     <span className="text-white text-2xl font-bold">{formatBRL(displayPrice)}</span>
-                    {mode === 'plan' && <span className="text-white/30 text-[10px] block">/mês</span>}
+                    {mode === 'plan' && !isUpgrade && <span className="text-white/30 text-[10px] block">/mês</span>}
+                    {isUpgrade && <span className="text-white/30 text-[10px] block">pagamento único</span>}
                   </div>
                 </div>
+                {isUpgrade && (
+                  <div className="flex items-center gap-1.5 mt-3 px-3 py-2 rounded-lg text-[11px]" style={{ backgroundColor: 'rgba(74, 222, 128, 0.06)', border: '1px solid rgba(74, 222, 128, 0.15)', color: 'rgba(74, 222, 128, 0.8)' }}>
+                    <Zap className="w-3 h-3 flex-shrink-0" />
+                    <span>Seus créditos atuais serão mantidos. Serão adicionados +{plan.credits - (PLANS[existingSub?.plan_type || '']?.credits || 0)} créditos do novo plano.</span>
+                  </div>
+                )}
                 {currentBalance !== null && mode !== 'gift' && (
                   <div className="flex items-center gap-1.5 mt-3 text-[11px]" style={{ color: 'rgba(123, 80, 220, 0.7)' }}>
                     <Sparkles className="w-3 h-3" /> Saldo atual: {Math.floor(currentBalance)} créditos

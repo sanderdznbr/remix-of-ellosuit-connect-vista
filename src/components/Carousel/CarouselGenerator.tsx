@@ -4175,6 +4175,16 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           } else {
             // No web photo — apply the NO HUMANS instruction if placeholder exists
             cardPrompt = cardPrompt.replace('\n\n__NO_HUMANS_PLACEHOLDER__', '\n\nCRITICAL: Do NOT include any people, faces, portraits, or human figures in this image. The image must contain ONLY visual elements, objects, graphics, text overlays, and abstract/decorative elements. NO HUMANS whatsoever.');
+            
+            // When web search was active but user skipped all photos, instruct AI to freely create related imagery
+            if (!skipWebSearch && webSearchResult?.content && !capturedProductRefs && !useRealEstateBlend && productImages.length === 0) {
+              const cardDesc = updatedCards[i]?.title || updatedCards[i]?.bodyTop || cleanTopic;
+              cardPrompt += `\n\n🎨 LIBERDADE CRIATIVA — IMAGENS TEMÁTICAS:
+Não há fotos de referência para este card. Você tem TOTAL LIBERDADE para criar/imaginar elementos visuais fotorrealistas relacionados ao tema "${cardDesc}".
+Use sua criatividade para incluir elementos, objetos, cenários e composições que remetam diretamente ao tema.
+Exemplo: se o tema é "pet shop", inclua fotos de animais (cães, gatos, etc.), produtos pet, ambientes de pet shop.
+A imagem deve ser RICA visualmente e temática, não abstrata ou genérica.`;
+            }
           }
 
           // === WEB SEARCH + FACE: create professional portrait matching post theme ===
@@ -5051,6 +5061,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           // Remove NO HUMANS if present — web photos may contain people
           loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS whatsoever\./g, '');
           loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS\./g, '');
+        } else if (!skipWebSearch && webSearchResult?.content && !loop2ProductRefs && productImages.length === 0) {
+          // User skipped web photos — give AI creative freedom
+          const cardDescL2 = updatedCards[i]?.title || updatedCards[i]?.bodyTop || cleanTopic;
+          loop2Prompt += `\n\n🎨 LIBERDADE CRIATIVA: Crie elementos visuais fotorrealistas relacionados ao tema "${cardDescL2}". Inclua objetos, cenários e composições que remetam diretamente ao tema. A imagem deve ser rica e temática.`;
         }
 
         imageFactories.push({
@@ -7588,7 +7602,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     )}
                     {currentStepName === 'Fotos' && (
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        webImages={webSearchResult?.images} onSkip={() => setWizardStep(wizardStep + 1)}
+                        webImages={webSearchResult?.images} onSkip={() => {
+                          // Clear card photo assignments so skipped images are NOT used in generation
+                          setCardPhotoAssignments({});
+                          setCardPhotoOptions({});
+                          setWizardStep(wizardStep + 1);
+                        }}
                         maxSelections={wizardMode === 'tweet2' && tweet2Config.photoCardCount > 0 ? tweet2Config.photoCardCount : undefined} />
                     )}
                     {currentStepName === 'Personalização' && (

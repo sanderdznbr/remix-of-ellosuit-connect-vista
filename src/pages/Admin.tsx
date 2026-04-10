@@ -439,6 +439,7 @@ function AdminContent() {
     { key: 'users', label: 'Usuários', icon: Users },
     { key: 'subscriptions', label: 'Assinaturas', icon: UserCheck },
     { key: 'payments', label: 'Pagamentos', icon: DollarSign },
+    { key: 'coupons', label: 'Cupons', icon: Tag },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
     { key: 'content', label: 'Conteúdo', icon: FileText },
   ];

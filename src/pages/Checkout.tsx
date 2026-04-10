@@ -323,6 +323,19 @@ function CheckoutContent() {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || data?.details || 'Erro no pagamento');
 
+      // Record coupon usage
+      if (appliedCoupon && user) {
+        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+        if (cu) {
+          await supabase.from('coupon_redemptions').insert({
+            coupon_id: appliedCoupon.id,
+            user_id: user.id,
+            company_id: cu.company_id,
+          });
+          await supabase.from('coupons').update({ current_uses: (appliedCoupon as any).current_uses ? (appliedCoupon as any).current_uses + 1 : 1 }).eq('id', appliedCoupon.id);
+        }
+      }
+
       if (paymentMethod === 'pix' && data.pix) {
         setPixData({
           qrCode: data.pix.qr_code,

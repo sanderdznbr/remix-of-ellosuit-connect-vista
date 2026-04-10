@@ -7283,6 +7283,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   </div>
                   )}
 
+                  {/* Subtle credit cost indicator */}
+                  {currentStepName !== 'Modo' && (
+                    <WizardCreditIndicator
+                      wizardMode={wizardMode}
+                      cardCount={contentMode === 'single-post' ? 1 : cardCount}
+                      hasFaceRef={facePersons.some(p => p.photos.length > 0)}
+                      contentMode={contentMode}
+                      themeColor={modeTheme.loadingColor}
+                    />
+                  )}
+
                    {/* Step content with entrance animation */}
                   <AnimatePresence mode="wait">
                     <motion.div

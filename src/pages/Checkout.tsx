@@ -81,10 +81,8 @@ function CheckoutContent() {
   const stylePrice = parseFloat(searchParams.get('style_price') || '9.90');
 
   const metodoParam = searchParams.get('metodo');
-  // Plans are card-only (recurring). Other modes default to PIX.
-  const isRecurring = mode === 'plan';
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(
-    isRecurring ? 'credit_card' : (metodoParam === 'credit_card' ? 'credit_card' : 'pix')
+    metodoParam === 'pix' ? 'pix' : metodoParam === 'credit_card' ? 'credit_card' : 'pix'
   );
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'pix'>('form');
@@ -171,7 +169,7 @@ function CheckoutContent() {
     if (!customerName.trim() || !customerDocument.trim()) {
       toast({ title: 'Preencha nome e CPF', variant: 'destructive' }); return;
     }
-    const needsCard = isRecurring || paymentMethod === 'credit_card';
+    const needsCard = (mode === "plan" && paymentMethod === "credit_card") || paymentMethod === 'credit_card';
     if (needsCard) {
       const cardDigits = cardNumber.replace(/\D/g, '');
       if (cardDigits.length < 13 || !cardHolder.trim() || cardExpiry.length < 5 || cardCvv.length < 3) {
@@ -189,7 +187,7 @@ function CheckoutContent() {
 
       let body: any;
       if (mode === 'plan') {
-        body = { action: 'subscribe', plan_id: planKey, customer, card: cardData };
+        body = { action: 'subscribe', plan_id: planKey, payment_method: paymentMethod, billing_period: billingPeriod, customer, card: cardData };
       } else if (mode === 'style') {
         body = { action: 'buy_style', style_id: styleId, price_cents: Math.round(stylePrice * 100), payment_method: paymentMethod, customer, card: cardData };
       } else if (mode === 'gift') {
@@ -235,7 +233,7 @@ function CheckoutContent() {
   // ────────────────── Render helpers ──────────────────
 
   const renderPaymentMethodSelector = () => {
-    if (isRecurring) return null; // Plans are card-only
+    
 
     return (
       <div className="mb-6">
@@ -279,7 +277,7 @@ function CheckoutContent() {
   const inputSt = { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' };
 
   const renderCardFields = () => {
-    if (paymentMethod !== 'credit_card' && !isRecurring) return null;
+    if (paymentMethod !== 'credit_card') return null;
     return (
       <div className="mb-6">
         <h3 className="text-white/50 text-[11px] font-semibold mb-3 uppercase tracking-widest">Dados do cartão</h3>
@@ -372,10 +370,16 @@ function CheckoutContent() {
               {renderPaymentMethodSelector()}
 
               {/* Plan recurring notice */}
-              {isRecurring && (
+              {mode === 'plan' && paymentMethod === 'credit_card' && (
                 <div className="flex items-center gap-2.5 mb-6 px-4 py-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(123, 80, 220, 0.06)', border: '1px solid rgba(123, 80, 220, 0.15)', color: 'rgba(123, 80, 220, 0.8)' }}>
                   <CreditCard className="w-4 h-4 flex-shrink-0" />
-                  <span>Planos recorrentes são cobrados exclusivamente via cartão de crédito com renovação automática.</span>
+                  <span>Assinatura recorrente com renovação automática mensal via cartão de crédito.</span>
+                </div>
+              )}
+              {mode === 'plan' && paymentMethod === 'pix' && (
+                <div className="flex items-center gap-2.5 mb-6 px-4 py-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(0, 200, 130, 0.06)', border: '1px solid rgba(0, 200, 130, 0.15)', color: 'rgba(0, 200, 130, 0.8)' }}>
+                  <QrCode className="w-4 h-4 flex-shrink-0" />
+                  <span>Pagamento avulso de 1 mês via PIX. Sem renovação automática — renove manualmente quando quiser.</span>
                 </div>
               )}
 
@@ -383,7 +387,7 @@ function CheckoutContent() {
               {renderCardFields()}
 
               {/* ── PIX notice ── */}
-              {paymentMethod === 'pix' && !isRecurring && (
+              {paymentMethod === 'pix' && (
                 <div className="mb-6 flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(0, 200, 130, 0.06)', border: '1px solid rgba(0, 200, 130, 0.15)', color: 'rgba(0, 200, 130, 0.8)' }}>
                   <QrCode className="w-4 h-4 flex-shrink-0" />
                   <span>Um QR Code PIX será gerado após confirmar. Válido por 1 hora.</span>
@@ -450,7 +454,7 @@ function CheckoutContent() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    {paymentMethod === 'pix' && !isRecurring ? <QrCode className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                    {paymentMethod === 'pix' ? <QrCode className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                     {mode === 'plan' ? `Assinar por ${formatBRL(displayPrice)}/mês` : paymentMethod === 'pix' ? `Gerar PIX de ${formatBRL(displayPrice)}` : `Pagar ${formatBRL(displayPrice)}`}
                   </>
                 )}

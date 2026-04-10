@@ -165,6 +165,12 @@ const StepMode: React.FC<Props> = ({
                 <span className="text-[10px] text-white/25 block mt-0.5">
                   {locked ? `Disponível a partir do plano ${getRequiredPlan(m.key)}` : m.desc}
                 </span>
+                {!locked && (
+                  <span className="text-[10px] text-white/15 block mt-1">
+                    {m.key === 'simple' ? '~1 crédito/card' : m.key === 'tweet2' ? '~1 crédito/card' : m.key === 'advanced' ? '~2 créditos/card · com rosto ~4' : m.key === 'extreme' ? '~2 créditos/card' : m.key === 'animated' ? '~2 créditos/card' : '~1 crédito/card'}
+                    {' + 1 pesquisa'}
+                  </span>
+                )}
               </div>
             </button>
           );

@@ -5,12 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Plan pricing (cents) — monthly prices
-const PLANS: Record<string, { name: string; price: number; credits: number }> = {
-  test: { name: 'Teste', price: 100, credits: 5 },
-  starter: { name: 'Starter', price: 8990, credits: 50 },
-  pro: { name: 'Pro', price: 15990, credits: 100 },
-  growth: { name: 'Growth', price: 26990, credits: 200 },
+// Plan pricing (cents) — monthly prices / annual prices
+const PLANS: Record<string, { name: string; monthlyPrice: number; annualPrice: number; credits: number; tier: number }> = {
+  test: { name: 'Teste', monthlyPrice: 100, annualPrice: 100, credits: 5, tier: 0 },
+  starter: { name: 'Starter', monthlyPrice: 8990, annualPrice: 6990, credits: 50, tier: 1 },
+  pro: { name: 'Pro', monthlyPrice: 15990, annualPrice: 12990, credits: 100, tier: 2 },
+  growth: { name: 'Growth', monthlyPrice: 26990, annualPrice: 21990, credits: 200, tier: 3 },
 };
 
 // Helper to apply coupon discount server-side
@@ -32,11 +32,9 @@ async function applyCouponDiscount(
 
   if (!coupon) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
 
-  // Validate expiry and usage
   if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
   if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) return { finalPrice: priceInCents, couponId: null, discountApplied: 0 };
 
-  // Check if user already used
   const { data: existing } = await adminClient
     .from('coupon_redemptions')
     .select('id')
@@ -52,7 +50,7 @@ async function applyCouponDiscount(
     discount = Math.round(coupon.discount_fixed * 100);
   }
 
-  const finalPrice = Math.max(100, priceInCents - discount); // min 1 real
+  const finalPrice = Math.max(100, priceInCents - discount);
   return { finalPrice, couponId: coupon.id, discountApplied: discount };
 }
 
@@ -68,7 +66,6 @@ async function getOrCreateCustomer(
   supabase: any,
   companyId: string,
 ): Promise<string> {
-  // Check if customer already exists
   const { data: existing } = await supabase
     .from('subscriptions')
     .select('pagarme_customer_id')
@@ -122,7 +119,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Authenticate user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -148,7 +144,6 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const userEmail = userData.user.email || '';
 
-    // Get company
     const { data: cu } = await userClient
       .from('company_users')
       .select('company_id')
@@ -180,7 +175,7 @@ Deno.serve(async (req) => {
     const customerId = await getOrCreateCustomer(auth, customer, adminClient, companyId);
 
     // ════════════════════════════════════════
-    //  ACTION: SUBSCRIBE (monthly plan, card only)
+    //  ACTION: SUBSCRIBE (plan subscription)
     // ════════════════════════════════════════
     if (action === 'subscribe') {
       const { plan_id, card, payment_method: subPayMethod } = body;
@@ -195,9 +190,9 @@ Deno.serve(async (req) => {
 
       const billingPeriod = body.billing_period || 'monthly';
       const usePix = subPayMethod === 'pix';
+      const isAnnual = billingPeriod === 'annual';
 
-      // PIX only allowed for annual plans
-      if (usePix && billingPeriod !== 'annual') {
+      if (usePix && !isAnnual) {
         return new Response(JSON.stringify({ error: 'PIX disponível apenas para planos anuais' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -211,40 +206,92 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log(`[SUBSCRIBE] Plan: ${plan_id}, Method: ${usePix ? 'pix' : 'card'}, Company: ${companyId}`);
+      // ── Check existing subscription for upgrade logic ──
+      const { data: existingSub } = await adminClient
+        .from('subscriptions')
+        .select('*')
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      const isUpgrade = existingSub && existingSub.status === 'active' && existingSub.plan_type !== 'free' && existingSub.plan_type !== plan_id;
+      const existingPlan = isUpgrade ? PLANS[existingSub.plan_type] : null;
+
+      // Calculate the price to charge
+      let basePriceCents = isAnnual ? plan.annualPrice : plan.monthlyPrice;
+      let upgradeDifferenceCents = 0;
+
+      if (isUpgrade && existingPlan) {
+        // Only allow upgrade to higher tier
+        if (plan.tier <= existingPlan.tier) {
+          return new Response(JSON.stringify({ error: 'Você já possui um plano igual ou superior. Para fazer downgrade, cancele o plano atual primeiro.' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Calculate prorated difference based on remaining days
+        const now = new Date();
+        const periodEnd = new Date(existingSub.current_period_end);
+        const periodStart = new Date(existingSub.current_period_start);
+        const totalDays = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / 86400000));
+        const remainingDays = Math.max(0, Math.ceil((periodEnd.getTime() - now.getTime()) / 86400000));
+        const dailyRateOld = (existingSub.monthly_price * 100) / totalDays;
+        const dailyRateNew = basePriceCents / totalDays;
+        upgradeDifferenceCents = Math.max(100, Math.round((dailyRateNew - dailyRateOld) * remainingDays));
+
+        console.log(`[UPGRADE] From ${existingSub.plan_type} to ${plan_id}: remaining ${remainingDays}/${totalDays} days, diff: ${upgradeDifferenceCents} cents`);
+        basePriceCents = upgradeDifferenceCents;
+      }
+
+      console.log(`[SUBSCRIBE] Plan: ${plan_id}, Method: ${usePix ? 'pix' : 'card'}, Company: ${companyId}, Upgrade: ${isUpgrade}`);
 
       const { finalPrice, couponId, discountApplied } = await applyCouponDiscount(
-        adminClient, body.coupon_code, userId, plan.price,
+        adminClient, body.coupon_code, userId, basePriceCents,
       );
-      console.log(`[SUBSCRIBE] Original: ${plan.price}, Discount: ${discountApplied}, Final: ${finalPrice}`);
+      console.log(`[SUBSCRIBE] Original: ${basePriceCents}, Discount: ${discountApplied}, Final: ${finalPrice}`);
 
       const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      // For upgrades, keep original billing date; for new subs, start fresh
+      const originalPeriodStart = isUpgrade ? new Date(existingSub.current_period_start) : now;
+      const originalPeriodEnd = isUpgrade ? new Date(existingSub.current_period_end) : (() => { const d = new Date(now); d.setMonth(d.getMonth() + 1); return d; })();
+      const originalCreditsResetAt = isUpgrade ? existingSub.credits_last_reset_at : now.toISOString();
+
+      // For upgrades, only add the DIFFERENCE in credits (new plan credits - old plan credits)
+      const creditsToAdd = isUpgrade && existingPlan
+        ? Math.max(0, plan.credits - existingPlan.credits)
+        : plan.credits;
 
       // Helper to activate subscription in DB
       const activateSubscription = async (pagarmeId: string, status: string, isPix: boolean) => {
+        // For upgrades, use the NEW plan's full price as monthly_price (for future billing)
+        const monthlyPriceForDb = isAnnual ? plan.annualPrice / 100 : plan.monthlyPrice / 100;
+
         await adminClient.from('subscriptions').upsert({
           company_id: companyId,
           plan_type: plan_id as any,
           billing_cycle: 'monthly',
           status: status === 'active' || status === 'paid' ? 'active' : 'pending',
-          monthly_price: finalPrice / 100,
-          current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          credits_last_reset_at: now.toISOString(),
-          pagarme_subscription_id: isPix ? null : pagarmeId,
+          monthly_price: monthlyPriceForDb,
+          current_period_start: originalPeriodStart.toISOString(),
+          current_period_end: originalPeriodEnd.toISOString(),
+          credits_last_reset_at: originalCreditsResetAt,
+          pagarme_subscription_id: isPix ? (existingSub?.pagarme_subscription_id || null) : pagarmeId,
           pagarme_customer_id: customerId,
           updated_at: now.toISOString(),
         }, { onConflict: 'company_id' });
 
         if (status === 'active' || status === 'paid') {
-          await adminClient.rpc('add_ai_credits', {
-            p_company_id: companyId,
-            p_amount: plan.credits,
-            p_description: `Plano ${plan.name} - ${plan.credits} créditos mensais`,
-          });
-          console.log(`[SUBSCRIBE] Added ${plan.credits} credits`);
+          // Credits are ADDED on top, never replaced
+          if (creditsToAdd > 0) {
+            await adminClient.rpc('add_ai_credits', {
+              p_company_id: companyId,
+              p_amount: creditsToAdd,
+              p_description: isUpgrade
+                ? `Upgrade para ${plan.name} - +${creditsToAdd} créditos adicionais`
+                : `Plano ${plan.name} - ${plan.credits} créditos mensais`,
+            });
+            console.log(`[SUBSCRIBE] Added ${creditsToAdd} credits (upgrade: ${isUpgrade})`);
+          }
 
           if (couponId) {
             await adminClient.from('coupon_redemptions').insert({
@@ -256,12 +303,15 @@ Deno.serve(async (req) => {
       };
 
       if (usePix) {
-        // PIX: create a one-time order, activate plan on payment
+        const description = isUpgrade
+          ? `elloContent - Upgrade para ${plan.name} (diferença proporcional)`
+          : `elloContent - Plano ${plan.name} (1º mês)`;
+
         const orderPayload = {
           customer_id: customerId,
           items: [{
             amount: finalPrice,
-            description: `elloContent - Plano ${plan.name} (1º mês)`,
+            description,
             quantity: 1,
           }],
           payments: [{
@@ -273,9 +323,10 @@ Deno.serve(async (req) => {
             company_id: companyId,
             user_id: userId,
             plan_id,
-            credits: plan.credits,
-            action: 'subscribe_pix',
+            credits: creditsToAdd,
+            action: isUpgrade ? 'upgrade_pix' : 'subscribe_pix',
             coupon_id: couponId || undefined,
+            is_upgrade: isUpgrade || false,
           },
         };
 
@@ -296,20 +347,18 @@ Deno.serve(async (req) => {
 
         console.log('[SUBSCRIBE_PIX] Order:', data.id, 'Status:', data.status);
 
-        // If paid immediately (unlikely for PIX), activate
         if (data.status === 'paid') {
           await activateSubscription(data.id, 'paid', true);
         } else {
-          // Set pending subscription
           await adminClient.from('subscriptions').upsert({
             company_id: companyId,
             plan_type: plan_id as any,
             billing_cycle: 'monthly',
             status: 'pending' as any,
             monthly_price: finalPrice / 100,
-            current_period_start: now.toISOString(),
-            current_period_end: periodEnd.toISOString(),
-            credits_last_reset_at: now.toISOString(),
+            current_period_start: originalPeriodStart.toISOString(),
+            current_period_end: originalPeriodEnd.toISOString(),
+            credits_last_reset_at: originalCreditsResetAt,
             pagarme_customer_id: customerId,
             updated_at: now.toISOString(),
           }, { onConflict: 'company_id' });
@@ -326,75 +375,151 @@ Deno.serve(async (req) => {
           order_id: data.id,
           status: data.status,
           plan: plan.name,
-          credits: plan.credits,
+          credits: creditsToAdd,
+          is_upgrade: isUpgrade || false,
           pix: pixData,
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
       } else {
-        // CARD: create recurring subscription
-        const subscriptionPayload = {
-          customer_id: customerId,
-          payment_method: 'credit_card',
-          interval: 'month',
-          interval_count: 1,
-          billing_type: 'prepaid',
-          installments: 1,
-          statement_descriptor: 'ELLOCONTENT',
-          currency: 'BRL',
-          card: {
-            number: card.number.replace(/\D/g, ''),
-            holder_name: card.holder_name,
-            exp_month: card.exp_month,
-            exp_year: card.exp_year,
-            cvv: card.cvv,
-            billing_address: {
-              line_1: customer.address || 'Rua Exemplo, 123',
-              zip_code: customer.zip_code?.replace(/\D/g, '') || '01001000',
-              city: customer.city || 'São Paulo',
-              state: customer.state || 'SP',
-              country: 'BR',
+        // CARD subscription
+        if (isUpgrade) {
+          // For upgrades via card: create a one-time charge for the difference, then update the existing subscription
+          const orderPayload = {
+            customer_id: customerId,
+            items: [{
+              amount: finalPrice,
+              description: `elloContent - Upgrade para ${plan.name} (diferença proporcional)`,
+              quantity: 1,
+            }],
+            payments: [{
+              payment_method: 'credit_card',
+              credit_card: {
+                card: {
+                  number: card.number.replace(/\D/g, ''),
+                  holder_name: card.holder_name,
+                  exp_month: card.exp_month,
+                  exp_year: card.exp_year,
+                  cvv: card.cvv,
+                  billing_address: {
+                    line_1: customer.address || 'Rua Exemplo, 123',
+                    zip_code: customer.zip_code?.replace(/\D/g, '') || '01001000',
+                    city: customer.city || 'São Paulo',
+                    state: customer.state || 'SP',
+                    country: 'BR',
+                  },
+                },
+                installments: 1,
+                statement_descriptor: 'ELLOCONTENT',
+              },
+              amount: finalPrice,
+            }],
+            metadata: {
+              company_id: companyId,
+              user_id: userId,
+              plan_id,
+              credits: creditsToAdd,
+              action: 'upgrade',
+              is_upgrade: true,
             },
-          },
-          items: [{
-            description: `elloContent - Plano ${plan.name} (Mensal)`,
-            quantity: 1,
-            pricing_scheme: { scheme_type: 'unit', price: finalPrice },
-          }],
-          metadata: {
-            company_id: companyId,
-            user_id: userId,
-            plan_id,
-            credits: plan.credits,
-            action: 'subscribe',
-            coupon_id: couponId || undefined,
-          },
-        };
+          };
 
-        const res = await fetch('https://api.pagar.me/core/v5/subscriptions', {
-          method: 'POST',
-          headers: { Authorization: auth, 'Content-Type': 'application/json' },
-          body: JSON.stringify(subscriptionPayload),
-        });
+          const res = await fetch('https://api.pagar.me/core/v5/orders', {
+            method: 'POST',
+            headers: { Authorization: auth, 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderPayload),
+          });
 
-        const data = await res.json();
-        if (!res.ok) {
-          console.error('[SUBSCRIBE] Error:', data);
+          const data = await res.json();
+          if (!res.ok) {
+            console.error('[UPGRADE] Error:', data);
+            return new Response(JSON.stringify({
+              error: 'Falha no pagamento do upgrade',
+              details: data.message || JSON.stringify(data.errors || data),
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          console.log('[UPGRADE] Order:', data.id, 'Status:', data.status);
+
+          if (data.status === 'paid') {
+            await activateSubscription(data.id, 'paid', false);
+          }
+
           return new Response(JSON.stringify({
-            error: 'Falha ao criar assinatura',
-            details: data.message || JSON.stringify(data.errors || data),
-          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            success: true,
+            order_id: data.id,
+            status: data.status,
+            plan: plan.name,
+            credits: creditsToAdd,
+            is_upgrade: true,
+            upgrade_amount: finalPrice,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+        } else {
+          // New subscription via card
+          const subscriptionPayload = {
+            customer_id: customerId,
+            payment_method: 'credit_card',
+            interval: 'month',
+            interval_count: 1,
+            billing_type: 'prepaid',
+            installments: 1,
+            statement_descriptor: 'ELLOCONTENT',
+            currency: 'BRL',
+            card: {
+              number: card.number.replace(/\D/g, ''),
+              holder_name: card.holder_name,
+              exp_month: card.exp_month,
+              exp_year: card.exp_year,
+              cvv: card.cvv,
+              billing_address: {
+                line_1: customer.address || 'Rua Exemplo, 123',
+                zip_code: customer.zip_code?.replace(/\D/g, '') || '01001000',
+                city: customer.city || 'São Paulo',
+                state: customer.state || 'SP',
+                country: 'BR',
+              },
+            },
+            items: [{
+              description: `elloContent - Plano ${plan.name} (Mensal)`,
+              quantity: 1,
+              pricing_scheme: { scheme_type: 'unit', price: finalPrice },
+            }],
+            metadata: {
+              company_id: companyId,
+              user_id: userId,
+              plan_id,
+              credits: plan.credits,
+              action: 'subscribe',
+              coupon_id: couponId || undefined,
+            },
+          };
+
+          const res = await fetch('https://api.pagar.me/core/v5/subscriptions', {
+            method: 'POST',
+            headers: { Authorization: auth, 'Content-Type': 'application/json' },
+            body: JSON.stringify(subscriptionPayload),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            console.error('[SUBSCRIBE] Error:', data);
+            return new Response(JSON.stringify({
+              error: 'Falha ao criar assinatura',
+              details: data.message || JSON.stringify(data.errors || data),
+            }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+
+          console.log('[SUBSCRIBE] Created:', data.id, 'Status:', data.status);
+          await activateSubscription(data.id, data.status, false);
+
+          return new Response(JSON.stringify({
+            success: true,
+            subscription_id: data.id,
+            status: data.status,
+            plan: plan.name,
+            credits: plan.credits,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-
-        console.log('[SUBSCRIBE] Created:', data.id, 'Status:', data.status);
-        await activateSubscription(data.id, data.status, false);
-
-        return new Response(JSON.stringify({
-          success: true,
-          subscription_id: data.id,
-          status: data.status,
-          plan: plan.name,
-          credits: plan.credits,
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
@@ -420,7 +545,6 @@ Deno.serve(async (req) => {
 
       console.log(`[BUY_CREDITS] ${credits} credits, method: ${payment_method}, company: ${companyId}`);
 
-      // Apply coupon discount server-side
       const { finalPrice: creditFinalPrice, couponId: creditCouponId } = await applyCouponDiscount(
         adminClient, body.coupon_code, userId, price_cents,
       );
@@ -444,9 +568,7 @@ Deno.serve(async (req) => {
       if (payment_method === 'pix') {
         orderPayload.payments.push({
           payment_method: 'pix',
-          pix: {
-            expires_in: 3600, // 1 hour
-          },
+          pix: { expires_in: 3600 },
           amount: creditFinalPrice,
         });
       } else {
@@ -495,7 +617,6 @@ Deno.serve(async (req) => {
 
       console.log('[BUY_CREDITS] Order created:', data.id, 'Status:', data.status);
 
-      // If paid immediately (credit card), add credits
       if (data.status === 'paid') {
         await adminClient.rpc('add_ai_credits', {
           p_company_id: companyId,
@@ -505,7 +626,6 @@ Deno.serve(async (req) => {
         console.log(`[BUY_CREDITS] Added ${credits} credits immediately`);
       }
 
-      // Extract PIX data if applicable
       let pixData = null;
       if (payment_method === 'pix' && data.charges?.[0]?.last_transaction) {
         const tx = data.charges[0].last_transaction;
@@ -540,7 +660,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Validate price server-side
       const { data: styleData } = await adminClient
         .from('marketplace_styles')
         .select('id, name, price_brl, is_free')
@@ -561,7 +680,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Use server-side price (security)
       const serverPriceCents = Math.round(styleData.price_brl * 100);
 
       if (payment_method === 'credit_card' && !card?.number) {
@@ -641,7 +759,6 @@ Deno.serve(async (req) => {
 
       console.log('[BUY_STYLE] Order created:', data.id, 'Status:', data.status);
 
-      // If paid immediately, grant the style
       if (data.status === 'paid') {
         await adminClient.from('purchased_styles').insert({
           user_id: userId,

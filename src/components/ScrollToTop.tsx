@@ -1,27 +1,22 @@
 import { useEffect } from "react";
-import { useLocation, useNavigationType } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export const ScrollToTop = () => {
   const { pathname } = useLocation();
-  const navType = useNavigationType();
 
   useEffect(() => {
-    if (navType !== "POP") {
-      // Immediate scroll
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-      document.querySelectorAll("main").forEach((el) =>
-        el.scrollTo({ top: 0, left: 0, behavior: "instant" })
-      );
+    // Scroll window
+    window.scrollTo({ top: 0, left: 0 });
 
-      // Also after next paint (for content that renders async)
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-        document.querySelectorAll("main").forEach((el) =>
-          el.scrollTo({ top: 0, left: 0, behavior: "instant" })
-        );
+    // Scroll all internal scrollable containers (dashboard, wizard, etc.)
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0 });
+      // Target common scrollable containers
+      document.querySelectorAll("[class*='overflow-y-auto'], [class*='overflow-auto'], main").forEach((el) => {
+        el.scrollTop = 0;
       });
-    }
-  }, [pathname, navType]);
+    });
+  }, [pathname]);
 
   return null;
 };

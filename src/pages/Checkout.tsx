@@ -311,10 +311,30 @@ function CheckoutContent() {
         body.affiliate_code = affiliateRef;
       }
 
+      // Attach coupon discount
+      if (appliedCoupon) {
+        body.coupon_code = appliedCoupon.code;
+        body.coupon_discount_percent = appliedCoupon.discount_percent;
+        body.coupon_discount_fixed = appliedCoupon.discount_fixed;
+      }
+
       const { data, error } = await supabase.functions.invoke('pagarme-checkout', { body });
 
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || data?.details || 'Erro no pagamento');
+
+      // Record coupon usage
+      if (appliedCoupon && user) {
+        const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).single();
+        if (cu) {
+          await supabase.from('coupon_redemptions').insert({
+            coupon_id: appliedCoupon.id,
+            user_id: user.id,
+            company_id: cu.company_id,
+          });
+          await supabase.from('coupons').update({ current_uses: (appliedCoupon as any).current_uses ? (appliedCoupon as any).current_uses + 1 : 1 }).eq('id', appliedCoupon.id);
+        }
+      }
 
       if (paymentMethod === 'pix' && data.pix) {
         setPixData({

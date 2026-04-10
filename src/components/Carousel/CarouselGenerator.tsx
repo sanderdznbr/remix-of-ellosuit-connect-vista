@@ -10918,6 +10918,58 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         topic={topic}
       />
 
+      {/* Community Publish Modal */}
+      {showCommunityPublish && (
+        <div className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center" onClick={() => setShowCommunityPublish(false)}>
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold text-lg mb-1">Postar na Comunidade</h3>
+            <p className="text-white/40 text-xs mb-4">Compartilhe esta criação com outros usuários</p>
+            {carouselData?.cards[0]?.imageUrl && (
+              <img src={carouselData.cards[0].imageUrl} alt="" className="w-full aspect-square object-cover rounded-xl mb-4" />
+            )}
+            <textarea
+              value={communityCaption}
+              onChange={e => setCommunityCaption(e.target.value)}
+              placeholder="Legenda (opcional)"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm resize-none h-20 mb-4 focus:outline-none focus:border-white/20"
+            />
+            <button
+              disabled={publishingCommunity}
+              onClick={async () => {
+                if (!user || !currentCarouselId) return;
+                setPublishingCommunity(true);
+                try {
+                  const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselId).single();
+                  const finalCover = existing?.cover_url || carouselData?.cards[0]?.imageUrl || null;
+                  const { error } = await supabase.from('community_posts').insert({
+                    user_id: user.id,
+                    carousel_id: currentCarouselId,
+                    cover_url: finalCover,
+                    caption: communityCaption || topic || '',
+                  } as any);
+                  if (error) {
+                    if (error.message?.includes('duplicate') || error.code === '23505') {
+                      sonnerToast.info('Este post já foi publicado na comunidade');
+                    } else throw error;
+                  } else {
+                    sonnerToast.success('Publicado na comunidade! 🎉');
+                  }
+                } catch (err: any) {
+                  sonnerToast.error('Erro ao publicar: ' + err.message);
+                } finally {
+                  setPublishingCommunity(false);
+                  setShowCommunityPublish(false);
+                }
+              }}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+            >
+              {publishingCommunity ? 'Publicando...' : 'Publicar'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tour removed */}
 
       {/* Guest Paywall Modal - now non-blocking, dismissable */}

@@ -345,10 +345,14 @@ function CheckoutContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-white text-lg font-bold leading-tight">
-                      {mode === 'plan' ? `Plano ${plan.name}` : mode === 'style' ? styleName : mode === 'gift' ? `Presente ${giftCredits} créditos` : `${creditPack.credits} créditos`}
+                      {mode === 'plan' ? (isUpgrade ? `Upgrade para ${plan.name}` : `Plano ${plan.name}`) : mode === 'style' ? styleName : mode === 'gift' ? `Presente ${giftCredits} créditos` : `${creditPack.credits} créditos`}
                     </h2>
                     <p className="text-white/40 text-xs mt-0.5">
-                      {mode === 'plan' ? `${isAnnual ? 'Anual' : 'Mensal'} • ${plan.credits} créditos/mês` : mode === 'style' ? 'Estilo do Marketplace' : mode === 'gift' ? 'Chave presente' : 'Créditos avulsos'}
+                      {mode === 'plan' 
+                        ? isUpgrade 
+                          ? `De ${existingSub?.plan_type?.charAt(0).toUpperCase()}${existingSub?.plan_type?.slice(1)} → ${plan.name} • Pague apenas a diferença proporcional`
+                          : `${isAnnual ? 'Anual' : 'Mensal'} • ${plan.credits} créditos/mês`
+                        : mode === 'style' ? 'Estilo do Marketplace' : mode === 'gift' ? 'Chave presente' : 'Créditos avulsos'}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">

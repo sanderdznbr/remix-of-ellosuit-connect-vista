@@ -370,10 +370,16 @@ function CheckoutContent() {
               {renderPaymentMethodSelector()}
 
               {/* Plan recurring notice */}
-              {mode === "plan" && paymentMethod === "credit_card" && (
+              {mode === 'plan' && paymentMethod === 'credit_card' && (
                 <div className="flex items-center gap-2.5 mb-6 px-4 py-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(123, 80, 220, 0.06)', border: '1px solid rgba(123, 80, 220, 0.15)', color: 'rgba(123, 80, 220, 0.8)' }}>
                   <CreditCard className="w-4 h-4 flex-shrink-0" />
-                  <span>Planos recorrentes são cobrados exclusivamente via cartão de crédito com renovação automática.</span>
+                  <span>Assinatura recorrente com renovação automática mensal via cartão de crédito.</span>
+                </div>
+              )}
+              {mode === 'plan' && paymentMethod === 'pix' && (
+                <div className="flex items-center gap-2.5 mb-6 px-4 py-3 rounded-xl text-xs" style={{ backgroundColor: 'rgba(0, 200, 130, 0.06)', border: '1px solid rgba(0, 200, 130, 0.15)', color: 'rgba(0, 200, 130, 0.8)' }}>
+                  <QrCode className="w-4 h-4 flex-shrink-0" />
+                  <span>Pagamento avulso de 1 mês via PIX. Sem renovação automática — renove manualmente quando quiser.</span>
                 </div>
               )}
 

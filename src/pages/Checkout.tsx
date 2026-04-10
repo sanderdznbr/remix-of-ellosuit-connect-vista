@@ -81,8 +81,9 @@ function CheckoutContent() {
   const stylePrice = parseFloat(searchParams.get('style_price') || '9.90');
 
   const metodoParam = searchParams.get('metodo');
+  const isMonthlyPlan = mode === 'plan' && !isAnnual;
   const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>(
-    metodoParam === 'pix' ? 'pix' : metodoParam === 'credit_card' ? 'credit_card' : 'pix'
+    isMonthlyPlan ? 'credit_card' : (metodoParam === 'pix' ? 'pix' : metodoParam === 'credit_card' ? 'credit_card' : 'pix')
   );
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'pix'>('form');
@@ -241,17 +242,20 @@ function CheckoutContent() {
         <div className="grid grid-cols-2 gap-3">
           {(['pix', 'credit_card'] as const).map(m => {
             const active = paymentMethod === m;
+            const pixDisabled = m === 'pix' && isMonthlyPlan;
             return (
               <button
                 key={m}
-                onClick={() => setPaymentMethod(m)}
-                className="relative flex flex-col items-center gap-2 p-4 rounded-2xl cursor-pointer transition-all duration-200"
+                onClick={() => !pixDisabled && setPaymentMethod(m)}
+                className="relative flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-200"
                 style={{
                   backgroundColor: active ? 'rgba(123, 80, 220, 0.12)' : 'rgba(255,255,255,0.02)',
                   border: active ? '2px solid rgba(123, 80, 220, 0.5)' : '2px solid rgba(255,255,255,0.06)',
+                  opacity: pixDisabled ? 0.35 : 1,
+                  cursor: pixDisabled ? 'not-allowed' : 'pointer',
                 }}
               >
-                {active && (
+                {active && !pixDisabled && (
                   <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: '#7B50DC' }}>
                     <Check className="w-3 h-3 text-white" />
                   </div>
@@ -263,7 +267,7 @@ function CheckoutContent() {
                   {m === 'pix' ? 'PIX' : 'Cartão'}
                 </span>
                 <span className="text-[10px]" style={{ color: active ? 'rgba(123, 80, 220, 0.8)' : 'rgba(255,255,255,0.25)' }}>
-                  {m === 'pix' ? 'Aprovação instantânea' : 'Débito imediato'}
+                  {m === 'pix' ? (pixDisabled ? 'Apenas planos anuais' : 'Aprovação instantânea') : 'Débito imediato'}
                 </span>
               </button>
             );

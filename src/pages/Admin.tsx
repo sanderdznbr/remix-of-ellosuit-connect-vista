@@ -517,8 +517,10 @@ function AdminContent() {
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'overview', label: 'Visão Geral', icon: Activity },
     { key: 'users', label: 'Usuários', icon: Users },
+    { key: 'posts', label: 'Posts', icon: Image },
     { key: 'subscriptions', label: 'Assinaturas', icon: UserCheck },
     { key: 'payments', label: 'Pagamentos', icon: DollarSign },
+    { key: 'support', label: 'Suporte', icon: MessageSquare },
     { key: 'coupons', label: 'Cupons', icon: Tag },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
     { key: 'content', label: 'Conteúdo', icon: FileText },

@@ -1,5 +1,6 @@
 import React from 'react';
-import { User, Sparkles, Lock, Layers } from 'lucide-react';
+import { User, Sparkles, Lock, Layers, Zap } from 'lucide-react';
+import { calculateCreditCost, type WizardMode } from '@/utils/creditCost';
 
 interface Props {
   cardCount: number;
@@ -133,6 +134,14 @@ const StepCardCount: React.FC<Props> = ({ cardCount, setCardCount, contentMode, 
                 </div>
               </>
             )}
+
+            {/* Credit estimate */}
+            <div className="flex items-center justify-center gap-1.5 pt-1">
+              <Zap className="w-3 h-3 text-purple-400/40" />
+              <span className="text-[11px] text-white/20">
+                Consumirá ~{calculateCreditCost({ cardCount, wizardMode: (wizardMode || 'simple') as WizardMode, hasFaceRef: !!hasFacePhotos, includeWebSearch: true })} créditos
+              </span>
+            </div>
           </>
         )}
 

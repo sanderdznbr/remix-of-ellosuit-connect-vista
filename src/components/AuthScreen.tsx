@@ -29,7 +29,7 @@ const AuthScreen = () => {
   const [username, setUsername] = useState('');
   const [companyName, setCompanyName] = useState('');
   
-  const { user, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signIn, signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,10 +38,10 @@ const AuthScreen = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       navigate(getReturnPath(), { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   if (isMobile) {
     return <MobileAuthScreen />;

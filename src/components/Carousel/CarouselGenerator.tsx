@@ -9508,6 +9508,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.15), rgba(225,48,108,0.15))' }}>
                       <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
                     </button>
+                    <button onClick={() => { setShowExportMenu(false); setCommunityCaption(topic || ''); setShowCommunityPublish(true); }}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-blue-500/20"
+                      style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15))' }}>
+                      <Users className="h-4 w-4 text-blue-400" /> Postar na Comunidade
+                    </button>
                   </div>
                 </div>
               )}

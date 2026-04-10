@@ -245,7 +245,7 @@ function CheckoutContent() {
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const basePrice = mode === 'plan' ? planPrice : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
+  const basePrice = mode === 'plan' ? (isUpgrade && upgradePrice !== null ? upgradePrice : planPrice) : mode === 'style' ? stylePrice : mode === 'gift' ? giftPrice : creditPack.price;
   const discount = appliedCoupon ? (appliedCoupon.discount_percent > 0 ? basePrice * (appliedCoupon.discount_percent / 100) : appliedCoupon.discount_fixed) : 0;
   const displayPrice = Math.max(0, basePrice - discount);
   const PlanIcon = plan.icon;

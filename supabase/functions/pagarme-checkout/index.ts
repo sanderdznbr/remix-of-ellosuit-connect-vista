@@ -193,7 +193,16 @@ Deno.serve(async (req) => {
         });
       }
 
+      const billingPeriod = body.billing_period || 'monthly';
       const usePix = subPayMethod === 'pix';
+
+      // PIX only allowed for annual plans
+      if (usePix && billingPeriod !== 'annual') {
+        return new Response(JSON.stringify({ error: 'PIX disponível apenas para planos anuais' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       if (!usePix && !card?.number) {
         return new Response(JSON.stringify({ error: 'Dados do cartão são obrigatórios' }), {

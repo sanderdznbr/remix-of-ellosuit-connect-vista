@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { 
   Users, CreditCard, Activity, Search, Loader2, 
   DollarSign, UserCheck, UserX, Clock, Gift, 
-  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText
+  TrendingUp, Eye, RefreshCw, Shield, ChevronDown, FileText, Tag, Plus, Trash2
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';

@@ -7588,7 +7588,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     )}
                     {currentStepName === 'Fotos' && (
                       <StepWebImages referenceImages={referenceImages} setReferenceImages={setReferenceImages}
-                        webImages={webSearchResult?.images} onSkip={() => setWizardStep(wizardStep + 1)}
+                        webImages={webSearchResult?.images} onSkip={() => {
+                          // Clear card photo assignments so skipped images are NOT used in generation
+                          setCardPhotoAssignments({});
+                          setCardPhotoOptions({});
+                          setWizardStep(wizardStep + 1);
+                        }}
                         maxSelections={wizardMode === 'tweet2' && tweet2Config.photoCardCount > 0 ? tweet2Config.photoCardCount : undefined} />
                     )}
                     {currentStepName === 'Personalização' && (

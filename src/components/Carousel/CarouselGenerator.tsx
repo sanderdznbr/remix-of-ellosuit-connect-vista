@@ -5063,7 +5063,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           loop2Prompt = loop2Prompt.replace(/CRITICAL: Do NOT include any people.*?NO HUMANS\./g, '');
         } else if (!skipWebSearch && webSearchResult?.content && !loop2ProductRefs && productImages.length === 0) {
           // User skipped web photos — give AI creative freedom
-          const cardDesc = outlineCards[i]?.title || outlineCards[i]?.bodyTop || cleanTopic;
+          const cardDescL2 = updatedCards[i]?.title || updatedCards[i]?.bodyTop || cleanTopic;
           loop2Prompt += `\n\n🎨 LIBERDADE CRIATIVA: Crie elementos visuais fotorrealistas relacionados ao tema "${cardDesc}". Inclua objetos, cenários e composições que remetam diretamente ao tema. A imagem deve ser rica e temática.`;
         }
 

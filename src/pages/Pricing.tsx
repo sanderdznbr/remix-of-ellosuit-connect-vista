@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown, X, Zap, Loader2, Gift, Copy, Ticket } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -353,14 +353,22 @@ function PlanCard({
       <h3 className="text-white text-base font-semibold mb-1">{plan.name}</h3>
       <p className="text-white/40 text-xs leading-relaxed mb-4 min-h-[32px]">{plan.description}</p>
 
-      <div className="mb-1">
+      <div className="mb-1 overflow-hidden">
         {plan.isEnterprise ? (
           <span className="text-white text-2xl font-bold">Sob consulta</span>
         ) : (
-          <>
-            <span className="text-white text-2xl font-bold">{price}</span>
-            <span className="text-white/40 text-xs ml-1">/mês</span>
-          </>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={price}
+              initial={{ y: -20, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 20, opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="text-white text-2xl font-bold">{price}</span>
+              <span className="text-white/40 text-xs ml-1">/mês</span>
+            </motion.div>
+          </AnimatePresence>
         )}
       </div>
       <p className="text-white/25 text-[11px] mb-4">{plan.credits}</p>

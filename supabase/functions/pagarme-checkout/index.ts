@@ -366,7 +366,7 @@ Deno.serve(async (req) => {
           pix: {
             expires_in: 3600, // 1 hour
           },
-          amount: price_cents,
+          amount: creditFinalPrice,
         });
       } else {
         orderPayload.payments.push({

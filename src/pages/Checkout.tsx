@@ -9,6 +9,10 @@ import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; annualPrice: number; monthlyPrice: number; credits: number; extraPrice: string; features: string[] }> = {
+  test: {
+    name: 'Teste', annualPrice: 1.00, monthlyPrice: 1.00, credits: 5, extraPrice: 'R$1,00',
+    features: ['Plano de teste — R$1,00', '5 créditos para testar', 'Acesso temporário'],
+  },
   starter: {
     name: 'Starter', annualPrice: 69.90, monthlyPrice: 89.90, credits: 50, extraPrice: 'R$1,50',
     features: ['~7 carrosséis simples de 6 cards', '~25 posts estáticos simples', 'Modo Simples', 'Exportação PNG/JPG', 'Galeria de marca — 1GB'],

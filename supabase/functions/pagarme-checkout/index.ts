@@ -339,10 +339,15 @@ Deno.serve(async (req) => {
 
       console.log(`[BUY_CREDITS] ${credits} credits, method: ${payment_method}, company: ${companyId}`);
 
+      // Apply coupon discount server-side
+      const { finalPrice: creditFinalPrice, couponId: creditCouponId } = await applyCouponDiscount(
+        adminClient, body.coupon_code, userId, price_cents,
+      );
+
       const orderPayload: any = {
         customer_id: customerId,
         items: [{
-          amount: price_cents,
+          amount: creditFinalPrice,
           description: `elloContent - ${credits} créditos avulsos`,
           quantity: 1,
         }],

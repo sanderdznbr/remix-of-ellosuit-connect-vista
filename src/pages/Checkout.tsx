@@ -311,6 +311,13 @@ function CheckoutContent() {
         body.affiliate_code = affiliateRef;
       }
 
+      // Attach coupon discount
+      if (appliedCoupon) {
+        body.coupon_code = appliedCoupon.code;
+        body.coupon_discount_percent = appliedCoupon.discount_percent;
+        body.coupon_discount_fixed = appliedCoupon.discount_fixed;
+      }
+
       const { data, error } = await supabase.functions.invoke('pagarme-checkout', { body });
 
       if (error) throw error;

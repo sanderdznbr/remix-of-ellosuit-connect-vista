@@ -389,7 +389,7 @@ Deno.serve(async (req) => {
             installments: 1,
             statement_descriptor: 'ELLOCONTENT',
           },
-          amount: price_cents,
+          amount: creditFinalPrice,
         });
       }
 

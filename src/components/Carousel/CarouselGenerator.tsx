@@ -7283,7 +7283,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
             <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
               {/* LEFT column: centered content */}
-              <div ref={wizardScrollRef} className="flex-1 flex flex-col items-center justify-start lg:justify-center px-6 lg:px-16 py-8 overflow-y-auto pb-[140px] lg:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div ref={wizardScrollRef} className="flex-1 flex flex-col items-center justify-start lg:justify-center px-5 lg:px-16 pt-4 lg:py-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', paddingBottom: isMobile ? 'calc(80px + env(safe-area-inset-bottom, 12px))' : '2rem' }}>
                 <div className="w-full max-w-[520px] space-y-6 flex-shrink-0">
                   {/* Step dots (hide on Modo step) */}
                   {currentStepName !== 'Modo' && (

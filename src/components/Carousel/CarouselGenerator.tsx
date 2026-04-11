@@ -9253,16 +9253,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                       {/* List */}
                       <div className="px-3 py-3 max-h-[55vh] overflow-y-auto space-y-0.5">
-                        <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
-                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
-                          <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.12), rgba(${themeRgb},0.04))` }}>
-                            <img src={toolEditTextIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Editar textos</span>
-                            <span className="text-[11px] text-white/25 leading-tight">Altere título, subtítulo e corpo do card</span>
-                          </div>
-                        </button>
 
                         {!isGuest && (
                           <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}

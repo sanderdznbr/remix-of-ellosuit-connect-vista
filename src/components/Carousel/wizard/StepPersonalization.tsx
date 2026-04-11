@@ -343,6 +343,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
               </button>
             </div>
           </div>
+        </div>
       )}
 
       {/* ═══ SUB-STEP 1: LOGO ═══ */}

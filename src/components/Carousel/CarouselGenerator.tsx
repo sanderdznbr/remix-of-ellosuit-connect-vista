@@ -9094,7 +9094,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== Card Action Bottom Sheet (basic mode) ===== */}
             <AnimatePresence>
-              {showCardActionSheet && isMobileView && resultViewMode === 'basic' && (
+              {showCardActionSheet && resultViewMode === 'basic' && (
                 <>
                   <motion.div
                     key="card-action-overlay"

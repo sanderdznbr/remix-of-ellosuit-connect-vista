@@ -8972,98 +8972,122 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: full-width horizontal snap gallery (mobile only) ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
-                {/* Mode toggle */}
-                <div className="flex items-center gap-0.5 mb-3 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}>
+                {/* Mode toggle — top center */}
+                <div className="flex items-center gap-0.5 mb-4 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <button
-                    className="text-[10px] px-3 py-1.5 rounded-full font-medium transition-all"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }}>
+                    className="text-[11px] px-4 py-1.5 rounded-full font-semibold transition-all"
+                    style={{ backgroundColor: `rgba(${themeRgb},0.2)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.3)` }}>
                     Simples
                   </button>
                   <button onClick={() => setResultViewMode('advanced')}
-                    className="text-[10px] px-3 py-1.5 rounded-full font-medium transition-all"
-                    style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    className="text-[11px] px-4 py-1.5 rounded-full font-medium transition-all hover:text-white/60"
+                    style={{ color: 'rgba(255,255,255,0.35)' }}>
                     Avançado
                   </button>
                 </div>
-                {/* Horizontal snap scroll gallery */}
-                <div
-                  className="w-full overflow-x-auto snap-x snap-mandatory flex gap-3 px-4 pb-3"
-                  style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' } as any}
-                  ref={(el) => {
-                    if (!el) return;
-                    el.style.setProperty('-webkit-overflow-scrolling', 'touch');
-                    (el.style as any).msOverflowStyle = 'none';
-                    el.style.scrollbarWidth = 'none';
-                  }}
-                  onScroll={(e) => {
-                    const container = e.currentTarget;
-                    const scrollLeft = container.scrollLeft;
-                    const children = container.children;
-                    if (!children.length) return;
-                    const itemWidth = children[0].getBoundingClientRect().width;
-                    const gap = 12;
-                    const idx = Math.round(scrollLeft / (itemWidth + gap));
-                    if (idx !== activeCardIndex && idx >= 0 && idx < carouselData.cards.length) {
-                      setActiveCardIndex(idx);
-                    }
-                  }}
-                >
+
+                {/* Main card — single large view with swipe */}
+                <div className="relative w-full flex items-center justify-center px-4">
+                  {/* Previous arrow */}
+                  {activeCardIndex > 0 && (
+                    <button
+                      onClick={() => setActiveCardIndex(prev => Math.max(0, prev - 1))}
+                      className="absolute left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <ChevronLeft className="h-4 w-4 text-white/60" />
+                    </button>
+                  )}
+
+                  {/* Card display */}
+                  <div
+                    className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
+                    style={{ 
+                      width: Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420),
+                      height: Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420) * (cardH / cardW),
+                      boxShadow: `0 20px 60px -15px rgba(0,0,0,0.5), 0 0 40px -10px rgba(${themeRgb},0.15)`,
+                    }}
+                    onClick={() => {
+                      if (!isCardLocked(activeCardIndex)) {
+                        setShowCardActionSheet(true);
+                      }
+                    }}
+                  >
+                    <div style={{ 
+                      width: previewW, 
+                      height: previewH, 
+                      transform: `scale(${Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420) / previewW})`, 
+                      transformOrigin: 'top left' 
+                    }}>
+                      {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
+                    </div>
+                    {isCardLocked(activeCardIndex) && (
+                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                        <Lock className="w-6 h-6 mb-2" style={{ color: themeHex }} />
+                        <p className="text-white text-xs font-semibold">Bloqueado</p>
+                      </div>
+                    )}
+                    {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
+                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+                        <div className="carousel-loader-wrapper" style={{ width: 60, height: 60 }}>
+                          <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 60, height: 60 }} />
+                        </div>
+                        <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                      </div>
+                    )}
+                    {/* Hover hint */}
+                    <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                      <span className="text-[10px] text-white/70 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm">
+                        Toque para editar este card
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Next arrow */}
+                  {activeCardIndex < carouselData.cards.length - 1 && (
+                    <button
+                      onClick={() => setActiveCardIndex(prev => Math.min(carouselData.cards.length - 1, prev + 1))}
+                      className="absolute right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <ChevronRight className="h-4 w-4 text-white/60" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Thumbnail strip */}
+                <div className="flex items-center justify-center gap-2 mt-4 px-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                   {carouselData.cards.map((card, i) => {
-                    const w = Math.min(window.innerWidth - 48, 340);
-                    const h = w * (cardH / cardW);
+                    const thumbW = 48;
+                    const thumbH = thumbW * (cardH / cardW);
                     return (
-                      <div
+                      <button
                         key={i}
-                        className="snap-center flex-shrink-0 relative rounded-2xl overflow-hidden"
-                        style={{ width: w, height: h }}
-                        onClick={() => {
-                          if (isCardLocked(i)) return;
-                          setActiveCardIndex(i);
-                          setShowCardActionSheet(true);
+                        onClick={() => setActiveCardIndex(i)}
+                        className="flex-shrink-0 rounded-lg overflow-hidden transition-all relative"
+                        style={{
+                          width: thumbW,
+                          height: thumbH,
+                          opacity: i === activeCardIndex ? 1 : 0.4,
+                          border: i === activeCardIndex ? `2px solid ${themeHex}` : '2px solid transparent',
+                          transform: i === activeCardIndex ? 'scale(1.1)' : 'scale(1)',
                         }}
                       >
-                        <div style={{ width: previewW, height: previewH, transform: `scale(${w / previewW})`, transformOrigin: 'top left' }}>
+                        <div style={{ width: previewW, height: previewH, transform: `scale(${thumbW / previewW})`, transformOrigin: 'top left' }}>
                           {renderCardPreview(card, i, false)}
                         </div>
                         {isCardLocked(i) && (
-                          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                            <Lock className="w-6 h-6 mb-2" style={{ color: themeHex }} />
-                            <p className="text-white text-xs font-semibold">Bloqueado</p>
+                          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                            <Lock className="w-3 h-3" style={{ color: themeHex }} />
                           </div>
                         )}
-                        {(regeneratingCard === i || regeneratingFace === i) && (
-                          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                            <div className="carousel-loader-wrapper" style={{ width: 60, height: 60 }}>
-                              <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 60, height: 60 }} />
-                            </div>
-                            <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === i ? 'Regenerando rosto...' : 'Regenerando...'}</p>
-                          </div>
-                        )}
-                        <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none opacity-50">
-                          <span className="text-[9px] text-white/50 bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                            Toque para opções
-                          </span>
-                        </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
-                {/* Dots */}
-                <div className="flex items-center justify-center gap-1.5 py-2">
-                  {carouselData.cards.map((_, i) => (
-                    <div key={i}
-                      className="transition-all rounded-full"
-                      style={{
-                        width: i === activeCardIndex ? 16 : 5,
-                        height: 5,
-                        borderRadius: i === activeCardIndex ? 3 : '50%',
-                        backgroundColor: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.15)',
-                      }} />
-                  ))}
-                </div>
-                <p className="text-[10px] text-white/25 mb-1">
-                  Card {activeCardIndex + 1} de {carouselData.cards.length}
+
+                {/* Card counter */}
+                <p className="text-[11px] text-white/40 mt-2 font-medium">
+                  {activeCardIndex + 1} <span className="text-white/20">/</span> {carouselData.cards.length}
                 </p>
               </div>
             )}

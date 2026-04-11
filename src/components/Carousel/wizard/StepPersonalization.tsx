@@ -160,7 +160,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
     logoUrl, setLogoUrl, logoDarkUrl, setLogoDarkUrl,
     logoPosition, setLogoPosition, useBrandColors, setUseBrandColors,
     useCustomColors, setUseCustomColors, customColors, setCustomColors,
-    onSkipAll, wizardMode, logoMode, setLogoMode,
+    onSkipAll, onWizardBack, wizardMode, logoMode, setLogoMode,
     setHasProduct, hasProduct, onOpenProductStep,
     animatedBgImageUrl, setAnimatedBgImageUrl,
     generateAiBg, setGenerateAiBg, generateAiMockup, setGenerateAiMockup,
@@ -270,7 +270,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
       setSubStep(s => s + 1);
     }
   };
-  const goBack = () => { if (subStep > 0) setSubStep(s => s - 1); };
+  const goBack = () => { if (subStep > 0) setSubStep(s => s - 1); else onWizardBack?.(); };
 
   return (
     <div className="flex flex-col gap-4 w-full" style={{ minHeight: '260px' }}>
@@ -328,10 +328,15 @@ const StepPersonalization: React.FC<Props> = (props) => {
 
           {/* Navigation */}
           <div className="flex items-center justify-between pt-2">
-            <button onClick={() => { goNext(); }}
-              className="text-sm text-white/30 hover:text-white/50 transition-colors">
-              Pular
+            <button onClick={goBack}
+              className="flex items-center gap-1 text-sm text-white/30 hover:text-white/50 transition-colors">
+              <ChevronLeft className="w-3.5 h-3.5" /> Voltar
             </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => { goNext(); }}
+                className="text-sm text-white/30 hover:text-white/50 transition-colors">
+                Pular
+              </button>
             <button onClick={goNext}
               className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white text-sm font-medium transition-all">
               Continuar <ChevronRight className="w-3.5 h-3.5" />

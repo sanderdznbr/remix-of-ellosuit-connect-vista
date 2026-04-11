@@ -4661,7 +4661,11 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     if (!localStorage.getItem('ello_tour_seen')) {
       setTimeout(() => setShowTour(true), 1200);
     }
-  }, []);
+    // Auto-generate caption in the background
+    if (!postCaption && !generatingCaption) {
+      setTimeout(() => generateCaption('500', 'sem hashtags, legenda curta e direta'), 500);
+    }
+  }, [postCaption, generatingCaption]);
 
   // ===== HELPER: Extract exact text from Extreme form =====
   const getExtremeExactText = useCallback((): string => {

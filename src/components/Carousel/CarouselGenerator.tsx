@@ -474,7 +474,7 @@ const CarouselGenerator: React.FC = () => {
   const [activePresetId, setActivePresetId] = useState<string>('ellosuit-editorial');
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
-  // CarouselTour removed
+  const [showTour, setShowTour] = useState(false);
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);

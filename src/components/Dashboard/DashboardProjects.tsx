@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2 } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -330,7 +330,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             return (
               <div
                 key={item.id}
-                className="rounded-lg overflow-hidden relative group transition-all hover:scale-[1.03] hover:ring-1 hover:ring-white/10 cursor-pointer aspect-[3/4]"
+                className="rounded-lg overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[3/4]"
                 style={{
                   background: 'rgba(255,255,255,0.03)',
                 }}
@@ -345,28 +345,54 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 )}
-                {/* Action buttons */}
-                <div className="absolute top-1.5 right-1.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-10">
-                  <button onClick={(e) => toggleStar(e, item.id, item.is_starred)} className="p-1 rounded-md cursor-pointer" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.5)' }}>
-                    <Star className="w-3 h-3" fill={item.is_starred ? '#facc15' : 'none'} />
-                  </button>
-                  <button onClick={(e) => handleDelete(e, item.id)} className="p-1 rounded-md cursor-pointer" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.5)' }} title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}>
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                  <button onClick={(e) => openPublishDialog(e, item)} className="p-1 rounded-md cursor-pointer" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: publishingId === item.id ? 'rgba(255,255,255,0.3)' : 'rgba(168,85,247,0.7)' }} title="Publicar na comunidade" disabled={publishingId === item.id}>
-                    {publishingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Share2 className="w-3 h-3" />}
-                  </button>
-                </div>
-                {item.is_starred && !deleteConfirmId && (
-                  <div className="absolute top-1.5 right-1.5 p-1 group-hover:hidden" style={{ color: '#facc15' }}>
+                {/* Starred indicator (visible when not hovering) */}
+                {item.is_starred && (
+                  <div className="absolute top-1.5 left-1.5 p-0.5 group-hover:opacity-0 transition-opacity" style={{ color: '#facc15' }}>
                     <Star className="w-3 h-3" fill="#facc15" />
                   </div>
                 )}
-                <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/80 via-transparent to-transparent">
-                  <p className="text-[10px] font-medium truncate leading-tight" style={{ color: 'rgba(255,255,255,0.9)' }}>{item.title || item.topic}</p>
-                  <p className="text-[8px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    {item.card_count || '?'} cards · {formatDate(item.created_at)}
-                  </p>
+                {/* Hover overlay: stronger gradient + action row */}
+                <div
+                  className="absolute inset-0 flex flex-col justify-end transition-all"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, transparent 70%)',
+                  }}
+                >
+                  {/* Default info (always visible) */}
+                  <div className="px-2.5 pb-2">
+                    <p className="text-[10px] font-medium truncate leading-tight" style={{ color: 'rgba(255,255,255,0.9)' }}>{item.title || item.topic}</p>
+                    <p className="text-[8px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      {item.card_count || '?'} cards · {formatDate(item.created_at)}
+                    </p>
+                  </div>
+                  {/* Action bar — slides up on hover */}
+                  <div className="flex items-center justify-center gap-4 pb-3 pt-1 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
+                      className="p-1.5 rounded-full transition-colors cursor-pointer hover:bg-white/20"
+                      style={{ color: 'rgba(255,255,255,0.7)' }}
+                      title="Editar"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => openPublishDialog(e, item)}
+                      className="p-1.5 rounded-full transition-colors cursor-pointer hover:bg-white/20"
+                      style={{ color: 'rgba(255,255,255,0.7)' }}
+                      title="Compartilhar"
+                      disabled={publishingId === item.id}
+                    >
+                      {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, item.id)}
+                      className="p-1.5 rounded-full transition-colors cursor-pointer hover:bg-white/20"
+                      style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.7)' }}
+                      title={deleteConfirmId === item.id ? 'Confirmar exclusão' : 'Excluir'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );

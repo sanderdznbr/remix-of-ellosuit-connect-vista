@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Sparkles, Cloud, Cpu } from 'lucide-react';
+import { Zap, Sparkles } from 'lucide-react';
 
 interface Props {
   imageModel: 'gemini' | 'nano-banana';
@@ -9,102 +9,80 @@ interface Props {
   accentTheme?: 'purple' | 'red' | 'orange';
 }
 
-const themeClasses = {
-  purple: { bg: 'bg-purple-500/[0.08]', border: 'border-purple-500/40', iconBg: 'bg-purple-500/20', icon: 'text-purple-400' },
-  red: { bg: 'bg-red-500/[0.08]', border: 'border-red-500/40', iconBg: 'bg-red-500/20', icon: 'text-red-400' },
-  orange: { bg: 'bg-orange-500/[0.08]', border: 'border-orange-500/40', iconBg: 'bg-orange-500/20', icon: 'text-orange-400' },
-};
-
 const StepSpeed: React.FC<Props> = ({ imageModel, setImageModel, generationMode, setGenerationMode, accentTheme = 'purple' }) => {
-  const t = themeClasses[accentTheme];
+  // Force direct mode as default
+  React.useEffect(() => {
+    if (generationMode !== 'direct') setGenerationMode('direct');
+  }, []);
+
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       <div>
-        <h2 className="text-2xl font-bold text-white mb-2">Velocidade de geração</h2>
-        <p className="text-sm text-white/40">Escolha entre rapidez ou qualidade máxima nas imagens.</p>
+        <h2 className="text-xl font-semibold text-white/90 tracking-tight">Qualidade da imagem</h2>
+        <p className="text-[13px] text-white/35 mt-1">Escolha o equilíbrio entre velocidade e qualidade visual.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
+        {/* Qualidade */}
         <button onClick={() => setImageModel('nano-banana')}
-          className={`flex items-center gap-4 p-5 rounded-2xl text-left transition-all border ${
+          className={`relative flex items-start gap-4 p-5 rounded-2xl text-left transition-all border ${
             imageModel === 'nano-banana'
-              ? `${t.bg} ${t.border}`
-              : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
+              ? 'bg-white/[0.04] border-white/[0.12]'
+              : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.03]'
           }`}>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            imageModel === 'nano-banana' ? t.iconBg : 'bg-white/[0.04]'
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            imageModel === 'nano-banana' ? 'bg-purple-500/15' : 'bg-white/[0.03]'
           }`}>
-            <Sparkles className={`h-6 w-6 ${imageModel === 'nano-banana' ? t.icon : 'text-white/30'}`} />
+            <Sparkles className={`h-5 w-5 ${imageModel === 'nano-banana' ? 'text-purple-400' : 'text-white/20'}`} />
           </div>
-          <div>
-            <span className="text-base font-semibold text-white/90 block">Qualidade</span>
-            <span className="text-xs text-white/40 block mt-0.5">ELLOIA Pro · ~15s por imagem</span>
-            <span className="text-[10px] text-white/25 block mt-0.5">Melhor resultado visual para publicação</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-semibold ${imageModel === 'nano-banana' ? 'text-white/90' : 'text-white/60'}`}>Qualidade máxima</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300/70">recomendado</span>
+            </div>
+            <p className={`text-[11px] mt-1 leading-relaxed ${imageModel === 'nano-banana' ? 'text-white/40' : 'text-white/25'}`}>
+              Modelo Pro com resolução alta e detalhes refinados. Ideal para publicação profissional em redes sociais.
+            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-[10px] text-white/20">⏱ ~15s por imagem</span>
+              <span className="text-[10px] text-purple-300/40">2 créditos</span>
+            </div>
           </div>
+          {imageModel === 'nano-banana' && (
+            <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-purple-500/50 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-purple-300" />
+            </div>
+          )}
         </button>
 
+        {/* Rápido */}
         <button onClick={() => setImageModel('gemini')}
-          className={`flex items-center gap-4 p-5 rounded-2xl text-left transition-all border ${
+          className={`relative flex items-start gap-4 p-5 rounded-2xl text-left transition-all border ${
             imageModel === 'gemini'
-              ? 'bg-emerald-500/[0.08] border-emerald-500/40'
-              : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
+              ? 'bg-white/[0.04] border-white/[0.12]'
+              : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.03]'
           }`}>
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            imageModel === 'gemini' ? 'bg-emerald-500/20' : 'bg-white/[0.04]'
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            imageModel === 'gemini' ? 'bg-emerald-500/15' : 'bg-white/[0.03]'
           }`}>
-            <Zap className={`h-6 w-6 ${imageModel === 'gemini' ? 'text-emerald-400' : 'text-white/30'}`} />
+            <Zap className={`h-5 w-5 ${imageModel === 'gemini' ? 'text-emerald-400' : 'text-white/20'}`} />
           </div>
-          <div>
-            <span className="text-base font-semibold text-white/90 block">Rápido</span>
-            <span className="text-xs text-white/40 block mt-0.5">ELLOIA Flash · ~5s por imagem</span>
-            <span className="text-[10px] text-white/25 block mt-0.5">Ideal para testes e iterações rápidas</span>
+          <div className="flex-1 min-w-0">
+            <span className={`text-sm font-semibold ${imageModel === 'gemini' ? 'text-white/90' : 'text-white/60'}`}>Rápido</span>
+            <p className={`text-[11px] mt-1 leading-relaxed ${imageModel === 'gemini' ? 'text-white/40' : 'text-white/25'}`}>
+              Modelo Flash otimizado para velocidade. Bom para rascunhos, testes e iterações rápidas antes da versão final.
+            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-[10px] text-white/20">⏱ ~5s por imagem</span>
+              <span className="text-[10px] text-emerald-300/40">1 crédito</span>
+            </div>
           </div>
+          {imageModel === 'gemini' && (
+            <div className="absolute top-4 right-4 w-4 h-4 rounded-full bg-emerald-500/50 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-emerald-300" />
+            </div>
+          )}
         </button>
-      </div>
-
-      {/* Processamento: Nuvem vs Direto */}
-      <div>
-        <h3 className="text-sm font-semibold text-white/60 mb-2 uppercase tracking-wider">Processamento</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => setGenerationMode('direct')}
-            className={`flex flex-col items-center gap-2 p-4 rounded-2xl text-center transition-all border ${
-              generationMode === 'direct'
-                ? 'bg-emerald-500/[0.08] border-emerald-500/40'
-                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
-            }`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              generationMode === 'direct' ? 'bg-emerald-500/20' : 'bg-white/[0.04]'
-            }`}>
-              <Cpu className={`h-5 w-5 ${generationMode === 'direct' ? 'text-emerald-400' : 'text-white/30'}`} />
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-white/90 block">Direto</span>
-              <span className="text-[10px] text-white/30 block mt-0.5">Processa no navegador</span>
-            </div>
-          </button>
-
-          <button onClick={() => setGenerationMode('cloud')}
-            className={`flex flex-col items-center gap-2 p-4 rounded-2xl text-center transition-all border ${
-              generationMode === 'cloud'
-                ? `${t.bg} ${t.border}`
-                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
-            }`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              generationMode === 'cloud' ? t.iconBg : 'bg-white/[0.04]'
-            }`}>
-              <Cloud className={`h-5 w-5 ${generationMode === 'cloud' ? t.icon : 'text-white/30'}`} />
-            </div>
-            <div>
-              <span className="text-sm font-semibold text-white/90 block">Nuvem</span>
-              <span className="text-[10px] text-white/30 block mt-0.5">Pode fechar o app</span>
-            </div>
-          </button>
-        </div>
-        <p className="text-[10px] text-white/20 mt-2 text-center">
-          {generationMode === 'cloud' 
-            ? '☁️ O servidor processa tudo. Você pode fechar o navegador e o resultado aparecerá nos recentes.'
-            : '⚡ Geração em tempo real no navegador. Mais rápido, mas não feche a aba.'}
-        </p>
       </div>
     </div>
   );

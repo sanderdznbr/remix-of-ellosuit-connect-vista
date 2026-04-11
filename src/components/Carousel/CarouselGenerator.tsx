@@ -9060,11 +9060,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
                       </div>
                     )}
-                    {/* Hover hint */}
-                    <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      <span className="text-[10px] text-white/70 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm">
-                        Toque para editar este card
-                      </span>
+                    {/* Edit hint: pencil icon on mobile, text on desktop hover */}
+                    <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
+                      <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <Pencil className="w-3.5 h-3.5 text-white/80" />
+                      </div>
                     </div>
                   </div>
 

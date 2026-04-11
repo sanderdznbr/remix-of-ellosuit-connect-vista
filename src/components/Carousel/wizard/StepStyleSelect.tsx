@@ -272,21 +272,6 @@ const StepStyleSelect: React.FC<Props> = ({
     return purchasedStyles.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [purchasedStyles, searchQuery]);
 
-  // Group by category
-  const stylesByCategory = useMemo(() => {
-    const map: Record<string, MarketplaceStyle[]> = {};
-    // Featured first
-    const featured = filteredStyles.filter(s => s.is_featured);
-    if (featured.length > 0) map['Destaques'] = featured;
-    // By category
-    filteredStyles.forEach(s => {
-      const cat = s.category || 'Outros';
-      const label = cat.charAt(0).toUpperCase() + cat.slice(1);
-      if (!map[label]) map[label] = [];
-      map[label].push(s);
-    });
-    return map;
-  }, [filteredStyles]);
 
   const applyPreset = (preset: StylePreset) => {
     setActiveStyleId(null);

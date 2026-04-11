@@ -1879,8 +1879,8 @@ The image must look like it was shot by a professional photographer or designed 
 
   // ===== GENERATE CAPTION =====
   const openCaptionConfigDialog = () => {
-    // Skip config dialog — generate directly with 400 char limit
-    generateCaption('400', '');
+    // Skip config dialog — generate directly with 400 char limit, no hashtags
+    generateCaption('400', 'NÃO use hashtags (#). Legenda curta e direta.');
   };
 
   const generateCaption = async (maxChars?: string, mentions?: string) => {
@@ -1902,7 +1902,7 @@ The image must look like it was shot by a professional photographer or designed 
       if (!error && data?.caption) {
         setPostCaption(data.caption);
       } else {
-        const fallback = `${carouselData?.title || topic}\n\n📌 Salve esse post para consultar depois!\n\n#${topic.split(' ').slice(0, 3).map(w => w.replace(/[^a-zA-ZÀ-ú0-9]/g, '')).filter(Boolean).join(' #')}`;
+        const fallback = `${carouselData?.title || topic}\n\n📌 Salve esse post para consultar depois!`;
         setPostCaption(fallback);
       }
     } catch {
@@ -8985,6 +8985,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   style={{
                     opacity: showMobileToolsSheet || showCardActionSheet ? 0.12 : 1,
                     pointerEvents: showMobileToolsSheet || showCardActionSheet ? 'none' : 'auto',
+                  }}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    (e.currentTarget as any)._swStartX = touch.clientX;
+                    (e.currentTarget as any)._swStartY = touch.clientY;
+                    (e.currentTarget as any)._swDone = false;
+                  }}
+                  onTouchMove={(e) => {
+                    const el = e.currentTarget as any;
+                    if (el._swDone) return;
+                    const dx = e.touches[0].clientX - (el._swStartX || 0);
+                    const dy = e.touches[0].clientY - (el._swStartY || 0);
+                    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+                      el._swDone = true;
+                      if (dx < 0 && activeCardIndex < carouselData.cards.length - 1) {
+                        setActiveCardIndex(prev => prev + 1);
+                      } else if (dx > 0 && activeCardIndex > 0) {
+                        setActiveCardIndex(prev => prev - 1);
+                      }
+                    }
                   }}
                 >
                   {/* Previous arrow */}

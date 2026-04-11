@@ -60,6 +60,19 @@ const StepTopic: React.FC<Props> = ({
   const [advancedMode, setAdvancedMode] = useState(false);
   const isSimple = wizardMode === 'simple';
 
+  const topicSuggestions = [
+    { emoji: '🐾', label: 'Petshop', prompt: '5 cuidados essenciais com seu pet no verão' },
+    { emoji: '🍕', label: 'Restaurante', prompt: '7 motivos para experimentar nossa nova receita artesanal' },
+    { emoji: '💪', label: 'Fitness', prompt: '5 exercícios rápidos para fazer em casa sem equipamento' },
+    { emoji: '💇', label: 'Beleza', prompt: '5 tendências de cabelo que vão dominar este ano' },
+    { emoji: '📊', label: 'Marketing', prompt: '5 estratégias de marketing digital para pequenos negócios' },
+    { emoji: '⚖️', label: 'Contabilidade', prompt: '5 dicas de contabilidade para pequenas empresas' },
+    { emoji: '🏠', label: 'Imobiliária', prompt: '5 dicas para comprar seu primeiro imóvel com segurança' },
+    { emoji: '👶', label: 'Maternidade', prompt: '5 cuidados essenciais nos primeiros meses do bebê' },
+    { emoji: '📚', label: 'Educação', prompt: '5 técnicas de estudo comprovadas pela ciência' },
+    { emoji: '🧘', label: 'Bem-estar', prompt: '5 hábitos matinais para começar o dia com energia' },
+  ];
+
   return (
     <div className="space-y-6" style={{ minHeight: '300px' }}>
       {/* Header with gear toggle */}
@@ -69,7 +82,7 @@ const StepTopic: React.FC<Props> = ({
             {advancedMode ? 'Texto direto na imagem' : 'Sobre o que é seu post?'}
           </h2>
           <p className="text-sm text-white/40">
-            {advancedMode ? 'Escreva exatamente o que a IA deve renderizar na imagem.' : 'Descreva o assunto e nós cuidamos do resto.'}
+            {advancedMode ? 'Escreva exatamente o que a IA deve renderizar na imagem.' : 'Descreva o assunto ou clique em uma sugestão abaixo.'}
           </p>
         </div>
         {!isSimple && (

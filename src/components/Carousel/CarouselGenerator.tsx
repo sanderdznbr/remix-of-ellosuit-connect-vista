@@ -9152,7 +9152,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             </AnimatePresence>
 
             {/* ===== ADVANCED MODE: Instagram Phone Mockup ===== */}
-            {(!isMobileView || resultViewMode === 'advanced') && (
+            {resultViewMode === 'advanced' && (
             <motion.div
               className="relative flex-shrink-0"
               layout
@@ -9776,7 +9776,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             )}
 
             {/* Old mobile action bar (advanced mode only) */}
-            {(!isMobileView || resultViewMode === 'advanced') && (
+            {resultViewMode === 'advanced' && (
             <div className="flex md:hidden items-center justify-center gap-2 mt-4 w-full relative z-10 px-4">
               {/* Edit */}
               {!isGuest && (

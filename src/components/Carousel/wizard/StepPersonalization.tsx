@@ -337,12 +337,12 @@ const StepPersonalization: React.FC<Props> = (props) => {
                 className="text-sm text-white/30 hover:text-white/50 transition-colors">
                 Pular
               </button>
-            <button onClick={goNext}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white text-sm font-medium transition-all">
-              Continuar <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+              <button onClick={goNext}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white text-sm font-medium transition-all">
+                Continuar <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-        </div>
       )}
 
       {/* ═══ SUB-STEP 1: LOGO ═══ */}

@@ -156,9 +156,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   if (isMobile) {
     return (
-      <div className="flex flex-col h-[100dvh] w-full" style={{ backgroundColor: '#0a0a0f', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex flex-col w-full" style={{ backgroundColor: '#0a0a0f', height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Mobile Header — transparent, floats above content */}
-        <header className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 h-14 z-50 bg-transparent" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <header className="absolute left-0 right-0 flex items-center justify-between px-4 h-14 z-50 bg-transparent" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
           <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/60 cursor-pointer">
             <div className="w-5 h-4 flex flex-col justify-between">
               <span className="block w-full h-[1.5px] bg-white/60 rounded-full" />
@@ -178,7 +178,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             <>
               <motion.div
                 className="fixed inset-0 z-40"
-                style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.4)', top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+                style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.4)' }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -186,8 +186,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                 onClick={() => setProfileOpen(false)}
               />
               <motion.div
-                className="absolute top-14 right-3 w-64 rounded-xl border border-white/[0.08] shadow-2xl z-50 overflow-hidden"
-                style={{ backgroundColor: '#111116' }}
+                className="absolute right-3 w-64 rounded-xl border border-white/[0.08] shadow-2xl z-50 overflow-hidden"
+                style={{ backgroundColor: '#111116', top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
                 initial={{ opacity: 0, y: -10, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.97 }}
@@ -259,11 +259,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
         {/* Sidebar drawer overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-50 flex">
+          <div className="fixed inset-0 z-50 flex" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
             <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
-            <div className="relative w-[260px] h-full animate-in slide-in-from-left duration-200">
+            <div className="relative w-[260px] h-full animate-in slide-in-from-left duration-200 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as any, overscrollBehavior: 'contain' }}>
               <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
-              <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-1.5 text-white/40 hover:text-white cursor-pointer z-10" style={{ right: '12px' }}>
+              <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-3 p-1.5 text-white/40 hover:text-white cursor-pointer z-10">
                 <X className="w-5 h-5" />
               </button>
             </div>

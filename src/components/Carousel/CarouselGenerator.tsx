@@ -36,6 +36,44 @@ const AnimatedCounter = ({ target }: { target: number }) => {
 
   return <>{display}%</>;
 };
+
+// Animated loading messages for carousel loading screen
+const LOADING_MESSAGES = [
+  'Puxando os dados do post...',
+  'Carregando imagens...',
+  'Preparando o editor...',
+  'Quase pronto...',
+];
+
+const LoadingMessages = () => {
+  const [msgIndex, setMsgIndex] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setMsgIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
+        {LOADING_MESSAGES[msgIndex]}
+      </p>
+      <div className="flex gap-1 mt-1">
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              backgroundColor: '#8B5CF6',
+              animation: `page-dot-pulse 1s ease-in-out ${i * 0.15}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Resilient edge function invoke — falls back to direct HTTP fetch if SDK times out

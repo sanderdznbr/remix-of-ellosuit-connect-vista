@@ -7024,6 +7024,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   // Auto-skip Cores/Fontes steps if marketplace full-bleed style is active (advanced mode only)
   const currentStepName = WIZARD_STEPS[wizardStep] || '';
+  const visibleWizardSteps = WIZARD_STEPS.filter((step) => {
+    if (isFullBleedMarketplace && (step === 'Cores' || step === 'Fontes')) return false;
+    if (step === 'Fotos' && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) return false;
+    return true;
+  });
+  const currentWizardDisplayStep = Math.max(1, visibleWizardSteps.indexOf(currentStepName) + 1);
 
   const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : currentStepName === 'Pesquisa' ? (selectedWebSourceIndex !== null) : true;
 
@@ -7240,22 +7246,28 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       <div className={carouselData && editingCard === null ? '' : 'flex-1 flex flex-col'} style={carouselData && editingCard === null ? { flex: 1, display: 'flex', flexDirection: 'column' } : undefined}>
         {/* ========== WIZARD - DARK THEME ========== */}
         {!carouselData && !generating && !generatingAllImages && !loadingCarousel && animatedCards.length === 0 && (
-          <div className="flex-1 flex flex-col w-full relative overflow-x-hidden overflow-y-auto" style={{ backgroundColor: '#0A0A0A', paddingTop: 'env(safe-area-inset-top)' }}>
-            {/* Subtle ambient glow accents */}
+          <div className="flex-1 flex flex-col w-full relative overflow-hidden" style={{ backgroundColor: '#0A0A0A', paddingTop: 'env(safe-area-inset-top)' }}>
             <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]" style={{ background: 'radial-gradient(circle, rgba(120,80,220,0.8) 0%, transparent 70%)' }} />
             <div className="absolute bottom-[-150px] left-[-80px] w-[400px] h-[400px] rounded-full pointer-events-none opacity-[0.03]" style={{ background: 'radial-gradient(circle, rgba(160,100,255,0.6) 0%, transparent 70%)' }} />
 
-            {/* Home button to return to dashboard */}
-            {user && (
-              <button
-                onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
-                className="absolute top-4 left-4 z-20 p-2 rounded-xl hover:bg-white/10 transition-colors"
-              >
-                <Home className="w-5 h-5 text-white/60" />
-              </button>
-            )}
+            <div className="relative z-20 flex items-center justify-between px-4 sm:px-6 pt-3 pb-2">
+              <div className="w-10 flex items-center justify-start">
+                {user ? (
+                  <button
+                    onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
+                    className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                  >
+                    <Home className="w-5 h-5 text-white/60" />
+                  </button>
+                ) : (
+                  <div className="w-9 h-9" />
+                )}
+              </div>
+              <div className="text-right text-[12px] sm:text-sm font-semibold text-white/35">
+                Etapa {currentWizardDisplayStep} de {visibleWizardSteps.length}
+              </div>
+            </div>
 
-            {/* Sidebar drawer overlay */}
             {sidebarDrawerOpen && (
               <div className="fixed inset-0 z-[80] flex">
                 <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarDrawerOpen(false)} />
@@ -7280,39 +7292,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
-            <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
-              {/* LEFT column: centered content */}
-              <div ref={wizardScrollRef} className="flex-1 flex flex-col items-center justify-start lg:justify-center px-5 lg:px-16 pt-4 lg:py-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', paddingBottom: isMobileView ? 'calc(80px + env(safe-area-inset-bottom, 12px))' : '2rem' }}>
-                <div className="w-full max-w-[520px] space-y-6 flex-shrink-0">
-                  {/* Step dots (hide on Modo step) */}
-                  {currentStepName !== 'Modo' && (
-                  <div className="flex items-center justify-center gap-2">
-                      {WIZARD_STEPS.filter(s => s !== 'Modo').map((stepName, i) => {
-                        const realIndex = i + 1;
-                        if ((stepName === 'Cores' || stepName === 'Fontes') && isFullBleedMarketplace) return null;
-                        return (
-                          <button key={realIndex} onClick={() => {
-                            if (realIndex <= wizardStep) setWizardStep(realIndex);
-                          }}
-                            className="transition-all"
-                            style={{
-                              width: realIndex === wizardStep ? 24 : 6,
-                              height: 6,
-                              borderRadius: 3,
-                              backgroundColor: realIndex === wizardStep ? modeTheme.loadingColor : realIndex < wizardStep ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.08)',
-                              cursor: realIndex <= wizardStep ? 'pointer' : 'default',
-                            }}
-                          />
-                        );
-                      })}
-                  </div>
-                  )}
-
-
-
-
-                   {/* Step content with entrance animation */}
+            <div className="flex-1 flex flex-row relative z-10 w-full overflow-hidden">
+              <div
+                ref={wizardScrollRef}
+                className="flex-1 overflow-y-auto px-5 lg:px-16"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  paddingBottom: isMobileView ? 'calc(88px + env(safe-area-inset-bottom, 12px))' : '2rem',
+                }}
+              >
+                <div className="min-h-full flex items-center justify-center py-[clamp(1rem,4vh,3rem)]">
+                  <div className="w-full max-w-[560px] space-y-6 flex-shrink-0">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={wizardStep}
@@ -8352,6 +8342,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   </div>
                 </div>
               </div>
+            </div>
 
               {/* RIGHT: Carousel loader animation with step percentage */}
               <div className="hidden lg:flex flex-1 items-center justify-center">

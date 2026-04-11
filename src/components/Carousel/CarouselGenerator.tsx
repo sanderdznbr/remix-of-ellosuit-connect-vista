@@ -9211,104 +9211,125 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="fixed inset-0 z-[71] flex items-center justify-center p-6 pointer-events-none"
                   >
                     <div
-                      className="w-full max-w-[340px] rounded-2xl pointer-events-auto"
-                      style={{ backgroundColor: '#151520', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}
+                      className="w-full max-w-[380px] rounded-2xl pointer-events-auto overflow-hidden"
+                      style={{ backgroundColor: '#151520', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 25px 60px rgba(0,0,0,0.7)' }}
                     >
                       {/* Header */}
-                      <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                        <div className="flex items-center gap-2">
-                          <SlidersHorizontal className="h-4 w-4" style={{ color: themeHex }} />
-                          <span className="text-sm font-bold text-white">Ferramentas</span>
+                      <div className="flex items-center justify-between px-5 pt-5 pb-1">
+                        <div className="flex items-center gap-2.5">
+                          <SlidersHorizontal className="h-5 w-5" style={{ color: themeHex }} />
+                          <span className="text-base font-bold text-white">Ferramentas</span>
                         </div>
-                        <button onClick={() => setShowMobileToolsSheet(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                          <X className="h-4 w-4 text-white/40" />
+                        <button onClick={() => setShowMobileToolsSheet(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                          <X className="h-5 w-5 text-white/40" />
                         </button>
                       </div>
 
-                      {/* Card indicator */}
-                      <div className="px-5 pb-3">
-                        <span className="text-[10px] text-white/30">Card {activeCardIndex + 1}/{carouselData.cards.length}</span>
+                      <div className="px-5 pb-2">
+                        <span className="text-xs text-white/30">Card {activeCardIndex + 1}/{carouselData.cards.length}</span>
                       </div>
 
-                      {/* Grid */}
-                      <div className="px-4 pb-5">
-                        <div className="grid grid-cols-4 gap-1">
-                          <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
-                            className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `rgba(${themeRgb},0.12)` }}>
-                              <Pencil className="h-4 w-4" style={{ color: themeHex }} />
+                      {/* List */}
+                      <div className="px-3 pb-4 max-h-[60vh] overflow-y-auto space-y-1">
+                        <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
+                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
+                          <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `rgba(${themeRgb},0.12)` }}>
+                            <Pencil className="h-5 w-5" style={{ color: themeHex }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold text-white block">Editar textos</span>
+                            <span className="text-[11px] text-white/35 leading-tight">Altere título, subtítulo e corpo do card</span>
+                          </div>
+                        </button>
+
+                        {!isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}
+                            disabled={regeneratingCard === activeCardIndex}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left disabled:opacity-40">
+                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.12)' }}>
+                              <Image className="h-5 w-5 text-blue-400" />
                             </div>
-                            <span className="text-[10px] text-white/60 font-medium">Editar</span>
-                          </button>
-
-                          {!isGuest && (
-                            <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}
-                              disabled={regeneratingCard === activeCardIndex}
-                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
-                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.12)' }}>
-                                <Image className="h-4 w-4 text-blue-400" />
-                              </div>
-                              <span className="text-[10px] text-white/60 font-medium">Regen foto</span>
-                            </button>
-                          )}
-
-                          {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                            <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
-                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
-                                <Pencil className="h-4 w-4 text-orange-400" />
-                              </div>
-                              <span className="text-[10px] text-white/60 font-medium">Corrigir</span>
-                            </button>
-                          )}
-
-                          {!isGuest && (
-                            <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
-                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(250,204,21,0.12)' }}>
-                                <FileText className="h-4 w-4 text-yellow-400" />
-                              </div>
-                              <span className="text-[10px] text-white/60 font-medium">Prompt</span>
-                            </button>
-                          )}
-
-                          <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
-                            className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(74,222,128,0.12)' }}>
-                              <RotateCcw className="h-4 w-4 text-green-400" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white block">Regenerar foto</span>
+                              <span className="text-[11px] text-white/35 leading-tight">Gere uma nova imagem com IA para este card</span>
                             </div>
-                            <span className="text-[10px] text-white/60 font-medium">Recriar</span>
                           </button>
+                        )}
 
-                          {carouselData.cards.length >= 2 && !isGuest && (
-                            <button onClick={() => { setShowMobileToolsSheet(false); setContinuousMode(false); regenerateAll(); }}
-                              disabled={regeneratingAll || regeneratingCard !== null}
-                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
-                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
-                                <RotateCcw className="h-4 w-4 text-orange-400" />
-                              </div>
-                              <span className="text-[10px] text-white/60 font-medium">Regen tudo</span>
-                            </button>
-                          )}
-
-                          {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                            <button onClick={() => { setShowMobileToolsSheet(false); setShowAddCardMenu(true); }}
-                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                                <Plus className="h-4 w-4 text-white/50" />
-                              </div>
-                              <span className="text-[10px] text-white/60 font-medium">Add card</span>
-                            </button>
-                          )}
-
-                          <button onClick={() => { setShowMobileToolsSheet(false); resetWizardState(); }}
-                            className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                              <Plus className="h-4 w-4 text-white/30" />
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
+                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
+                              <Pencil className="h-5 w-5 text-orange-400" />
                             </div>
-                            <span className="text-[10px] text-white/40 font-medium">Novo</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white block">Corrigir região</span>
+                              <span className="text-[11px] text-white/35 leading-tight">Edite uma área específica da imagem com IA</span>
+                            </div>
                           </button>
-                        </div>
+                        )}
+
+                        {!isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
+                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(250,204,21,0.12)' }}>
+                              <FileText className="h-5 w-5 text-yellow-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white block">Ver prompt</span>
+                              <span className="text-[11px] text-white/35 leading-tight">Veja e edite o prompt usado na geração</span>
+                            </div>
+                          </button>
+                        )}
+
+                        <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
+                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
+                          <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(74,222,128,0.12)' }}>
+                            <RotateCcw className="h-5 w-5 text-green-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold text-white block">Recriar carrossel</span>
+                            <span className="text-[11px] text-white/35 leading-tight">Gere todo o carrossel novamente com outro estilo</span>
+                          </div>
+                        </button>
+
+                        {carouselData.cards.length >= 2 && !isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setContinuousMode(false); regenerateAll(); }}
+                            disabled={regeneratingAll || regeneratingCard !== null}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left disabled:opacity-40">
+                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
+                              <RotateCcw className="h-5 w-5 text-orange-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white block">Regenerar todas as fotos</span>
+                              <span className="text-[11px] text-white/35 leading-tight">Recrie as imagens de todos os cards de uma vez</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setShowAddCardMenu(true); }}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
+                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                              <Plus className="h-5 w-5 text-white/50" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white block">Adicionar card</span>
+                              <span className="text-[11px] text-white/35 leading-tight">Insira um novo card ao carrossel</span>
+                            </div>
+                          </button>
+                        )}
+
+                        <button onClick={() => { setShowMobileToolsSheet(false); resetWizardState(); }}
+                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
+                          <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                            <Plus className="h-5 w-5 text-white/30" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold text-white block">Novo carrossel</span>
+                            <span className="text-[11px] text-white/35 leading-tight">Comece um projeto do zero</span>
+                          </div>
+                        </button>
                       </div>
                     </div>
                   </motion.div>

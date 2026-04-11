@@ -8990,7 +8990,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
 
                 {/* Main card — single large view with swipe */}
-                <div className="relative w-full flex items-center justify-center px-4">
+                <div
+                  className="relative w-full flex items-center justify-center px-4 transition-opacity duration-200"
+                  style={{
+                    opacity: showMobileToolsSheet || showCardActionSheet ? 0.12 : 1,
+                    pointerEvents: showMobileToolsSheet || showCardActionSheet ? 'none' : 'auto',
+                  }}
+                >
                   {/* Previous arrow */}
                   {activeCardIndex > 0 && (
                     <button

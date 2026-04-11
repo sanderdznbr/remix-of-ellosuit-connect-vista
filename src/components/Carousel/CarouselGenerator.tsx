@@ -7302,7 +7302,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 }}
               >
                 <div className="min-h-full flex items-center justify-center py-[clamp(1rem,4vh,3rem)]">
-                  <div className="w-full max-w-[560px] space-y-6 flex-shrink-0">
+                  <div className={`w-full space-y-6 flex-shrink-0 ${currentStepName === 'Estilo' ? 'max-w-[900px]' : 'max-w-[560px]'}`}>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={wizardStep}

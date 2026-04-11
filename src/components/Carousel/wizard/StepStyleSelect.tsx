@@ -314,18 +314,49 @@ const StepStyleSelect: React.FC<Props> = ({
     onApplyMarketplaceStyle?.({ ...config, id: style.id, _previewImages: style.preview_images, _styleName: style.name, _strictInstructions: (style as any).strict_instructions || null });
   };
 
+  // Extract unique categories
+  const categories = useMemo(() => {
+    const cats = Array.from(new Set(purchasedStyles.map(s => s.category).filter(Boolean)));
+    return cats;
+  }, [purchasedStyles]);
+
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Filter by search + category
+  const displayStyles = useMemo(() => {
+    let result = filteredStyles;
+    if (selectedCategory) {
+      result = result.filter(s => s.category === selectedCategory);
+    }
+    return result;
+  }, [filteredStyles, selectedCategory]);
+
+  // Group for Netflix rows
+  const stylesByCategory = useMemo(() => {
+    const map: Record<string, MarketplaceStyle[]> = {};
+    const featured = displayStyles.filter(s => s.is_featured);
+    if (featured.length > 0) map['Destaques'] = featured;
+    displayStyles.forEach(s => {
+      const cat = s.category || 'Outros';
+      const label = cat.charAt(0).toUpperCase() + cat.slice(1);
+      if (!map[label]) map[label] = [];
+      map[label].push(s);
+    });
+    return map;
+  }, [displayStyles]);
+
   return (
-    <div className="flex flex-col" style={{ height: 'min(78vh, 620px)' }}>
-      {/* Hero header */}
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 160px)', minHeight: '400px' }}>
+      {/* Header + Search */}
       <div className="shrink-0 mb-4">
-        <h2 className="text-2xl font-extrabold text-white tracking-tight">Selecione o estilo</h2>
-        <p className="text-xs text-white/35 mt-1">
+        <h2 className="text-2xl font-extrabold text-white tracking-tight mb-1">Selecione o estilo</h2>
+        <p className="text-xs text-white/35">
           {user ? 'Escolha um visual para o seu post.' : 'Estilos gratuitos para teste. Crie uma conta para mais.'}
         </p>
       </div>
 
-      {/* Search bar - prominent */}
-      <div className="shrink-0 mb-5">
+      {/* Search + Category filters */}
+      <div className="shrink-0 space-y-3 mb-4">
         <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/[0.06] border border-white/[0.08] focus-within:border-white/20 transition-colors">
           <Search className="w-4 h-4 text-white/30 shrink-0" />
           <input
@@ -341,11 +372,40 @@ const StepStyleSelect: React.FC<Props> = ({
             </button>
           )}
         </div>
+
+        {/* Category pills */}
+        {categories.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                !selectedCategory
+                  ? `${t.bgLight} ${t.textLight} border ${t.borderLight}`
+                  : 'bg-white/[0.05] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
+              }`}
+            >
+              Todos
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  selectedCategory === cat
+                    ? `${t.bgLight} ${t.textLight} border ${t.borderLight}`
+                    : 'bg-white/[0.05] text-white/40 border border-white/[0.06] hover:bg-white/[0.08]'
+                }`}
+              >
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Scrollable content — Netflix rows */}
+      {/* Full-height scrollable Netflix rows */}
       <div
-        className="flex-1 min-h-0 overflow-y-auto space-y-6 pb-4"
+        className="flex-1 min-h-0 overflow-y-auto space-y-7 pb-4"
         style={{ scrollbarWidth: 'none' }}
       >
         {loading ? (

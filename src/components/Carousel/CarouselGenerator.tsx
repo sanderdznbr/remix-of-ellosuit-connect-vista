@@ -10773,7 +10773,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <div className="flex gap-2 flex-wrap">
                           {activeFaces.map((person, pi) => person.photos.map((photo, phi) => (
                             <div key={`face-${pi}-${phi}`} className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/10">
-                              <img src={photo} alt={`Rosto ${pi + 1}`} className="w-full h-full object-cover" />
+                              <img src={photo.thumb || photo.url} alt={`Rosto ${pi + 1}`} className="w-full h-full object-cover" />
                             </div>
                           )))}
                         </div>
@@ -10852,8 +10852,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     onChange={(e) => setRecreateVisualIdea(e.target.value)}
                     placeholder="Ex: neon azul, estilo cyberpunk..."
                     rows={3}
-                    className="w-full rounded-xl text-xs text-white/80 placeholder:text-white/20 resize-none focus:outline-none focus:ring-1 p-3"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', focusRingColor: 'rgba(255,255,255,0.15)' }}
+                    className="w-full rounded-xl text-xs text-white/80 placeholder:text-white/20 resize-none focus:outline-none focus:ring-1 focus:ring-white/15 p-3"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
                   />
                 </div>
 

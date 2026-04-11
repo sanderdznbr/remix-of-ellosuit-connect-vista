@@ -295,7 +295,16 @@ const CarouselGenerator: React.FC = () => {
   const [animatedBgStyle, setAnimatedBgStyle] = useState('solid');
 
   // Wizard state
-  const [wizardStep, setWizardStep] = useState(0);
+  const wizardScrollRef = useRef<HTMLDivElement>(null);
+  const [wizardStepRaw, setWizardStepRaw] = useState(0);
+  const setWizardStep = useCallback((v: number | ((prev: number) => number)) => {
+    setWizardStepRaw(v);
+    // Reset scroll to top on step change
+    requestAnimationFrame(() => {
+      wizardScrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    });
+  }, []);
+  const wizardStep = wizardStepRaw;
   // WIZARD_STEPS computed below after all state declarations
   
 
@@ -7274,7 +7283,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* Two-column layout: left (steps + inputs + nav), right (cube) */}
             <div className="flex-1 flex flex-row relative z-10 w-full overflow-x-hidden">
               {/* LEFT column: centered content */}
-              <div className="flex-1 flex flex-col items-center justify-center px-6 lg:px-16 py-8 overflow-y-auto pb-[120px] lg:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <div ref={wizardScrollRef} className="flex-1 flex flex-col items-center justify-start lg:justify-center px-6 lg:px-16 py-8 overflow-y-auto pb-[140px] lg:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <div className="w-full max-w-[520px] space-y-6 flex-shrink-0">
                   {/* Step dots (hide on Modo step) */}
                   {currentStepName !== 'Modo' && (
@@ -7307,10 +7316,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={wizardStep}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
                     >
                     {currentStepName === 'Modo' && (
                       <StepMode 

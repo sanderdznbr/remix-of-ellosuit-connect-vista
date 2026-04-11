@@ -9194,8 +9194,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="fixed inset-0 z-[71] flex items-center justify-center p-6 pointer-events-none"
                   >
                     <div
-                      className="w-full max-w-[380px] rounded-2xl pointer-events-auto overflow-hidden"
-                      style={{ backgroundColor: '#151520', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 25px 60px rgba(0,0,0,0.7)' }}
+                      className="w-full max-w-[380px] rounded-2xl pointer-events-auto overflow-hidden backdrop-blur-xl"
+                      style={{ backgroundColor: 'rgba(8,8,8,0.88)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 25px 80px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.04)' }}
                     >
                       {/* Header */}
                       <div className="flex items-center justify-between px-5 pt-5 pb-1">

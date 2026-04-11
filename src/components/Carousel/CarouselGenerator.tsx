@@ -1244,14 +1244,8 @@ const CarouselGenerator: React.FC = () => {
       const { data } = await supabase.from('brand_assets').select('id, name, file_url, category').eq('company_id', cu.company_id).eq('file_type', 'image').order('created_at', { ascending: false });
       if (data) {
         setBrandAssets(data);
-        // Auto-load logo from brand assets if not already set (skip ellosuit logos)
-        if (!logoUrl) {
-          const logo = data.find(a => a.category === 'logo' && !/ellosuit/i.test(a.file_url) && !/ellosuit/i.test(a.name));
-          if (logo) {
-            setLogoUrl(logo.file_url);
-            console.log('[AutoBrand] Logo auto-loaded from brand assets:', logo.file_url);
-          }
-        }
+        // Logo is NOT auto-loaded from brand assets anymore.
+        // User must manually add it in the Personalização step.
       }
     };
     fetchBrandAssets();
@@ -1445,7 +1439,7 @@ const CarouselGenerator: React.FC = () => {
     userName,
     dateLabel,
     activePresetId,
-    logoUrl,
+    logoUrl: logoUrl || null,
     logoPosition,
     showHeader,
     marketplaceStyleId: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
@@ -1503,7 +1497,7 @@ const CarouselGenerator: React.FC = () => {
         }
         
         const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || !!loadedMarketplaceStyleId || wizardMode === 'extreme';
-        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
+        const styleConfig = { bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl: logoUrl || null, logoPosition, logoMode, showHeader, isFullBleed, referenceImages: referenceImages.length > 0 ? referenceImages : undefined, faceGender, wearsGlasses, facePersons: facePersons.length > 0 ? facePersons : undefined, allPeopleOnCover };
         
         if (currentCarouselIdRef.current) {
           await supabase.from('generated_carousels').update({ 
@@ -2421,7 +2415,7 @@ The image must look like it was shot by a professional photographer or designed 
         brand_name: brandName,
         user_name: userName,
         date_label: dateLabel,
-        logo_url: logoUrl,
+        logo_url: logoUrl || null,
         logo_dark_url: logoDarkUrl,
         logo_position: logoPosition,
         show_header: showHeader,

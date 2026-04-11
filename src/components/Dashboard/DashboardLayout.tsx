@@ -332,5 +332,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       {renderContent()}
     </div>
   );
+};
 
 export default DashboardLayout;

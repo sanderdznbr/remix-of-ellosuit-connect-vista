@@ -9405,8 +9405,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button
                           onClick={() => {
                             setShowStylePreview(false);
-                            setStyleChangeSource('toolbar');
-                            setShowStylePanel(true);
+                            setShowFullScreenStylePicker(true);
                           }}
                           className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
                           style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
@@ -10145,11 +10144,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <ImageIcon className="h-4 w-4" /> Baixar tudo WEBP
                     </button>
                     <div className="h-px bg-white/10 my-1" />
-                    <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
-                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"
-                      style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.15), rgba(225,48,108,0.15))' }}>
-                      <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
-                    </button>
                     <button onClick={() => { setShowExportMenu(false); setCommunityCaption(topic || ''); setShowCommunityPublish(true); }}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-blue-500/20"
                       style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15))' }}>

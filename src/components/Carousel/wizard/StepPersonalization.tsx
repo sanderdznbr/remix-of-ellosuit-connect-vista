@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { User, Building2, Upload, X, Folder, ShoppingBag, Palette, ImagePlus, Sparkles, Monitor } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -245,299 +245,265 @@ const StepPersonalization: React.FC<Props> = (props) => {
     setGalleryTarget(null);
   };
 
-  const BLOCK = "rounded-xl border border-white/[0.06] p-4 space-y-3";
-  const BLOCK_BG = "rgba(255,255,255,0.02)";
+  const isMobile = useIsMobile();
+  const BLOCK = "rounded-2xl border border-white/[0.04] p-4 space-y-3 bg-[rgba(255,255,255,0.018)] hover:bg-[rgba(255,255,255,0.028)] transition-colors";
 
   return (
-    <div className="flex flex-col gap-4 w-full" style={{ minHeight: '260px' }}>
+    <div className="flex flex-col gap-3 w-full" style={{ minHeight: '260px' }}>
       {/* Header */}
-      <div className="mb-1">
-        <h2 className="text-lg font-semibold text-white/90">Personalização</h2>
-        <p className="text-xs text-white/30 mt-0.5">Arraste arquivos em qualquer zona ou clique para enviar.</p>
+      <div className="mb-0.5">
+        <h2 className="text-base font-semibold text-white/85 tracking-tight">Personalização</h2>
+        <p className="text-[11px] text-white/25 mt-0.5">Arraste arquivos ou clique para enviar</p>
       </div>
 
-      {/* ═══ ROSTO ═══ */}
-      <div className={BLOCK} style={{ backgroundColor: BLOCK_BG }}>
-        <div className="flex items-center gap-2">
-          <User className="h-3.5 w-3.5 text-white/30" />
-          <span className="text-xs font-medium text-white/50">Rosto / Pessoa</span>
-          {facePhotos.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-white/40 ml-auto">{facePhotos.length}</span>}
-        </div>
+      {/* ═══ 2-COLUMN GRID ═══ */}
+      <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
 
-        {facePhotos.length > 0 && (
-          <ThumbStrip items={facePhotos} onRemove={removeFace} accentClass="ring-white/[0.08]" />
-        )}
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <DropZone
-              onFiles={handleFaceFiles}
-              icon={<Upload className="h-4 w-4 text-white/15" />}
-              label={facePhotos.length > 0 ? 'Adicionar mais' : 'Arraste ou clique'}
-              compact
-            />
+        {/* ── ROSTO ── */}
+        <div className={BLOCK}>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-white/[0.04] flex items-center justify-center">
+              <User className="h-3 w-3 text-white/40" />
+            </div>
+            <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">Rosto</span>
+            {facePhotos.length > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.05] text-white/35 ml-auto">{facePhotos.length}</span>}
           </div>
-          {user && (
-            <button
-              onClick={() => setGalleryTarget('face')}
-              className="flex items-center gap-1.5 px-3 rounded-xl border border-white/[0.06] text-[11px] text-white/25 hover:text-white/45 hover:bg-white/[0.03] transition-colors"
-            >
-              <Folder className="h-3 w-3" />
-            </button>
+
+          {facePhotos.length > 0 && (
+            <ThumbStrip items={facePhotos} onRemove={removeFace} accentClass="ring-white/[0.06]" />
           )}
-        </div>
 
-        {/* Face attributes - shown only when photos exist */}
-        {facePhotos.length > 0 && (
-          <div className="space-y-2 pt-1">
-            <div className="flex gap-1.5">
-              {(['male', 'female', 'auto'] as const).map(g => (
-                <button key={g} onClick={() => setFaceGender(g)}
-                  className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${faceGender === g ? 'bg-white/[0.08] text-white/70' : 'bg-white/[0.02] text-white/20 hover:text-white/35'}`}>
-                  {g === 'male' ? 'Masc.' : g === 'female' ? 'Fem.' : 'Auto'}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1.5">
-              <button onClick={() => setWearsGlasses(false)}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${!wearsGlasses ? 'bg-white/[0.08] text-white/70' : 'bg-white/[0.02] text-white/20'}`}>
-                Sem óculos
-              </button>
-              <button onClick={() => setWearsGlasses(true)}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${wearsGlasses ? 'bg-white/[0.08] text-white/70' : 'bg-white/[0.02] text-white/20'}`}>
-                Com óculos
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ═══ MARCA / LOGO ═══ */}
-      <div className={BLOCK} style={{ backgroundColor: BLOCK_BG }}>
-        <div className="flex items-center gap-2">
-          <Building2 className="h-3.5 w-3.5 text-white/30" />
-          <span className="text-xs font-medium text-white/50">Marca / Logo</span>
-          {logoUrl && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-white/40 ml-auto">✓</span>}
-        </div>
-
-        {logoUrl ? (
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/[0.08] bg-white/[0.03] flex items-center justify-center">
-              <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-1" />
-            </div>
-            <div className="flex gap-1.5 flex-1">
-              <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f) handleLogoFiles(Array.from(f)); }; input.click(); }}
-                className="text-[10px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] text-white/35 hover:text-white/60 transition-colors">
-                Trocar
-              </button>
-              {user && (
-                <button onClick={() => setGalleryTarget('logo')} className="text-[10px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] text-white/35 hover:text-white/60 transition-colors">
-                  <Folder className="h-3 w-3 inline mr-0.5" />Galeria
-                </button>
-              )}
-              <button onClick={() => setLogoUrl('')} className="text-[10px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] text-white/35 hover:text-red-400/60 transition-colors ml-auto">
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <div className="flex-1">
-              <DropZone
-                onFiles={handleLogoFiles}
-                multiple={false}
-                icon={<Upload className="h-4 w-4 text-white/15" />}
-                label="Arraste o logo aqui"
-                sublabel="Apenas 1 arquivo"
-                compact
-              />
+              <DropZone onFiles={handleFaceFiles} icon={<Upload className="h-3.5 w-3.5 text-white/12" />}
+                label={facePhotos.length > 0 ? 'Mais fotos' : 'Arraste ou clique'} compact />
             </div>
             {user && (
-              <button
-                onClick={() => setGalleryTarget('logo')}
-                className="flex items-center gap-1.5 px-3 rounded-xl border border-white/[0.06] text-[11px] text-white/25 hover:text-white/45 hover:bg-white/[0.03] transition-colors"
-              >
+              <button onClick={() => setGalleryTarget('face')}
+                className="flex items-center px-2.5 rounded-xl border border-white/[0.04] text-white/20 hover:text-white/40 hover:bg-white/[0.02] transition-colors">
                 <Folder className="h-3 w-3" />
               </button>
             )}
           </div>
-        )}
 
-        {/* Logo positioning */}
-        {logoUrl && wizardMode === 'advanced' && (
-          <div className="space-y-2 pt-1">
+          {facePhotos.length > 0 && (
+            <div className="flex gap-1 pt-0.5">
+              {(['male', 'female', 'auto'] as const).map(g => (
+                <button key={g} onClick={() => setFaceGender(g)}
+                  className={`flex-1 py-1 rounded-md text-[9px] font-medium transition-all ${faceGender === g ? 'bg-white/[0.07] text-white/60' : 'text-white/18 hover:text-white/30'}`}>
+                  {g === 'male' ? 'Masc.' : g === 'female' ? 'Fem.' : 'Auto'}
+                </button>
+              ))}
+              <button onClick={() => setWearsGlasses(!wearsGlasses)}
+                className={`px-2 py-1 rounded-md text-[9px] font-medium transition-all ${wearsGlasses ? 'bg-white/[0.07] text-white/60' : 'text-white/18 hover:text-white/30'}`}>
+                🤓
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── MARCA / LOGO ── */}
+        <div className={BLOCK}>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-white/[0.04] flex items-center justify-center">
+              <Building2 className="h-3 w-3 text-white/40" />
+            </div>
+            <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">Logo</span>
+            {logoUrl && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.05] text-white/35 ml-auto">✓</span>}
+          </div>
+
+          {logoUrl ? (
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-lg ring-1 ring-white/[0.06] bg-white/[0.03] flex items-center justify-center shrink-0">
+                <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-0.5" />
+              </div>
+              <div className="flex gap-1 flex-1 flex-wrap">
+                <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f) handleLogoFiles(Array.from(f)); }; input.click(); }}
+                  className="text-[9px] px-2 py-1 rounded-md bg-white/[0.04] text-white/30 hover:text-white/55 transition-colors">Trocar</button>
+                {user && (
+                  <button onClick={() => setGalleryTarget('logo')} className="text-[9px] px-2 py-1 rounded-md bg-white/[0.04] text-white/30 hover:text-white/55 transition-colors">Galeria</button>
+                )}
+                <button onClick={() => setLogoUrl('')} className="text-[9px] px-2 py-1 rounded-md bg-white/[0.04] text-white/30 hover:text-red-400/50 transition-colors ml-auto">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            </div>
+          ) : (
             <div className="flex gap-1.5">
+              <div className="flex-1">
+                <DropZone onFiles={handleLogoFiles} multiple={false} icon={<Upload className="h-3.5 w-3.5 text-white/12" />}
+                  label="Logo aqui" sublabel="1 arquivo" compact />
+              </div>
+              {user && (
+                <button onClick={() => setGalleryTarget('logo')}
+                  className="flex items-center px-2.5 rounded-xl border border-white/[0.04] text-white/20 hover:text-white/40 hover:bg-white/[0.02] transition-colors">
+                  <Folder className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Logo pos + colors compact */}
+          {logoUrl && wizardMode === 'advanced' && (
+            <div className="flex gap-1">
               <button onClick={() => setLogoMode('ai')}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${logoMode === 'ai' ? 'bg-white/[0.08] text-white/70' : 'bg-white/[0.02] text-white/20'}`}>
+                className={`flex-1 py-1 rounded-md text-[9px] font-medium transition-all ${logoMode === 'ai' ? 'bg-white/[0.07] text-white/60' : 'text-white/18'}`}>
                 IA posiciona
               </button>
               <button onClick={() => setLogoMode('manual')}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all ${logoMode === 'manual' ? 'bg-white/[0.08] text-white/70' : 'bg-white/[0.02] text-white/20'}`}>
+                className={`flex-1 py-1 rounded-md text-[9px] font-medium transition-all ${logoMode === 'manual' ? 'bg-white/[0.07] text-white/60' : 'text-white/18'}`}>
                 Manual
               </button>
             </div>
-            {logoMode === 'manual' && (
-              <div className="relative w-full aspect-[4/5] max-w-[120px] rounded-lg border border-white/[0.08] bg-white/[0.02] mx-auto">
-                {[
-                  { value: 'top-left', style: 'top-1.5 left-1.5' },
-                  { value: 'top-right', style: 'top-1.5 right-1.5' },
-                  { value: 'bottom-left', style: 'bottom-1.5 left-1.5' },
-                  { value: 'bottom-right', style: 'bottom-1.5 right-1.5' },
-                ].map(pos => (
-                  <button key={pos.value} onClick={() => setLogoPosition(pos.value as LogoPosition)}
-                    className={`absolute ${pos.style} w-6 h-6 rounded flex items-center justify-center transition-all ${
-                      logoPosition === pos.value ? 'bg-purple-500/80 scale-110' : 'bg-white/[0.05] hover:bg-white/[0.10]'
-                    }`}>
-                    {logoPosition === pos.value
-                      ? <img src={logoUrl} alt="" className="w-3.5 h-3.5 object-contain" />
-                      : <div className="w-2 h-2 rounded-sm bg-white/15" />}
-                  </button>
-                ))}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-[9px] text-white/10">POST</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Color options */}
-        {logoUrl && (
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-white/35">Cores da marca</span>
+          )}
+          {logoUrl && wizardMode === 'advanced' && logoMode === 'manual' && (
+            <div className="relative w-full aspect-[4/5] max-w-[100px] rounded-lg border border-white/[0.06] bg-white/[0.015] mx-auto">
+              {[
+                { value: 'top-left', style: 'top-1 left-1' },
+                { value: 'top-right', style: 'top-1 right-1' },
+                { value: 'bottom-left', style: 'bottom-1 left-1' },
+                { value: 'bottom-right', style: 'bottom-1 right-1' },
+              ].map(pos => (
+                <button key={pos.value} onClick={() => setLogoPosition(pos.value as LogoPosition)}
+                  className={`absolute ${pos.style} w-5 h-5 rounded flex items-center justify-center transition-all ${
+                    logoPosition === pos.value ? 'bg-purple-500/70 scale-110' : 'bg-white/[0.04] hover:bg-white/[0.08]'
+                  }`}>
+                  {logoPosition === pos.value
+                    ? <img src={logoUrl} alt="" className="w-3 h-3 object-contain" />
+                    : <div className="w-1.5 h-1.5 rounded-sm bg-white/12" />}
+                </button>
+              ))}
+            </div>
+          )}
+          {logoUrl && (
+            <div className="flex items-center justify-between pt-0.5">
+              <span className="text-[9px] text-white/25">Cores da marca</span>
               <button onClick={() => { setUseBrandColors(!useBrandColors); if (!useBrandColors) setUseCustomColors(false); }}
-                className={`relative w-8 h-4 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500/70' : 'bg-white/[0.08]'}`}>
-                <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-4' : ''}`} />
+                className={`relative w-7 h-3.5 rounded-full transition-colors ${useBrandColors ? 'bg-purple-500/60' : 'bg-white/[0.06]'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform ${useBrandColors ? 'translate-x-3' : ''}`} />
               </button>
             </div>
-            {!useBrandColors && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Palette className="h-3 w-3 text-white/25" />
-                  <span className="text-[11px] text-white/35">Cores custom</span>
-                </div>
-                <button onClick={() => setUseCustomColors(!useCustomColors)}
-                  className={`relative w-8 h-4 rounded-full transition-colors ${useCustomColors ? 'bg-purple-500/70' : 'bg-white/[0.08]'}`}>
-                  <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${useCustomColors ? 'translate-x-4' : ''}`} />
-                </button>
+          )}
+          {logoUrl && !useBrandColors && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Palette className="h-2.5 w-2.5 text-white/20" />
+                <span className="text-[9px] text-white/25">Custom</span>
               </div>
-            )}
-            {useCustomColors && !useBrandColors && (
-              <div className="flex items-center gap-2 pt-0.5">
-                {customColors.map((c, i) => (
-                  <label key={i} className="relative cursor-pointer group">
-                    <input type="color" value={c} onChange={e => { const u = [...customColors]; u[i] = e.target.value; setCustomColors(u); }} className="sr-only" />
-                    <div className="w-8 h-8 rounded-lg border border-white/[0.08] group-hover:border-white/20 transition-colors" style={{ backgroundColor: c }} />
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ═══ FOTOS / MÍDIAS ═══ */}
-      <div className={BLOCK} style={{ backgroundColor: BLOCK_BG }}>
-        <div className="flex items-center gap-2">
-          <ImagePlus className="h-3.5 w-3.5 text-white/30" />
-          <span className="text-xs font-medium text-white/50">Fotos / Mídias</span>
-          {mediaRefs.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-white/40 ml-auto">{mediaRefs.length}</span>}
-        </div>
-
-        {mediaRefs.length > 0 && (
-          <ThumbStrip items={mediaRefs} onRemove={removeMedia} accentClass="ring-white/[0.08]" />
-        )}
-
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <DropZone
-              onFiles={handleMediaFiles}
-              icon={<Upload className="h-4 w-4 text-white/15" />}
-              label={mediaRefs.length > 0 ? 'Adicionar mais' : 'Arraste fotos aqui'}
-              sublabel="Screenshots, prints, referências"
-              compact
-            />
-          </div>
-          {user && (
-            <button
-              onClick={() => setGalleryTarget('media')}
-              className="flex items-center gap-1.5 px-3 rounded-xl border border-white/[0.06] text-[11px] text-white/25 hover:text-white/45 hover:bg-white/[0.03] transition-colors"
-            >
-              <Folder className="h-3 w-3" />
-            </button>
+              <button onClick={() => setUseCustomColors(!useCustomColors)}
+                className={`relative w-7 h-3.5 rounded-full transition-colors ${useCustomColors ? 'bg-purple-500/60' : 'bg-white/[0.06]'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform ${useCustomColors ? 'translate-x-3' : ''}`} />
+              </button>
+            </div>
+          )}
+          {useCustomColors && !useBrandColors && (
+            <div className="flex items-center gap-1.5">
+              {customColors.map((c, i) => (
+                <label key={i} className="relative cursor-pointer group">
+                  <input type="color" value={c} onChange={e => { const u = [...customColors]; u[i] = e.target.value; setCustomColors(u); }} className="sr-only" />
+                  <div className="w-6 h-6 rounded-md border border-white/[0.06] group-hover:border-white/15 transition-colors" style={{ backgroundColor: c }} />
+                </label>
+              ))}
+            </div>
           )}
         </div>
+
+        {/* ── FOTOS / MÍDIAS ── */}
+        <div className={BLOCK}>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-white/[0.04] flex items-center justify-center">
+              <ImagePlus className="h-3 w-3 text-white/40" />
+            </div>
+            <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">Mídias</span>
+            {mediaRefs.length > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.05] text-white/35 ml-auto">{mediaRefs.length}</span>}
+          </div>
+
+          {mediaRefs.length > 0 && (
+            <ThumbStrip items={mediaRefs} onRemove={removeMedia} accentClass="ring-white/[0.06]" />
+          )}
+
+          <div className="flex gap-1.5">
+            <div className="flex-1">
+              <DropZone onFiles={handleMediaFiles} icon={<Upload className="h-3.5 w-3.5 text-white/12" />}
+                label={mediaRefs.length > 0 ? 'Mais fotos' : 'Arraste fotos'} sublabel="Prints, screenshots" compact />
+            </div>
+            {user && (
+              <button onClick={() => setGalleryTarget('media')}
+                className="flex items-center px-2.5 rounded-xl border border-white/[0.04] text-white/20 hover:text-white/40 hover:bg-white/[0.02] transition-colors">
+                <Folder className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── PRODUTO ── */}
+        {setHasProduct && (
+          <button
+            onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
+            className={`${BLOCK} flex items-center gap-3 text-left w-full`}
+          >
+            <div className="w-6 h-6 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-3 w-3 text-white/40" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">Produto</span>
+              <p className="text-[9px] text-white/20 leading-tight mt-0.5">Mockups e cenas IA</p>
+            </div>
+            {hasProduct
+              ? <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.05] text-white/35 shrink-0">✓</span>
+              : <span className="text-[9px] text-white/15 shrink-0">opcional</span>}
+          </button>
+        )}
       </div>
 
-      {/* ═══ PRODUTO ═══ */}
-      {setHasProduct && (
-        <button
-          onClick={() => { setHasProduct?.(true); onOpenProductStep?.(); }}
-          className={`${BLOCK} flex items-center gap-3 text-left hover:bg-white/[0.03] transition-colors w-full`}
-          style={{ backgroundColor: BLOCK_BG }}
-        >
-          <ShoppingBag className="h-4 w-4 text-white/25 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <span className="text-xs font-medium text-white/50">Fotos de Produto</span>
-            <p className="text-[10px] text-white/20 leading-tight mt-0.5">A IA recria em mockups e cenas no carrossel</p>
-          </div>
-          {hasProduct
-            ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-white/40 shrink-0">✓</span>
-            : <span className="text-[10px] text-white/15 shrink-0">opcional</span>}
-        </button>
-      )}
-
-      {/* ═══ AI IMAGES (animated mode) ═══ */}
+      {/* ═══ ANIMATED MODE EXTRAS (full width below grid) ═══ */}
       {wizardMode === 'animated' && (setGenerateAiBg || setGenerateAiMockup) && (
-        <div className={BLOCK} style={{ backgroundColor: BLOCK_BG }}>
+        <div className={BLOCK}>
           <div className="flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-white/30" />
-            <span className="text-xs font-medium text-white/50">Imagens com IA</span>
+            <div className="w-6 h-6 rounded-lg bg-white/[0.04] flex items-center justify-center">
+              <Sparkles className="h-3 w-3 text-white/40" />
+            </div>
+            <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">IA Imagens</span>
           </div>
-          <p className="text-[10px] text-white/20">Gera imagens únicas por card. Consome mais créditos.</p>
-
-          {setGenerateAiBg && (
-            <button onClick={() => { setGenerateAiBg(!generateAiBg); if (!generateAiBg && setAnimatedBgImageUrl) setAnimatedBgImageUrl(''); }}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${generateAiBg ? 'border-white/[0.12] bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.01]'}`}>
-              <ImagePlus className={`h-4 w-4 ${generateAiBg ? 'text-white/50' : 'text-white/15'}`} />
-              <div className="text-left flex-1">
-                <div className={`text-[11px] font-medium ${generateAiBg ? 'text-white/60' : 'text-white/30'}`}>Fundo IA</div>
-              </div>
-              <div className={`w-7 h-3.5 rounded-full transition-colors ${generateAiBg ? 'bg-purple-500/70' : 'bg-white/[0.08]'}`}>
-                <div className={`w-2.5 h-2.5 rounded-full bg-white mt-0.5 transition-transform ${generateAiBg ? 'translate-x-3.5 ml-0.5' : 'ml-0.5'}`} />
-              </div>
-            </button>
-          )}
-
-          {setGenerateAiMockup && (
-            <button onClick={() => setGenerateAiMockup(!generateAiMockup)}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${generateAiMockup ? 'border-white/[0.12] bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.01]'}`}>
-              <Monitor className={`h-4 w-4 ${generateAiMockup ? 'text-white/50' : 'text-white/15'}`} />
-              <div className="text-left flex-1">
-                <div className={`text-[11px] font-medium ${generateAiMockup ? 'text-white/60' : 'text-white/30'}`}>Mockups IA</div>
-              </div>
-              <div className={`w-7 h-3.5 rounded-full transition-colors ${generateAiMockup ? 'bg-purple-500/70' : 'bg-white/[0.08]'}`}>
-                <div className={`w-2.5 h-2.5 rounded-full bg-white mt-0.5 transition-transform ${generateAiMockup ? 'translate-x-3.5 ml-0.5' : 'ml-0.5'}`} />
-              </div>
-            </button>
-          )}
+          <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {setGenerateAiBg && (
+              <button onClick={() => { setGenerateAiBg(!generateAiBg); if (!generateAiBg && setAnimatedBgImageUrl) setAnimatedBgImageUrl(''); }}
+                className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-pointer ${generateAiBg ? 'border-white/[0.10] bg-white/[0.04]' : 'border-white/[0.04] bg-white/[0.01]'}`}>
+                <ImagePlus className={`h-3.5 w-3.5 ${generateAiBg ? 'text-white/45' : 'text-white/12'}`} />
+                <span className={`text-[10px] font-medium flex-1 text-left ${generateAiBg ? 'text-white/55' : 'text-white/25'}`}>Fundo IA</span>
+                <div className={`w-6 h-3 rounded-full transition-colors ${generateAiBg ? 'bg-purple-500/60' : 'bg-white/[0.06]'}`}>
+                  <div className={`w-2 h-2 rounded-full bg-white mt-0.5 transition-transform ${generateAiBg ? 'translate-x-3 ml-0.5' : 'ml-0.5'}`} />
+                </div>
+              </button>
+            )}
+            {setGenerateAiMockup && (
+              <button onClick={() => setGenerateAiMockup(!generateAiMockup)}
+                className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-pointer ${generateAiMockup ? 'border-white/[0.10] bg-white/[0.04]' : 'border-white/[0.04] bg-white/[0.01]'}`}>
+                <Monitor className={`h-3.5 w-3.5 ${generateAiMockup ? 'text-white/45' : 'text-white/12'}`} />
+                <span className={`text-[10px] font-medium flex-1 text-left ${generateAiMockup ? 'text-white/55' : 'text-white/25'}`}>Mockups IA</span>
+                <div className={`w-6 h-3 rounded-full transition-colors ${generateAiMockup ? 'bg-purple-500/60' : 'bg-white/[0.06]'}`}>
+                  <div className={`w-2 h-2 rounded-full bg-white mt-0.5 transition-transform ${generateAiMockup ? 'translate-x-3 ml-0.5' : 'ml-0.5'}`} />
+                </div>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Manual bg for animated */}
       {wizardMode === 'animated' && setAnimatedBgImageUrl && !generateAiBg && (
-        <div className={BLOCK} style={{ backgroundColor: BLOCK_BG }}>
+        <div className={BLOCK}>
           <div className="flex items-center gap-2">
-            <ImagePlus className="h-3.5 w-3.5 text-white/30" />
-            <span className="text-xs font-medium text-white/50">Fundo Manual</span>
+            <div className="w-6 h-6 rounded-lg bg-white/[0.04] flex items-center justify-center">
+              <ImagePlus className="h-3 w-3 text-white/40" />
+            </div>
+            <span className="text-[11px] font-medium text-white/50 uppercase tracking-wider">Fundo</span>
           </div>
           {animatedBgImageUrl ? (
-            <div className="relative w-full h-24 rounded-lg overflow-hidden border border-white/[0.06]">
+            <div className="relative w-full h-20 rounded-lg overflow-hidden border border-white/[0.04]">
               <img src={animatedBgImageUrl} alt="" className="w-full h-full object-cover" />
               <button onClick={() => setAnimatedBgImageUrl('')}
-                className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center hover:bg-black/70">
-                <X className="h-3 w-3 text-white/70" />
+                className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60">
+                <X className="h-2.5 w-2.5 text-white/60" />
               </button>
             </div>
           ) : (
@@ -555,8 +521,8 @@ const StepPersonalization: React.FC<Props> = (props) => {
                 } catch {}
               }}
               multiple={false}
-              icon={<Upload className="h-4 w-4 text-white/15" />}
-              label="Arraste a imagem de fundo"
+              icon={<Upload className="h-3.5 w-3.5 text-white/12" />}
+              label="Arraste imagem de fundo"
               compact
             />
           )}
@@ -565,7 +531,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
 
       {/* Skip */}
       <button onClick={onSkipAll}
-        className="py-2 text-[11px] text-white/15 hover:text-white/30 transition-colors">
+        className="py-1.5 text-[10px] text-white/12 hover:text-white/25 transition-colors">
         Pular personalização
       </button>
 

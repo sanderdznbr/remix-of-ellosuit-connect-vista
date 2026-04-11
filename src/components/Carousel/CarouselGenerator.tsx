@@ -4614,6 +4614,10 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     setCompletingGeneration(false);
     setResultEntrance(true);
     setTimeout(() => setResultEntrance(false), 800);
+    // Show tour on first generation
+    if (!localStorage.getItem('ello_tour_seen')) {
+      setTimeout(() => setShowTour(true), 1200);
+    }
   }, []);
 
   // ===== HELPER: Extract exact text from Extreme form =====

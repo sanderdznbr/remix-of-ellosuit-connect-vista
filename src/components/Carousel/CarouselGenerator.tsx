@@ -8972,7 +8972,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: full-width horizontal snap gallery (mobile only) ===== */}
             {isMobileView && resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col items-center relative">
+              <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
                 {/* Mode toggle */}
                 <div className="flex items-center gap-2 mb-3">
                   <button onClick={() => setResultViewMode('advanced')}

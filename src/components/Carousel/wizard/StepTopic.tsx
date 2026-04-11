@@ -148,6 +148,30 @@ const StepTopic: React.FC<Props> = ({
             </div>
           </div>
 
+          {/* Topic suggestions */}
+          {!topic.trim() && (
+            <div className="space-y-2">
+              <p className="text-xs text-white/30 font-medium">💡 Sugestões rápidas — clique para usar:</p>
+              <div className="flex flex-wrap gap-2">
+                {topicSuggestions.map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => setTopic(s.prompt)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all hover:scale-[1.03]"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: 'rgba(255,255,255,0.55)',
+                    }}
+                  >
+                    <span>{s.emoji}</span>
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Force web search toggle */}
           {setForceWebSearch && !classifyingTopic && !searchingWeb && (
             <button

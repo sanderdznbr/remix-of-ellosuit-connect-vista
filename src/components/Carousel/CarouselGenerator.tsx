@@ -9094,7 +9094,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* ===== Card Action Bottom Sheet (basic mode) ===== */}
+            {/* ===== Card Action Bottom Sheet (basic mode) — portal to escape transform context ===== */}
+            {typeof document !== 'undefined' && createPortal(
             <AnimatePresence>
               {showCardActionSheet && resultViewMode === 'basic' && (
                 <>

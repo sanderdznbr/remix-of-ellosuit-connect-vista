@@ -8974,11 +8974,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {resultViewMode === 'basic' && (
               <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
                 {/* Mode toggle */}
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-0.5 mb-3 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button
+                    className="text-[10px] px-3 py-1.5 rounded-full font-medium transition-all"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }}>
+                    Simples
+                  </button>
                   <button onClick={() => setResultViewMode('advanced')}
-                    className="text-[10px] px-2.5 py-1 rounded-full transition-all"
-                    style={{ color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    Ver no mockup ↗
+                    className="text-[10px] px-3 py-1.5 rounded-full font-medium transition-all"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Avançado
                   </button>
                 </div>
                 {/* Horizontal snap scroll gallery */}
@@ -9154,15 +9159,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* ===== ADVANCED MODE: Instagram Phone Mockup ===== */}
             {resultViewMode === 'advanced' && (
             <>
-              {isMobileView && (
-                <div className="flex justify-center mb-2">
+              <div className="flex justify-center mb-2">
+                <div className="flex items-center gap-0.5 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <button onClick={() => setResultViewMode('basic')}
-                    className="text-[10px] px-2.5 py-1 rounded-full transition-all"
-                    style={{ color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    ← Modo básico
+                    className="text-[10px] px-3 py-1.5 rounded-full font-medium transition-all"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Simples
+                  </button>
+                  <button
+                    className="text-[10px] px-3 py-1.5 rounded-full font-medium transition-all"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }}>
+                    Avançado
                   </button>
                 </div>
-              )}
+              </div>
             <motion.div
               className="relative flex-shrink-0"
               layout

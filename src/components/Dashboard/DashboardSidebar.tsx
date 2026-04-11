@@ -140,24 +140,25 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       </div>
 
       {/* Nav */}
-      <nav className="px-2 space-y-0.5">
+      <nav className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
         <button
           onClick={() => { onTabChange('home'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
             activeTab === 'home' && !searchOpen
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Home' : undefined}
         >
-          <Home className="w-4 h-4" />
-          Home
+          <Home className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Home'}
         </button>
 
       </nav>
 
       {/* Projects section */}
-      <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Projetos</p>
+      <div className={`${collapsed ? 'px-1.5' : 'px-2'} mt-5`}>
+        {!collapsed && <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Projetos</p>}
         <div className="flex items-center">
           <button
             onClick={() => { onTabChange('projects'); closeSearch(); }}

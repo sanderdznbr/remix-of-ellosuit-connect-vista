@@ -113,16 +113,13 @@
         margin: 0;
         padding: 0;
         transition: background-color 0.3s ease;
-      }
-      
-      body {
-        padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
       }
       
       #root {
         background-color: #0a0a0f;
-        min-height: 100vh;
+        min-height: 100dvh;
       }
 
       /* Prevent image saving via drag/right-click */

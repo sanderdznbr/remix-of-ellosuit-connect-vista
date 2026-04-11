@@ -299,14 +299,15 @@ Deno.serve(async (req) => {
 
       const prompt = `Gere uma legenda ${tone || 'profissional'} para ${platform || 'Instagram'} sobre: "${topic}".
 A legenda deve:
-- Ter no máximo 2200 caracteres
-- Incluir 5-10 hashtags relevantes no final
+- Ter no máximo 600 caracteres
+- NÃO incluir hashtags (nenhum caractere #)
+- NÃO usar o símbolo # em nenhuma parte do texto
 - Usar emojis estratégicos
 - Ter um call-to-action engajador
 - Estar em ${language || 'português brasileiro'}
 - Ser criativa e gerar engajamento
 
-Retorne APENAS a legenda pronta, sem explicações.`;
+Retorne APENAS a legenda pronta, sem explicações, sem hashtags.`;
 
       const aiRes = await fetch("https://api.perplexity.ai/chat/completions", {
         method: "POST",
@@ -317,11 +318,13 @@ Retorne APENAS a legenda pronta, sem explicações.`;
         body: JSON.stringify({
           model: "sonar",
           messages: [{ role: "user", content: prompt }],
-          max_tokens: 1000,
+          max_tokens: 2048,
         }),
       });
       const aiData = await aiRes.json();
-      const caption = aiData.choices?.[0]?.message?.content || "";
+      let caption = aiData.choices?.[0]?.message?.content || "";
+      // Strip any hashtags the model may have included
+      caption = caption.replace(/#\S+/g, '').replace(/\s{2,}/g, ' ').trim().slice(0, 600);
 
       return new Response(JSON.stringify({ success: true, caption }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

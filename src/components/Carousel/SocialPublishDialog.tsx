@@ -88,7 +88,7 @@ export default function SocialPublishDialog({ open, onOpenChange, imageUrls, top
               rows={6}
               className="text-sm"
             />
-            <p className="text-xs text-muted-foreground">{caption.length}/2200 caracteres</p>
+            <p className="text-xs text-muted-foreground">{caption.length}/600 caracteres</p>
           </div>
 
           {/* Preview */}

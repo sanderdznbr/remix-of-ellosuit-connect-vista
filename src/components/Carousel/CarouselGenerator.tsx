@@ -10023,7 +10023,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-3 py-3 rounded-xl resize-none outline-none mb-3"
                         style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
                       />
-                      <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
+                      <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/600 caracteres</p>
                       <div className="flex gap-2">
                         <button onClick={openCaptionConfigDialog} disabled={generatingCaption}
                           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"

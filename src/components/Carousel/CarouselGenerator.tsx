@@ -118,7 +118,7 @@ import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import { PropertyCardData } from './RealEstateCardTemplates';
 import SocialPublishDialog from './SocialPublishDialog';
-// CarouselTour removed
+import CarouselTour from './CarouselTour';
 import StepPersonalization from './wizard/StepPersonalization';
 import WizardCreditIndicator from './wizard/WizardCreditIndicator';
 import GeneratingAnimation from './GeneratingAnimation';

@@ -9477,6 +9477,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
+            {resultViewMode === 'advanced' && (
             <>
               <div className="flex justify-center mb-2">
                 <div className="flex items-center gap-0.5 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>

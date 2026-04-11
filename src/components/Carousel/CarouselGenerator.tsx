@@ -9779,29 +9779,45 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== FIXED BOTTOM BAR — mobile basic mode ===== */}
             {resultViewMode === 'basic' && !isGuest && (
-              <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-3 px-4 py-3"
+              <div className="fixed bottom-0 left-0 right-0 z-40"
                 style={{
-                  backgroundColor: 'rgba(10,10,15,0.95)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
+                  backgroundColor: 'rgba(10,10,15,0.97)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
                   borderTop: '1px solid rgba(255,255,255,0.06)',
-                  paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                  paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
                 }}>
-                <button onClick={() => setShowExportMenu(true)}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-white transition-all"
-                  style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}>
-                  <Download className="h-3.5 w-3.5" /> Exportar
-                </button>
-                <button onClick={() => { setEditingCard(activeCardIndex); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/80 transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <Pencil className="h-3.5 w-3.5" /> Editar
-                </button>
-                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/80 transition-all"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <Palette className="h-3.5 w-3.5" /> Estilo
-                </button>
+                <div className="flex items-center justify-around px-2 py-2">
+                  <button onClick={() => setShowExportMenu(true)}
+                    className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center"
+                      style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}>
+                      <Download className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-white/70">Exportar</span>
+                  </button>
+                  <button onClick={() => setShowInlineEditor(true)}
+                    className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <SlidersHorizontal className="h-4 w-4 text-white/70" />
+                    </div>
+                    <span className="text-[10px] font-medium text-white/50">Ferramentas</span>
+                  </button>
+                  <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                    className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <Palette className="h-4 w-4 text-white/70" />
+                    </div>
+                    <span className="text-[10px] font-medium text-white/50">Estilo</span>
+                  </button>
+                  <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                    className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <FileText className="h-4 w-4 text-white/70" />
+                    </div>
+                    <span className="text-[10px] font-medium text-white/50">Legenda</span>
+                  </button>
+                </div>
               </div>
             )}
 

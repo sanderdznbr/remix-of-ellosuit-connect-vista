@@ -121,7 +121,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   };
 
   return (
-    <aside className="relative w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
+    <aside className={`relative ${collapsed ? 'w-[60px]' : 'w-[240px]'} h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden transition-all duration-300`} style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
       {/* Purple ambient glow background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[400px] h-[250px] opacity-[0.18]" style={{ background: 'radial-gradient(ellipse at center, #7C3AED 0%, #4C1D95 40%, transparent 70%)', filter: 'blur(50px)' }} />
@@ -129,9 +129,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       </div>
       {/* Scrollable nav area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
-      {/* Logo */}
-      <div className="px-4 pt-4 pb-3">
-        <img src={faviconIcon} alt="Logo" className="h-8 w-8" />
+      {/* Logo + collapse toggle */}
+      <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-4 pb-3`}>
+        <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0" />
+        {!collapsed && onToggleCollapse && (
+          <button onClick={onToggleCollapse} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Recolher sidebar">
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Nav */}

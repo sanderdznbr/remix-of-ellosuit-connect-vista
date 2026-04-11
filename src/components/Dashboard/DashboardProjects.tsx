@@ -351,46 +351,38 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     <Star className="w-3 h-3" fill="#facc15" />
                   </div>
                 )}
-                {/* Hover overlay: stronger gradient + action row */}
+                {/* Hover overlay */}
                 <div
-                  className="absolute inset-0 flex flex-col justify-end transition-all"
+                  className="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300"
                   style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 40%, transparent 70%)',
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 80%)',
                   }}
                 >
-                  {/* Default info (always visible) */}
-                  <div className="px-2.5 pb-2">
-                    <p className="text-[10px] font-medium truncate leading-tight" style={{ color: 'rgba(255,255,255,0.9)' }}>{item.title || item.topic}</p>
-                    <p className="text-[8px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      {item.card_count || '?'} cards · {formatDate(item.created_at)}
-                    </p>
-                  </div>
-                  {/* Action bar — slides up on hover */}
-                  <div className="flex items-center justify-center gap-4 pb-3 pt-1 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+                  <div className="flex flex-col gap-0.5 px-3 pb-3">
                     <button
                       onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
-                      className="p-1.5 rounded-full transition-colors cursor-pointer hover:bg-white/20"
-                      style={{ color: 'rgba(255,255,255,0.7)' }}
-                      title="Editar"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                      style={{ color: 'rgba(255,255,255,0.8)' }}
                     >
                       <Pencil className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">Editar</span>
                     </button>
                     <button
                       onClick={(e) => openPublishDialog(e, item)}
-                      className="p-1.5 rounded-full transition-colors cursor-pointer hover:bg-white/20"
-                      style={{ color: 'rgba(255,255,255,0.7)' }}
-                      title="Compartilhar"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                      style={{ color: 'rgba(255,255,255,0.8)' }}
                       disabled={publishingId === item.id}
                     >
                       {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                      <span className="text-[11px]">Compartilhar</span>
                     </button>
                     <button
                       onClick={(e) => handleDelete(e, item.id)}
-                      className="p-1.5 rounded-full transition-colors cursor-pointer hover:bg-white/20"
-                      style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.7)' }}
-                      title={deleteConfirmId === item.id ? 'Confirmar exclusão' : 'Excluir'}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                      style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">{deleteConfirmId === item.id ? 'Confirmar' : 'Excluir'}</span>
                     </button>
                   </div>
                 </div>

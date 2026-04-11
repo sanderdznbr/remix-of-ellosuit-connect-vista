@@ -500,6 +500,7 @@ const CarouselGenerator: React.FC = () => {
    const [showFullConfigModal, setShowFullConfigModal] = useState(false);
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
+  const [showFullScreenStylePicker, setShowFullScreenStylePicker] = useState(false);
   const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card' | 'recreate'>('toolbar');
   const [pendingRecreateConfig, setPendingRecreateConfig] = useState<any>(null);
   const [recreateVisualIdea, setRecreateVisualIdea] = useState('');

@@ -520,6 +520,7 @@ const CarouselGenerator: React.FC = () => {
   const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
+  const [showStylePreview, setShowStylePreview] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -9337,6 +9338,83 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
+            {/* ===== Style Preview Popup (basic mode) ===== */}
+            <AnimatePresence>
+              {showStylePreview && resultViewMode === 'basic' && (
+                <>
+                  <motion.div
+                    key="style-preview-bg"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70]"
+                    onClick={() => setShowStylePreview(false)}
+                  />
+                  <motion.div
+                    key="style-preview-popup"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                    className="fixed inset-0 z-[71] flex items-center justify-center p-6 pointer-events-none"
+                  >
+                    <div
+                      className="w-full max-w-[360px] rounded-2xl pointer-events-auto overflow-hidden"
+                      style={{ backgroundColor: '#151520', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 25px 60px rgba(0,0,0,0.7)' }}
+                    >
+                      <div className="flex items-center justify-between px-5 pt-5 pb-2">
+                        <div className="flex items-center gap-2.5">
+                          <Palette className="h-5 w-5" style={{ color: themeHex }} />
+                          <span className="text-base font-bold text-white">Estilo atual</span>
+                        </div>
+                        <button onClick={() => setShowStylePreview(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                          <X className="h-5 w-5 text-white/40" />
+                        </button>
+                      </div>
+
+                      <div className="px-5 py-4">
+                        <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ backgroundColor: `rgba(${themeRgb},0.08)`, border: `1px solid rgba(${themeRgb},0.15)` }}>
+                          {activeMarketplaceStyle?.preview_urls?.[0] && (
+                            <img src={activeMarketplaceStyle.preview_urls[0]} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold text-white block truncate">
+                              {activeMarketplaceStyle?.name || 'Estilo padrão'}
+                            </span>
+                            <span className="text-[11px] text-white/40">Estilo usado neste carrossel</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="px-5 pb-2">
+                        <p className="text-sm text-white/60 text-center">Deseja recriar este post com um estilo diferente?</p>
+                      </div>
+
+                      <div className="flex gap-3 px-5 py-4">
+                        <button
+                          onClick={() => setShowStylePreview(false)}
+                          className="flex-1 px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:bg-white/[0.06] transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowStylePreview(false);
+                            setStyleChangeSource('toolbar');
+                            setShowStylePanel(true);
+                          }}
+                          className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
+                          style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
+                        >
+                          Escolher estilo
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
             {resultViewMode === 'advanced' && (
             <>
               <div className="flex justify-center mb-2">
@@ -9959,7 +10037,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                     <span className="text-[10px] font-medium text-white/50">Ferramentas</span>
                   </button>
-                  <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                  <button onClick={() => setShowStylePreview(true)}
                     className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <Palette className="h-4 w-4 text-white/70" />

@@ -1439,7 +1439,7 @@ const CarouselGenerator: React.FC = () => {
     userName,
     dateLabel,
     activePresetId,
-    logoUrl,
+    logoUrl: logoUrl || null,
     logoPosition,
     showHeader,
     marketplaceStyleId: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,

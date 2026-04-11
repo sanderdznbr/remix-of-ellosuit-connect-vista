@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'; // tweet2-refresh
+import { createPortal } from 'react-dom';
 import { calculateCreditCost } from '@/utils/creditCost';
 import '@/styles/carousel-loader.css';
 import { buildPaletteFromColors, extractColorsFromImage } from '@/utils/extractColorsFromImage';

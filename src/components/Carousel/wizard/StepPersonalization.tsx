@@ -326,8 +326,8 @@ const StepPersonalization: React.FC<Props> = (props) => {
               <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-1" />
             </div>
             <div className="flex gap-1.5 flex-1">
-              <button onClick={() => handleLogoFiles([])} className="text-[10px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] text-white/35 hover:text-white/60 transition-colors"
-                onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f) handleLogoFiles(Array.from(f)); }; input.click(); }}>
+              <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f) handleLogoFiles(Array.from(f)); }; input.click(); }}
+                className="text-[10px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] text-white/35 hover:text-white/60 transition-colors">
                 Trocar
               </button>
               {user && (

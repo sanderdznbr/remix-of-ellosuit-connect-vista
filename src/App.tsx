@@ -80,6 +80,17 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<PublicCarouselGenerator />} />
+                <Route path="/projetos" element={<PublicCarouselGenerator />} />
+                <Route path="/favoritos" element={<PublicCarouselGenerator />} />
+                <Route path="/galeria" element={<PublicCarouselGenerator />} />
+                <Route path="/prompts" element={<PublicCarouselGenerator />} />
+                <Route path="/marketplace" element={<PublicCarouselGenerator />} />
+                <Route path="/ferramentas/remover-logo" element={<PublicCarouselGenerator />} />
+                <Route path="/ferramentas/historico" element={<PublicCarouselGenerator />} />
+                <Route path="/ferramentas/behance" element={<PublicCarouselGenerator />} />
+                <Route path="/ferramentas/instagram" element={<PublicCarouselGenerator />} />
+                <Route path="/ferramentas/gerador-rosto" element={<PublicCarouselGenerator />} />
+                <Route path="/ferramentas/criar-estilo" element={<PublicCarouselGenerator />} />
                 <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
                 <Route path="/auth" element={<Index />} />
                 <Route path="/register" element={<Register />} />

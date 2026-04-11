@@ -7769,6 +7769,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         hasWebImages={hasWebImages}
                         webFacePosition={webFacePosition} setWebFacePosition={setWebFacePosition}
                         onSkipAll={() => setWizardStep(wizardStep + 1)}
+                        onWizardBack={() => {
+                          let prev = wizardStep - 1;
+                          const prevName = WIZARD_STEPS[prev];
+                          if (prevName === 'Fotos' && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev--;
+                          if ((WIZARD_STEPS[prev] === 'Cores' || WIZARD_STEPS[prev] === 'Fontes') && isFullBleedMarketplace) {
+                            while (prev > 0 && (WIZARD_STEPS[prev] === 'Cores' || WIZARD_STEPS[prev] === 'Fontes')) prev--;
+                          }
+                          setWizardStep(prev);
+                        }}
                         activeMarketplaceStyle={activeMarketplaceStyle}
                         isExtreme={wizardMode === 'extreme'}
                         hasProduct={wantsProduct}
@@ -8114,7 +8123,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </motion.div>
                   </AnimatePresence>
 
-                  {/* Navigation buttons — sticky on mobile */}
+                  {/* Navigation buttons — sticky on mobile (hidden when step has own nav) */}
+                  {currentStepName !== 'Personalização' && (
                   <div className="fixed bottom-0 left-0 right-0 z-30 lg:relative lg:bottom-auto lg:left-auto lg:right-auto flex items-center justify-between pt-4 px-5 pb-[calc(env(safe-area-inset-bottom,12px)+12px)] lg:px-0 lg:pb-0" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', backgroundColor: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                     <button onClick={() => {
                       if (currentStepName === 'Modo') { setShowWelcome(true); setCurrentCarouselId(null); setWizardStep(0); }
@@ -8476,6 +8486,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     )}
                   </div>
+                  )}
                 </div>
               </div>
             </div>

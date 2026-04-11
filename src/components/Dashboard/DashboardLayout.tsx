@@ -178,7 +178,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             <>
               <motion.div
                 className="fixed inset-0 z-40"
-                style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.4)', top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+                style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.4)' }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -186,8 +186,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                 onClick={() => setProfileOpen(false)}
               />
               <motion.div
-                className="absolute top-14 right-3 w-64 rounded-xl border border-white/[0.08] shadow-2xl z-50 overflow-hidden"
-                style={{ backgroundColor: '#111116' }}
+                className="absolute right-3 w-64 rounded-xl border border-white/[0.08] shadow-2xl z-50 overflow-hidden"
+                style={{ backgroundColor: '#111116', top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
                 initial={{ opacity: 0, y: -10, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.97 }}

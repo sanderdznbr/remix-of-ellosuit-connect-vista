@@ -178,12 +178,12 @@ const StepTopic: React.FC<Props> = ({
           {!topic.trim() && (
             <div className="space-y-2">
               <p className="text-[11px] text-white/25">Sugestões rápidas:</p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {topicSuggestions.map((s) => (
                   <button
                     key={s.label}
                     onClick={() => setTopic(s.prompt)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] transition-all hover:bg-white/[0.06]"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] transition-all hover:bg-white/[0.06] flex-shrink-0"
                     style={{
                       backgroundColor: 'rgba(255,255,255,0.03)',
                       border: '1px solid rgba(255,255,255,0.06)',

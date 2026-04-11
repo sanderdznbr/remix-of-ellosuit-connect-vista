@@ -9153,6 +9153,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== ADVANCED MODE: Instagram Phone Mockup ===== */}
             {resultViewMode === 'advanced' && (
+            <>
             <motion.div
               className="relative flex-shrink-0"
               layout
@@ -9481,6 +9482,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
               </div>
             </motion.div>
+            </>
             )}
 
             {/* Inline Style Panel — desktop only, next to the phone */}

@@ -516,6 +516,8 @@ const CarouselGenerator: React.FC = () => {
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
+  const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
+  const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -8968,7 +8970,204 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
-            {/* Instagram Phone Mockup */}
+            {/* ===== BASIC MODE: full-width horizontal snap gallery (mobile only) ===== */}
+            {isMobileView && resultViewMode === 'basic' && (
+              <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
+                {/* Mode toggle */}
+                <div className="flex items-center gap-2 mb-3">
+                  <button onClick={() => setResultViewMode('advanced')}
+                    className="text-[10px] px-2.5 py-1 rounded-full transition-all"
+                    style={{ color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    Ver no mockup ↗
+                  </button>
+                </div>
+                {/* Horizontal snap scroll gallery */}
+                <div
+                  className="w-full overflow-x-auto snap-x snap-mandatory flex gap-3 px-4 pb-3"
+                  style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' } as any}
+                  ref={(el) => {
+                    if (!el) return;
+                    el.style.setProperty('-webkit-overflow-scrolling', 'touch');
+                    (el.style as any).msOverflowStyle = 'none';
+                    el.style.scrollbarWidth = 'none';
+                  }}
+                  onScroll={(e) => {
+                    const container = e.currentTarget;
+                    const scrollLeft = container.scrollLeft;
+                    const children = container.children;
+                    if (!children.length) return;
+                    const itemWidth = children[0].getBoundingClientRect().width;
+                    const gap = 12;
+                    const idx = Math.round(scrollLeft / (itemWidth + gap));
+                    if (idx !== activeCardIndex && idx >= 0 && idx < carouselData.cards.length) {
+                      setActiveCardIndex(idx);
+                    }
+                  }}
+                >
+                  {carouselData.cards.map((card, i) => {
+                    const w = Math.min(window.innerWidth - 48, 340);
+                    const h = w * (cardH / cardW);
+                    return (
+                      <div
+                        key={i}
+                        className="snap-center flex-shrink-0 relative rounded-2xl overflow-hidden"
+                        style={{ width: w, height: h }}
+                        onClick={() => {
+                          if (isCardLocked(i)) return;
+                          setActiveCardIndex(i);
+                          setShowCardActionSheet(true);
+                        }}
+                      >
+                        <div style={{ width: previewW, height: previewH, transform: `scale(${w / previewW})`, transformOrigin: 'top left' }}>
+                          {renderCardPreview(card, i, false)}
+                        </div>
+                        {isCardLocked(i) && (
+                          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center backdrop-blur-md" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                            <Lock className="w-6 h-6 mb-2" style={{ color: themeHex }} />
+                            <p className="text-white text-xs font-semibold">Bloqueado</p>
+                          </div>
+                        )}
+                        {(regeneratingCard === i || regeneratingFace === i) && (
+                          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+                            <div className="carousel-loader-wrapper" style={{ width: 60, height: 60 }}>
+                              <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 60, height: 60 }} />
+                            </div>
+                            <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === i ? 'Regenerando rosto...' : 'Regenerando...'}</p>
+                          </div>
+                        )}
+                        <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none opacity-50">
+                          <span className="text-[9px] text-white/50 bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                            Toque para opções
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Dots */}
+                <div className="flex items-center justify-center gap-1.5 py-2">
+                  {carouselData.cards.map((_, i) => (
+                    <div key={i}
+                      className="transition-all rounded-full"
+                      style={{
+                        width: i === activeCardIndex ? 16 : 5,
+                        height: 5,
+                        borderRadius: i === activeCardIndex ? 3 : '50%',
+                        backgroundColor: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.15)',
+                      }} />
+                  ))}
+                </div>
+                <p className="text-[10px] text-white/25 mb-1">
+                  Card {activeCardIndex + 1} de {carouselData.cards.length}
+                </p>
+              </div>
+            )}
+
+            {/* ===== Card Action Bottom Sheet (basic mode) ===== */}
+            <AnimatePresence>
+              {showCardActionSheet && isMobileView && resultViewMode === 'basic' && (
+                <>
+                  <motion.div
+                    key="card-action-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/60 z-[60]"
+                    onClick={() => setShowCardActionSheet(false)}
+                  />
+                  <motion.div
+                    key="card-action-sheet"
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl"
+                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+                  >
+                    <div className="flex justify-center py-2.5">
+                      <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                    </div>
+                    <div className="px-4 pb-1">
+                      <p className="text-xs font-semibold text-white/60 mb-3">Card {activeCardIndex + 1}</p>
+                    </div>
+                    <div className="flex flex-col px-3 pb-3 gap-0.5">
+                      <button onClick={() => { setShowCardActionSheet(false); setEditingCard(activeCardIndex); }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                        <Pencil className="h-4 w-4" style={{ color: themeHex }} />
+                        <div className="text-left">
+                          <p className="text-[13px] text-white/80 font-medium">Editar texto</p>
+                          <p className="text-[10px] text-white/30">Altere título e corpo do card</p>
+                        </div>
+                      </button>
+                      {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                        <button onClick={() => { setShowCardActionSheet(false); regenerateCard(activeCardIndex); }}
+                          disabled={regeneratingCard !== null}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                          <RotateCcw className="h-4 w-4 text-orange-400" />
+                          <div className="text-left">
+                            <p className="text-[13px] text-white/80 font-medium">Regenerar imagem</p>
+                            <p className="text-[10px] text-white/30">Gerar nova imagem com IA</p>
+                          </div>
+                        </button>
+                      )}
+                      {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                        <button onClick={() => { setShowCardActionSheet(false); setCorrectionCardIndex(activeCardIndex); }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                          <Pencil className="h-4 w-4 text-amber-400" />
+                          <div className="text-left">
+                            <p className="text-[13px] text-white/80 font-medium">Corrigir imagem</p>
+                            <p className="text-[10px] text-white/30">Editar áreas específicas</p>
+                          </div>
+                        </button>
+                      )}
+                      {!isGuest && (
+                        <button onClick={() => { setShowCardActionSheet(false); setViewPromptCard(activeCardIndex); }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                          <FileText className="h-4 w-4 text-yellow-400" />
+                          <div className="text-left">
+                            <p className="text-[13px] text-white/80 font-medium">Ver prompt</p>
+                            <p className="text-[10px] text-white/30">Prompt usado para gerar</p>
+                          </div>
+                        </button>
+                      )}
+                      {!isGuest && carouselData.cards.length > 1 && (
+                        <button onClick={() => {
+                          setShowCardActionSheet(false);
+                          const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
+                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                          if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
+                        }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                          <Trash2 className="h-4 w-4 text-red-400/60" />
+                          <div className="text-left">
+                            <p className="text-[13px] text-red-400/70 font-medium">Excluir card</p>
+                            <p className="text-[10px] text-white/20">Remove este card do carrossel</p>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
+            {/* ===== ADVANCED MODE: Instagram Phone Mockup ===== */}
+            {(!isMobileView || resultViewMode === 'advanced') && (
+            <motion.div
+              className="relative flex-shrink-0"
+              layout
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              style={{ width: postFormat === 'story' ? 280 : 375, maxWidth: '95vw' }}
+            >
+              {isMobileView && (
+                <div className="flex justify-center mb-2">
+                  <button onClick={() => setResultViewMode('basic')}
+                    className="text-[10px] px-2.5 py-1 rounded-full transition-all"
+                    style={{ color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    ← Modo básico
+                  </button>
+                </div>
+              )}
             <motion.div
               className="relative flex-shrink-0"
               layout
@@ -9282,6 +9481,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
               </div>
             </motion.div>
+            )}
 
             {/* Inline Style Panel — desktop only, next to the phone */}
             <AnimatePresence>
@@ -9546,7 +9746,36 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* Action buttons below - mobile only: primary row */}
+            {/* ===== FIXED BOTTOM BAR — mobile basic mode ===== */}
+            {isMobileView && resultViewMode === 'basic' && !isGuest && (
+              <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-3 px-4 py-3"
+                style={{
+                  backgroundColor: 'rgba(10,10,15,0.95)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                }}>
+                <button onClick={() => setShowExportMenu(true)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-white transition-all"
+                  style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}>
+                  <Download className="h-3.5 w-3.5" /> Exportar
+                </button>
+                <button onClick={() => { setEditingCard(activeCardIndex); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/80 transition-all"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Pencil className="h-3.5 w-3.5" /> Editar
+                </button>
+                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/80 transition-all"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Palette className="h-3.5 w-3.5" /> Estilo
+                </button>
+              </div>
+            )}
+
+            {/* Old mobile action bar (advanced mode only) */}
+            {(!isMobileView || resultViewMode === 'advanced') && (
             <div className="flex md:hidden items-center justify-center gap-2 mt-4 w-full relative z-10 px-4">
               {/* Edit */}
               {!isGuest && (
@@ -9737,6 +9966,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
 
             {/* Carousel from cover modal - enhanced */}
             {showCarouselFromCover && (

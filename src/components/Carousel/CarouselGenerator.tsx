@@ -9614,10 +9614,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </>
               )}
               {/* Phone frame */}
-              <div className={postFormat === 'story' ? 'rounded-[2rem] overflow-hidden' : 'rounded-[3rem] overflow-hidden'} style={{
+              <div className={postFormat === 'story' ? 'rounded-[2rem] overflow-hidden max-h-[70vh]' : 'rounded-[3rem] overflow-hidden'} style={{
                 border: postFormat === 'story' ? '2px solid rgba(255,255,255,0.08)' : '3px solid rgba(255,255,255,0.1)',
                 background: '#000',
                 boxShadow: `0 0 80px rgba(${themeRgb},0.18), 0 0 2px rgba(255,255,255,0.1) inset`,
+                ...(postFormat === 'story' ? { width: 'auto', aspectRatio: '9/16' } : {}),
               }}>
                 {/* Notch - hide for stories */}
                 {postFormat !== 'story' && (

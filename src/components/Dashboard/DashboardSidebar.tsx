@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, ChevronLeft, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
@@ -11,9 +11,11 @@ interface DashboardSidebarProps {
   onTabChange: (tab: string) => void;
   onSearch?: (query: string) => void;
   onLoadCarousel?: (carouselItem: any) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch, onLoadCarousel }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch, onLoadCarousel, collapsed = false, onToggleCollapse }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -119,7 +121,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   };
 
   return (
-    <aside className="relative w-[240px] md:w-[240px] h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden" style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
+    <aside className={`relative ${collapsed ? 'w-[60px]' : 'w-[240px]'} h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden transition-all duration-300`} style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
       {/* Purple ambient glow background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[400px] h-[250px] opacity-[0.18]" style={{ background: 'radial-gradient(ellipse at center, #7C3AED 0%, #4C1D95 40%, transparent 70%)', filter: 'blur(50px)' }} />
@@ -127,43 +129,50 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       </div>
       {/* Scrollable nav area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
-      {/* Logo */}
-      <div className="px-4 pt-4 pb-3">
-        <img src={faviconIcon} alt="Logo" className="h-8 w-8" />
+      {/* Logo + collapse toggle */}
+      <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-4 pb-3`}>
+        <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0" />
+        {!collapsed && onToggleCollapse && (
+          <button onClick={onToggleCollapse} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Recolher sidebar">
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
-      <nav className="px-2 space-y-0.5">
+      <nav className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
         <button
           onClick={() => { onTabChange('home'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
             activeTab === 'home' && !searchOpen
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Home' : undefined}
         >
-          <Home className="w-4 h-4" />
-          Home
+          <Home className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Home'}
         </button>
 
       </nav>
 
       {/* Projects section */}
-      <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Projetos</p>
+      <div className={`${collapsed ? 'px-1.5' : 'px-2'} mt-5`}>
+        {!collapsed && <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Projetos</p>}
         <div className="flex items-center">
           <button
             onClick={() => { onTabChange('projects'); closeSearch(); }}
-            className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            className={`flex-1 flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
               activeTab === 'projects' || activeTab === 'starred'
                 ? 'text-white'
                 : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
             }`}
+            title={collapsed ? 'Conteúdos' : undefined}
           >
-            <FolderOpen className="w-4 h-4" />
-            Conteúdos
+            <FolderOpen className="w-4 h-4 shrink-0" />
+            {!collapsed && 'Conteúdos'}
           </button>
-          {(activeTab === 'projects' || activeTab === 'starred') && (
+          {!collapsed && (activeTab === 'projects' || activeTab === 'starred') && (
             <button
               onClick={() => { onTabChange(activeTab === 'starred' ? 'projects' : 'starred'); closeSearch(); }}
               className="p-1.5 rounded-md cursor-pointer transition-colors mr-1"
@@ -175,41 +184,44 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
         <button
           onClick={() => { onTabChange('gallery'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'gallery'
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Galeria' : undefined}
         >
-          <ImageIcon className="w-4 h-4" />
-          Galeria
+          <ImageIcon className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Galeria'}
         </button>
         <button
           onClick={() => { onTabChange('prompts'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'prompts'
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Prompts' : undefined}
         >
-          <MessageSquareText className="w-4 h-4" />
-          Prompts
+          <MessageSquareText className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Prompts'}
         </button>
         <button
           onClick={() => { onTabChange('marketplace'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'marketplace'
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Estilos' : undefined}
         >
-          <ShoppingBag className="w-4 h-4" />
-          Estilos
+          <ShoppingBag className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Estilos'}
         </button>
       </div>
 
       {/* Ferramentas section — collapsible */}
-      {email === 'admin@gmail.com' && (
+      {!collapsed && email === 'admin@gmail.com' && (
         <div className="px-2 mt-5">
           <button
             onClick={() => setFerramentasOpen(!ferramentasOpen)}
@@ -246,44 +258,62 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       )}
 
       {/* Comunidade section — collapsible */}
-      <div className="px-2 mt-5">
-        <button
-          onClick={() => setComunidadeOpen(!comunidadeOpen)}
-          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-        >
-          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Comunidade</span>
-          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${comunidadeOpen ? 'rotate-90' : ''}`} />
-        </button>
-        {comunidadeOpen && (
-          <div className="mt-1 space-y-0.5">
-            <button
-              onClick={() => { navigate('/comunidade'); closeSearch(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                location.pathname === '/comunidade'
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Explorar
-            </button>
-            <button
-              onClick={() => { navigate('/perfil'); closeSearch(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              <User className="w-4 h-4" />
-              Meu Perfil
-            </button>
-          </div>
-        )}
-      </div>
+      {!collapsed && (
+        <div className="px-2 mt-5">
+          <button
+            onClick={() => setComunidadeOpen(!comunidadeOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
+          >
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Comunidade</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${comunidadeOpen ? 'rotate-90' : ''}`} />
+          </button>
+          {comunidadeOpen && (
+            <div className="mt-1 space-y-0.5">
+              <button
+                onClick={() => { navigate('/comunidade'); closeSearch(); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                  location.pathname === '/comunidade'
+                    ? 'text-white'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Explorar
+              </button>
+              <button
+                onClick={() => { navigate('/perfil'); closeSearch(); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                  location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
+                    ? 'text-white'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                Meu Perfil
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsed: icon-only shortcuts for comunidade */}
+      {collapsed && (
+        <div className="px-1.5 mt-5 space-y-0.5">
+          <button onClick={() => { navigate('/comunidade'); closeSearch(); }}
+            className={`w-full flex items-center justify-center py-2 rounded-lg transition-colors cursor-pointer ${location.pathname === '/comunidade' ? 'text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}
+            title="Comunidade">
+            <Users className="w-4 h-4" />
+          </button>
+          <button onClick={() => { navigate('/ajuda'); closeSearch(); }}
+            className={`w-full flex items-center justify-center py-2 rounded-lg transition-colors cursor-pointer ${location.pathname === '/ajuda' ? 'text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}
+            title="Ajuda">
+            <BookOpen className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Parceiros section — only for affiliates or admin */}
-      {(isAffiliate || email === 'admin@gmail.com') && (
+      {!collapsed && (isAffiliate || email === 'admin@gmail.com') && (
         <div className="px-2 mt-5">
           <button
             onClick={() => setParceirosOpen(!parceirosOpen)}
@@ -324,167 +354,145 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       )}
 
       {/* Ajuda section */}
-      <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ajuda</p>
-        <button
-          onClick={() => { navigate('/ajuda'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            location.pathname === '/ajuda'
-              ? 'text-white'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          Dúvidas & Créditos
-        </button>
-      </div>
-
+      {!collapsed && (
+        <div className="px-2 mt-5">
+          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ajuda</p>
+          <button
+            onClick={() => { navigate('/ajuda'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              location.pathname === '/ajuda'
+                ? 'text-white'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            Dúvidas & Créditos
+          </button>
+        </div>
+      )}
 
       </div>{/* end scrollable nav area */}
 
 
       {/* Bottom: Profile — fixed at bottom */}
       <div className="shrink-0 border-t border-white/[0.04] relative z-10">
-        {/* Credits with gradient bar and plan marker */}
-        {(() => {
-          const balance = displayBalance ?? 0;
-          const planNameLower = planName.toLowerCase();
-          const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
-          const planColor = '#8B5CF6';
-          // Total bar represents max(balance, monthlyCredits) + some headroom
-          const maxBar = Math.max(balance, monthlyCredits, 50);
-          const balancePct = Math.min(100, (balance / maxBar) * 100);
-          const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
-          const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
-
-          return (
-            <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
-              {/* Plan badge + balance */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                    style={{ backgroundColor: `${planColor}20`, color: planColor }}
-                  >
-                    {planLabel}
-                  </span>
+        {/* Collapsed: expand button + compact profile */}
+        {collapsed ? (
+          <div className="flex flex-col items-center py-3 gap-2">
+            {onToggleCollapse && (
+              <button onClick={onToggleCollapse} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Expandir sidebar">
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            )}
+            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/60 transition-colors cursor-pointer" title={email}>
+              <User className="w-4 h-4" />
+            </button>
+            {showProfileMenu && (
+              <div className="absolute bottom-full left-1 mb-1 w-56 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0d0d12' }}>
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <p className="text-sm text-white/70 font-medium truncate">{email}</p>
                 </div>
-                <span className="text-white/70 text-xs font-medium">
-                  {Math.floor(balance)} restantes
-                </span>
-              </div>
-
-              {/* Gradient progress bar with animated shimmer */}
-              <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
-                  style={{
-                    width: `${balancePct}%`,
-                    background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)`,
-                  }}
-                >
-                  {/* Animated shimmer overlay */}
-                  <div
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'shimmer-credit 2s ease-in-out infinite',
-                    }}
-                  />
+                <div className="py-1">
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <User className="w-4 h-4" /> Perfil
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <Settings className="w-4 h-4" /> Configurações
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <CreditCard className="w-4 h-4" /> Plano & Créditos
+                  </button>
                 </div>
-                {/* Monthly credits marker line */}
-                {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
-                  <div
-                    className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full"
-                    style={{
-                      left: `${monthlyMarkerPct}%`,
-                      backgroundColor: 'rgba(255,255,255,0.5)',
-                    }}
-                    title={`${monthlyCredits} créditos mensais`}
-                  />
-                )}
-                <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+                <div className="border-t border-white/[0.06] py-1">
+                  <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <LogOut className="w-4 h-4" /> Sair
+                  </button>
+                </div>
               </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Credits with gradient bar and plan marker */}
+            {(() => {
+              const balance = displayBalance ?? 0;
+              const planNameLower = planName.toLowerCase();
+              const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
+              const planColor = '#8B5CF6';
+              const maxBar = Math.max(balance, monthlyCredits, 50);
+              const balancePct = Math.min(100, (balance / maxBar) * 100);
+              const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
+              const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
 
-              {/* Monthly credits label */}
-              {monthlyCredits > 0 && (
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[10px] text-white/25">
-                    {monthlyCredits} mensais
-                  </span>
-                  {bonusCredits > 0 && (
-                    <span className="text-[10px]" style={{ color: `${planColor}99` }}>
-                      +{Math.floor(bonusCredits)} bônus
-                    </span>
+              return (
+                <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${planColor}20`, color: planColor }}>
+                        {planLabel}
+                      </span>
+                    </div>
+                    <span className="text-white/70 text-xs font-medium">{Math.floor(balance)} restantes</span>
+                  </div>
+                  <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-full rounded-full transition-all duration-700 relative overflow-hidden" style={{ width: `${balancePct}%`, background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)` }}>
+                      <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer-credit 2s ease-in-out infinite' }} />
+                    </div>
+                    {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
+                      <div className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full" style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.5)' }} title={`${monthlyCredits} créditos mensais`} />
+                    )}
+                    <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+                  </div>
+                  {monthlyCredits > 0 && (
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[10px] text-white/25">{monthlyCredits} mensais</span>
+                      {bonusCredits > 0 && (
+                        <span className="text-[10px]" style={{ color: `${planColor}99` }}>+{Math.floor(bonusCredits)} bônus</span>
+                      )}
+                    </div>
                   )}
+                </div>
+              );
+            })()}
+
+            {/* Profile button */}
+            <div className="relative px-2 pb-3">
+              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <p className="text-sm text-white/50 font-medium truncate">{email}</p>
+                <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showProfileMenu && (
+                <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0d0d12' }}>
+                  <div className="px-4 py-3 border-b border-white/[0.06]">
+                    <p className="text-sm text-white/70 font-medium truncate">{email}</p>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <User className="w-4 h-4" /> Perfil
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <Settings className="w-4 h-4" /> Configurações
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <CreditCard className="w-4 h-4" /> Plano & Créditos
+                    </button>
+                  </div>
+                  <div className="border-t border-white/[0.06] py-1">
+                    <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <LogOut className="w-4 h-4" /> Sair
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          );
-        })()}
-
-        {/* Profile button */}
-        <div className="relative px-2 pb-3">
-          <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer"
-          >
-            <p className="text-sm text-white/50 font-medium truncate">{email}</p>
-            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Profile dropdown */}
-          {showProfileMenu && (
-            <div
-              className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50"
-              style={{ backgroundColor: '#0d0d12' }}
-            >
-              <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-sm text-white/70 font-medium truncate">{email}</p>
-              </div>
-              <div className="py-1">
-                <button
-                  onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <User className="w-4 h-4" /> Perfil
-                </button>
-                <button
-                  onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <Settings className="w-4 h-4" /> Configurações
-                </button>
-                <button
-                  onClick={() => { setShowProfileMenu(false); navigate('/precos'); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <CreditCard className="w-4 h-4" /> Plano & Créditos
-                </button>
-              </div>
-              <div className="border-t border-white/[0.06] py-1">
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" /> Sair
-                </button>
-              </div>
+            {/* Powered by ellosuit */}
+            <div className="px-4 pb-3 pt-1 flex justify-center">
+              <a href="https://www.ellosuit.online" target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/20 hover:text-white/40 transition-colors">
+                Powered by <span className="font-semibold">ellosuit</span>
+              </a>
             </div>
-          )}
-        </div>
-        {/* Powered by ellosuit */}
-        <div className="px-4 pb-3 pt-1 flex justify-center">
-          <a
-            href="https://www.ellosuit.online"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-white/20 hover:text-white/40 transition-colors"
-          >
-            Powered by <span className="font-semibold">ellosuit</span>
-          </a>
-        </div>
+          </>
+        )}
       </div>
     </aside>
   );

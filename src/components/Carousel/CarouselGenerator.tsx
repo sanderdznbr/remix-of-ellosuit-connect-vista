@@ -9481,6 +9481,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
               </div>
             </motion.div>
+            )}
 
             {/* Inline Style Panel — desktop only, next to the phone */}
             <AnimatePresence>

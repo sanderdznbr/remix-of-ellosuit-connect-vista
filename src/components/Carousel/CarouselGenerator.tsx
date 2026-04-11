@@ -118,7 +118,7 @@ import AddCardStylePicker from './AddCardStylePicker';
 import CarouselEditorSidebar from './editor/CarouselEditorSidebar';
 import { PropertyCardData } from './RealEstateCardTemplates';
 import SocialPublishDialog from './SocialPublishDialog';
-// CarouselTour removed
+import CarouselTour from './CarouselTour';
 import StepPersonalization from './wizard/StepPersonalization';
 import WizardCreditIndicator from './wizard/WizardCreditIndicator';
 import GeneratingAnimation from './GeneratingAnimation';
@@ -474,7 +474,7 @@ const CarouselGenerator: React.FC = () => {
   const [activePresetId, setActivePresetId] = useState<string>('ellosuit-editorial');
   const [regenMenuOpen, setRegenMenuOpen] = useState<number | null>(null);
   const [showRefPanel, setShowRefPanel] = useState(false);
-  // CarouselTour removed
+  const [showTour, setShowTour] = useState(false);
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
@@ -4614,6 +4614,10 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
     setCompletingGeneration(false);
     setResultEntrance(true);
     setTimeout(() => setResultEntrance(false), 800);
+    // Show tour on first generation
+    if (!localStorage.getItem('ello_tour_seen')) {
+      setTimeout(() => setShowTour(true), 1200);
+    }
   }, []);
 
   // ===== HELPER: Extract exact text from Extreme form =====
@@ -7263,8 +7267,49 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div className="w-9 h-9" />
                 )}
               </div>
-              <div className="text-right text-[12px] sm:text-sm font-semibold text-white/35">
-                Etapa {currentWizardDisplayStep} de {visibleWizardSteps.length}
+              {/* Named progress bar */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[70%]">
+                {visibleWizardSteps.map((step, i) => {
+                  const isCurrent = i + 1 === currentWizardDisplayStep;
+                  const isPast = i + 1 < currentWizardDisplayStep;
+                  const shortNames: Record<string, string> = {
+                    'Modo': 'Modo', 'Estilo': 'Estilo', 'Tema': 'Tema', 'Formato': 'Qtd',
+                    'Personalização': 'Brand', 'Velocidade': 'Gerar', 'Roteiro': 'Roteiro',
+                    'Cores': 'Cores', 'Fontes': 'Fontes', 'Pesquisa': 'Web', 'Fotos': 'Fotos',
+                    'Screenshots': 'Prints', 'Produto': 'Produto', 'Ideia Visual': 'Ideia',
+                    'Origem': 'Origem', 'Visão': 'Visão', 'Detalhes': 'Detalhes',
+                    'Referências': 'Refs', 'Resumo': 'Resumo', 'Animação': 'Anim',
+                    'Estilos de Fundo': 'Fundo', 'Tweet Config': 'Config', 'tweet2': 'Config',
+                    'Fotos Imóvel': 'Fotos', 'Crop Imóvel': 'Crop', 'Info Imóvel': 'Info',
+                    'Roteiro Tweet': 'Roteiro', 'Roteiro Tweet2': 'Roteiro', 'Fotos Tweet2': 'Fotos',
+                  };
+                  const label = shortNames[step] || step;
+                  return (
+                    <div key={step} className="flex items-center gap-1 flex-shrink-0">
+                      <div
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-all"
+                        style={{
+                          backgroundColor: isCurrent ? `rgba(${modeTheme.rgb},0.15)` : 'transparent',
+                        }}
+                      >
+                        <div
+                          className="w-1.5 h-1.5 rounded-full transition-all flex-shrink-0"
+                          style={{
+                            backgroundColor: isCurrent ? modeTheme.hex : isPast ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.12)',
+                          }}
+                        />
+                        <span
+                          className="text-[10px] font-medium whitespace-nowrap transition-all"
+                          style={{
+                            color: isCurrent ? modeTheme.hex : isPast ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)',
+                          }}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -10970,7 +11015,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         </div>
       )}
 
-      {/* Tour removed */}
+      {showTour && (
+        <CarouselTour onComplete={() => { setShowTour(false); localStorage.setItem('ello_tour_seen', '1'); }} />
+      )}
 
       {/* Guest Paywall Modal - now non-blocking, dismissable */}
       {showGuestPaywall && (

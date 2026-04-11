@@ -7769,6 +7769,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         hasWebImages={hasWebImages}
                         webFacePosition={webFacePosition} setWebFacePosition={setWebFacePosition}
                         onSkipAll={() => setWizardStep(wizardStep + 1)}
+                        onWizardBack={() => {
+                          let prev = wizardStep - 1;
+                          const prevName = WIZARD_STEPS[prev];
+                          if (prevName === 'Fotos' && (skipWebSearch || (!webSearchResult?.images?.length && !webSearchResult?.content))) prev--;
+                          if ((WIZARD_STEPS[prev] === 'Cores' || WIZARD_STEPS[prev] === 'Fontes') && isFullBleedMarketplace) {
+                            while (prev > 0 && (WIZARD_STEPS[prev] === 'Cores' || WIZARD_STEPS[prev] === 'Fontes')) prev--;
+                          }
+                          setWizardStep(prev);
+                        }}
                         activeMarketplaceStyle={activeMarketplaceStyle}
                         isExtreme={wizardMode === 'extreme'}
                         hasProduct={wantsProduct}

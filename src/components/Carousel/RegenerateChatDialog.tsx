@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Upload, Loader2, Sparkles, ImageIcon } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, ImageIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import assistantAvatar from '@/assets/assistant-avatar.png';
 
 interface Message {
   role: 'assistant' | 'user';
@@ -17,15 +18,12 @@ interface RegenerateChatDialogProps {
   currentCardImageUrl?: string | null;
 }
 
-const INITIAL_MESSAGE: Message = {
-  role: 'assistant',
-  text: 'Olá! 👋 O que você gostaria de mudar nessa imagem? Me conte o que não ficou bom ou como você imagina o resultado ideal.',
-};
+const ASSISTANT_NAME = 'Laura';
 
 const RegenerateChatDialog: React.FC<RegenerateChatDialogProps> = ({
   open, onClose, onConfirm, cardIndex, loading, currentCardImageUrl,
 }) => {
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
@@ -34,11 +32,13 @@ const RegenerateChatDialog: React.FC<RegenerateChatDialogProps> = ({
   const [readyToRegenerate, setReadyToRegenerate] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (open) {
-      setMessages([INITIAL_MESSAGE]);
+      setMessages([
+        { role: 'assistant', text: 'Oi! Sou a Laura 😊' },
+        { role: 'assistant', text: 'Me conta, o que não ficou legal nessa imagem?' },
+      ]);
       setInput('');
       setAttachedImage(null);
       setFinalInstruction('');
@@ -79,7 +79,7 @@ const RegenerateChatDialog: React.FC<RegenerateChatDialogProps> = ({
 
     try {
       const conversationContext = newMessages
-        .map(m => `${m.role === 'user' ? 'Usuário' : 'Assistente'}: ${m.text}${m.image ? ' [enviou uma imagem de referência]' : ''}`)
+        .map(m => `${m.role === 'user' ? 'Usuário' : 'Laura'}: ${m.text}${m.image ? ' [enviou uma foto]' : ''}`)
         .join('\n');
 
       const { data, error } = await supabase.functions.invoke('ai-chat', {
@@ -87,37 +87,38 @@ const RegenerateChatDialog: React.FC<RegenerateChatDialogProps> = ({
           messages: [
             {
               role: 'system',
-              content: `Você é um assistente de design que ajuda o usuário a melhorar a imagem de um post/carrossel.
+              content: `Você é a Laura, assistente de design simpática e direta. Você ajuda o usuário a melhorar a imagem de um post.
 
-Seu objetivo é entender o que o usuário quer mudar na imagem atual e construir uma instrução clara para a IA de geração de imagens.
+REGRAS DE PERSONALIDADE:
+- Fale de forma curta e natural, como mensagem de WhatsApp
+- Máximo 1-2 frases por mensagem
+- Use emojis com moderação (1 por mensagem no máximo)
+- Seja calorosa mas objetiva
+- Trate o usuário por "você"
 
-Regras:
-- Seja breve e direto (máximo 2 frases por resposta)
-- Se o usuário mencionar um produto, objeto específico ou pessoa, PEÇA uma foto de referência
-- Se o usuário enviar uma foto, agradeça e pergunte se quer mais alguma mudança
+REGRAS DE FLUXO:
+- Se o usuário mencionar produto, objeto ou pessoa específica: peça uma foto "Manda uma foto pra eu entender melhor!"
+- Se o usuário enviar foto: "Perfeito, entendi!"
 - Quando tiver informação suficiente, responda com EXATAMENTE este formato na última linha:
-  [INSTRUÇÃO_FINAL]: <instrução detalhada para a IA de geração>
-- A instrução final deve ser em português, detalhada e específica
-- Se o usuário pedir algo simples (mudar cor, fundo, etc), pode gerar a instrução final na primeira resposta
-- NÃO gere a instrução final se ainda precisar de mais informações
+  [INSTRUÇÃO_FINAL]: <instrução detalhada para a IA>
+- A instrução deve ser clara e específica em português
+- Se for algo simples (trocar cor, fundo, etc), pode dar a instrução final já na primeira resposta
+- NÃO gere instrução final se precisar de mais info
 
-${userImage ? 'O usuário acabou de enviar uma imagem de referência junto com a mensagem.' : ''}`
+${userImage ? 'O usuário enviou uma imagem junto com a mensagem.' : ''}`
             },
-            {
-              role: 'user',
-              content: conversationContext,
-            }
+            { role: 'user', content: conversationContext },
           ],
           model: 'google/gemini-3-flash-preview',
+          lightweight: true,
         },
       });
 
       if (error) throw error;
 
       const reply = data?.choices?.[0]?.message?.content || data?.content || data?.reply || '';
-
-      // Check if reply contains final instruction
       const finalMatch = reply.match(/\[INSTRUÇÃO_FINAL\]:\s*(.+)/s);
+
       if (finalMatch) {
         const cleanReply = reply.replace(/\[INSTRUÇÃO_FINAL\]:\s*.+/s, '').trim();
         const instruction = finalMatch[1].trim();
@@ -125,16 +126,21 @@ ${userImage ? 'O usuário acabou de enviar uma imagem de referência junto com a
         if (userImage) setFinalImage(userImage);
         setReadyToRegenerate(true);
 
-        if (cleanReply) {
-          setMessages(prev => [...prev, { role: 'assistant', text: cleanReply }]);
-        }
-        setMessages(prev => [...prev, { role: 'assistant', text: '✅ Entendi! Tudo pronto para regenerar com as suas instruções.' }]);
+        const replies: Message[] = [];
+        if (cleanReply) replies.push({ role: 'assistant', text: cleanReply });
+        replies.push({ role: 'assistant', text: 'Prontinho! Posso gerar agora? ✨' });
+        setMessages(prev => [...prev, ...replies]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+        // Split long replies into separate messages
+        const parts = reply.split(/\n\n+/).filter(Boolean).map((t: string) => t.trim()).filter(Boolean);
+        const replyMessages: Message[] = parts.length > 0
+          ? parts.map((t: string) => ({ role: 'assistant' as const, text: t }))
+          : [{ role: 'assistant' as const, text: reply }];
+        setMessages(prev => [...prev, ...replyMessages]);
       }
     } catch (err) {
       console.warn('Chat error:', err);
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Desculpe, houve um erro. Tente novamente ou clique em "Regenerar" para gerar com o que já temos.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Ops, tive um probleminha. Tenta de novo? 😅' }]);
       setReadyToRegenerate(true);
     } finally {
       setThinking(false);
@@ -142,17 +148,13 @@ ${userImage ? 'O usuário acabou de enviar uma imagem de referência junto com a
   }, [input, attachedImage, messages]);
 
   const handleRegenerate = () => {
-    // Collect all user images
     const allUserImages = messages.filter(m => m.role === 'user' && m.image).map(m => m.image!);
     const imageToUse = finalImage || allUserImages[allUserImages.length - 1] || null;
-
-    // Collect all user text as instruction if no final instruction
     const instruction = finalInstruction || messages
       .filter(m => m.role === 'user')
       .map(m => m.text)
       .filter(Boolean)
       .join('. ');
-
     onConfirm(instruction, imageToUse);
   };
 
@@ -168,119 +170,128 @@ ${userImage ? 'O usuário acabou de enviar uma imagem de referência junto com a
   const hasUserMessages = messages.some(m => m.role === 'user');
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-[#111118] border border-white/[0.08] rounded-2xl w-full max-w-md mx-4 shadow-2xl flex flex-col"
-        style={{ maxHeight: 'min(85vh, 600px)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-[13px] font-medium text-white/90">Assistente de Regeneração</p>
-              <p className="text-[10px] text-white/30">Card {cardIndex + 1}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors p-1">
-            <X className="h-4 w-4" />
-          </button>
+    <div className="fixed inset-0 z-[200] flex flex-col bg-[#0a0a0f]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]"
+        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+        <div className="relative">
+          <img src={assistantAvatar} alt={ASSISTANT_NAME} className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-[#0a0a0f]" />
         </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-semibold text-white">{ASSISTANT_NAME}</p>
+          <p className="text-[11px] text-green-400/80">Online agora</p>
+        </div>
+        <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3" style={{ minHeight: '200px' }}>
-          {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+        {messages.map((msg, i) => {
+          const isAssistant = msg.role === 'assistant';
+          const showAvatar = isAssistant && (i === 0 || messages[i - 1]?.role !== 'assistant');
+          const isLastInGroup = !messages[i + 1] || messages[i + 1]?.role !== msg.role;
+
+          return (
+            <div key={i} className={`flex ${isAssistant ? 'justify-start' : 'justify-end'} ${isLastInGroup ? 'mb-3' : 'mb-0.5'}`}>
+              {isAssistant && (
+                <div className="w-7 shrink-0 mr-2">
+                  {showAvatar && (
+                    <img src={assistantAvatar} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  )}
+                </div>
+              )}
               <div
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-md'
-                    : 'bg-white/[0.06] text-white/80 rounded-bl-md'
+                className={`max-w-[80%] px-3.5 py-2.5 text-[14px] leading-[1.45] ${
+                  isAssistant
+                    ? 'bg-white/[0.07] text-white/85 rounded-2xl rounded-tl-md'
+                    : 'bg-purple-600 text-white rounded-2xl rounded-tr-md'
                 }`}
               >
                 {msg.image && (
-                  <img src={msg.image} alt="" className="w-full max-w-[180px] rounded-xl mb-2 border border-white/10" />
+                  <img src={msg.image} alt="" className="w-full max-w-[200px] rounded-xl mb-2 border border-white/10" />
                 )}
                 <p className="whitespace-pre-wrap">{msg.text}</p>
               </div>
             </div>
-          ))}
-          {thinking && (
-            <div className="flex justify-start">
-              <div className="bg-white/[0.06] rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+          );
+        })}
 
-        {/* Attached preview */}
-        {attachedImage && (
-          <div className="px-4 pb-1 shrink-0">
-            <div className="relative inline-block">
-              <img src={attachedImage} alt="" className="h-14 rounded-xl border border-white/10 object-contain" />
-              <button onClick={() => setAttachedImage(null)} className="absolute -top-1.5 -right-1.5 bg-white/10 hover:bg-white/20 rounded-full p-0.5">
-                <X className="h-2.5 w-2.5 text-white" />
-              </button>
+        {thinking && (
+          <div className="flex justify-start mb-3">
+            <div className="w-7 shrink-0 mr-2" />
+            <div className="bg-white/[0.07] rounded-2xl rounded-tl-md px-4 py-3">
+              <div className="flex gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-white/25 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Input area */}
-        <div className="px-3 py-3 border-t border-white/[0.06] shrink-0">
-          {readyToRegenerate ? (
-            <button
-              onClick={handleRegenerate}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Regenerar com instruções
+      {/* Attached preview */}
+      {attachedImage && (
+        <div className="px-4 pb-2 shrink-0">
+          <div className="relative inline-block">
+            <img src={attachedImage} alt="" className="h-16 rounded-xl border border-white/10 object-contain" />
+            <button onClick={() => setAttachedImage(null)} className="absolute -top-1.5 -right-1.5 bg-red-500/80 hover:bg-red-500 rounded-full p-0.5 transition-colors">
+              <X className="h-2.5 w-2.5 text-white" />
             </button>
-          ) : (
-            <div className="flex items-end gap-2">
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
-              >
-                <ImageIcon className="h-4 w-4" />
-              </button>
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Descreva o que quer mudar..."
-                rows={1}
-                className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-white/25 resize-none focus:outline-none focus:border-blue-500/40 max-h-20"
-                style={{ minHeight: '36px' }}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={(!input.trim() && !attachedImage) || thinking}
-                className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-30"
-              >
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-          {hasUserMessages && !readyToRegenerate && (
-            <button
-              onClick={() => { setReadyToRegenerate(true); }}
-              className="w-full mt-2 text-[11px] text-white/25 hover:text-white/40 transition-colors"
-            >
-              Pular e regenerar direto
-            </button>
-          )}
+          </div>
         </div>
+      )}
+
+      {/* Input area */}
+      <div className="shrink-0 px-3 py-3 border-t border-white/[0.06]"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+        {readyToRegenerate ? (
+          <button
+            onClick={handleRegenerate}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-[15px] font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50 active:scale-[0.98]"
+          >
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+            Regenerar imagem
+          </button>
+        ) : (
+          <div className="flex items-end gap-2">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+            >
+              <ImageIcon className="h-5 w-5" />
+            </button>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite sua mensagem..."
+              rows={1}
+              className="flex-1 bg-white/[0.05] border border-white/[0.08] rounded-2xl px-4 py-2.5 text-[14px] text-white placeholder-white/25 resize-none focus:outline-none focus:border-purple-500/40 max-h-24"
+              style={{ minHeight: '42px' }}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={(!input.trim() && !attachedImage) || thinking}
+              className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-30 active:scale-95"
+            >
+              <Send className="h-4.5 w-4.5" />
+            </button>
+          </div>
+        )}
+        {hasUserMessages && !readyToRegenerate && (
+          <button
+            onClick={() => setReadyToRegenerate(true)}
+            className="w-full mt-2.5 text-[12px] text-white/20 hover:text-white/40 transition-colors"
+          >
+            Pular e regenerar direto →
+          </button>
+        )}
       </div>
     </div>
   );

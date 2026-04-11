@@ -606,8 +606,11 @@ const StepPersonalization: React.FC<Props> = (props) => {
               <ChevronLeft className="w-3.5 h-3.5" /> Voltar
             </button>
             <button onClick={onSkipAll}
-              className="text-sm text-white/30 hover:text-white/50 transition-colors">
-              {mediaRefs.length > 0 ? 'Concluir' : 'Pular'}
+              className={mediaRefs.length > 0
+                ? "px-5 py-2 rounded-xl text-sm font-semibold bg-purple-500 hover:bg-purple-400 text-white shadow-lg shadow-purple-500/25 transition-all"
+                : "text-sm text-white/30 hover:text-white/50 transition-colors"
+              }>
+              {mediaRefs.length > 0 ? 'Concluir ✓' : 'Pular'}
             </button>
           </div>
         </div>

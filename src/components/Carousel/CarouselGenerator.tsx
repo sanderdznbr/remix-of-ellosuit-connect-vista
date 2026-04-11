@@ -9810,6 +9810,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </button>
               )}
             </div>
+            )}
 
             {/* Export Dialog - rendered outside mobile container so it works on all viewports */}
             {showExportMenu && !isGuest && (

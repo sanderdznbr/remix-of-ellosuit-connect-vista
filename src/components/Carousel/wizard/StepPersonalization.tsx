@@ -373,7 +373,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
                   {user && (
                     <button onClick={() => setGalleryTarget('logo')} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-white/65 transition-colors">Galeria</button>
                   )}
-                  <button onClick={() => setLogoUrl('')} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-red-400/60 transition-colors ml-auto">
+                  <button onClick={() => { setLogoUrl(''); }} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-red-400/60 transition-colors ml-auto">
                     <X className="h-3 w-3" />
                   </button>
                 </div>

@@ -9746,7 +9746,36 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* Action buttons below - mobile only: primary row */}
+            {/* ===== FIXED BOTTOM BAR — mobile basic mode ===== */}
+            {isMobileView && resultViewMode === 'basic' && !isGuest && (
+              <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-3 px-4 py-3"
+                style={{
+                  backgroundColor: 'rgba(10,10,15,0.95)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+                }}>
+                <button onClick={() => setShowExportMenu(true)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold text-white transition-all"
+                  style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}>
+                  <Download className="h-3.5 w-3.5" /> Exportar
+                </button>
+                <button onClick={() => { setEditingCard(activeCardIndex); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/80 transition-all"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Pencil className="h-3.5 w-3.5" /> Editar
+                </button>
+                <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-medium text-white/80 transition-all"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <Palette className="h-3.5 w-3.5" /> Estilo
+                </button>
+              </div>
+            )}
+
+            {/* Old mobile action bar (advanced mode only) */}
+            {(!isMobileView || resultViewMode === 'advanced') && (
             <div className="flex md:hidden items-center justify-center gap-2 mt-4 w-full relative z-10 px-4">
               {/* Edit */}
               {!isGuest && (
@@ -9937,6 +9966,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
 
             {/* Carousel from cover modal - enhanced */}
             {showCarouselFromCover && (

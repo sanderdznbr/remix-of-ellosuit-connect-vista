@@ -9063,7 +9063,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
 
                 {/* Thumbnail strip */}
-                <div className="flex items-center justify-center gap-2 mt-4 px-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <div className="flex items-center justify-center gap-2 mt-4 px-4 overflow-x-auto transition-opacity duration-200" style={{ scrollbarWidth: 'none', opacity: showMobileToolsSheet || showCardActionSheet ? 0.08 : 1, pointerEvents: showMobileToolsSheet || showCardActionSheet ? 'none' : 'auto' }}>
                   {carouselData.cards.map((card, i) => {
                     const thumbW = 48;
                     const thumbH = thumbW * (cardH / cardW);
@@ -9094,7 +9094,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </div>
 
                 {/* Card counter */}
-                <p className="text-[11px] text-white/40 mt-2 font-medium">
+                <p
+                  className="text-[11px] text-white/40 mt-2 font-medium transition-opacity duration-200"
+                  style={{ opacity: showMobileToolsSheet || showCardActionSheet ? 0.08 : 1 }}>
                   {activeCardIndex + 1} <span className="text-white/20">/</span> {carouselData.cards.length}
                 </p>
               </div>

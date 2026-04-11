@@ -169,7 +169,7 @@ import WizardCreditIndicator from './wizard/WizardCreditIndicator';
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
 import PostCorrectionEditor from './PostCorrectionEditor';
-import RegeneratePhotoDialog from './RegeneratePhotoDialog';
+import RegenerateChatDialog from './RegenerateChatDialog';
 import PromptMediaConfirmDialog from './wizard/PromptMediaConfirmDialog';
 import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
@@ -9147,7 +9147,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                       <div className="flex flex-col px-3 pb-3 gap-0.5">
                         {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                          <button onClick={() => { setShowCardActionSheet(false); regenerateCard(activeCardIndex); }}
+                          <button onClick={() => { setShowCardActionSheet(false); setRegenDialogCard(activeCardIndex); }}
                             disabled={regeneratingCard !== null}
                             className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
                             <RotateCcw className="h-4 w-4 text-orange-400" />
@@ -11957,12 +11957,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         />
       )}
       
-      {/* Regenerate Photo Dialog */}
-      <RegeneratePhotoDialog
+      {/* Regenerate Chat Dialog */}
+      <RegenerateChatDialog
         open={regenDialogCard !== null}
         onClose={() => setRegenDialogCard(null)}
         cardIndex={regenDialogCard ?? 0}
         loading={regeneratingCard !== null}
+        currentCardImageUrl={carouselData?.cards?.[regenDialogCard ?? 0]?.imageUrl}
         onConfirm={(instruction, imageUrl) => {
           const idx = regenDialogCard;
           setRegenDialogCard(null);

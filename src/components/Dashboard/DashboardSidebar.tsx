@@ -221,7 +221,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       </div>
 
       {/* Ferramentas section — collapsible */}
-      {email === 'admin@gmail.com' && (
+      {!collapsed && email === 'admin@gmail.com' && (
         <div className="px-2 mt-5">
           <button
             onClick={() => setFerramentasOpen(!ferramentasOpen)}
@@ -258,44 +258,62 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       )}
 
       {/* Comunidade section — collapsible */}
-      <div className="px-2 mt-5">
-        <button
-          onClick={() => setComunidadeOpen(!comunidadeOpen)}
-          className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-        >
-          <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Comunidade</span>
-          <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${comunidadeOpen ? 'rotate-90' : ''}`} />
-        </button>
-        {comunidadeOpen && (
-          <div className="mt-1 space-y-0.5">
-            <button
-              onClick={() => { navigate('/comunidade'); closeSearch(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                location.pathname === '/comunidade'
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Explorar
-            </button>
-            <button
-              onClick={() => { navigate('/perfil'); closeSearch(); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
-                  ? 'text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              <User className="w-4 h-4" />
-              Meu Perfil
-            </button>
-          </div>
-        )}
-      </div>
+      {!collapsed && (
+        <div className="px-2 mt-5">
+          <button
+            onClick={() => setComunidadeOpen(!comunidadeOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
+          >
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Comunidade</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${comunidadeOpen ? 'rotate-90' : ''}`} />
+          </button>
+          {comunidadeOpen && (
+            <div className="mt-1 space-y-0.5">
+              <button
+                onClick={() => { navigate('/comunidade'); closeSearch(); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                  location.pathname === '/comunidade'
+                    ? 'text-white'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Explorar
+              </button>
+              <button
+                onClick={() => { navigate('/perfil'); closeSearch(); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                  location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
+                    ? 'text-white'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                Meu Perfil
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsed: icon-only shortcuts for comunidade */}
+      {collapsed && (
+        <div className="px-1.5 mt-5 space-y-0.5">
+          <button onClick={() => { navigate('/comunidade'); closeSearch(); }}
+            className={`w-full flex items-center justify-center py-2 rounded-lg transition-colors cursor-pointer ${location.pathname === '/comunidade' ? 'text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}
+            title="Comunidade">
+            <Users className="w-4 h-4" />
+          </button>
+          <button onClick={() => { navigate('/ajuda'); closeSearch(); }}
+            className={`w-full flex items-center justify-center py-2 rounded-lg transition-colors cursor-pointer ${location.pathname === '/ajuda' ? 'text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}
+            title="Ajuda">
+            <BookOpen className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Parceiros section — only for affiliates or admin */}
-      {(isAffiliate || email === 'admin@gmail.com') && (
+      {!collapsed && (isAffiliate || email === 'admin@gmail.com') && (
         <div className="px-2 mt-5">
           <button
             onClick={() => setParceirosOpen(!parceirosOpen)}
@@ -336,18 +354,19 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       )}
 
       {/* Ajuda section */}
-      <div className="px-2 mt-5">
-        <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ajuda</p>
-        <button
-          onClick={() => { navigate('/ajuda'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            location.pathname === '/ajuda'
-              ? 'text-white'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          Dúvidas & Créditos
+      {!collapsed && (
+        <div className="px-2 mt-5">
+          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ajuda</p>
+          <button
+            onClick={() => { navigate('/ajuda'); closeSearch(); }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              location.pathname === '/ajuda'
+                ? 'text-white'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            Dúvidas & Créditos
         </button>
       </div>
 

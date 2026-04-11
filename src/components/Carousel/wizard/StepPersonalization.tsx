@@ -41,6 +41,7 @@ interface Props {
   webFacePosition: 'cover' | 'last' | 'none';
   setWebFacePosition: (v: 'cover' | 'last' | 'none') => void;
   onSkipAll: () => void;
+  onWizardBack?: () => void;
   activeMarketplaceStyle?: any;
   isExtreme?: boolean;
   hasProduct?: boolean;

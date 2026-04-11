@@ -108,7 +108,7 @@ ${userImage ? 'O usuário acabou de enviar uma imagem de referência junto com a
               content: conversationContext,
             }
           ],
-          model: 'gpt-4o-mini',
+          model: 'google/gemini-3-flash-preview',
         },
       });
 

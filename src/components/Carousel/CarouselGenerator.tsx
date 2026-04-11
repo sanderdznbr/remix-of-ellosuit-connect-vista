@@ -1879,7 +1879,8 @@ The image must look like it was shot by a professional photographer or designed 
 
   // ===== GENERATE CAPTION =====
   const openCaptionConfigDialog = () => {
-    setShowCaptionConfigDialog(true);
+    // Skip config dialog — generate directly with 400 char limit
+    generateCaption('400', '');
   };
 
   const generateCaption = async (maxChars?: string, mentions?: string) => {

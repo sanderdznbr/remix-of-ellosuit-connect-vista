@@ -252,7 +252,7 @@ function CheckoutContent() {
 
   const handleSuccessAction = () => {
     if (mode === 'gift') navigate(`/presentear?purchased=true&credits=${giftCredits}&price=${giftPrice}`);
-    else if (mode === 'style') navigate('/?tab=marketplace');
+    else if (mode === 'style') navigate('/marketplace');
     else navigate('/');
   };
 

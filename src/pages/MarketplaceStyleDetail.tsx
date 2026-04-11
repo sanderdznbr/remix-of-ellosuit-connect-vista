@@ -171,7 +171,7 @@ const MarketplaceStyleDetail: React.FC = () => {
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Back */}
         <button
-          onClick={() => navigate('/?tab=marketplace')}
+          onClick={() => navigate('/marketplace')}
           className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar ao Marketplace

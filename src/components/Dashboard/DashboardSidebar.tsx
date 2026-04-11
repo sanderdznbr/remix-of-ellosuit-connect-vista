@@ -367,9 +367,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           >
             <BookOpen className="w-4 h-4" />
             Dúvidas & Créditos
-        </button>
-      </div>
-
+          </button>
+        </div>
+      )}
 
       </div>{/* end scrollable nav area */}
 

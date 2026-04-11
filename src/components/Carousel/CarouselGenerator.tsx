@@ -10271,57 +10271,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            <div data-tour="card-strip" className="w-full max-w-5xl mt-6 relative z-10 overflow-x-hidden">
-              <div className="flex gap-3 pb-4 px-4 justify-center flex-wrap">
-                {carouselData.cards.map((card, i) => {
-                  const thumbW = 120;
-                  const thumbH = thumbW * (cardH / cardW);
-                  return (
-                  <div key={i} className="snap-center flex-shrink-0 relative group cursor-pointer" style={{ width: thumbW + 4 }}
-                    onClick={() => {
-                      if (isCardLocked(i)) return;
-                      setActiveCardIndex(i);
-                    }}>
-                    <div className="rounded-xl overflow-hidden transition-all" style={{
-                      border: i === activeCardIndex ? `2px solid ${themeHex}` : '2px solid rgba(255,255,255,0.08)',
-                      boxShadow: i === activeCardIndex ? `0 0 20px rgba(${themeRgb},0.3)` : 'none',
-                      opacity: i === activeCardIndex ? 1 : 0.6,
-                      transform: i === activeCardIndex ? 'scale(1.05)' : 'scale(1)',
-                    }}>
-                      <div style={{ width: thumbW, height: thumbH, overflow: 'hidden', borderRadius: 10 }}>
-                        <div style={{ transform: `scale(${thumbW / previewW})`, transformOrigin: 'top left', width: previewW, height: previewH }}>
-                          {renderCardPreview(card, i, false)}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Regenerating overlay on thumbnail */}
-                    {(regeneratingCard === i || regeneratingFace === i) && (
-                      <div className="absolute inset-0 rounded-xl flex flex-col items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                        <div className="w-5 h-5 rounded-full border-2 animate-spin" style={{ borderColor: `rgba(${themeRgb},0.3)`, borderTopColor: themeHex }} />
-                      </div>
-                    )}
-                    {/* Lock overlay for guest thumbnails */}
-                    {isCardLocked(i) && (
-                      <div className="absolute inset-0 rounded-xl flex items-center justify-center z-10" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
-                        <Lock className="w-4 h-4" style={{ color: `rgba(${themeRgb},0.7)` }} />
-                      </div>
-                    )}
-                    {/* Delete button - top right */}
-                    {carouselData.cards.length > 2 && (
-                      <button onClick={(e) => { e.stopPropagation(); removeCard(i); }}
-                        className="absolute top-1 right-1 p-1 rounded-md opacity-70 hover:opacity-100 transition-opacity z-20"
-                        style={{ backgroundColor: 'rgba(220,38,38,0.8)' }}
-                        title="Excluir card">
-                        <Trash2 className="h-3 w-3 text-white" />
-                      </button>
-                    )}
-                    {/* Modificar button removed - functions moved to sidebar */}
-                    <p className="text-center text-[10px] mt-1.5 font-medium" style={{ color: i === activeCardIndex ? themeHex : 'rgba(255,255,255,0.3)' }}>{i + 1}</p>
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
           </motion.div>
           );
         })()}

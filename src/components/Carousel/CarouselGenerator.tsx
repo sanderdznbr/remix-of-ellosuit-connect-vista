@@ -9797,7 +9797,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                     <span className="text-[10px] font-semibold text-white/70">Exportar</span>
                   </button>
-                  <button onClick={() => setShowInlineEditor(true)}
+                  <button onClick={() => { if (isMobileView) { setShowMobileToolsSheet(true); } else { setShowInlineEditor(true); } }}
                     className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <SlidersHorizontal className="h-4 w-4 text-white/70" />

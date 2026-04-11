@@ -10041,49 +10041,73 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                   </motion.div>
 
-                  {/* Mobile bottom sheet */}
+                  {/* Mobile centered popup */}
                   <motion.div
-                    initial={{ y: '100%' }}
-                    animate={{ y: 0 }}
-                    exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="md:hidden fixed bottom-0 left-0 right-0 z-[51] rounded-t-2xl overflow-hidden"
-                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)', maxHeight: '75dvh' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="md:hidden fixed inset-0 z-[70]"
                   >
-                    <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" style={{ color: themeHex }} />
-                        <h3 className="text-sm font-semibold text-white">Legenda</h3>
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCaptionPanel(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                      className="absolute inset-0 flex items-center justify-center p-6 pointer-events-none"
+                    >
+                      <div
+                        className="w-full max-w-[380px] rounded-3xl pointer-events-auto overflow-hidden backdrop-blur-2xl"
+                        style={{ backgroundColor: 'rgba(6,6,6,0.92)', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 30px 90px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.03), 0 0 0 0.5px rgba(255,255,255,0.03)' }}
+                      >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 pt-5 pb-1">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))`, border: `1px solid rgba(${themeRgb},0.15)` }}>
+                              <FileText className="h-4 w-4" style={{ color: themeHex }} />
+                            </div>
+                            <span className="text-[15px] font-semibold text-white tracking-tight">Legenda</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={openCaptionConfigDialog}
+                              disabled={generatingCaption}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+                              title="Regenerar legenda"
+                            >
+                              {generatingCaption ? <Loader2 className="h-4 w-4 text-white/40 animate-spin" /> : <RotateCcw className="h-4 w-4 text-white/40" />}
+                            </button>
+                            <button
+                              onClick={() => { if (postCaption) { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); } }}
+                              disabled={!postCaption}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors disabled:opacity-20"
+                              title="Copiar legenda"
+                            >
+                              <Copy className="h-4 w-4 text-white/40" />
+                            </button>
+                            <button onClick={() => setShowCaptionPanel(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+                              <X className="h-4 w-4 text-white/30" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="mx-5 mt-2 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)' }} />
+
+                        {/* Content */}
+                        <div className="px-5 py-4">
+                          <textarea
+                            value={postCaption}
+                            onChange={(e) => setPostCaption(e.target.value)}
+                            placeholder={generatingCaption ? 'Gerando legenda...' : 'Sua legenda aparecerá aqui...'}
+                            rows={8}
+                            className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-4 py-3 rounded-2xl resize-none outline-none focus:ring-0"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+                          />
+                          <p className="text-[10px] text-white/20 mt-2 text-right">{postCaption.length} caracteres</p>
+                        </div>
                       </div>
-                      <button onClick={() => setShowCaptionPanel(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                        <X className="h-4 w-4 text-white/50" />
-                      </button>
-                    </div>
-                    <div className="overflow-y-auto px-5 pb-8" style={{ maxHeight: 'calc(75dvh - 60px)' }}>
-                      <textarea
-                        value={postCaption}
-                        onChange={(e) => setPostCaption(e.target.value)}
-                        placeholder={generatingCaption ? 'Gerando legenda...' : 'Escreva ou gere uma legenda...'}
-                        rows={8}
-                        className="w-full bg-transparent text-white/80 placeholder-white/20 text-sm px-3 py-3 rounded-xl resize-none outline-none mt-3 mb-2"
-                        style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-                      />
-                      <p className="text-[10px] text-white/30 mb-3">{postCaption.length}/2200 caracteres</p>
-                      <div className="flex gap-2">
-                        <button onClick={openCaptionConfigDialog} disabled={generatingCaption}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                          style={{ backgroundColor: `rgba(${themeRgb},0.12)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.15)` }}>
-                          {generatingCaption ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                          {generatingCaption ? 'Gerando...' : 'Gerar com IA'}
-                        </button>
-                        <button onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
-                          disabled={!postCaption}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-all disabled:opacity-30"
-                          style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          <Copy className="h-3 w-3" /> Copiar
-                        </button>
-                      </div>
-                    </div>
+                    </motion.div>
                   </motion.div>
                 </>
               )}

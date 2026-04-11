@@ -9133,66 +9133,66 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   />
                   <motion.div
                     key="card-action-sheet"
-                    initial={{ y: '100%' }}
-                    animate={{ y: 0 }}
-                    exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="fixed bottom-0 left-0 right-0 z-[71] rounded-t-2xl"
-                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+                    initial={{ opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-[71] flex items-center justify-center px-6"
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowCardActionSheet(false); }}
                   >
-                    <div className="flex justify-center py-2.5">
-                      <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
-                    </div>
-                    <div className="px-4 pb-1">
-                      <p className="text-xs font-semibold text-white/60 mb-3">Card {activeCardIndex + 1}</p>
-                    </div>
-                    <div className="flex flex-col px-3 pb-3 gap-0.5">
-                      {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                        <button onClick={() => { setShowCardActionSheet(false); regenerateCard(activeCardIndex); }}
-                          disabled={regeneratingCard !== null}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
-                          <RotateCcw className="h-4 w-4 text-orange-400" />
-                          <div className="text-left">
-                            <p className="text-[13px] text-white/80 font-medium">Regenerar imagem</p>
-                            <p className="text-[10px] text-white/30">Gerar nova imagem com IA</p>
-                          </div>
-                        </button>
-                      )}
-                      {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                        <button onClick={() => { setShowCardActionSheet(false); setCorrectionCardIndex(activeCardIndex); }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                          <Pencil className="h-4 w-4 text-amber-400" />
-                          <div className="text-left">
-                            <p className="text-[13px] text-white/80 font-medium">Corrigir imagem</p>
-                            <p className="text-[10px] text-white/30">Editar áreas específicas</p>
-                          </div>
-                        </button>
-                      )}
-                      {!isGuest && (
-                        <button onClick={() => { setShowCardActionSheet(false); setViewPromptCard(activeCardIndex); }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                          <FileText className="h-4 w-4 text-yellow-400" />
-                          <div className="text-left">
-                            <p className="text-[13px] text-white/80 font-medium">Ver prompt</p>
-                            <p className="text-[10px] text-white/30">Prompt usado para gerar</p>
-                          </div>
-                        </button>
-                      )}
-                      {!isGuest && carouselData.cards.length > 1 && (
-                        <button onClick={() => {
-                          setShowCardActionSheet(false);
-                          const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
-                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                          if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
-                        }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                          <Trash2 className="h-4 w-4 text-red-400/60" />
-                          <div className="text-left">
-                            <p className="text-[13px] text-red-400/70 font-medium">Excluir card</p>
-                            <p className="text-[10px] text-white/20">Remove este card do carrossel</p>
-                          </div>
-                        </button>
-                      )}
+                    <div className="w-full max-w-xs rounded-2xl overflow-hidden"
+                      style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div className="px-4 pt-4 pb-1">
+                        <p className="text-xs font-semibold text-white/60 mb-2">Card {activeCardIndex + 1}</p>
+                      </div>
+                      <div className="flex flex-col px-3 pb-3 gap-0.5">
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button onClick={() => { setShowCardActionSheet(false); regenerateCard(activeCardIndex); }}
+                            disabled={regeneratingCard !== null}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                            <RotateCcw className="h-4 w-4 text-orange-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/80 font-medium">Regenerar imagem</p>
+                              <p className="text-[10px] text-white/30">Gerar nova imagem com IA</p>
+                            </div>
+                          </button>
+                        )}
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button onClick={() => { setShowCardActionSheet(false); setCorrectionCardIndex(activeCardIndex); }}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                            <Pencil className="h-4 w-4 text-amber-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/80 font-medium">Corrigir imagem</p>
+                              <p className="text-[10px] text-white/30">Editar áreas específicas</p>
+                            </div>
+                          </button>
+                        )}
+                        {!isGuest && (
+                          <button onClick={() => { setShowCardActionSheet(false); setViewPromptCard(activeCardIndex); }}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                            <FileText className="h-4 w-4 text-yellow-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/80 font-medium">Ver prompt</p>
+                              <p className="text-[10px] text-white/30">Prompt usado para gerar</p>
+                            </div>
+                          </button>
+                        )}
+                        {!isGuest && carouselData.cards.length > 1 && (
+                          <button onClick={() => {
+                            setShowCardActionSheet(false);
+                            const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
+                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                            if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
+                          }}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                            <Trash2 className="h-4 w-4 text-red-400/60" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-red-400/70 font-medium">Excluir card</p>
+                              <p className="text-[10px] text-white/20">Remove este card do carrossel</p>
+                            </div>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 </>

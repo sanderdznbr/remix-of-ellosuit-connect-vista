@@ -376,146 +376,123 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
       {/* Bottom: Profile — fixed at bottom */}
       <div className="shrink-0 border-t border-white/[0.04] relative z-10">
-        {/* Credits with gradient bar and plan marker */}
-        {(() => {
-          const balance = displayBalance ?? 0;
-          const planNameLower = planName.toLowerCase();
-          const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
-          const planColor = '#8B5CF6';
-          // Total bar represents max(balance, monthlyCredits) + some headroom
-          const maxBar = Math.max(balance, monthlyCredits, 50);
-          const balancePct = Math.min(100, (balance / maxBar) * 100);
-          const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
-          const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
-
-          return (
-            <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
-              {/* Plan badge + balance */}
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                    style={{ backgroundColor: `${planColor}20`, color: planColor }}
-                  >
-                    {planLabel}
-                  </span>
+        {/* Collapsed: expand button + compact profile */}
+        {collapsed ? (
+          <div className="flex flex-col items-center py-3 gap-2">
+            {onToggleCollapse && (
+              <button onClick={onToggleCollapse} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Expandir sidebar">
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            )}
+            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/60 transition-colors cursor-pointer" title={email}>
+              <User className="w-4 h-4" />
+            </button>
+            {showProfileMenu && (
+              <div className="absolute bottom-full left-1 mb-1 w-56 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0d0d12' }}>
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <p className="text-sm text-white/70 font-medium truncate">{email}</p>
                 </div>
-                <span className="text-white/70 text-xs font-medium">
-                  {Math.floor(balance)} restantes
-                </span>
-              </div>
-
-              {/* Gradient progress bar with animated shimmer */}
-              <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
-                  style={{
-                    width: `${balancePct}%`,
-                    background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)`,
-                  }}
-                >
-                  {/* Animated shimmer overlay */}
-                  <div
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'shimmer-credit 2s ease-in-out infinite',
-                    }}
-                  />
+                <div className="py-1">
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <User className="w-4 h-4" /> Perfil
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <Settings className="w-4 h-4" /> Configurações
+                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <CreditCard className="w-4 h-4" /> Plano & Créditos
+                  </button>
                 </div>
-                {/* Monthly credits marker line */}
-                {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
-                  <div
-                    className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full"
-                    style={{
-                      left: `${monthlyMarkerPct}%`,
-                      backgroundColor: 'rgba(255,255,255,0.5)',
-                    }}
-                    title={`${monthlyCredits} créditos mensais`}
-                  />
-                )}
-                <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+                <div className="border-t border-white/[0.06] py-1">
+                  <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <LogOut className="w-4 h-4" /> Sair
+                  </button>
+                </div>
               </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Credits with gradient bar and plan marker */}
+            {(() => {
+              const balance = displayBalance ?? 0;
+              const planNameLower = planName.toLowerCase();
+              const planLabel = planNameLower.includes('growth') ? 'Growth' : planNameLower.includes('pro') ? 'Pro' : planNameLower.includes('starter') ? 'Starter' : 'Free';
+              const planColor = '#8B5CF6';
+              const maxBar = Math.max(balance, monthlyCredits, 50);
+              const balancePct = Math.min(100, (balance / maxBar) * 100);
+              const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
+              const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
 
-              {/* Monthly credits label */}
-              {monthlyCredits > 0 && (
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[10px] text-white/25">
-                    {monthlyCredits} mensais
-                  </span>
-                  {bonusCredits > 0 && (
-                    <span className="text-[10px]" style={{ color: `${planColor}99` }}>
-                      +{Math.floor(bonusCredits)} bônus
-                    </span>
+              return (
+                <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${planColor}20`, color: planColor }}>
+                        {planLabel}
+                      </span>
+                    </div>
+                    <span className="text-white/70 text-xs font-medium">{Math.floor(balance)} restantes</span>
+                  </div>
+                  <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-full rounded-full transition-all duration-700 relative overflow-hidden" style={{ width: `${balancePct}%`, background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)` }}>
+                      <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer-credit 2s ease-in-out infinite' }} />
+                    </div>
+                    {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
+                      <div className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full" style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.5)' }} title={`${monthlyCredits} créditos mensais`} />
+                    )}
+                    <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+                  </div>
+                  {monthlyCredits > 0 && (
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[10px] text-white/25">{monthlyCredits} mensais</span>
+                      {bonusCredits > 0 && (
+                        <span className="text-[10px]" style={{ color: `${planColor}99` }}>+{Math.floor(bonusCredits)} bônus</span>
+                      )}
+                    </div>
                   )}
+                </div>
+              );
+            })()}
+
+            {/* Profile button */}
+            <div className="relative px-2 pb-3">
+              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer">
+                <p className="text-sm text-white/50 font-medium truncate">{email}</p>
+                <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showProfileMenu && (
+                <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0d0d12' }}>
+                  <div className="px-4 py-3 border-b border-white/[0.06]">
+                    <p className="text-sm text-white/70 font-medium truncate">{email}</p>
+                  </div>
+                  <div className="py-1">
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <User className="w-4 h-4" /> Perfil
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <Settings className="w-4 h-4" /> Configurações
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <CreditCard className="w-4 h-4" /> Plano & Créditos
+                    </button>
+                  </div>
+                  <div className="border-t border-white/[0.06] py-1">
+                    <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
+                      <LogOut className="w-4 h-4" /> Sair
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          );
-        })()}
-
-        {/* Profile button */}
-        <div className="relative px-2 pb-3">
-          <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer"
-          >
-            <p className="text-sm text-white/50 font-medium truncate">{email}</p>
-            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Profile dropdown */}
-          {showProfileMenu && (
-            <div
-              className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50"
-              style={{ backgroundColor: '#0d0d12' }}
-            >
-              <div className="px-4 py-3 border-b border-white/[0.06]">
-                <p className="text-sm text-white/70 font-medium truncate">{email}</p>
-              </div>
-              <div className="py-1">
-                <button
-                  onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <User className="w-4 h-4" /> Perfil
-                </button>
-                <button
-                  onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <Settings className="w-4 h-4" /> Configurações
-                </button>
-                <button
-                  onClick={() => { setShowProfileMenu(false); navigate('/precos'); }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <CreditCard className="w-4 h-4" /> Plano & Créditos
-                </button>
-              </div>
-              <div className="border-t border-white/[0.06] py-1">
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" /> Sair
-                </button>
-              </div>
+            {/* Powered by ellosuit */}
+            <div className="px-4 pb-3 pt-1 flex justify-center">
+              <a href="https://www.ellosuit.online" target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/20 hover:text-white/40 transition-colors">
+                Powered by <span className="font-semibold">ellosuit</span>
+              </a>
             </div>
-          )}
-        </div>
-        {/* Powered by ellosuit */}
-        <div className="px-4 pb-3 pt-1 flex justify-center">
-          <a
-            href="https://www.ellosuit.online"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-white/20 hover:text-white/40 transition-colors"
-          >
-            Powered by <span className="font-semibold">ellosuit</span>
-          </a>
-        </div>
+          </>
+        )}
       </div>
     </aside>
   );

@@ -516,6 +516,8 @@ const CarouselGenerator: React.FC = () => {
   const [editorRefImage, setEditorRefImage] = useState<string | null>(null);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
+  const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
+  const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);

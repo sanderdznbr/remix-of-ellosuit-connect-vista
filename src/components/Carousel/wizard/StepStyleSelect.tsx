@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
-import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Filter, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Loader2, Check, Sparkles, Crown, Zap, X, Search, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STYLE_PRESETS, StylePreset } from './StepStyle';
 import { WizardAccentTheme, getThemeClasses } from './wizardTheme';
 
@@ -32,6 +32,184 @@ interface Props {
   accentTheme?: WizardAccentTheme;
 }
 
+/* ─── Netflix-style horizontal row ─── */
+const StyleRow: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  badge?: string;
+}> = ({ title, children, badge }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 8);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    el?.addEventListener('scroll', checkScroll, { passive: true });
+    return () => el?.removeEventListener('scroll', checkScroll);
+  }, [children]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="relative group/row">
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <h3 className="text-sm font-bold text-white/80 tracking-wide">{title}</h3>
+        {badge && (
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 uppercase tracking-wider">
+            {badge}
+          </span>
+        )}
+      </div>
+
+      <div className="relative">
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-0 bottom-0 w-10 z-10 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-pointer"
+            style={{ background: 'linear-gradient(to right, rgba(10,10,10,0.9), transparent)' }}
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+        )}
+
+        {/* Scrollable container */}
+        <div
+          ref={scrollRef}
+          className="flex gap-3 overflow-x-auto pb-2 scrollbar-none"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' as any }}
+        >
+          {children}
+        </div>
+
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-0 bottom-0 w-10 z-10 flex items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity cursor-pointer"
+            style={{ background: 'linear-gradient(to left, rgba(10,10,10,0.9), transparent)' }}
+          >
+            <ChevronRight className="w-5 h-5 text-white" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Single style card ─── */
+const StyleCard: React.FC<{
+  style: MarketplaceStyle;
+  isActive: boolean;
+  isLocked: boolean;
+  previewIndex: number;
+  onSelect: () => void;
+  onChangePreview: (idx: number) => void;
+  themeClasses: ReturnType<typeof getThemeClasses>;
+}> = ({ style, isActive, isLocked, previewIndex, onSelect, onChangePreview, themeClasses: t }) => {
+  const coverImage = style.style_config?.cover_image;
+  const images = style.preview_images || [];
+  const currentImg = coverImage || images[previewIndex] || images[0];
+  const hasMultiple = images.length > 1;
+
+  return (
+    <button
+      onClick={onSelect}
+      className={`relative shrink-0 rounded-xl overflow-hidden transition-all duration-200 cursor-pointer group
+        ${isLocked ? 'opacity-60' : ''}
+        ${isActive
+          ? `ring-2 ${t.ringFull} scale-[1.03] shadow-lg`
+          : 'hover:scale-[1.04] hover:shadow-xl hover:z-10'
+        }
+      `}
+      style={{ width: '160px' }}
+    >
+      {/* Image */}
+      <div className="relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
+        {currentImg ? (
+          <img
+            src={currentImg}
+            alt={style.name}
+            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${isLocked ? 'grayscale' : ''}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full bg-white/[0.04] flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-white/10" />
+          </div>
+        )}
+
+        {/* Dark gradient overlay at bottom */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-16"
+          style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' }}
+        />
+
+        {/* Lock overlay */}
+        {isLocked && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <Lock className="w-6 h-6 text-white/50" />
+          </div>
+        )}
+
+        {/* Selected check */}
+        {isActive && !isLocked && (
+          <div className={`absolute top-2 right-2 w-6 h-6 rounded-full ${t.bg} flex items-center justify-center shadow-lg`}>
+            <Check className="w-3.5 h-3.5 text-white" />
+          </div>
+        )}
+
+        {/* PRO badge for locked */}
+        {isLocked && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-yellow-500/90 text-[9px] font-bold text-black uppercase">
+            PRO
+          </div>
+        )}
+
+        {/* Featured badge */}
+        {style.is_featured && !isLocked && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-yellow-500/90 flex items-center gap-0.5">
+            <Crown className="w-2.5 h-2.5 text-black" />
+            <span className="text-[8px] font-bold text-black">DESTAQUE</span>
+          </div>
+        )}
+
+        {/* Slider dots */}
+        {hasMultiple && !isLocked && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            {images.slice(0, 5).map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); onChangePreview(i); }}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${i === previewIndex ? 'bg-white scale-125' : 'bg-white/30'}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Name on bottom */}
+        <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2">
+          <p className="text-[12px] font-semibold text-white truncate drop-shadow-lg">{style.name}</p>
+        </div>
+      </div>
+    </button>
+  );
+};
+
+/* ─── Main Component ─── */
 const StepStyleSelect: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
   selectedFont, setSelectedFont, onApplyPreset, onApplyMarketplaceStyle, accentTheme = 'purple',
@@ -45,7 +223,6 @@ const StepStyleSelect: React.FC<Props> = ({
   const [showMarketplace, setShowMarketplace] = useState(false);
   const [lockedStyleName, setLockedStyleName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [previewIndex, setPreviewIndex] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -56,7 +233,6 @@ const StepStyleSelect: React.FC<Props> = ({
     setLoading(true);
     try {
       if (!user) {
-        // Unauth users: show ALL styles (free ones selectable, paid ones locked)
         const { data: allStyles } = await supabase
           .from('marketplace_styles')
           .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
@@ -67,7 +243,6 @@ const StepStyleSelect: React.FC<Props> = ({
         setLoading(false);
         return;
       }
-      // Auth users: show purchased styles + free styles
       const [{ data: purchased }, { data: freeStyles }] = await Promise.all([
         supabase.from('purchased_styles').select('style_id').eq('user_id', user.id),
         supabase.from('marketplace_styles')
@@ -92,18 +267,26 @@ const StepStyleSelect: React.FC<Props> = ({
     }
   };
 
-  const categories = useMemo(() => {
-    const cats = Array.from(new Set(purchasedStyles.map(s => s.category)));
-    return ['all', ...cats];
-  }, [purchasedStyles]);
-
   const filteredStyles = useMemo(() => {
-    return purchasedStyles.filter(s => {
-      if (selectedCategory !== 'all' && s.category !== selectedCategory) return false;
-      if (searchQuery && !s.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
+    if (!searchQuery) return purchasedStyles;
+    return purchasedStyles.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [purchasedStyles, searchQuery]);
+
+  // Group by category
+  const stylesByCategory = useMemo(() => {
+    const map: Record<string, MarketplaceStyle[]> = {};
+    // Featured first
+    const featured = filteredStyles.filter(s => s.is_featured);
+    if (featured.length > 0) map['Destaques'] = featured;
+    // By category
+    filteredStyles.forEach(s => {
+      const cat = s.category || 'Outros';
+      const label = cat.charAt(0).toUpperCase() + cat.slice(1);
+      if (!map[label]) map[label] = [];
+      map[label].push(s);
     });
-  }, [purchasedStyles, searchQuery, selectedCategory]);
+    return map;
+  }, [filteredStyles]);
 
   const applyPreset = (preset: StylePreset) => {
     setActiveStyleId(null);
@@ -132,136 +315,89 @@ const StepStyleSelect: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
-      {/* Header */}
-      <div className="shrink-0 pb-3">
-        <h2 className="text-xl font-bold text-white mb-1">Selecione o estilo</h2>
-        <p className="text-xs text-white/40">
-          {user ? 'Selecione um estilo do Marketplace para continuar.' : 'Estilos gratuitos disponíveis para teste. Crie uma conta para acessar mais.'}
+    <div className="flex flex-col" style={{ height: 'min(78vh, 620px)' }}>
+      {/* Hero header */}
+      <div className="shrink-0 mb-4">
+        <h2 className="text-2xl font-extrabold text-white tracking-tight">Selecione o estilo</h2>
+        <p className="text-xs text-white/35 mt-1">
+          {user ? 'Escolha um visual para o seu post.' : 'Estilos gratuitos para teste. Crie uma conta para mais.'}
         </p>
       </div>
 
-      {/* Search + Filters */}
-      <div className="shrink-0 flex flex-col gap-2 pb-3">
-        <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+      {/* Search bar - prominent */}
+      <div className="shrink-0 mb-5">
+        <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/[0.06] border border-white/[0.08] focus-within:border-white/20 transition-colors">
           <Search className="w-4 h-4 text-white/30 shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Buscar estilos..."
-            className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 outline-none min-w-0"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/20 outline-none min-w-0"
           />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="p-0.5 cursor-pointer">
+              <X className="w-3.5 h-3.5 text-white/30" />
+            </button>
+          )}
         </div>
-        {categories.length > 2 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {categories.map(cat => (
-              <button key={cat} onClick={() => setSelectedCategory(cat)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
-                  selectedCategory === cat
-                    ? `${t.bgLight} ${t.textLight} border ${t.borderLight}`
-                    : 'bg-white/[0.04] text-white/40 hover:text-white/60 border border-transparent'
-                }`}>
-                {cat === 'all' ? 'Todos' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Scrollable grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+      {/* Scrollable content — Netflix rows */}
+      <div
+        className="flex-1 min-h-0 overflow-y-auto space-y-6 pb-4"
+        style={{ scrollbarWidth: 'none' }}
+      >
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-5 h-5 animate-spin text-white/30" />
+            <Loader2 className="w-6 h-6 animate-spin text-white/20" />
           </div>
-        ) : filteredStyles.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {filteredStyles.map(style => {
-              const isActive = activeStyleId === style.id;
-              const coverImage = (style as any).style_config?.cover_image;
-              const images = style.preview_images || [];
-              const currentIdx = previewIndex[style.id] || 0;
-              const currentImg = coverImage || images[currentIdx] || images[0];
-              const isFree = (style as any).is_free;
-              const isLocked = !user && !isFree;
-              const hasMultiple = images.length > 1;
-              return (
-                <button key={style.id}
-                  onClick={() => {
-                    if (isLocked) {
-                      setLockedStyleName(style.name);
-                      return;
-                    }
-                    applyMarketplaceStyle(style);
-                  }}
-                  className={`relative rounded-xl overflow-hidden border transition-all text-left cursor-pointer group ${
-                    isLocked
-                      ? 'border-white/[0.04] opacity-70'
-                      : isActive
-                        ? `border-current ${t.ringFull} ring-1 ${t.ring}`
-                        : 'border-white/[0.06] hover:border-white/15'
-                  }`}>
-                  {currentImg && (
-                    <div className="bg-white/[0.03] relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
-                      <img src={currentImg} alt={style.name} className={`w-full h-full object-cover ${isLocked ? 'grayscale' : ''}`} loading="eager" />
-                      {isLocked && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <Lock className="w-5 h-5 text-white/60" />
-                        </div>
-                      )}
-                      {/* Slider arrows */}
-                      {hasMultiple && !isLocked && (
-                        <>
-                          <div
-                            className="absolute left-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(prev => ({ ...prev, [style.id]: (currentIdx - 1 + images.length) % images.length })); }}>
-                            <ChevronLeft className="w-3 h-3 text-white" />
-                          </div>
-                          <div
-                            className="absolute right-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(prev => ({ ...prev, [style.id]: (currentIdx + 1) % images.length })); }}>
-                            <ChevronRight className="w-3 h-3 text-white" />
-                          </div>
-                          {/* Dots */}
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 z-10">
-                            {images.slice(0, 6).map((_, i) => (
-                              <div key={i} className={`w-1 h-1 rounded-full transition-colors ${i === currentIdx ? 'bg-white' : 'bg-white/30'}`} />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="p-2 flex items-center justify-between">
-                    <p className="text-[11px] font-medium text-white truncate">{style.name}</p>
-                    {isLocked && (
-                      <span className="text-[9px] text-yellow-400/70 font-medium shrink-0 ml-1">PRO</span>
-                    )}
-                  </div>
-                  {isActive && !isLocked && (
-                    <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full ${t.bg} flex items-center justify-center`}>
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        ) : Object.keys(stylesByCategory).length > 0 ? (
+          <>
+            {Object.entries(stylesByCategory).map(([category, styles]) => (
+              <StyleRow
+                key={category}
+                title={category}
+                badge={category === 'Destaques' ? 'Popular' : undefined}
+              >
+                {styles.map(style => {
+                  const isFree = (style as any).is_free;
+                  const isLocked = !user && !isFree;
+                  return (
+                    <StyleCard
+                      key={style.id}
+                      style={style}
+                      isActive={activeStyleId === style.id}
+                      isLocked={isLocked}
+                      previewIndex={previewIndex[style.id] || 0}
+                      onSelect={() => {
+                        if (isLocked) {
+                          setLockedStyleName(style.name);
+                          return;
+                        }
+                        applyMarketplaceStyle(style);
+                      }}
+                      onChangePreview={(idx) => setPreviewIndex(prev => ({ ...prev, [style.id]: idx }))}
+                      themeClasses={t}
+                    />
+                  );
+                })}
+              </StyleRow>
+            ))}
+          </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-white/20 gap-2">
-            <ShoppingBag className="w-8 h-8" />
-            <p className="text-xs">{searchQuery ? 'Nenhum estilo encontrado' : user ? 'Nenhum estilo adquirido' : 'Nenhum estilo gratuito disponível'}</p>
+          <div className="flex flex-col items-center justify-center h-full text-white/20 gap-3">
+            <ShoppingBag className="w-10 h-10" />
+            <p className="text-sm">{searchQuery ? 'Nenhum estilo encontrado' : 'Nenhum estilo disponível'}</p>
           </div>
         )}
       </div>
 
-      {/* Marketplace button - only for logged in users */}
+      {/* Marketplace CTA */}
       {user && (
         <button
           onClick={() => setShowMarketplace(true)}
-          className={`shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed ${t.borderLight} ${t.bgFaint} ${t.textLight} hover:bg-opacity-10 transition-all text-xs font-medium cursor-pointer`}
+          className={`shrink-0 mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed ${t.borderLight} ${t.bgFaint} ${t.textLight} hover:bg-opacity-10 transition-all text-xs font-semibold cursor-pointer`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
           Explorar Marketplace
@@ -371,7 +507,6 @@ const MarketplacePopup: React.FC<{
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-4xl h-[85vh] flex flex-col rounded-2xl border border-white/[0.08] overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-        {/* Header */}
         <div className="shrink-0 px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-white">Marketplace de Estilos</h2>
@@ -384,7 +519,6 @@ const MarketplacePopup: React.FC<{
           </button>
         </div>
 
-        {/* Filters */}
         <div className="shrink-0 px-6 py-3 border-b border-white/[0.04] flex flex-col sm:flex-row items-start sm:items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] flex-1 max-w-xs">
             <Search className="w-4 h-4 text-white/30" />
@@ -405,7 +539,6 @@ const MarketplacePopup: React.FC<{
           </div>
         </div>
 
-        {/* Scrollable content */}
         <div className="flex-1 min-h-0 overflow-y-auto p-6" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
           {loading ? (
             <div className="flex items-center justify-center py-16">
@@ -459,7 +592,7 @@ const MarketplacePopup: React.FC<{
                           )}
                         </button>
                       ) : (
-                        <p className="mt-2 text-[10px] text-green-400/60 text-center">Já adquirido ✓</p>
+                        <p className="mt-2 text-[10px] text-green-400/60 text-center">Já adquirido</p>
                       )}
                     </div>
                   </div>

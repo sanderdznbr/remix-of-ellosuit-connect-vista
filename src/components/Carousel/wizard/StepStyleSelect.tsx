@@ -224,6 +224,7 @@ const StepStyleSelect: React.FC<Props> = ({
   const [lockedStyleName, setLockedStyleName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewIndex, setPreviewIndex] = useState<Record<string, number>>({});
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAvailableStyles();
@@ -305,7 +306,6 @@ const StepStyleSelect: React.FC<Props> = ({
     return cats;
   }, [purchasedStyles]);
 
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Filter by search + category
   const displayStyles = useMemo(() => {

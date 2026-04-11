@@ -1879,8 +1879,8 @@ The image must look like it was shot by a professional photographer or designed 
 
   // ===== GENERATE CAPTION =====
   const openCaptionConfigDialog = () => {
-    // Skip config dialog — generate directly with 400 char limit
-    generateCaption('400', '');
+    // Skip config dialog — generate directly with 400 char limit, no hashtags
+    generateCaption('400', 'NÃO use hashtags (#). Legenda curta e direta.');
   };
 
   const generateCaption = async (maxChars?: string, mentions?: string) => {

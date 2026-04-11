@@ -9960,7 +9960,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                     <span className="text-[10px] font-medium text-white/50">Ferramentas</span>
                   </button>
-                  <button onClick={() => { setStyleChangeSource('toolbar'); setShowStylePanel(true); }}
+                  <button onClick={() => setShowStylePreview(true)}
                     className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <Palette className="h-4 w-4 text-white/70" />

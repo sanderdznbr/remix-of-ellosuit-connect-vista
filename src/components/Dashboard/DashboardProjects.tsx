@@ -268,7 +268,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
       {/* Content */}
       <div className="px-4 md:px-8 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))' }}>
         <motion.div
-          className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-4' : 'flex flex-col gap-2 mt-4'}
+          className={viewMode === 'grid' ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2.5 mt-4' : 'flex flex-col gap-1.5 mt-4'}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -278,33 +278,30 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             onClick={() => onStartCarousel()}
             className={`${
               viewMode === 'grid'
-                ? 'aspect-[4/5] rounded-xl flex flex-col items-center justify-center gap-3'
-                : 'rounded-xl flex items-center gap-3 px-4 py-4'
-            } transition-colors cursor-pointer`}
-            style={{ border: '1px dashed rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.25)' }}
+                ? 'aspect-[3/4] rounded-lg flex flex-col items-center justify-center gap-2'
+                : 'rounded-lg flex items-center gap-3 px-3 py-3'
+            } transition-all cursor-pointer hover:bg-white/[0.06]`}
+            style={{ border: '1px dashed rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.2)' }}
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-sm">Criar novo projeto</span>
+            <Plus className="w-5 h-5" />
+            <span className="text-[11px]">Novo projeto</span>
           </div>
 
           {/* Project cards */}
           {sorted.slice(0, visibleCount).map((item) => {
-            // Skip base64 covers (they're too large and cause slowness)
             const cover = item.cover_url && !item.cover_url.startsWith('data:') ? item.cover_url : null;
 
             if (viewMode === 'list') {
               return (
                 <div
                   key={item.id}
-                  className="rounded-xl flex items-center gap-4 px-4 py-3 transition-all cursor-pointer group"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="rounded-lg flex items-center gap-3 px-3 py-2 transition-all cursor-pointer group hover:bg-white/[0.06]"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
                   onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
                 >
                   <div
-                    className="w-12 h-14 rounded-lg shrink-0 overflow-hidden relative"
-                    style={{
-                      background: cover ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.06)',
-                    }}
+                    className="w-10 h-12 rounded-md shrink-0 overflow-hidden relative"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}
                   >
                     {cover && (
                       <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy"
@@ -312,34 +309,19 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    <p className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>{item.title || item.topic}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
                       {item.card_count || '?'} cards · {formatDate(item.created_at)}
                     </p>
                   </div>
-                  <button
-                    onClick={(e) => toggleStar(e, item.id, item.is_starred)}
-                    className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                    style={{ color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.15)' }}
-                  >
-                    <Star className="w-4 h-4" fill={item.is_starred ? '#facc15' : 'none'} />
+                  <button onClick={(e) => toggleStar(e, item.id, item.is_starred)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.12)' }}>
+                    <Star className="w-3.5 h-3.5" fill={item.is_starred ? '#facc15' : 'none'} />
                   </button>
-                  <button
-                    onClick={(e) => handleDelete(e, item.id)}
-                    className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                    style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.15)' }}
-                    title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
-                  >
-                    <Trash2 className="w-4 h-4" />
+                  <button onClick={(e) => handleDelete(e, item.id)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.12)' }} title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                  <button
-                    onClick={(e) => openPublishDialog(e, item)}
-                    className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                    style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.15)' : 'rgba(168,85,247,0.6)' }}
-                    title="Publicar na comunidade"
-                    disabled={publishingId === item.id}
-                  >
-                    {publishingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                  <button onClick={(e) => openPublishDialog(e, item)} className="p-1 rounded-md transition-colors cursor-pointer" style={{ color: publishingId === item.id ? 'rgba(255,255,255,0.12)' : 'rgba(168,85,247,0.5)' }} title="Publicar na comunidade" disabled={publishingId === item.id}>
+                    {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               );
@@ -348,10 +330,9 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             return (
               <div
                 key={item.id}
-                className="rounded-xl overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[4/5]"
+                className="rounded-lg overflow-hidden relative group transition-all hover:scale-[1.03] hover:ring-1 hover:ring-white/10 cursor-pointer aspect-[3/4]"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(255,255,255,0.03)',
                 }}
                 onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
               >
@@ -365,40 +346,25 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                   />
                 )}
                 {/* Action buttons */}
-                <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                  <button
-                    onClick={(e) => toggleStar(e, item.id, item.is_starred)}
-                    className="p-1.5 rounded-lg cursor-pointer"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.5)' }}
-                  >
-                    <Star className="w-3.5 h-3.5" fill={item.is_starred ? '#facc15' : 'none'} />
+                <div className="absolute top-1.5 right-1.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-all z-10">
+                  <button onClick={(e) => toggleStar(e, item.id, item.is_starred)} className="p-1 rounded-md cursor-pointer" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: item.is_starred ? '#facc15' : 'rgba(255,255,255,0.5)' }}>
+                    <Star className="w-3 h-3" fill={item.is_starred ? '#facc15' : 'none'} />
                   </button>
-                  <button
-                    onClick={(e) => handleDelete(e, item.id)}
-                    className="p-1.5 rounded-lg cursor-pointer"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.5)' }}
-                    title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
+                  <button onClick={(e) => handleDelete(e, item.id)} className="p-1 rounded-md cursor-pointer" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.5)' }} title={deleteConfirmId === item.id ? 'Clique novamente para confirmar' : 'Excluir'}>
+                    <Trash2 className="w-3 h-3" />
                   </button>
-                  <button
-                    onClick={(e) => openPublishDialog(e, item)}
-                    className="p-1.5 rounded-lg cursor-pointer"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: publishingId === item.id ? 'rgba(255,255,255,0.3)' : 'rgba(168,85,247,0.8)' }}
-                    title="Publicar na comunidade"
-                    disabled={publishingId === item.id}
-                  >
-                    {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                  <button onClick={(e) => openPublishDialog(e, item)} className="p-1 rounded-md cursor-pointer" style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: publishingId === item.id ? 'rgba(255,255,255,0.3)' : 'rgba(168,85,247,0.7)' }} title="Publicar na comunidade" disabled={publishingId === item.id}>
+                    {publishingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Share2 className="w-3 h-3" />}
                   </button>
                 </div>
                 {item.is_starred && !deleteConfirmId && (
-                  <div className="absolute top-2 right-2 p-1.5 group-hover:hidden" style={{ color: '#facc15' }}>
-                    <Star className="w-3.5 h-3.5" fill="#facc15" />
+                  <div className="absolute top-1.5 right-1.5 p-1 group-hover:hidden" style={{ color: '#facc15' }}>
+                    <Star className="w-3 h-3" fill="#facc15" />
                   </div>
                 )}
-                <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-                  <p className="text-[11px] font-semibold truncate" style={{ color: '#ffffff' }}>{item.title || item.topic}</p>
-                  <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/80 via-transparent to-transparent">
+                  <p className="text-[10px] font-medium truncate leading-tight" style={{ color: 'rgba(255,255,255,0.9)' }}>{item.title || item.topic}</p>
+                  <p className="text-[8px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
                     {item.card_count || '?'} cards · {formatDate(item.created_at)}
                   </p>
                 </div>
@@ -411,15 +377,15 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             <div className={`${viewMode === 'grid' ? 'col-span-full' : ''} flex flex-col items-center justify-center py-16 text-center`}>
               {filterMode === 'starred' ? (
                 <>
-                  <Star className="w-10 h-10 mb-3" style={{ color: 'rgba(255,255,255,0.1)' }} />
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum projeto favoritado</p>
-                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.15)' }}>Favorite projetos para acessá-los rapidamente</p>
+                  <Star className="w-8 h-8 mb-3" style={{ color: 'rgba(255,255,255,0.08)' }} />
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>Nenhum projeto favoritado</p>
+                  <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.12)' }}>Favorite projetos para acessá-los rapidamente</p>
                 </>
               ) : (
                 <>
-                  <Clock className="w-10 h-10 mb-3" style={{ color: 'rgba(255,255,255,0.1)' }} />
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>Nenhum projeto encontrado</p>
-                  <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.15)' }}>Crie seu primeiro carrossel para começar</p>
+                  <Clock className="w-8 h-8 mb-3" style={{ color: 'rgba(255,255,255,0.08)' }} />
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>Nenhum projeto encontrado</p>
+                  <p className="text-[10px] mt-1" style={{ color: 'rgba(255,255,255,0.12)' }}>Crie seu primeiro carrossel para começar</p>
                 </>
               )}
             </div>
@@ -428,11 +394,11 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
 
         {/* Load more */}
         {sorted.length > visibleCount && (
-          <div className="flex justify-center mt-6 pb-4">
+          <div className="flex justify-center mt-5 pb-4">
             <button
-              onClick={() => setVisibleCount(prev => prev + 9)}
-              className="px-6 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/90 transition-all cursor-pointer"
-              style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={() => setVisibleCount(prev => prev + 12)}
+              className="px-5 py-2 rounded-lg text-[11px] font-medium text-white/50 hover:text-white/80 transition-all cursor-pointer"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               Carregar mais
             </button>

@@ -207,7 +207,7 @@ ${userImage ? 'O usuário enviou uma imagem junto com a mensagem.' : ''}`
                 className={`max-w-[80%] px-3.5 py-2.5 text-[14px] leading-[1.45] ${
                   isAssistant
                     ? 'bg-white/[0.07] text-white/85 rounded-2xl rounded-tl-md'
-                    : 'bg-purple-600 text-white rounded-2xl rounded-tr-md'
+                    : 'bg-purple-600/80 text-white rounded-2xl rounded-tr-md'
                 }`}
               >
                 {msg.image && (

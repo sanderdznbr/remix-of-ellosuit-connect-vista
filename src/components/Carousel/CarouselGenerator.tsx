@@ -9419,7 +9419,64 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
-            {resultViewMode === 'advanced' && (
+            {/* ===== Full-Screen Style Picker (Netflix-style) ===== */}
+            <AnimatePresence>
+              {showFullScreenStylePicker && (
+                <motion.div
+                  key="fullscreen-style-picker"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[80] flex flex-col"
+                  style={{ backgroundColor: '#0A0A0F' }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style={{ backgroundColor: '#0A0A0F' }}>
+                    <button
+                      onClick={() => setShowFullScreenStylePicker(false)}
+                      className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                      <span className="text-sm font-medium">Voltar</span>
+                    </button>
+                    <span className="text-sm font-bold text-white">Escolher novo estilo</span>
+                    <div className="w-16" />
+                  </div>
+
+                  {/* Current style indicator */}
+                  {activeMarketplaceStyle && (
+                    <div className="mx-4 mt-3 mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {activeMarketplaceStyle.preview_urls?.[0] && (
+                        <img src={activeMarketplaceStyle.preview_urls[0]} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 opacity-50" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-medium text-white/40 block truncate">{activeMarketplaceStyle.name}</span>
+                        <span className="text-[10px] text-white/25">Estilo atual — selecione outro abaixo</span>
+                      </div>
+                      <Lock className="h-4 w-4 text-white/20 flex-shrink-0" />
+                    </div>
+                  )}
+
+                  {/* StepStyleSelect */}
+                  <div className="flex-1 overflow-y-auto px-2 pt-2 pb-8">
+                    <StepStyleSelect
+                      bgColor={bgColor} setBgColor={setBgColor}
+                      accentColor={accentColor} setAccentColor={setAccentColor}
+                      textColor={textColor} setTextColor={setTextColor}
+                      selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                      onApplyMarketplaceStyle={(config) => {
+                        if (config?.id === activeMarketplaceStyle?.id) return; // block current
+                        setShowFullScreenStylePicker(false);
+                        setStyleChangeSource('toolbar');
+                        setRecreateVisualIdea('');
+                        setPendingRecreateConfig(config);
+                      }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <>
               <div className="flex justify-center mb-2">
                 <div className="flex items-center gap-0.5 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>

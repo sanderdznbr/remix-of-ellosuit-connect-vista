@@ -9358,41 +9358,62 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="fixed inset-0 z-[71] flex items-center justify-center p-6 pointer-events-none"
                   >
                     <div
-                      className="w-full max-w-[360px] rounded-2xl pointer-events-auto overflow-hidden"
-                      style={{ backgroundColor: '#151520', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 25px 60px rgba(0,0,0,0.7)' }}
+                      className="w-full max-w-[380px] rounded-3xl pointer-events-auto overflow-hidden backdrop-blur-2xl"
+                      style={{ backgroundColor: 'rgba(6,6,6,0.92)', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 30px 90px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.03), 0 0 0 0.5px rgba(255,255,255,0.03)' }}
                     >
-                      <div className="flex items-center justify-between px-5 pt-5 pb-2">
-                        <div className="flex items-center gap-2.5">
-                          <Palette className="h-5 w-5" style={{ color: themeHex }} />
-                          <span className="text-base font-bold text-white">Estilo atual</span>
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-6 pt-5 pb-1">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))`, border: `1px solid rgba(${themeRgb},0.15)` }}>
+                            <Palette className="h-4 w-4" style={{ color: themeHex }} />
+                          </div>
+                          <span className="text-[15px] font-semibold text-white tracking-tight">Estilo atual</span>
                         </div>
-                        <button onClick={() => setShowStylePreview(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-                          <X className="h-5 w-5 text-white/40" />
+                        <button onClick={() => setShowStylePreview(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+                          <X className="h-4 w-4 text-white/30" />
                         </button>
                       </div>
 
-                      <div className="px-5 py-4">
-                        <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ backgroundColor: `rgba(${themeRgb},0.08)`, border: `1px solid rgba(${themeRgb},0.15)` }}>
-                          {activeMarketplaceStyle?.preview_urls?.[0] && (
-                            <img src={activeMarketplaceStyle.preview_urls[0]} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-white block truncate">
+                      <div className="px-6 pb-3 pt-0.5">
+                        <span className="text-[11px] font-medium tracking-widest uppercase text-white/20">Identidade visual</span>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="mx-5 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)' }} />
+
+                      {/* Style card with cover */}
+                      <div className="px-4 py-4">
+                        <div className="rounded-2xl overflow-hidden" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.08), rgba(${themeRgb},0.02))`, border: `1px solid rgba(${themeRgb},0.1)` }}>
+                          {/* Cover image */}
+                          {(() => {
+                            const coverImg = (activeMarketplaceStyle as any)?.style_config?.cover_image || activeMarketplaceStyle?.preview_urls?.[0];
+                            return coverImg ? (
+                              <div className="relative w-full h-40 overflow-hidden">
+                                <img src={coverImg} alt="" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,6,6,0.9) 0%, transparent 60%)' }} />
+                              </div>
+                            ) : null;
+                          })()}
+                          <div className="px-4 py-3 -mt-8 relative z-10">
+                            <span className="text-base font-bold text-white block">
                               {activeMarketplaceStyle?.name || 'Estilo padrão'}
                             </span>
-                            <span className="text-[11px] text-white/40">Estilo usado neste carrossel</span>
+                            <span className="text-[11px] text-white/30 mt-0.5 block">Estilo usado neste carrossel</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="px-5 pb-2">
-                        <p className="text-sm text-white/60 text-center">Deseja recriar este post com um estilo diferente?</p>
+                      {/* Divider */}
+                      <div className="mx-5 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
+
+                      <div className="px-5 py-3">
+                        <p className="text-[13px] text-white/40 text-center">Deseja recriar este post com um estilo diferente?</p>
                       </div>
 
-                      <div className="flex gap-3 px-5 py-4">
+                      <div className="flex gap-3 px-5 pb-5 pt-1">
                         <button
                           onClick={() => setShowStylePreview(false)}
-                          className="flex-1 px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:bg-white/[0.06] transition-colors"
+                          className="flex-1 px-4 py-3 rounded-2xl text-sm font-medium text-white/40 hover:bg-white/[0.04] active:bg-white/[0.06] transition-all"
                         >
                           Cancelar
                         </button>
@@ -9401,8 +9422,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             setShowStylePreview(false);
                             setShowFullScreenStylePicker(true);
                           }}
-                          className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
-                          style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
+                          className="flex-1 px-4 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-[0.97]"
+                          style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})`, boxShadow: `0 4px 20px rgba(${themeRgb},0.3)` }}
                         >
                           Escolher estilo
                         </button>

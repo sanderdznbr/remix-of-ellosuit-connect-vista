@@ -9386,7 +9386,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <div className="rounded-2xl overflow-hidden" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.08), rgba(${themeRgb},0.02))`, border: `1px solid rgba(${themeRgb},0.1)` }}>
                           {/* Cover image */}
                           {(() => {
-                            const coverImg = (activeMarketplaceStyle as any)?.style_config?.cover_image || activeMarketplaceStyle?.preview_urls?.[0];
+                            const coverImg = (activeMarketplaceStyle as any)?.style_config?.cover_image || activeMarketplaceStyle?.preview_images?.[0] || activeMarketplaceStyle?.preview_urls?.[0];
                             return coverImg ? (
                               <div className="relative w-full h-40 overflow-hidden">
                                 <img src={coverImg} alt="" className="w-full h-full object-cover" />
@@ -9394,9 +9394,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                               </div>
                             ) : null;
                           })()}
-                          <div className="px-4 py-3 -mt-8 relative z-10">
+                          <div className={`px-4 py-3 relative z-10 ${(() => { const ci = (activeMarketplaceStyle as any)?.style_config?.cover_image || activeMarketplaceStyle?.preview_images?.[0] || activeMarketplaceStyle?.preview_urls?.[0]; return ci ? '-mt-8' : ''; })()}`}>
                             <span className="text-base font-bold text-white block">
-                              {activeMarketplaceStyle?.name || 'Estilo padrão'}
+                              {activeMarketplaceStyle?.name || (carouselData as any)?.styleName || 'Estilo padrão'}
                             </span>
                             <span className="text-[11px] text-white/30 mt-0.5 block">Estilo usado neste carrossel</span>
                           </div>

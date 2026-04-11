@@ -417,7 +417,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         for (const ref of validStyleRefs) {
           messageContent.push({ type: 'image_url', image_url: { url: ref } });
         }
-        messageContent.push({ type: 'text', text: `✅ FIM DAS REFERÊNCIAS DE ESTILO. RESUMO OBRIGATÓRIO:\n1. Copie APENAS: cores, TIPOGRAFIA/FONTES (mesma família, peso, estilo), layout, elementos gráficos decorativos.\n2. DESCARTE COMPLETAMENTE todo texto visível nas referências — títulos, nomes, placares, resultados esportivos, marcas, @handles, frases.\n3. Os ÚNICOS textos que devem aparecer na imagem final são os fornecidos no CONTEÚDO DO POST abaixo.\n4. NUNCA use uma referência como conteúdo dentro de mockups, telas ou dispositivos — são APENAS inspiração estética.` });
+        messageContent.push({ type: 'text', text: `✅ FIM DAS REFERÊNCIAS DE ESTILO. RESUMO OBRIGATÓRIO:\n1. Copie APENAS: cores, TIPOGRAFIA/FONTES (mesma família, peso, estilo), layout, elementos gráficos decorativos.\n2. DESCARTE COMPLETAMENTE todo texto visível nas referências — títulos, nomes, placares, resultados esportivos, marcas, @handles, frases.\n3. DESCARTE COMPLETAMENTE as fotografias/cenas/pessoas das referências — NÃO copie soldados, mãos, paisagens ou qualquer conteúdo fotográfico. Gere fotos NOVAS e RELEVANTES ao tema.\n4. Os ÚNICOS textos que devem aparecer na imagem final são os fornecidos no CONTEÚDO DO POST abaixo.\n5. NUNCA use uma referência como conteúdo dentro de mockups, telas ou dispositivos — são APENAS inspiração estética.` });
       }
 
       messageContent.push({ type: 'text', text: textPrompt });

@@ -10727,161 +10727,177 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       {/* ===== PRE-RECREATE CONFIRMATION DIALOG ===== */}
       <AnimatePresence>
-        {pendingRecreateConfig && (
+        {pendingRecreateConfig && (() => {
+          const activeFaces = facePersons.filter(p => p.photos.length > 0);
+          const brandRefs = referenceImages.filter(r => r.category === 'brand');
+          const hasAnyAsset = !!logoUrl || activeFaces.length > 0 || brandRefs.length > 0 || styleScreenshots.length > 0 || productImages.length > 0;
+          return (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center"
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
             onClick={() => setPendingRecreateConfig(null)}>
-            <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-[90%] max-w-md rounded-2xl p-6 space-y-5 overflow-y-auto max-h-[85dvh]"
-              style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)' }}>
+              className="relative w-full max-w-[380px] rounded-3xl overflow-hidden overflow-y-auto max-h-[85dvh]"
+              style={{ backgroundColor: 'rgba(6,6,6,0.92)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 32px 64px rgba(0,0,0,0.6)' }}>
               
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white">Confirmar antes de gerar</h3>
-                <button onClick={() => setPendingRecreateConfig(null)} className="text-white/50 hover:text-white/80 transition-colors cursor-pointer">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)/0.2), hsl(var(--primary)/0.05))' }}>
+                    <Sparkles className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
+                  </div>
+                  <h3 className="text-base font-semibold text-white tracking-tight">Confirmar geração</h3>
+                </div>
+                <button onClick={() => setPendingRecreateConfig(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white/70 hover:bg-white/5 transition-all cursor-pointer">
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Brand / Logo section */}
-              {logoUrl && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Marca</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/10 flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                      <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-white/70">{brandName || 'Logo enviada'}</p>
-                      {logoBrandColors.length > 0 && (
-                        <div className="flex gap-1 mt-1.5">
-                          {logoBrandColors.map((c, i) => (
-                            <div key={i} className="w-5 h-5 rounded-md ring-1 ring-white/10" style={{ backgroundColor: c }} title={c} />
+              <div className="px-5 pb-5 space-y-4">
+                {/* Assets grid */}
+                {hasAnyAsset && (
+                  <div className="space-y-3">
+                    {/* Face photos */}
+                    {activeFaces.length > 0 && (
+                      <div className="rounded-2xl p-3.5" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p className="text-[10px] font-semibold text-white/35 uppercase tracking-[0.08em] mb-2.5">Rosto</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {activeFaces.map((person, pi) => person.photos.map((photo, phi) => (
+                            <div key={`face-${pi}-${phi}`} className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/10">
+                              <img src={photo} alt={`Rosto ${pi + 1}`} className="w-full h-full object-cover" />
+                            </div>
+                          )))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Logo + brand colors */}
+                    {logoUrl && (
+                      <div className="rounded-2xl p-3.5" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p className="text-[10px] font-semibold text-white/35 uppercase tracking-[0.08em] mb-2.5">Marca</p>
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/10 flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-white/60 truncate">{brandName || 'Logo enviada'}</p>
+                            {logoBrandColors.length > 0 && (
+                              <div className="flex gap-1 mt-1.5">
+                                {logoBrandColors.map((c, i) => (
+                                  <div key={i} className="w-4 h-4 rounded-md ring-1 ring-white/10" style={{ backgroundColor: c }} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Brand references + Screenshots + Product — compact row */}
+                    {(brandRefs.length > 0 || styleScreenshots.length > 0 || productImages.length > 0) && (
+                      <div className="rounded-2xl p-3.5" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p className="text-[10px] font-semibold text-white/35 uppercase tracking-[0.08em] mb-2.5">Referências</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {brandRefs.map((ref, i) => (
+                            <div key={`brand-${i}`} className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/10">
+                              <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                          {styleScreenshots.map((s, i) => (
+                            <div key={`ss-${i}`} className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/10">
+                              <img src={s.thumb || s.url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                          {productImages.map((p, i) => (
+                            <div key={`prod-${i}`} className="w-11 h-11 rounded-xl overflow-hidden ring-1 ring-white/10">
+                              <img src={p.thumb || p.url} alt="" className="w-full h-full object-cover" />
+                            </div>
                           ))}
                         </div>
-                      )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Use brand colors toggle */}
+                {logoBrandColors.length > 0 && (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-2xl" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div className="flex items-center gap-2.5">
+                      <Palette className="h-3.5 w-3.5 text-white/35" />
+                      <span className="text-xs text-white/60">Usar cores da marca</span>
                     </div>
+                    <button
+                      onClick={() => setUseBrandColors(!useBrandColors)}
+                      className="relative w-10 h-5.5 rounded-full transition-colors cursor-pointer"
+                      style={{ backgroundColor: useBrandColors ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)' }}>
+                      <span className={`absolute top-0.5 ${useBrandColors ? 'left-5' : 'left-0.5'} w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm`} />
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Brand references */}
-              {referenceImages.filter(r => r.category === 'brand').length > 0 && (
+                {/* Visual idea */}
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Referências de marca</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {referenceImages.filter(r => r.category === 'brand').map((ref, i) => (
-                      <div key={i} className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
-                        <img src={ref.thumb} alt={ref.label} className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-[10px] font-semibold text-white/35 uppercase tracking-[0.08em]">Ideia visual (opcional)</p>
+                  <textarea
+                    value={recreateVisualIdea}
+                    onChange={(e) => setRecreateVisualIdea(e.target.value)}
+                    placeholder="Ex: neon azul, estilo cyberpunk..."
+                    rows={3}
+                    className="w-full rounded-xl text-xs text-white/80 placeholder:text-white/20 resize-none focus:outline-none focus:ring-1 p-3"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', focusRingColor: 'rgba(255,255,255,0.15)' }}
+                  />
                 </div>
-              )}
 
-              {/* Screenshots */}
-              {styleScreenshots.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Screenshots</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {styleScreenshots.map((s, i) => (
-                      <div key={i} className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
-                        <img src={s.thumb || s.url} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Product images */}
-              {productImages.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Produto</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {productImages.map((p, i) => (
-                      <div key={i} className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-white/10">
-                        <img src={p.thumb || p.url} alt={`Produto ${i + 1}`} className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Use brand colors toggle */}
-              {logoBrandColors.length > 0 && (
-                <div className="flex items-center justify-between py-3 px-4 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div className="flex items-center gap-2">
-                    <Palette className="h-4 w-4 text-white/40" />
-                    <span className="text-sm text-white/70">Usar cores da marca</span>
-                  </div>
+                {/* Actions */}
+                <div className="flex gap-2.5 pt-1">
                   <button
-                    onClick={() => setUseBrandColors(!useBrandColors)}
-                    className={`relative w-10 h-5.5 rounded-full transition-colors ${useBrandColors ? '' : ''}`}
-                    style={{ backgroundColor: useBrandColors ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)' }}>
-                    <span className={`absolute top-0.5 ${useBrandColors ? 'left-5' : 'left-0.5'} w-4.5 h-4.5 rounded-full bg-white transition-all shadow-sm`} />
+                    onClick={() => {
+                      const config = pendingRecreateConfig;
+                      setPendingRecreateConfig(null);
+                      if (recreateVisualIdea.trim()) {
+                        setAdvancedVisualIdea(recreateVisualIdea.trim());
+                      }
+                      setActiveMarketplaceStyle(config);
+                      setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+                      propertyListRef.current = propertyList;
+                      activeMarketplaceStyleRef.current = config;
+                      generationSnapshotRef.current = {
+                        isRealEstate: !!config?.is_real_estate,
+                        realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
+                        propertyList: JSON.parse(JSON.stringify(propertyList)),
+                        marketplaceStyle: config ? { ...config } : null,
+                      };
+                      setTransitionToGenerate(true);
+                      setCurrentCarouselId(null);
+                      const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
+                      setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
+                    }}
+                    className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white transition-all hover:opacity-90 cursor-pointer flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.7) 100%)', boxShadow: '0 4px 20px hsl(var(--primary)/0.25)' }}>
+                    <Sparkles className="h-4 w-4" />
+                    Gerar agora
+                  </button>
+                  <button
+                    onClick={() => setPendingRecreateConfig(null)}
+                    className="px-5 py-3 rounded-2xl text-xs font-medium text-white/40 hover:text-white/60 transition-colors cursor-pointer"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                    Cancelar
                   </button>
                 </div>
-              )}
-
-              {/* Visual idea */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Ideia visual (opcional)</p>
-                <Textarea
-                  value={recreateVisualIdea}
-                  onChange={(e) => setRecreateVisualIdea(e.target.value)}
-                  placeholder="Ex: usar neon azul no fundo, estilo cyberpunk, mãos segurando o celular..."
-                  className="!bg-white/[0.03] !border-white/[0.06] !text-white text-sm min-h-[80px] resize-none focus:!border-white/20 focus:!ring-0"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    const config = pendingRecreateConfig;
-                    setPendingRecreateConfig(null);
-                    // Apply visual idea to advancedVisualIdea so it gets used in generation
-                    if (recreateVisualIdea.trim()) {
-                      setAdvancedVisualIdea(recreateVisualIdea.trim());
-                    }
-                    setActiveMarketplaceStyle(config);
-                    setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
-                    propertyListRef.current = propertyList;
-                    activeMarketplaceStyleRef.current = config;
-                    generationSnapshotRef.current = {
-                      isRealEstate: !!config?.is_real_estate,
-                      realEstateMode: (config?.real_estate_mode as 'single' | 'multiple') || 'single',
-                      propertyList: JSON.parse(JSON.stringify(propertyList)),
-                      marketplaceStyle: config ? { ...config } : null,
-                    };
-                    setTransitionToGenerate(true);
-                    setCurrentCarouselId(null);
-                    const isSinglePost = contentMode === 'single-post' || (carouselData?.cards?.length === 1);
-                    setTimeout(() => isSinglePost ? generateSinglePost() : generateContent(), 1200);
-                  }}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 cursor-pointer"
-                  style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.8) 100%)' }}>
-                  <Sparkles className="h-4 w-4 inline mr-1.5" />
-                  Gerar agora
-                </button>
-                <button
-                  onClick={() => setPendingRecreateConfig(null)}
-                  className="px-4 py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white/70 transition-colors cursor-pointer"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                  Cancelar
-                </button>
               </div>
             </motion.div>
           </motion.div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* ===== FULL GENERATION CONFIG MODAL ===== */}

@@ -322,7 +322,9 @@ Retorne APENAS a legenda pronta, sem explicações, sem hashtags.`;
         }),
       });
       const aiData = await aiRes.json();
-      const caption = aiData.choices?.[0]?.message?.content || "";
+      let caption = aiData.choices?.[0]?.message?.content || "";
+      // Strip any hashtags the model may have included
+      caption = caption.replace(/#\S+/g, '').replace(/\s{2,}/g, ' ').trim().slice(0, 600);
 
       return new Response(JSON.stringify({ success: true, caption }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

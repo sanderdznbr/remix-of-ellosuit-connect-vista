@@ -466,7 +466,6 @@ function LoggedInPricing() {
   const maxCredits = planConfig?.credits || 0;
 
   const handleTabChange = (tab: string) => {
-    const { routeFromTab } = require('@/utils/dashboard-routes');
     navigate(routeFromTab(tab));
   };
 

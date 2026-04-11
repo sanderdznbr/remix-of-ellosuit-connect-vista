@@ -160,7 +160,6 @@ const MarketplaceStyleDetail: React.FC = () => {
   };
 
   const handleTabChange = (tab: string) => {
-    const { routeFromTab } = require('@/utils/dashboard-routes');
     setSidebarTab(tab);
     setSidebarOpen(false);
     navigate(routeFromTab(tab));

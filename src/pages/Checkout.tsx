@@ -585,7 +585,6 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const handleTabChange = (tab: string) => {
-    const { routeFromTab } = require('@/utils/dashboard-routes');
     navigate(routeFromTab(tab));
   };
 

@@ -7258,7 +7258,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="w-10 flex items-center justify-start">
                 {user ? (
                   <button
-                    onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); }}
+                    onClick={() => { setShowWelcome(true); setCurrentCarouselId(null); navigate('/'); }}
                     className="p-2 rounded-xl hover:bg-white/10 transition-colors"
                   >
                     <Home className="w-5 h-5 text-white/60" />
@@ -7353,11 +7353,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       setSidebarDrawerOpen(false);
                       setShowWelcome(true);
                       setCurrentCarouselId(null);
+                      navigate(tab === 'home' ? '/' : `/${tab}`);
                     }}
                     onSearch={() => {
                       setSidebarDrawerOpen(false);
                       setShowWelcome(true);
                       setCurrentCarouselId(null);
+                      navigate('/projetos');
                     }}
                   />
                   <button onClick={() => setSidebarDrawerOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">

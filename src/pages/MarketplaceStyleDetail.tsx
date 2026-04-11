@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { ArrowLeft, ShoppingBag, Check, Sparkles, Crown, CreditCard, Coins } from 'lucide-react';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import { routeFromTab } from '@/utils/dashboard-routes';
 import CommunityPosts from '@/components/Marketplace/CommunityPosts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X } from 'lucide-react';
@@ -161,9 +162,7 @@ const MarketplaceStyleDetail: React.FC = () => {
   const handleTabChange = (tab: string) => {
     setSidebarTab(tab);
     setSidebarOpen(false);
-    if (tab === 'home') navigate('/');
-    else if (tab === 'projects') navigate('/');
-    else if (tab === 'marketplace') navigate('/');
+    navigate(routeFromTab(tab));
   };
 
   const content = (
@@ -171,7 +170,7 @@ const MarketplaceStyleDetail: React.FC = () => {
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Back */}
         <button
-          onClick={() => navigate('/?tab=marketplace')}
+          onClick={() => navigate('/marketplace')}
           className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors mb-6 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar ao Marketplace

@@ -5,6 +5,7 @@ import { Check, ChevronDown, X, Zap, Loader2, Gift, Copy, Ticket } from 'lucide-
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import { routeFromTab } from '@/utils/dashboard-routes';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
 
@@ -465,8 +466,7 @@ function LoggedInPricing() {
   const maxCredits = planConfig?.credits || 0;
 
   const handleTabChange = (tab: string) => {
-    if (tab === 'home') navigate('/');
-    else if (tab === 'projects') navigate('/');
+    navigate(routeFromTab(tab));
   };
 
   const handleRedeemCode = async () => {

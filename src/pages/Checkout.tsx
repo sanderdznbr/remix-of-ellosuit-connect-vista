@@ -584,9 +584,8 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const handleTabChange = (tab: string) => {
-    if (tab === 'home') navigate('/');
-    else if (tab === 'projects') navigate('/');
-    else if (tab === 'pricing') navigate('/precos');
+    const { routeFromTab } = require('@/utils/dashboard-routes');
+    navigate(routeFromTab(tab));
   };
 
   if (loading) {

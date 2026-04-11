@@ -1894,7 +1894,7 @@ The image must look like it was shot by a professional photographer or designed 
       if (!error && data?.caption) {
         setPostCaption(data.caption);
       } else {
-        const fallback = `${carouselData?.title || topic}\n\n📌 Salve esse post para consultar depois!\n\n#${topic.split(' ').slice(0, 3).map(w => w.replace(/[^a-zA-ZÀ-ú0-9]/g, '')).filter(Boolean).join(' #')}`;
+        const fallback = `${carouselData?.title || topic}\n\n📌 Salve esse post para consultar depois!`;
         setPostCaption(fallback);
       }
     } catch {

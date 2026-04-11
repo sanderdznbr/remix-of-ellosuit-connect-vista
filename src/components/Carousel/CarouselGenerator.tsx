@@ -9102,7 +9102,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/60 z-[60]"
+                    className="fixed inset-0 bg-black/60 z-[70]"
                     onClick={() => setShowCardActionSheet(false)}
                   />
                   <motion.div
@@ -9111,7 +9111,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl"
+                    className="fixed bottom-0 left-0 right-0 z-[71] rounded-t-2xl"
                     style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
                   >
                     <div className="flex justify-center py-2.5">

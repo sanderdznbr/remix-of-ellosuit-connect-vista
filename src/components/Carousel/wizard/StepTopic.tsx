@@ -232,8 +232,8 @@ const StepTopic: React.FC<Props> = ({
           )}
           {searchingWeb && !webSearchResult && (
             <div className="flex items-center gap-3 py-3">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-400/50" />
-              <span className="text-xs text-blue-300/40">Pesquisando na web...</span>
+              <Loader2 className="h-4 w-4 animate-spin" style={{ color: `rgba(${accentRgb},0.5)` }} />
+              <span className="text-xs" style={{ color: `rgba(${accentRgb},0.4)` }}>Pesquisando na web...</span>
             </div>
           )}
         </>

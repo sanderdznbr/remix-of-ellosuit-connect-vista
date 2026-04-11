@@ -518,6 +518,7 @@ const CarouselGenerator: React.FC = () => {
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
   const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
+  const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
   const tweetCardPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -9180,7 +9181,160 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
-            {/* ===== ADVANCED MODE: Instagram Phone Mockup ===== */}
+            {/* ===== Mobile Tools Bottom Sheet (basic mode) ===== */}
+            <AnimatePresence>
+              {showMobileToolsSheet && resultViewMode === 'basic' && (
+                <>
+                  <motion.div
+                    key="tools-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/60 z-[60]"
+                    onClick={() => setShowMobileToolsSheet(false)}
+                  />
+                  <motion.div
+                    key="tools-sheet"
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl flex flex-col"
+                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '85dvh', paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+                  >
+                    {/* Drag handle */}
+                    <div className="flex justify-center py-2.5 shrink-0">
+                      <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                    </div>
+                    <div className="flex items-center justify-between px-5 pb-3 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <SlidersHorizontal className="h-5 w-5" style={{ color: themeHex }} />
+                        <h3 className="font-bold text-white text-base">Ferramentas</h3>
+                      </div>
+                      <button onClick={() => setShowMobileToolsSheet(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                        <X className="h-4 w-4 text-white/60" />
+                      </button>
+                    </div>
+
+                    <div className="overflow-y-auto flex-1 px-4 pb-6" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+                      {/* Card info */}
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3 text-[11px]" style={{ backgroundColor: `rgba(${themeRgb},0.06)`, border: `1px solid rgba(${themeRgb},0.12)` }}>
+                        <span className="font-bold uppercase tracking-wider" style={{ color: themeHex }}>
+                          Card {activeCardIndex + 1}/{carouselData.cards.length}
+                        </span>
+                        <span className="text-white/20">•</span>
+                        <span className="text-white/50 truncate flex-1">{topic || 'Sem tema'}</span>
+                      </div>
+
+                      {/* Auto-save status */}
+                      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-white/40 border border-white/5 mb-3">
+                        {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
+                        {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save ativo'}
+                      </div>
+
+                      <div className="flex flex-col gap-0.5">
+                        {/* Editar texto */}
+                        <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
+                          className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors">
+                          <Pencil className="h-4.5 w-4.5" style={{ color: themeHex }} />
+                          <div className="text-left">
+                            <p className="text-[13px] text-white/85 font-medium">Editar texto</p>
+                            <p className="text-[10px] text-white/30">Altere título e corpo do card</p>
+                          </div>
+                        </button>
+
+                        {/* Regenerar foto */}
+                        {!isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}
+                            disabled={regeneratingCard === activeCardIndex}
+                            className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                            <Image className="h-4.5 w-4.5 text-blue-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/85 font-medium">Regenerar foto</p>
+                              <p className="text-[10px] text-white/30">Gerar nova imagem com IA</p>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Corrigir área */}
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
+                            className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors">
+                            <Pencil className="h-4.5 w-4.5 text-orange-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/85 font-medium">Corrigir área</p>
+                              <p className="text-[10px] text-white/30">Editar partes específicas da imagem</p>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Ver prompt */}
+                        {!isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
+                            className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors">
+                            <FileText className="h-4.5 w-4.5 text-yellow-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/85 font-medium">Ver prompt</p>
+                              <p className="text-[10px] text-white/30">Prompt usado na geração</p>
+                            </div>
+                          </button>
+                        )}
+
+                        <div className="h-px bg-white/[0.06] my-2" />
+
+                        {/* Criar novo mesmo prompt */}
+                        <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
+                          className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors">
+                          <RotateCcw className="h-4.5 w-4.5 text-green-400" />
+                          <div className="text-left">
+                            <p className="text-[13px] text-white/85 font-medium">Criar novo</p>
+                            <p className="text-[10px] text-white/30">Mesmo tema, outro estilo</p>
+                          </div>
+                        </button>
+
+                        {/* Regenerar tudo */}
+                        {carouselData.cards.length >= 2 && !isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setContinuousMode(false); regenerateAll(); }}
+                            disabled={regeneratingAll || regeneratingCard !== null}
+                            className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                            <RotateCcw className="h-4.5 w-4.5 text-orange-400" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/85 font-medium">Regenerar tudo</p>
+                              <p className="text-[10px] text-white/30">Novas imagens para todos os cards</p>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Adicionar card */}
+                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setShowAddCardMenu(true); }}
+                            className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors">
+                            <Plus className="h-4.5 w-4.5 text-white/50" />
+                            <div className="text-left">
+                              <p className="text-[13px] text-white/85 font-medium">Adicionar card</p>
+                              <p className="text-[10px] text-white/30">Inserir novo card ao carrossel</p>
+                            </div>
+                          </button>
+                        )}
+
+                        <div className="h-px bg-white/[0.06] my-2" />
+
+                        {/* Novo projeto */}
+                        <button onClick={() => { setShowMobileToolsSheet(false); resetWizardState(); }}
+                          className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.06] transition-colors">
+                          <Plus className="h-4.5 w-4.5 text-white/30" />
+                          <div className="text-left">
+                            <p className="text-[13px] text-white/50 font-medium">Novo projeto</p>
+                            <p className="text-[10px] text-white/20">Começar do zero</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
             {resultViewMode === 'advanced' && (
             <>
               <div className="flex justify-center mb-2">
@@ -9796,7 +9950,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                     <span className="text-[10px] font-semibold text-white/70">Exportar</span>
                   </button>
-                  <button onClick={() => setShowInlineEditor(true)}
+                  <button onClick={() => { if (isMobileView) { setShowMobileToolsSheet(true); } else { setShowInlineEditor(true); } }}
                     className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-all hover:bg-white/[0.06]">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <SlidersHorizontal className="h-4 w-4 text-white/70" />

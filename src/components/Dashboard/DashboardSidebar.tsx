@@ -162,16 +162,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <div className="flex items-center">
           <button
             onClick={() => { onTabChange('projects'); closeSearch(); }}
-            className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+            className={`flex-1 flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
               activeTab === 'projects' || activeTab === 'starred'
                 ? 'text-white'
                 : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
             }`}
+            title={collapsed ? 'Conteúdos' : undefined}
           >
-            <FolderOpen className="w-4 h-4" />
-            Conteúdos
+            <FolderOpen className="w-4 h-4 shrink-0" />
+            {!collapsed && 'Conteúdos'}
           </button>
-          {(activeTab === 'projects' || activeTab === 'starred') && (
+          {!collapsed && (activeTab === 'projects' || activeTab === 'starred') && (
             <button
               onClick={() => { onTabChange(activeTab === 'starred' ? 'projects' : 'starred'); closeSearch(); }}
               className="p-1.5 rounded-md cursor-pointer transition-colors mr-1"
@@ -183,36 +184,39 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
         <button
           onClick={() => { onTabChange('gallery'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'gallery'
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Galeria' : undefined}
         >
-          <ImageIcon className="w-4 h-4" />
-          Galeria
+          <ImageIcon className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Galeria'}
         </button>
         <button
           onClick={() => { onTabChange('prompts'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'prompts'
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Prompts' : undefined}
         >
-          <MessageSquareText className="w-4 h-4" />
-          Prompts
+          <MessageSquareText className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Prompts'}
         </button>
         <button
           onClick={() => { onTabChange('marketplace'); closeSearch(); }}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
             activeTab === 'marketplace'
               ? 'text-white'
               : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
           }`}
+          title={collapsed ? 'Estilos' : undefined}
         >
-          <ShoppingBag className="w-4 h-4" />
-          Estilos
+          <ShoppingBag className="w-4 h-4 shrink-0" />
+          {!collapsed && 'Estilos'}
         </button>
       </div>
 

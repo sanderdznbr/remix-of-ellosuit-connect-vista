@@ -8593,12 +8593,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 >
                   <Home className="w-5 h-5 text-white/60" />
                 </button>
-                <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg" style={{ color: themeHex, backgroundColor: `rgba(${themeRgb},0.12)`, border: `1px solid rgba(${themeRgb},0.25)` }}>
-                  {wizardMode === 'extreme' ? 'Modo Extreme' : wizardMode === 'advanced' ? 'Modo Avançado' : wizardMode === 'tweet' || wizardMode === 'tweet2' ? 'Tweet Mode' : 'Modo Simples'}
-                  {activeMarketplaceStyle?.name && (
-                    <>, tema {activeMarketplaceStyle.name}</>
-                  )}
-                </span>
               </div>
               <button
                 onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
@@ -8977,19 +8971,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* ===== BASIC MODE: full-width horizontal snap gallery (mobile only) ===== */}
             {resultViewMode === 'basic' && (
               <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}>
-                {/* Mode toggle — top center */}
-                <div className="flex items-center gap-0.5 mb-4 p-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <button
-                    className="text-[11px] px-4 py-1.5 rounded-full font-semibold transition-all"
-                    style={{ backgroundColor: `rgba(${themeRgb},0.2)`, color: themeHex, border: `1px solid rgba(${themeRgb},0.3)` }}>
-                    Simples
-                  </button>
-                  <button onClick={() => setResultViewMode('advanced')}
-                    className="text-[11px] px-4 py-1.5 rounded-full font-medium transition-all hover:text-white/60"
-                    style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    Avançado
-                  </button>
-                </div>
 
                 {/* Main card — single large view with swipe */}
                 <div

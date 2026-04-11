@@ -34,6 +34,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'home');
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
+  });
   const [profileOpen, setProfileOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [monthlyCredits, setMonthlyCredits] = useState<number>(0);
@@ -315,10 +318,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
     );
   }
 
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
+      return next;
+    });
+  };
+
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-      <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
+      <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebarCollapse} />
       {renderContent()}
+    </div>
+  );
+};
     </div>
   );
 };

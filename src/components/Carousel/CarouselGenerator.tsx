@@ -9754,7 +9754,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             )}
 
             {/* ===== FIXED BOTTOM BAR — mobile basic mode ===== */}
-            {isMobileView && resultViewMode === 'basic' && !isGuest && (
+            {resultViewMode === 'basic' && !isGuest && (
               <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-3 px-4 py-3"
                 style={{
                   backgroundColor: 'rgba(10,10,15,0.95)',

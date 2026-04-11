@@ -7263,8 +7263,49 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div className="w-9 h-9" />
                 )}
               </div>
-              <div className="text-right text-[12px] sm:text-sm font-semibold text-white/35">
-                Etapa {currentWizardDisplayStep} de {visibleWizardSteps.length}
+              {/* Named progress bar */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar max-w-[70%]">
+                {visibleWizardSteps.map((step, i) => {
+                  const isCurrent = i + 1 === currentWizardDisplayStep;
+                  const isPast = i + 1 < currentWizardDisplayStep;
+                  const shortNames: Record<string, string> = {
+                    'Modo': 'Modo', 'Estilo': 'Estilo', 'Tema': 'Tema', 'Formato': 'Qtd',
+                    'Personalização': 'Brand', 'Velocidade': 'Gerar', 'Roteiro': 'Roteiro',
+                    'Cores': 'Cores', 'Fontes': 'Fontes', 'Pesquisa': 'Web', 'Fotos': 'Fotos',
+                    'Screenshots': 'Prints', 'Produto': 'Produto', 'Ideia Visual': 'Ideia',
+                    'Origem': 'Origem', 'Visão': 'Visão', 'Detalhes': 'Detalhes',
+                    'Referências': 'Refs', 'Resumo': 'Resumo', 'Animação': 'Anim',
+                    'Estilos de Fundo': 'Fundo', 'Tweet Config': 'Config', 'tweet2': 'Config',
+                    'Fotos Imóvel': 'Fotos', 'Crop Imóvel': 'Crop', 'Info Imóvel': 'Info',
+                    'Roteiro Tweet': 'Roteiro', 'Roteiro Tweet2': 'Roteiro', 'Fotos Tweet2': 'Fotos',
+                  };
+                  const label = shortNames[step] || step;
+                  return (
+                    <div key={step} className="flex items-center gap-1 flex-shrink-0">
+                      <div
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-all"
+                        style={{
+                          backgroundColor: isCurrent ? `rgba(${modeTheme.rgb},0.15)` : 'transparent',
+                        }}
+                      >
+                        <div
+                          className="w-1.5 h-1.5 rounded-full transition-all flex-shrink-0"
+                          style={{
+                            backgroundColor: isCurrent ? modeTheme.hex : isPast ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.12)',
+                          }}
+                        />
+                        <span
+                          className="text-[10px] font-medium whitespace-nowrap transition-all"
+                          style={{
+                            color: isCurrent ? modeTheme.hex : isPast ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)',
+                          }}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

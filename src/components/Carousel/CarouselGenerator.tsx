@@ -500,6 +500,7 @@ const CarouselGenerator: React.FC = () => {
    const [showFullConfigModal, setShowFullConfigModal] = useState(false);
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);
   const [showStylePanel, setShowStylePanel] = useState(false);
+  const [showFullScreenStylePicker, setShowFullScreenStylePicker] = useState(false);
   const [styleChangeSource, setStyleChangeSource] = useState<'toolbar' | 'add-card' | 'recreate'>('toolbar');
   const [pendingRecreateConfig, setPendingRecreateConfig] = useState<any>(null);
   const [recreateVisualIdea, setRecreateVisualIdea] = useState('');
@@ -9404,8 +9405,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button
                           onClick={() => {
                             setShowStylePreview(false);
-                            setStyleChangeSource('toolbar');
-                            setShowStylePanel(true);
+                            setShowFullScreenStylePicker(true);
                           }}
                           className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
                           style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
@@ -9416,6 +9416,64 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     </div>
                   </motion.div>
                 </>
+              )}
+            </AnimatePresence>
+
+            {/* ===== Full-Screen Style Picker (Netflix-style) ===== */}
+            <AnimatePresence>
+              {showFullScreenStylePicker && (
+                <motion.div
+                  key="fullscreen-style-picker"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[80] flex flex-col"
+                  style={{ backgroundColor: '#0A0A0F' }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style={{ backgroundColor: '#0A0A0F' }}>
+                    <button
+                      onClick={() => setShowFullScreenStylePicker(false)}
+                      className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                      <span className="text-sm font-medium">Voltar</span>
+                    </button>
+                    <span className="text-sm font-bold text-white">Escolher novo estilo</span>
+                    <div className="w-16" />
+                  </div>
+
+                  {/* Current style indicator */}
+                  {activeMarketplaceStyle && (
+                    <div className="mx-4 mt-3 mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {activeMarketplaceStyle.preview_urls?.[0] && (
+                        <img src={activeMarketplaceStyle.preview_urls[0]} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 opacity-50" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-medium text-white/40 block truncate">{activeMarketplaceStyle.name}</span>
+                        <span className="text-[10px] text-white/25">Estilo atual — selecione outro abaixo</span>
+                      </div>
+                      <Lock className="h-4 w-4 text-white/20 flex-shrink-0" />
+                    </div>
+                  )}
+
+                  {/* StepStyleSelect */}
+                  <div className="flex-1 overflow-y-auto px-2 pt-2 pb-8">
+                    <StepStyleSelect
+                      bgColor={bgColor} setBgColor={setBgColor}
+                      accentColor={accentColor} setAccentColor={setAccentColor}
+                      textColor={textColor} setTextColor={setTextColor}
+                      selectedFont={selectedFont} setSelectedFont={setSelectedFont}
+                      onApplyMarketplaceStyle={(config) => {
+                        if (config?.id === activeMarketplaceStyle?.id) return; // block current
+                        setShowFullScreenStylePicker(false);
+                        setStyleChangeSource('toolbar');
+                        setRecreateVisualIdea('');
+                        setPendingRecreateConfig(config);
+                      }}
+                    />
+                  </div>
+                </motion.div>
               )}
             </AnimatePresence>
 
@@ -10144,11 +10202,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <ImageIcon className="h-4 w-4" /> Baixar tudo WEBP
                     </button>
                     <div className="h-px bg-white/10 my-1" />
-                    <button onClick={() => { setShowExportMenu(false); setShowPublishDialog(true); }}
-                      className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-pink-500/20"
-                      style={{ background: 'linear-gradient(135deg, rgba(131,58,180,0.15), rgba(225,48,108,0.15))' }}>
-                      <Instagram className="h-4 w-4 text-pink-400" /> Publicar no Instagram
-                    </button>
                     <button onClick={() => { setShowExportMenu(false); setCommunityCaption(topic || ''); setShowCommunityPublish(true); }}
                       className="w-full px-4 py-3 rounded-xl text-sm font-medium text-white hover:bg-white/10 transition-colors flex items-center gap-3 border border-blue-500/20"
                       style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15))' }}>

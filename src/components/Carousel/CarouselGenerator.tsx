@@ -9190,7 +9190,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
-            {/* ===== Mobile Tools Bottom Sheet (basic mode) ===== */}
+            {/* ===== Mobile Tools Popup (basic mode) — centered modal ===== */}
             <AnimatePresence>
               {showMobileToolsSheet && resultViewMode === 'basic' && (
                 <>
@@ -9199,109 +9199,116 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/60 z-[70]"
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70]"
                     onClick={() => setShowMobileToolsSheet(false)}
                   />
                   <motion.div
-                    key="tools-sheet"
-                    initial={{ y: '100%' }}
-                    animate={{ y: 0 }}
-                    exit={{ y: '100%' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="fixed bottom-0 left-0 right-0 z-[71] rounded-t-2xl"
-                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)', paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+                    key="tools-popup"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                    className="fixed inset-0 z-[71] flex items-center justify-center p-6 pointer-events-none"
                   >
-                    {/* Drag handle */}
-                    <div className="flex justify-center py-2">
-                      <div className="w-8 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
-                    </div>
-
-                    {/* Compact grid of actions */}
-                    <div className="px-4 pb-2">
-                      <div className="grid grid-cols-4 gap-2">
-                        {/* Editar texto */}
-                        <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
-                          className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `rgba(${themeRgb},0.12)` }}>
-                            <Pencil className="h-4 w-4" style={{ color: themeHex }} />
-                          </div>
-                          <span className="text-[10px] text-white/60 font-medium">Editar</span>
+                    <div
+                      className="w-full max-w-[340px] rounded-2xl pointer-events-auto"
+                      style={{ backgroundColor: '#151520', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+                        <div className="flex items-center gap-2">
+                          <SlidersHorizontal className="h-4 w-4" style={{ color: themeHex }} />
+                          <span className="text-sm font-bold text-white">Ferramentas</span>
+                        </div>
+                        <button onClick={() => setShowMobileToolsSheet(false)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                          <X className="h-4 w-4 text-white/40" />
                         </button>
+                      </div>
 
-                        {/* Regenerar foto */}
-                        {!isGuest && (
-                          <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}
-                            disabled={regeneratingCard === activeCardIndex}
-                            className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.12)' }}>
-                              <Image className="h-4 w-4 text-blue-400" />
-                            </div>
-                            <span className="text-[10px] text-white/60 font-medium">Regen foto</span>
-                          </button>
-                        )}
+                      {/* Card indicator */}
+                      <div className="px-5 pb-3">
+                        <span className="text-[10px] text-white/30">Card {activeCardIndex + 1}/{carouselData.cards.length}</span>
+                      </div>
 
-                        {/* Corrigir área */}
-                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                          <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
+                      {/* Grid */}
+                      <div className="px-4 pb-5">
+                        <div className="grid grid-cols-4 gap-1">
+                          <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
                             className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
-                              <Pencil className="h-4 w-4 text-orange-400" />
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `rgba(${themeRgb},0.12)` }}>
+                              <Pencil className="h-4 w-4" style={{ color: themeHex }} />
                             </div>
-                            <span className="text-[10px] text-white/60 font-medium">Corrigir</span>
+                            <span className="text-[10px] text-white/60 font-medium">Editar</span>
                           </button>
-                        )}
 
-                        {/* Ver prompt */}
-                        {!isGuest && (
-                          <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
+                          {!isGuest && (
+                            <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}
+                              disabled={regeneratingCard === activeCardIndex}
+                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.12)' }}>
+                                <Image className="h-4 w-4 text-blue-400" />
+                              </div>
+                              <span className="text-[10px] text-white/60 font-medium">Regen foto</span>
+                            </button>
+                          )}
+
+                          {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                            <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
+                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
+                                <Pencil className="h-4 w-4 text-orange-400" />
+                              </div>
+                              <span className="text-[10px] text-white/60 font-medium">Corrigir</span>
+                            </button>
+                          )}
+
+                          {!isGuest && (
+                            <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
+                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(250,204,21,0.12)' }}>
+                                <FileText className="h-4 w-4 text-yellow-400" />
+                              </div>
+                              <span className="text-[10px] text-white/60 font-medium">Prompt</span>
+                            </button>
+                          )}
+
+                          <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
                             className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(250,204,21,0.12)' }}>
-                              <FileText className="h-4 w-4 text-yellow-400" />
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(74,222,128,0.12)' }}>
+                              <RotateCcw className="h-4 w-4 text-green-400" />
                             </div>
-                            <span className="text-[10px] text-white/60 font-medium">Prompt</span>
+                            <span className="text-[10px] text-white/60 font-medium">Recriar</span>
                           </button>
-                        )}
 
-                        {/* Criar novo */}
-                        <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
-                          className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(74,222,128,0.12)' }}>
-                            <RotateCcw className="h-4 w-4 text-green-400" />
-                          </div>
-                          <span className="text-[10px] text-white/60 font-medium">Recriar</span>
-                        </button>
+                          {carouselData.cards.length >= 2 && !isGuest && (
+                            <button onClick={() => { setShowMobileToolsSheet(false); setContinuousMode(false); regenerateAll(); }}
+                              disabled={regeneratingAll || regeneratingCard !== null}
+                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
+                                <RotateCcw className="h-4 w-4 text-orange-400" />
+                              </div>
+                              <span className="text-[10px] text-white/60 font-medium">Regen tudo</span>
+                            </button>
+                          )}
 
-                        {/* Regenerar tudo */}
-                        {carouselData.cards.length >= 2 && !isGuest && (
-                          <button onClick={() => { setShowMobileToolsSheet(false); setContinuousMode(false); regenerateAll(); }}
-                            disabled={regeneratingAll || regeneratingCard !== null}
-                            className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
-                              <RotateCcw className="h-4 w-4 text-orange-400" />
-                            </div>
-                            <span className="text-[10px] text-white/60 font-medium">Regen tudo</span>
-                          </button>
-                        )}
+                          {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                            <button onClick={() => { setShowMobileToolsSheet(false); setShowAddCardMenu(true); }}
+                              className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+                                <Plus className="h-4 w-4 text-white/50" />
+                              </div>
+                              <span className="text-[10px] text-white/60 font-medium">Add card</span>
+                            </button>
+                          )}
 
-                        {/* Adicionar card */}
-                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                          <button onClick={() => { setShowMobileToolsSheet(false); setShowAddCardMenu(true); }}
+                          <button onClick={() => { setShowMobileToolsSheet(false); resetWizardState(); }}
                             className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                              <Plus className="h-4 w-4 text-white/50" />
+                              <Plus className="h-4 w-4 text-white/30" />
                             </div>
-                            <span className="text-[10px] text-white/60 font-medium">Add card</span>
+                            <span className="text-[10px] text-white/40 font-medium">Novo</span>
                           </button>
-                        )}
-
-                        {/* Novo projeto */}
-                        <button onClick={() => { setShowMobileToolsSheet(false); resetWizardState(); }}
-                          className="flex flex-col items-center gap-1.5 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                            <Plus className="h-4 w-4 text-white/30" />
-                          </div>
-                          <span className="text-[10px] text-white/40 font-medium">Novo</span>
-                        </button>
+                        </div>
                       </div>
                     </div>
                   </motion.div>

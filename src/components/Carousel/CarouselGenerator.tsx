@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'; // tweet2-refresh
+import { createPortal } from 'react-dom';
 import { calculateCreditCost } from '@/utils/creditCost';
 import '@/styles/carousel-loader.css';
 import { buildPaletteFromColors, extractColorsFromImage } from '@/utils/extractColorsFromImage';
@@ -8577,9 +8578,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           <motion.div
             className="flex-1 flex flex-col items-center justify-start px-4 relative overflow-y-auto overflow-x-hidden"
             style={{ backgroundColor: '#0A0A0A' }}
-            initial={resultEntrance ? { opacity: 0, y: 40, scale: 0.97 } : false}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            initial={resultEntrance ? { opacity: 0 } : false}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
           >
             {/* Header bar */}
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>

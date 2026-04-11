@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Loader2, Wand2, Globe, Search, Settings, Image as ImageIcon, Layers } from 'lucide-react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Loader2, Wand2, Globe, Settings, Sparkles, Zap, Search, ExternalLink } from 'lucide-react';
 import { getAccentTheme, getThemeClasses } from './wizardTheme';
 import PromptMentionInput, { PromptMentionRef } from './PromptMention';
 
@@ -43,6 +43,61 @@ interface Props {
   setForceWebSearch?: (v: boolean) => void;
 }
 
+// Keywords that suggest the topic is news/current events
+const NEWS_KEYWORDS = [
+  'notícia', 'noticias', 'news', 'atualização', 'últimas', 'hoje',
+  'tendência', 'tendencias', 'trend', 'mercado', 'dados', 'estatística',
+  'pesquisa', 'estudo', 'relatório', 'report', 'ranking', 'top ',
+  'melhores', 'piores', 'preço', 'precos', 'salário', 'salarios',
+  'economia', 'política', 'eleição', 'governo', 'lei ', 'regulamentação',
+  'ia ', 'inteligência artificial', 'artificial intelligence', 'ai ',
+  'tecnologia', 'lançamento', 'release', 'update', 'nova versão',
+  'covid', 'pandemia', 'inflação', 'dólar', 'bitcoin', 'cripto',
+];
+
+// Keywords that suggest personal/brand content (no web search needed)
+const PERSONAL_KEYWORDS = [
+  'meu ', 'minha ', 'nosso', 'nossa', 'meus ', 'minhas ',
+  'meu negócio', 'minha empresa', 'minha marca', 'meu produto',
+  'dicas de', 'como fazer', 'tutorial', 'passo a passo',
+  'receita', 'treino', 'rotina', 'hábito', 'motivação',
+  'frase', 'reflexão', 'pensamento', 'quote',
+];
+
+function detectTopicType(text: string): 'news' | 'personal' | 'unknown' {
+  const lower = text.toLowerCase().trim();
+  if (!lower || lower.length < 8) return 'unknown';
+  
+  const newsScore = NEWS_KEYWORDS.filter(k => lower.includes(k)).length;
+  const personalScore = PERSONAL_KEYWORDS.filter(k => lower.includes(k)).length;
+  
+  if (newsScore > personalScore && newsScore >= 1) return 'news';
+  if (personalScore > newsScore && personalScore >= 1) return 'personal';
+  return 'unknown';
+}
+
+// AI-powered prompt suggestions based on the topic
+const SMART_SUGGESTIONS: { trigger: string[]; suggestion: string }[] = [
+  { trigger: ['pet', 'animal', 'cachorro', 'gato', 'veterinário'], suggestion: 'Adicione números ou estatísticas para mais impacto, ex: "5 cuidados..."' },
+  { trigger: ['comida', 'receita', 'restaurante', 'gastronomia', 'chef'], suggestion: 'Mencione ingredientes específicos ou técnicas culinárias para conteúdo mais rico' },
+  { trigger: ['fitness', 'treino', 'exercício', 'academia', 'musculação'], suggestion: 'Inclua o nível de dificuldade ou público-alvo (iniciante, avançado)' },
+  { trigger: ['marketing', 'vendas', 'negócio', 'empreendedor'], suggestion: 'Adicione dados de mercado ou cases de sucesso para mais credibilidade' },
+  { trigger: ['saúde', 'saude', 'bem-estar', 'medicina', 'doença'], suggestion: 'Referencie estudos ou profissionais da área para conteúdo confiável' },
+  { trigger: ['beleza', 'cabelo', 'pele', 'maquiagem', 'estética'], suggestion: 'Especifique o tipo de pele/cabelo ou tendência da temporada' },
+  { trigger: ['tecnologia', 'app', 'software', 'programação'], suggestion: 'Mencione ferramentas específicas ou comparações para engajar mais' },
+  { trigger: ['educação', 'estudo', 'aprendizado', 'curso'], suggestion: 'Inclua métodos comprovados ou benefícios tangíveis' },
+  { trigger: ['imóvel', 'casa', 'apartamento', 'imobiliária'], suggestion: 'Adicione faixa de preço, localização ou dicas de financiamento' },
+];
+
+function getSmartSuggestion(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const item of SMART_SUGGESTIONS) {
+    if (item.trigger.some(t => lower.includes(t))) return item.suggestion;
+  }
+  if (lower.length > 15) return 'Dica: quanto mais detalhes você der, melhor será o resultado da IA ✨';
+  return null;
+}
+
 const StepTopic: React.FC<Props> = ({
   topic, setTopic,
   cardCount, setCardCount,
@@ -59,6 +114,21 @@ const StepTopic: React.FC<Props> = ({
   const t = getThemeClasses(getAccentTheme(wizardMode));
   const [advancedMode, setAdvancedMode] = useState(false);
   const isSimple = wizardMode === 'simple';
+  const [autoDetected, setAutoDetected] = useState<'news' | 'personal' | 'unknown'>('unknown');
+
+  // Auto-detect topic type and toggle web search
+  useEffect(() => {
+    if (!setForceWebSearch) return;
+    const type = detectTopicType(topic);
+    setAutoDetected(type);
+    
+    if (type === 'news' && !forceWebSearch) {
+      setForceWebSearch(true);
+    }
+    // Don't auto-disable — let user control that
+  }, [topic]);
+
+  const smartSuggestion = topic.trim() ? getSmartSuggestion(topic) : null;
 
   const topicSuggestions = [
     { emoji: '🐾', label: 'Petshop', prompt: '5 cuidados essenciais com seu pet no verão' },
@@ -74,15 +144,15 @@ const StepTopic: React.FC<Props> = ({
   ];
 
   return (
-    <div className="space-y-6" style={{ minHeight: '300px' }}>
+    <div className="space-y-5" style={{ minHeight: '300px' }}>
       {/* Header with gear toggle */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-white mb-2">
+          <h2 className="text-2xl font-bold text-white mb-1">
             {advancedMode ? 'Texto direto na imagem' : 'Sobre o que é seu post?'}
           </h2>
           <p className="text-sm text-white/40">
-            {advancedMode ? 'Escreva exatamente o que a IA deve renderizar na imagem.' : 'Descreva o assunto ou clique em uma sugestão abaixo.'}
+            {advancedMode ? 'Escreva exatamente o que a IA deve renderizar na imagem.' : 'Descreva o assunto e a IA criará o conteúdo completo.'}
           </p>
         </div>
         {!isSimple && (
@@ -108,10 +178,8 @@ const StepTopic: React.FC<Props> = ({
               <textarea
                 value={topic}
                 onChange={e => setTopic(e.target.value)}
-                placeholder={skipWebSearch 
-                  ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
-                  : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
-                className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-12 border px-4 py-3 outline-none"
+                placeholder="Descreva o assunto do seu post com o máximo de detalhes possível. Quanto mais informações, melhor o resultado..."
+                className="!bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/25 rounded-2xl min-h-[180px] w-full resize-none text-base leading-relaxed focus:!border-purple-500/40 focus:!ring-0 pr-12 border px-5 py-4 outline-none transition-colors"
               />
             ) : (
               <PromptMentionInput
@@ -121,13 +189,11 @@ const StepTopic: React.FC<Props> = ({
                 mentionedPrompts={mentionedPrompts}
                 onMentionAdd={onMentionAdd || (() => {})}
                 onMentionRemove={onMentionRemove || (() => {})}
-                placeholder={skipWebSearch 
-                  ? "Descreva tudo sobre o assunto aqui. Quanto mais detalhes, melhor o resultado..." 
-                  : "Ex: 5 dicas de contabilidade para pequenas empresas..."}
-                className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[140px] w-full resize-none text-base leading-relaxed focus:!border-white/20 focus:!ring-0 pr-24 border px-4 py-3 outline-none"
+                placeholder="Descreva o assunto do seu post com o máximo de detalhes possível. Quanto mais informações, melhor o resultado..."
+                className="!bg-white/[0.04] !border-white/[0.08] !text-white !placeholder-white/25 rounded-2xl min-h-[180px] w-full resize-none text-base leading-relaxed focus:!border-purple-500/40 focus:!ring-0 pr-24 border px-5 py-4 outline-none transition-colors"
               />
             )}
-            <div className="absolute bottom-3 right-3 flex items-center gap-2 z-20">
+            <div className="absolute bottom-4 right-4 flex items-center gap-2 z-20">
               {!guestMode && (
                 <button
                   onClick={() => mentionRef.current?.triggerMention()}
@@ -140,13 +206,50 @@ const StepTopic: React.FC<Props> = ({
               <button
                 onClick={onEnhance}
                 disabled={enhancingPrompt || !topic.trim()}
-                className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white/40 hover:text-white/70 transition-all disabled:opacity-20"
-                title="Melhorar com IA"
+                className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 hover:text-purple-200 transition-all disabled:opacity-20 border border-purple-500/20"
+                title="Melhorar prompt com IA"
               >
-                {enhancingPrompt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                {enhancingPrompt ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                <span className="text-xs font-medium">Melhorar</span>
               </button>
             </div>
           </div>
+
+          {/* AI Smart Suggestion */}
+          {smartSuggestion && !enhancingPrompt && (
+            <div 
+              className="flex items-start gap-3 px-4 py-3 rounded-xl"
+              style={{
+                backgroundColor: 'rgba(139,92,246,0.06)',
+                border: '1px solid rgba(139,92,246,0.12)',
+              }}
+            >
+              <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: '#A78BFA' }} />
+              <p className="text-xs leading-relaxed" style={{ color: 'rgba(167,139,250,0.8)' }}>
+                {smartSuggestion}
+              </p>
+            </div>
+          )}
+
+          {/* Auto-detection badge */}
+          {autoDetected !== 'unknown' && topic.trim().length > 10 && (
+            <div className="flex items-center gap-2">
+              <span 
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
+                style={{
+                  backgroundColor: autoDetected === 'news' ? 'rgba(59,130,246,0.1)' : 'rgba(34,197,94,0.1)',
+                  color: autoDetected === 'news' ? '#93C5FD' : '#86EFAC',
+                  border: `1px solid ${autoDetected === 'news' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)'}`,
+                }}
+              >
+                {autoDetected === 'news' ? (
+                  <><Globe className="h-3 w-3" /> Conteúdo informativo detectado</>
+                ) : (
+                  <><Zap className="h-3 w-3" /> Conteúdo autoral detectado</>
+                )}
+              </span>
+            </div>
+          )}
 
           {/* Topic suggestions */}
           {!topic.trim() && (
@@ -172,26 +275,62 @@ const StepTopic: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Force web search toggle */}
+          {/* Web search toggle — redesigned */}
           {setForceWebSearch && !classifyingTopic && !searchingWeb && (
-            <button
-              onClick={() => setForceWebSearch(!forceWebSearch)}
-              className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all w-full"
+            <div
+              className="rounded-2xl overflow-hidden transition-all"
               style={{
-                backgroundColor: forceWebSearch ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${forceWebSearch ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                backgroundColor: forceWebSearch ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${forceWebSearch ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.06)'}`,
               }}
             >
-              <Globe className="h-4 w-4" style={{ color: forceWebSearch ? '#60A5FA' : 'rgba(255,255,255,0.3)' }} />
-              <span className="text-sm" style={{ color: forceWebSearch ? '#93C5FD' : 'rgba(255,255,255,0.4)' }}>
-                Buscar na web (notícias / dados atuais)
-              </span>
-              <div className="ml-auto">
-                <div className={`relative w-9 h-5 rounded-full transition-colors ${forceWebSearch ? 'bg-blue-500' : 'bg-white/[0.1]'}`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${forceWebSearch ? 'translate-x-4' : 'translate-x-0'}`} />
+              <button
+                onClick={() => setForceWebSearch(!forceWebSearch)}
+                className="flex items-center gap-3 w-full px-4 py-3.5 transition-all"
+              >
+                <div 
+                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    backgroundColor: forceWebSearch ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)',
+                  }}
+                >
+                  <Globe className="h-4.5 w-4.5" style={{ color: forceWebSearch ? '#60A5FA' : 'rgba(255,255,255,0.3)' }} />
                 </div>
-              </div>
-            </button>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium" style={{ color: forceWebSearch ? '#BFDBFE' : 'rgba(255,255,255,0.5)' }}>
+                      Pesquisa inteligente na web
+                    </span>
+                    <span 
+                      className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                      style={{
+                        backgroundColor: 'rgba(139,92,246,0.15)',
+                        color: '#C4B5FD',
+                        border: '1px solid rgba(139,92,246,0.25)',
+                      }}
+                    >
+                      +1 crédito
+                    </span>
+                  </div>
+                  <p className="text-[11px] mt-0.5" style={{ color: forceWebSearch ? 'rgba(147,197,253,0.6)' : 'rgba(255,255,255,0.25)' }}>
+                    Busca fontes reais, notícias e dados atualizados para enriquecer seu conteúdo
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className={`relative w-10 h-[22px] rounded-full transition-colors ${forceWebSearch ? 'bg-blue-500' : 'bg-white/[0.1]'}`}>
+                    <span className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${forceWebSearch ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                  </div>
+                </div>
+              </button>
+              
+              {forceWebSearch && (
+                <div className="px-4 pb-3 flex items-center gap-4 text-[10px]" style={{ color: 'rgba(147,197,253,0.45)' }}>
+                  <span className="flex items-center gap-1"><Search className="h-3 w-3" /> Fontes verificadas</span>
+                  <span className="flex items-center gap-1"><ExternalLink className="h-3 w-3" /> Citações reais</span>
+                  <span className="flex items-center gap-1"><Zap className="h-3 w-3" /> Dados atualizados</span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Web search loading indicators */}
@@ -204,8 +343,8 @@ const StepTopic: React.FC<Props> = ({
 
           {searchingWeb && !webSearchResult && (
             <div className="flex items-center gap-3 py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-white/40" />
-              <span className="text-sm text-white/40">Pesquisando na web...</span>
+              <Loader2 className="h-5 w-5 animate-spin text-blue-400/60" />
+              <span className="text-sm text-blue-300/50">Pesquisando fontes reais na web...</span>
             </div>
           )}
         </>
@@ -224,7 +363,6 @@ const StepTopic: React.FC<Props> = ({
           <p className="text-[11px] text-white/25">Este texto será renderizado pela IA diretamente na imagem com tipografia editorial.</p>
         </div>
       )}
-
     </div>
   );
 };

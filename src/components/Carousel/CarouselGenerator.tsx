@@ -5,6 +5,12 @@ import '@/styles/carousel-loader.css';
 import { buildPaletteFromColors, extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';
 import ellocontentProfile from '@/assets/ellocontent-profile.jpg';
+import toolEditTextIcon from '@/assets/icons/tool-edit-text.png';
+import toolRegenPhotoIcon from '@/assets/icons/tool-regen-photo.png';
+import toolCorrectRegionIcon from '@/assets/icons/tool-correct-region.png';
+import toolViewPromptIcon from '@/assets/icons/tool-view-prompt.png';
+import toolRecreateIcon from '@/assets/icons/tool-recreate.png';
+import toolRegenAllIcon from '@/assets/icons/tool-regen-all.png';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 

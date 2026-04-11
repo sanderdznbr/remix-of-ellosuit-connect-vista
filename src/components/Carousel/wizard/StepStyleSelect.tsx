@@ -316,11 +316,9 @@ const StepStyleSelect: React.FC<Props> = ({
     return result;
   }, [filteredStyles, selectedCategory]);
 
-  // Group for Netflix rows
+  // Group for Netflix rows (no separate featured row)
   const stylesByCategory = useMemo(() => {
     const map: Record<string, MarketplaceStyle[]> = {};
-    const featured = displayStyles.filter(s => s.is_featured);
-    if (featured.length > 0) map['Destaques'] = featured;
     displayStyles.forEach(s => {
       const cat = s.category || 'Outros';
       const label = cat.charAt(0).toUpperCase() + cat.slice(1);

@@ -9147,14 +9147,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       <p className="text-xs font-semibold text-white/60 mb-3">Card {activeCardIndex + 1}</p>
                     </div>
                     <div className="flex flex-col px-3 pb-3 gap-0.5">
-                      <button onClick={() => { setShowCardActionSheet(false); setEditingCard(activeCardIndex); }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                        <Pencil className="h-4 w-4" style={{ color: themeHex }} />
-                        <div className="text-left">
-                          <p className="text-[13px] text-white/80 font-medium">Editar texto</p>
-                          <p className="text-[10px] text-white/30">Altere título e corpo do card</p>
-                        </div>
-                      </button>
                       {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
                         <button onClick={() => { setShowCardActionSheet(false); regenerateCard(activeCardIndex); }}
                           disabled={regeneratingCard !== null}

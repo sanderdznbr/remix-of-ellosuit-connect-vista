@@ -11015,7 +11015,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         </div>
       )}
 
-      {/* Tour removed */}
+      {showTour && (
+        <CarouselTour onComplete={() => { setShowTour(false); localStorage.setItem('ello_tour_seen', '1'); }} />
+      )}
 
       {/* Guest Paywall Modal - now non-blocking, dismissable */}
       {showGuestPaywall && (

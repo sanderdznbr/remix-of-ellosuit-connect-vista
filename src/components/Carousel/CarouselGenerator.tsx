@@ -36,6 +36,44 @@ const AnimatedCounter = ({ target }: { target: number }) => {
 
   return <>{display}%</>;
 };
+
+// Animated loading messages for carousel loading screen
+const LOADING_MESSAGES = [
+  'Puxando os dados do post...',
+  'Carregando imagens...',
+  'Preparando o editor...',
+  'Quase pronto...',
+];
+
+const LoadingMessages = () => {
+  const [msgIndex, setMsgIndex] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setMsgIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
+        {LOADING_MESSAGES[msgIndex]}
+      </p>
+      <div className="flex gap-1 mt-1">
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              backgroundColor: '#8B5CF6',
+              animation: `page-dot-pulse 1s ease-in-out ${i * 0.15}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Resilient edge function invoke — falls back to direct HTTP fetch if SDK times out
@@ -7230,12 +7268,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         )}
       </AnimatePresence>
 
-      {/* Loading state while fetching carousel data */}
-      {loadingCarousel && !showWelcome && (
-        <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#0A0A0A' }}>
-          <div className="carousel-loader-wrapper" style={{ width: '200px', height: '200px' }}>
-            <div className="carousel-loader-spinner" />
-            <span className="text-white/40 text-sm z-[1]">Carregando...</span>
+      {/* Loading state while fetching carousel data — full-screen overlay */}
+      {loadingCarousel && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center" style={{ backgroundColor: '#0A0A0A' }}>
+          <div className="flex flex-col items-center gap-6 max-w-xs text-center">
+            {/* Animated purple orb */}
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ backgroundColor: '#7C3AED' }} />
+              <div className="absolute inset-2 rounded-full animate-pulse" style={{ background: 'linear-gradient(135deg, #7C3AED, #A78BFA)' }} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white/90" />
+              </div>
+            </div>
+            {/* Animated loading messages */}
+            <LoadingMessages />
           </div>
         </div>
       )}

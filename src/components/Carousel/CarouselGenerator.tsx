@@ -9200,123 +9200,134 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     className="fixed inset-0 z-[71] flex items-center justify-center p-6 pointer-events-none"
                   >
                     <div
-                      className="w-full max-w-[380px] rounded-2xl pointer-events-auto overflow-hidden backdrop-blur-xl"
-                      style={{ backgroundColor: 'rgba(8,8,8,0.88)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 25px 80px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.04)' }}
+                      className="w-full max-w-[380px] rounded-3xl pointer-events-auto overflow-hidden backdrop-blur-2xl"
+                      style={{ backgroundColor: 'rgba(6,6,6,0.92)', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 30px 90px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.03), 0 0 0 0.5px rgba(255,255,255,0.03)' }}
                     >
                       {/* Header */}
-                      <div className="flex items-center justify-between px-5 pt-5 pb-1">
-                        <div className="flex items-center gap-2.5">
-                          <SlidersHorizontal className="h-5 w-5" style={{ color: themeHex }} />
-                          <span className="text-base font-bold text-white">Ferramentas</span>
+                      <div className="flex items-center justify-between px-6 pt-5 pb-1">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.15), rgba(${themeRgb},0.05))`, border: `1px solid rgba(${themeRgb},0.15)` }}>
+                            <SlidersHorizontal className="h-4 w-4" style={{ color: themeHex }} />
+                          </div>
+                          <span className="text-[15px] font-semibold text-white tracking-tight">Ferramentas</span>
                         </div>
-                        <button onClick={() => setShowMobileToolsSheet(false)} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
-                          <X className="h-5 w-5 text-white/40" />
+                        <button onClick={() => setShowMobileToolsSheet(false)} className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+                          <X className="h-4 w-4 text-white/30" />
                         </button>
                       </div>
 
-                      <div className="px-5 pb-2">
-                        <span className="text-xs text-white/30">Card {activeCardIndex + 1}/{carouselData.cards.length}</span>
+                      <div className="px-6 pb-3 pt-0.5">
+                        <span className="text-[11px] font-medium tracking-widest uppercase text-white/20">Card {activeCardIndex + 1} de {carouselData.cards.length}</span>
                       </div>
 
+                      {/* Divider */}
+                      <div className="mx-5 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)' }} />
+
                       {/* List */}
-                      <div className="px-3 pb-4 max-h-[60vh] overflow-y-auto space-y-1">
+                      <div className="px-3 py-3 max-h-[55vh] overflow-y-auto space-y-0.5">
                         <button onClick={() => { setShowMobileToolsSheet(false); setEditingCard(activeCardIndex); }}
-                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
-                          <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: `rgba(${themeRgb},0.12)` }}>
-                            <Pencil className="h-5 w-5" style={{ color: themeHex }} />
+                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                          <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.12), rgba(${themeRgb},0.04))` }}>
+                            <img src={toolEditTextIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-white block">Editar textos</span>
-                            <span className="text-[11px] text-white/35 leading-tight">Altere título, subtítulo e corpo do card</span>
+                            <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Editar textos</span>
+                            <span className="text-[11px] text-white/25 leading-tight">Altere título, subtítulo e corpo do card</span>
                           </div>
                         </button>
 
                         {!isGuest && (
                           <button onClick={() => { setShowMobileToolsSheet(false); setRegenDialogCard(activeCardIndex); }}
                             disabled={regeneratingCard === activeCardIndex}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left disabled:opacity-40">
-                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(59,130,246,0.12)' }}>
-                              <Image className="h-5 w-5 text-blue-400" />
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left disabled:opacity-40 group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(59,130,246,0.04))' }}>
+                              <img src={toolRegenPhotoIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white block">Regenerar foto</span>
-                              <span className="text-[11px] text-white/35 leading-tight">Gere uma nova imagem com IA para este card</span>
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Regenerar foto</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Gere uma nova imagem com IA para este card</span>
                             </div>
                           </button>
                         )}
 
                         {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
                           <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
-                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
-                              <Pencil className="h-5 w-5 text-orange-400" />
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(251,146,60,0.12), rgba(251,146,60,0.04))' }}>
+                              <img src={toolCorrectRegionIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white block">Corrigir região</span>
-                              <span className="text-[11px] text-white/35 leading-tight">Edite uma área específica da imagem com IA</span>
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Corrigir região</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Edite uma área específica da imagem com IA</span>
                             </div>
                           </button>
                         )}
 
                         {!isGuest && (
                           <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
-                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(250,204,21,0.12)' }}>
-                              <FileText className="h-5 w-5 text-yellow-400" />
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.04))' }}>
+                              <img src={toolViewPromptIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white block">Ver prompt</span>
-                              <span className="text-[11px] text-white/35 leading-tight">Veja e edite o prompt usado na geração</span>
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Ver prompt</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Veja e edite o prompt usado na geração</span>
                             </div>
                           </button>
                         )}
 
+                        {/* Divider */}
+                        <div className="mx-2 my-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
+
                         <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
-                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
-                          <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(74,222,128,0.12)' }}>
-                            <RotateCcw className="h-5 w-5 text-green-400" />
+                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                          <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(74,222,128,0.12), rgba(74,222,128,0.04))' }}>
+                            <img src={toolRecreateIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-white block">Recriar carrossel</span>
-                            <span className="text-[11px] text-white/35 leading-tight">Gere todo o carrossel novamente com outro estilo</span>
+                            <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Recriar carrossel</span>
+                            <span className="text-[11px] text-white/25 leading-tight">Gere todo o carrossel novamente com outro estilo</span>
                           </div>
                         </button>
 
                         {carouselData.cards.length >= 2 && !isGuest && (
                           <button onClick={() => { setShowMobileToolsSheet(false); setContinuousMode(false); regenerateAll(); }}
                             disabled={regeneratingAll || regeneratingCard !== null}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left disabled:opacity-40">
-                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(251,146,60,0.12)' }}>
-                              <RotateCcw className="h-5 w-5 text-orange-400" />
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left disabled:opacity-40 group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(251,146,60,0.12), rgba(251,146,60,0.04))' }}>
+                              <img src={toolRegenAllIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white block">Regenerar todas as fotos</span>
-                              <span className="text-[11px] text-white/35 leading-tight">Recrie as imagens de todos os cards de uma vez</span>
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Regenerar todas as fotos</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Recrie as imagens de todos os cards de uma vez</span>
                             </div>
                           </button>
                         )}
 
+                        {/* Divider */}
+                        <div className="mx-2 my-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
+
                         {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
                           <button onClick={() => { setShowMobileToolsSheet(false); setShowAddCardMenu(true); }}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
-                            <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                              <Plus className="h-5 w-5 text-white/50" />
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))' }}>
+                              <Plus className="h-5 w-5 text-white/40" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white block">Adicionar card</span>
-                              <span className="text-[11px] text-white/35 leading-tight">Insira um novo card ao carrossel</span>
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Adicionar card</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Insira um novo card ao carrossel</span>
                             </div>
                           </button>
                         )}
 
                         <button onClick={() => { setShowMobileToolsSheet(false); resetWizardState(); }}
-                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-xl hover:bg-white/[0.05] transition-colors text-left">
-                          <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                            <Plus className="h-5 w-5 text-white/30" />
+                          className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                          <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))' }}>
+                            <Plus className="h-5 w-5 text-white/25" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold text-white block">Novo carrossel</span>
-                            <span className="text-[11px] text-white/35 leading-tight">Comece um projeto do zero</span>
+                            <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Novo carrossel</span>
+                            <span className="text-[11px] text-white/25 leading-tight">Comece um projeto do zero</span>
                           </div>
                         </button>
                       </div>

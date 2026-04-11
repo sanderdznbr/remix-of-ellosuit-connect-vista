@@ -8596,7 +8596,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
           >
-            {/* Header bar */}
+            {/* Header bar — hidden when full-screen style picker is open */}
+            {!showFullScreenStylePicker && (
             <div className="w-full flex items-center justify-between px-2 py-3 z-20 relative shrink-0" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
               <div className="flex items-center gap-3">
                 <button
@@ -8616,6 +8617,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 Salvar Post
               </button>
             </div>
+            )}
             {/* Subtle background glow effects */}
             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-[120px] pointer-events-none" style={{ background: `radial-gradient(circle, rgba(${themeRgb},0.4) 0%, transparent 70%)` }} />
             <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full opacity-[0.04] blur-[80px] pointer-events-none" style={{ background: `radial-gradient(circle, rgba(${themeRgb2},0.5) 0%, transparent 70%)` }} />

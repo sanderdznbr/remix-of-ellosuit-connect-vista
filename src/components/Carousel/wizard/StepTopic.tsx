@@ -73,7 +73,10 @@ const StepTopic: React.FC<Props> = ({
   forceWebSearch = false, setForceWebSearch,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
-  const t = getThemeClasses(getAccentTheme(wizardMode));
+  const accent = getAccentTheme(wizardMode);
+  const t = getThemeClasses(accent);
+  const accentHex = t.hex || '#8B5CF6';
+  const accentRgb = t.rgb || '139,92,246';
   const [advancedMode, setAdvancedMode] = useState(false);
   const isSimple = wizardMode === 'simple';
 

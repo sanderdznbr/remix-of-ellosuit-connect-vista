@@ -73,7 +73,10 @@ const StepTopic: React.FC<Props> = ({
   forceWebSearch = false, setForceWebSearch,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
-  const t = getThemeClasses(getAccentTheme(wizardMode));
+  const accent = getAccentTheme(wizardMode);
+  const t = getThemeClasses(accent);
+  const accentHex = t.hex || '#8B5CF6';
+  const accentRgb = t.rgb || '139,92,246';
   const [advancedMode, setAdvancedMode] = useState(false);
   const isSimple = wizardMode === 'simple';
 
@@ -201,20 +204,20 @@ const StepTopic: React.FC<Props> = ({
               onClick={() => setForceWebSearch(!forceWebSearch)}
               className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all text-left"
               style={{
-                backgroundColor: forceWebSearch ? 'rgba(59,130,246,0.07)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${forceWebSearch ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)'}`,
+                backgroundColor: forceWebSearch ? `rgba(${accentRgb},0.07)` : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${forceWebSearch ? `rgba(${accentRgb},0.15)` : 'rgba(255,255,255,0.05)'}`,
               }}
             >
-              <Globe className="h-4 w-4 flex-shrink-0" style={{ color: forceWebSearch ? '#60A5FA' : 'rgba(255,255,255,0.2)' }} />
+              <Globe className="h-4 w-4 flex-shrink-0" style={{ color: forceWebSearch ? accentHex : 'rgba(255,255,255,0.2)' }} />
               <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium" style={{ color: forceWebSearch ? '#93C5FD' : 'rgba(255,255,255,0.35)' }}>
+                <span className="text-xs font-medium" style={{ color: forceWebSearch ? accentHex : 'rgba(255,255,255,0.35)' }}>
                   Buscar fontes reais na web
                 </span>
-                <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: 'rgba(139,92,246,0.12)', color: '#C4B5FD' }}>
+                <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: `rgba(${accentRgb},0.12)`, color: accentHex }}>
                   +1 crédito
                 </span>
               </div>
-              <div className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${forceWebSearch ? 'bg-blue-500' : 'bg-white/[0.08]'}`}>
+              <div className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0" style={{ backgroundColor: forceWebSearch ? accentHex : 'rgba(255,255,255,0.08)' }}>
                 <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${forceWebSearch ? 'translate-x-4' : 'translate-x-0'}`} />
               </div>
             </button>
@@ -229,8 +232,8 @@ const StepTopic: React.FC<Props> = ({
           )}
           {searchingWeb && !webSearchResult && (
             <div className="flex items-center gap-3 py-3">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-400/50" />
-              <span className="text-xs text-blue-300/40">Pesquisando na web...</span>
+              <Loader2 className="h-4 w-4 animate-spin" style={{ color: `rgba(${accentRgb},0.5)` }} />
+              <span className="text-xs" style={{ color: `rgba(${accentRgb},0.4)` }}>Pesquisando na web...</span>
             </div>
           )}
         </>

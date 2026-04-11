@@ -9154,12 +9154,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             {/* ===== ADVANCED MODE: Instagram Phone Mockup ===== */}
             {resultViewMode === 'advanced' && (
             <>
-            <motion.div
-              className="relative flex-shrink-0"
-              layout
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{ width: postFormat === 'story' ? 280 : 375, maxWidth: '95vw' }}
-            >
               {isMobileView && (
                 <div className="flex justify-center mb-2">
                   <button onClick={() => setResultViewMode('basic')}

@@ -7268,7 +7268,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
               </div>
               {/* Named progress bar */}
-              {isMobile ? (
+              {isMobileView ? (
                 /* Mobile: compact pill with step count + thin progress bar */
                 <div className="flex items-center gap-2 flex-1 max-w-[65%]">
                   <div className="flex-1 flex flex-col gap-1">

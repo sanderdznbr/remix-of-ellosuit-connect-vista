@@ -401,7 +401,7 @@ const StepStyleSelect: React.FC<Props> = ({
               <StyleRow
                 key={category}
                 title={category}
-                badge={category === 'Destaques' ? 'Popular' : undefined}
+                
               >
                 {styles.map(style => {
                   const isFree = (style as any).is_free;

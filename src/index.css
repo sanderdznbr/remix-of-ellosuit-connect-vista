@@ -552,3 +552,7 @@ body[data-scroll-locked] {
   scrollbar-width: thin;
   scrollbar-color: #2a2a2a transparent;
 }
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

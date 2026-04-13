@@ -7841,6 +7841,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         selectedFont={selectedFont} setSelectedFont={setSelectedFont}
                         onApplyPreset={(preset) => { setActivePresetId(preset.id); setActiveMarketplaceStyle(null); setIsLoadedFullBleed(false); }}
                         onApplyMarketplaceStyle={(config) => { setActiveMarketplaceStyle(config); setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style); }}
+                        topic={topic}
                       />
                     )}
                     {currentStepName === 'Cores' && !isFullBleedMarketplace && (
@@ -9589,6 +9590,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         setRecreateVisualIdea('');
                         setPendingRecreateConfig(config);
                       }}
+                      topic={topic}
                     />
                   </div>
                 </motion.div>
@@ -9973,6 +9975,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setRecreateVisualIdea('');
                           setPendingRecreateConfig(config);
                         }}
+                        topic={topic}
                       />
                     ) : (
                       <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}
@@ -10051,6 +10054,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             setRecreateVisualIdea('');
                             setPendingRecreateConfig(config);
                           }}
+                          topic={topic}
                         />
                       ) : (
                         <StepStyle bgColor={bgColor} setBgColor={setBgColor} accentColor={accentColor} setAccentColor={setAccentColor}

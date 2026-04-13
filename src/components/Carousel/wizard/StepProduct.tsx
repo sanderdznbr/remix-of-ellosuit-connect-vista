@@ -144,17 +144,18 @@ export function detectContext(topic: string, mentionedPrompts?: MentionedPrompt[
   
   if (!t.trim()) return null;
   
-  // App / mobile — check first (most specific)
-  if (/\b(app|aplicativo|mobile|ios|android|play store|app store|saas|plataforma digital)\b/.test(t) ||
-      /tela do app|funcionalidade do app|download|baixe o/.test(t) ||
-      /lancamento.*(app|aplicativo)|app.*(lancamento|lancar|divulgar)/.test(t) ||
-      /divulgar.*(app|aplicativo|plataforma)/.test(t)) return 'app';
+  // App / mobile — only match when topic is clearly about an app/mobile product
+  if (/\b(aplicativo|mobile app|ios app|android app|play store|app store)\b/.test(t) ||
+      /\btela do app\b|funcionalidade do app|download do app|baixe o app/.test(t) ||
+      /lancamento.*(aplicativo)|aplicativo.*(lancamento|lancar|divulgar)/.test(t) ||
+      /divulgar.*(aplicativo)/.test(t) ||
+      /\bapp\b/.test(t) && /\b(lancamento|lancar|download|baixe|tela|screenshot|mockup)\b/.test(t)) return 'app';
   
-  // Website / system / dashboard — expanded to catch more software terms
-  if (/\b(site|website|landing page|dashboard|sistema|painel|plataforma web|plataforma|portal|web app|ferramenta online|ferramenta|software|erp|crm|saas|ia|inteligencia artificial|automacao|gestao empresarial|gestao|solucao digital|solucao|tecnologia)\b/.test(t) ||
-      /lancamento.*(sistema|plataforma|software|ferramenta|portal|solucao|produto digital)|divulgar.*(sistema|plataforma|software|solucao)/.test(t) ||
-      /\b(lancar|lancamento|vai ser lancad|sera lancad|novo sistema|nova plataforma|nova ferramenta|novo software)\b/.test(t) ||
-      /funcoes de ia|inteligencia artificial|machine learning|deep learning/.test(t)) return 'website';
+  // Website / system / dashboard — only match specific software terms, not generic business words
+  if (/\b(website|landing page|dashboard|web app)\b/.test(t) ||
+      /lancamento.*(sistema|software|erp|crm)|divulgar.*(sistema|software)/.test(t) ||
+      /\b(novo sistema|nova plataforma digital|novo software|novo erp|novo crm)\b/.test(t) ||
+      /screenshot.*(sistema|site|dashboard|plataforma)/.test(t)) return 'website';
   
   // Food
   if (/\b(receita|prato|comida|alimento|restaurante|lanche|pizza|hamburguer|bolo|doce|bebida|suco|cafe|cardapio|menu|delivery)\b/.test(t)) return 'food';

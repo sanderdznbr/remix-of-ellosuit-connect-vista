@@ -9246,6 +9246,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   style={{ opacity: showMobileToolsSheet || showCardActionSheet ? 0.08 : 1 }}>
                   {activeCardIndex + 1} <span className="text-white/20">/</span> {carouselData.cards.length}
                 </p>
+                </div>
               </div>
             )}
 

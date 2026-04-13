@@ -317,7 +317,7 @@ ${userImage ? 'O usuário enviou uma imagem junto com a mensagem.' : ''}`
                 className={`max-w-[80%] px-3.5 py-2.5 text-[14px] leading-[1.45] ${
                   isAssistant
                     ? 'bg-white/[0.07] text-white/85 rounded-2xl rounded-tl-md'
-                    : 'bg-purple-600/80 text-white rounded-2xl rounded-tr-md'
+                    : 'bg-white text-gray-900 rounded-2xl rounded-tr-md'
                 }`}
               >
                 {msg.image && (
@@ -375,9 +375,10 @@ ${userImage ? 'O usuário enviou uma imagem junto com a mensagem.' : ''}`
           <button
             onClick={handleRegenerate}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-[15px] font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50 active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-[15px] font-semibold text-white transition-all disabled:opacity-50 active:scale-[0.98] border border-white/[0.08]"
+            style={{ background: 'linear-gradient(135deg, #2a2a35 0%, #1a1a24 50%, #2d1f4e 100%)' }}
           >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+            {loading && <Loader2 className="h-5 w-5 animate-spin" />}
             Regenerar imagem
           </button>
         ) : (

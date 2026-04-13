@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles,
+  Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles, Wand2,
   Star, StarOff, Eye, EyeOff, GripVertical, Building2,
 } from 'lucide-react';
 import {
@@ -81,6 +81,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     name: '', description: '', category: 'editorial',
     price_credits: 50, price_brl: 9.90, tags: '',
     is_featured: false, is_free: false, strict_instructions: '',
+    negative_prompt: '',
     is_real_estate: false,
     real_estate_mode: 'single' as 'single' | 'multiple',
     is_beta: false,
@@ -90,6 +91,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>('');
   const [existingCover, setExistingCover] = useState<string>('');
@@ -137,6 +139,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
           is_featured: editStyle.is_featured,
           is_free: (editStyle as any).is_free || false,
           strict_instructions: (editStyle as any).strict_instructions || '',
+          negative_prompt: sc?.imageGeneration?.negative_prompt || '',
           is_real_estate: !!sc.is_real_estate,
           real_estate_mode: sc.real_estate_mode || 'single',
           is_beta: !!sc.is_beta,
@@ -144,7 +147,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
         setExistingImages(editStyle.preview_images || []);
         setExistingCover(sc.cover_image || '');
       } else {
-        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', is_real_estate: false, real_estate_mode: 'single', is_beta: false });
+        setForm({ name: '', description: '', category: 'editorial', price_credits: 50, price_brl: 9.90, tags: '', is_featured: false, is_free: false, strict_instructions: '', negative_prompt: '', is_real_estate: false, real_estate_mode: 'single', is_beta: false });
         setExistingImages([]);
         setExistingCover('');
       }
@@ -214,7 +217,7 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
         prompt_prefix: form.is_real_estate
           ? 'Premium real estate marketing post for Instagram. Showcase property with professional photography and bold typography. 1080x1350 portrait format.'
           : 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
-        negative_prompt: 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
+        negative_prompt: form.negative_prompt.trim() || 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
         imageType: 'photo', lightingStyle: 'cinematic', cameraAngle: 'front', fidelity: 'high',
       },
       cardVariations: [
@@ -331,6 +334,55 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
     }
   };
 
+  const analyzeAndGenerate = async () => {
+    const allRefs = [...existingImages, ...refPreviews].slice(0, 6);
+    if (allRefs.length === 0) { toast.error('Adicione referências primeiro'); return; }
+    setAnalyzing(true);
+    try {
+      const imageUrls = allRefs.map(url => ({ type: 'image_url', image_url: { url } }));
+      const userContent: any[] = [
+        { type: 'text', text: `Analise as imagens de referência de estilo para posts de Instagram e retorne um JSON com os seguintes campos:
+- "name": nome criativo e curto para o estilo (máx 30 chars, português)
+- "description": descrição concisa do estilo visual (máx 120 chars, português)
+- "category": uma das opções: editorial, minimalista, moderno, criativo, corporativo, lifestyle
+- "tags": array de 3-5 tags relevantes em português
+- "strict_instructions": instruções obrigatórias para a IA seguir ao gerar com este estilo (descreva cores, tipografia, composição, elementos obrigatórios que vê nas referências - máx 300 chars)
+- "negative_prompt": elementos que NÃO devem aparecer nas gerações (em inglês, separados por vírgula)
+
+Responda APENAS com o JSON válido, sem markdown.` },
+        ...imageUrls,
+      ];
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: [
+            { role: 'system', content: 'Você é um diretor de arte sênior especialista em design para Instagram. Analise imagens e extraia DNA visual com precisão. Responda APENAS com JSON válido.' },
+            { role: 'user', content: userContent }
+          ],
+          model: 'google/gemini-2.5-flash'
+        }
+      });
+      if (error) throw error;
+      const text = typeof data === 'string' ? data : data?.content || data?.message || '';
+      const cleanJson = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      setForm(f => ({
+        ...f,
+        name: parsed.name || f.name,
+        description: parsed.description || f.description,
+        category: parsed.category || f.category,
+        tags: Array.isArray(parsed.tags) ? parsed.tags.join(', ') : (parsed.tags || f.tags),
+        strict_instructions: parsed.strict_instructions || f.strict_instructions,
+        negative_prompt: parsed.negative_prompt || f.negative_prompt,
+      }));
+      toast.success('Análise concluída! Campos preenchidos.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro na análise: ' + (err.message || 'Tente novamente'));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -366,9 +418,6 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
               </select>
             </div>
           </div>
-
-
-
 
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -520,7 +569,17 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             )}
           </div>
 
-          {/* Cover Image - separate from references */}
+          {/* Analyze & Generate Button */}
+          <button
+            type="button"
+            disabled={analyzing || (existingImages.length === 0 && refPreviews.length === 0)}
+            onClick={analyzeAndGenerate}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 cursor-pointer border border-purple-500/30 hover:border-purple-500/50"
+            style={{ background: 'linear-gradient(135deg, rgba(147,51,234,0.15) 0%, rgba(79,70,229,0.15) 100%)' }}
+          >
+            {analyzing ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Wand2 className="w-4 h-4 text-purple-400" />}
+            <span className="text-purple-300">{analyzing ? 'Analisando referências...' : 'Analisar e Gerar'}</span>
+          </button>
           <div>
             <label className="text-[10px] text-white/40 mb-1 block">Capa para o Marketplace (opcional)</label>
             <p className="text-[9px] text-white/15 mb-2">Imagem de capa usada apenas para exibição. Não é usada como referência na geração.</p>
@@ -562,7 +621,16 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
             <p className="text-[9px] text-white/15 mt-1">Essas instruções serão injetadas com prioridade máxima na IA ao gerar com este estilo.</p>
           </div>
 
-          {/* Actions */}
+          <div>
+            <label className="text-[10px] text-white/40 mb-1 block">Prompt Negativo (opcional)</label>
+            <textarea value={form.negative_prompt} onChange={e => setForm(f => ({ ...f, negative_prompt: e.target.value }))}
+              placeholder="Ex: cartoon, anime, illustration, 3d render, stock photo..."
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none resize-none focus:border-yellow-500/40" />
+            <p className="text-[9px] text-white/15 mt-1">Elementos que a IA deve evitar ao gerar imagens com este estilo.</p>
+          </div>
+
+
           <div className="flex gap-2 pt-2">
             {editStyle && (
               <button onClick={async () => {

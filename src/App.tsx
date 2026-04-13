@@ -97,6 +97,7 @@ const App = () => (
                 <Route path="/auth" element={<Index />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
                 <Route path="/precos" element={<Pricing />} />
                 <Route path="/checkout" element={<Checkout />} />

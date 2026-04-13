@@ -395,6 +395,12 @@ const StepStyleSelect: React.FC<Props> = ({
     return map;
   }, [displayStyles]);
 
+  // Recommended styles based on topic
+  const recommendedStyles = useMemo(() => {
+    if (!topic || searchQuery || selectedCategory) return [];
+    return getRecommendedStyles(topic, purchasedStyles);
+  }, [topic, purchasedStyles, searchQuery, selectedCategory]);
+
   return (
     <div className="flex flex-col" style={{ height: 'calc(100dvh - 160px)', minHeight: '400px' }}>
       {/* Header + Search */}

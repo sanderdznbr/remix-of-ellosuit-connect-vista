@@ -135,7 +135,7 @@ export default function ForgotPassword() {
                 <Button
                   onClick={() => { setSent(false); setEmail(''); }}
                   variant="outline"
-                  className="w-full h-10 rounded-xl text-sm border-white/10 text-white/60 hover:text-white hover:bg-white/5"
+                  className="w-full h-10 rounded-xl text-sm border-purple-500/30 bg-purple-500/10 text-purple-300 hover:text-white hover:bg-purple-500/20"
                 >
                   Tentar outro email
                 </Button>

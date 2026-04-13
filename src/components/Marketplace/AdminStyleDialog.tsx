@@ -367,8 +367,8 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
                 <option value="corporativo" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Corporativo</option>
                 <option value="lifestyle" style={{ backgroundColor: '#1a1a24', color: '#fff' }}>Lifestyle</option>
               </select>
+            </div>
           </div>
-
 
           <div>
             <div className="flex items-center justify-between mb-1">

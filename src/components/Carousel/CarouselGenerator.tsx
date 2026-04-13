@@ -1509,11 +1509,18 @@ const CarouselGenerator: React.FC = () => {
             marketplace_style_id: activeMarketplaceStyle?.id || loadedMarketplaceStyleId || null,
             generation_config: buildGenerationConfig(),
           } as any).eq('id', currentCarouselIdRef.current);
-          // Retry cover capture if missing
+          // Re-capture cover if card[0] image changed or cover_url is missing
+          const currentCoverImage = dataToPersist.cards?.[0]?.imageUrl || '';
+          const coverImageChanged = currentCoverImage !== lastSavedCoverImageRef.current;
           try {
-            const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselIdRef.current).single();
-            if (!existing?.cover_url) {
+            if (coverImageChanged) {
+              lastSavedCoverImageRef.current = currentCoverImage;
               captureCoverImage(currentCarouselIdRef.current, companyData.company_id, dataToPersist).catch(() => {});
+            } else {
+              const { data: existing } = await supabase.from('generated_carousels').select('cover_url').eq('id', currentCarouselIdRef.current).single();
+              if (!existing?.cover_url) {
+                captureCoverImage(currentCarouselIdRef.current, companyData.company_id, dataToPersist).catch(() => {});
+              }
             }
           } catch { /* ignore */ }
         } else if (!generationInFlightRef.current) {

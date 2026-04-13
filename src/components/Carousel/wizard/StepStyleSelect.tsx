@@ -279,7 +279,7 @@ const StyleCard: React.FC<{
 /* ─── Main Component ─── */
 const StepStyleSelect: React.FC<Props> = ({
   bgColor, setBgColor, accentColor, setAccentColor, textColor, setTextColor,
-  selectedFont, setSelectedFont, onApplyPreset, onApplyMarketplaceStyle, accentTheme = 'purple',
+  selectedFont, setSelectedFont, onApplyPreset, onApplyMarketplaceStyle, accentTheme = 'purple', topic,
 }) => {
   const t = getThemeClasses(accentTheme);
   const { user } = useAuth();

@@ -112,6 +112,7 @@ const App = () => (
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/comunidade" element={<Comunidade />} />
                 <Route path="/ajuda" element={<Ajuda />} />
+                <Route path="/unsubscribe" element={<Unsubscribe />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

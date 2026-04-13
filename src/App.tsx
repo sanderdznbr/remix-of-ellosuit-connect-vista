@@ -16,6 +16,7 @@ const PublicCarouselGenerator = lazy(() => import('./pages/PublicCarouselGenerat
 const Index = lazy(() => import('./pages/Index'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const MarketplaceStyleDetail = lazy(() => import('./pages/MarketplaceStyleDetail'));

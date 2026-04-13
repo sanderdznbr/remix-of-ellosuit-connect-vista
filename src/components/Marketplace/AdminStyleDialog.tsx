@@ -621,7 +621,16 @@ Responda APENAS com o JSON válido, sem markdown.` },
             <p className="text-[9px] text-white/15 mt-1">Essas instruções serão injetadas com prioridade máxima na IA ao gerar com este estilo.</p>
           </div>
 
-          {/* Actions */}
+          <div>
+            <label className="text-[10px] text-white/40 mb-1 block">Prompt Negativo (opcional)</label>
+            <textarea value={form.negative_prompt} onChange={e => setForm(f => ({ ...f, negative_prompt: e.target.value }))}
+              placeholder="Ex: cartoon, anime, illustration, 3d render, stock photo..."
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-white placeholder:text-white/20 outline-none resize-none focus:border-yellow-500/40" />
+            <p className="text-[9px] text-white/15 mt-1">Elementos que a IA deve evitar ao gerar imagens com este estilo.</p>
+          </div>
+
+
           <div className="flex gap-2 pt-2">
             {editStyle && (
               <button onClick={async () => {

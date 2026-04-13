@@ -31,6 +31,7 @@ const AreaParceiros = lazy(() => import('./pages/AreaParceiros'));
 const Comunidade = lazy(() => import('./pages/Comunidade'));
 const Ajuda = lazy(() => import('./pages/Ajuda'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
 
 const queryClient = new QueryClient({
   defaultOptions: {

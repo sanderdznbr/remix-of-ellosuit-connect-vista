@@ -470,6 +470,36 @@ const StepStyleSelect: React.FC<Props> = ({
           </div>
         ) : Object.keys(stylesByCategory).length > 0 ? (
           <>
+            {/* Recommended styles row — always first */}
+            {recommendedStyles.length > 0 && (
+              <StyleRow
+                title="Recomendados pro seu tema"
+                badge="IA"
+              >
+                {recommendedStyles.map(style => {
+                  const isFree = (style as any).is_free;
+                  const isLocked = !user && !isFree;
+                  return (
+                    <StyleCard
+                      key={`rec-${style.id}`}
+                      style={style}
+                      isActive={activeStyleId === style.id}
+                      isLocked={isLocked}
+                      previewIndex={previewIndex[style.id] || 0}
+                      onSelect={() => {
+                        if (isLocked) {
+                          setLockedStyleName(style.name);
+                          return;
+                        }
+                        applyMarketplaceStyle(style);
+                      }}
+                      onChangePreview={(idx) => setPreviewIndex(prev => ({ ...prev, [style.id]: idx }))}
+                      themeClasses={t}
+                    />
+                  );
+                })}
+              </StyleRow>
+            )}
             {Object.entries(stylesByCategory).map(([category, styles]) => (
               <StyleRow
                 key={category}

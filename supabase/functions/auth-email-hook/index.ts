@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirme seu e-mail',
+  invite: 'Você foi convidado',
+  magiclink: 'Seu link de login',
+  recovery: 'Redefinir sua senha',
+  email_change: 'Confirme a alteração do e-mail',
+  reauthentication: 'Seu código de verificação',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "ellosuit-call-dash"
+const SITE_NAME = "elloSuit"
 const SENDER_DOMAIN = "contato.ellosuit.online"
 const ROOT_DOMAIN = "ellosuit.online"
 const FROM_DOMAIN = "contato.ellosuit.online" // Domain shown in From address (may be root or sender subdomain)

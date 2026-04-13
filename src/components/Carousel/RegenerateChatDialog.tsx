@@ -206,12 +206,13 @@ const RegenerateChatDialog: React.FC<RegenerateChatDialogProps> = ({
         ? `\nO usuário SELECIONOU uma região específica da imagem: posição (${Math.round(userRegion.x*100)}%, ${Math.round(userRegion.y*100)}%) tamanho (${Math.round(userRegion.w*100)}% x ${Math.round(userRegion.h*100)}%). Use essa informação na instrução final.`
         : '';
 
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: {
-          messages: [
-            {
-              role: 'system',
-              content: `Você é a Laura, assistente de design simpática e direta. Você ajuda o usuário a melhorar a imagem de um post.
+      // Build messages with image context
+      const aiMessages: any[] = [
+        {
+          role: 'system',
+          content: `Você é a Laura, assistente de design simpática e direta. Você ajuda o usuário a melhorar a imagem de um post.
+
+IMPORTANTE: Você TEM ACESSO à imagem atual do card. Ela está anexada abaixo. Você PODE ver e analisar a imagem diretamente. NUNCA peça para o usuário enviar a imagem atual — você já a tem.
 
 REGRAS DE PERSONALIDADE:
 - Fale de forma curta e natural, como mensagem de WhatsApp
@@ -222,8 +223,9 @@ REGRAS DE PERSONALIDADE:
 
 REGRAS DE FLUXO:
 ${isDesktop ? '- Se o usuário falar de algo específico na imagem (logo, objeto, região): sugira "Quer marcar a região na imagem? Clica no botão 📍 e seleciona!" OU se já selecionou a região, confirme.' : ''}
-- Se o usuário mencionar produto, objeto ou pessoa específica e enviar foto: "Perfeito, entendi!"
-- Se o usuário mencionar produto sem foto: peça uma foto "Manda uma foto pra eu entender melhor!"
+- Se o usuário mencionar produto, objeto ou pessoa específica e enviar foto de REFERÊNCIA: "Perfeito, entendi!"
+- Se o usuário mencionar um produto/objeto EXTERNO que não está na imagem atual e quer adicionar: peça uma foto de referência "Manda uma foto desse produto pra eu usar de referência!"
+- NÃO peça foto da imagem atual. Você JÁ TEM ela.
 - Quando tiver informação suficiente, responda com EXATAMENTE este formato na última linha:
   [INSTRUÇÃO_FINAL]: <instrução detalhada para a IA>
 - A instrução deve ser clara e específica em português
@@ -231,10 +233,31 @@ ${isDesktop ? '- Se o usuário falar de algo específico na imagem (logo, objeto
 - Se o usuário selecionou uma região, INCLUA a posição da região na instrução final
 - NÃO gere instrução final se precisar de mais info
 ${regionSystemNote}
-${userImage ? 'O usuário enviou uma imagem junto com a mensagem.' : ''}`
-            },
-            { role: 'user', content: conversationContext + regionInfo },
+${userImage ? 'O usuário enviou uma imagem de REFERÊNCIA junto com a mensagem.' : ''}`
+        },
+      ];
+
+      // Send the current card image so the AI can see it
+      if (currentCardImageUrl) {
+        aiMessages.push({
+          role: 'user',
+          content: [
+            { type: 'text', text: '[Imagem atual do card que estamos editando:]' },
+            { type: 'image_url', image_url: { url: currentCardImageUrl } },
           ],
+        });
+        aiMessages.push({
+          role: 'assistant',
+          content: 'Entendi, já estou vendo a imagem! 👀',
+        });
+      }
+
+      // Add the conversation
+      aiMessages.push({ role: 'user', content: conversationContext + regionInfo });
+
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: aiMessages,
           model: 'google/gemini-3-flash-preview',
           lightweight: true,
         },

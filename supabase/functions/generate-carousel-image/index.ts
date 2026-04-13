@@ -397,8 +397,8 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       // VISUAL CLONE MODE — always send face refs in Stage 1
 
       if (validFaceRefs.length > 0) {
-        // Limit style refs when face refs present to avoid visual competition
-        const maxStyleRefs = validFaceRefs.length > 0 ? Math.min(validStyleRefs.length, 3) : validStyleRefs.length;
+        // Allow more style refs even with face refs — fidelity needs visual DNA
+        const maxStyleRefs = Math.min(validStyleRefs.length, 5);
         
         // Face refs FIRST — highest priority
         messageContent.push({ type: 'text', text: `🚨 IDENTIDADE FACIAL OBRIGATÓRIA — Esta é a pessoa que DEVE aparecer na imagem. Copie EXATAMENTE este rosto:` });

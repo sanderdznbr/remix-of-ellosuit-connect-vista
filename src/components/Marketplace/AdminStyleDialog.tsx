@@ -81,6 +81,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
     name: '', description: '', category: 'editorial',
     price_credits: 50, price_brl: 9.90, tags: '',
     is_featured: false, is_free: false, strict_instructions: '',
+    negative_prompt: '',
     is_real_estate: false,
     real_estate_mode: 'single' as 'single' | 'multiple',
     is_beta: false,
@@ -90,6 +91,7 @@ const AdminStyleDialog: React.FC<AdminStyleDialogProps> = ({ open, onOpenChange,
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>('');
   const [existingCover, setExistingCover] = useState<string>('');

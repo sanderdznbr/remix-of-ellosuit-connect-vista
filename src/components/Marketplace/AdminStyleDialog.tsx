@@ -569,7 +569,17 @@ Responda APENAS com o JSON válido, sem markdown.` },
             )}
           </div>
 
-          {/* Cover Image - separate from references */}
+          {/* Analyze & Generate Button */}
+          <button
+            type="button"
+            disabled={analyzing || (existingImages.length === 0 && refPreviews.length === 0)}
+            onClick={analyzeAndGenerate}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 cursor-pointer border border-purple-500/30 hover:border-purple-500/50"
+            style={{ background: 'linear-gradient(135deg, rgba(147,51,234,0.15) 0%, rgba(79,70,229,0.15) 100%)' }}
+          >
+            {analyzing ? <Loader2 className="w-4 h-4 animate-spin text-purple-400" /> : <Wand2 className="w-4 h-4 text-purple-400" />}
+            <span className="text-purple-300">{analyzing ? 'Analisando referências...' : 'Analisar e Gerar'}</span>
+          </button>
           <div>
             <label className="text-[10px] text-white/40 mb-1 block">Capa para o Marketplace (opcional)</label>
             <p className="text-[9px] text-white/15 mb-2">Imagem de capa usada apenas para exibição. Não é usada como referência na geração.</p>

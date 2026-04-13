@@ -30,6 +30,73 @@ interface Props {
   onApplyPreset?: (preset: StylePreset) => void;
   onApplyMarketplaceStyle?: (styleConfig: any) => void;
   accentTheme?: WizardAccentTheme;
+  topic?: string;
+}
+
+/* ─── Topic → keyword mapping for smart recommendations ─── */
+const TOPIC_KEYWORD_MAP: { pattern: RegExp; keywords: string[] }[] = [
+  { pattern: /\b(app|aplicativo|mobile|ios|android|saas|plataforma|sistema|erp|crm|software)\b/i, keywords: ['tecnologia', 'tech', 'corporativo', 'moderno', 'digital', 'app'] },
+  { pattern: /\b(comida|food|gastronomia|restaurante|receita|chef|culinaria|delivery|hamburguer|pizza|doce|confeitaria|padaria)\b/i, keywords: ['food', 'gastronomia', 'lifestyle', 'comercial'] },
+  { pattern: /\b(imovel|imoveis|imobiliaria|apartamento|casa|condominio|corretor|construtora)\b/i, keywords: ['imobiliário', 'corporativo', 'moderno', 'elegante'] },
+  { pattern: /\b(fitness|academia|treino|musculacao|saude|nutricao|dieta|crossfit|yoga|personal)\b/i, keywords: ['fitness', 'saúde', 'lifestyle', 'esporte'] },
+  { pattern: /\b(beleza|beauty|moda|fashion|maquiagem|cosmetico|skincare|cabelo|estetica|salao|barbearia)\b/i, keywords: ['beleza', 'moda', 'lifestyle', 'elegante', 'minimalista'] },
+  { pattern: /\b(marketing|negocio|empreendedorismo|vendas|lead|funil|startup|empresa|coach)\b/i, keywords: ['marketing', 'negócios', 'corporativo', 'editorial'] },
+  { pattern: /\b(educacao|curso|aula|professor|escola|universidade|mentoria|ead)\b/i, keywords: ['educação', 'editorial', 'criativo'] },
+  { pattern: /\b(pet|cachorro|gato|animal|veterinario|petshop)\b/i, keywords: ['pet', 'fofo', 'lifestyle', 'criativo'] },
+  { pattern: /\b(musica|music|podcast|spotify|show|festival|dj)\b/i, keywords: ['música', 'criativo', 'moderno', 'editorial'] },
+  { pattern: /\b(financ|investimento|cripto|bitcoin|trading|bolsa|banco|contabil|economia)\b/i, keywords: ['finanças', 'corporativo', 'moderno', 'elegante'] },
+  { pattern: /\b(viagem|turismo|hotel|destino|aventura)\b/i, keywords: ['viagem', 'lifestyle', 'criativo'] },
+  { pattern: /\b(motivacao|motivacional|mindset|produtividade|autoconhecimento|crescimento)\b/i, keywords: ['motivacional', 'editorial', 'criativo'] },
+  { pattern: /\b(direito|advogad|juridi|lei|tribunal)\b/i, keywords: ['jurídico', 'corporativo', 'elegante', 'editorial'] },
+  { pattern: /\b(medic|doutor|clinica|hospital|odonto|dentista|psicolog|terapia)\b/i, keywords: ['saúde', 'corporativo', 'moderno', 'elegante'] },
+  { pattern: /\b(casamento|noiva|evento|festas|decoracao|buffet)\b/i, keywords: ['casamento', 'elegante', 'lifestyle', 'minimalista'] },
+];
+
+function getRecommendedStyles(topic: string, styles: MarketplaceStyle[]): MarketplaceStyle[] {
+  if (!topic?.trim() || !styles.length) return [];
+  
+  const normalizedTopic = topic.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Find matching keywords from the topic
+  const matchedKeywords: string[] = [];
+  for (const entry of TOPIC_KEYWORD_MAP) {
+    if (entry.pattern.test(normalizedTopic)) {
+      matchedKeywords.push(...entry.keywords);
+    }
+  }
+  
+  if (!matchedKeywords.length) return [];
+  
+  const uniqueKeywords = Array.from(new Set(matchedKeywords));
+  
+  // Score each style based on how many keywords match its tags, category, or name
+  const scored = styles.map(style => {
+    let score = 0;
+    const styleName = (style.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const styleCategory = (style.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const styleTags = (style.tags || []).map(t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+    const styleDesc = (style.description || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    for (const kw of uniqueKeywords) {
+      const kwNorm = kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (styleTags.some(tag => tag.includes(kwNorm))) score += 3;
+      if (styleCategory.includes(kwNorm)) score += 2;
+      if (styleName.includes(kwNorm)) score += 1;
+      if (styleDesc.includes(kwNorm)) score += 1;
+    }
+    
+    // Boost featured styles
+    if (style.is_featured && score > 0) score += 1;
+    
+    return { style, score };
+  });
+  
+  // Return top-scoring styles (min score 1), max 8
+  return scored
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(s => s.style);
 }
 
 /* ─── Netflix-style horizontal row ─── */

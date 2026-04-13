@@ -217,7 +217,7 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
         prompt_prefix: form.is_real_estate
           ? 'Premium real estate marketing post for Instagram. Showcase property with professional photography and bold typography. 1080x1350 portrait format.'
           : 'Social media carousel post matching the exact visual style of the reference images. 1080x1350 portrait format.',
-        negative_prompt: 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
+        negative_prompt: form.negative_prompt.trim() || 'cartoon, anime, illustration, 3d render, stock photo, generic corporate, gradient background, minimalist flat design',
         imageType: 'photo', lightingStyle: 'cinematic', cameraAngle: 'front', fidelity: 'high',
       },
       cardVariations: [

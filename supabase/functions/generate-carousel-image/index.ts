@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
     const isSinglePost = !isCarousel;
     const BUDGET = isSinglePost
       ? { maxTotal: 8, maxFace: 5, maxStyle: 6, maxGeneral: 2 }
-      : { maxTotal: 5, maxFace: 3, maxStyle: 3, maxGeneral: 1 };
+      : { maxTotal: 7, maxFace: 3, maxStyle: 5, maxGeneral: 1 };
 
     let validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, BUDGET.maxFace).filter(isUrlAccessible) : [];
     let validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, BUDGET.maxStyle).filter(isUrlAccessible) : [];

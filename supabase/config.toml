@@ -1,34 +1,35 @@
 project_id = "jwddiyuezqrpuakazvgg"
 
-[functions.ellocontent-webhook]
-verify_jwt = false
-
-[functions.generate-carousel-image]
-verify_jwt = false
-
-[functions.generate-carousel-cloud]
-verify_jwt = false
-
-[functions.pagarme-webhook]
-verify_jwt = false
-
-[functions.pagarme-checkout]
-verify_jwt = false
-
-[functions.pagarme-cancel]
-verify_jwt = false
-
-[functions.generate-portrait]
-verify_jwt = false
-
-[functions.logo-removal]
-verify_jwt = false
-
-[functions.generate-realestate-card]
-verify_jwt = false
-
-[functions.post-correction]
-verify_jwt = false
-
-[functions.parse-content-document]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.ellocontent-webhook]
+    verify_jwt = false
+  [functions.generate-carousel-cloud]
+    verify_jwt = false
+  [functions.generate-carousel-image]
+    verify_jwt = false
+  [functions.generate-portrait]
+    verify_jwt = false
+  [functions.generate-realestate-card]
+    verify_jwt = false
+  [functions.logo-removal]
+    verify_jwt = false
+  [functions.pagarme-cancel]
+    verify_jwt = false
+  [functions.pagarme-checkout]
+    verify_jwt = false
+  [functions.pagarme-webhook]
+    verify_jwt = false
+  [functions.parse-content-document]
+    verify_jwt = false
+  [functions.post-correction]
+    verify_jwt = false
+  [functions.send-transactional-email]
+    verify_jwt = true
+  [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false
+  [functions.handle-email-suppression]
+    verify_jwt = false

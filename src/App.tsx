@@ -16,6 +16,7 @@ const PublicCarouselGenerator = lazy(() => import('./pages/PublicCarouselGenerat
 const Index = lazy(() => import('./pages/Index'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const MarketplaceStyleDetail = lazy(() => import('./pages/MarketplaceStyleDetail'));
@@ -96,6 +97,7 @@ const App = () => (
                 <Route path="/auth" element={<Index />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
                 <Route path="/precos" element={<Pricing />} />
                 <Route path="/checkout" element={<Checkout />} />

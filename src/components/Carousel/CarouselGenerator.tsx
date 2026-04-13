@@ -7286,15 +7286,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       {/* Loading state while fetching carousel data — full-screen overlay */}
       {loadingCarousel && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center" style={{ backgroundColor: '#0A0A0A' }}>
-          <div className="flex flex-col items-center gap-6 max-w-xs text-center">
-            {/* Animated purple orb */}
-            <div className="relative w-16 h-16">
-              <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ backgroundColor: '#7C3AED' }} />
-              <div className="absolute inset-2 rounded-full animate-pulse" style={{ background: 'linear-gradient(135deg, #7C3AED, #A78BFA)' }} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white/90" />
-              </div>
-            </div>
+          <div className="flex flex-col items-center gap-5 max-w-xs text-center">
+            {/* Minimal spinner */}
+            <div className="w-8 h-8 rounded-full border-2 border-white/10 border-t-purple-500 animate-spin" />
             {/* Animated loading messages */}
             <LoadingMessages />
           </div>

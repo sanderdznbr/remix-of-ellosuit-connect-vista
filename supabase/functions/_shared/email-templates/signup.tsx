@@ -21,34 +21,24 @@ interface SignupEmailProps {
   confirmationUrl: string
 }
 
-export const SignupEmail = ({
-  siteName,
-  siteUrl,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
+export const SignupEmail = ({ siteName, siteUrl, recipient, confirmationUrl }: SignupEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme seu e-mail no elloContent</Preview>
+    <Preview>Confirme seu e-mail no elloSuit</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Confirme seu e-mail</Heading>
         <Text style={text}>
           Obrigado por se cadastrar no{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>elloContent</strong>
-          </Link>
-          !
+          <Link href={siteUrl} style={link}><strong>elloSuit</strong></Link>!
         </Text>
         <Text style={text}>
-          Confirme seu endereço de e-mail (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
+          Confirme seu endereço de e-mail ({' '}
+          <Link href={`mailto:${recipient}`} style={link}>{recipient}</Link>
           ) clicando no botão abaixo:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Verificar E-mail
+          Confirmar E-mail
         </Button>
         <Text style={footer}>
           Se você não criou uma conta, pode ignorar este e-mail com segurança.

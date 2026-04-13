@@ -24,12 +24,12 @@ interface EmailChangeEmailProps {
 export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }: EmailChangeEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme a alteração do seu e-mail no elloContent</Preview>
+    <Preview>Confirme a alteração do seu e-mail no elloSuit</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Confirme a alteração do seu e-mail</Heading>
         <Text style={text}>
-          Você solicitou a alteração do seu e-mail no elloContent de{' '}
+          Você solicitou a alteração do seu e-mail no elloSuit de{' '}
           <Link href={`mailto:${email}`} style={link}>{email}</Link>{' '}
           para{' '}
           <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.

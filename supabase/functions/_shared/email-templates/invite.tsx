@@ -23,22 +23,20 @@ interface InviteEmailProps {
 export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Você foi convidado para o elloContent</Preview>
+    <Preview>Você foi convidado para o elloSuit</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Você foi convidado</Heading>
         <Text style={text}>
-          Você foi convidado para o{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>elloContent</strong>
-          </Link>
-          . Clique no botão abaixo para aceitar o convite e criar sua conta.
+          Você foi convidado para participar do{' '}
+          <Link href={siteUrl} style={link}><strong>elloSuit</strong></Link>.
+          Clique no botão abaixo para aceitar o convite e criar sua conta.
         </Text>
         <Button style={button} href={confirmationUrl}>
           Aceitar Convite
         </Button>
         <Text style={footer}>
-          Se você não esperava este convite, pode ignorar este e-mail.
+          Se você não esperava este convite, pode ignorar este e-mail com segurança.
         </Text>
       </Container>
     </Body>

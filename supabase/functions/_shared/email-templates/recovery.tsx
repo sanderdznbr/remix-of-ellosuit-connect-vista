@@ -21,20 +21,18 @@ interface RecoveryEmailProps {
 export const RecoveryEmail = ({ siteName, confirmationUrl }: RecoveryEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Redefinir sua senha no elloContent</Preview>
+    <Preview>Redefinir sua senha no elloSuit</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Redefinir sua senha</Heading>
         <Text style={text}>
-          Recebemos uma solicitação para redefinir sua senha no elloContent.
-          Clique no botão abaixo para escolher uma nova senha.
+          Recebemos uma solicitação para redefinir sua senha no elloSuit. Clique no botão abaixo para escolher uma nova senha.
         </Text>
         <Button style={button} href={confirmationUrl}>
           Redefinir Senha
         </Button>
         <Text style={footer}>
-          Se você não solicitou a redefinição de senha, pode ignorar este e-mail.
-          Sua senha não será alterada.
+          Se você não solicitou a redefinição de senha, pode ignorar este e-mail. Sua senha não será alterada.
         </Text>
       </Container>
     </Body>

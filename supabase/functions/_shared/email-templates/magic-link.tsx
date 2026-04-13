@@ -21,18 +21,18 @@ interface MagicLinkEmailProps {
 export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Seu link de acesso ao elloContent</Preview>
+    <Preview>Seu link de login no elloSuit</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Seu link de acesso</Heading>
+        <Heading style={h1}>Seu link de login</Heading>
         <Text style={text}>
-          Clique no botão abaixo para entrar no elloContent. Este link expira em breve.
+          Clique no botão abaixo para entrar no elloSuit. Este link expira em breve.
         </Text>
         <Button style={button} href={confirmationUrl}>
           Entrar
         </Button>
         <Text style={footer}>
-          Se você não solicitou este link, pode ignorar este e-mail.
+          Se você não solicitou este link, pode ignorar este e-mail com segurança.
         </Text>
       </Container>
     </Body>

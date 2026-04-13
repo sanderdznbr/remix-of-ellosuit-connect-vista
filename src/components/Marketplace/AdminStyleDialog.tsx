@@ -334,6 +334,55 @@ Este estilo é especializado para o mercado IMOBILIÁRIO. Ao gerar posts:
     }
   };
 
+  const analyzeAndGenerate = async () => {
+    const allRefs = [...existingImages, ...refPreviews].slice(0, 6);
+    if (allRefs.length === 0) { toast.error('Adicione referências primeiro'); return; }
+    setAnalyzing(true);
+    try {
+      const imageUrls = allRefs.map(url => ({ type: 'image_url', image_url: { url } }));
+      const userContent: any[] = [
+        { type: 'text', text: `Analise as imagens de referência de estilo para posts de Instagram e retorne um JSON com os seguintes campos:
+- "name": nome criativo e curto para o estilo (máx 30 chars, português)
+- "description": descrição concisa do estilo visual (máx 120 chars, português)
+- "category": uma das opções: editorial, minimalista, moderno, criativo, corporativo, lifestyle
+- "tags": array de 3-5 tags relevantes em português
+- "strict_instructions": instruções obrigatórias para a IA seguir ao gerar com este estilo (descreva cores, tipografia, composição, elementos obrigatórios que vê nas referências - máx 300 chars)
+- "negative_prompt": elementos que NÃO devem aparecer nas gerações (em inglês, separados por vírgula)
+
+Responda APENAS com o JSON válido, sem markdown.` },
+        ...imageUrls,
+      ];
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: [
+            { role: 'system', content: 'Você é um diretor de arte sênior especialista em design para Instagram. Analise imagens e extraia DNA visual com precisão. Responda APENAS com JSON válido.' },
+            { role: 'user', content: userContent }
+          ],
+          model: 'google/gemini-2.5-flash'
+        }
+      });
+      if (error) throw error;
+      const text = typeof data === 'string' ? data : data?.content || data?.message || '';
+      const cleanJson = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      setForm(f => ({
+        ...f,
+        name: parsed.name || f.name,
+        description: parsed.description || f.description,
+        category: parsed.category || f.category,
+        tags: Array.isArray(parsed.tags) ? parsed.tags.join(', ') : (parsed.tags || f.tags),
+        strict_instructions: parsed.strict_instructions || f.strict_instructions,
+        negative_prompt: parsed.negative_prompt || f.negative_prompt,
+      }));
+      toast.success('Análise concluída! Campos preenchidos.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro na análise: ' + (err.message || 'Tente novamente'));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   if (!open) return null;
 
   return (

@@ -1462,6 +1462,7 @@ const CarouselGenerator: React.FC = () => {
   // ===== AUTO-SAVE: debounced save when carouselData changes =====
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedDataRef = useRef<string>('');
+  const lastSavedCoverImageRef = useRef<string>('');
   
   useEffect(() => {
     if (!carouselData || !user || generating || generatingAllImages || regeneratingAll || regeneratingCard !== null || isGuest || isSavingRef.current) return;

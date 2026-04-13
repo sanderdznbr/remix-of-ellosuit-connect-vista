@@ -1772,30 +1772,29 @@ The image must look like it was shot by a professional photographer or designed 
     const styleImageGen = activeMarketplaceStyleRef.current?.imageGeneration;
     
     // === SMART REF BUDGET (FRONTEND) — cap references BEFORE sending to edge function ===
-    // This prevents 546 WORKER_LIMIT errors by ensuring the payload is always within safe limits.
-    // Single post: more generous (one invocation). Carousel: strict (N invocations share resources).
+    // Keep frontend aligned with backend limits to preserve marketplace style fidelity.
     const isCarouselMode = !!opts.isCarousel;
     const REF_LIMITS = isCarouselMode
-      ? { maxFace: 3, maxStyle: 3, maxGeneral: 1, maxTotal: 5 }
+      ? { maxFace: 3, maxStyle: 5, maxGeneral: 1, maxTotal: 7 }
       : { maxFace: 5, maxStyle: 6, maxGeneral: 2, maxTotal: 8 };
 
     let cappedFaceRefs = (opts.faceReferenceUrls || []).slice(0, REF_LIMITS.maxFace);
     let cappedStyleRefs = (opts.styleReferenceUrls || []).slice(0, REF_LIMITS.maxStyle);
     let cappedGeneralRefs = (opts.referenceImageUrls || []).slice(0, REF_LIMITS.maxGeneral);
 
-    // Dynamic rebalance: if total exceeds budget, trim lower-priority refs (style first, then general)
+    // Dynamic rebalance: preserve visual DNA for marketplace styles.
+    // Priority: face > style > general.
     const fontSlot = opts.fontReferenceImage ? 1 : 0;
     let currentTotal = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
     if (currentTotal > REF_LIMITS.maxTotal) {
-      // Trim style refs first
       const overflow1 = currentTotal - REF_LIMITS.maxTotal;
-      const styleToKeep = Math.max(1, cappedStyleRefs.length - overflow1);
-      cappedStyleRefs = cappedStyleRefs.slice(0, styleToKeep);
+      cappedGeneralRefs = cappedGeneralRefs.slice(0, Math.max(0, cappedGeneralRefs.length - overflow1));
       currentTotal = cappedFaceRefs.length + cappedStyleRefs.length + cappedGeneralRefs.length + fontSlot;
-      // If still over, trim general refs
+
       if (currentTotal > REF_LIMITS.maxTotal) {
         const overflow2 = currentTotal - REF_LIMITS.maxTotal;
-        cappedGeneralRefs = cappedGeneralRefs.slice(0, Math.max(0, cappedGeneralRefs.length - overflow2));
+        const styleToKeep = Math.max(1, cappedStyleRefs.length - overflow2);
+        cappedStyleRefs = cappedStyleRefs.slice(0, styleToKeep);
       }
     }
 

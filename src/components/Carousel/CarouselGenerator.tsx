@@ -8682,15 +8682,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     )}
 
-                    <div className="h-px bg-white/[0.06] my-1" />
-
-                    {/* Ver Prompt (full generation config) */}
-                    <button
-                      onClick={() => setShowFullConfigModal(true)}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all w-full">
-                      <FileText className="h-4 w-4 text-yellow-400" />
-                      Ver Prompt
-                    </button>
 
                     {/* Criar novo usando mesmo prompt */}
                     <button
@@ -9034,13 +9025,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           Corrigir região
                         </button>
                       )}
-                      {!isGuest && (
-                        <button onClick={() => setViewPromptCard(activeCardIndex)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                          <img src={toolViewPromptIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
-                          Ver prompt
-                        </button>
-                      )}
                       {!isGuest && carouselData.cards.length > 1 && (
                         <button onClick={() => {
                           const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
@@ -9300,16 +9284,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             </div>
                           </button>
                         )}
-                        {!isGuest && (
-                          <button onClick={() => { setShowCardActionSheet(false); setViewPromptCard(activeCardIndex); }}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <FileText className="h-4 w-4 text-yellow-400" />
-                            <div className="text-left">
-                              <p className="text-[13px] text-white/80 font-medium">Ver prompt</p>
-                              <p className="text-[10px] text-white/30">Prompt usado para gerar</p>
-                            </div>
-                          </button>
-                        )}
                         {!isGuest && carouselData.cards.length > 1 && (
                           <button onClick={() => {
                             setShowCardActionSheet(false);
@@ -9406,18 +9380,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </button>
                         )}
 
-                        {!isGuest && (
-                          <button onClick={() => { setShowMobileToolsSheet(false); setShowFullConfigModal(true); }}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
-                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.04))' }}>
-                              <img src={toolViewPromptIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Ver prompt</span>
-                              <span className="text-[11px] text-white/25 leading-tight">Veja e edite o prompt usado na geração</span>
-                            </div>
-                          </button>
-                        )}
 
                         {/* Divider */}
                         <div className="mx-2 my-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
@@ -10667,14 +10629,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors disabled:opacity-50">
                         {regeneratingFace === cardIdx ? <Loader2 className="h-4 w-4 text-green-400 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-400" />}
                         Regenerar rosto
-                      </button>
-                    )}
-                    {(card.generatedPrompt || card.imagePrompt || card.isAiImage) && (
-                      <button
-                        onClick={() => { setModifyMenuCard(null); setViewPromptCard(cardIdx); }}
-                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-white/90 hover:bg-white/10 transition-colors">
-                        <FileText className="h-4 w-4 text-yellow-400" />
-                        Ver prompt usado
                       </button>
                     )}
                     {card.imageUrl && (

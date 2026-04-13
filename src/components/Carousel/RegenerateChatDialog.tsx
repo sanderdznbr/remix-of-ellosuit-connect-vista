@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Loader2, Sparkles, ImageIcon, MousePointer2 } from 'lucide-react';
+import { X, Send, Loader2, ImageIcon, MousePointer2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import assistantAvatar from '@/assets/assistant-avatar.png';
 import { useIsMobile } from '@/hooks/use-mobile';

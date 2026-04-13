@@ -8982,9 +8982,139 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               )}
             </AnimatePresence>
 
-            {/* ===== BASIC MODE: full-width horizontal snap gallery (mobile only) ===== */}
+            {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col items-center relative" style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}>
+              <div className="w-full flex flex-col md:flex-row md:items-start md:justify-center md:gap-6 items-center relative" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+
+                {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
+                {!isMobileView && (
+                  <div className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-2xl overflow-hidden sticky top-20 max-h-[85vh] overflow-y-auto"
+                    style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    
+                    {/* Auto-save */}
+                    <div className="flex items-center gap-2 px-4 py-3 text-xs font-medium text-white/40 border-b border-white/[0.05]">
+                      {autoSaveStatus === 'saving' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : autoSaveStatus === 'saved' ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Save className="h-3.5 w-3.5" />}
+                      {autoSaveStatus === 'saving' ? 'Salvando...' : autoSaveStatus === 'saved' ? 'Salvo!' : 'Auto-save'}
+                    </div>
+
+                    {/* Export */}
+                    <div className="px-3 pt-3 pb-1">
+                      <button onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)} disabled={exporting}
+                        className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] font-medium text-white border transition-all disabled:opacity-50 w-full"
+                        style={{ borderColor: `rgba(${themeRgb},0.3)`, background: `linear-gradient(135deg, rgba(${themeRgb},0.12), rgba(${themeRgb},0.04))` }}>
+                        {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" style={{ color: themeHex }} />}
+                        {isGuest ? 'Assine para baixar' : 'Exportar'}
+                      </button>
+                    </div>
+
+                    <div className="mx-3 h-px bg-white/[0.05]" />
+
+                    {/* Card-specific section */}
+                    {!isGuest && carouselData.cards.length > 0 && (
+                      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/30">
+                        Card {activeCardIndex + 1} de {carouselData.cards.length}
+                      </p>
+                    )}
+
+                    <div className="px-3 pb-1 space-y-0.5">
+                      {!isGuest && (
+                        <button onClick={() => setRegenDialogCard(activeCardIndex)}
+                          disabled={regeneratingCard === activeCardIndex}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          <img src={toolRegenPhotoIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                          Regenerar foto
+                        </button>
+                      )}
+                      {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                        <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                          <img src={toolCorrectRegionIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                          Corrigir região
+                        </button>
+                      )}
+                      {!isGuest && (
+                        <button onClick={() => setViewPromptCard(activeCardIndex)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                          <img src={toolViewPromptIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                          Ver prompt
+                        </button>
+                      )}
+                      {!isGuest && carouselData.cards.length > 1 && (
+                        <button onClick={() => {
+                          const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
+                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                          if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
+                        }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-all">
+                          <Trash2 className="h-4 w-4" />
+                          Excluir card
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mx-3 h-px bg-white/[0.05]" />
+
+                    {/* Global actions */}
+                    <div className="px-3 py-1 space-y-0.5">
+                      <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                        <img src={toolRecreateIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                        Recriar carrossel
+                      </button>
+                      {carouselData.cards.length >= 2 && !isGuest && (
+                        <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
+                          disabled={regeneratingAll || regeneratingCard !== null}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          <img src={toolRegenAllIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                          Regenerar todas
+                        </button>
+                      )}
+                      {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                        <button onClick={() => setShowAddCardMenu(true)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                          <Plus className="h-4 w-4" />
+                          Adicionar card
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mx-3 h-px bg-white/[0.05]" />
+
+                    {/* Style */}
+                    <div className="px-3 py-1">
+                      <button onClick={() => setShowFullScreenStylePicker(true)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                        <Palette className="h-4 w-4" />
+                        Mudar estilo
+                      </button>
+                    </div>
+
+                    <div className="mx-3 h-px bg-white/[0.05]" />
+
+                    {/* Caption */}
+                    <div className="px-3 py-2">
+                      <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
+                        <FileText className="h-4 w-4" />
+                        Legenda
+                      </button>
+                    </div>
+
+                    <div className="mx-3 h-px bg-white/[0.05]" />
+
+                    {/* New carousel */}
+                    <div className="px-3 py-2 pb-4">
+                      <button onClick={() => resetWizardState()}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all">
+                        <Plus className="h-4 w-4" />
+                        Novo carrossel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ===== POST CONTENT (card gallery) ===== */}
+                <div className="flex flex-col items-center flex-1 md:max-w-[520px]">
 
                 {/* Main card — single large view with swipe */}
                 <div

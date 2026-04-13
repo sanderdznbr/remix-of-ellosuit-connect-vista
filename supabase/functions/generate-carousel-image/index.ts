@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
     const isSinglePost = !isCarousel;
     const BUDGET = isSinglePost
       ? { maxTotal: 8, maxFace: 5, maxStyle: 6, maxGeneral: 2 }
-      : { maxTotal: 5, maxFace: 3, maxStyle: 3, maxGeneral: 1 };
+      : { maxTotal: 7, maxFace: 3, maxStyle: 5, maxGeneral: 1 };
 
     let validFaceRefs = hasFaceRefs ? faceReferenceUrls.slice(0, BUDGET.maxFace).filter(isUrlAccessible) : [];
     let validStyleRefs = hasStyleRefs ? styleReferenceUrls.slice(0, BUDGET.maxStyle).filter(isUrlAccessible) : [];
@@ -281,9 +281,11 @@ OBRIGATÓRIO — características de um post PROFISSIONAL REAL:
 
     textPrompt += `\n\n${antiAiAesthetic}\n\n${safeAreaInstruction}\n\nFULL BLEED OBRIGATÓRIO: A imagem DEVE preencher 100% do canvas sem bordas, molduras ou espaço vazio.\nPROIBIÇÃO DE MOLDURA/FRAME: NUNCA adicione molduras, bordas decorativas, frames de celular/dispositivo, sombras de cartão, cantos arredondados decorativos ou qualquer elemento que emoldure a imagem. A arte DEVE ir de ponta a ponta, sem nenhum tipo de frame. NÃO simule um post dentro de outro post. NÃO crie efeito de "cartão flutuando" com sombra. NÃO adicione borda branca, preta ou colorida.\nPROIBIÇÃO DE CÓPIA DE TEXTO: NUNCA copie textos visíveis nas imagens de referência. Títulos, nomes de estilos, categorias, marcas d'água e rótulos das referências são METADADOS — renderize APENAS os textos fornecidos pelo usuário no prompt.\n${logoInstruction}\nPROIBIÇÃO ABSOLUTA DE GRID/COLAGEM/MOSAICO: Cada card DEVE ser UMA ÚNICA composição visual contínua e UNIFICADA. NUNCA divida um card em múltiplas fotos, grids, mosaicos, colagens, sub-quadros ou painéis lado a lado. PROIBIDO criar layouts com 2, 3 ou 4 fotos dentro de um único card. PROIBIDO dividir a imagem em seções ou quadrantes. A imagem INTEIRA deve ser UMA CENA ÚNICA, CONTÍNUA e COESA que preenche todo o canvas de ponta a ponta. Se precisar mostrar múltiplos elementos, componha-os organicamente em UMA ÚNICA CENA — NUNCA em grades separadas.`;
 
-    // Negative prompt — keep it SHORT and only as a separate text, not embedded in main prompt
-    // For visual clone mode, negative prompts can actively hurt fidelity
-    
+    // Negative prompt — inject when provided (style or user-defined restrictions)
+    if (negativePrompt && typeof negativePrompt === 'string' && negativePrompt.trim()) {
+      textPrompt += `\n\nPROMPT NEGATIVO (PROIBIÇÕES ABSOLUTAS — NÃO gere nada da lista abaixo):\n${negativePrompt.trim()}`;
+    }
+
     // Face/person instructions (these are important and specific)
     const isMultiPerson = facePersonsMetadata && Array.isArray(facePersonsMetadata) && facePersonsMetadata.length > 1;
     const buildGenderDirective = (gender: string) => 

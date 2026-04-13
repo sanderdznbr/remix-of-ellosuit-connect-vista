@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles,
+  Plus, Trash2, Upload, Save, Loader2, X, Download, Sparkles, Wand2,
   Star, StarOff, Eye, EyeOff, GripVertical, Building2,
 } from 'lucide-react';
 import {

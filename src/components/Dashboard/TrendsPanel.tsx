@@ -4,6 +4,7 @@ import { TrendingUp, Sparkles, RefreshCw, Settings2, Loader2, Calendar, ChevronR
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 
 interface TrendConfig {
   id?: string;
@@ -168,6 +169,18 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       setConfig(p => ({ ...p, [type === 'light' ? 'logo_url' : 'logo_dark_url']: publicUrl }));
+
+      // Auto-extract brand colors from the uploaded logo
+      try {
+        const colors = await extractColorsFromImage(publicUrl, 6);
+        if (colors.length > 0) {
+          setConfig(p => {
+            const merged = [...new Set([...p.brand_colors, ...colors])].slice(0, 6);
+            return { ...p, brand_colors: merged };
+          });
+          toast.success(`${colors.length} cor(es) extraída(s) da logo`);
+        }
+      } catch { /* ignore color extraction errors */ }
     } catch (err: any) {
       toast.error('Erro no upload: ' + (err?.message || ''));
     } finally {

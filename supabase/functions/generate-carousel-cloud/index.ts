@@ -161,11 +161,13 @@ async function processSinglePost(job: any, jobId: string, timeLeft: () => number
       }
       analysisContent.push({ type: 'text', text: `Analyze these Instagram post reference images and describe their EXACT visual DNA in detail. Also COUNT the approximate number of characters used in titles and body text across the references.
 
+CRITICAL — TYPOGRAPHY IDENTIFICATION: Identify the SPECIFIC font family names used (e.g. 'Montserrat Black', 'Playfair Display Bold Italic', 'Bebas Neue', 'Futura Extra Bold Condensed'). Describe weight, style, case, tracking, and effects for EACH text level. This is the MOST important aspect of the analysis.
+
 Return ONLY a JSON object:
-{"background":"exact bg description","typography":"exact font style","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature","text_limits":{"title_max_chars":50,"body_max_chars":120,"has_subtitle":true,"subtitle_max_chars":60}}
+{"background":"exact bg description","typography":"SPECIFIC font family name + weight + style + case + tracking + effects for EACH text level (title, subtitle, body, labels)","layout":"exact layout","colors_hex":["#hex1","#hex2"],"color_roles":"role of each color","decorative":"decorative elements","photo_treatment":"photo style","mood":"2-3 word mood","signature":"most distinctive feature","text_limits":{"title_max_chars":50,"body_max_chars":120,"has_subtitle":true,"subtitle_max_chars":60}}
 
 For text_limits: count the AVERAGE number of visible characters in titles, body text, and subtitles across ALL reference images. This is critical for maintaining visual fidelity — too much text will break the layout.
-Be EXTREMELY specific. No markdown, pure JSON only.` });
+Be EXTREMELY specific about typography. No markdown, pure JSON only.` });
 
       const dnaRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -403,8 +405,9 @@ Also COUNT the approximate number of characters used in titles and body text acr
 Return ONLY a JSON object:
 {
   "background": "EXACT background (e.g. 'dark navy blue #1a1f3a solid with subtle grid pattern overlay at 10% opacity' NOT just 'dark background')",
-  "typography_main": "EXACT main title font (e.g. 'bold condensed sans-serif, all-caps, white #ffffff, with subtle drop shadow, ~80pt equivalent, tracking -2%' NOT just 'bold text')",
-  "typography_secondary": "EXACT secondary text style (e.g. 'light serif italic, cream #d4b896, ~24pt, normal tracking')",
+  "typography_main": "EXACT main title font — identify the SPECIFIC font family name if recognizable (e.g. 'Montserrat Black', 'Playfair Display Bold', 'Futura Extra Bold Condensed'). Describe weight (thin/light/regular/medium/bold/black/extra-black), style (normal/italic/oblique), case (uppercase/lowercase/title-case), color with hex, approximate size in pt, letter-spacing (tight/normal/wide with % estimate), line-height, and any effects (shadow, outline, gradient fill, 3D). Be as specific as possible about the font identity.",
+  "typography_secondary": "EXACT secondary text font — identify SPECIFIC font family name if recognizable. Describe weight, style, case, color hex, size, spacing. (e.g. 'Open Sans Light, sentence-case, cream #d4b896, ~24pt, normal tracking, 1.5 line-height')",
+  "typography_accent": "Any THIRD typographic style used for labels, tags, CTAs, or highlights — font name, weight, case, color, size. Say 'none' if only 2 styles exist.",
   "text_boxes": "EXACT text box/label styles if present (e.g. 'solid gold #c4a265 rectangles with 8px padding, dark navy text inside, slight rounded corners 4px')",
   "layout": "EXACT layout structure (e.g. 'title top 30%, photo center 40%, text box bottom 20%, left-aligned with 5% margin')",
   "colors_hex": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
@@ -466,8 +469,14 @@ Keep text within these limits to match the style's visual density.`
         promptStyle = `REPLIQUE ESTE ESTILO VISUAL EXATO (das imagens de referência). O resultado DEVE ser INDISTINGUÍVEL de um post feito por um designer humano profissional — NUNCA pode parecer "gerado por IA":
 
 BACKGROUND: ${dna.background}
-MAIN TYPOGRAPHY: ${dna.typography_main || dna.typography}
-SECONDARY TEXT: ${dna.typography_secondary || 'Match from references'}
+
+=== TIPOGRAFIA — FIDELIDADE 100% OBRIGATÓRIA ===
+FONTE PRINCIPAL (títulos): ${dna.typography_main || dna.typography}
+FONTE SECUNDÁRIA (corpo): ${dna.typography_secondary || 'Copie exatamente das referências'}
+FONTE DE DESTAQUE (labels/CTAs): ${dna.typography_accent || 'Copie exatamente das referências'}
+⚠️ REGRA CRÍTICA DE TIPOGRAFIA: Você DEVE reproduzir EXATAMENTE a mesma fonte visual das referências. Identifique a família tipográfica (ex: Montserrat, Playfair Display, Futura, etc.), o peso EXATO (Bold, Black, Light, etc.), o estilo (itálico, condensado, etc.) e o case (MAIÚSCULAS, minúsculas, Title Case). NÃO substitua por fontes genéricas. A tipografia é o elemento MAIS IMPORTANTE da identidade visual — uma fonte diferente DESTRÓI completamente a fidelidade ao estilo original.
+=== FIM TIPOGRAFIA ===
+
 TEXT BOXES/LABELS: ${dna.text_boxes || 'None — match references'}
 LAYOUT: ${dna.layout}
 COLORS (USE ONLY THESE): ${(dna.colors_hex || []).join(', ')} — ${dna.color_roles}
@@ -476,7 +485,7 @@ PHOTO TREATMENT: ${dna.photo_treatment}
 SIGNATURE: ${dna.signature}${textLimitSection}
 
 RULES: Full bleed, português brasileiro, NÃO copie @handles/nomes. O resultado DEVE ser INDISTINGUÍVEL da mesma coleção.
-QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipografia com HIERARQUIA CLARA e letras PERFEITAS (kerning correto, sem deformações). Espaçamento GENEROSO. Alinhamento PRECISO como design editorial. Iluminação direcional com sombras reais. ZERO aspecto artificial/plástico. O post deve parecer que foi criado manualmente em Photoshop por um designer sênior.`;
+QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipografia com HIERARQUIA CLARA e letras PERFEITAS (kerning correto, sem deformações) — USE A MESMA FONTE DAS REFERÊNCIAS, não uma similar. Espaçamento GENEROSO. Alinhamento PRECISO como design editorial. Iluminação direcional com sombras reais. ZERO aspecto artificial/plástico. O post deve parecer que foi criado manualmente em Photoshop por um designer sênior.`;
 
         if (marketplaceStyle?.imageGeneration) {
           marketplaceStyle.imageGeneration.prompt_style = promptStyle;

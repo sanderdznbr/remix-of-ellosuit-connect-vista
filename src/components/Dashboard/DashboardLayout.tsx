@@ -15,6 +15,7 @@ import LogoRemoverTool from './LogoRemoverTool';
 import LogoRemoverHistory from './LogoRemoverHistory';
 import BehanceImporter from './BehanceImporter';
 import InstagramImporter from './InstagramImporter';
+import TrendsPanel from './TrendsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
@@ -131,6 +132,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             setBehanceFiles(files);
             navigate(routeFromTab('logo-remover'));
           }} />;
+        case 'trends':
+          return <TrendsPanel onCreateFromTrend={(topic) => onStartCarousel?.(topic)} />;
         default:
           return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} onResumeJob={onResumeJob} />;
       }

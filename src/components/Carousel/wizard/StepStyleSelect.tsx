@@ -618,7 +618,7 @@ const MarketplacePopup: React.FC<{
 
   const fetchAll = async () => {
     setLoading(true);
-    const [{ data: allStyles }, purchased, credits] = await Promise.all([
+    const [{ data: allStyles }, purchased, credits, adminCheck] = await Promise.all([
       supabase.from('marketplace_styles').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
       user ? supabase.from('purchased_styles').select('style_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),
       user ? (async () => {
@@ -627,9 +627,15 @@ const MarketplacePopup: React.FC<{
         const { data: bal } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle();
         return bal?.balance ?? 0;
       })() : Promise.resolve(0),
+      user ? supabase.rpc('is_adminmaster', { _user_id: user.id }) : Promise.resolve({ data: false }),
     ]);
     setStyles((allStyles as any[]) || []);
-    setPurchasedIds(new Set(((purchased as any)?.data as any[])?.map((p: any) => p.style_id) || []));
+    if ((adminCheck as any)?.data === true) {
+      // Admin owns all styles
+      setPurchasedIds(new Set((allStyles as any[])?.map((s: any) => s.id) || []));
+    } else {
+      setPurchasedIds(new Set(((purchased as any)?.data as any[])?.map((p: any) => p.style_id) || []));
+    }
     setCreditBalance(credits as number);
     setLoading(false);
   };

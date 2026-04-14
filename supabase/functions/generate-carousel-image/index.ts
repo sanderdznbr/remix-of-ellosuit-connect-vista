@@ -191,6 +191,43 @@ Deno.serve(async (req) => {
     // Determine if this is a marketplace/fullbleed style (stylePrompt + style refs = visual clone mode)
     const isVisualCloneMode = !!stylePrompt && validStyleRefs.length > 0;
 
+    // === TYPOGRAPHY DNA PRE-ANALYSIS ===
+    // Quick AI analysis of reference images to extract exact font details before generation
+    let typographyDNA = '';
+    if (isVisualCloneMode && validStyleRefs.length > 0) {
+      try {
+        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+        if (LOVABLE_API_KEY) {
+          const fontAnalysisContent: any[] = [];
+          for (const ref of validStyleRefs.slice(0, 3)) {
+            fontAnalysisContent.push({ type: 'image_url', image_url: { url: ref } });
+          }
+          fontAnalysisContent.push({ type: 'text', text: `Analyze ONLY the typography/fonts in these design references. Return a SHORT plain-text description (max 200 words) with:
+1. MAIN TITLE FONT: exact family name (e.g. "Playfair Display", "Montserrat", "Bebas Neue"), weight (Bold/Black/Light etc), style (italic/condensed/normal), case (UPPERCASE/lowercase/Title Case), color hex, any effects (shadow/outline/gradient/3D)
+2. SECONDARY FONT: same details
+3. ACCENT FONT (if any): same details
+4. Letter-spacing: tight/normal/wide
+5. Any special text treatments (metallic, emboss, glow, etc)
+Be EXTREMELY specific about font identification. If unsure of exact name, describe visual characteristics precisely (serif vs sans-serif, geometric vs humanist, thick vs thin strokes, etc).
+Plain text only, no JSON, no markdown.` });
+
+          const fontRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [{ role: 'user', content: fontAnalysisContent }],
+            }),
+          });
+          if (fontRes.ok) {
+            const fontData = await fontRes.json();
+            typographyDNA = fontData?.choices?.[0]?.message?.content || '';
+            console.log('Typography DNA extracted:', typographyDNA.slice(0, 300));
+          }
+        }
+      } catch (e) { console.error('Typography DNA analysis failed:', e); }
+    }
+
     // === SANITIZE stylePrompt: remove any style/template names that could leak into the image ===
     let cleanStylePrompt = stylePrompt || '';
     if (cleanStylePrompt) {
@@ -229,7 +266,13 @@ Deno.serve(async (req) => {
           .replace(/(?:stories?|portrait|retrato)\s+(?:format[oa]?|orientation|vertical)/gi, '')
           .replace(/\s{2,}/g, ' ')
           .trim();
-        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, TIPOGRAFIA/FONTES e layout — NÃO copie textos, NÃO copie formato/proporção):\n${sanitizedCloneStyle}\n\n⚠️ REFORÇO TIPOGRÁFICO: A fonte usada DEVE ser VISUALMENTE IDÊNTICA à das referências. Mesmo peso, mesmo estilo, mesmo case, mesmo espaçamento. Se a referência usa uma fonte bold condensada em caixa alta, você DEVE usar uma fonte bold condensada em caixa alta — não uma regular ou normal. Este é o critério #1 de qualidade.`;
+        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, TIPOGRAFIA/FONTES e layout — NÃO copie textos, NÃO copie formato/proporção):\n${sanitizedCloneStyle}`;
+        // Inject typography DNA analysis if available
+        if (typographyDNA) {
+          textPrompt += `\n\n🔍 ANÁLISE TIPOGRÁFICA PRÉ-EXTRAÍDA DAS REFERÊNCIAS (SIGA EXATAMENTE):\n${typographyDNA}\n\n⚠️ INSTRUÇÃO CRÍTICA: As fontes descritas acima foram identificadas por análise visual das referências. Você DEVE usar EXATAMENTE essas fontes — mesmo família, peso, estilo e case. Se a análise diz "Playfair Display Bold Italic UPPERCASE com efeito dourado", use EXATAMENTE isso. NÃO substitua por fontes genéricas. A tipografia é o critério #1 de qualidade — uma fonte errada INVALIDA todo o trabalho.`;
+        } else {
+          textPrompt += `\n\n⚠️ REFORÇO TIPOGRÁFICO: A fonte usada DEVE ser VISUALMENTE IDÊNTICA à das referências. Mesmo peso, mesmo estilo, mesmo case, mesmo espaçamento. Se a referência usa uma fonte bold condensada em caixa alta, você DEVE usar uma fonte bold condensada em caixa alta — não uma regular ou normal. Este é o critério #1 de qualidade.`;
+        }
       }
     } else if (cleanStylePrompt) {
       textPrompt = `${cleanStylePrompt}\n\n${imagePrompt}\n\nIMPORTANTE: NÃO copie textos das referências. Use APENAS os textos fornecidos acima.`;

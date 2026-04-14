@@ -113,6 +113,11 @@ Contexto do cliente:
 - Palavras-chave: ${config.keywords || "nenhuma especificada"}
 - País: ${config.country || "BR"}
 - Idioma: ${config.language || "pt-BR"}
+- Sobre a empresa: ${config.company_description || "não informado"}
+- Produtos/Serviços: ${config.products_services || "não informado"}
+- Tom de comunicação: ${config.brand_tone || "profissional"}
+- Objetivos: ${(config.content_goals || []).join(", ") || "não informado"}
+- Instagram: ${config.instagram_url || "não informado"}
 ${trendsContext}
 
 Gere exatamente 8 ideias de conteúdo para posts (carrosseis ou estáticos) que sejam tendência HOJE. 

@@ -123,7 +123,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         setHasConfig(true);
       } else {
         setHasConfig(false);
-        setShowSetup(true);
+        setShowSetup(false);
       }
 
       setTrends((trs as any[]) || []);
@@ -237,8 +237,36 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     );
   }
 
+  // === WELCOME SCREEN (no config yet, setup not started) ===
+  if (!hasConfig && !showSetup) {
+    return (
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
+            <TrendingUp className="w-8 h-8" style={{ color: '#a78bfa' }} />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-3">Trends</h2>
+          <p className="text-white/40 text-sm leading-relaxed mb-8">
+            Receba diariamente ideias de conteúdo personalizadas para o seu negócio, baseadas em tendências reais do seu mercado.
+          </p>
+          <button
+            onClick={() => { setShowSetup(true); setSetupStep(0); }}
+            className="px-8 py-3 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)' }}
+          >
+            Começar configuração
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   // === ONBOARDING SETUP ===
-  if (showSetup || !hasConfig) {
+  if (showSetup) {
     const step = STEPS[setupStep];
     const canAdvance = setupStep === 0
       ? config.company_description.trim().length > 0

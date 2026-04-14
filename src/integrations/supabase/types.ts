@@ -6388,6 +6388,7 @@ export type Database = {
       }
       trend_configs: {
         Row: {
+          brand_colors: string[] | null
           brand_tone: string | null
           company_description: string | null
           company_id: string
@@ -6400,6 +6401,8 @@ export type Database = {
           is_active: boolean
           keywords: string | null
           language: string
+          logo_dark_url: string | null
+          logo_url: string | null
           niche: string
           products_services: string | null
           target_audience: string | null
@@ -6407,6 +6410,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          brand_colors?: string[] | null
           brand_tone?: string | null
           company_description?: string | null
           company_id: string
@@ -6419,6 +6423,8 @@ export type Database = {
           is_active?: boolean
           keywords?: string | null
           language?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
           niche?: string
           products_services?: string | null
           target_audience?: string | null
@@ -6426,6 +6432,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          brand_colors?: string[] | null
           brand_tone?: string | null
           company_description?: string | null
           company_id?: string
@@ -6438,6 +6445,8 @@ export type Database = {
           is_active?: boolean
           keywords?: string | null
           language?: string
+          logo_dark_url?: string | null
+          logo_url?: string | null
           niche?: string
           products_services?: string | null
           target_audience?: string | null

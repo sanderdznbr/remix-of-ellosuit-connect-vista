@@ -230,6 +230,13 @@ const MarketplaceContent: React.FC = () => {
 
   const fetchPurchased = async () => {
     if (!user) return;
+    // Adminmaster owns all styles
+    const { data: isAdmin } = await supabase.rpc('is_adminmaster', { _user_id: user.id });
+    if (isAdmin) {
+      const { data: all } = await supabase.from('marketplace_styles').select('id').eq('is_active', true);
+      setPurchasedIds(new Set((all as any[])?.map((s: any) => s.id) || []));
+      return;
+    }
     const { data } = await supabase.from('purchased_styles').select('style_id').eq('user_id', user.id);
     setPurchasedIds(new Set((data as any[])?.map((p: any) => p.style_id) || []));
   };

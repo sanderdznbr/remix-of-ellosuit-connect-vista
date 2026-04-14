@@ -159,21 +159,24 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       };
 
       if (config.id) {
-        await supabase.from('trend_configs').update(payload).eq('id', config.id);
+        const { error } = await supabase.from('trend_configs').update(payload).eq('id', config.id);
+        if (error) throw error;
       } else {
-        const { data } = await supabase.from('trend_configs').insert({
+        const { data, error } = await supabase.from('trend_configs').insert({
           company_id: companyId,
           user_id: user.id,
           ...payload,
         }).select().single();
+        if (error) throw error;
         if (data) setConfig(prev => ({ ...prev, id: data.id }));
       }
       setHasConfig(true);
       setShowSetup(false);
       toast.success('Configuração salva!');
       if (andGenerate) generateTrends();
-    } catch {
-      toast.error('Erro ao salvar');
+    } catch (err: any) {
+      console.error('Save config error:', err);
+      toast.error('Erro ao salvar: ' + (err?.message || 'desconhecido'));
     } finally {
       setSavingConfig(false);
     }

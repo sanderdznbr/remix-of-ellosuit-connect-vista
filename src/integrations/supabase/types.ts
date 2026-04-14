@@ -6388,40 +6388,58 @@ export type Database = {
       }
       trend_configs: {
         Row: {
+          brand_tone: string | null
+          company_description: string | null
           company_id: string
+          content_goals: string[] | null
           country: string
           created_at: string
+          facebook_url: string | null
           id: string
+          instagram_url: string | null
           is_active: boolean
           keywords: string | null
           language: string
           niche: string
+          products_services: string | null
           target_audience: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          brand_tone?: string | null
+          company_description?: string | null
           company_id: string
+          content_goals?: string[] | null
           country?: string
           created_at?: string
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           is_active?: boolean
           keywords?: string | null
           language?: string
           niche?: string
+          products_services?: string | null
           target_audience?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          brand_tone?: string | null
+          company_description?: string | null
           company_id?: string
+          content_goals?: string[] | null
           country?: string
           created_at?: string
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           is_active?: boolean
           keywords?: string | null
           language?: string
           niche?: string
+          products_services?: string | null
           target_audience?: string | null
           updated_at?: string
           user_id?: string

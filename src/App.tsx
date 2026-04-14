@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
 

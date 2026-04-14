@@ -266,7 +266,13 @@ Plain text only, no JSON, no markdown.` });
           .replace(/(?:stories?|portrait|retrato)\s+(?:format[oa]?|orientation|vertical)/gi, '')
           .replace(/\s{2,}/g, ' ')
           .trim();
-        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, TIPOGRAFIA/FONTES e layout — NÃO copie textos, NÃO copie formato/proporção):\n${sanitizedCloneStyle}\n\n⚠️ REFORÇO TIPOGRÁFICO: A fonte usada DEVE ser VISUALMENTE IDÊNTICA à das referências. Mesmo peso, mesmo estilo, mesmo case, mesmo espaçamento. Se a referência usa uma fonte bold condensada em caixa alta, você DEVE usar uma fonte bold condensada em caixa alta — não uma regular ou normal. Este é o critério #1 de qualidade.`;
+        textPrompt += `\n\nDNA VISUAL DO ESTILO (copie cores, TIPOGRAFIA/FONTES e layout — NÃO copie textos, NÃO copie formato/proporção):\n${sanitizedCloneStyle}`;
+        // Inject typography DNA analysis if available
+        if (typographyDNA) {
+          textPrompt += `\n\n🔍 ANÁLISE TIPOGRÁFICA PRÉ-EXTRAÍDA DAS REFERÊNCIAS (SIGA EXATAMENTE):\n${typographyDNA}\n\n⚠️ INSTRUÇÃO CRÍTICA: As fontes descritas acima foram identificadas por análise visual das referências. Você DEVE usar EXATAMENTE essas fontes — mesmo família, peso, estilo e case. Se a análise diz "Playfair Display Bold Italic UPPERCASE com efeito dourado", use EXATAMENTE isso. NÃO substitua por fontes genéricas. A tipografia é o critério #1 de qualidade — uma fonte errada INVALIDA todo o trabalho.`;
+        } else {
+          textPrompt += `\n\n⚠️ REFORÇO TIPOGRÁFICO: A fonte usada DEVE ser VISUALMENTE IDÊNTICA à das referências. Mesmo peso, mesmo estilo, mesmo case, mesmo espaçamento. Se a referência usa uma fonte bold condensada em caixa alta, você DEVE usar uma fonte bold condensada em caixa alta — não uma regular ou normal. Este é o critério #1 de qualidade.`;
+        }
       }
     } else if (cleanStylePrompt) {
       textPrompt = `${cleanStylePrompt}\n\n${imagePrompt}\n\nIMPORTANTE: NÃO copie textos das referências. Use APENAS os textos fornecidos acima.`;

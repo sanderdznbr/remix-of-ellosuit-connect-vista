@@ -4,6 +4,7 @@ import { TrendingUp, Sparkles, RefreshCw, Settings2, Loader2, Calendar, ChevronR
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
+import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
 
 interface TrendConfig {
   id?: string;

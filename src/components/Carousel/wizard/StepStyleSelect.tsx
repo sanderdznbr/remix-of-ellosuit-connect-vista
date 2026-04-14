@@ -300,10 +300,11 @@ const StepStyleSelect: React.FC<Props> = ({
   const fetchAvailableStyles = async () => {
     setLoading(true);
     try {
+      const selectFields = 'id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free';
       if (!user) {
         const { data: allStyles } = await supabase
           .from('marketplace_styles')
-          .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
+          .select(selectFields)
           .eq('is_active', true)
           .order('is_free', { ascending: false })
           .order('sort_order', { ascending: true });
@@ -311,10 +312,24 @@ const StepStyleSelect: React.FC<Props> = ({
         setLoading(false);
         return;
       }
+
+      // Adminmaster gets all styles
+      const { data: isAdmin } = await supabase.rpc('is_adminmaster', { _user_id: user.id });
+      if (isAdmin) {
+        const { data: allStyles } = await supabase
+          .from('marketplace_styles')
+          .select(selectFields)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+        setPurchasedStyles((allStyles as any[]) || []);
+        setLoading(false);
+        return;
+      }
+
       const [{ data: purchased }, { data: freeStyles }] = await Promise.all([
         supabase.from('purchased_styles').select('style_id').eq('user_id', user.id),
         supabase.from('marketplace_styles')
-          .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
+          .select(selectFields)
           .eq('is_active', true)
           .eq('is_free', true),
       ]);
@@ -324,7 +339,7 @@ const StepStyleSelect: React.FC<Props> = ({
       if (!allIds.length) { setLoading(false); return; }
       const { data: styles } = await supabase
         .from('marketplace_styles')
-        .select('id, name, description, preview_images, price_credits, price_brl, category, style_config, is_featured, tags, strict_instructions, is_free')
+        .select(selectFields)
         .in('id', allIds)
         .eq('is_active', true);
       setPurchasedStyles((styles as any[]) || []);
@@ -603,7 +618,7 @@ const MarketplacePopup: React.FC<{
 
   const fetchAll = async () => {
     setLoading(true);
-    const [{ data: allStyles }, purchased, credits] = await Promise.all([
+    const [{ data: allStyles }, purchased, credits, adminCheck] = await Promise.all([
       supabase.from('marketplace_styles').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
       user ? supabase.from('purchased_styles').select('style_id').eq('user_id', user.id) : Promise.resolve({ data: [] }),
       user ? (async () => {
@@ -612,9 +627,15 @@ const MarketplacePopup: React.FC<{
         const { data: bal } = await supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle();
         return bal?.balance ?? 0;
       })() : Promise.resolve(0),
+      user ? supabase.rpc('is_adminmaster', { _user_id: user.id }) : Promise.resolve({ data: false }),
     ]);
     setStyles((allStyles as any[]) || []);
-    setPurchasedIds(new Set(((purchased as any)?.data as any[])?.map((p: any) => p.style_id) || []));
+    if ((adminCheck as any)?.data === true) {
+      // Admin owns all styles
+      setPurchasedIds(new Set((allStyles as any[])?.map((s: any) => s.id) || []));
+    } else {
+      setPurchasedIds(new Set(((purchased as any)?.data as any[])?.map((p: any) => p.style_id) || []));
+    }
     setCreditBalance(credits as number);
     setLoading(false);
   };

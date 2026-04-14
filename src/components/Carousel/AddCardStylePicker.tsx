@@ -24,6 +24,18 @@ const AddCardStylePicker: React.FC<AddCardStylePickerProps> = ({ onSelectStyle }
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
+
+        // Check if user is adminmaster — gets ALL styles
+        const { data: isAdmin } = await supabase.rpc('is_adminmaster', { _user_id: userData.user.id });
+        if (isAdmin) {
+          const { data } = await supabase
+            .from('marketplace_styles')
+            .select('id, name, preview_images, style_config')
+            .eq('is_active', true);
+          setStyles((data as any[]) || []);
+          return;
+        }
+
         const [{ data: purchased }, { data: freeStyles }] = await Promise.all([
           supabase.from('purchased_styles').select('style_id').eq('user_id', userData.user.id),
           supabase.from('marketplace_styles').select('id').eq('is_active', true).eq('is_free', true),

@@ -251,18 +251,16 @@ const PromptGallery: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 shrink-0">
-        <h1 className="text-xl font-bold text-white mb-1">Galeria de Prompts</h1>
-        <p className="text-sm text-white/30">Salve prompts reutilizáveis com mídias e use com <span className="text-purple-400">@</span> no wizard.</p>
-      </div>
-
-      {/* Action bar */}
-      <div className="px-6 pb-4 shrink-0">
+      <div className="px-6 pt-6 pb-4 shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-white/90">Prompts</h1>
+          <p className="text-xs text-white/25 mt-0.5">Use <span className="text-purple-400/70">@</span> no wizard para mencionar</p>
+        </div>
         <button
           onClick={openNewPrompt}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 transition-all cursor-pointer shadow-lg shadow-purple-600/20"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/50 hover:text-white border border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.04] transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4" /> Novo prompt
+          <Plus className="w-3.5 h-3.5" /> Novo
         </button>
       </div>
 

@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/components/AuthProvider";
 import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
 
@@ -70,59 +71,61 @@ const PageLoader = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AffiliateTracker>
-          <ScrollToTop />
-          <AuthProvider>
-            <SubscriptionBlockedBanner />
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<PublicCarouselGenerator />} />
-                <Route path="/projetos" element={<PublicCarouselGenerator />} />
-                <Route path="/favoritos" element={<PublicCarouselGenerator />} />
-                <Route path="/galeria" element={<PublicCarouselGenerator />} />
-                <Route path="/prompts" element={<PublicCarouselGenerator />} />
-                <Route path="/marketplace" element={<PublicCarouselGenerator />} />
-                <Route path="/ferramentas/remover-logo" element={<PublicCarouselGenerator />} />
-                <Route path="/ferramentas/historico" element={<PublicCarouselGenerator />} />
-                <Route path="/ferramentas/behance" element={<PublicCarouselGenerator />} />
-                <Route path="/ferramentas/instagram" element={<PublicCarouselGenerator />} />
-                <Route path="/ferramentas/gerador-rosto" element={<PublicCarouselGenerator />} />
-                <Route path="/ferramentas/criar-estilo" element={<PublicCarouselGenerator />} />
-                <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
-                <Route path="/auth" element={<Index />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
-                <Route path="/precos" element={<Pricing />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
-                <Route path="/recursos" element={<Recursos />} />
-                <Route path="/suporte" element={<Suporte />} />
-                <Route path="/perfil" element={<Profile />} />
-                <Route path="/perfil/:username" element={<Profile />} />
-                <Route path="/configuracoes" element={<Settings />} />
-                <Route path="/post/:postId" element={<PostPublic />} />
-                <Route path="/presentear" element={<Presentear />} />
-                <Route path="/parceiros" element={<Parceiros />} />
-                <Route path="/area/parceiros" element={<AreaParceiros />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/comunidade" element={<Comunidade />} />
-                <Route path="/ajuda" element={<Ajuda />} />
-                <Route path="/unsubscribe" element={<Unsubscribe />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </AuthProvider>
-        </AffiliateTracker>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AffiliateTracker>
+            <ScrollToTop />
+            <AuthProvider>
+              <SubscriptionBlockedBanner />
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<PublicCarouselGenerator />} />
+                  <Route path="/projetos" element={<PublicCarouselGenerator />} />
+                  <Route path="/favoritos" element={<PublicCarouselGenerator />} />
+                  <Route path="/galeria" element={<PublicCarouselGenerator />} />
+                  <Route path="/prompts" element={<PublicCarouselGenerator />} />
+                  <Route path="/marketplace" element={<PublicCarouselGenerator />} />
+                  <Route path="/ferramentas/remover-logo" element={<PublicCarouselGenerator />} />
+                  <Route path="/ferramentas/historico" element={<PublicCarouselGenerator />} />
+                  <Route path="/ferramentas/behance" element={<PublicCarouselGenerator />} />
+                  <Route path="/ferramentas/instagram" element={<PublicCarouselGenerator />} />
+                  <Route path="/ferramentas/gerador-rosto" element={<PublicCarouselGenerator />} />
+                  <Route path="/ferramentas/criar-estilo" element={<PublicCarouselGenerator />} />
+                  <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
+                  <Route path="/auth" element={<Index />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/gerador-de-carrosseis" element={<PublicCarouselGenerator />} />
+                  <Route path="/precos" element={<Pricing />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
+                  <Route path="/recursos" element={<Recursos />} />
+                  <Route path="/suporte" element={<Suporte />} />
+                  <Route path="/perfil" element={<Profile />} />
+                  <Route path="/perfil/:username" element={<Profile />} />
+                  <Route path="/configuracoes" element={<Settings />} />
+                  <Route path="/post/:postId" element={<PostPublic />} />
+                  <Route path="/presentear" element={<Presentear />} />
+                  <Route path="/parceiros" element={<Parceiros />} />
+                  <Route path="/area/parceiros" element={<AreaParceiros />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/comunidade" element={<Comunidade />} />
+                  <Route path="/ajuda" element={<Ajuda />} />
+                  <Route path="/unsubscribe" element={<Unsubscribe />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </AuthProvider>
+          </AffiliateTracker>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, ChevronLeft, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle, PanelLeftClose, PanelLeftOpen, TrendingUp } from 'lucide-react';
+import { Home, Search, Star, Settings, LogOut, ChevronDown, ChevronRight, ChevronLeft, User, CreditCard, X, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle, PanelLeftClose, PanelLeftOpen, TrendingUp, LayoutGrid, Sparkles, PenTool, Palette, CircleHelp } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
@@ -30,6 +30,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const [ferramentasOpen, setFerramentasOpen] = useState(false);
   const [comunidadeOpen, setComunidadeOpen] = useState(false);
   const [parceirosOpen, setParceirosOpen] = useState(false);
+  const [ajudaOpen, setAjudaOpen] = useState(false);
   const [isAffiliate, setIsAffiliate] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevBalanceRef = useRef<number | null>(null);
@@ -169,7 +170,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             }`}
             title={collapsed ? 'Conteúdos' : undefined}
           >
-            <FolderOpen className="w-4 h-4 shrink-0" />
+            <LayoutGrid className="w-4 h-4 shrink-0" />
             {!collapsed && 'Conteúdos'}
           </button>
           {!collapsed && (activeTab === 'projects' || activeTab === 'starred') && (
@@ -191,7 +192,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
           title={collapsed ? 'Galeria' : undefined}
         >
-          <ImageIcon className="w-4 h-4 shrink-0" />
+          <Sparkles className="w-4 h-4 shrink-0" />
           {!collapsed && 'Galeria'}
         </button>
         <button
@@ -203,7 +204,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
           title={collapsed ? 'Prompts' : undefined}
         >
-          <MessageSquareText className="w-4 h-4 shrink-0" />
+          <PenTool className="w-4 h-4 shrink-0" />
           {!collapsed && 'Prompts'}
         </button>
         <button
@@ -215,7 +216,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           }`}
           title={collapsed ? 'Estilos' : undefined}
         >
-          <ShoppingBag className="w-4 h-4 shrink-0" />
+          <Palette className="w-4 h-4 shrink-0" />
           {!collapsed && 'Estilos'}
         </button>
 
@@ -369,21 +370,31 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
       )}
 
-      {/* Ajuda section */}
+      {/* Ajuda section — collapsible */}
       {!collapsed && (
         <div className="px-2 mt-5">
-          <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Ajuda</p>
           <button
-            onClick={() => { navigate('/ajuda'); closeSearch(); }}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              location.pathname === '/ajuda'
-                ? 'text-white'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
+            onClick={() => setAjudaOpen(!ajudaOpen)}
+            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
           >
-            <BookOpen className="w-4 h-4" />
-            Dúvidas & Créditos
+            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Ajuda</span>
+            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${ajudaOpen ? 'rotate-90' : ''}`} />
           </button>
+          {ajudaOpen && (
+            <div className="mt-1 space-y-0.5">
+              <button
+                onClick={() => { navigate('/ajuda'); closeSearch(); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                  location.pathname === '/ajuda'
+                    ? 'text-white'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <CircleHelp className="w-4 h-4" />
+                Dúvidas & Créditos
+              </button>
+            </div>
+          )}
         </div>
       )}
 

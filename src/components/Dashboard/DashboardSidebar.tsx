@@ -230,13 +230,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             }`}
             title={collapsed ? 'Trends' : undefined}
           >
-            <TrendingUp className="w-4 h-4 shrink-0" style={{ color: activeTab === 'trends' ? '#f59e0b' : undefined }} />
-            {!collapsed && (
-              <span className="flex items-center gap-1.5">
-                Trends
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: 'white' }}>NEW</span>
-              </span>
-            )}
+            <TrendingUp className="w-4 h-4 shrink-0" style={{ color: activeTab === 'trends' ? '#a78bfa' : undefined }} />
+            {!collapsed && 'Trends'}
           </button>
         )}
       </div>

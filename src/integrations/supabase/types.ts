@@ -7780,6 +7780,14 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_email: {
+        Args: { msg_id: number; queue_name: string }
+        Returns: boolean
+      }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: undefined
+      }
       get_carousel_cover_images: {
         Args: { carousel_ids: string[] }
         Returns: {
@@ -7816,6 +7824,24 @@ export type Database = {
       is_room_host: {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean
+      }
+      move_to_dlq: {
+        Args: { msg_id: number; source_queue: string }
+        Returns: undefined
+      }
+      read_email_batch: {
+        Args: {
+          batch_size: number
+          queue_name: string
+          visibility_timeout?: number
+        }
+        Returns: unknown[]
+        SetofOptions: {
+          from: "*"
+          to: "message_record"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       user_belongs_to_company: {
         Args: { company_id: string; user_id: string }

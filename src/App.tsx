@@ -95,6 +95,7 @@ const App = () => (
                   <Route path="/ferramentas/instagram" element={<PublicCarouselGenerator />} />
                   <Route path="/ferramentas/gerador-rosto" element={<PublicCarouselGenerator />} />
                   <Route path="/ferramentas/criar-estilo" element={<PublicCarouselGenerator />} />
+                  <Route path="/trends" element={<PublicCarouselGenerator />} />
                   <Route path="/carousel/:id" element={<PublicCarouselGenerator />} />
                   <Route path="/auth" element={<Index />} />
                   <Route path="/register" element={<Register />} />

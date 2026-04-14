@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, ChevronLeft, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Home, Search, FolderOpen, Star, Settings, LogOut, ChevronDown, ChevronRight, ChevronLeft, User, CreditCard, X, ImageIcon, ShoppingBag, MessageSquareText, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle, PanelLeftClose, PanelLeftOpen, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
@@ -218,6 +218,27 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <ShoppingBag className="w-4 h-4 shrink-0" />
           {!collapsed && 'Estilos'}
         </button>
+
+        {/* Trends — admin only */}
+        {email === 'admin@gmail.com' && (
+          <button
+            onClick={() => { onTabChange('trends'); closeSearch(); }}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+              activeTab === 'trends'
+                ? 'text-white'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+            }`}
+            title={collapsed ? 'Trends' : undefined}
+          >
+            <TrendingUp className="w-4 h-4 shrink-0" style={{ color: activeTab === 'trends' ? '#f59e0b' : undefined }} />
+            {!collapsed && (
+              <span className="flex items-center gap-1.5">
+                Trends
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)', color: 'white' }}>NEW</span>
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Ferramentas section — collapsible */}

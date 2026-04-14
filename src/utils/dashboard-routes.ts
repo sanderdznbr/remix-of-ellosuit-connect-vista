@@ -13,6 +13,7 @@ const ROUTE_TO_TAB: Record<string, string> = {
   '/ferramentas/instagram': 'instagram-import',
   '/ferramentas/gerador-rosto': 'face-generator',
   '/ferramentas/criar-estilo': 'style-creator',
+  '/trends': 'trends',
 };
 
 const TAB_TO_ROUTE: Record<string, string> = Object.fromEntries(

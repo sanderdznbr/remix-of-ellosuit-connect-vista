@@ -2122,6 +2122,59 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_trends: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          relevance_score: number | null
+          source: string
+          title: string
+          trend_date: string
+          updated_at: string
+          used: boolean
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          relevance_score?: number | null
+          source?: string
+          title: string
+          trend_date?: string
+          updated_at?: string
+          used?: boolean
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          relevance_score?: number | null
+          source?: string
+          title?: string
+          trend_date?: string
+          updated_at?: string
+          used?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_trends_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_widgets: {
         Row: {
           company_id: string
@@ -6332,6 +6385,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      trend_configs: {
+        Row: {
+          company_id: string
+          country: string
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string | null
+          language: string
+          niche: string
+          target_audience: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string | null
+          language?: string
+          niche?: string
+          target_audience?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string | null
+          language?: string
+          niche?: string
+          target_audience?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tutorial_categories: {
         Row: {

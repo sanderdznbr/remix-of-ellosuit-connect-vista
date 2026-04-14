@@ -251,18 +251,16 @@ const PromptGallery: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 shrink-0">
-        <h1 className="text-xl font-bold text-white mb-1">Galeria de Prompts</h1>
-        <p className="text-sm text-white/30">Salve prompts reutilizáveis com mídias e use com <span className="text-purple-400">@</span> no wizard.</p>
-      </div>
-
-      {/* Action bar */}
-      <div className="px-6 pb-4 shrink-0">
+      <div className="px-6 pt-6 pb-4 shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-white/90">Prompts</h1>
+          <p className="text-xs text-white/25 mt-0.5">Use <span className="text-purple-400/70">@</span> no wizard para mencionar</p>
+        </div>
         <button
           onClick={openNewPrompt}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 transition-all cursor-pointer shadow-lg shadow-purple-600/20"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/50 hover:text-white border border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.04] transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4" /> Novo prompt
+          <Plus className="w-3.5 h-3.5" /> Novo
         </button>
       </div>
 
@@ -501,67 +499,75 @@ const PromptGallery: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-6 pb-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-white/20" />
+            <Loader2 className="w-5 h-5 animate-spin text-white/15" />
           </div>
         ) : prompts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <MessageSquareText className="w-12 h-12 text-white/10 mb-3" />
-            <p className="text-sm text-white/30">Nenhum prompt salvo ainda</p>
-            <p className="text-xs text-white/15 mt-1">Crie prompts reutilizáveis para agilizar seu workflow</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+              <MessageSquareText className="w-6 h-6 text-white/10" />
+            </div>
+            <p className="text-sm text-white/25">Nenhum prompt salvo</p>
+            <p className="text-[11px] text-white/12 mt-1">Crie contextos reutilizáveis para suas marcas</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {prompts.map(p => {
               const media = promptMedia[p.id] || [];
               const isExpanded = expandedPromptId === p.id;
+              const coverImage = p.avatar_url || (media.length > 0 ? media[0].file_url : null);
               return (
                 <motion.div
                   key={p.id}
                   layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-white/[0.06] hover:border-white/[0.1] transition-colors overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="group relative rounded-xl overflow-hidden border border-white/[0.06] hover:border-white/[0.12] transition-all cursor-pointer"
                   style={{ backgroundColor: '#111118' }}
+                  onClick={() => setExpandedPromptId(isExpanded ? null : p.id)}
                 >
-                  {/* Main row */}
-                  <div className="flex items-start gap-3 p-3 group">
-                    <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#1a1a24' }}>
-                      {p.avatar_url ? (
-                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <MessageSquareText className="w-4 h-4 text-white/20" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white/80 truncate">{p.title}</p>
-                      <p className="text-xs text-white/30 mt-0.5 line-clamp-2">{p.content}</p>
-                      {media.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1.5">
-                          <ImageIcon className="w-3 h-3 text-purple-400/60" />
-                          <span className="text-[10px] text-purple-400/60">{media.length} mídia{media.length > 1 ? 's' : ''}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  {/* Cover */}
+                  <div className="relative w-full" style={{ aspectRatio: '1' }}>
+                    {coverImage ? (
+                      <img src={coverImage} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #141420 0%, #1a1a2e 100%)' }}>
+                        <MessageSquareText className="w-8 h-8 text-white/[0.06]" />
+                      </div>
+                    )}
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    {/* Actions on hover */}
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
-                        onClick={() => setExpandedPromptId(isExpanded ? null : p.id)}
-                        className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer"
-                        title="Mídias vinculadas"
+                        onClick={e => { e.stopPropagation(); handleEdit(p); }}
+                        className="p-1.5 rounded-lg backdrop-blur-sm text-white/60 hover:text-white transition-colors cursor-pointer"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
                       >
-                        <ImageIcon className="w-3.5 h-3.5" />
+                        <Pencil className="w-3 h-3" />
                       </button>
-                      <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/[0.06] cursor-pointer">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 cursor-pointer">
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDelete(p.id); }}
+                        className="p-1.5 rounded-lg backdrop-blur-sm text-red-400/60 hover:text-red-400 transition-colors cursor-pointer"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+                      >
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
+                    {/* Media badge */}
+                    {media.length > 0 && (
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <ImageIcon className="w-2.5 h-2.5 text-purple-300/70" />
+                        <span className="text-[9px] text-white/50">{media.length}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div className="px-3 py-2.5">
+                    <p className="text-xs font-medium text-white/75 truncate">{p.title}</p>
+                    <p className="text-[10px] text-white/25 mt-0.5 line-clamp-1">{p.content}</p>
                   </div>
 
-                  {/* Expanded media section */}
+                  {/* Expanded media panel */}
                   <AnimatePresence>
                     {isExpanded && (
                       <motion.div
@@ -571,75 +577,34 @@ const PromptGallery: React.FC = () => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="px-3 pb-3 border-t border-white/[0.04] pt-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Mídias vinculadas</p>
-                          </div>
-
+                        <div className="px-3 pb-3 border-t border-white/[0.04] pt-2.5">
                           {media.length > 0 && (
-                            <div className="grid grid-cols-4 gap-2 mb-3">
-                              {media.map(m => {
-                                const typeInfo = MEDIA_TYPES.find(t => t.value === m.media_type);
-                                return (
-                                  <div key={m.id} className="relative group/media rounded-lg overflow-hidden border border-white/[0.06]" style={{ aspectRatio: '1' }}>
-                                    <img src={m.file_url} alt={m.file_name} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
-                                      <button
-                                        onClick={() => handleDeleteMedia(m.id)}
-                                        className="p-1 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 cursor-pointer"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                    <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-                                      <span className="text-[8px] text-white/50 truncate block">{typeInfo?.label || m.media_type}</span>
-                                    </div>
+                            <div className="grid grid-cols-3 gap-1.5 mb-2">
+                              {media.map(m => (
+                                <div key={m.id} className="relative group/media rounded-md overflow-hidden border border-white/[0.06]" style={{ aspectRatio: '1' }}>
+                                  <img src={m.file_url} alt={m.file_name} className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                                    <button onClick={e => { e.stopPropagation(); handleDeleteMedia(m.id); }} className="p-1 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 cursor-pointer">
+                                      <Trash2 className="w-2.5 h-2.5" />
+                                    </button>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              ))}
                             </div>
                           )}
-
-                          {/* Quick upload in expanded view */}
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
-                              <select
-                                value={selectedMediaType}
-                                onChange={e => setSelectedMediaType(e.target.value)}
-                                className="text-[11px] rounded-lg px-2 py-1.5 outline-none cursor-pointer appearance-none pr-6"
-                                style={{ backgroundColor: '#1a1a24', color: '#ccc', border: '1px solid rgba(255,255,255,0.1)' }}
-                              >
-                                {MEDIA_TYPES.map(t => (
-                                  <option key={t.value} value={t.value} style={{ backgroundColor: '#1a1a24', color: '#ccc' }}>{t.label}</option>
-                                ))}
-                              </select>
-                              <ChevronDown className="w-3 h-3 text-white/40 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            </div>
-                            <label
-                              className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed transition-colors cursor-pointer"
-                              style={{ borderColor: 'rgba(255,255,255,0.1)' }}
-                              onDragOver={e => { e.preventDefault(); e.stopPropagation(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.5)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(168,85,247,0.05)'; }}
-                              onDragLeave={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
-                              onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; if (e.dataTransfer.files?.length) handleUploadMedia(e.dataTransfer.files, p.id); }}
-                            >
-                              {uploadingMediaFor === p.id ? (
-                                <Loader2 className="w-3.5 h-3.5 text-white/30 animate-spin" />
-                              ) : (
-                                <Upload className="w-3.5 h-3.5 text-white/25" />
-                              )}
-                              <span className="text-[11px] text-white/30">Adicionar mídia</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={e => {
-                                  if (e.target.files?.length) handleUploadMedia(e.target.files, p.id);
-                                  e.target.value = '';
-                                }}
-                              />
-                            </label>
-                          </div>
+                          <label
+                            className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-dashed cursor-pointer hover:border-purple-500/30 transition-colors"
+                            style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {uploadingMediaFor === p.id ? (
+                              <Loader2 className="w-3 h-3 text-white/30 animate-spin" />
+                            ) : (
+                              <Upload className="w-3 h-3 text-white/20" />
+                            )}
+                            <span className="text-[10px] text-white/25">Adicionar</span>
+                            <input type="file" accept="image/*" multiple className="hidden" onChange={e => { if (e.target.files?.length) handleUploadMedia(e.target.files, p.id); e.target.value = ''; }} />
+                          </label>
                         </div>
                       </motion.div>
                     )}

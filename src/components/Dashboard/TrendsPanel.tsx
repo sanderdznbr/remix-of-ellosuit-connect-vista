@@ -125,14 +125,22 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).single();
+      const { data: cu, error: companyError } = await supabase
+        .from('company_users')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      if (companyError) throw companyError;
       if (!cu) return;
       setCompanyId(cu.company_id);
 
-      const [{ data: cfg }, { data: trs }] = await Promise.all([
+      const [{ data: cfg, error: configError }, { data: trs, error: trendsError }] = await Promise.all([
         supabase.from('trend_configs').select('*').eq('company_id', cu.company_id).maybeSingle(),
         supabase.from('daily_trends').select('*').eq('company_id', cu.company_id).order('relevance_score', { ascending: false }).limit(20),
       ]);
+
+      if (configError) throw configError;
+      if (trendsError) throw trendsError;
 
       if (cfg && cfg.niche) {
         setConfig({
@@ -154,7 +162,11 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         setShowSetup(false);
       }
       setTrends((trs as any[]) || []);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e: any) {
+      console.error('Fetch trends error:', e);
+      toast.error('Erro ao carregar trends: ' + (e?.message || 'desconhecido'));
+      setTrends([]);
+    } finally { setLoading(false); }
   }, [user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -246,7 +258,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error || 'Erro');
       toast.success(`${result.count} trends geradas!`);
-      fetchData();
+      await fetchData();
     } catch (e: any) { toast.error(e.message || 'Erro ao gerar trends'); } finally { setGenerating(false); }
   };
 

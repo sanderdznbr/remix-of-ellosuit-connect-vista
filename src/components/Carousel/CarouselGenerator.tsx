@@ -5,11 +5,6 @@ import '@/styles/carousel-loader.css';
 import { buildPaletteFromColors, extractColorsFromImage } from '@/utils/extractColorsFromImage';
 import '@/styles/cube-loader.css';
 import ellocontentProfile from '@/assets/ellocontent-profile.jpg';
-import toolEditTextIcon from '@/assets/icons/tool-edit-text.png';
-import toolRegenPhotoIcon from '@/assets/icons/tool-regen-photo.png';
-import toolCorrectRegionIcon from '@/assets/icons/tool-correct-region.png';
-import toolViewPromptIcon from '@/assets/icons/tool-view-prompt.png';
-import toolRecreateIcon from '@/assets/icons/tool-recreate.png';
 import toolRegenAllIcon from '@/assets/icons/tool-regen-all.png';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1116,6 +1111,48 @@ const CarouselGenerator: React.FC = () => {
     currentCarouselIdRef.current = id;
     _setCurrentCarouselId(id);
   }, []);
+
+  const applyEditHistoryEntry = useCallback(async (entry: { cardIndex: number; imageUrl: string } | undefined, target: 'undo' | 'redo') => {
+    if (!entry || !carouselData) return;
+
+    const currentUrl = carouselData.cards[entry.cardIndex]?.imageUrl;
+    if (currentUrl) {
+      if (target === 'undo') {
+        setCorrectionRedoStack(prev => [...prev, { cardIndex: entry.cardIndex, imageUrl: currentUrl }]);
+      } else {
+        setCorrectionUndoStack(prev => [...prev, { cardIndex: entry.cardIndex, imageUrl: currentUrl }]);
+      }
+    }
+
+    const newCards = [...carouselData.cards];
+    if (newCards[entry.cardIndex]) {
+      newCards[entry.cardIndex] = { ...newCards[entry.cardIndex], imageUrl: entry.imageUrl };
+      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+    }
+
+    if (entry.cardIndex === 0 && currentCarouselIdRef.current) {
+      await supabase
+        .from('generated_carousels')
+        .update({ cover_url: `${entry.imageUrl}?t=${Date.now()}` })
+        .eq('id', currentCarouselIdRef.current);
+    }
+
+    if (target === 'undo') {
+      setCorrectionUndoStack(prev => prev.slice(0, -1));
+      toast({ title: 'Edição revertida!' });
+    } else {
+      setCorrectionRedoStack(prev => prev.slice(0, -1));
+      toast({ title: 'Edição avançada!' });
+    }
+  }, [carouselData, toast]);
+
+  const handleUndoEdit = useCallback(() => {
+    void applyEditHistoryEntry(correctionUndoStack[correctionUndoStack.length - 1], 'undo');
+  }, [applyEditHistoryEntry, correctionUndoStack]);
+
+  const handleRedoEdit = useCallback(() => {
+    void applyEditHistoryEntry(correctionRedoStack[correctionRedoStack.length - 1], 'redo');
+  }, [applyEditHistoryEntry, correctionRedoStack]);
 
   // Full reset for starting a brand-new carousel
   const resetWizardState = useCallback(() => {
@@ -9383,58 +9420,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         {/* Retornar edição (Undo) */}
                         {!isGuest && (
                           <button
-                            onClick={() => {
-                              if (correctionUndoStack.length === 0) return;
-                              const last = correctionUndoStack[correctionUndoStack.length - 1];
-                              if (!last || !carouselData) return;
-                              // Push current image to redo stack
-                              const currentUrl = carouselData.cards[last.cardIndex]?.imageUrl;
-                              if (currentUrl) {
-                                setCorrectionRedoStack(prev => [...prev, { cardIndex: last.cardIndex, imageUrl: currentUrl }]);
-                              }
-                              const newCards = [...carouselData.cards];
-                              if (newCards[last.cardIndex]) {
-                                newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
-                                setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                              }
-                              if (last.cardIndex === 0 && currentCarouselId) {
-                                supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                              }
-                              setCorrectionUndoStack(prev => prev.slice(0, -1));
-                              toast({ title: 'Edição revertida!' });
-                            }}
+                            onClick={handleUndoEdit}
                             disabled={correctionUndoStack.length === 0}
                             className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                            <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
+                            <Undo2 className="h-4 w-4 text-yellow-400" /> Voltar edição {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
                           </button>
                         )}
 
                         {/* Avançar edição (Redo) */}
                         {!isGuest && (
                           <button
-                            onClick={() => {
-                              if (correctionRedoStack.length === 0) return;
-                              const next = correctionRedoStack[correctionRedoStack.length - 1];
-                              if (!next || !carouselData) return;
-                              // Push current image to undo stack
-                              const currentUrl = carouselData.cards[next.cardIndex]?.imageUrl;
-                              if (currentUrl) {
-                                setCorrectionUndoStack(prev => [...prev, { cardIndex: next.cardIndex, imageUrl: currentUrl }]);
-                              }
-                              const newCards = [...carouselData.cards];
-                              if (newCards[next.cardIndex]) {
-                                newCards[next.cardIndex] = { ...newCards[next.cardIndex], imageUrl: next.imageUrl };
-                                setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                              }
-                              if (next.cardIndex === 0 && currentCarouselId) {
-                                supabase.from('generated_carousels').update({ cover_url: `${next.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                              }
-                              setCorrectionRedoStack(prev => prev.slice(0, -1));
-                              toast({ title: 'Edição avançada!' });
-                            }}
+                            onClick={handleRedoEdit}
                             disabled={correctionRedoStack.length === 0}
                             className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
-                            <Redo2 className="h-4 w-4 text-blue-400" /> Avançar Edição {correctionRedoStack.length > 0 && <span className="ml-auto text-[10px] text-blue-400/60">({correctionRedoStack.length})</span>}
+                            <Redo2 className="h-4 w-4 text-blue-400" /> Avançar edição {correctionRedoStack.length > 0 && <span className="ml-auto text-[10px] text-blue-400/60">({correctionRedoStack.length})</span>}
                           </button>
                         )}
 
@@ -9591,15 +9590,33 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={() => setRegenDialogCard(activeCardIndex)}
                           disabled={regeneratingCard === activeCardIndex}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
-                          <img src={toolRegenPhotoIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                          {regeneratingCard === activeCardIndex ? <Loader2 className="h-4 w-4 animate-spin text-sky-400" /> : <Wand2 className="h-4 w-4 text-sky-400" />}
                           Regenerar foto
                         </button>
                       )}
                       {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
                         <button onClick={() => setCorrectionCardIndex(activeCardIndex)}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                          <img src={toolCorrectRegionIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                          <Pencil className="h-4 w-4 text-orange-400" />
                           Corrigir região
+                        </button>
+                      )}
+                      {!isGuest && (
+                        <button onClick={handleUndoEdit}
+                          disabled={correctionUndoStack.length === 0}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          <Undo2 className="h-4 w-4 text-yellow-400" />
+                          Voltar edição
+                          {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
+                        </button>
+                      )}
+                      {!isGuest && (
+                        <button onClick={handleRedoEdit}
+                          disabled={correctionRedoStack.length === 0}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          <Redo2 className="h-4 w-4 text-blue-400" />
+                          Avançar edição
+                          {correctionRedoStack.length > 0 && <span className="ml-auto text-[10px] text-blue-400/60">({correctionRedoStack.length})</span>}
                         </button>
                       )}
                       {!isGuest && carouselData.cards.length > 1 && (
@@ -9621,7 +9638,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div className="px-3 py-1 space-y-0.5">
                       <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all">
-                        <img src={toolRecreateIcon} alt="" className="w-6 h-6 object-contain" loading="lazy" />
+                        <Repeat2 className="h-4 w-4 text-emerald-400" />
                         Recriar carrossel
                       </button>
                       {carouselData.cards.length >= 2 && !isGuest && (
@@ -9984,7 +10001,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             disabled={regeneratingCard === activeCardIndex}
                             className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left disabled:opacity-40 group">
                             <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(59,130,246,0.04))' }}>
-                              <img src={toolRegenPhotoIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
+                              {regeneratingCard === activeCardIndex ? <Loader2 className="h-5 w-5 text-sky-400 animate-spin" /> : <Wand2 className="h-5 w-5 text-sky-400" />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Regenerar foto</span>
@@ -9997,7 +10014,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <button onClick={() => { setShowMobileToolsSheet(false); setCorrectionCardIndex(activeCardIndex); }}
                             className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
                             <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(251,146,60,0.12), rgba(251,146,60,0.04))' }}>
-                              <img src={toolCorrectRegionIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
+                              <Pencil className="h-5 w-5 text-orange-400" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Corrigir região</span>
@@ -10013,7 +10030,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={() => { setShowMobileToolsSheet(false); setStyleChangeSource('recreate'); setShowStylePanel(true); }}
                           className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
                           <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(74,222,128,0.12), rgba(74,222,128,0.04))' }}>
-                            <img src={toolRecreateIcon} alt="" className="w-7 h-7 object-contain" loading="lazy" />
+                            <Repeat2 className="h-5 w-5 text-emerald-400" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Recriar carrossel</span>
@@ -10084,51 +10101,25 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <div className="mx-2 my-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
 
                         {/* Undo */}
-                        {!isGuest && correctionUndoStack.length > 0 && (
-                          <button onClick={() => {
-                            setShowMobileToolsSheet(false);
-                            const last = correctionUndoStack[correctionUndoStack.length - 1];
-                            if (!last || !carouselData) return;
-                            const currentUrl = carouselData.cards[last.cardIndex]?.imageUrl;
-                            if (currentUrl) setCorrectionRedoStack(prev => [...prev, { cardIndex: last.cardIndex, imageUrl: currentUrl }]);
-                            const newCards = [...carouselData.cards];
-                            if (newCards[last.cardIndex]) {
-                              newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
-                              setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                            }
-                            if (last.cardIndex === 0 && currentCarouselId) supabase.from('generated_carousels').update({ cover_url: `${last.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                            setCorrectionUndoStack(prev => prev.slice(0, -1));
-                            toast({ title: 'Edição revertida!' });
-                          }}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                        {!isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); handleUndoEdit(); }}
+                            disabled={correctionUndoStack.length === 0}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group disabled:opacity-40">
                             <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.04))' }}>
                               <Undo2 className="h-5 w-5 text-yellow-400" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Retornar edição</span>
-                              <span className="text-[11px] text-white/25 leading-tight">Desfazer última alteração ({correctionUndoStack.length})</span>
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Voltar edição</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Desfazer última alteração {correctionUndoStack.length > 0 ? `(${correctionUndoStack.length})` : ''}</span>
                             </div>
                           </button>
                         )}
 
                         {/* Redo */}
-                        {!isGuest && correctionRedoStack.length > 0 && (
-                          <button onClick={() => {
-                            setShowMobileToolsSheet(false);
-                            const next = correctionRedoStack[correctionRedoStack.length - 1];
-                            if (!next || !carouselData) return;
-                            const currentUrl = carouselData.cards[next.cardIndex]?.imageUrl;
-                            if (currentUrl) setCorrectionUndoStack(prev => [...prev, { cardIndex: next.cardIndex, imageUrl: currentUrl }]);
-                            const newCards = [...carouselData.cards];
-                            if (newCards[next.cardIndex]) {
-                              newCards[next.cardIndex] = { ...newCards[next.cardIndex], imageUrl: next.imageUrl };
-                              setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                            }
-                            if (next.cardIndex === 0 && currentCarouselId) supabase.from('generated_carousels').update({ cover_url: `${next.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
-                            setCorrectionRedoStack(prev => prev.slice(0, -1));
-                            toast({ title: 'Edição avançada!' });
-                          }}
-                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group">
+                        {!isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); handleRedoEdit(); }}
+                            disabled={correctionRedoStack.length === 0}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left group disabled:opacity-40">
                             <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(96,165,250,0.12), rgba(96,165,250,0.04))' }}>
                               <Redo2 className="h-5 w-5 text-blue-400" />
                             </div>

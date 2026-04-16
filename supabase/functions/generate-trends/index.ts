@@ -167,11 +167,13 @@ PERFIL DO CLIENTE
 ═══════════════════════════════════
 NOTÍCIAS E TENDÊNCIAS DE HOJE
 ═══════════════════════════════════
-${topNews.length > 0 ? `📰 MANCHETES DO DIA:\n${topNews.map((n, i) => `${i + 1}. ${n}`).join("\n")}` : "Sem notícias disponíveis"}
+${topNews.length > 0 ? `📰 MANCHETES DO DIA:\n${topNews.map((n, i) => `${i + 1}. ${n.text}`).join("\n")}` : "Sem notícias disponíveis"}
 
 ${googleTrends.length > 0 ? `\n🔥 TRENDING NO GOOGLE:\n${googleTrends.map((t, i) => `${i + 1}. ${t}`).join("\n")}` : ""}
 
-${nicheNews.length > 0 ? `\n🎯 NOTÍCIAS DO NICHO "${config.niche}":\n${nicheNews.map((n, i) => `${i + 1}. ${n}`).join("\n")}` : ""}
+${nicheNews.length > 0 ? `\n🎯 NOTÍCIAS DO NICHO "${config.niche}":\n${nicheNews.map((n, i) => `${i + 1}. ${n.text}`).join("\n")}` : ""}
+
+${allNewsWithThumbs.length > 0 ? `\n🖼️ IMAGENS DISPONÍVEIS DAS FONTES (use o news_source_index para referenciar):\n${allNewsWithThumbs.map(t => `index=${t.index}: ${t.text}`).join("\n")}` : ""}
 
 ═══════════════════════════════════
 REGRAS

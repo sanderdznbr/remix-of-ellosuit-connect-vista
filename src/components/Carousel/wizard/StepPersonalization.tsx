@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { User, Building2, Upload, X, Folder, ShoppingBag, Palette, ImagePlus, Sparkles, Monitor, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { User, Building2, Upload, X, Folder, ShoppingBag, Palette, ImagePlus, Sparkles, Monitor, ChevronRight, ChevronLeft, Check, Moon, Sun } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';

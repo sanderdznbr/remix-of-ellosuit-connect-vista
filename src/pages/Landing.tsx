@@ -236,7 +236,7 @@ const Landing: React.FC = () => {
                     <Icon className="w-5 h-5" style={{ color: PURPLE }} />
                   </div>
                   <p className="text-[10.5px] uppercase tracking-[0.15em] mb-2" style={{ color: PURPLE, fontWeight: 600 }}>{f.tag}</p>
-                  <h3 className="text-[19px] font-semibold mb-3 leading-tight tracking-tight" style={{ letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <h3 className="text-[19px] font-semibold mb-3 leading-tight tracking-tight" style={{ color: '#fff', letterSpacing: '-0.01em' }}>{f.title}</h3>
                   <p className="text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{f.desc}</p>
                 </motion.div>
               );
@@ -308,7 +308,7 @@ const Landing: React.FC = () => {
                 {p.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 12px -2px rgba(139,92,246,0.5)' }}>Mais popular</div>
                 )}
-                <h3 className="text-[19px] font-semibold mb-1 tracking-tight" style={{ letterSpacing: '-0.01em' }}>{p.name}</h3>
+                <h3 className="text-[19px] font-semibold mb-1 tracking-tight" style={{ color: '#fff', letterSpacing: '-0.01em' }}>{p.name}</h3>
                 <p className="text-[12.5px] mb-6 min-h-[3.2em]" style={{ color: INK_SOFT }}>{p.desc}</p>
                 <div className="mb-6">
                   {p.custom ? (

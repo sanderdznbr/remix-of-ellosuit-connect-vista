@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { TrendingUp, Sparkles, RefreshCw, Settings2, Loader2, Calendar, ChevronRight, ChevronLeft, Instagram, Globe, Target, Pen, Check, Upload, X, Palette, Image, MessageSquare, ChevronDown, Zap } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, Sparkles, RefreshCw, Settings2, Loader2, Calendar, ChevronRight, ChevronLeft, Instagram, Globe, Target, Pen, Check, Upload, X, Palette, Image, MessageSquare, ChevronDown, Zap, Clock, ChevronDown as MoreIcon } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';

@@ -2518,7 +2518,7 @@ The image must look like it was shot by a professional photographer or designed 
             const { data, error } = await supabase.functions.invoke('generate-carousel', {
               body: {
                 action: 'generate-content',
-                topic: cleanMentionsFromTopic(topic.trim()),
+                topic: sanitizeTopic(topic.trim()),
                 cardCount: tweet2Config.cardCount,
                 keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
                 productContext: `TWEET_POST_MODE: Gere ${tweet2Config.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Use capitalização normal. Sem título, sem CTA. Escreva como um post real, em português brasileiro, máximo 280 caracteres.`,
@@ -2532,7 +2532,7 @@ The image must look like it was shot by a professional photographer or designed 
             }).filter(Boolean);
           } catch (e) { console.warn('[tweet2] content generation fallback', e); }
         }
-        if (texts.length === 0) texts = [cleanMentionsFromTopic(topic.trim()) || 'Tweet'];
+        if (texts.length === 0) texts = [sanitizeTopic(topic.trim()) || 'Tweet'];
         while (texts.length < tweet2Config.cardCount) texts.push(texts[texts.length - 1] || 'Tweet');
         texts = texts.slice(0, tweet2Config.cardCount);
 
@@ -2613,7 +2613,7 @@ The image must look like it was shot by a professional photographer or designed 
           const { data, error } = await supabase.functions.invoke('generate-carousel', {
             body: {
               action: 'generate-content',
-              topic: cleanMentionsFromTopic(topic.trim()),
+              topic: sanitizeTopic(topic.trim()),
               cardCount: tweetConfig.cardCount,
               keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
               productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Escreva com capitalização normal (primeira letra maiúscula, resto minúsculo). Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.`,
@@ -2636,7 +2636,7 @@ The image must look like it was shot by a professional photographer or designed 
         }
 
         if (cards.length === 0) {
-          cards = [{ body: cleanMentionsFromTopic(topic.trim()) }];
+          cards = [{ body: sanitizeTopic(topic.trim()) }];
         }
       } else {
         cards = [{ body: 'Tweet de exemplo' }];
@@ -2644,7 +2644,7 @@ The image must look like it was shot by a professional photographer or designed 
 
       // Normalize amount of cards
       while (cards.length < tweetConfig.cardCount) {
-        cards.push({ body: cards[cards.length - 1]?.body || cleanMentionsFromTopic(topic.trim()) || 'Tweet' });
+        cards.push({ body: cards[cards.length - 1]?.body || sanitizeTopic(topic.trim()) || 'Tweet' });
       }
       cards = cards.slice(0, tweetConfig.cardCount);
 
@@ -3228,9 +3228,30 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   // ===== GENERATE (CLOUD-BASED) =====
   // Strip mention tags from topic: (@Title) → Title
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]*)\)/g, '$1').replace(/@(\w+)/g, '$1').replace(/@/g, '');
-  const sanitizeAnimatedTopic = (raw: string) => cleanMentionsFromTopic(raw)
-    .replace(/^\s*(crie|criar|gere|gerar|faça|fazer|monte|montar)\s+(um|uma|o|a)?\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)?\s*(sobre|para)?\s*/i, '')
-    .replace(/^\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)\s*(sobre|para)\s*/i, '')
+  // Strip command prefixes like "crie um post sobre" from topic
+  const stripCommandPrefix = (raw: string) => raw
+    .replace(/^\s*(crie|criar|gere|gerar|faça|fazer|monte|montar)\s+(um|uma|o|a)?\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)?\s*(sobre|para|de|do|da)?\s*/i, '')
+    .replace(/^\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)\s*(sobre|para|de|do|da)\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Full sanitization: clean mentions + strip commands. When mentionedPrompts exist, use their content as the real topic.
+  const sanitizeTopic = (raw: string) => {
+    const cleaned = cleanMentionsFromTopic(raw);
+    const stripped = stripCommandPrefix(cleaned);
+    // If after stripping commands only a prompt title remains (e.g. "ellocontent"), 
+    // and we have mentionedPrompts, use the first prompt's content as topic context
+    if (mentionedPrompts.length > 0) {
+      const mainPrompt = mentionedPrompts[0];
+      const topicWithoutBrand = stripped.replace(/\b(ellocontent|ellosuit)\b/gi, '').trim();
+      if (!topicWithoutBrand || topicWithoutBrand.length < 5) {
+        // Topic was basically just the mention — use prompt content as the real topic
+        return mainPrompt.title || mainPrompt.content.substring(0, 200);
+      }
+      return stripped;
+    }
+    return stripped || cleaned;
+  };
+  const sanitizeAnimatedTopic = (raw: string) => sanitizeTopic(raw)
     .replace(/\b(ellocontent|ellosuit)\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -3261,7 +3282,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const hasManualTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       if (!hasManualTexts) {
         try {
-          const cleanTopic = sanitizeAnimatedTopic(topic) || cleanMentionsFromTopic(topic).trim();
+          const cleanTopic = sanitizeAnimatedTopic(topic) || sanitizeTopic(topic).trim();
           const { data: outlineData, error: outlineError } = await supabase.functions.invoke('generate-carousel', {
             body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel', ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}) },
           });
@@ -3278,7 +3299,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       for (let i = 0; i < cardCount; i++) {
         const cardData = effectiveCardTexts[i] || {};
         const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
-        const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
+        const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || sanitizeTopic(topic).trim();
         const payload: Record<string, any> = {
           topic: cleanTopic,
           cardIndex: i,
@@ -3413,7 +3434,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     try {
       const cardData = manualCardTexts[cardIndex] || {};
       const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
-      const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
+      const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || sanitizeTopic(topic).trim();
       const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
 
       const payload = {
@@ -3647,7 +3668,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
       const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       console.log('[GENERATE_FLOW] Calling generate-carousel edge function...');
-      console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: cleanMentionsFromTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
+      console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: sanitizeTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
       // Build tweet context for tweet mode
       const tweetModeContext = wizardMode === 'tweet' ? {
         isTweetMode: true,
@@ -3667,7 +3688,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: cleanMentionsFromTopic(topic.trim()),
+          topic: sanitizeTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: wizardMode === 'tweet' ? tweetConfig.cardCount : cardCount,
           brandName: brandName || undefined,
@@ -3695,15 +3716,15 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             rawCards.push({
               type: 'cta', title: 'Gostou do conteúdo?', body: 'Salve, compartilhe e siga para mais!',
               ctaLine: brandName || userName || '',
-              imagePrompt: `Card final de CTA sobre "${cleanMentionsFromTopic(topic.trim())}" com design editorial.`,
+              imagePrompt: `Card final de CTA sobre "${sanitizeTopic(topic.trim())}" com design editorial.`,
               needsImage: true,
             });
           } else {
             rawCards.splice(insertIdx, 0, {
               type: 'content',
-              bodyTop: `Continuação sobre ${cleanMentionsFromTopic(topic.trim()).split('\n')[0]}...`,
+              bodyTop: `Continuação sobre ${sanitizeTopic(topic.trim()).split('\n')[0]}...`,
               bodyBottom: '',
-              imagePrompt: `Composição editorial profissional sobre "${cleanMentionsFromTopic(topic.trim())}", card ${insertIdx + 1} de ${cardCount}.`,
+              imagePrompt: `Composição editorial profissional sobre "${sanitizeTopic(topic.trim())}", card ${insertIdx + 1} de ${cardCount}.`,
               needsImage: true,
             });
           }
@@ -3748,7 +3769,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         setImageGenProgress('🌄 Gerando panorama contínuo...');
 
         // Build a panoramic prompt with all card texts
-        const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
+        const cleanTopic = sanitizeTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
         const allCardTexts = cards.slice(0, panelCount).map((c, i) => {
           const title = c.title || c.bodyTop || '';
           const body = c.bodyBottom || c.body || '';
@@ -3967,7 +3988,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const allFaceRefUrls = [...referenceImages.filter(r => r.category === 'face').map(r => r.url), ...getExtremeFormPhotoRefs().filter(r => r.category === 'face').map(r => r.url)];
       const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-      const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
+      const cleanTopic = sanitizeTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
 
       // === REAL ESTATE: Convert property photos from blob URLs to base64 data URLs ===
       const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
@@ -5012,7 +5033,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: cleanMentionsFromTopic(topic.trim()),
+          topic: sanitizeTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: totalCards,
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
@@ -6095,7 +6116,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       
       if (isContinuous && panelCount >= 2 && panelCount <= 3) {
         // Re-generate as panoramic continuous
-        const cleanTopic = cleanMentionsFromTopic(topic.split('\n')[0].trim());
+        const cleanTopic = sanitizeTopic(topic.split('\n')[0].trim());
         const allCardTexts = currentData.cards.map((c, i) => {
           const title = c.title || c.bodyTop || '';
           const body = c.bodyBottom || c.body || '';
@@ -7194,7 +7215,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         const { data, error } = await supabase.functions.invoke('generate-carousel', {
           body: {
             action: 'generate-content',
-            topic: cleanMentionsFromTopic(topic.trim()),
+            topic: sanitizeTopic(topic.trim()),
             cardCount: activeCount,
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
             productContext: `TWEET_POST_MODE: Gere ${activeCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
@@ -8090,7 +8111,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   const { data, error } = await supabase.functions.invoke('generate-carousel', {
                                     body: {
                                       action: 'generate-content',
-                                      topic: cleanMentionsFromTopic(topic.trim()),
+                                      topic: sanitizeTopic(topic.trim()),
                                       cardCount: tweetConfig.cardCount,
                                       isTweetMode: true,
                                       webSearchContent: (!skipWebSearch && webSearchResult) ? {
@@ -8163,7 +8184,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   const { data, error } = await supabase.functions.invoke('generate-carousel', {
                                     body: {
                                       action: 'generate-content',
-                                      topic: cleanMentionsFromTopic(topic.trim()),
+                                      topic: sanitizeTopic(topic.trim()),
                                       cardCount: tweet2Config.cardCount,
                                       isTweetMode: true,
                                       webSearchContent: (!skipWebSearch && webSearchResult) ? {

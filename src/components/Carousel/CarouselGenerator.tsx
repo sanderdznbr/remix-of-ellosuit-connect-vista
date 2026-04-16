@@ -2023,6 +2023,12 @@ The image must look like it was shot by a professional photographer or designed 
     const card = carouselData.cards[cardIdx];
     if (!card?.imageUrl) return;
 
+    // Push current image to undo stack before changing
+    const prevUrl = card.imageUrl;
+    if (prevUrl) {
+      setCorrectionUndoStack(prev => [...prev, { cardIndex: cardIdx, imageUrl: prevUrl }]);
+    }
+
     setChangingFont(true);
     setShowFontChangePanel(false);
     try {

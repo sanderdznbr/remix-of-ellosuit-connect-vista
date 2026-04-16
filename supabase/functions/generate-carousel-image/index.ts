@@ -400,6 +400,7 @@ REFERÊNCIA DE QUALIDADE: Pense em posts do Instagram de marcas como Apple, Nike
 INSTRUÇÕES PRECISAS PARA O MOCKUP:
 - Crie um iPhone 15 Pro FOTORREALISTA (bordas em titânio, Dynamic Island no topo).
 - Posicione o celular em ângulo 3/4 levemente inclinado para a direita, como um anúncio premium da Apple.
+- ⚠️ PROPORÇÃO OBRIGATÓRIA DO DISPOSITIVO: O celular DEVE ocupar no MÁXIMO 40-50% da ALTURA total do canvas e no máximo 35-40% da LARGURA. O celular NÃO pode dominar ou ocupar a composição inteira. Deve haver espaço GENEROSO para título, subtítulo e elementos gráficos ao redor. Pense em proporções de anúncio editorial da Apple — o mockup é UM ELEMENTO da composição, NÃO a composição inteira.
 - Use o screenshot APENAS como base estrutural da interface (layout, blocos, proporções e hierarquia visual), NÃO como texto a ser re-renderizado.
 - NUNCA reproduza nomes de marca, nomes de app, logos, @handles ou qualquer texto institucional presente na screenshot.
 - Se a screenshot contiver “Ellocontent”, “Ellosuit” ou variações, REMOVA/IGNORE completamente esse texto ao compor a tela.

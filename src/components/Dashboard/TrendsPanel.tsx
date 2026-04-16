@@ -60,6 +60,7 @@ export interface TrendData {
   imageSearchQuery?: string;
   contextImages?: string[];
   contextDetails?: string;
+  faceImages?: string[];
 }
 
 interface TrendsPanelProps {

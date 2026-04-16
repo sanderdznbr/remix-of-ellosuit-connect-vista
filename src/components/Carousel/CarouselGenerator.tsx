@@ -552,7 +552,7 @@ const CarouselGenerator: React.FC = () => {
   // Web search state (declared early for WIZARD_STEPS computation)
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
-  const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; cardTexts?: string[]; caption: string; styleId?: string; useBrandColors?: boolean; logoUrl?: string; logoDarkUrl?: string; brandColors?: string[] } | null>(null);
+  const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; cardTexts?: string[]; caption: string; styleId?: string; useBrandColors?: boolean; logoUrl?: string; logoDarkUrl?: string; brandColors?: string[]; faceImages?: string[] } | null>(null);
   const [pendingTrendGeneration, setPendingTrendGeneration] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[]; sources?: { title: string; summary: string; angle: string }[] } | null>(null);
   const [selectedWebSourceIndex, setSelectedWebSourceIndex] = useState<number | null>(null);
@@ -7280,6 +7280,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
 
                   // Use Trend media as STRONG visual references, matching normal generation fidelity
+                  // Separate face images from context images
+                  const trendFaceUrls: string[] = (trendData.faceImages || []).filter((url: string) => typeof url === 'string' && url.trim());
                   const trendContextRefs = (trendData.contextImages || [])
                     .filter((url: string) => typeof url === 'string' && url.trim())
                     .map((url: string, index: number) => ({
@@ -7287,12 +7289,61 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       thumb: url,
                       label: `Trend ref ${index + 1}`,
                       source: 'upload' as const,
-                      category: 'general' as const,
+                      category: 'style' as const,
                     }));
-                  setReferenceImages(trendContextRefs as any);
+                  
+                  // Add face images as face category refs
+                  const trendFaceRefs = trendFaceUrls.map((url: string, index: number) => ({
+                    url,
+                    thumb: url,
+                    label: `Rosto ${index + 1}`,
+                    source: 'upload' as const,
+                    category: 'face' as const,
+                  }));
+                  
+                  setReferenceImages([...trendFaceRefs, ...trendContextRefs] as any);
                   setProductImages((trendData.contextImages || [])
                     .filter((url: string) => typeof url === 'string' && url.trim())
                     .map((url: string) => ({ url, thumb: url, file: null as any })));
+                  
+                  // Set up face persons for face fidelity
+                  if (trendFaceUrls.length > 0) {
+                    const facePerson = {
+                      id: 'trend-face-1',
+                      label: 'Pessoa 1',
+                      photos: trendFaceUrls.map((url: string, idx: number) => ({ url, thumb: url, label: `Rosto ${idx + 1}`, source: 'upload' as const, category: 'face' as const })),
+                      gender: 'auto' as const,
+                      wearsGlasses: false,
+                    };
+                    setFacePersons([facePerson]);
+                    setFaceGender('auto');
+                    
+                    // Auto-detect gender from face photo
+                    (async () => {
+                      try {
+                        const { data, error } = await supabase.functions.invoke('ai-chat', {
+                          body: {
+                            model: 'google/gemini-2.0-flash-001',
+                            messages: [
+                              { role: 'system', content: 'You are a gender detection assistant. Respond ONLY with "male" or "female". Nothing else.' },
+                              { role: 'user', content: [
+                                { type: 'text', text: 'What is the gender of the person in this photo? Reply only "male" or "female".' },
+                                { type: 'image_url', image_url: { url: trendFaceUrls[0] } },
+                              ]},
+                            ],
+                          },
+                        });
+                        if (!error && data?.content) {
+                          const result = data.content.trim().toLowerCase();
+                          const detectedGender = (result.includes('female') || result.includes('fem')) ? 'female' : 'male';
+                          setFacePersons(prev => prev.map(p => p.id === 'trend-face-1' ? { ...p, gender: detectedGender } : p));
+                          setFaceGender(detectedGender);
+                        }
+                      } catch (err) {
+                        console.warn('Trend face gender detection failed:', err);
+                      }
+                    })();
+                  }
 
                   // Enrich topic with user details for AI
                   if (trendData.contextDetails) {

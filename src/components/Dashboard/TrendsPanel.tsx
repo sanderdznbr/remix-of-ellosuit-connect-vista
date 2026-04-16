@@ -611,14 +611,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     );
   }
 
-  // Split trends into today vs older
-  const today = new Date().toISOString().split('T')[0];
-  const { todayTrends, olderTrends } = useMemo(() => {
-    const todayList = trends.filter(t => t.trend_date === today);
-    const olderList = trends.filter(t => t.trend_date !== today);
-    return { todayTrends: todayList, olderTrends: olderList };
-  }, [trends, today]);
-
   const ITEMS_PER_PAGE = 9;
   const displayedToday = todayTrends.slice(0, ITEMS_PER_PAGE);
   const olderPages = Math.ceil(olderTrends.length / ITEMS_PER_PAGE);

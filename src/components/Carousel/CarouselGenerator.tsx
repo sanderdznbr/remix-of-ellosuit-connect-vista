@@ -1564,6 +1564,15 @@ const CarouselGenerator: React.FC = () => {
     };
   }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig]);
 
+  // Auto-trigger generation when coming from Trends (after state is flushed)
+  useEffect(() => {
+    if (pendingTrendGeneration && topic.trim()) {
+      setPendingTrendGeneration(false);
+      setTransitionToGenerate(true);
+      setTimeout(() => generateContent(), 1200);
+    }
+  }, [pendingTrendGeneration, topic]);
+
 
   // Export dialog is now a centered modal, no outside-click handler needed
 

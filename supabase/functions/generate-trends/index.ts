@@ -273,25 +273,35 @@ CATEGORIAS:
     const parsed = JSON.parse(toolCall.function.arguments);
     const trends = (parsed.trends || []).map((trend: any) => {
       const format = trend?.format || "estatico";
-      const cardTexts = Array.isArray(trend?.card_texts)
-        ? trend.card_texts
-            .filter((text: unknown) => typeof text === "string")
-            .map((text: string) => text.trim())
-            .filter(Boolean)
-            .slice(0, 5)
-        : [];
+      // Normalize card_texts to array of {title, subtitle} objects
+      let cardTexts: { title: string; subtitle: string }[] = [];
+      if (Array.isArray(trend?.card_texts)) {
+        cardTexts = trend.card_texts
+          .map((item: any) => {
+            if (typeof item === "object" && item !== null) {
+              return { title: (item.title || "").trim(), subtitle: (item.subtitle || "").trim() };
+            }
+            // Backward compat: plain string → title only
+            if (typeof item === "string") {
+              return { title: item.trim(), subtitle: "" };
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .slice(0, 5);
+      }
 
       if (format === "carrossel") {
         const fallbackTexts = [
-          trend?.title?.trim() || "Capa",
-          "Ponto principal",
-          "Detalhe importante",
-          "Como aplicar",
-          "Próximo passo",
+          { title: trend?.title?.trim() || "Capa", subtitle: "Descubra tudo sobre este assunto" },
+          { title: "Ponto principal", subtitle: "O conceito mais importante" },
+          { title: "Detalhe importante", subtitle: "Entenda o porquê" },
+          { title: "Como aplicar", subtitle: "Coloque em prática agora" },
+          { title: "Próximo passo", subtitle: "Siga para mais conteúdo!" },
         ];
 
         while (cardTexts.length < 5) {
-          cardTexts.push(fallbackTexts[cardTexts.length] || `Slide ${cardTexts.length + 1}`);
+          cardTexts.push(fallbackTexts[cardTexts.length] || { title: `Slide ${cardTexts.length + 1}`, subtitle: "" });
         }
       }
 

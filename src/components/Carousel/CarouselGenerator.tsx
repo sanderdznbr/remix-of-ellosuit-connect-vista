@@ -3496,8 +3496,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   };
 
   const generateContent = async () => {
+    // Use ref for contentMode to avoid stale closure (critical for Trends async flow)
+    const effectiveContentMode = contentModeRef.current;
     console.log('[GENERATE_FLOW] generateContent() called');
-    console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', contentMode, 'cardCount:', cardCount);
+    console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', effectiveContentMode, 'cardCount:', cardCount);
     console.log('[GENERATE_FLOW] generating:', generating, 'generationInFlightRef:', generationInFlightRef.current);
     console.log('[GENERATE_FLOW] snapshot ref:', JSON.stringify({
       exists: !!generationSnapshotRef.current,
@@ -3516,7 +3518,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     }
 
     // === SINGLE POST MODE ===
-    if (contentMode === 'single-post') {
+    if (effectiveContentMode === 'single-post') {
       console.log('[GENERATE_FLOW] Routing to generateSinglePost()');
       return generateSinglePost();
     }

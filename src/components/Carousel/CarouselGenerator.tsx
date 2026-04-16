@@ -9601,6 +9601,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     )}
 
+                    {/* Upscale */}
+                    {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                      <div className="px-3 py-1">
+                        <button onClick={upscaleCard}
+                          disabled={upscaling}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          {upscaling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          Melhorar qualidade
+                        </button>
+                      </div>
+                    )}
+
                     <div className="mx-3 h-px bg-white/[0.05]" />
 
                     {/* Caption */}

@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
 - Mockups e dispositivos também devem ficar completamente contidos dentro do canvas; não corte topo, base ou laterais do aparelho.
 - Para screenshots em mockups, a tela deve ficar centralizada e corretamente encaixada no dispositivo, sem escapar da moldura.
 - CONSISTÊNCIA DE MARGENS: Se este é um carrossel, use EXATAMENTE as mesmas margens e posicionamento em TODOS os slides.`;
-    const compactSafeAreaReminder = 'SAFE AREA OBRIGATÓRIA: mantenha texto, mockup, tela e logo 100% dentro do canvas, com margens internas mínimas de 8% em todos os lados; nada pode tocar ou ultrapassar as bordas. PRIORIZE RESPIRO EXTRA NO TOPO E NOS CANTOS SUPERIORES.';
+    const compactSafeAreaReminder = 'SAFE AREA OBRIGATÓRIA: mantenha texto, mockup, tela e logo 100% dentro do canvas, com margens internas mínimas de 10% em todos os lados; nada pode tocar ou ultrapassar as bordas. PRIORIZE RESPIRO EXTRA NO TOPO E NOS CANTOS. TEXTO NUNCA PODE SER CORTADO OU SAIR DA ARTE.';
 
     // Filter out URLs from domains that block hotlinking
     const BLOCKED_DOMAINS = ['shutterstock.com', 'gettyimages.com', 'istockphoto.com', 'alamy.com', 'depositphotos.com', 'dreamstime.com', '123rf.com', 'stock.adobe.com'];

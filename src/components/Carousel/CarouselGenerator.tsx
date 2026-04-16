@@ -3769,7 +3769,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         setImageGenProgress('🌄 Gerando panorama contínuo...');
 
         // Build a panoramic prompt with all card texts
-        const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
+        const cleanTopic = sanitizeTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
         const allCardTexts = cards.slice(0, panelCount).map((c, i) => {
           const title = c.title || c.bodyTop || '';
           const body = c.bodyBottom || c.body || '';
@@ -3988,7 +3988,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const allFaceRefUrls = [...referenceImages.filter(r => r.category === 'face').map(r => r.url), ...getExtremeFormPhotoRefs().filter(r => r.category === 'face').map(r => r.url)];
       const activeFacePersonsForGen = facePersons.filter(p => p.photos.length > 0);
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-      const cleanTopic = cleanMentionsFromTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
+      const cleanTopic = sanitizeTopic(webSearchResult?.content?.clean_topic || topic.split('\n')[0].trim());
 
       // === REAL ESTATE: Convert property photos from blob URLs to base64 data URLs ===
       const useRealEstateBlend = snapshotIsRealEstate && snapshotPropertyList.some(p => p.photos && p.photos.length > 0);
@@ -6116,7 +6116,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       
       if (isContinuous && panelCount >= 2 && panelCount <= 3) {
         // Re-generate as panoramic continuous
-        const cleanTopic = cleanMentionsFromTopic(topic.split('\n')[0].trim());
+        const cleanTopic = sanitizeTopic(topic.split('\n')[0].trim());
         const allCardTexts = currentData.cards.map((c, i) => {
           const title = c.title || c.bodyTop || '';
           const body = c.bodyBottom || c.body || '';

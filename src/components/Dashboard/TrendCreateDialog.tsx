@@ -11,7 +11,6 @@ interface MarketplaceStyle {
   id: string;
   name: string;
   preview_images: any;
-  cover_url?: string;
   category?: string;
 }
 

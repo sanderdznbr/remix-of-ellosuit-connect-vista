@@ -287,6 +287,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         topic: trend.title + ': ' + trend.description,
         format: trend.metadata?.format || 'estatico',
         cardText: trend.metadata?.card_text || '',
+        cardTexts: trend.metadata?.card_texts || [],
         caption: trend.metadata?.caption || '',
       };
       onCreateFromTrend(trendData.topic, trendData);

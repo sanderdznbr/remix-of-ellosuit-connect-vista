@@ -412,7 +412,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
       textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE screenshots e produtos fielmente na composição. REGRA CRÍTICA: se alguma referência for uma logomarca ou ativo de branding, NÃO renderize essa logo dentro da imagem — a marca será aplicada separadamente via Canvas no final. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final, EXCETO logos que devem ser preservadas para overlay manual.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
-      textPrompt += `\n\nPRODUTO/SCREENSHOT OBRIGATÓRIO: As imagens de referência fornecidas são CONTEÚDO REAL do usuário (screenshot de app, produto, etc.). Você DEVE incorporar estas imagens FIELMENTE no design. Se for um screenshot de aplicativo/sistema: coloque-o dentro de um mockup de smartphone ou laptop premium. Se for um produto: mostre-o em destaque. NÃO gere uma versão genérica ou inventada — use a imagem EXATA fornecida.`;
+      textPrompt += `\n\nPRODUTO/SCREENSHOT OBRIGATÓRIO: As imagens de referência fornecidas são CONTEÚDO REAL do usuário (screenshot de app, produto, etc.). Você DEVE incorporar estas imagens FIELMENTE no design. Se for um screenshot de aplicativo/sistema: coloque-o dentro de um mockup de smartphone ou laptop premium, mas o dispositivo deve ocupar no MÁXIMO 40-50% da altura do canvas — NUNCA gigante ou dominando a composição. Se for um produto: mostre-o em destaque com proporção realista. NÃO gere uma versão genérica ou inventada — use a imagem EXATA fornecida.`;
     }
 
     // Brand colors — always apply when provided (user's brand identity overrides style palette)
@@ -467,7 +467,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       if (validGeneralRefs.length > 0 && isRealEstatePrompt) {
         messageContent.push({ type: 'text', text: `📸 FOTO REAL DO IMÓVEL ABAIXO — Use esta foto como imagem principal do card. NÃO gere uma casa diferente:` });
       } else if (validGeneralRefs.length > 0 && isAppMockup) {
-        messageContent.push({ type: 'text', text: `📱 SCREENSHOT REAL DO APP ABAIXO — Coloque esta imagem EXATAMENTE na tela de um mockup de smartphone premium. Reproduza PIXEL A PIXEL o conteúdo da tela. NÃO invente uma interface diferente:` });
+        messageContent.push({ type: 'text', text: `📱 SCREENSHOT REAL DO APP ABAIXO — Coloque esta imagem na tela de um mockup de smartphone premium. O dispositivo deve ocupar no MÁXIMO 40-50% da altura do canvas, proporcionalmente equilibrado com título e elementos gráficos. NÃO invente uma interface diferente:` });
       } else if (validGeneralRefs.length > 0) {
         messageContent.push({ type: 'text', text: `🎨 CONTEÚDO VISUAL OBRIGATÓRIO ABAIXO — Esta imagem deve aparecer FIELMENTE no resultado (em mockup se for screenshot, em destaque se for produto):` });
       }

@@ -644,6 +644,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     const formatBadge = getFormatBadge(trend);
     const isExpanded = expandedCard === trend.id;
     const cardText = trend.metadata?.card_text;
+    const cardTexts = trend.metadata?.card_texts;
+    const isCarousel = trend.metadata?.format === 'carrossel';
     const caption = trend.metadata?.caption;
     const imageUrl = trend.metadata?.image_url;
 
@@ -691,12 +693,24 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           <p className="text-xs text-white/35 leading-relaxed line-clamp-2 mb-3">{trend.description}</p>
 
           {/* Card text preview */}
-          {cardText && (
+          {isCarousel && cardTexts && cardTexts.length > 0 ? (
+            <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
+              <p className="text-[10px] text-white/20 mb-1.5 uppercase tracking-wider font-medium">Slides ({cardTexts.length})</p>
+              <div className="space-y-1">
+                {cardTexts.map((ct, idx) => (
+                  <div key={idx} className="flex items-start gap-1.5">
+                    <span className="text-[9px] text-purple-400/40 font-mono mt-px shrink-0">{idx + 1}.</span>
+                    <p className="text-[11px] text-white/55 leading-snug">{ct}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : cardText ? (
             <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
               <p className="text-[10px] text-white/20 mb-1 uppercase tracking-wider font-medium">Texto da arte</p>
               <p className="text-xs text-white/60 leading-relaxed line-clamp-3">{cardText}</p>
             </div>
-          )}
+          ) : null}
 
           {/* Caption preview */}
           {caption && (

@@ -3289,8 +3289,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           }
         } catch (e) { console.warn('[SINGLE_POST] Font base64 conversion failed:', e); }
       }
-      // Include logo as reference image for AI
-      if (logoUrl && logoUrl.startsWith('http')) {
+      // Include logo as reference image for AI (ONLY for full-bleed styles where AI renders the logo)
+      const singleIsFullBleed = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
+      if (logoUrl && logoUrl.startsWith('http') && singleIsFullBleed) {
         effectiveProductRefs = [...(effectiveProductRefs || []), logoUrl];
       }
 

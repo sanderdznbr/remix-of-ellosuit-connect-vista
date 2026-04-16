@@ -72,7 +72,7 @@ const StepFaceRef: React.FC<Props> = ({
     try {
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
-          model: 'google/gemini-2.0-flash-001',
+           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: 'You are a gender detection assistant. Respond ONLY with "male" or "female". Nothing else.' },
             { role: 'user', content: [

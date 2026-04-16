@@ -308,7 +308,12 @@ const CarouselGenerator: React.FC = () => {
   const previewH = previewW * (cardH / cardW);
   
   // Content mode: carousel vs single-post
-  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
+  const [contentMode, _setContentMode] = useState<'carousel' | 'single-post'>('carousel');
+  const contentModeRef = useRef<'carousel' | 'single-post'>('carousel');
+  const setContentMode = useCallback((mode: 'carousel' | 'single-post') => {
+    contentModeRef.current = mode;
+    _setContentMode(mode);
+  }, []);
   const [manualPostText, setManualPostText] = useState('');
   const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
   const [cardPhotoAssignments, setCardPhotoAssignments] = useState<Record<number, string>>({});

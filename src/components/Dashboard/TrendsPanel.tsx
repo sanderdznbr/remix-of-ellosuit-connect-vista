@@ -58,6 +58,8 @@ export interface TrendData {
   brandColors?: string[];
   imageUrl?: string;
   imageSearchQuery?: string;
+  contextImages?: string[];
+  contextDetails?: string;
 }
 
 interface TrendsPanelProps {

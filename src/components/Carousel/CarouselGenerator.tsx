@@ -7260,6 +7260,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   if (trendData.logoUrl) setLogoUrl(trendData.logoUrl);
                   if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
 
+                  // Set context images as reference images for generation
+                  if (trendData.contextImages?.length) {
+                    setReferenceImages(trendData.contextImages);
+                  }
+                  // Enrich topic with context details for AI
+                  if (trendData.contextDetails) {
+                    const enrichedTopic = (trendData.topic || '') + '\n\nCONTEXTO ADICIONAL DO USUÁRIO: ' + trendData.contextDetails;
+                    setTopic(enrichedTopic);
+                    setOriginalTopic(enrichedTopic);
+                  }
+
                   // Set format: carousel vs single-post
                   const isTrendCarousel = trendData.format === 'carrossel';
                   if (isTrendCarousel) {

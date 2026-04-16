@@ -501,12 +501,11 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
   const antiFaceNeg = hasFaceRefsForCarousel && !styleRecommendsNoFaces
     ? 'no humans, no people, no portraits, no faces'
     : '';
+  // Apenas 1 card do carrossel pode ter mockup de aparelho completo (a capa).
+  // O resto deve usar abordagens editoriais variadas (crops, painéis, módulos).
   const preferredDeviceMockupIndices = (() => {
     if (!(hasProductImages && isAppScreenshot)) return new Set<number>();
-    const anchors = cards.length <= 5
-      ? [0, cards.length - 1]
-      : [0, Math.floor((cards.length - 1) / 2), cards.length - 1];
-    return new Set(anchors.filter((idx) => idx >= 0 && idx < cards.length));
+    return new Set<number>([0]);
   })();
 
   for (let i = 0; i < cards.length; i++) {
@@ -593,20 +592,20 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
         const variationIndex = (i * 3 + Math.floor(i / 2)) % variations.length;
         const variation = variations[variationIndex];
         if (shouldUseFullDeviceMockup) {
-          parts.push(`OBRIGATÓRIO — MOCKUP COM SCREENSHOT REAL: A imagem de referência de produto contém um SCREENSHOT REAL do aplicativo. Você DEVE:
+          parts.push(`OBRIGATÓRIO — MOCKUP COM SCREENSHOT REAL (APENAS NESTE CARD): A imagem de referência de produto contém um SCREENSHOT REAL do aplicativo. Você DEVE:
 1. Criar um mockup 3D fotorrealista: ${variation}
 2. INSERIR o screenshot EXATAMENTE como ele é na tela do dispositivo — NÃO redesenhe, NÃO invente uma UI nova
-3. O screenshot deve ser CLARAMENTE VISÍVEL e LEGÍVEL na tela do dispositivo
-4. A composição deve ser cinematográfica com iluminação profissional
-5. PROIBIDO repetir o mesmo enquadramento de outro card
+3. NÃO adicione logo, ícone ou marca na tela do dispositivo — use APENAS o screenshot fornecido
+4. O screenshot deve ser CLARAMENTE VISÍVEL e LEGÍVEL na tela do dispositivo
+5. Composição cinematográfica com iluminação profissional
 6. O mockup INTEIRO deve caber dentro da safe area com margens generosas`);
         } else {
-          parts.push(`OBRIGATÓRIO — USE O SCREENSHOT REAL SEM EXCESSO DE MOCKUP NESTE CARD:
-1. NÃO use aparelho completo, moldura de celular ou hardware de smartphone neste slide
-2. Mostre a interface como painéis, crops editoriais, janelas flutuantes, módulos ampliados ou composição de tela integrada ao layout
-3. O screenshot deve permanecer fiel, legível e claramente reconhecível
-4. A composição deve parecer design editorial real, não repetição de mockup de celular
-5. PROIBIDO repetir iPhone/celular em vários cards do mesmo carrossel`);
+          parts.push(`PROIBIDO USAR MOCKUP DE CELULAR/APARELHO NESTE CARD. Crie uma composição editorial DIFERENTE usando uma destas abordagens (escolha a mais apropriada ao tema):
+- Tipografia gigante editorial sobre fundo limpo (sem nenhum aparelho)
+- Crop ampliado de uma seção da UI integrado ao layout como bloco gráfico
+- Ilustração abstrata, fotografia conceitual ou cenário do dia a dia ligado ao tema
+- Composição apenas com texto e elementos gráficos (formas, linhas, gradientes)
+REGRAS: ZERO smartphones, ZERO iPhones, ZERO frames de aparelho, ZERO laptops. NÃO renderize nenhuma logo ou marca. O carrossel inteiro deve parecer um editorial premium com VARIEDADE visual entre slides — nunca repetição de mockups.`);
         }
       } else if (hasProductImages) {
         parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista. O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');

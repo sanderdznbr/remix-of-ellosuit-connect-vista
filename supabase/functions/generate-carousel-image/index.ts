@@ -386,7 +386,7 @@ REGRAS DE DESIGN EDITORIAL:
 2. COMPOSIÇÃO: Use a REGRA DOS TERÇOS. Elementos alinhados com precisão milimétrica. Espaçamento generoso entre elementos. Nada amontoado, nada desalinhado. Layout LIMPO e RESPIRADO.
 3. CORES: Paleta COESA de no máximo 3-4 cores. Contraste alto entre texto e fundo. Se o fundo é escuro, use textos claros com detalhes de cor de destaque (laranja, dourado, azul elétrico). Se o fundo é claro, use textos escuros elegantes.
 4. ELEMENTOS GRÁFICOS: Use elementos sutis como gradientes, linhas finas decorativas, formas geométricas suaves, ícones minimalistas. NUNCA sobrecarregue — menos é mais.
-5. MOCKUPS: Se há screenshot de app, use mockup de iPhone 15 Pro REALISTA com reflexos e sombras sutis, ângulo levemente inclinado (3/4), como em anúncio da Apple.
+5. MOCKUPS: Se há screenshot de app, use mockup de iPhone 15 Pro REALISTA com reflexos e sombras sutis, ângulo levemente inclinado (3/4), como em anúncio da Apple. PROPORÇÃO OBRIGATÓRIA: O celular DEVE ocupar no MÁXIMO 40-50% da altura total do canvas — NUNCA gigante ou dominando a composição inteira. Deixe espaço generoso para título e elementos gráficos.
 6. TEXTOS: Máximo 3 blocos de texto. Título CURTO e PODEROSO (máx 6 palavras). Subtítulo explicativo (máx 15 palavras). CTA opcional. ZERO parágrafos longos.
 7. FULL BLEED: Preencha 100% do canvas. Zero bordas. Zero espaço desperdiçado.
 

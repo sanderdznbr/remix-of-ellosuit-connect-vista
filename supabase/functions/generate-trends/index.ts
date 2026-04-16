@@ -88,8 +88,8 @@ serve(async (req) => {
     // ── Gather real-world context ──
     const serpApiKey = Deno.env.get("SERPAPI_API_KEY");
     let googleTrends: string[] = [];
-    let topNews: string[] = [];
-    let nicheNews: string[] = [];
+    let topNews: { text: string; thumbnail?: string }[] = [];
+    let nicheNews: { text: string; thumbnail?: string }[] = [];
 
     if (serpApiKey) {
       const [trendsResult, newsResult, nicheNewsResult] = await Promise.allSettled([
@@ -116,8 +116,9 @@ serve(async (req) => {
         topNews = articles.slice(0, 15).map((a: any) => {
           const title = a.title || "";
           const snippet = a.snippet || a.description || "";
-          return `${title}${snippet ? ` — ${snippet}` : ""}`;
-        }).filter(Boolean);
+          const thumbnail = a.thumbnail || a.images?.thumbnail || null;
+          return { text: `${title}${snippet ? ` — ${snippet}` : ""}`, thumbnail };
+        }).filter((n: any) => n.text);
       }
 
       if (nicheNewsResult.status === "fulfilled" && nicheNewsResult.value) {
@@ -125,12 +126,18 @@ serve(async (req) => {
         nicheNews = articles.slice(0, 10).map((a: any) => {
           const title = a.title || "";
           const snippet = a.snippet || a.description || "";
-          return `${title}${snippet ? ` — ${snippet}` : ""}`;
-        }).filter(Boolean);
+          const thumbnail = a.thumbnail || a.images?.thumbnail || null;
+          return { text: `${title}${snippet ? ` — ${snippet}` : ""}`, thumbnail };
+        }).filter((n: any) => n.text);
       }
 
       console.log(`Sources: ${googleTrends.length} trends, ${topNews.length} top news, ${nicheNews.length} niche news`);
     }
+
+    // Build thumbnail lookup for AI to reference
+    const allNewsWithThumbs: { index: number; text: string; thumbnail: string }[] = [];
+    topNews.forEach((n, i) => { if (n.thumbnail) allNewsWithThumbs.push({ index: i, text: n.text.slice(0, 80), thumbnail: n.thumbnail }); });
+    nicheNews.forEach((n, i) => { if (n.thumbnail) allNewsWithThumbs.push({ index: 100 + i, text: n.text.slice(0, 80), thumbnail: n.thumbnail }); });
 
     // ── Expert AI prompt ──
     const todayStr = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -160,11 +167,13 @@ PERFIL DO CLIENTE
 ═══════════════════════════════════
 NOTÍCIAS E TENDÊNCIAS DE HOJE
 ═══════════════════════════════════
-${topNews.length > 0 ? `📰 MANCHETES DO DIA:\n${topNews.map((n, i) => `${i + 1}. ${n}`).join("\n")}` : "Sem notícias disponíveis"}
+${topNews.length > 0 ? `📰 MANCHETES DO DIA:\n${topNews.map((n, i) => `${i + 1}. ${n.text}`).join("\n")}` : "Sem notícias disponíveis"}
 
 ${googleTrends.length > 0 ? `\n🔥 TRENDING NO GOOGLE:\n${googleTrends.map((t, i) => `${i + 1}. ${t}`).join("\n")}` : ""}
 
-${nicheNews.length > 0 ? `\n🎯 NOTÍCIAS DO NICHO "${config.niche}":\n${nicheNews.map((n, i) => `${i + 1}. ${n}`).join("\n")}` : ""}
+${nicheNews.length > 0 ? `\n🎯 NOTÍCIAS DO NICHO "${config.niche}":\n${nicheNews.map((n, i) => `${i + 1}. ${n.text}`).join("\n")}` : ""}
+
+${allNewsWithThumbs.length > 0 ? `\n🖼️ IMAGENS DISPONÍVEIS DAS FONTES (use o news_source_index para referenciar):\n${allNewsWithThumbs.map(t => `index=${t.index}: ${t.text}`).join("\n")}` : ""}
 
 ═══════════════════════════════════
 REGRAS
@@ -213,6 +222,7 @@ CATEGORIAS:
                       format: { type: "string", enum: ["carrossel", "estatico"], description: "Formato recomendado" },
                       card_text: { type: "string", description: "Texto que vai na arte/imagem" },
                       caption: { type: "string", description: "Legenda completa do Instagram, máx 500 chars, sem hashtags" },
+                      news_source_index: { type: "number", description: "Index da fonte de notícia que tem imagem disponível (do bloco IMAGENS DISPONÍVEIS), ou -1 se não tem" },
                     },
                     required: ["title", "description", "category", "relevance_score", "format", "card_text", "caption"],
                   },
@@ -260,22 +270,32 @@ CATEGORIAS:
       .eq("company_id", cu.company_id)
       .eq("trend_date", today);
 
-    const rows = trends.map((t: any) => ({
-      company_id: cu.company_id,
-      title: t.title,
-      description: t.description,
-      category: t.category,
-      source: topNews.length > 0 ? "expert_news_ai" : googleTrends.length > 0 ? "google_trends_ai" : "ai_generated",
-      trend_date: today,
-      relevance_score: Math.min(100, Math.max(0, t.relevance_score || 50)),
-      metadata: {
-        news_hook: t.news_hook || null,
-        format: t.format || "estatico",
-        card_text: t.card_text || "",
-        caption: t.caption || "",
-        sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },
-      },
-    }));
+    const rows = trends.map((t: any) => {
+      // Resolve image from news source index
+      let imageUrl: string | null = null;
+      if (typeof t.news_source_index === "number" && t.news_source_index >= 0) {
+        const match = allNewsWithThumbs.find(n => n.index === t.news_source_index);
+        if (match) imageUrl = match.thumbnail;
+      }
+
+      return {
+        company_id: cu.company_id,
+        title: t.title,
+        description: t.description,
+        category: t.category,
+        source: topNews.length > 0 ? "expert_news_ai" : googleTrends.length > 0 ? "google_trends_ai" : "ai_generated",
+        trend_date: today,
+        relevance_score: Math.min(100, Math.max(0, t.relevance_score || 50)),
+        metadata: {
+          news_hook: t.news_hook || null,
+          format: t.format || "estatico",
+          card_text: t.card_text || "",
+          caption: t.caption || "",
+          image_url: imageUrl,
+          sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },
+        },
+      };
+    });
 
     const { error: insertError } = await supabase.from("daily_trends").insert(rows);
     if (insertError) {

@@ -3163,6 +3163,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         title: topic.trim(),
         subtitle: manualPostText.trim() || undefined,
         imageUrl: finalImageUrl,
+        imageUrlRaw: logoUrl ? rawImageUrl : undefined,
         isAiImage: true,
         layout: 'dark',
       };

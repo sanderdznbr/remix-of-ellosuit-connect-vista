@@ -4365,6 +4365,24 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements, no glowing particles, no floating orbs, no network lines, no hexagonal grid, no digital matrix, no abstract tech background, no bokeh circles, no constellation pattern, no holographic effect, no neural network visual';
       const isFullBleedStyle = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
 
+      // === 40% TEXT-ONLY RULE: enforce that ~40% of content cards have no image (non-full-bleed only) ===
+      if (!isFullBleedStyle) {
+        const contentCards = updatedCards.filter((c, idx) => c.type !== 'cover' && c.type !== 'cta' && idx > 0 && idx < updatedCards.length - 1);
+        const contentIndices = updatedCards.map((c, idx) => idx).filter(idx => updatedCards[idx].type !== 'cover' && updatedCards[idx].type !== 'cta' && idx > 0 && idx < updatedCards.length - 1);
+        const maxImageContentCards = Math.ceil(contentCards.length * 0.6); // 60% can have images, 40% text-only
+        let imageContentCount = 0;
+        for (const idx of contentIndices) {
+          if (updatedCards[idx].needsImage || imageCardIndices.includes(idx)) {
+            imageContentCount++;
+            if (imageContentCount > maxImageContentCards) {
+              // Force this card to be text-only
+              updatedCards[idx] = { ...updatedCards[idx], needsImage: false };
+              console.log(`[40% RULE] Card ${idx} forced to text-only (cap reached: ${maxImageContentCards}/${contentCards.length})`);
+            }
+          }
+        }
+      }
+
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
         if (isFullBleedStyle || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i)) {

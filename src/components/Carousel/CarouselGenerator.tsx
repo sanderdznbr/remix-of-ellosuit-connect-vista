@@ -518,6 +518,8 @@ const CarouselGenerator: React.FC = () => {
   const [recreateVisualIdea, setRecreateVisualIdea] = useState('');
   const [pendingAddCardStyle, setPendingAddCardStyle] = useState<any>(null);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
+  const [showLogoRepositionPanel, setShowLogoRepositionPanel] = useState(false);
+  const [repositioningLogo, setRepositioningLogo] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [showCaptionConfigDialog, setShowCaptionConfigDialog] = useState(false);

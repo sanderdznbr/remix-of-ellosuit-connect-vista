@@ -15,7 +15,7 @@ import LogoRemoverTool from './LogoRemoverTool';
 import LogoRemoverHistory from './LogoRemoverHistory';
 import BehanceImporter from './BehanceImporter';
 import InstagramImporter from './InstagramImporter';
-import TrendsPanel from './TrendsPanel';
+import TrendsPanel, { type TrendData } from './TrendsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
@@ -24,7 +24,7 @@ import { tabFromPath, routeFromTab } from '@/utils/dashboard-routes';
 import ellocontentLogo from '@/assets/ellocontent2.svg';
 
 interface DashboardLayoutProps {
-  onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string) => void;
+  onStartCarousel?: (topic?: string, mentionedPrompts?: any[], postFormat?: string, trendData?: TrendData) => void;
   onLoadCarousel?: (carouselItem: any) => void;
   onResumeJob?: (jobId: string) => void;
   children?: React.ReactNode;
@@ -133,7 +133,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             navigate(routeFromTab('logo-remover'));
           }} />;
         case 'trends':
-          return <TrendsPanel onCreateFromTrend={(topic) => onStartCarousel?.(topic)} />;
+          return <TrendsPanel onCreateFromTrend={(topic, trendData) => onStartCarousel?.(topic, undefined, undefined, trendData)} />;
         default:
           return <DashboardHome onStartCarousel={onStartCarousel || (() => {})} onLoadCarousel={onLoadCarousel} onViewAllProjects={() => handleTabChange('projects')} onResumeJob={onResumeJob} />;
       }

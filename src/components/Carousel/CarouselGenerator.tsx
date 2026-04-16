@@ -547,6 +547,7 @@ const CarouselGenerator: React.FC = () => {
   // Web search state (declared early for WIZARD_STEPS computation)
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
+  const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; caption: string } | null>(null);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[]; sources?: { title: string; summary: string; angle: string }[] } | null>(null);
   const [selectedWebSourceIndex, setSelectedWebSourceIndex] = useState<number | null>(null);
   const [extractingUrl, setExtractingUrl] = useState(false);
@@ -1150,6 +1151,7 @@ const CarouselGenerator: React.FC = () => {
     setLoadedMarketplaceStyleId(null);
     setSearchingWeb(false);
     setSkipWebSearch(false);
+    setFromTrendData(null);
     setWebSearchResult(null);
     setSelectedWebSourceIndex(null);
     setExtractingUrl(false);
@@ -7225,7 +7227,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             transition={{ duration: 0.3 }}
           >
             <DashboardLayout
-              onStartCarousel={(newTopic?: string, newMentionedPrompts?: any[], newPostFormat?: string) => {
+              onStartCarousel={(newTopic?: string, newMentionedPrompts?: any[], newPostFormat?: string, trendData?: any) => {
                 resetWizardState();
                 setShowWelcome(false);
                 if (newPostFormat && newPostFormat in FORMAT_DIMENSIONS) {
@@ -7237,6 +7239,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 }
                 if (newMentionedPrompts?.length) {
                   setMentionedPrompts(newMentionedPrompts);
+                }
+                // When coming from trends, lock topic and skip web search
+                if (trendData) {
+                  setFromTrendData(trendData);
+                  setSkipWebSearch(true);
+                  setForceWebSearch(false);
                 }
               }}
               onLoadCarousel={async (item: any) => {
@@ -7667,7 +7675,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
                           else if (cardCount < 2) { setCardCount(5); }
-                        }} />
+                        }}
+                        fromTrendData={fromTrendData} />
                     )}
                     {currentStepName === 'Pesquisa' && (
                       <StepWebSearchResult

@@ -7264,9 +7264,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   if (trendData.contextImages?.length) {
                     setReferenceImages(trendData.contextImages);
                   }
-                  // Set context details as product context for AI
+                  // Enrich topic with context details for AI
                   if (trendData.contextDetails) {
-                    setProductContext(prev => (prev ? prev + '\n' : '') + trendData.contextDetails);
+                    const enrichedTopic = (trendData.topic || '') + '\n\nCONTEXTO ADICIONAL DO USUÁRIO: ' + trendData.contextDetails;
+                    setTopic(enrichedTopic);
+                    setOriginalTopic(enrichedTopic);
                   }
 
                   // Set format: carousel vs single-post

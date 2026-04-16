@@ -11054,8 +11054,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <button
                       onClick={() => {
                         const last = correctionUndoStack[correctionUndoStack.length - 1];
-                        if (!last) return;
-                        const newCards = carouselData ? [...carouselData.cards] : [];
+                        if (!last || !carouselData) return;
+                        const currentUrl = carouselData.cards[last.cardIndex]?.imageUrl;
+                        if (currentUrl) {
+                          setCorrectionRedoStack(prev => [...prev, { cardIndex: last.cardIndex, imageUrl: currentUrl }]);
+                        }
+                        const newCards = [...carouselData.cards];
                         if (newCards[last.cardIndex]) {
                           newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
                           setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
@@ -11069,6 +11073,31 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-yellow-300 hover:text-yellow-200 border transition-all"
                       style={{ borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }}>
                       <Undo2 className="h-3.5 w-3.5" /> Desfazer
+                    </button>
+                  )}
+                  {!isGuest && correctionRedoStack.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const next = correctionRedoStack[correctionRedoStack.length - 1];
+                        if (!next || !carouselData) return;
+                        const currentUrl = carouselData.cards[next.cardIndex]?.imageUrl;
+                        if (currentUrl) {
+                          setCorrectionUndoStack(prev => [...prev, { cardIndex: next.cardIndex, imageUrl: currentUrl }]);
+                        }
+                        const newCards = [...carouselData.cards];
+                        if (newCards[next.cardIndex]) {
+                          newCards[next.cardIndex] = { ...newCards[next.cardIndex], imageUrl: next.imageUrl };
+                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                        }
+                        if (next.cardIndex === 0 && currentCarouselId) {
+                          supabase.from('generated_carousels').update({ cover_url: `${next.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+                        }
+                        setCorrectionRedoStack(prev => prev.slice(0, -1));
+                        toast({ title: 'Edição avançada!' });
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-blue-300 hover:text-blue-200 border transition-all"
+                      style={{ borderColor: 'rgba(96,165,250,0.3)', backgroundColor: 'rgba(96,165,250,0.08)' }}>
+                      <Redo2 className="h-3.5 w-3.5" /> Refazer
                     </button>
                   )}
                   <button onClick={() => { resetWizardState(); }}

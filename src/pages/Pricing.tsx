@@ -766,7 +766,7 @@ function LoggedInPricing() {
                   style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}
                 >
                   <h3 className="text-white text-sm font-semibold mb-1">🎁 Resgatar código</h3>
-                  <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate créditos ou planos aqui.</p>
+                  <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate criativos ou planos aqui.</p>
                   <div className="flex gap-2">
                     <input
                       type="text"

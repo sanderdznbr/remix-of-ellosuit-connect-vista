@@ -4545,12 +4545,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             }
           }
           
-          // Include logo as reference image for the AI to render (ONLY for full-bleed styles where AI renders the logo)
-          if (logoUrl && logoUrl.startsWith('http') && isFullBleedMkt) {
-            capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
-          }
-
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
+           
+           // Include logo as reference image for the AI to render (ONLY for full-bleed styles where AI renders the logo)
+           if (logoUrl && logoUrl.startsWith('http') && isFullBleedMkt) {
+             capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
+           }
+
            const capturedNegative = isFullBleedMkt 
               ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;

@@ -15,8 +15,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -28,8 +27,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -41,8 +39,7 @@ serve(async (req) => {
 
     if (!cu || !["admin", "adminmaster", "manager"].includes(cu.role)) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -54,45 +51,56 @@ serve(async (req) => {
 
     if (!config || !config.niche) {
       return new Response(JSON.stringify({ error: "Configure seu nicho primeiro" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // ── Consume 1 trend credit ──
+    const { data: balance } = await supabase
+      .from("ai_credit_balances")
+      .select("balance")
+      .eq("company_id", cu.company_id)
+      .maybeSingle();
+
+    if (!balance || balance.balance < 1) {
+      return new Response(JSON.stringify({ error: "Sem créditos disponíveis" }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Deduct 1 credit
+    await supabase.rpc("consume_ai_credits", {
+      p_company_id: cu.company_id,
+      p_agent_id: null,
+      p_amount: 1,
+      p_description: "Busca de trends (1 crédito)",
+    });
 
     console.log(`Generating expert trends for company ${cu.company_id}, niche: ${config.niche}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ============================================================
-    // STEP 1: Gather real-world context from MULTIPLE sources
-    // ============================================================
-
+    // ── Gather real-world context ──
     const serpApiKey = Deno.env.get("SERPAPI_API_KEY");
     let googleTrends: string[] = [];
     let topNews: string[] = [];
     let nicheNews: string[] = [];
 
     if (serpApiKey) {
-      // Fetch in parallel: general trends + general news + niche news
       const [trendsResult, newsResult, nicheNewsResult] = await Promise.allSettled([
-        // 1) Google Trends - GENERAL (not filtered by niche)
         fetch(`https://serpapi.com/search.json?engine=google_trends_trending_now&geo=${config.country || "BR"}&api_key=${serpApiKey}`)
           .then(r => r.ok ? r.json() : null),
-        // 2) Google News - TOP headlines today
         fetch(`https://serpapi.com/search.json?engine=google_news&gl=${(config.country || "BR").toLowerCase()}&hl=${(config.language || "pt-BR").split("-")[0]}&api_key=${serpApiKey}`)
           .then(r => r.ok ? r.json() : null),
-        // 3) Google News - niche-specific
         fetch(`https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(config.niche)}&gl=${(config.country || "BR").toLowerCase()}&hl=${(config.language || "pt-BR").split("-")[0]}&api_key=${serpApiKey}`)
           .then(r => r.ok ? r.json() : null),
       ]);
 
-      // Parse general trends
       if (trendsResult.status === "fulfilled" && trendsResult.value) {
         const trending = trendsResult.value.trending_searches || trendsResult.value.daily_searches || [];
         if (Array.isArray(trending)) {
@@ -103,7 +111,6 @@ serve(async (req) => {
         }
       }
 
-      // Parse general news
       if (newsResult.status === "fulfilled" && newsResult.value) {
         const articles = newsResult.value.news_results || [];
         topNews = articles.slice(0, 15).map((a: any) => {
@@ -113,7 +120,6 @@ serve(async (req) => {
         }).filter(Boolean);
       }
 
-      // Parse niche news
       if (nicheNewsResult.status === "fulfilled" && nicheNewsResult.value) {
         const articles = nicheNewsResult.value.news_results || [];
         nicheNews = articles.slice(0, 10).map((a: any) => {
@@ -126,15 +132,17 @@ serve(async (req) => {
       console.log(`Sources: ${googleTrends.length} trends, ${topNews.length} top news, ${nicheNews.length} niche news`);
     }
 
-    // ============================================================
-    // STEP 2: Expert AI prompt with creative cross-pollination
-    // ============================================================
-
+    // ── Expert AI prompt ──
     const todayStr = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-    const prompt = `Você é um ESTRATEGISTA DE CONTEÚDO DE ELITE, especialista em marketing viral e storytelling persuasivo.
+    const prompt = `Você é um ESTRATEGISTA DE CONTEÚDO DE ELITE para redes sociais (Instagram).
 
-Sua missão: gerar ideias de conteúdo IRRESISTÍVEIS que misturam o que está acontecendo NO MUNDO REAL HOJE com o nicho do cliente, criando conexões inesperadas e persuasivas.
+Sua missão: gerar 9 ideias de conteúdo PRONTAS PARA USAR, cada uma com:
+- Título curto e impactante
+- Descrição persuasiva explicando o ângulo
+- FORMATO RECOMENDADO: "carrossel" (múltiplos slides) ou "estatico" (post único)
+- TEXTO DA ARTE: o texto exato que vai na imagem/card (máx 80 chars para estático, máx 40 chars por slide para carrossel)
+- LEGENDA PRONTA: a legenda completa do Instagram (máx 500 chars, sem hashtags, com CTA)
 
 📌 DATA DE HOJE: ${todayStr}
 
@@ -148,7 +156,6 @@ PERFIL DO CLIENTE
 • Tom de comunicação: ${config.brand_tone || "profissional"}
 • Objetivos: ${(config.content_goals || []).join(", ") || "não informado"}
 • Palavras-chave: ${config.keywords || "nenhuma"}
-• Instagram: ${config.instagram_url || "não informado"}
 
 ═══════════════════════════════════
 NOTÍCIAS E TENDÊNCIAS DE HOJE
@@ -160,28 +167,18 @@ ${googleTrends.length > 0 ? `\n🔥 TRENDING NO GOOGLE:\n${googleTrends.map((t, 
 ${nicheNews.length > 0 ? `\n🎯 NOTÍCIAS DO NICHO "${config.niche}":\n${nicheNews.map((n, i) => `${i + 1}. ${n}`).join("\n")}` : ""}
 
 ═══════════════════════════════════
-REGRAS DE OURO
+REGRAS
 ═══════════════════════════════════
-1. MISTURE mundos: pegue uma notícia/trend GERAL e conecte ao nicho de forma criativa e persuasiva
-   Exemplo: "MC Ryan preso por lavagem de dinheiro" → para um dentista: "Investir no sorriso nunca dá problema com a justiça 😄 Mas investir errado sim..."
-   Exemplo: "Dólar bate recorde" → para um restaurante: "Enquanto o dólar sobe, nosso cardápio continua acessível..."
-   
-2. EXATAMENTE 5 das 9 ideias DEVEM SER CROSS-POLLINATION (notícia/evento geral do dia → conexão criativa com o nicho). Use a categoria "trend" para essas.
-3. As outras 4 podem ser tendências diretas do nicho, dicas, cases ou conteúdo educativo
-4. Tom: ${config.brand_tone || "profissional"} mas SEMPRE com um gancho de curiosidade
-5. Títulos CURTOS e impactantes (máx 60 chars), que façam a pessoa parar o scroll
-6. Descrições com o ÂNGULO persuasivo: explique POR QUE esse conteúdo vai engajar
+1. 5 das 9 ideias DEVEM ser cross-pollination: notícia geral do dia → conexão criativa com o nicho
+2. As outras 4: tendências diretas, dicas, cases ou educativo do nicho
+3. Para cada ideia, decida se funciona melhor como CARROSSEL (conteúdo rico, passo a passo, storytelling) ou ESTÁTICO (frase de impacto, provocação, dica rápida)
+4. O "card_text" é o que vai ESCRITO na arte — deve ser curto, impactante e visual
+5. A "caption" é a legenda do Instagram — deve ter gancho, desenvolvimento e CTA
+6. Tom: ${config.brand_tone || "profissional"}
 
-CATEGORIAS PERMITIDAS:
-- "trend" → quando usa uma tendência/notícia do momento (OBRIGATÓRIO em pelo menos 5 ideias)
-- "vendas" → quando o objetivo é converter
-- "educativo" → quando ensina algo
-- "engajamento" → quando provoca interação
-- "autoridade" → quando posiciona como expert
-- "case" → estudo de caso / prova social
-- "dica" → dica prática e rápida
-
-Gere exatamente 9 ideias diversificadas e BRILHANTES.`;
+CATEGORIAS:
+- "trend" (usa tendência/notícia - OBRIGATÓRIO em 5+)
+- "vendas", "educativo", "engajamento", "autoridade", "case", "dica"`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -212,9 +209,12 @@ Gere exatamente 9 ideias diversificadas e BRILHANTES.`;
                       description: { type: "string", description: "Descrição com ângulo persuasivo, 2-3 frases" },
                       category: { type: "string", enum: ["trend", "vendas", "educativo", "engajamento", "autoridade", "case", "dica"] },
                       relevance_score: { type: "number", description: "0-100 relevância para o nicho" },
-                      news_hook: { type: "string", description: "A notícia/trend que inspirou esta ideia, ou vazio se for ideia original" },
+                      news_hook: { type: "string", description: "A notícia/trend que inspirou, ou vazio" },
+                      format: { type: "string", enum: ["carrossel", "estatico"], description: "Formato recomendado" },
+                      card_text: { type: "string", description: "Texto que vai na arte/imagem" },
+                      caption: { type: "string", description: "Legenda completa do Instagram, máx 500 chars, sem hashtags" },
                     },
-                    required: ["title", "description", "category", "relevance_score"],
+                    required: ["title", "description", "category", "relevance_score", "format", "card_text", "caption"],
                   },
                 },
               },
@@ -251,7 +251,7 @@ Gere exatamente 9 ideias diversificadas e BRILHANTES.`;
     const parsed = JSON.parse(toolCall.function.arguments);
     const trends = parsed.trends || [];
 
-    // Step 3: Save
+    // Save
     const today = new Date().toISOString().split("T")[0];
 
     await supabase
@@ -270,6 +270,9 @@ Gere exatamente 9 ideias diversificadas e BRILHANTES.`;
       relevance_score: Math.min(100, Math.max(0, t.relevance_score || 50)),
       metadata: {
         news_hook: t.news_hook || null,
+        format: t.format || "estatico",
+        card_text: t.card_text || "",
+        caption: t.caption || "",
         sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },
       },
     }));

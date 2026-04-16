@@ -4447,6 +4447,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               unknown: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". ${sizeInstruction} You DON'T need to replicate it exactly — change angles, contexts, compositions. Keep the product recognizable but create visually unique and diverse scenes.`,
             };
             imgPrompt += '. ' + (productPromptMap[productAnalysis.type] || productPromptMap.unknown);
+          } else if (referenceImages.some(r => r.category === 'general' && r.source === 'upload')) {
+            const mediaCount = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').length;
+            imgPrompt += `. MÍDIA DO USUÁRIO (OBRIGATÓRIO): O usuário enviou ${mediaCount} foto(s) de referência que DEVEM ser incorporadas na composição. Use o conteúdo dessas fotos como elemento central — NÃO ignore e NÃO substitua por objetos genéricos diferentes.`;
           }
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');

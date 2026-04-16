@@ -244,7 +244,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
 
   const handleMediaFiles = (files: File[]) => {
     readFiles(files, (url, name) => {
-      setReferenceImages(prev => [...prev, { url, thumb: url, label: name, source: 'upload' as const, category: 'style' as const }]);
+      setReferenceImages(prev => [...prev, { url, thumb: url, label: name, source: 'upload' as const, category: 'general' as const }]);
     });
   };
 

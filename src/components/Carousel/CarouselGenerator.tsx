@@ -1933,6 +1933,85 @@ The image must look like it was shot by a professional photographer or designed 
     }
   };
 
+  // ===== REPOSITION LOGO =====
+  const repositionLogo = useCallback(async (newPosition: LogoPosition) => {
+    if (!carouselData || !logoUrl || repositioningLogo) return;
+    const hasRawImages = carouselData.cards.some(c => c.imageUrlRaw);
+    if (!hasRawImages) {
+      toast({ title: 'Imagens originais não disponíveis para reposicionar.' });
+      return;
+    }
+    setRepositioningLogo(true);
+    setLogoPosition(newPosition);
+    try {
+      const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+        const img = document.createElement('img') as HTMLImageElement;
+        if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+
+      const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+        const r = await fetch(logoUrl); const b = await r.blob();
+        return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+      })();
+      const darkLogoB64 = logoDarkUrl ? (logoDarkUrl.startsWith('data:') ? logoDarkUrl : await (async () => {
+        const r = await fetch(logoDarkUrl); const b = await r.blob();
+        return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+      })()) : null;
+
+      const newCards = [...carouselData.cards];
+      for (let i = 0; i < newCards.length; i++) {
+        const rawUrl = newCards[i]?.imageUrlRaw;
+        if (!rawUrl) continue;
+        try {
+          const baseImg = await loadImg(rawUrl);
+          const W = baseImg.width || 1080;
+          const H = baseImg.height || 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(baseImg, 0, 0, W, H);
+
+          // Smart logo selection based on background luminance
+          const probeBounds = getLogoOverlayBounds(W, H, 220, 90, newPosition);
+          const sampleX = Math.round(probeBounds.x + probeBounds.width / 2);
+          const sampleY = Math.round(probeBounds.y + probeBounds.height / 2);
+          const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+          const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+          const bgIsDark = lum < 0.45;
+
+          const chosenB64 = bgIsDark ? logoB64 : (darkLogoB64 || logoB64);
+          const needsInvert = !bgIsDark && !darkLogoB64;
+
+          const logoImg = await loadImg(chosenB64);
+          const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, newPosition);
+
+          ctx.save();
+          if (needsInvert) {
+            ctx.filter = 'brightness(0)';
+          } else if (bgIsDark && !darkLogoB64) {
+            ctx.filter = 'brightness(0) invert(1)';
+          }
+          ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
+          ctx.restore();
+
+          newCards[i] = { ...newCards[i], imageUrl: canvas.toDataURL('image/jpeg', 0.92) };
+        } catch (e) {
+          console.warn('[LOGO_REPOSITION] Card', i, 'failed:', e);
+        }
+      }
+      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+      toast({ title: 'Logo reposicionada!' });
+    } catch (err) {
+      console.error('[LOGO_REPOSITION] Failed:', err);
+      toast({ title: 'Erro ao reposicionar logo', variant: 'destructive' });
+    } finally {
+      setRepositioningLogo(false);
+    }
+  }, [carouselData, logoUrl, logoDarkUrl, repositioningLogo, getLogoOverlayBounds, toast]);
+
 
   // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {

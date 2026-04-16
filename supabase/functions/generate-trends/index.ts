@@ -245,6 +245,7 @@ CATEGORIAS:
           },
         }],
         tool_choice: { type: "function", function: { name: "return_trends" } },
+        max_tokens: 16384,
       }),
     });
 

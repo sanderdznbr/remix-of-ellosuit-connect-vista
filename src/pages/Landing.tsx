@@ -139,22 +139,28 @@ const Landing: React.FC = () => {
             Sem precisar cadastrar cartão
           </motion.p>
 
-          {/* Hero visual */}
+          {/* Hero visual — ellocontent purple orb (signature) */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-20 mx-auto rounded-[28px] overflow-hidden relative"
+            transition={{ duration: 1.1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-24 mx-auto rounded-[32px] overflow-hidden relative"
             style={{
-              maxWidth: 980,
-              aspectRatio: '16/9',
-              background: `linear-gradient(135deg, ${BG_SOFT} 0%, #15101f 100%)`,
+              maxWidth: 1000,
+              aspectRatio: '16/10',
+              background: `radial-gradient(ellipse at 50% 120%, rgba(139,92,246,0.25), transparent 60%), linear-gradient(180deg, ${BG_SOFT} 0%, #0c0814 100%)`,
               border: `1px solid ${HAIRLINE_STRONG}`,
-              boxShadow: '0 40px 100px -20px rgba(139,92,246,0.25), 0 0 0 1px rgba(139,92,246,0.05) inset',
+              boxShadow: '0 60px 140px -30px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.06) inset',
             }}
           >
-            <div className="absolute inset-0 flex items-center justify-center text-[13px]" style={{ color: INK_DIM }}>
-              Pré-visualização do app
+            <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ bottom: '-55%', filter: 'blur(4px)' }}>
+              <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 70vw, 900px)', height: 'clamp(500px, 70vw, 900px)' }}>
+                <div className="carousel-loader-spinner" />
+              </div>
+            </div>
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: 'rgba(20,16,30,0.7)', border: `1px solid ${HAIRLINE_STRONG}`, backdropFilter: 'blur(20px)' }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: PURPLE }} />
+              <span className="text-[12px] font-medium" style={{ color: INK_SOFT }}>Gerando seu conteúdo…</span>
             </div>
           </motion.div>
         </div>

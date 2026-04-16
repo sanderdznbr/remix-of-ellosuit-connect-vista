@@ -871,6 +871,12 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           )}
         </>
       )}
+      <TrendCreateDialog
+        open={!!dialogTrend}
+        onClose={() => setDialogTrend(null)}
+        trendData={dialogTrend}
+        onConfirm={handleDialogConfirm}
+      />
     </div>
   );
 };

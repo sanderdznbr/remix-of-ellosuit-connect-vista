@@ -295,11 +295,7 @@ Plain text only, no JSON, no markdown.` });
     }
 
     // Anti-border + anti-text-copy + anti-grid + anti-AI-aesthetic instruction for ALL modes
-    // Logo handling depends on logoMode: 'ai' = AI renders it, 'manual'/default = Canvas overlay
-    const isAiLogoMode = logoMode === 'ai' && logoImageUrl;
-    const logoInstruction = isAiLogoMode
-      ? `LOGOMARCA OBRIGATÓRIA: A imagem de referência da logomarca foi fornecida. Você DEVE posicionar esta logomarca de forma elegante e profissional no design, escolhendo o melhor canto ou posição que harmonize com a composição. A logo deve ser PEQUENA e DISCRETA (não dominante), mas claramente visível e legível. Mantenha as proporções originais da logo. NÃO distorça, recrie ou redesenhe a logo — use EXATAMENTE como fornecida. REGRA CRÍTICA: Use a logomarca COMPLETA e INTEIRA como fornecida — se a logo contém símbolo + texto (wordmark), INCLUA AMBOS. NUNCA recorte, fragmente ou use apenas parte da logo (como só o ícone/isotipo sem o nome). A logo deve aparecer EXATAMENTE como o arquivo original, na íntegra. A logomarca DEVE ficar totalmente contida dentro da SAFE AREA, com folga visível ao redor. Nunca cole a logo na borda e nunca deixe a logo parcialmente para fora do canvas.`
-      : `PROIBIÇÃO DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Reserve o canto ${logoPosition || 'top-left'} com folga generosa dentro da SAFE AREA, sem títulos, mockups, telas, texturas pesadas ou elementos importantes competindo com a futura logo. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend.`;
+    const logoInstruction = `PROIBIÇÃO ABSOLUTA DE LOGOMARCA/MARCA: NÃO renderize NENHUM nome de marca, logotipo, logo, símbolo, wordmark ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas após a geração. Deixe a área do logo COMPLETAMENTE LIMPA e SEM TEXTO. Reserve o canto ${logoPosition || 'top-left'} com folga generosa dentro da SAFE AREA, sem títulos, mockups, telas, texturas pesadas ou elementos importantes competindo com a futura logo. Se o prompt mencionar uma marca, use-a apenas como CONTEXTO TEMÁTICO para o conteúdo, NUNCA como texto visual renderizado na arte. NUNCA desenhe, renderize, recrie ou posicione qualquer logo — isso é responsabilidade exclusiva do frontend/canvas.`;
     const antiAiAesthetic = `
 ESTÉTICA ANTI-IA (PRIORIDADE CRÍTICA — LEIA COM ATENÇÃO):
 O resultado DEVE parecer um post criado por um designer humano profissional em Photoshop/Illustrator, NÃO uma imagem gerada por IA.
@@ -413,7 +409,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         - O título deve estar ACIMA ou AO LADO do mockup, nunca sobrepondo a tela do app.
 - NÃO gere uma interface genérica ou inventada, mas também NÃO copie literalmente textos de branding da screenshot.`;
     } else if (validGeneralRefs.length > 0 && isExtremeMode) {
-      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE cada referência fielmente na composição — se é um logo, inclua-o no design; se é um screenshot, mostre-o em um mockup de celular profissional; se é um produto, destaque-o. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final.`;
+      textPrompt += `\n\n🎨 REFERÊNCIAS VISUAIS OBRIGATÓRIAS (MODO EXTREME): As imagens de referência fornecidas são ELEMENTOS OBRIGATÓRIOS que o usuário quer ver no resultado final. INCORPORE screenshots e produtos fielmente na composição. REGRA CRÍTICA: se alguma referência for uma logomarca ou ativo de branding, NÃO renderize essa logo dentro da imagem — a marca será aplicada separadamente via Canvas no final. Estas NÃO são referências de estilo — são CONTEÚDO que deve aparecer na imagem final, EXCETO logos que devem ser preservadas para overlay manual.`;
     } else if (validGeneralRefs.length > 0 && validFaceRefs.length === 0) {
       textPrompt += `\n\nPRODUTO/SCREENSHOT OBRIGATÓRIO: As imagens de referência fornecidas são CONTEÚDO REAL do usuário (screenshot de app, produto, etc.). Você DEVE incorporar estas imagens FIELMENTE no design. Se for um screenshot de aplicativo/sistema: coloque-o dentro de um mockup de smartphone ou laptop premium. Se for um produto: mostre-o em destaque. NÃO gere uma versão genérica ou inventada — use a imagem EXATA fornecida.`;
     }
@@ -540,16 +536,15 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       messageContent.push({ type: 'text', text: `🔤 FONTE TIPOGRÁFICA OBRIGATÓRIA — A imagem abaixo mostra a fonte "${fontLabel}" que você DEVE usar em TODOS os textos do design. Replique 100% fielmente: estilo, peso, serifas, proporções, espaçamento e personalidade visual desta fonte. NÃO use outra fonte. Esta é a referência ABSOLUTA de tipografia:` });
       messageContent.push({ type: 'image_url', image_url: { url: fontReferenceImage } });
       messageContent.push({ type: 'text', text: `REGRA DE TIPOGRAFIA INVIOLÁVEL: A fonte renderizada no post DEVE ser VISUALMENTE IDÊNTICA à imagem de referência acima ("${fontLabel}"). Copie cada detalhe: serifas ou sem serifas, peso (bold/light/regular), largura, espaçamento entre letras, estilo decorativo. A tipografia é tão importante quanto o conteúdo visual. Se a fonte é bold e impactante, use bold e impactante. Se é elegante e fina, use elegante e fina. FIDELIDADE TOTAL.` });
+      if (isCarousel) {
+        messageContent.push({ type: 'text', text: `TRAVA TIPOGRÁFICA DO CARROSSEL: como este card faz parte de um carrossel, a fonte "${fontLabel}" DEVE permanecer EXATAMENTE A MESMA em TODOS os slides. PROIBIDO variar família tipográfica, peso-base, estilo visual ou personalidade da fonte entre cards.` });
+      }
       console.log('Font reference injected:', fontLabel, 'base64 length:', fontReferenceImage.length);
     }
 
-    // === LOGO IMAGE: Send to AI when logoMode is 'ai', otherwise handled via Canvas overlay ===
-    if (logoImageUrl && logoMode === 'ai') {
-      messageContent.push({ type: 'text', text: `🏷️ LOGOMARCA DA MARCA — A imagem abaixo é a logomarca oficial que DEVE ser posicionada no design. Coloque-a de forma DISCRETA e PROFISSIONAL em um canto que harmonize com a composição. Mantenha-a PEQUENA mas LEGÍVEL. NÃO altere, redesenhe, recorte ou distorça a logo — use EXATAMENTE como fornecida, COMPLETA E INTEIRA (símbolo + texto/wordmark se houver). NUNCA use apenas parte da logo (ex: só o ícone sem o nome):` });
-      messageContent.push({ type: 'image_url', image_url: { url: logoImageUrl } });
-      console.log('Logo sent to AI for positioning (logoMode=ai), length:', logoImageUrl.length);
-    } else if (logoImageUrl) {
-      console.log('Logo provided but NOT sent to AI — will be overlaid via Canvas. Position:', logoPosition);
+    // === LOGO IMAGE: Always handled via Canvas overlay, never sent to AI ===
+    if (logoImageUrl) {
+      console.log('Logo provided and BLOCKED from AI input — will be overlaid via Canvas only. Position:', logoPosition, 'requestedMode:', logoMode);
     }
 
     // === DIAGNOSTIC: Log total message size ===

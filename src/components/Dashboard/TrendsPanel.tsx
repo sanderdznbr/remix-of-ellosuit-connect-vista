@@ -279,6 +279,21 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     }));
   };
 
+  const toggleAutoDaily = async (checked: boolean) => {
+    if (!config.id) return;
+    setTogglingAuto(true);
+    try {
+      const { error } = await supabase.from('trend_configs').update({ auto_daily: checked } as any).eq('id', config.id);
+      if (error) throw error;
+      setAutoDaily(checked);
+      toast.success(checked ? 'Atualização automática ativada!' : 'Atualização automática desativada');
+    } catch (e: any) {
+      toast.error('Erro ao salvar: ' + (e?.message || ''));
+    } finally {
+      setTogglingAuto(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">

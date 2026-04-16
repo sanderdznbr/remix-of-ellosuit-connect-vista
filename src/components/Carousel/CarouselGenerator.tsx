@@ -155,6 +155,7 @@ import StepExtremeFonts from './wizard/StepExtremeFonts';
 import StepExtremeSource, { ExtremeSourceMode } from './wizard/StepExtremeSource';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
 import LogoPositionPicker from './wizard/LogoPositionPicker';
+import FontChangePicker from './editor/FontChangePicker';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
 import StepPropertyCrop from './wizard/StepPropertyCrop';

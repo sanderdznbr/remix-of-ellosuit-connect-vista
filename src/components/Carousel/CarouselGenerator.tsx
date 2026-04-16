@@ -9155,6 +9155,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
                         </button>
 
+                        {/* Reposicionar Logo */}
+                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                          <>
+                            <button
+                              onClick={() => setShowLogoRepositionPanel(prev => !prev)}
+                              disabled={repositioningLogo}
+                              className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-teal-300 hover:text-teal-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                              {repositioningLogo ? <Loader2 className="h-4 w-4 text-teal-400 animate-spin" /> : <Move className="h-4 w-4 text-teal-400" />} Reposicionar Logo
+                            </button>
+                            {showLogoRepositionPanel && (
+                              <div className="px-3 pb-2">
+                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         <div className="h-px bg-white/[0.06] my-1" />
 
                         {/* Regenerar Tudo */}

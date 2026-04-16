@@ -722,7 +722,7 @@ function LoggedInPricing() {
                       <div>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold">Admin Only</span>
                         <h3 className="text-white font-bold text-sm mt-1">Plano Teste — R$1,00</h3>
-                        <p className="text-white/40 text-xs">5 créditos • Para testar pagamento com cartão real</p>
+                        <p className="text-white/40 text-xs">5 criativos • Para testar pagamento com cartão real</p>
                       </div>
                       <button
                         onClick={() => navigate('/checkout?plano=test&billing=monthly')}

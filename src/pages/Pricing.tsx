@@ -659,7 +659,7 @@ function LoggedInPricing() {
                         onClick={() => setShowTopUpDropdown(!showTopUpDropdown)}
                         className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium border border-white/[0.12] text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
                       >
-                        Comprar créditos
+                        Comprar criativos
                         <ChevronDown className="w-3 h-3" />
                       </button>
                       {showTopUpDropdown && (
@@ -672,7 +672,7 @@ function LoggedInPricing() {
                                 onClick={() => { setSelectedTopup(i); setShowTopUpDropdown(false); setShowTopUp(true); }}
                                 className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
                               >
-                                <span>+{opt.credits} créditos</span>
+                                <span>+{opt.credits} criativos</span>
                                 <span className="text-white/40">R${opt.price.toFixed(2)}</span>
                               </button>
                             ))}

@@ -3228,9 +3228,30 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   // ===== GENERATE (CLOUD-BASED) =====
   // Strip mention tags from topic: (@Title) → Title
   const cleanMentionsFromTopic = (raw: string) => raw.replace(/\(@([^)]*)\)/g, '$1').replace(/@(\w+)/g, '$1').replace(/@/g, '');
-  const sanitizeAnimatedTopic = (raw: string) => cleanMentionsFromTopic(raw)
-    .replace(/^\s*(crie|criar|gere|gerar|faça|fazer|monte|montar)\s+(um|uma|o|a)?\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)?\s*(sobre|para)?\s*/i, '')
-    .replace(/^\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)\s*(sobre|para)\s*/i, '')
+  // Strip command prefixes like "crie um post sobre" from topic
+  const stripCommandPrefix = (raw: string) => raw
+    .replace(/^\s*(crie|criar|gere|gerar|faça|fazer|monte|montar)\s+(um|uma|o|a)?\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)?\s*(sobre|para|de|do|da)?\s*/i, '')
+    .replace(/^\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)\s*(sobre|para|de|do|da)\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Full sanitization: clean mentions + strip commands. When mentionedPrompts exist, use their content as the real topic.
+  const sanitizeTopic = (raw: string) => {
+    const cleaned = cleanMentionsFromTopic(raw);
+    const stripped = stripCommandPrefix(cleaned);
+    // If after stripping commands only a prompt title remains (e.g. "ellocontent"), 
+    // and we have mentionedPrompts, use the first prompt's content as topic context
+    if (mentionedPrompts.length > 0) {
+      const mainPrompt = mentionedPrompts[0];
+      const topicWithoutBrand = stripped.replace(/\b(ellocontent|ellosuit)\b/gi, '').trim();
+      if (!topicWithoutBrand || topicWithoutBrand.length < 5) {
+        // Topic was basically just the mention — use prompt content as the real topic
+        return mainPrompt.title || mainPrompt.content.substring(0, 200);
+      }
+      return stripped;
+    }
+    return stripped || cleaned;
+  };
+  const sanitizeAnimatedTopic = (raw: string) => sanitizeTopic(raw)
     .replace(/\b(ellocontent|ellosuit)\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();

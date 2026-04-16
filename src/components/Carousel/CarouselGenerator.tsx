@@ -7675,7 +7675,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setContentMode(mode);
                           if (mode === 'single-post') { setCardCount(1); setImageCardCount(1); }
                           else if (cardCount < 2) { setCardCount(5); }
-                        }} />
+                        }}
+                        fromTrendData={fromTrendData} />
                     )}
                     {currentStepName === 'Pesquisa' && (
                       <StepWebSearchResult

@@ -56,6 +56,8 @@ export interface TrendData {
   logoUrl?: string;
   logoDarkUrl?: string;
   brandColors?: string[];
+  imageUrl?: string;
+  imageSearchQuery?: string;
 }
 
 interface TrendsPanelProps {
@@ -295,6 +297,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       cardText: trend.metadata?.card_text || '',
       cardTexts: trend.metadata?.card_texts || [],
       caption: trend.metadata?.caption || '',
+      imageUrl: trend.metadata?.image_url || undefined,
+      imageSearchQuery: (trend.metadata as any)?.image_search_query || undefined,
     };
     setDialogTrend(trendData);
   };

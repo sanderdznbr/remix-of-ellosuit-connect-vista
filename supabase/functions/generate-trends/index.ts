@@ -68,7 +68,6 @@ serve(async (req) => {
       });
     }
 
-    // Deduct 1 credit
     await supabase.rpc("consume_ai_credits", {
       p_company_id: cu.company_id,
       p_agent_id: null,
@@ -85,59 +84,70 @@ serve(async (req) => {
       });
     }
 
-    // ── Gather real-world context ──
-    const serpApiKey = Deno.env.get("SERPAPI_API_KEY");
-    let googleTrends: string[] = [];
-    let topNews: { text: string; thumbnail?: string }[] = [];
-    let nicheNews: { text: string; thumbnail?: string }[] = [];
+    // ── Brave Search for real-world context ──
+    const braveApiKey = Deno.env.get("BRAVE_SEARCH_API_KEY");
+    let topNews: { text: string; thumbnail?: string; url?: string }[] = [];
+    let nicheNews: { text: string; thumbnail?: string; url?: string }[] = [];
 
-    if (serpApiKey) {
-      const [trendsResult, newsResult, nicheNewsResult] = await Promise.allSettled([
-        fetch(`https://serpapi.com/search.json?engine=google_trends_trending_now&geo=${config.country || "BR"}&api_key=${serpApiKey}`)
+    if (braveApiKey) {
+      const lang = (config.language || "pt-BR").split("-")[0];
+      const country = (config.country || "BR").toLowerCase();
+      const headers = { "Accept": "application/json", "Accept-Encoding": "gzip", "X-Subscription-Token": braveApiKey };
+
+      const [generalResult, nicheResult] = await Promise.allSettled([
+        fetch(`https://api.search.brave.com/res/v1/news/search?q=noticias+do+dia&country=${country}&search_lang=${lang}&count=15&freshness=pd`, { headers })
           .then(r => r.ok ? r.json() : null),
-        fetch(`https://serpapi.com/search.json?engine=google_news&gl=${(config.country || "BR").toLowerCase()}&hl=${(config.language || "pt-BR").split("-")[0]}&api_key=${serpApiKey}`)
-          .then(r => r.ok ? r.json() : null),
-        fetch(`https://serpapi.com/search.json?engine=google_news&q=${encodeURIComponent(config.niche)}&gl=${(config.country || "BR").toLowerCase()}&hl=${(config.language || "pt-BR").split("-")[0]}&api_key=${serpApiKey}`)
+        fetch(`https://api.search.brave.com/res/v1/news/search?q=${encodeURIComponent(config.niche + " " + (config.keywords || ""))}&country=${country}&search_lang=${lang}&count=10&freshness=pw`, { headers })
           .then(r => r.ok ? r.json() : null),
       ]);
 
-      if (trendsResult.status === "fulfilled" && trendsResult.value) {
-        const trending = trendsResult.value.trending_searches || trendsResult.value.daily_searches || [];
-        if (Array.isArray(trending)) {
-          googleTrends = trending.slice(0, 25).map((t: any) => {
-            if (typeof t === "string") return t;
-            return t.query || t.title || t.name || JSON.stringify(t);
-          });
-        }
+      if (generalResult.status === "fulfilled" && generalResult.value) {
+        const results = generalResult.value.results || [];
+        topNews = results.map((a: any) => ({
+          text: `${a.title || ""}${a.description ? ` — ${a.description}` : ""}`,
+          thumbnail: a.thumbnail?.src || null,
+          url: a.url || null,
+        })).filter((n: any) => n.text);
       }
 
-      if (newsResult.status === "fulfilled" && newsResult.value) {
-        const articles = newsResult.value.news_results || [];
-        topNews = articles.slice(0, 15).map((a: any) => {
-          const title = a.title || "";
-          const snippet = a.snippet || a.description || "";
-          const thumbnail = a.thumbnail || a.images?.thumbnail || null;
-          return { text: `${title}${snippet ? ` — ${snippet}` : ""}`, thumbnail };
-        }).filter((n: any) => n.text);
+      if (nicheResult.status === "fulfilled" && nicheResult.value) {
+        const results = nicheResult.value.results || [];
+        nicheNews = results.map((a: any) => ({
+          text: `${a.title || ""}${a.description ? ` — ${a.description}` : ""}`,
+          thumbnail: a.thumbnail?.src || null,
+          url: a.url || null,
+        })).filter((n: any) => n.text);
       }
 
-      if (nicheNewsResult.status === "fulfilled" && nicheNewsResult.value) {
-        const articles = nicheNewsResult.value.news_results || [];
-        nicheNews = articles.slice(0, 10).map((a: any) => {
-          const title = a.title || "";
-          const snippet = a.snippet || a.description || "";
-          const thumbnail = a.thumbnail || a.images?.thumbnail || null;
-          return { text: `${title}${snippet ? ` — ${snippet}` : ""}`, thumbnail };
-        }).filter((n: any) => n.text);
-      }
-
-      console.log(`Sources: ${googleTrends.length} trends, ${topNews.length} top news, ${nicheNews.length} niche news`);
+      console.log(`Brave Search: ${topNews.length} general news, ${nicheNews.length} niche news`);
+    } else {
+      console.warn("BRAVE_SEARCH_API_KEY not set, generating trends without news context");
     }
 
     // Build thumbnail lookup for AI to reference
     const allNewsWithThumbs: { index: number; text: string; thumbnail: string }[] = [];
     topNews.forEach((n, i) => { if (n.thumbnail) allNewsWithThumbs.push({ index: i, text: n.text.slice(0, 80), thumbnail: n.thumbnail }); });
     nicheNews.forEach((n, i) => { if (n.thumbnail) allNewsWithThumbs.push({ index: 100 + i, text: n.text.slice(0, 80), thumbnail: n.thumbnail }); });
+
+    // ── Also fetch images via Brave Image Search for visual content ──
+    let nicheImages: { src: string; title: string }[] = [];
+    if (braveApiKey) {
+      try {
+        const imgResp = await fetch(`https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(config.niche + " " + (config.products_services || ""))}&count=10&safesearch=strict`, {
+          headers: { "Accept": "application/json", "X-Subscription-Token": braveApiKey },
+        });
+        if (imgResp.ok) {
+          const imgData = await imgResp.json();
+          nicheImages = (imgData.results || []).slice(0, 10).map((img: any) => ({
+            src: img.thumbnail?.src || img.properties?.url || "",
+            title: img.title || "",
+          })).filter((i: any) => i.src);
+          console.log(`Brave Images: ${nicheImages.length} niche images found`);
+        }
+      } catch (e) {
+        console.warn("Brave image search failed:", e);
+      }
+    }
 
     // ── Expert AI prompt ──
     const todayStr = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -150,6 +160,7 @@ Sua missão: gerar 9 ideias de conteúdo PRONTAS PARA USAR, cada uma com:
 - FORMATO RECOMENDADO: "carrossel" (múltiplos slides) ou "estatico" (post único)
 - TEXTO DA ARTE: Para ESTÁTICO = texto único (máx 80 chars). Para CARROSSEL = array de textos, um por slide (5-7 slides, máx 40 chars cada)
 - LEGENDA PRONTA: a legenda completa do Instagram (máx 500 chars, sem hashtags, com CTA)
+- SUGESTÃO DE BUSCA DE IMAGEM: uma frase curta para buscar a foto ideal
 
 📌 DATA DE HOJE: ${todayStr}
 
@@ -165,11 +176,9 @@ PERFIL DO CLIENTE
 • Palavras-chave: ${config.keywords || "nenhuma"}
 
 ═══════════════════════════════════
-NOTÍCIAS E TENDÊNCIAS DE HOJE
+NOTÍCIAS E TENDÊNCIAS DE HOJE (Brave Search)
 ═══════════════════════════════════
 ${topNews.length > 0 ? `📰 MANCHETES DO DIA:\n${topNews.map((n, i) => `${i + 1}. ${n.text}`).join("\n")}` : "Sem notícias disponíveis"}
-
-${googleTrends.length > 0 ? `\n🔥 TRENDING NO GOOGLE:\n${googleTrends.map((t, i) => `${i + 1}. ${t}`).join("\n")}` : ""}
 
 ${nicheNews.length > 0 ? `\n🎯 NOTÍCIAS DO NICHO "${config.niche}":\n${nicheNews.map((n, i) => `${i + 1}. ${n.text}`).join("\n")}` : ""}
 
@@ -184,6 +193,7 @@ REGRAS
 4. Para ESTÁTICO: "card_text" = texto único. Para CARROSSEL: "card_texts" = array de 5-7 textos (um por slide)
 5. A "caption" é a legenda do Instagram — deve ter gancho, desenvolvimento e CTA
 6. Tom: ${config.brand_tone || "profissional"}
+7. "image_search_query" deve ser uma frase ESPECÍFICA para buscar foto ideal (ex: "dentista sorrindo consultório moderno")
 
 CATEGORIAS:
 - "trend" (usa tendência/notícia - OBRIGATÓRIO em 5+)
@@ -223,9 +233,10 @@ CATEGORIAS:
                       card_text: { type: "string", description: "Texto da arte para post ESTÁTICO (máx 80 chars)" },
                       card_texts: { type: "array", items: { type: "string" }, description: "Array de textos dos slides para CARROSSEL (5-7 items, máx 40 chars cada)" },
                       caption: { type: "string", description: "Legenda completa do Instagram, máx 500 chars, sem hashtags" },
-                      news_source_index: { type: "number", description: "Index da fonte de notícia que tem imagem disponível (do bloco IMAGENS DISPONÍVEIS), ou -1 se não tem" },
+                      news_source_index: { type: "number", description: "Index da fonte de notícia que tem imagem disponível, ou -1" },
+                      image_search_query: { type: "string", description: "Frase de busca para encontrar foto ideal para este post" },
                     },
-                    required: ["title", "description", "category", "relevance_score", "format", "card_text", "caption"],
+                    required: ["title", "description", "category", "relevance_score", "format", "card_text", "caption", "image_search_query"],
                   },
                 },
               },
@@ -262,6 +273,30 @@ CATEGORIAS:
     const parsed = JSON.parse(toolCall.function.arguments);
     const trends = parsed.trends || [];
 
+    // ── For each trend, try to fetch a real photo via Brave Image Search ──
+    const imageResults: (string | null)[] = [];
+    if (braveApiKey) {
+      const imagePromises = trends.map(async (t: any) => {
+        try {
+          const query = t.image_search_query || t.title;
+          const imgResp = await fetch(
+            `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(query)}&count=3&safesearch=strict`,
+            { headers: { "Accept": "application/json", "X-Subscription-Token": braveApiKey } }
+          );
+          if (imgResp.ok) {
+            const imgData = await imgResp.json();
+            const firstImg = (imgData.results || [])[0];
+            return firstImg?.thumbnail?.src || firstImg?.properties?.url || null;
+          }
+        } catch (e) {
+          console.warn("Image search failed for:", t.title, e);
+        }
+        return null;
+      });
+      const results = await Promise.allSettled(imagePromises);
+      results.forEach((r) => imageResults.push(r.status === "fulfilled" ? r.value : null));
+    }
+
     // Save
     const today = new Date().toISOString().split("T")[0];
 
@@ -271,10 +306,10 @@ CATEGORIAS:
       .eq("company_id", cu.company_id)
       .eq("trend_date", today);
 
-    const rows = trends.map((t: any) => {
-      // Resolve image from news source index
-      let imageUrl: string | null = null;
-      if (typeof t.news_source_index === "number" && t.news_source_index >= 0) {
+    const rows = trends.map((t: any, idx: number) => {
+      // Resolve image: first try Brave image search, then news source
+      let imageUrl: string | null = imageResults[idx] || null;
+      if (!imageUrl && typeof t.news_source_index === "number" && t.news_source_index >= 0) {
         const match = allNewsWithThumbs.find(n => n.index === t.news_source_index);
         if (match) imageUrl = match.thumbnail;
       }
@@ -284,7 +319,7 @@ CATEGORIAS:
         title: t.title,
         description: t.description,
         category: t.category,
-        source: topNews.length > 0 ? "expert_news_ai" : googleTrends.length > 0 ? "google_trends_ai" : "ai_generated",
+        source: topNews.length > 0 ? "brave_news_ai" : "ai_generated",
         trend_date: today,
         relevance_score: Math.min(100, Math.max(0, t.relevance_score || 50)),
         metadata: {
@@ -294,7 +329,8 @@ CATEGORIAS:
           card_texts: Array.isArray(t.card_texts) ? t.card_texts : [],
           caption: t.caption || "",
           image_url: imageUrl,
-          sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },
+          image_search_query: t.image_search_query || "",
+          sources_count: { top_news: topNews.length, niche_news: nicheNews.length },
         },
       };
     });

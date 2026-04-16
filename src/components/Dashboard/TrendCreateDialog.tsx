@@ -818,7 +818,6 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       </div>
                     )}
 
-                    {logoUrl && (
                     {/* Face summary */}
                     {faceImages.length > 0 && (
                       <div className="rounded-xl border border-purple-500/10 p-3" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>

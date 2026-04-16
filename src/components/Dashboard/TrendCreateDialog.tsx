@@ -305,10 +305,10 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
     setFaceImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateSlideText = (index: number, value: string) => {
+  const updateSlideText = (index: number, field: 'title' | 'subtitle', value: string) => {
     setEditedCardTexts(prev => {
       const copy = [...prev];
-      copy[index] = value;
+      copy[index] = { ...copy[index], [field]: value };
       return copy;
     });
   };

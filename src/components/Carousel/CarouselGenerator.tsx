@@ -7124,7 +7124,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       setGeneratingRoteiro(true);
       setCardPhotoAssignments({});
       setCardPhotoOptions({});
-      const totalCards = contentMode === 'single-post' ? 1 : cardCount;
+      const trendExactTexts = fromTrendData?.format === 'carrossel'
+        ? (fromTrendData.cardTexts || []).filter((text: string) => typeof text === 'string' && text.trim())
+        : [];
+      const totalCards = contentMode === 'single-post' ? 1 : (trendExactTexts.length || cardCount);
       const localFallback = () => {
         if (contentMode === 'single-post') return [{ title: topic.trim().slice(0, 60), body: '' }];
         return Array.from({ length: totalCards }, (_, i) => {
@@ -7135,24 +7138,32 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       };
 
       let generatedOutline: { title?: string; body?: string }[] = [];
-      try {
-        console.log('[AutoRoteiro] Auto-generating outline on step entry');
-        const webContext = webSearchResult?.content?.summary || webSearchResult?.content?.clean_topic || '';
-        const outlineData = await resilientInvoke('generate-carousel', {
-          action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode,
-          ...(webContext ? { webContext } : {}),
-        });
-        if (outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
-          generatedOutline = outlineData.outline;
-          setManualCardTexts(outlineData.outline);
-        } else {
+      if (trendExactTexts.length > 0) {
+        generatedOutline = trendExactTexts.map((text: string, index: number) => ({
+          title: index === 0 ? text.trim() : '',
+          body: index === 0 ? '' : text.trim(),
+        }));
+        setManualCardTexts(generatedOutline);
+      } else {
+        try {
+          console.log('[AutoRoteiro] Auto-generating outline on step entry');
+          const webContext = webSearchResult?.content?.summary || webSearchResult?.content?.clean_topic || '';
+          const outlineData = await resilientInvoke('generate-carousel', {
+            action: 'generate-outline', topic: topic.trim(), cardCount: totalCards, contentMode,
+            ...(webContext ? { webContext } : {}),
+          });
+          if (outlineData?.outline && Array.isArray(outlineData.outline) && outlineData.outline.length > 0) {
+            generatedOutline = outlineData.outline;
+            setManualCardTexts(outlineData.outline);
+          } else {
+            generatedOutline = localFallback();
+            setManualCardTexts(generatedOutline);
+          }
+        } catch (err) {
+          console.error('[AutoRoteiro] Error:', err);
           generatedOutline = localFallback();
           setManualCardTexts(generatedOutline);
         }
-      } catch (err) {
-        console.error('[AutoRoteiro] Error:', err);
-        generatedOutline = localFallback();
-        setManualCardTexts(generatedOutline);
       }
 
       setRoteiroGenerated(true);
@@ -7292,7 +7303,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                   // Apply manual copy from Trend so the result follows the reviewed content
                   if (trendData.format === 'carrossel') {
-                    const slideTexts = (trendData.cardTexts || []).filter((text: string) => typeof text === 'string' && text.trim());
+                    const slideTexts = (trendData.cardTexts || []).filter((text: string) => typeof text === 'string' && text.trim()).slice(0, 5);
                     setContentMode('carousel');
                     const slideCount = slideTexts.length || 5;
                     setCardCount(slideCount);

@@ -293,11 +293,19 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   };
 
   const handleCreate = (trend: DailyTrend) => {
+    const normalizedCardTexts = Array.isArray(trend.metadata?.card_texts)
+      ? trend.metadata.card_texts
+          .filter((text): text is string => typeof text === 'string')
+          .map(text => text.trim())
+          .filter(Boolean)
+          .slice(0, 5)
+      : [];
+
     const trendData: TrendData = {
       topic: trend.title + ': ' + trend.description,
       format: trend.metadata?.format || 'estatico',
       cardText: trend.metadata?.card_text || '',
-      cardTexts: trend.metadata?.card_texts || [],
+      cardTexts: normalizedCardTexts,
       caption: trend.metadata?.caption || '',
       imageUrl: trend.metadata?.image_url || undefined,
       imageSearchQuery: (trend.metadata as any)?.image_search_query || undefined,

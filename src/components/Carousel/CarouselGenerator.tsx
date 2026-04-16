@@ -1499,7 +1499,7 @@ const CarouselGenerator: React.FC = () => {
         const { data: companyData } = await supabase.from('company_users').select('company_id').eq('user_id', userData.user.id).limit(1).single();
         if (!companyData) return;
 
-        let dataToPersist = carouselData;
+        let dataToPersist = { ...carouselData, editHistory: correctionUndoStack, redoHistory: correctionRedoStack } as any;
         if ((wizardMode === 'tweet' || wizardMode === 'tweet2') && carouselData.cards.some((card) => card.type === 'tweet' || card.type === 'tweet2')) {
           try {
             const previewCards = await buildPersistedTweetCardsFromPreview(carouselData.cards);

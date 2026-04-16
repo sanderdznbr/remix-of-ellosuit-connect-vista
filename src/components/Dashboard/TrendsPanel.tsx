@@ -42,8 +42,15 @@ interface DailyTrend {
   };
 }
 
+export interface TrendData {
+  topic: string;
+  format: string;
+  cardText: string;
+  caption: string;
+}
+
 interface TrendsPanelProps {
-  onCreateFromTrend?: (topic: string) => void;
+  onCreateFromTrend?: (topic: string, trendData?: TrendData) => void;
 }
 
 const EMPTY_CONFIG: TrendConfig = {
@@ -272,7 +279,15 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   };
 
   const handleCreate = (trend: DailyTrend) => {
-    if (onCreateFromTrend) onCreateFromTrend(trend.title + ': ' + trend.description);
+    if (onCreateFromTrend) {
+      const trendData: TrendData = {
+        topic: trend.title + ': ' + trend.description,
+        format: trend.metadata?.format || 'estatico',
+        cardText: trend.metadata?.card_text || '',
+        caption: trend.metadata?.caption || '',
+      };
+      onCreateFromTrend(trendData.topic, trendData);
+    }
   };
 
   const copyCaption = (caption: string, e: React.MouseEvent) => {

@@ -3092,6 +3092,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         }
       }
 
+      // Save raw (pre-logo) image for repositioning later
+      const rawImageUrl = finalImageUrl;
+
       // === NON-REAL-ESTATE: Programmatic logo overlay via Canvas ===
       if (!useRealEstateBlend && logoUrl && finalImageUrl) {
         try {

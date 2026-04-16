@@ -7245,10 +7245,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   setFromTrendData(trendData);
                   setSkipWebSearch(true);
                   setForceWebSearch(false);
-                  // Auto-set style from dialog
+                  // Auto-set branding from dialog
+                  if (trendData.logoUrl) setLogoUrl(trendData.logoUrl);
+                  if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
+
+                  // Set format: carousel vs single-post
+                  const isTrendCarousel = trendData.format === 'carrossel';
+                  if (isTrendCarousel) {
+                    setContentMode('carousel');
+                    const slideCount = trendData.cardTexts?.length || 5;
+                    setCardCount(slideCount);
+                    setImageCardCount(Math.min(slideCount, 3));
+                  } else {
+                    setContentMode('single-post');
+                    setCardCount(1);
+                    setImageCardCount(1);
+                  }
+
+                  // Auto-set style and trigger generation
                   if (trendData.styleId) {
                     setLoadedMarketplaceStyleId(trendData.styleId);
-                    // Load the full style object
                     supabase.from('marketplace_styles').select('*')
                       .eq('id', trendData.styleId).single()
                       .then(({ data }) => {
@@ -7256,11 +7272,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setActiveMarketplaceStyle(data);
                           activeMarketplaceStyleRef.current = data;
                         }
+                        // Auto-trigger generation after style is loaded
+                        setTimeout(() => {
+                          setTransitionToGenerate(true);
+                          setTimeout(() => generateContent(), 1200);
+                        }, 300);
                       });
+                  } else {
+                    // No style, still auto-generate
+                    setTimeout(() => {
+                      setTransitionToGenerate(true);
+                      setTimeout(() => generateContent(), 1200);
+                    }, 300);
                   }
-                  // Auto-set branding from dialog
-                  if (trendData.logoUrl) setLogoUrl(trendData.logoUrl);
-                  if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
                 }
               }}
               onLoadCarousel={async (item: any) => {

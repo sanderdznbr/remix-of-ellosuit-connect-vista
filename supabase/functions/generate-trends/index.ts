@@ -270,22 +270,32 @@ CATEGORIAS:
       .eq("company_id", cu.company_id)
       .eq("trend_date", today);
 
-    const rows = trends.map((t: any) => ({
-      company_id: cu.company_id,
-      title: t.title,
-      description: t.description,
-      category: t.category,
-      source: topNews.length > 0 ? "expert_news_ai" : googleTrends.length > 0 ? "google_trends_ai" : "ai_generated",
-      trend_date: today,
-      relevance_score: Math.min(100, Math.max(0, t.relevance_score || 50)),
-      metadata: {
-        news_hook: t.news_hook || null,
-        format: t.format || "estatico",
-        card_text: t.card_text || "",
-        caption: t.caption || "",
-        sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },
-      },
-    }));
+    const rows = trends.map((t: any) => {
+      // Resolve image from news source index
+      let imageUrl: string | null = null;
+      if (typeof t.news_source_index === "number" && t.news_source_index >= 0) {
+        const match = allNewsWithThumbs.find(n => n.index === t.news_source_index);
+        if (match) imageUrl = match.thumbnail;
+      }
+
+      return {
+        company_id: cu.company_id,
+        title: t.title,
+        description: t.description,
+        category: t.category,
+        source: topNews.length > 0 ? "expert_news_ai" : googleTrends.length > 0 ? "google_trends_ai" : "ai_generated",
+        trend_date: today,
+        relevance_score: Math.min(100, Math.max(0, t.relevance_score || 50)),
+        metadata: {
+          news_hook: t.news_hook || null,
+          format: t.format || "estatico",
+          card_text: t.card_text || "",
+          caption: t.caption || "",
+          image_url: imageUrl,
+          sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },
+        },
+      };
+    });
 
     const { error: insertError } = await supabase.from("daily_trends").insert(rows);
     if (insertError) {

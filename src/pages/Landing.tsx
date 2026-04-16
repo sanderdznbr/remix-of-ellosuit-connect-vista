@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Minus, Sparkles, Palette, User, Zap, AtSign, FolderOpen, Check } from 'lucide-react';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import '@/styles/carousel-loader.css';
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -14,15 +15,16 @@ const fadeUp = {
 // Brand tokens (ellocontent)
 const BG = '#0a0a0f';
 const BG_SOFT = '#0f0f15';
-const SURFACE = 'rgba(255,255,255,0.03)';
-const SURFACE_HOVER = 'rgba(255,255,255,0.05)';
-const HAIRLINE = 'rgba(255,255,255,0.07)';
-const HAIRLINE_STRONG = 'rgba(255,255,255,0.12)';
-const INK = '#f5f5f7';
-const INK_SOFT = 'rgba(245,245,247,0.55)';
-const INK_DIM = 'rgba(245,245,247,0.4)';
-const PURPLE = '#8B5CF6';
-const PURPLE_DEEP = '#7B50DC';
+const SURFACE = 'rgba(255,255,255,0.04)';
+const SURFACE_HOVER = 'rgba(255,255,255,0.07)';
+const HAIRLINE = 'rgba(255,255,255,0.08)';
+const HAIRLINE_STRONG = 'rgba(255,255,255,0.14)';
+const INK = '#ffffff';
+const INK_SOFT = 'rgba(255,255,255,0.78)';
+const INK_DIM = 'rgba(255,255,255,0.55)';
+const PURPLE = '#A78BFA';
+const PURPLE_DEEP = '#8B5CF6';
+const PURPLE_GLOW = '#C4B5FD';
 
 const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif";
 
@@ -137,22 +139,28 @@ const Landing: React.FC = () => {
             Sem precisar cadastrar cartão
           </motion.p>
 
-          {/* Hero visual */}
+          {/* Hero visual — ellocontent purple orb (signature) */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-20 mx-auto rounded-[28px] overflow-hidden relative"
+            transition={{ duration: 1.1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-24 mx-auto rounded-[32px] overflow-hidden relative"
             style={{
-              maxWidth: 980,
-              aspectRatio: '16/9',
-              background: `linear-gradient(135deg, ${BG_SOFT} 0%, #15101f 100%)`,
+              maxWidth: 1000,
+              aspectRatio: '16/10',
+              background: `radial-gradient(ellipse at 50% 120%, rgba(139,92,246,0.25), transparent 60%), linear-gradient(180deg, ${BG_SOFT} 0%, #0c0814 100%)`,
               border: `1px solid ${HAIRLINE_STRONG}`,
-              boxShadow: '0 40px 100px -20px rgba(139,92,246,0.25), 0 0 0 1px rgba(139,92,246,0.05) inset',
+              boxShadow: '0 60px 140px -30px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.06) inset',
             }}
           >
-            <div className="absolute inset-0 flex items-center justify-center text-[13px]" style={{ color: INK_DIM }}>
-              Pré-visualização do app
+            <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ bottom: '-55%', filter: 'blur(4px)' }}>
+              <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 70vw, 900px)', height: 'clamp(500px, 70vw, 900px)' }}>
+                <div className="carousel-loader-spinner" />
+              </div>
+            </div>
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: 'rgba(20,16,30,0.7)', border: `1px solid ${HAIRLINE_STRONG}`, backdropFilter: 'blur(20px)' }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: PURPLE }} />
+              <span className="text-[12px] font-medium" style={{ color: INK_SOFT }}>Gerando seu conteúdo…</span>
             </div>
           </motion.div>
         </div>

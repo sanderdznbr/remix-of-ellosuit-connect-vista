@@ -2128,8 +2128,96 @@ The image must look like it was shot by a professional photographer or designed 
     }
   }, [carouselData, activeCardIndex, changingFont, accentColor, logoUrl, logoDarkUrl, logoPosition, getLogoOverlayBounds, toast]);
 
+  // ===== UPSCALE IMAGE =====
+  const upscaleCard = useCallback(async () => {
+    if (!carouselData || upscaling) return;
+    const cardIdx = activeCardIndex;
+    const card = carouselData.cards[cardIdx];
+    if (!card?.imageUrl) return;
 
-  // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
+    // Push to undo stack
+    setCorrectionUndoStack(prev => [...prev, { cardIndex: cardIdx, imageUrl: card.imageUrl }]);
+    setUpscaling(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('upscale-image', {
+        body: { imageUrl: card.imageUrl },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.imageUrl) {
+        throw new Error(data?.error || 'Falha no upscale');
+      }
+
+      const newCards = [...carouselData.cards];
+      newCards[cardIdx] = {
+        ...newCards[cardIdx],
+        imageUrl: data.imageUrl,
+        imageUrlRaw: data.imageUrl,
+      };
+
+      // Re-apply logo if needed
+      if (logoUrl) {
+        try {
+          const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+            const img = document.createElement('img') as HTMLImageElement;
+            if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+          });
+          const baseImg = await loadImg(data.imageUrl);
+          const W = baseImg.width || 1080;
+          const H = baseImg.height || 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(baseImg, 0, 0, W, H);
+
+          const probeBounds = getLogoOverlayBounds(W, H, 220, 90, logoPosition || 'top-left');
+          const sampleX = Math.round(probeBounds.x + probeBounds.width / 2);
+          const sampleY = Math.round(probeBounds.y + probeBounds.height / 2);
+          const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+          const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+          const bgIsDark = lum < 0.45;
+
+          const chosenLogoUrl = bgIsDark ? logoUrl : (logoDarkUrl || logoUrl);
+          const needsInvert = !bgIsDark && !logoDarkUrl;
+
+          const logoB64 = chosenLogoUrl.startsWith('data:') ? chosenLogoUrl : await (async () => {
+            const r = await fetch(chosenLogoUrl); const b = await r.blob();
+            return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+          })();
+          const logoImg = await loadImg(logoB64);
+          const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, logoPosition || 'top-left');
+
+          ctx.save();
+          if (needsInvert) ctx.filter = 'brightness(0)';
+          else if (bgIsDark && !logoDarkUrl) ctx.filter = 'brightness(0) invert(1)';
+          ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
+          ctx.restore();
+
+          newCards[cardIdx] = {
+            ...newCards[cardIdx],
+            imageUrlRaw: data.imageUrl,
+            imageUrl: canvas.toDataURL('image/jpeg', 0.95),
+          };
+        } catch (logoErr) {
+          console.warn('[UPSCALE] Logo re-apply failed:', logoErr);
+        }
+      }
+
+      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+      toast({ title: 'Qualidade melhorada com sucesso!' });
+    } catch (err: any) {
+      console.error('[UPSCALE] Error:', err);
+      toast({ title: err?.message || 'Erro ao melhorar qualidade', variant: 'destructive' });
+    } finally {
+      setUpscaling(false);
+    }
+  }, [carouselData, activeCardIndex, upscaling, logoUrl, logoDarkUrl, logoPosition, getLogoOverlayBounds, toast]);
+
+
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
     try {
       // Use explicit data (passed directly) or fall back to state

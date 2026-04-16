@@ -2532,7 +2532,7 @@ The image must look like it was shot by a professional photographer or designed 
             }).filter(Boolean);
           } catch (e) { console.warn('[tweet2] content generation fallback', e); }
         }
-        if (texts.length === 0) texts = [cleanMentionsFromTopic(topic.trim()) || 'Tweet'];
+        if (texts.length === 0) texts = [sanitizeTopic(topic.trim()) || 'Tweet'];
         while (texts.length < tweet2Config.cardCount) texts.push(texts[texts.length - 1] || 'Tweet');
         texts = texts.slice(0, tweet2Config.cardCount);
 
@@ -2636,7 +2636,7 @@ The image must look like it was shot by a professional photographer or designed 
         }
 
         if (cards.length === 0) {
-          cards = [{ body: cleanMentionsFromTopic(topic.trim()) }];
+          cards = [{ body: sanitizeTopic(topic.trim()) }];
         }
       } else {
         cards = [{ body: 'Tweet de exemplo' }];
@@ -2644,7 +2644,7 @@ The image must look like it was shot by a professional photographer or designed 
 
       // Normalize amount of cards
       while (cards.length < tweetConfig.cardCount) {
-        cards.push({ body: cards[cards.length - 1]?.body || cleanMentionsFromTopic(topic.trim()) || 'Tweet' });
+        cards.push({ body: cards[cards.length - 1]?.body || sanitizeTopic(topic.trim()) || 'Tweet' });
       }
       cards = cards.slice(0, tweetConfig.cardCount);
 
@@ -3282,7 +3282,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const hasManualTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       if (!hasManualTexts) {
         try {
-          const cleanTopic = sanitizeAnimatedTopic(topic) || cleanMentionsFromTopic(topic).trim();
+          const cleanTopic = sanitizeAnimatedTopic(topic) || sanitizeTopic(topic).trim();
           const { data: outlineData, error: outlineError } = await supabase.functions.invoke('generate-carousel', {
             body: { action: 'generate-outline', topic: cleanTopic, cardCount, contentMode: 'carousel', ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}) },
           });
@@ -3299,7 +3299,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       for (let i = 0; i < cardCount; i++) {
         const cardData = effectiveCardTexts[i] || {};
         const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
-        const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
+        const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || sanitizeTopic(topic).trim();
         const payload: Record<string, any> = {
           topic: cleanTopic,
           cardIndex: i,
@@ -3434,7 +3434,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     try {
       const cardData = manualCardTexts[cardIndex] || {};
       const selectedAnimatedFont = FONT_OPTIONS[selectedFont];
-      const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || cleanMentionsFromTopic(topic).trim();
+      const cleanTopic = sanitizeAnimatedTopic(topic) || (cardData.title || '').trim() || sanitizeTopic(topic).trim();
       const formatStr = postFormat === 'story' ? '9:16' : postFormat === 'square' ? '1:1' : '4:5';
 
       const payload = {
@@ -3716,15 +3716,15 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             rawCards.push({
               type: 'cta', title: 'Gostou do conteúdo?', body: 'Salve, compartilhe e siga para mais!',
               ctaLine: brandName || userName || '',
-              imagePrompt: `Card final de CTA sobre "${cleanMentionsFromTopic(topic.trim())}" com design editorial.`,
+              imagePrompt: `Card final de CTA sobre "${sanitizeTopic(topic.trim())}" com design editorial.`,
               needsImage: true,
             });
           } else {
             rawCards.splice(insertIdx, 0, {
               type: 'content',
-              bodyTop: `Continuação sobre ${cleanMentionsFromTopic(topic.trim()).split('\n')[0]}...`,
+              bodyTop: `Continuação sobre ${sanitizeTopic(topic.trim()).split('\n')[0]}...`,
               bodyBottom: '',
-              imagePrompt: `Composição editorial profissional sobre "${cleanMentionsFromTopic(topic.trim())}", card ${insertIdx + 1} de ${cardCount}.`,
+              imagePrompt: `Composição editorial profissional sobre "${sanitizeTopic(topic.trim())}", card ${insertIdx + 1} de ${cardCount}.`,
               needsImage: true,
             });
           }

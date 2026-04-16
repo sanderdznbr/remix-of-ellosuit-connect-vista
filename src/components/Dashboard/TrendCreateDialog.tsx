@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Palette, Image as ImageIcon, Check, ChevronRight, ChevronLeft, Upload, Edit3, LayoutGrid, FileText, Eye } from 'lucide-react';
+import { X, Sparkles, Loader2, Palette, Image as ImageIcon, Check, ChevronRight, ChevronLeft, Upload, Edit3, LayoutGrid, FileText, Eye, Camera, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Switch } from '@/components/ui/switch';
@@ -14,6 +14,12 @@ interface MarketplaceStyle {
   category?: string;
 }
 
+interface ContextSuggestion {
+  label: string;
+  placeholder: string;
+  icon: 'camera' | 'details' | 'logo';
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -21,14 +27,97 @@ interface Props {
   onConfirm: (trendData: TrendData, styleId: string, useBrandColors: boolean) => void;
 }
 
-type WizardStep = 'review' | 'brand' | 'style' | 'confirm';
+type WizardStep = 'review' | 'context' | 'brand' | 'style' | 'confirm';
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'review', label: 'Revisar' },
+  { key: 'context', label: 'Contexto' },
   { key: 'brand', label: 'Marca' },
   { key: 'style', label: 'Estilo' },
   { key: 'confirm', label: 'Criar' },
 ];
+
+/** Analyzes topic to suggest what media/details to ask for */
+const getContextSuggestions = (topic: string, category: string): { title: string; subtitle: string; suggestions: ContextSuggestion[] } => {
+  const lower = topic.toLowerCase();
+
+  if (lower.includes('caso de sucesso') || lower.includes('case') || lower.includes('resultado') || lower.includes('como ajudamos') || lower.includes('cliente')) {
+    return {
+      title: 'Detalhes do case',
+      subtitle: 'Adicione fotos do trabalho e informações do cliente',
+      suggestions: [
+        { label: 'Foto do trabalho / resultado', placeholder: 'Ex: screenshot, foto do produto, antes e depois', icon: 'camera' },
+        { label: 'Detalhes do cliente e resultado', placeholder: 'Nome do cliente, qual foi o problema, resultado alcançado...', icon: 'details' },
+      ],
+    };
+  }
+
+  if (lower.includes('landing') || lower.includes('site') || lower.includes('website') || lower.includes('app') || lower.includes('software') || lower.includes('plataforma') || lower.includes('sistema')) {
+    return {
+      title: 'Mostre seu trabalho',
+      subtitle: 'Envie screenshots ou prints do projeto',
+      suggestions: [
+        { label: 'Screenshot do projeto', placeholder: 'Print da tela, landing page, interface', icon: 'camera' },
+        { label: 'Contexto adicional', placeholder: 'Tecnologias usadas, funcionalidades, resultados...', icon: 'details' },
+      ],
+    };
+  }
+
+  if (lower.includes('produto') || lower.includes('lançamento') || lower.includes('oferta') || lower.includes('desconto') || lower.includes('promo')) {
+    return {
+      title: 'Foto do produto',
+      subtitle: 'Envie a foto do produto ou serviço em destaque',
+      suggestions: [
+        { label: 'Foto do produto', placeholder: 'Foto profissional ou mockup do produto', icon: 'camera' },
+        { label: 'Detalhes da oferta', placeholder: 'Preço, benefícios, diferenciais...', icon: 'details' },
+      ],
+    };
+  }
+
+  if (lower.includes('antes e depois') || lower.includes('transformação') || lower.includes('reforma') || lower.includes('evolução')) {
+    return {
+      title: 'Antes e depois',
+      subtitle: 'Envie as fotos de comparação',
+      suggestions: [
+        { label: 'Foto "Antes"', placeholder: 'Estado inicial, antes da transformação', icon: 'camera' },
+        { label: 'Foto "Depois"', placeholder: 'Resultado final', icon: 'camera' },
+        { label: 'Contexto', placeholder: 'O que foi feito, quanto tempo levou...', icon: 'details' },
+      ],
+    };
+  }
+
+  if (lower.includes('dica') || lower.includes('tutorial') || lower.includes('passo') || lower.includes('como fazer') || lower.includes('educativo')) {
+    return {
+      title: 'Material de apoio',
+      subtitle: 'Envie imagens que ilustrem o conteúdo (opcional)',
+      suggestions: [
+        { label: 'Imagem ilustrativa', placeholder: 'Gráfico, print de tela, infográfico', icon: 'camera' },
+        { label: 'Detalhes extras', placeholder: 'Dados, estatísticas ou experiência pessoal...', icon: 'details' },
+      ],
+    };
+  }
+
+  if (lower.includes('depoimento') || lower.includes('feedback') || lower.includes('avaliação') || lower.includes('prova social')) {
+    return {
+      title: 'Prova social',
+      subtitle: 'Envie print do depoimento ou foto do cliente',
+      suggestions: [
+        { label: 'Print do depoimento', placeholder: 'Screenshot do WhatsApp, Google, Instagram', icon: 'camera' },
+        { label: 'Detalhes do cliente', placeholder: 'Nome, empresa, resultado alcançado...', icon: 'details' },
+      ],
+    };
+  }
+
+  // Default: generic context
+  return {
+    title: 'Personalize o conteúdo',
+    subtitle: 'Adicione fotos ou detalhes para enriquecer o post (opcional)',
+    suggestions: [
+      { label: 'Foto ou imagem de apoio', placeholder: 'Envie uma foto real do seu negócio, trabalho ou produto', icon: 'camera' },
+      { label: 'Detalhes adicionais', placeholder: 'Informações que a IA deve considerar na criação...', icon: 'details' },
+    ],
+  };
+};
 
 const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfirm }) => {
   const { user } = useAuth();
@@ -46,15 +135,23 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   const [editedCaption, setEditedCaption] = useState('');
   const [editedTopic, setEditedTopic] = useState('');
   
+  // Context step - media and details
+  const [contextImages, setContextImages] = useState<string[]>([]);
+  const [contextDetails, setContextDetails] = useState('');
+  const [uploadingContext, setUploadingContext] = useState(false);
+
   // Logo upload
   const [logoUrl, setLogoUrl] = useState('');
   const [logoDarkUrl, setLogoDarkUrl] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contextFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open || !user) return;
     setStep('review');
+    setContextImages([]);
+    setContextDetails('');
     loadData();
   }, [open, user]);
 
@@ -134,6 +231,34 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
     }
   };
 
+  const handleContextImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !user) return;
+    setUploadingContext(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files).slice(0, 5 - contextImages.length)) {
+        const ext = file.name.split('.').pop();
+        const path = `${user.id}/trend-context-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+        const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+        newUrls.push(publicUrl);
+      }
+      setContextImages(prev => [...prev, ...newUrls]);
+      if (newUrls.length > 0) toast.success(`${newUrls.length} imagem(ns) adicionada(s)`);
+    } catch (err: any) {
+      toast.error('Erro no upload: ' + (err?.message || ''));
+    } finally {
+      setUploadingContext(false);
+      if (contextFileInputRef.current) contextFileInputRef.current.value = '';
+    }
+  };
+
+  const removeContextImage = (index: number) => {
+    setContextImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const updateSlideText = (index: number, value: string) => {
     setEditedCardTexts(prev => {
       const copy = [...prev];
@@ -152,6 +277,8 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
       cardText: editedCardText,
       cardTexts: editedCardTexts,
       caption: editedCaption,
+      contextImages: contextImages.length > 0 ? contextImages : undefined,
+      contextDetails: contextDetails.trim() || undefined,
     };
 
     onConfirm(finalTrend, selectedStyle, useBrandColors);
@@ -162,9 +289,11 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
   const isCarousel = trendData.format === 'carrossel';
   const stepIndex = STEPS.findIndex(s => s.key === step);
+  const ctxSuggestions = getContextSuggestions(editedTopic || trendData.topic || '', trendData.category || '');
 
   const canProceed = () => {
     if (step === 'review') return true;
+    if (step === 'context') return true; // optional step
     if (step === 'brand') return true;
     if (step === 'style') return !!selectedStyle;
     return true;
@@ -289,7 +418,83 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                 </motion.div>
               )}
 
-              {/* STEP 2: Brand */}
+              {/* STEP 2: Smart Context (adaptive per content) */}
+              {step === 'context' && (
+                <motion.div key="context" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                  className="space-y-5">
+
+                  {/* Smart header */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.25), rgba(6,182,212,0.08))' }}>
+                      <Camera className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">{ctxSuggestions.title}</h3>
+                      <p className="text-[11px] text-white/30 mt-0.5 leading-relaxed">{ctxSuggestions.subtitle}</p>
+                    </div>
+                  </div>
+
+                  {/* Image upload area */}
+                  <div>
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 flex items-center gap-1.5">
+                      <Camera className="w-3 h-3" />
+                      {ctxSuggestions.suggestions.find(s => s.icon === 'camera')?.label || 'Fotos de apoio'}
+                    </label>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      {contextImages.map((url, idx) => (
+                        <div key={idx} className="relative rounded-xl overflow-hidden border border-white/[0.08] aspect-square group">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => removeContextImage(idx)}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <Trash2 className="w-3 h-3 text-red-400" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {contextImages.length < 5 && (
+                        <button onClick={() => contextFileInputRef.current?.click()} disabled={uploadingContext}
+                          className="rounded-xl border-2 border-dashed border-white/[0.08] aspect-square flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-cyan-500/30 transition-colors"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                          {uploadingContext ? (
+                            <Loader2 className="w-5 h-5 animate-spin text-white/20" />
+                          ) : (
+                            <>
+                              <Plus className="w-5 h-5 text-white/15" />
+                              <span className="text-[8px] text-white/15 font-medium">Adicionar</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={contextFileInputRef} type="file" accept="image/*" multiple onChange={handleContextImageUpload} className="hidden" />
+                  </div>
+
+                  {/* Context details textarea */}
+                  <div>
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 flex items-center gap-1.5">
+                      <MessageSquare className="w-3 h-3" />
+                      {ctxSuggestions.suggestions.find(s => s.icon === 'details')?.label || 'Detalhes adicionais'}
+                    </label>
+                    <textarea
+                      value={contextDetails}
+                      onChange={e => setContextDetails(e.target.value)}
+                      placeholder={ctxSuggestions.suggestions.find(s => s.icon === 'details')?.placeholder || 'Informações extras...'}
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl text-xs text-white/70 border border-white/[0.08] focus:border-cyan-500/30 outline-none transition-colors resize-none leading-relaxed placeholder:text-white/15"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                    />
+                  </div>
+
+                  {/* Skip hint */}
+                  <p className="text-[10px] text-white/15 text-center">
+                    Esta etapa é opcional — pule se preferir usar apenas a foto sugerida pela IA
+                  </p>
+                </motion.div>
+              )}
+
+              {/* STEP 3: Brand */}
               {step === 'brand' && (
                 <motion.div key="brand" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                   className="space-y-5">
@@ -351,7 +556,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                 </motion.div>
               )}
 
-              {/* STEP 3: Style */}
+              {/* STEP 4: Style */}
               {step === 'style' && (
                 <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                   <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-3 block">Selecione o estilo</label>
@@ -395,7 +600,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                 </motion.div>
               )}
 
-              {/* STEP 4: Confirm */}
+              {/* STEP 5: Confirm */}
               {step === 'confirm' && (
                 <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                   className="space-y-4">
@@ -426,6 +631,21 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                         <p className="text-xs text-white/60 truncate">{styles.find(s => s.id === selectedStyle)?.name || '—'}</p>
                       </div>
                     </div>
+
+                    {/* Context summary */}
+                    {(contextImages.length > 0 || contextDetails) && (
+                      <div className="rounded-xl border border-white/[0.06] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                        <p className="text-[10px] text-white/25 uppercase tracking-wider mb-2">Contexto</p>
+                        {contextImages.length > 0 && (
+                          <div className="flex gap-1.5 mb-2">
+                            {contextImages.map((url, i) => (
+                              <img key={i} src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.06]" />
+                            ))}
+                          </div>
+                        )}
+                        {contextDetails && <p className="text-[11px] text-white/40 line-clamp-2">{contextDetails}</p>}
+                      </div>
+                    )}
 
                     {logoUrl && (
                       <div className="rounded-xl border border-white/[0.06] p-3 flex items-center gap-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
@@ -465,7 +685,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
               <button onClick={goNext} disabled={!canProceed()}
                 className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-medium text-white transition-all cursor-pointer disabled:opacity-30"
                 style={{ backgroundColor: '#8B5CF6' }}>
-                Continuar <ChevronRight className="w-3.5 h-3.5" />
+                {step === 'context' ? 'Continuar' : 'Continuar'} <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>

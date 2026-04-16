@@ -440,7 +440,7 @@ const CarouselGenerator: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('top-left');
-  const [logoMode, setLogoMode] = useState<'ai' | 'manual'>('ai');
+  const [logoMode, setLogoMode] = useState<'ai' | 'manual'>('manual');
   const [logoBrandColors, setLogoBrandColors] = useState<string[]>([]);
   const [useBrandColors, setUseBrandColors] = useState(true);
   const [useCustomColors, setUseCustomColors] = useState(false);
@@ -1842,7 +1842,6 @@ The image must look like it was shot by a professional photographer or designed 
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
         ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
-        ...(logoMode === 'ai' && logoUrl ? { logoImageUrl: logoUrl, logoMode: 'ai' } : {}),
       },
     });
     
@@ -3063,7 +3062,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           ctx.globalCompositeOperation = 'source-over';
 
           // STEP 4: Draw logo
-          if (logoMode === 'manual' && logoUrl) {
+          if (logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
                 const r = await fetch(logoUrl); const b = await r.blob();
@@ -3091,7 +3090,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay via Canvas ===
-      if (!useRealEstateBlend && logoMode === 'manual' && logoUrl && finalImageUrl) {
+      if (!useRealEstateBlend && logoUrl && finalImageUrl) {
         try {
           console.log('[LOGO_OVERLAY] Adding logo to single post...');
           const W = cardW, H = cardH;
@@ -4505,7 +4504,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           ctx.globalCompositeOperation = 'source-over';
           
           // === STEP 4: Draw logo ===
-          if (logoMode === 'manual' && logoUrl) {
+          if (logoUrl) {
             try {
               const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
                 const r = await fetch(logoUrl); const b = await r.blob();
@@ -4573,7 +4572,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for ALL carousel cards ===
-      if (!useRealEstateBlend && logoMode === 'manual' && logoUrl && updatedCards.length > 0) {
+      if (!useRealEstateBlend && logoUrl && updatedCards.length > 0) {
         console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards...');
         const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
           const img = document.createElement('img') as HTMLImageElement;
@@ -6018,7 +6017,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for regenerated card ===
-      if (!regenHasPhotos && logoMode === 'manual' && logoUrl && newImageUrl) {
+      if (!regenHasPhotos && logoUrl && newImageUrl) {
         try {
           console.log('[REGEN_LOGO] Adding logo to regenerated card', cardIndex);
           const W = cardW, H = cardH;

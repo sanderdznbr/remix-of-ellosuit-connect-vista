@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { FacePerson, ReferenceImage } from './types';
 import { LogoPosition } from './StepStyle';
 import GalleryPicker from './GalleryPicker';
+import LogoPositionPicker from './LogoPositionPicker';
 
 interface Props {
   facePersons: FacePerson[];
@@ -174,6 +175,12 @@ const StepPersonalization: React.FC<Props> = (props) => {
   const facePhotos = facePersons.flatMap(p => p.photos);
   const mediaRefs = referenceImages.filter(r => r.category !== 'face');
 
+  useEffect(() => {
+    if (logoUrl && logoMode !== 'manual') {
+      setLogoMode('manual');
+    }
+  }, [logoUrl, logoMode, setLogoMode]);
+
   // Auto-skip mídias if already has media refs
   const totalSubSteps = 3;
   const subStepLabels = ['Rosto', 'Logo', 'Mídias'];
@@ -211,11 +218,17 @@ const StepPersonalization: React.FC<Props> = (props) => {
         if (error) throw error;
         const { data } = supabase.storage.from('brand-assets').getPublicUrl(path);
         setLogoUrl(data.publicUrl);
+        setLogoMode('manual');
         return;
       } catch {}
     }
     const reader = new FileReader();
-    reader.onload = ev => { if (ev.target?.result) setLogoUrl(ev.target.result as string); };
+    reader.onload = ev => {
+      if (ev.target?.result) {
+        setLogoUrl(ev.target.result as string);
+        setLogoMode('manual');
+      }
+    };
     reader.readAsDataURL(file);
   };
 
@@ -257,6 +270,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
         });
       } else if (galleryTarget === 'logo') {
         setLogoUrl(f.url);
+        setLogoMode('manual');
       } else {
         setReferenceImages(prev => [...prev, { url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const }]);
       }
@@ -397,37 +411,13 @@ const StepPersonalization: React.FC<Props> = (props) => {
           )}
 
           {/* Logo position + brand colors */}
-          {logoUrl && wizardMode === 'advanced' && (
+          {logoUrl && (
             <div className="space-y-3">
-              <div className="flex gap-1.5">
-                <button onClick={() => setLogoMode('ai')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${logoMode === 'ai' ? 'bg-white/[0.08] text-white/70' : 'text-white/20 bg-white/[0.02]'}`}>
-                  IA posiciona
-                </button>
-                <button onClick={() => setLogoMode('manual')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${logoMode === 'manual' ? 'bg-white/[0.08] text-white/70' : 'text-white/20 bg-white/[0.02]'}`}>
-                  Manual
-                </button>
+              <div className="space-y-2">
+                <p className="text-xs text-white/45">Posição da logo no post final</p>
+                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={setLogoPosition} />
+                <p className="text-[10px] text-white/25">A logo será aplicada via canvas no canto selecionado, após a geração.</p>
               </div>
-              {logoMode === 'manual' && (
-                <div className="relative w-full aspect-[4/5] max-w-[120px] rounded-lg border border-white/[0.06] bg-white/[0.015] mx-auto">
-                  {[
-                    { value: 'top-left', style: 'top-1.5 left-1.5' },
-                    { value: 'top-right', style: 'top-1.5 right-1.5' },
-                    { value: 'bottom-left', style: 'bottom-1.5 left-1.5' },
-                    { value: 'bottom-right', style: 'bottom-1.5 right-1.5' },
-                  ].map(pos => (
-                    <button key={pos.value} onClick={() => setLogoPosition(pos.value as LogoPosition)}
-                      className={`absolute ${pos.style} w-6 h-6 rounded-md flex items-center justify-center transition-all ${
-                        logoPosition === pos.value ? 'bg-purple-500/70 scale-110' : 'bg-white/[0.05] hover:bg-white/[0.1]'
-                      }`}>
-                      {logoPosition === pos.value
-                        ? <img src={logoUrl} alt="" className="w-4 h-4 object-contain" />
-                        : <div className="w-2 h-2 rounded-sm bg-white/12" />}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
           {logoUrl && (

@@ -2514,6 +2514,9 @@ The image must look like it was shot by a professional photographer or designed 
     }
 
     lastSavedDataRef.current = JSON.stringify({ cards: (item.carousel_data?.cards || []).map((c: any) => ({ ...c })), title: item.carousel_data?.title });
+    // Restore edit history stacks from persisted data
+    setCorrectionUndoStack(Array.isArray(item.carousel_data?.editHistory) ? item.carousel_data.editHistory : []);
+    setCorrectionRedoStack(Array.isArray(item.carousel_data?.redoHistory) ? item.carousel_data.redoHistory : []);
     setCarouselData(item.carousel_data);
     setTopic(item.topic);
     setKeywords((item.keywords || []).join(', '));

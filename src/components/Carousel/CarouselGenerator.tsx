@@ -552,7 +552,7 @@ const CarouselGenerator: React.FC = () => {
   // Web search state (declared early for WIZARD_STEPS computation)
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
-  const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; cardTexts?: string[]; caption: string; styleId?: string; useBrandColors?: boolean; logoUrl?: string; logoDarkUrl?: string; brandColors?: string[]; faceImages?: string[] } | null>(null);
+  const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; cardTexts?: { title: string; subtitle: string }[]; caption: string; styleId?: string; useBrandColors?: boolean; logoUrl?: string; logoDarkUrl?: string; brandColors?: string[]; faceImages?: string[] } | null>(null);
   const [pendingTrendGeneration, setPendingTrendGeneration] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[]; sources?: { title: string; summary: string; angle: string }[] } | null>(null);
   const [selectedWebSourceIndex, setSelectedWebSourceIndex] = useState<number | null>(null);
@@ -7125,7 +7125,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       setCardPhotoAssignments({});
       setCardPhotoOptions({});
       const trendExactTexts = fromTrendData?.format === 'carrossel'
-        ? (fromTrendData.cardTexts || []).filter((text: string) => typeof text === 'string' && text.trim())
+        ? (fromTrendData.cardTexts || []).filter((item: any) => item && (item.title || item.subtitle))
         : [];
       const totalCards = contentMode === 'single-post' ? 1 : (trendExactTexts.length || cardCount);
       const localFallback = () => {
@@ -7139,9 +7139,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
       let generatedOutline: { title?: string; body?: string }[] = [];
       if (trendExactTexts.length > 0) {
-        generatedOutline = trendExactTexts.map((text: string, index: number) => ({
-          title: index === 0 ? text.trim() : '',
-          body: index === 0 ? '' : text.trim(),
+        generatedOutline = trendExactTexts.map((item: any) => ({
+          title: (item.title || '').trim(),
+          body: (item.subtitle || '').trim(),
         }));
         setManualCardTexts(generatedOutline);
       } else {

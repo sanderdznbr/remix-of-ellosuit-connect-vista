@@ -199,13 +199,7 @@ Be EXTREMELY specific about typography. No markdown, pure JSON only.` });
     promptParts.push(`TEMA: "${job.topic}"`);
   }
   promptParts.push('POST ÚNICO para Instagram (1080x1350). UMA composição editorial completa. Full bleed total, ZERO bordas.');
-  // Logo handling depends on logoMode
-  const isAiLogo = styleConfig.logoMode === 'ai' && job.logo_url;
-  if (isAiLogo) {
-    promptParts.push('LOGOMARCA: A logomarca da marca será fornecida como imagem de referência. Posicione-a de forma DISCRETA e PROFISSIONAL no design.');
-  } else {
-    promptParts.push('PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
-  }
+  promptParts.push(`PROIBIÇÃO ABSOLUTA DE LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas no canto ${job.logo_position || 'top-left'}. Deixe a área do logo COMPLETAMENTE LIMPA.`);
   const isMarketplaceStyle = !!singlePromptStyle;
   if (!isMarketplaceStyle && brandColors.length > 0) promptParts.push(`PALETA DE CORES DA MARCA: ${brandColors.join(', ')}.`);
 
@@ -227,7 +221,7 @@ Be EXTREMELY specific about typography. No markdown, pure JSON only.` });
     facePersonsMetadata: facePersonsMeta && facePersonsMeta.length > 1 ? facePersonsMeta : undefined,
     ...(singlePromptStyle ? { stylePrompt: singlePromptStyle } : {}),
     ...(!isMarketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-    ...(isAiLogo ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
+    ...(job.logo_position ? { logoPosition: job.logo_position } : {}),
   });
 
   if (!imageUrl) {
@@ -507,6 +501,13 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
   const antiFaceNeg = hasFaceRefsForCarousel && !styleRecommendsNoFaces
     ? 'no humans, no people, no portraits, no faces'
     : '';
+  const preferredDeviceMockupIndices = (() => {
+    if (!(hasProductImages && isAppScreenshot)) return new Set<number>();
+    const anchors = cards.length <= 5
+      ? [0, cards.length - 1]
+      : [0, Math.floor((cards.length - 1) / 2), cards.length - 1];
+    return new Set(anchors.filter((idx) => idx >= 0 && idx < cards.length));
+  })();
 
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
@@ -524,14 +525,10 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
       parts.push(`Texto em PORTUGUÊS BRASILEIRO correto e fluente. Tema: "${cleanTopic}".`);
       parts.push('REGRA OBRIGATÓRIA: ZERO bordas, ZERO molduras, ZERO frames. A imagem deve ser FULL BLEED total, sangrar de ponta a ponta.');
       parts.push('PROIBIDO COPIAR TEXTOS DAS REFERÊNCIAS: NÃO copie títulos, nomes de estilos, categorias, nomes de templates ou qualquer texto visível nas imagens de referência. Use EXCLUSIVAMENTE os textos fornecidos neste prompt. NUNCA renderize nomes como "EXCLUSIVE", "PREMIUM", "TEMPLATE", ou qualquer nome de coleção/estilo.');
-      const carouselIsAiLogo = styleConfig.logoMode === 'ai' && job.logo_url;
-      if (carouselIsAiLogo) {
-        parts.push('LOGOMARCA: A logomarca será fornecida como referência. Posicione-a DISCRETAMENTE no design.');
-      } else {
-        parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
-      }
+      parts.push(`PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas no canto ${job.logo_position || 'top-left'}. Deixe a área do logo COMPLETAMENTE LIMPA.`);
       // CONSISTENCY ACROSS CAROUSEL — critical for uniform look
       parts.push(`CONSISTÊNCIA OBRIGATÓRIA DO CARROSSEL (card ${i + 1}/${cards.length}): Este é um SLIDE de um carrossel com ${cards.length} cards. TODOS os cards DEVEM usar EXATAMENTE a mesma fonte tipográfica, mesma paleta de cores, mesmo estilo de layout e mesmos elementos decorativos. O resultado deve parecer que TODOS os slides foram criados no MESMO arquivo de Photoshop. Se a referência usa Montserrat Black em caixa alta para títulos, TODOS os cards usam Montserrat Black em caixa alta. Mesma cor de fundo, mesmos gradientes, mesmos estilos de caixa de texto. ZERO variação tipográfica entre slides.`);
+      parts.push('TRAVA TIPOGRÁFICA ABSOLUTA: escolha UMA identidade tipográfica única com base nas referências e MANTENHA-A idêntica em todos os slides. PROIBIDO alternar entre fontes arredondadas, condensadas, serifadas ou display diferentes entre cards. Título principal = mesma família/peso/efeito em todo o carrossel. Texto secundário = mesma família/peso em todo o carrossel.');
       parts.push('MARGENS E SAFE AREA: Reserve no mínimo 10% de margem em TODOS os lados. Nenhum texto, elemento ou objeto importante pode tocar ou chegar perto das bordas. Cantos devem ter respiro generoso. Texto centralizado com padding interno consistente.');
       parts.push('QUALIDADE ANTI-IA: Paleta de cores RESTRITA e COESA (3-4 cores máx). Tipografia com HIERARQUIA CLARA (título bold grande + corpo leve). ESPAÇAMENTO GENEROSO entre elementos. ALINHAMENTO PRECISO em grid editorial. Cores REALISTAS sem saturação exagerada. Composição ASSIMÉTRICA intencional. O post deve parecer parte de um feed de marca premium.');
 
@@ -555,6 +552,7 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
       }
       // Inject product/screenshot instructions when product images are provided
       if (hasProductImages && isAppScreenshot) {
+        const shouldUseFullDeviceMockup = preferredDeviceMockupIndices.has(i);
         // Randomize mockup using hash of card index + topic for true variety
         const mobileVariations = [
           'iPhone 15 Pro Max segurado elegantemente por uma mão, ângulo 30° inclinado',
@@ -594,13 +592,22 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
         // Use a hash-like approach to avoid sequential repetition
         const variationIndex = (i * 3 + Math.floor(i / 2)) % variations.length;
         const variation = variations[variationIndex];
-        parts.push(`OBRIGATÓRIO — MOCKUP COM SCREENSHOT REAL: A imagem de referência de produto contém um SCREENSHOT REAL do aplicativo. Você DEVE:
+        if (shouldUseFullDeviceMockup) {
+          parts.push(`OBRIGATÓRIO — MOCKUP COM SCREENSHOT REAL: A imagem de referência de produto contém um SCREENSHOT REAL do aplicativo. Você DEVE:
 1. Criar um mockup 3D fotorrealista: ${variation}
 2. INSERIR o screenshot EXATAMENTE como ele é na tela do dispositivo — NÃO redesenhe, NÃO invente uma UI nova
 3. O screenshot deve ser CLARAMENTE VISÍVEL e LEGÍVEL na tela do dispositivo
 4. A composição deve ser cinematográfica com iluminação profissional
-5. CADA CARD deve ter um ÂNGULO e COMPOSIÇÃO COMPLETAMENTE DIFERENTES — PROIBIDO repetir o mesmo enquadramento de outro card
+5. PROIBIDO repetir o mesmo enquadramento de outro card
 6. O mockup INTEIRO deve caber dentro da safe area com margens generosas`);
+        } else {
+          parts.push(`OBRIGATÓRIO — USE O SCREENSHOT REAL SEM EXCESSO DE MOCKUP NESTE CARD:
+1. NÃO use aparelho completo, moldura de celular ou hardware de smartphone neste slide
+2. Mostre a interface como painéis, crops editoriais, janelas flutuantes, módulos ampliados ou composição de tela integrada ao layout
+3. O screenshot deve permanecer fiel, legível e claramente reconhecível
+4. A composição deve parecer design editorial real, não repetição de mockup de celular
+5. PROIBIDO repetir iPhone/celular em vários cards do mesmo carrossel`);
+        }
       } else if (hasProductImages) {
         parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista. O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
       }
@@ -642,8 +649,15 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
     }
 
     const finalPrompt = promptParts.filter(Boolean).join(' ');
+    const deviceRepetitionNegPrompt = hasProductImages && isAppScreenshot && !preferredDeviceMockupIndices.has(i)
+      ? (screenshotDeviceType === 'web'
+          ? 'no laptop mockup, no monitor hardware, no computer frame'
+          : screenshotDeviceType === 'tablet'
+            ? 'no tablet mockup, no ipad frame, no tablet hardware'
+            : 'no smartphone mockup, no phone hardware, no cellphone frame, no repeated iphone')
+      : '';
     const negPrompt = isFullBleed 
-      ? [antiFaceNeg, 'no borders, no frames, no margins, no white border, no picture frame'].filter(Boolean).join(', ')
+      ? [antiFaceNeg, deviceRepetitionNegPrompt, 'no borders, no frames, no margins, no white border, no picture frame'].filter(Boolean).join(', ')
       : [baseNeg, job.negative_prompt, 'no borders, no frames, no margins'].filter(Boolean).join(', ');
 
     imageTasks.push({ index: i, prompt: finalPrompt, negPrompt, cardGetsFace });
@@ -721,9 +735,10 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
           negativePrompt: task.negPrompt,
           fidelity: task.cardGetsFace ? 'high' : (isFullBleed ? 'high' : (marketplaceStyle?.imageGeneration?.fidelity || imageSettings.fidelity || 'balanced')),
           facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
+          isCarousel: true,
           ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
           ...(!isFullBleed && !marketplaceStyle && brandColors.length > 0 ? { brandColors } : {}),
-          ...(styleConfig.logoMode === 'ai' && job.logo_url ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
+          ...(job.logo_position ? { logoPosition: job.logo_position } : {}),
         });
         if (url) {
           if (isFullBleed && timeLeft() > 30_000) {
@@ -741,8 +756,9 @@ Be strict about borders — even thin white/gray edges count as a fail. JSON onl
                 negativePrompt: task.negPrompt + ', no borders, no frames, no white edges, no picture frame',
                 fidelity: task.cardGetsFace ? 'high' : 'high',
                 facePersonsMetadata: task.cardGetsFace && isMultiPerson ? facePersonsMeta : undefined,
+                isCarousel: true,
                 ...(isFullBleed && promptStyle ? { stylePrompt: promptStyle } : {}),
-                ...(styleConfig.logoMode === 'ai' && job.logo_url ? { logoImageUrl: job.logo_url, logoMode: 'ai' } : {}),
+                ...(job.logo_position ? { logoPosition: job.logo_position } : {}),
               });
               if (retryUrl) return { index: task.index, url: retryUrl };
             }

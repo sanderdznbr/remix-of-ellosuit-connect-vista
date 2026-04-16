@@ -296,6 +296,14 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     }
   };
 
+  // Split trends into today vs older (must be before early returns)
+  const todayDate = new Date().toISOString().split('T')[0];
+  const { todayTrends, olderTrends } = useMemo(() => {
+    const todayList = trends.filter(t => t.trend_date === todayDate);
+    const olderList = trends.filter(t => t.trend_date !== todayDate);
+    return { todayTrends: todayList, olderTrends: olderList };
+  }, [trends, todayDate]);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[400px]">

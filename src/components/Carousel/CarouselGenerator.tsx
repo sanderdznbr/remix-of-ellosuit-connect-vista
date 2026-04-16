@@ -1151,6 +1151,7 @@ const CarouselGenerator: React.FC = () => {
     setLoadedMarketplaceStyleId(null);
     setSearchingWeb(false);
     setSkipWebSearch(false);
+    setFromTrendData(null);
     setWebSearchResult(null);
     setSelectedWebSourceIndex(null);
     setExtractingUrl(false);

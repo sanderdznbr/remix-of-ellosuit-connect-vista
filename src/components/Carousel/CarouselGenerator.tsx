@@ -5707,24 +5707,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           parts.push(`NÃO use retrato, pessoa, modelo, rosto, mãos, corpo humano ou silhuetas humanas.`);
         }
         
-        // Include logo/brand overlay instructions for full-bleed regeneration
-        if (logoUrl && brandName) {
-          const posMap: Record<string, string> = {
-            'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
-            'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
-            'middle-left': 'centro esquerdo', 'middle-right': 'centro direito',
-          };
-          const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
-          parts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, sobrepondo o conteúdo com leve destaque (fundo semitransparente ou sombra sutil). A logo deve ser pequena e elegante, sem dominar o layout.`);
-        } else if (brandName) {
-          const posMap: Record<string, string> = {
-            'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
-            'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
-            'middle-left': 'centro esquerdo', 'middle-right': 'centro direito',
-          };
-          const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
-          parts.push(`MARCA: Inclua o nome "${brandName}" como texto pequeno no ${posLabel} da imagem, com estilo sutil e elegante.`);
-        }
+        // Logo is applied via Canvas overlay — do NOT tell AI to render it
+        parts.push(`PROIBIÇÃO DE LOGO/MARCA NA IMAGEM: NÃO renderize nenhum logotipo, nome de marca, wordmark ou símbolo de branding na imagem. A logomarca será sobreposta automaticamente via Canvas após a geração. Deixe o canto destinado à logo LIMPO e SEM TEXTO.`);
         // Inject extreme mode vision/form context into the image prompt
         if (wizardMode === 'extreme' && extremeAnalysis) {
           parts.push(`\nMODO EXTREME — VISÃO DO USUÁRIO: "${extremeVision}"`);
@@ -5743,13 +5727,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             parts.push(`TEXTO EXATO OBRIGATÓRIO (copie caractere por caractere): ${exactText}`);
           }
         }
-        // Instruct AI to include product/screen images provided as references
+        // Product/screen references — use as VISUAL CONTEXT only, do NOT copy text from them
         const allProductRefsForPrompt = [...productRefUrls, ...extremeProductRefs];
         if (allProductRefsForPrompt.length > 0) {
-          parts.push(`\nREFERÊNCIAS DE PRODUTO/TELA OBRIGATÓRIAS: Foram fornecidas ${allProductRefsForPrompt.length} imagem(ns) de produto/tela/app como referência. Você DEVE incluir essas imagens de produto/tela no card regenerado, renderizando-as fielmente (mockup de celular, print de tela, etc). NÃO ignore essas referências.`);
-        }
-        if (logoUrl) {
-          parts.push(`REFERÊNCIA DE LOGO: A imagem da logomarca foi fornecida como referência. Renderize-a fielmente na posição indicada.`);
+          parts.push(`\nREFERÊNCIAS DE PRODUTO/TELA: Foram fornecidas ${allProductRefsForPrompt.length} imagem(ns) de produto/tela/app. Use como CONTEXTO VISUAL para o layout (ex: incluir um mockup de tela). PROIBIDO copiar textos, nomes de marcas, URLs ou qualquer texto legível das imagens de referência — use APENAS o conceito visual.`);
         }
         if (isCover) {
           parts.push(`ESTE É O CARD DE CAPA (Card 1 de ${carouselData.cards.length}).`);
@@ -5787,22 +5768,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
           stdParts.push(`DIREÇÃO VISUAL OBRIGATÓRIA: card tipográfico/editorial SOMENTE com elementos gráficos.`);
           stdParts.push(`NÃO use retrato, pessoa, modelo, rosto, mãos, corpo humano ou silhuetas humanas.`);
         }
-        // Include logo/brand instructions
-        if (logoUrl && brandName) {
-          const posMap: Record<string, string> = {
-            'top-left': 'canto superior esquerdo', 'top-center': 'centro superior', 'top-right': 'canto superior direito',
-            'bottom-left': 'canto inferior esquerdo', 'bottom-center': 'centro inferior', 'bottom-right': 'canto inferior direito',
-          };
-          const posLabel = posMap[logoPosition] || 'canto superior esquerdo';
-          stdParts.push(`LOGOMARCA: Inclua a logomarca/nome "${brandName}" no ${posLabel} da imagem, pequena e elegante.`);
-        }
-        if (logoUrl) {
-          stdParts.push(`REFERÊNCIA DE LOGO: A imagem da logomarca foi fornecida como referência. Renderize-a fielmente na posição indicada.`);
-        }
-        // Product references
+        // Logo is applied via Canvas overlay — do NOT tell AI to render it
+        stdParts.push(`PROIBIÇÃO DE LOGO/MARCA NA IMAGEM: NÃO renderize nenhum logotipo, nome de marca, wordmark ou símbolo de branding na imagem. A logomarca será sobreposta via Canvas após a geração.`);
+        // Product references — use as visual context only
         const allProductRefsStd = [...productRefUrls, ...extremeProductRefs];
         if (allProductRefsStd.length > 0) {
-          stdParts.push(`REFERÊNCIAS DE PRODUTO: Foram fornecidas ${allProductRefsStd.length} imagem(ns) de produto. Inclua-as fielmente no design.`);
+          stdParts.push(`REFERÊNCIAS DE PRODUTO: Foram fornecidas ${allProductRefsStd.length} imagem(ns) de produto. Use como CONTEXTO VISUAL (mockup). PROIBIDO copiar textos, nomes ou URLs visíveis nas imagens de referência.`);
         }
         // Card-specific text context
         if (isCover) {
@@ -5846,9 +5817,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       const allProductRefs = [...productRefUrls, ...extremeProductRefs];
       // Include logo as a reference image so the AI can reproduce it exactly
       const regenReferenceImages: string[] = [...allProductRefs];
-      if (logoUrl && logoUrl.startsWith('http')) {
-        regenReferenceImages.push(logoUrl);
-      }
+      // Logo is NOT sent to the AI — it's applied via Canvas overlay only
       if (customImageUrl) {
         regenReferenceImages.push(customImageUrl);
       }

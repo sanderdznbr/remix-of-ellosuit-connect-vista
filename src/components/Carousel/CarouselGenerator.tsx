@@ -9336,14 +9336,19 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </button>
                         )}
 
-                        {/* Retornar edição */}
+                        {/* Retornar edição (Undo) */}
                         {!isGuest && (
                           <button
                             onClick={() => {
                               if (correctionUndoStack.length === 0) return;
                               const last = correctionUndoStack[correctionUndoStack.length - 1];
-                              if (!last) return;
-                              const newCards = carouselData ? [...carouselData.cards] : [];
+                              if (!last || !carouselData) return;
+                              // Push current image to redo stack
+                              const currentUrl = carouselData.cards[last.cardIndex]?.imageUrl;
+                              if (currentUrl) {
+                                setCorrectionRedoStack(prev => [...prev, { cardIndex: last.cardIndex, imageUrl: currentUrl }]);
+                              }
+                              const newCards = [...carouselData.cards];
                               if (newCards[last.cardIndex]) {
                                 newCards[last.cardIndex] = { ...newCards[last.cardIndex], imageUrl: last.imageUrl };
                                 setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
@@ -9357,6 +9362,35 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             disabled={correctionUndoStack.length === 0}
                             className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-yellow-300 hover:text-yellow-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
                             <Undo2 className="h-4 w-4 text-yellow-400" /> Retornar Edição {correctionUndoStack.length > 0 && <span className="ml-auto text-[10px] text-yellow-400/60">({correctionUndoStack.length})</span>}
+                          </button>
+                        )}
+
+                        {/* Avançar edição (Redo) */}
+                        {!isGuest && (
+                          <button
+                            onClick={() => {
+                              if (correctionRedoStack.length === 0) return;
+                              const next = correctionRedoStack[correctionRedoStack.length - 1];
+                              if (!next || !carouselData) return;
+                              // Push current image to undo stack
+                              const currentUrl = carouselData.cards[next.cardIndex]?.imageUrl;
+                              if (currentUrl) {
+                                setCorrectionUndoStack(prev => [...prev, { cardIndex: next.cardIndex, imageUrl: currentUrl }]);
+                              }
+                              const newCards = [...carouselData.cards];
+                              if (newCards[next.cardIndex]) {
+                                newCards[next.cardIndex] = { ...newCards[next.cardIndex], imageUrl: next.imageUrl };
+                                setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                              }
+                              if (next.cardIndex === 0 && currentCarouselId) {
+                                supabase.from('generated_carousels').update({ cover_url: `${next.imageUrl}?t=${Date.now()}` }).eq('id', currentCarouselId).then(() => {});
+                              }
+                              setCorrectionRedoStack(prev => prev.slice(0, -1));
+                              toast({ title: 'Edição avançada!' });
+                            }}
+                            disabled={correctionRedoStack.length === 0}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-blue-300 hover:text-blue-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 disabled:cursor-not-allowed w-full">
+                            <Redo2 className="h-4 w-4 text-blue-400" /> Avançar Edição {correctionRedoStack.length > 0 && <span className="ml-auto text-[10px] text-blue-400/60">({correctionRedoStack.length})</span>}
                           </button>
                         )}
 

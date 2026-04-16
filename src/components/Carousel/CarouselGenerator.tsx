@@ -7311,7 +7311,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     const facePerson = {
                       id: 'trend-face-1',
                       label: 'Pessoa 1',
-                      photos: trendFaceUrls.map((url: string) => ({ url, thumb: url })),
+                      photos: trendFaceUrls.map((url: string, idx: number) => ({ url, thumb: url, label: `Rosto ${idx + 1}`, source: 'upload' as const, category: 'face' as const })),
                       gender: 'auto' as const,
                       wearsGlasses: false,
                     };

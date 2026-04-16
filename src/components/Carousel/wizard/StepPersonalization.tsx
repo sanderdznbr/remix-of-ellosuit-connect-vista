@@ -207,9 +207,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
     });
   };
 
-  const handleLogoFiles = async (files: File[]) => {
-    const file = files[0];
-    if (!file) return;
+  const handleLogoUpload = async (file: File, setter: (v: string) => void) => {
     if (user) {
       try {
         const ext = file.name.split('.').pop() || 'png';
@@ -217,7 +215,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
         const { error } = await supabase.storage.from('brand-assets').upload(path, file);
         if (error) throw error;
         const { data } = supabase.storage.from('brand-assets').getPublicUrl(path);
-        setLogoUrl(data.publicUrl);
+        setter(data.publicUrl);
         setLogoMode('manual');
         return;
       } catch {}
@@ -225,11 +223,23 @@ const StepPersonalization: React.FC<Props> = (props) => {
     const reader = new FileReader();
     reader.onload = ev => {
       if (ev.target?.result) {
-        setLogoUrl(ev.target.result as string);
+        setter(ev.target.result as string);
         setLogoMode('manual');
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleLogoFiles = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    handleLogoUpload(file, setLogoUrl);
+  };
+
+  const handleLogoDarkFiles = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    handleLogoUpload(file, setLogoDarkUrl);
   };
 
   const handleMediaFiles = (files: File[]) => {

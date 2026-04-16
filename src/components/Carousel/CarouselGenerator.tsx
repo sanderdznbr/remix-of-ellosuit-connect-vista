@@ -1112,6 +1112,48 @@ const CarouselGenerator: React.FC = () => {
     _setCurrentCarouselId(id);
   }, []);
 
+  const applyEditHistoryEntry = useCallback(async (entry: { cardIndex: number; imageUrl: string } | undefined, target: 'undo' | 'redo') => {
+    if (!entry || !carouselData) return;
+
+    const currentUrl = carouselData.cards[entry.cardIndex]?.imageUrl;
+    if (currentUrl) {
+      if (target === 'undo') {
+        setCorrectionRedoStack(prev => [...prev, { cardIndex: entry.cardIndex, imageUrl: currentUrl }]);
+      } else {
+        setCorrectionUndoStack(prev => [...prev, { cardIndex: entry.cardIndex, imageUrl: currentUrl }]);
+      }
+    }
+
+    const newCards = [...carouselData.cards];
+    if (newCards[entry.cardIndex]) {
+      newCards[entry.cardIndex] = { ...newCards[entry.cardIndex], imageUrl: entry.imageUrl };
+      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+    }
+
+    if (entry.cardIndex === 0 && currentCarouselIdRef.current) {
+      await supabase
+        .from('generated_carousels')
+        .update({ cover_url: `${entry.imageUrl}?t=${Date.now()}` })
+        .eq('id', currentCarouselIdRef.current);
+    }
+
+    if (target === 'undo') {
+      setCorrectionUndoStack(prev => prev.slice(0, -1));
+      toast({ title: 'Edição revertida!' });
+    } else {
+      setCorrectionRedoStack(prev => prev.slice(0, -1));
+      toast({ title: 'Edição avançada!' });
+    }
+  }, [carouselData, toast]);
+
+  const handleUndoEdit = useCallback(() => {
+    void applyEditHistoryEntry(correctionUndoStack[correctionUndoStack.length - 1], 'undo');
+  }, [applyEditHistoryEntry, correctionUndoStack]);
+
+  const handleRedoEdit = useCallback(() => {
+    void applyEditHistoryEntry(correctionRedoStack[correctionRedoStack.length - 1], 'redo');
+  }, [applyEditHistoryEntry, correctionRedoStack]);
+
   // Full reset for starting a brand-new carousel
   const resetWizardState = useCallback(() => {
     setWizardStep(0);

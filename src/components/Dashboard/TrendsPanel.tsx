@@ -603,10 +603,11 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
 
   // === TRENDS DASHBOARD ===
   return (
-    <div className="flex-1 px-4 md:px-8 py-6 max-w-5xl mx-auto w-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex-1 px-4 md:px-8 py-6 max-w-4xl mx-auto w-full">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
             <TrendingUp className="w-5 h-5" style={{ color: '#a78bfa' }} />
           </div>
           <div>
@@ -614,7 +615,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
             <p className="text-xs text-white/30">Ideias de conteúdo para <span className="text-white/50">{config.niche}</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button onClick={() => { setShowSetup(true); setSetupStep(0); }}
             className="p-2.5 rounded-xl text-white/25 hover:text-white/50 hover:bg-white/[0.04] transition-colors cursor-pointer" title="Reconfigurar">
             <Settings2 className="w-4 h-4" />
@@ -623,10 +624,34 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all cursor-pointer disabled:opacity-50"
             style={{ backgroundColor: '#8B5CF6' }}>
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {generating ? 'Gerando...' : 'Atualizar Trends'}
+            {generating ? 'Gerando...' : 'Atualizar'}
           </button>
         </div>
       </div>
+
+      {/* Auto-daily toggle */}
+      <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] px-5 py-4 mb-6" style={{ backgroundColor: autoDaily ? 'rgba(139,92,246,0.06)' : 'rgba(255,255,255,0.02)' }}>
+        <div className="flex items-center gap-3">
+          <Zap className="w-4 h-4" style={{ color: autoDaily ? '#a78bfa' : 'rgba(255,255,255,0.2)' }} />
+          <div>
+            <p className="text-sm font-medium text-white/80">Atualização automática</p>
+            <p className="text-[11px] text-white/30">Gera novas ideias todos os dias automaticamente</p>
+          </div>
+        </div>
+        <Switch checked={autoDaily} onCheckedChange={toggleAutoDaily} disabled={togglingAuto} />
+      </div>
+
+      {/* Date & count */}
+      {trends.length > 0 && (
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="w-3.5 h-3.5 text-white/20" />
+          <span className="text-xs text-white/25">
+            {new Date(trends[0].trend_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
+          <span className="text-white/10">·</span>
+          <span className="text-xs text-white/25">{trends.length} ideias</span>
+        </div>
+      )}
 
       {trends.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -643,40 +668,33 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           </button>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {trends.length > 0 && (
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-3.5 h-3.5 text-white/20" />
-              <span className="text-xs text-white/20">
-                {new Date(trends[0].trend_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
-              <span className="text-[10px] text-white/15">•</span>
-              <span className="text-xs text-white/20">{trends.length} ideias</span>
-            </div>
-          )}
+        <div className="grid gap-3 md:grid-cols-2">
           {trends.map((trend, i) => {
-            const style = CATEGORY_STYLES[trend.category] || { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' };
+            const catStyle = CATEGORY_STYLES[trend.category] || { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' };
             return (
-              <motion.div key={trend.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04, duration: 0.3 }}
-                className="group rounded-xl border border-white/[0.05] hover:border-white/[0.1] p-4 transition-all cursor-default"
+              <motion.div key={trend.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03, duration: 0.3 }}
+                onClick={() => handleCreate(trend)}
+                className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/20 p-5 transition-all cursor-pointer relative overflow-hidden"
                 style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                        style={{ color: style.text, backgroundColor: style.bg }}>
-                        {trend.category}
-                      </span>
+                {/* Subtle hover glow */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{ background: 'radial-gradient(ellipse at top left, rgba(139,92,246,0.04), transparent 70%)' }} />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                      style={{ color: catStyle.text, backgroundColor: catStyle.bg }}>
+                      {trend.category}
+                    </span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: '#c4b5fd' }}>
+                      <span className="text-[11px] font-medium">Criar</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </div>
-                    <h3 className="text-sm font-semibold text-white/90 mb-1">{trend.title}</h3>
-                    <p className="text-xs text-white/35 leading-relaxed">{trend.description}</p>
                   </div>
-                  <button onClick={() => handleCreate(trend)}
-                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                    style={{ backgroundColor: 'rgba(139,92,246,0.15)', color: '#c4b5fd' }}>
-                    <Pen className="w-3 h-3" /> Criar Post
-                  </button>
+                  <h3 className="text-[15px] font-semibold text-white/90 mb-2 leading-snug">{trend.title}</h3>
+                  <p className="text-xs text-white/35 leading-relaxed line-clamp-3">{trend.description}</p>
                 </div>
               </motion.div>
             );

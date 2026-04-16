@@ -141,7 +141,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
 
       const [{ data: cfg, error: configError }, { data: trs, error: trendsError }] = await Promise.all([
         supabase.from('trend_configs').select('*').eq('company_id', cu.company_id).maybeSingle(),
-        supabase.from('daily_trends').select('*').eq('company_id', cu.company_id).order('relevance_score', { ascending: false }).limit(20),
+        supabase.from('daily_trends').select('*').eq('company_id', cu.company_id).order('trend_date', { ascending: false }).order('relevance_score', { ascending: false }).limit(200),
       ]);
 
       if (configError) throw configError;

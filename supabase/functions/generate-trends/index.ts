@@ -297,12 +297,13 @@ CATEGORIAS:
       results.forEach((r) => imageResults.push(r.status === "fulfilled" ? r.value : null));
     }
 
-    // Save
+    // Save — move existing today's trends to yesterday so they appear in "Anteriores"
     const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
     await supabase
       .from("daily_trends")
-      .delete()
+      .update({ trend_date: yesterday } as any)
       .eq("company_id", cu.company_id)
       .eq("trend_date", today);
 

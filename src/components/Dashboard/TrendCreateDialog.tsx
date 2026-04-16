@@ -132,7 +132,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
   // Editable content
   const [editedCardText, setEditedCardText] = useState('');
-  const [editedCardTexts, setEditedCardTexts] = useState<string[]>([]);
+  const [editedCardTexts, setEditedCardTexts] = useState<{ title: string; subtitle: string }[]>([]);
   const [editedCaption, setEditedCaption] = useState('');
   const [editedTopic, setEditedTopic] = useState('');
   

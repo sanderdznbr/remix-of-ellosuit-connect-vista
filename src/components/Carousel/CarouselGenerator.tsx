@@ -524,6 +524,7 @@ const CarouselGenerator: React.FC = () => {
   const [repositioningLogo, setRepositioningLogo] = useState(false);
   const [showFontChangePanel, setShowFontChangePanel] = useState(false);
   const [changingFont, setChangingFont] = useState(false);
+  const [upscaling, setUpscaling] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [showCaptionConfigDialog, setShowCaptionConfigDialog] = useState(false);
@@ -2127,8 +2128,96 @@ The image must look like it was shot by a professional photographer or designed 
     }
   }, [carouselData, activeCardIndex, changingFont, accentColor, logoUrl, logoDarkUrl, logoPosition, getLogoOverlayBounds, toast]);
 
+  // ===== UPSCALE IMAGE =====
+  const upscaleCard = useCallback(async () => {
+    if (!carouselData || upscaling) return;
+    const cardIdx = activeCardIndex;
+    const card = carouselData.cards[cardIdx];
+    if (!card?.imageUrl) return;
 
-  // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
+    // Push to undo stack
+    setCorrectionUndoStack(prev => [...prev, { cardIndex: cardIdx, imageUrl: card.imageUrl }]);
+    setUpscaling(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('upscale-image', {
+        body: { imageUrl: card.imageUrl },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.imageUrl) {
+        throw new Error(data?.error || 'Falha no upscale');
+      }
+
+      const newCards = [...carouselData.cards];
+      newCards[cardIdx] = {
+        ...newCards[cardIdx],
+        imageUrl: data.imageUrl,
+        imageUrlRaw: data.imageUrl,
+      };
+
+      // Re-apply logo if needed
+      if (logoUrl) {
+        try {
+          const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+            const img = document.createElement('img') as HTMLImageElement;
+            if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+          });
+          const baseImg = await loadImg(data.imageUrl);
+          const W = baseImg.width || 1080;
+          const H = baseImg.height || 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(baseImg, 0, 0, W, H);
+
+          const probeBounds = getLogoOverlayBounds(W, H, 220, 90, logoPosition || 'top-left');
+          const sampleX = Math.round(probeBounds.x + probeBounds.width / 2);
+          const sampleY = Math.round(probeBounds.y + probeBounds.height / 2);
+          const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+          const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+          const bgIsDark = lum < 0.45;
+
+          const chosenLogoUrl = bgIsDark ? logoUrl : (logoDarkUrl || logoUrl);
+          const needsInvert = !bgIsDark && !logoDarkUrl;
+
+          const logoB64 = chosenLogoUrl.startsWith('data:') ? chosenLogoUrl : await (async () => {
+            const r = await fetch(chosenLogoUrl); const b = await r.blob();
+            return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+          })();
+          const logoImg = await loadImg(logoB64);
+          const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, logoPosition || 'top-left');
+
+          ctx.save();
+          if (needsInvert) ctx.filter = 'brightness(0)';
+          else if (bgIsDark && !logoDarkUrl) ctx.filter = 'brightness(0) invert(1)';
+          ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
+          ctx.restore();
+
+          newCards[cardIdx] = {
+            ...newCards[cardIdx],
+            imageUrlRaw: data.imageUrl,
+            imageUrl: canvas.toDataURL('image/jpeg', 0.95),
+          };
+        } catch (logoErr) {
+          console.warn('[UPSCALE] Logo re-apply failed:', logoErr);
+        }
+      }
+
+      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+      toast({ title: 'Qualidade melhorada com sucesso!' });
+    } catch (err: any) {
+      console.error('[UPSCALE] Error:', err);
+      toast({ title: err?.message || 'Erro ao melhorar qualidade', variant: 'destructive' });
+    } finally {
+      setUpscaling(false);
+    }
+  }, [carouselData, activeCardIndex, upscaling, logoUrl, logoDarkUrl, logoPosition, getLogoOverlayBounds, toast]);
+
+
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
     try {
       // Use explicit data (passed directly) or fall back to state
@@ -9306,6 +9395,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </>
                         )}
 
+                        {/* Melhorar Qualidade (Upscale) */}
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button
+                            onClick={upscaleCard}
+                            disabled={upscaling}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-emerald-300 hover:text-emerald-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                            {upscaling ? <Loader2 className="h-4 w-4 text-emerald-400 animate-spin" /> : <Sparkles className="h-4 w-4 text-emerald-400" />} Melhorar Qualidade
+                          </button>
+                        )}
+
                         <div className="h-px bg-white/[0.06] my-1" />
 
                         {/* Regenerar Tudo */}
@@ -9499,6 +9598,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             />
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Upscale */}
+                    {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                      <div className="px-3 py-1">
+                        <button onClick={upscaleCard}
+                          disabled={upscaling}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          {upscaling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          Melhorar qualidade
+                        </button>
                       </div>
                     )}
 
@@ -9863,6 +9974,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                             <div className="flex-1 min-w-0">
                               <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Mudar fonte</span>
                               <span className="text-[11px] text-white/25 leading-tight">Altere a tipografia do card com IA</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Upscale */}
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); upscaleCard(); }}
+                            disabled={upscaling}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left disabled:opacity-40 group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))' }}>
+                              {upscaling ? <Loader2 className="h-5 w-5 text-emerald-400 animate-spin" /> : <Sparkles className="h-5 w-5 text-emerald-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Melhorar qualidade</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Upscale com IA para resolução máxima</span>
                             </div>
                           </button>
                         )}

@@ -510,6 +510,7 @@ const CarouselGenerator: React.FC = () => {
    const [tempFaceFiles, setTempFaceFiles] = useState<string[]>([]);
     const [correctionCardIndex, setCorrectionCardIndex] = useState<number | null>(null);
     const [correctionUndoStack, setCorrectionUndoStack] = useState<Array<{ cardIndex: number; imageUrl: string }>>([]);
+    const [correctionRedoStack, setCorrectionRedoStack] = useState<Array<{ cardIndex: number; imageUrl: string }>>([]);
    const [viewPromptCard, setViewPromptCard] = useState<number | null>(null);
    const [showFullConfigModal, setShowFullConfigModal] = useState(false);
    const [faceGalleryOpen, setFaceGalleryOpen] = useState(false);

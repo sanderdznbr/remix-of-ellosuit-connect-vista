@@ -238,6 +238,7 @@ interface CarouselCard {
   bodyTop?: string;
   bodyBottom?: string;
   imageUrl?: string;
+  imageUrlRaw?: string; // Pre-logo image for repositioning
   imagePrompt?: string;
   generatedPrompt?: string;
   searchTerms?: string[];

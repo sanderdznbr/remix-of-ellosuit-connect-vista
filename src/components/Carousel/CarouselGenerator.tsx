@@ -7298,6 +7298,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           config._strictInstructions = (styleData as any).strict_instructions || null;
                           setActiveMarketplaceStyle(config);
                           activeMarketplaceStyleRef.current = config;
+                          setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
                         }
                         setPendingTrendGeneration(true);
                       });

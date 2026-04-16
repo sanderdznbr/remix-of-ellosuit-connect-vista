@@ -9846,6 +9846,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </button>
                         )}
 
+                        {/* Font change */}
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setShowFontChangePanel(true); }}
+                            disabled={changingFont}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left disabled:opacity-40 group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(236,72,153,0.12), rgba(236,72,153,0.04))' }}>
+                              {changingFont ? <Loader2 className="h-5 w-5 text-pink-400 animate-spin" /> : <Type className="h-5 w-5 text-pink-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Mudar fonte</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Altere a tipografia do card com IA</span>
+                            </div>
+                          </button>
+                        )}
+
                         <div className="mx-2 my-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
 
                         {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (

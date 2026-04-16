@@ -154,11 +154,21 @@ serve(async (req) => {
 
     const prompt = `Você é um ESTRATEGISTA DE CONTEÚDO DE ELITE para redes sociais (Instagram).
 
-Sua missão: gerar 9 ideias de conteúdo PRONTAS PARA USAR, cada uma com:
+Sua missão: gerar 9 ideias de conteúdo PRONTAS PARA USAR, organizadas em BLOCOS DE 3:
+
+🔴 BLOCO 1 — VIRAL (ideias 1, 4, 7): Notícia VIRAL do Brasil ou do mundo de HOJE. Algo que todo mundo está comentando. Pode ser polêmica, tragédia, conquista, viralização. O post deve ser SOBRE a notícia com angle para o nicho.
+
+🟢 BLOCO 2 — NICHO (ideias 2, 5, 8): Conteúdo 100% sobre o nicho do cliente. Dica prática, case, educativo, autoridade, bastidores. Algo que gere valor real para o público-alvo.
+
+🟡 BLOCO 3 — TREND TOPIC (ideias 3, 6, 9): TREND TOPIC viral (meme, tendência cultural, assunto do momento) conectado criativamente ao nicho. Cross-pollination entre o viral e o nicho.
+
+A ORDEM FINAL DEVE SER: 1-viral, 2-nicho, 3-trend, 4-viral, 5-nicho, 6-trend, 7-viral, 8-nicho, 9-trend
+
+Cada ideia deve ter:
 - Título curto e impactante
 - Descrição persuasiva explicando o ângulo
 - FORMATO RECOMENDADO: "carrossel" (múltiplos slides) ou "estatico" (post único)
-- TEXTO DA ARTE: Para ESTÁTICO = texto único (máx 80 chars). Para CARROSSEL = array de textos, um por slide (EXATAMENTE 5 slides, máx 40 chars cada)
+- TEXTO DA ARTE: Para ESTÁTICO = texto único (máx 80 chars). Para CARROSSEL = array de 5 objetos {title, subtitle}
 - LEGENDA PRONTA: a legenda completa do Instagram (máx 500 chars, sem hashtags, com CTA)
 - SUGESTÃO DE BUSCA DE IMAGEM: uma frase curta para buscar a foto ideal
 
@@ -187,17 +197,19 @@ ${allNewsWithThumbs.length > 0 ? `\n🖼️ IMAGENS DISPONÍVEIS DAS FONTES (use
 ═══════════════════════════════════
 REGRAS
 ═══════════════════════════════════
-1. 5 das 9 ideias DEVEM ser cross-pollination: notícia geral do dia → conexão criativa com o nicho
-2. As outras 4: tendências diretas, dicas, cases ou educativo do nicho
-3. Para cada ideia, decida se funciona melhor como CARROSSEL (conteúdo rico, passo a passo, storytelling) ou ESTÁTICO (frase de impacto, provocação, dica rápida)
-4. Para ESTÁTICO: "card_text" = texto único. Para CARROSSEL: "card_texts" = array com EXATAMENTE 5 objetos {title, subtitle} (um por slide). O title é o título principal do slide (máx 40 chars), o subtitle é o texto de apoio/complemento (máx 80 chars)
-5. A "caption" é a legenda do Instagram — deve ter gancho, desenvolvimento e CTA
-6. Tom: ${config.brand_tone || "profissional"}
-7. "image_search_query" deve ser uma frase ESPECÍFICA para buscar foto ideal (ex: "dentista sorrindo consultório moderno")
+1. RESPEITE A ORDEM 3-3-3: viral→nicho→trend, viral→nicho→trend, viral→nicho→trend
+2. VIRAL = notícia real de HOJE do Brasil ou do mundo (use as manchetes acima)
+3. NICHO = conteúdo puro do nicho, sem misturar com notícias
+4. TREND = trend topic viral + conexão criativa com o nicho (cross-pollination)
+5. Para cada ideia, decida se funciona melhor como CARROSSEL (conteúdo rico, storytelling) ou ESTÁTICO (frase de impacto)
+6. Para ESTÁTICO: "card_text" = texto único (máx 80 chars). Para CARROSSEL: "card_texts" = array com EXATAMENTE 5 objetos {title, subtitle} (title máx 40 chars, subtitle máx 80 chars)
+7. A "caption" é a legenda do Instagram — deve ter gancho, desenvolvimento e CTA (máx 500 chars, sem hashtags)
+8. Tom: ${config.brand_tone || "profissional"}
+9. "image_search_query" deve ser uma frase ESPECÍFICA para buscar foto ideal
 
-CATEGORIAS:
-- "trend" (usa tendência/notícia - OBRIGATÓRIO em 5+)
-- "vendas", "educativo", "engajamento", "autoridade", "case", "dica"`;
+CATEGORIAS OBRIGATÓRIAS:
+- "trend" para ideias VIRAL e TREND TOPIC (posições 1,3,4,6,7,9)
+- "educativo", "vendas", "autoridade", "case", "dica", "engajamento" para ideias de NICHO (posições 2,5,8)`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

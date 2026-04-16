@@ -2518,7 +2518,7 @@ The image must look like it was shot by a professional photographer or designed 
             const { data, error } = await supabase.functions.invoke('generate-carousel', {
               body: {
                 action: 'generate-content',
-                topic: cleanMentionsFromTopic(topic.trim()),
+                topic: sanitizeTopic(topic.trim()),
                 cardCount: tweet2Config.cardCount,
                 keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
                 productContext: `TWEET_POST_MODE: Gere ${tweet2Config.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Use capitalização normal. Sem título, sem CTA. Escreva como um post real, em português brasileiro, máximo 280 caracteres.`,
@@ -2613,7 +2613,7 @@ The image must look like it was shot by a professional photographer or designed 
           const { data, error } = await supabase.functions.invoke('generate-carousel', {
             body: {
               action: 'generate-content',
-              topic: cleanMentionsFromTopic(topic.trim()),
+              topic: sanitizeTopic(topic.trim()),
               cardCount: tweetConfig.cardCount,
               keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
               productContext: `TWEET_POST_MODE: Gere ${tweetConfig.cardCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. NUNCA use texto todo em CAIXA ALTA/maiúsculas. Escreva com capitalização normal (primeira letra maiúscula, resto minúsculo). Sem título de capa, sem subtítulo, sem CTA, sem estrutura de carrossel, sem mencionar plataforma/ferramenta a menos que esteja no tópico. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.`,
@@ -3668,7 +3668,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
 
       const hasManualCardTexts = manualCardTexts.some(t => (t.title || '').trim() || (t.body || '').trim());
       console.log('[GENERATE_FLOW] Calling generate-carousel edge function...');
-      console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: cleanMentionsFromTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
+      console.log('[GENERATE_FLOW] Body:', JSON.stringify({ action: 'generate-content', topic: sanitizeTopic(topic.trim()).substring(0, 50), cardCount, hasManualCardTexts, hasWebSearch: !!webSearchResult?.content, wizardMode }));
       // Build tweet context for tweet mode
       const tweetModeContext = wizardMode === 'tweet' ? {
         isTweetMode: true,
@@ -3688,7 +3688,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: cleanMentionsFromTopic(topic.trim()),
+          topic: sanitizeTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: wizardMode === 'tweet' ? tweetConfig.cardCount : cardCount,
           brandName: brandName || undefined,
@@ -5033,7 +5033,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: cleanMentionsFromTopic(topic.trim()),
+          topic: sanitizeTopic(topic.trim()),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: totalCards,
           ...(mentionedPrompts.length > 0 ? { promptContexts: mentionedPrompts.map(m => ({ title: m.title, content: m.content })) } : {}),
@@ -7215,7 +7215,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         const { data, error } = await supabase.functions.invoke('generate-carousel', {
           body: {
             action: 'generate-content',
-            topic: cleanMentionsFromTopic(topic.trim()),
+            topic: sanitizeTopic(topic.trim()),
             cardCount: activeCount,
             keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
             productContext: `TWEET_POST_MODE: Gere ${activeCount} textos no formato de tweets reais do Twitter/X. Cada card deve conter APENAS um texto curto, natural, humano e publicável. REGRA CRÍTICA: NUNCA escreva textos todo em CAIXA ALTA ou maiúsculas. Use capitalização normal de frase (primeira letra maiúscula, resto minúsculo). Sem título, sem CTA, sem estrutura de carrossel. Escreva como um post real sobre o tema, em português brasileiro, com no máximo 280 caracteres por tweet.` + (!skipWebSearch && webSearchResult?.summary ? `\n\nCONTEXTO PESQUISADO NA WEB:\n${webSearchResult.summary}` : ''),
@@ -8111,7 +8111,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   const { data, error } = await supabase.functions.invoke('generate-carousel', {
                                     body: {
                                       action: 'generate-content',
-                                      topic: cleanMentionsFromTopic(topic.trim()),
+                                      topic: sanitizeTopic(topic.trim()),
                                       cardCount: tweetConfig.cardCount,
                                       isTweetMode: true,
                                       webSearchContent: (!skipWebSearch && webSearchResult) ? {
@@ -8184,7 +8184,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                                   const { data, error } = await supabase.functions.invoke('generate-carousel', {
                                     body: {
                                       action: 'generate-content',
-                                      topic: cleanMentionsFromTopic(topic.trim()),
+                                      topic: sanitizeTopic(topic.trim()),
                                       cardCount: tweet2Config.cardCount,
                                       isTweetMode: true,
                                       webSearchContent: (!skipWebSearch && webSearchResult) ? {

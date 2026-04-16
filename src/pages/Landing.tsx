@@ -11,6 +11,21 @@ const fadeUp = {
   transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as any },
 };
 
+// Brand tokens (ellocontent)
+const BG = '#0a0a0f';
+const BG_SOFT = '#0f0f15';
+const SURFACE = 'rgba(255,255,255,0.03)';
+const SURFACE_HOVER = 'rgba(255,255,255,0.05)';
+const HAIRLINE = 'rgba(255,255,255,0.07)';
+const HAIRLINE_STRONG = 'rgba(255,255,255,0.12)';
+const INK = '#f5f5f7';
+const INK_SOFT = 'rgba(245,245,247,0.55)';
+const INK_DIM = 'rgba(245,245,247,0.4)';
+const PURPLE = '#8B5CF6';
+const PURPLE_DEEP = '#7B50DC';
+
+const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif";
+
 const Landing: React.FC = () => {
   const navigate = useNavigate();
   const [annual, setAnnual] = useState(true);
@@ -57,75 +72,86 @@ const Landing: React.FC = () => {
     { q: 'Posso cancelar quando quiser?', a: 'Sim. Sem fidelidade, sem multa. Cancele a qualquer momento direto no painel.' },
   ];
 
-  // Apple-like type system
-  const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif";
-  const INK = '#1d1d1f';
-  const INK_SOFT = '#86868b';
-  const HAIRLINE = 'rgba(0,0,0,0.08)';
+  const Eyebrow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div className="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: 'rgba(139,92,246,0.08)' }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PURPLE }} />
+      <span className="text-[11px] uppercase tracking-[0.18em] font-medium" style={{ color: PURPLE }}>{children}</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fbfbfd', color: INK, fontFamily: FONT_STACK, WebkitFontSmoothing: 'antialiased' }}>
-      {/* Nav — Apple translucent */}
-      <nav className="sticky top-0 z-50" style={{ backgroundColor: 'rgba(251,251,253,0.72)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: `1px solid ${HAIRLINE}` }}>
-        <div className="max-w-[980px] mx-auto px-6 h-12 flex items-center justify-between">
-          <img src={ellocontentLogo} alt="ellocontent" className="h-4" style={{ filter: 'invert(1) brightness(0.1)' }} />
-          <div className="hidden md:flex items-center gap-8 text-[12px]" style={{ color: INK }}>
-            <a href="#recursos" className="opacity-80 hover:opacity-100 transition-opacity">Recursos</a>
-            <a href="#como-funciona" className="opacity-80 hover:opacity-100 transition-opacity">Como funciona</a>
-            <a href="#planos" className="opacity-80 hover:opacity-100 transition-opacity">Planos</a>
-            <a href="#faq" className="opacity-80 hover:opacity-100 transition-opacity">Dúvidas</a>
+    <div className="min-h-screen" style={{ backgroundColor: BG, color: INK, fontFamily: FONT_STACK, WebkitFontSmoothing: 'antialiased' }}>
+      {/* Nav */}
+      <nav className="sticky top-0 z-50" style={{ backgroundColor: 'rgba(10,10,15,0.7)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: `1px solid ${HAIRLINE}` }}>
+        <div className="max-w-[1100px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-10">
+            <img src={ellocontentLogo} alt="ellocontent" className="h-5" />
+            <div className="hidden md:flex items-center gap-7 text-[13px]" style={{ color: 'rgba(245,245,247,0.7)' }}>
+              <a href="#recursos" className="hover:text-white transition-colors">Recursos</a>
+              <a href="#como-funciona" className="hover:text-white transition-colors">Como funciona</a>
+              <a href="#planos" className="hover:text-white transition-colors">Planos</a>
+              <a href="#faq" className="hover:text-white transition-colors">Dúvidas</a>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/auth')} className="text-[12px] opacity-80 hover:opacity-100 transition-opacity">Login</button>
-            <button onClick={goCreate} className="text-[12px] font-medium px-4 py-1.5 rounded-full text-white transition-all hover:scale-[1.02]" style={{ backgroundColor: INK }}>Começar</button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/auth')} className="text-[13px] px-3 py-1.5 transition-opacity hover:opacity-100" style={{ color: 'rgba(245,245,247,0.7)' }}>Login</button>
+            <button onClick={goCreate} className="text-[13px] font-medium px-4 py-1.5 rounded-full text-white transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 16px -4px rgba(139,92,246,0.5)' }}>
+              Começar
+            </button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="relative max-w-[1100px] mx-auto px-6 pt-20 md:pt-32 pb-24 md:pb-40 text-center">
-          <motion.h1
-            {...fadeUp}
-            className="font-semibold tracking-tight"
-            style={{ fontSize: 'clamp(40px, 7vw, 80px)', lineHeight: 1.05, letterSpacing: '-0.025em', color: INK }}
-          >
-            Da ideia ao conteúdo pronto<br className="hidden md:block" />{' '}
-            <span style={{ color: INK_SOFT }}>em minutos.</span>
-            <br />
-            <span style={{ color: INK_SOFT, fontSize: '0.5em', fontWeight: 400, letterSpacing: '-0.01em' }}>Tão fácil que parece até mágica.</span>
+        {/* Purple ambient glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 800px 500px at 50% -10%, rgba(139,92,246,0.18), transparent 70%)' }} />
+        <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)' }} />
+
+        <div className="relative max-w-[1100px] mx-auto px-6 pt-20 md:pt-28 pb-24 md:pb-32 text-center">
+          <motion.div {...fadeUp}>
+            <div className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: 'rgba(139,92,246,0.06)' }}>
+              <Sparkles className="w-3 h-3" style={{ color: PURPLE }} />
+              <span className="text-[11px] font-medium tracking-wide" style={{ color: 'rgba(245,245,247,0.7)' }}>Conteúdo com IA, criado em minutos</span>
+            </div>
+          </motion.div>
+
+          <motion.h1 {...fadeUp} transition={{ duration: 0.8, delay: 0.05 }} className="font-semibold tracking-tight" style={{ fontSize: 'clamp(40px, 7vw, 84px)', lineHeight: 1.02, letterSpacing: '-0.03em' }}>
+            Da ideia ao conteúdo<br />
+            pronto em <span style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #C4B5FD 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>minutos.</span>
           </motion.h1>
 
-          <motion.p
-            {...fadeUp}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="mt-8 mx-auto"
-            style={{ fontSize: 'clamp(17px, 1.5vw, 21px)', lineHeight: 1.5, color: INK_SOFT, maxWidth: 640, fontWeight: 400 }}
-          >
+          <motion.p {...fadeUp} transition={{ duration: 0.8, delay: 0.15 }} className="mt-7 mx-auto" style={{ fontSize: 'clamp(17px, 1.5vw, 21px)', lineHeight: 1.5, color: INK_SOFT, maxWidth: 620 }}>
             Crie conteúdos que as pessoas param pra ver. Sem designer, sem agência e sem gastar seu dia nisso. Feito para qualquer negócio e qualquer nicho.
           </motion.p>
 
-          <motion.div {...fadeUp} transition={{ duration: 0.8, delay: 0.2 }} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.02]" style={{ backgroundColor: '#0071e3' }}>
+          <motion.div {...fadeUp} transition={{ duration: 0.8, delay: 0.25 }} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3.5 rounded-full transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 8px 24px -8px rgba(139,92,246,0.55)' }}>
               Criar post grátis
             </button>
-            <button onClick={goPlans} className="text-[15px] font-medium px-1 py-3 transition-opacity hover:opacity-70" style={{ color: '#0071e3' }}>
-              Ver planos ›
+            <button onClick={goPlans} className="text-[15px] font-medium px-6 py-3.5 rounded-full transition-colors" style={{ color: INK, border: `1px solid ${HAIRLINE_STRONG}` }}>
+              Ver planos
             </button>
           </motion.div>
-          <motion.p {...fadeUp} transition={{ duration: 0.8, delay: 0.3 }} className="mt-5 text-[12px]" style={{ color: INK_SOFT }}>
+          <motion.p {...fadeUp} transition={{ duration: 0.8, delay: 0.3 }} className="mt-5 text-[12px]" style={{ color: INK_DIM }}>
             Sem precisar cadastrar cartão
           </motion.p>
 
-          {/* Hero visual mock */}
+          {/* Hero visual */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="mt-20 mx-auto rounded-[28px] overflow-hidden relative"
-            style={{ maxWidth: 980, aspectRatio: '16/9', background: 'linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%)', boxShadow: '0 30px 80px -20px rgba(0,0,0,0.15)' }}
+            style={{
+              maxWidth: 980,
+              aspectRatio: '16/9',
+              background: `linear-gradient(135deg, ${BG_SOFT} 0%, #15101f 100%)`,
+              border: `1px solid ${HAIRLINE_STRONG}`,
+              boxShadow: '0 40px 100px -20px rgba(139,92,246,0.25), 0 0 0 1px rgba(139,92,246,0.05) inset',
+            }}
           >
-            <div className="absolute inset-0 flex items-center justify-center" style={{ color: INK_SOFT, fontSize: 13 }}>
+            <div className="absolute inset-0 flex items-center justify-center text-[13px]" style={{ color: INK_DIM }}>
               Pré-visualização do app
             </div>
           </motion.div>
@@ -133,11 +159,11 @@ const Landing: React.FC = () => {
       </section>
 
       {/* Pain points */}
-      <section className="py-24 md:py-32" style={{ backgroundColor: '#ffffff' }}>
-        <div className="max-w-[980px] mx-auto px-6">
-          <motion.div {...fadeUp} className="text-center mb-16">
-            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Você se identifica?</p>
-            <h2 className="font-semibold tracking-tight mx-auto" style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', lineHeight: 1.1, letterSpacing: '-0.02em', maxWidth: 760 }}>
+      <section className="py-24 md:py-32" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
+        <div className="max-w-[1000px] mx-auto px-6">
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <Eyebrow>Você se identifica?</Eyebrow>
+            <h2 className="font-semibold tracking-tight mx-auto" style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', lineHeight: 1.08, letterSpacing: '-0.025em', maxWidth: 760 }}>
               Se você se identificar com alguma dessas situações,{' '}
               <span style={{ color: INK_SOFT }}>o Ellocontent foi feito para você.</span>
             </h2>
@@ -146,42 +172,42 @@ const Landing: React.FC = () => {
             {painPoints.map((p, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.04 }}
-                className="p-6 rounded-2xl text-[15px] leading-relaxed"
-                style={{ backgroundColor: '#f5f5f7', color: INK }}
+                className="p-5 rounded-2xl text-[14.5px] leading-relaxed transition-colors"
+                style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}`, color: 'rgba(245,245,247,0.78)' }}
               >
                 {p}
               </motion.div>
             ))}
           </div>
-          <motion.p {...fadeUp} className="text-center mt-14 text-[20px]" style={{ color: INK_SOFT, fontWeight: 400 }}>
+          <motion.p {...fadeUp} className="text-center mt-14 text-[20px] italic" style={{ color: PURPLE, fontWeight: 400 }}>
             Quanto isso custa pra você?
           </motion.p>
         </div>
       </section>
 
       {/* Como funciona */}
-      <section id="como-funciona" className="py-24 md:py-36" style={{ backgroundColor: '#fbfbfd' }}>
+      <section id="como-funciona" className="py-24 md:py-36" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[820px] mx-auto px-6 text-center">
-          <motion.p {...fadeUp} className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Como funciona</motion.p>
-          <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+          <Eyebrow>Como funciona</Eyebrow>
+          <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
             Simples assim.
           </motion.h2>
-          <motion.p {...fadeUp} className="leading-relaxed" style={{ fontSize: 'clamp(18px, 1.6vw, 22px)', color: INK_SOFT, fontWeight: 400 }}>
+          <motion.p {...fadeUp} className="leading-relaxed" style={{ fontSize: 'clamp(17px, 1.6vw, 21px)', color: INK_SOFT }}>
             Você digita o que quer falar, pode ser uma ideia, um tema ou até um texto pronto. A IA entende, cria o roteiro, gera as imagens e monta o design. Com poucos cliques você tem um conteúdo pronto para baixar e postar. Sem complicação, sem curva de aprendizado e <span style={{ color: INK }}>100% editável</span> do jeito que você quiser.
           </motion.p>
         </div>
       </section>
 
       {/* Recursos */}
-      <section id="recursos" className="py-24 md:py-32" style={{ backgroundColor: '#ffffff' }}>
+      <section id="recursos" className="py-24 md:py-32" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[1100px] mx-auto px-6">
-          <motion.div {...fadeUp} className="text-center mb-16">
-            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Recursos</p>
-            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <Eyebrow>Recursos</Eyebrow>
+            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               O que o Ellocontent te entrega.
             </h2>
           </motion.div>
@@ -195,14 +221,14 @@ const Landing: React.FC = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: i * 0.06 }}
-                  className="p-8 rounded-3xl"
-                  style={{ backgroundColor: '#f5f5f7' }}
+                  className="group p-7 rounded-3xl transition-all"
+                  style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}` }}
                 >
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                    <Icon className="w-5 h-5" style={{ color: '#0071e3' }} />
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-6" style={{ background: `linear-gradient(135deg, rgba(139,92,246,0.18), rgba(139,92,246,0.05))`, border: `1px solid rgba(139,92,246,0.25)` }}>
+                    <Icon className="w-5 h-5" style={{ color: PURPLE }} />
                   </div>
-                  <p className="text-[11px] uppercase tracking-wider mb-2" style={{ color: '#0071e3', fontWeight: 600 }}>{f.tag}</p>
-                  <h3 className="text-[20px] font-semibold mb-3 leading-tight tracking-tight" style={{ color: INK, letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <p className="text-[10.5px] uppercase tracking-[0.15em] mb-2" style={{ color: PURPLE, fontWeight: 600 }}>{f.tag}</p>
+                  <h3 className="text-[19px] font-semibold mb-3 leading-tight tracking-tight" style={{ letterSpacing: '-0.01em' }}>{f.title}</h3>
                   <p className="text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{f.desc}</p>
                 </motion.div>
               );
@@ -212,11 +238,11 @@ const Landing: React.FC = () => {
       </section>
 
       {/* Galeria */}
-      <section className="py-24 md:py-32" style={{ backgroundColor: '#fbfbfd' }}>
+      <section className="py-24 md:py-32" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[1100px] mx-auto px-6">
-          <motion.div {...fadeUp} className="text-center mb-16">
-            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Galeria</p>
-            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <Eyebrow>Galeria</Eyebrow>
+            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Veja o que é possível criar.
             </h2>
           </motion.div>
@@ -229,7 +255,7 @@ const Landing: React.FC = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
                 className="aspect-[4/5] rounded-2xl flex items-center justify-center text-[12px]"
-                style={{ background: 'linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%)', color: INK_SOFT }}
+                style={{ background: `linear-gradient(135deg, ${BG_SOFT} 0%, #14101c 100%)`, border: `1px solid ${HAIRLINE}`, color: INK_DIM }}
               >
                 Exemplo de conteúdo
               </motion.div>
@@ -239,17 +265,17 @@ const Landing: React.FC = () => {
       </section>
 
       {/* Planos */}
-      <section id="planos" className="py-24 md:py-32" style={{ backgroundColor: '#ffffff' }}>
+      <section id="planos" className="py-24 md:py-32" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[1200px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-12">
-            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Planos</p>
-            <h2 className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+            <Eyebrow>Planos</Eyebrow>
+            <h2 className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Planos e Preços.
             </h2>
-            <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ backgroundColor: '#f5f5f7' }}>
-              <button onClick={() => setAnnual(false)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: !annual ? INK : 'transparent', color: !annual ? '#fff' : INK }}>Mensal</button>
-              <button onClick={() => setAnnual(true)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: annual ? INK : 'transparent', color: annual ? '#fff' : INK }}>
-                Anual <span className="opacity-70 ml-1">−29%</span>
+            <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: SURFACE }}>
+              <button onClick={() => setAnnual(false)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: !annual ? INK : 'transparent', color: !annual ? BG : INK_SOFT }}>Mensal</button>
+              <button onClick={() => setAnnual(true)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: annual ? INK : 'transparent', color: annual ? BG : INK_SOFT }}>
+                Anual <span className="opacity-60 ml-1">−29%</span>
               </button>
             </div>
           </motion.div>
@@ -264,40 +290,44 @@ const Landing: React.FC = () => {
                 transition={{ duration: 0.5, delay: i * 0.06 }}
                 className="relative p-7 rounded-3xl flex flex-col"
                 style={{
-                  backgroundColor: p.popular ? INK : '#f5f5f7',
-                  color: p.popular ? '#fff' : INK,
+                  background: p.popular
+                    ? `linear-gradient(180deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.04) 100%)`
+                    : SURFACE,
+                  border: `1px solid ${p.popular ? 'rgba(139,92,246,0.4)' : HAIRLINE}`,
+                  boxShadow: p.popular ? '0 20px 60px -20px rgba(139,92,246,0.35)' : 'none',
                 }}
               >
                 {p.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider" style={{ backgroundColor: '#0071e3', color: '#fff' }}>Mais popular</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 12px -2px rgba(139,92,246,0.5)' }}>Mais popular</div>
                 )}
-                <h3 className="text-[20px] font-semibold mb-1 tracking-tight" style={{ letterSpacing: '-0.01em' }}>{p.name}</h3>
-                <p className="text-[13px] mb-6 min-h-[3.2em]" style={{ color: p.popular ? 'rgba(255,255,255,0.6)' : INK_SOFT }}>{p.desc}</p>
+                <h3 className="text-[19px] font-semibold mb-1 tracking-tight" style={{ letterSpacing: '-0.01em' }}>{p.name}</h3>
+                <p className="text-[12.5px] mb-6 min-h-[3.2em]" style={{ color: INK_SOFT }}>{p.desc}</p>
                 <div className="mb-6">
                   {p.custom ? (
                     <div className="text-[26px] font-semibold tracking-tight">Sob consulta</div>
                   ) : (
                     <div className="flex items-baseline gap-1">
-                      <span className="text-[36px] font-semibold tracking-tight" style={{ letterSpacing: '-0.02em' }}>R${(annual ? p.yearly! : p.monthly!).toFixed(2).replace('.', ',')}</span>
-                      <span className="text-[12px]" style={{ color: p.popular ? 'rgba(255,255,255,0.5)' : INK_SOFT }}>/mês</span>
+                      <span className="text-[36px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>R${(annual ? p.yearly! : p.monthly!).toFixed(2).replace('.', ',')}</span>
+                      <span className="text-[12px]" style={{ color: INK_DIM }}>/mês</span>
                     </div>
                   )}
-                  <p className="text-[12px] mt-1" style={{ color: p.popular ? 'rgba(255,255,255,0.5)' : INK_SOFT }}>{p.credits}</p>
+                  <p className="text-[12px] mt-1" style={{ color: INK_DIM }}>{p.credits}</p>
                 </div>
                 <button
                   onClick={p.custom ? () => navigate('/suporte') : goPlans}
                   className="w-full py-2.5 rounded-full text-[13px] font-medium mb-6 transition-all hover:scale-[1.02]"
                   style={{
-                    backgroundColor: p.popular ? '#fff' : '#0071e3',
-                    color: p.popular ? INK : '#fff',
+                    background: p.popular ? `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)` : INK,
+                    color: p.popular ? '#fff' : BG,
+                    boxShadow: p.popular ? '0 4px 16px -4px rgba(139,92,246,0.5)' : 'none',
                   }}
                 >
                   {p.custom ? 'Falar com vendas' : 'Assinar'}
                 </button>
-                <ul className="space-y-2.5 text-[13px]" style={{ color: p.popular ? 'rgba(255,255,255,0.75)' : INK }}>
+                <ul className="space-y-2.5 text-[13px]" style={{ color: 'rgba(245,245,247,0.75)' }}>
                   {p.features.map((f, j) => (
                     <li key={j} className="flex gap-2">
-                      <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: p.popular ? 'rgba(255,255,255,0.5)' : '#0071e3' }} />
+                      <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: PURPLE }} />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -309,23 +339,23 @@ const Landing: React.FC = () => {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-24 md:py-32" style={{ backgroundColor: '#fbfbfd' }}>
+      <section id="faq" className="py-24 md:py-32" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[760px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-12">
-            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Dúvidas</p>
-            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+            <Eyebrow>Dúvidas</Eyebrow>
+            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Ficou alguma dúvida?
             </h2>
           </motion.div>
           <div className="space-y-2">
             {faqs.map((f, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#fff', border: `1px solid ${HAIRLINE}` }}>
+              <div key={i} className="rounded-2xl overflow-hidden" style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}` }}>
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-black/[0.015]"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-white/[0.02]"
                 >
-                  <span className="text-[15px] font-medium pr-4" style={{ color: INK }}>{f.q}</span>
-                  {openFaq === i ? <Minus className="w-4 h-4 shrink-0" style={{ color: INK_SOFT }} /> : <Plus className="w-4 h-4 shrink-0" style={{ color: INK_SOFT }} />}
+                  <span className="text-[15px] font-medium pr-4">{f.q}</span>
+                  {openFaq === i ? <Minus className="w-4 h-4 shrink-0" style={{ color: PURPLE }} /> : <Plus className="w-4 h-4 shrink-0" style={{ color: INK_DIM }} />}
                 </button>
                 {openFaq === i && (
                   <div className="px-6 pb-5 text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{f.a}</div>
@@ -337,33 +367,37 @@ const Landing: React.FC = () => {
       </section>
 
       {/* CTA Final */}
-      <section className="py-28 md:py-40" style={{ backgroundColor: '#ffffff' }}>
-        <div className="max-w-[820px] mx-auto px-6 text-center">
-          <motion.h2 {...fadeUp} className="font-semibold tracking-tight" style={{ fontSize: 'clamp(36px, 5.5vw, 64px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+      <section className="relative py-28 md:py-40 overflow-hidden" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 600px 400px at 50% 100%, rgba(139,92,246,0.18), transparent 70%)' }} />
+        <div className="relative max-w-[820px] mx-auto px-6 text-center">
+          <motion.h2 {...fadeUp} className="font-semibold tracking-tight" style={{ fontSize: 'clamp(36px, 5.5vw, 64px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
             Pronto para criar conteúdo<br />
-            <span style={{ color: INK_SOFT }}>que gera resultado?</span>
+            <span style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #C4B5FD 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>que gera resultado?</span>
           </motion.h2>
           <motion.p {...fadeUp} className="mt-6 mx-auto" style={{ fontSize: 'clamp(17px, 1.5vw, 20px)', color: INK_SOFT, maxWidth: 580 }}>
             Comece agora, gere seu primeiro post gratuitamente e veja na prática o que o Ellocontent faz pelo seu negócio.
           </motion.p>
-          <motion.div {...fadeUp} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.02]" style={{ backgroundColor: '#0071e3' }}>
+          <motion.div {...fadeUp} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3.5 rounded-full transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 8px 24px -8px rgba(139,92,246,0.55)' }}>
               Criar post grátis
             </button>
-            <button onClick={goPlans} className="text-[15px] font-medium px-1 py-3 transition-opacity hover:opacity-70" style={{ color: '#0071e3' }}>
-              Ver planos ›
+            <button onClick={goPlans} className="text-[15px] font-medium px-6 py-3.5 rounded-full" style={{ color: INK, border: `1px solid ${HAIRLINE_STRONG}` }}>
+              Ver planos
             </button>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-10" style={{ borderTop: `1px solid ${HAIRLINE}`, backgroundColor: '#f5f5f7' }}>
-        <div className="max-w-[980px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-[12px]" style={{ color: INK_SOFT }}>
-          <span>© 2026 Ellocontent. Todos os direitos reservados.</span>
+      <footer className="py-10" style={{ borderTop: `1px solid ${HAIRLINE}`, backgroundColor: BG_SOFT }}>
+        <div className="max-w-[1100px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-[12px]" style={{ color: INK_DIM }}>
+          <div className="flex items-center gap-3">
+            <img src={ellocontentLogo} alt="ellocontent" className="h-4 opacity-70" />
+            <span>© 2026 Ellocontent. Todos os direitos reservados.</span>
+          </div>
           <div className="flex items-center gap-5">
-            <a href="#" className="hover:underline">Política de Privacidade</a>
-            <a href="#" className="hover:underline">Termos de Serviço</a>
+            <a href="#" className="hover:text-white transition-colors">Política de Privacidade</a>
+            <a href="#" className="hover:text-white transition-colors">Termos de Serviço</a>
           </div>
         </div>
       </footer>

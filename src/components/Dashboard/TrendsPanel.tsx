@@ -642,14 +642,25 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     const isExpanded = expandedCard === trend.id;
     const cardText = trend.metadata?.card_text;
     const caption = trend.metadata?.caption;
+    const imageUrl = trend.metadata?.image_url;
 
     return (
       <motion.div key={trend.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.03, duration: 0.35 }}
         className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/20 transition-all duration-300 relative overflow-hidden flex flex-col"
         style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
-        {/* Top accent bar */}
-        <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, ${catStyle.text}40, transparent)` }} />
+        
+        {/* News thumbnail */}
+        {imageUrl && (
+          <div className="w-full h-32 overflow-hidden relative">
+            <img src={imageUrl} alt="" className="w-full h-full object-cover" loading="lazy"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d15] via-transparent to-transparent" />
+          </div>
+        )}
+
+        {/* Top accent bar (only when no image) */}
+        {!imageUrl && <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, ${catStyle.text}40, transparent)` }} />}
         
         <div className="p-5 flex-1 flex flex-col">
           {/* Badges row */}

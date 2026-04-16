@@ -8,7 +8,7 @@ const fadeUp = {
   initial: { opacity: 0, y: 24 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: '-80px' },
-  transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any },
+  transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as any },
 };
 
 const Landing: React.FC = () => {
@@ -40,38 +40,10 @@ const Landing: React.FC = () => {
   ];
 
   const plans = [
-    {
-      name: 'Starter',
-      desc: 'Ideal para quem está começando a criar conteúdo com IA.',
-      monthly: 69.90,
-      yearly: 49.90,
-      credits: '50 créditos/mês',
-      features: ['50 créditos mensais', '~7 carrosséis simples de 6 cards', '~25 posts estáticos simples', 'Modo Simples — rápido e direto', 'ElloIA Flash', 'Galeria de marca — 1GB', '3 prompts salvos', 'Templates gratuitos', 'Exportação PNG, JPG e ZIP', 'Suporte por e-mail'],
-    },
-    {
-      name: 'Pro',
-      desc: 'Para criadores que publicam conteúdo visual com frequência.',
-      monthly: 129.90,
-      yearly: 92.90,
-      credits: '100 créditos/mês',
-      popular: true,
-      features: ['100 créditos mensais', '~14 carrosséis simples ou ~7 avançados', '~50 posts simples ou ~33 avançados', 'Modo Avançado — controle total', 'ElloIA Pro', 'ElloIA Pro + Rosto Pessoal', 'Carrossel contínuo panorâmico', 'Galeria de marca — 5GB', 'Prompts ilimitados', 'Compra de templates premium', 'Exportação PNG, JPG, ZIP e WebP', 'Suporte prioritário'],
-    },
-    {
-      name: 'Growth',
-      desc: 'Para quem produz com consistência e quer sempre o melhor resultado.',
-      monthly: 219.90,
-      yearly: 156.90,
-      credits: '200 créditos/mês',
-      features: ['200 créditos mensais', '~28 carrosséis simples ou ~15 avançados', '~100 posts simples ou ~66 avançados', 'Modo Extreme — designs virais do mercado', 'Galeria de marca — 10GB', 'Carrossel com animação (em breve)', 'Geração de fotos realistas com IA (em breve)', 'Acesso a ferramentas exclusivas', 'Suporte via chat'],
-    },
-    {
-      name: 'Enterprise',
-      desc: 'Para empresas, franquias e agências que precisam de escala e personalização total.',
-      custom: true,
-      credits: 'Volume e créditos sob medida',
-      features: ['Créditos sob medida', 'Usuários ilimitados na conta', 'Múltiplos workspaces', 'Galeria de marca por workspace', 'Templates personalizados', 'Controle de acesso por papéis', 'Painel de gestão', 'Histórico com auditoria', 'Suporte dedicado com SLA', 'Onboarding e treinamento', 'API de integração e SSO'],
-    },
+    { name: 'Starter', desc: 'Ideal para quem está começando a criar conteúdo com IA.', monthly: 69.90, yearly: 49.90, credits: '50 créditos/mês', features: ['50 créditos mensais', '~7 carrosséis simples de 6 cards', '~25 posts estáticos simples', 'Modo Simples — rápido e direto', 'ElloIA Flash', 'Galeria de marca — 1GB', '3 prompts salvos', 'Templates gratuitos', 'Exportação PNG, JPG e ZIP', 'Suporte por e-mail'] },
+    { name: 'Pro', desc: 'Para criadores que publicam conteúdo visual com frequência.', monthly: 129.90, yearly: 92.90, credits: '100 créditos/mês', popular: true, features: ['100 créditos mensais', '~14 carrosséis simples ou ~7 avançados', '~50 posts simples ou ~33 avançados', 'Modo Avançado — controle total', 'ElloIA Pro', 'ElloIA Pro + Rosto Pessoal', 'Carrossel contínuo panorâmico', 'Galeria de marca — 5GB', 'Prompts ilimitados', 'Compra de templates premium', 'Exportação PNG, JPG, ZIP e WebP', 'Suporte prioritário'] },
+    { name: 'Growth', desc: 'Para quem produz com consistência e quer sempre o melhor resultado.', monthly: 219.90, yearly: 156.90, credits: '200 créditos/mês', features: ['200 créditos mensais', '~28 carrosséis simples ou ~15 avançados', '~100 posts simples ou ~66 avançados', 'Modo Extreme — designs virais do mercado', 'Galeria de marca — 10GB', 'Carrossel com animação (em breve)', 'Geração de fotos realistas com IA (em breve)', 'Acesso a ferramentas exclusivas', 'Suporte via chat'] },
+    { name: 'Enterprise', desc: 'Para empresas, franquias e agências que precisam de escala e personalização total.', custom: true, credits: 'Volume e créditos sob medida', features: ['Créditos sob medida', 'Usuários ilimitados na conta', 'Múltiplos workspaces', 'Galeria de marca por workspace', 'Templates personalizados', 'Controle de acesso por papéis', 'Painel de gestão', 'Histórico com auditoria', 'Suporte dedicado com SLA', 'Onboarding e treinamento', 'API de integração e SSO'] },
   ];
 
   const faqs = [
@@ -85,58 +57,89 @@ const Landing: React.FC = () => {
     { q: 'Posso cancelar quando quiser?', a: 'Sim. Sem fidelidade, sem multa. Cancele a qualquer momento direto no painel.' },
   ];
 
+  // Apple-like type system
+  const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+  const INK = '#1d1d1f';
+  const INK_SOFT = '#86868b';
+  const HAIRLINE = 'rgba(0,0,0,0.08)';
+
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: '#000' }}>
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 backdrop-blur-xl" style={{ backgroundColor: 'rgba(0,0,0,0.7)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <img src={ellocontentLogo} alt="ellocontent" className="h-5" />
-          <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
-            <a href="#recursos" className="hover:text-white transition-colors">Recursos</a>
-            <a href="#como-funciona" className="hover:text-white transition-colors">Como funciona</a>
-            <a href="#planos" className="hover:text-white transition-colors">Planos</a>
-            <a href="#faq" className="hover:text-white transition-colors">Dúvidas</a>
+    <div className="min-h-screen" style={{ backgroundColor: '#fbfbfd', color: INK, fontFamily: FONT_STACK, WebkitFontSmoothing: 'antialiased' }}>
+      {/* Nav — Apple translucent */}
+      <nav className="sticky top-0 z-50" style={{ backgroundColor: 'rgba(251,251,253,0.72)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', borderBottom: `1px solid ${HAIRLINE}` }}>
+        <div className="max-w-[980px] mx-auto px-6 h-12 flex items-center justify-between">
+          <img src={ellocontentLogo} alt="ellocontent" className="h-4" style={{ filter: 'invert(1) brightness(0.1)' }} />
+          <div className="hidden md:flex items-center gap-8 text-[12px]" style={{ color: INK }}>
+            <a href="#recursos" className="opacity-80 hover:opacity-100 transition-opacity">Recursos</a>
+            <a href="#como-funciona" className="opacity-80 hover:opacity-100 transition-opacity">Como funciona</a>
+            <a href="#planos" className="opacity-80 hover:opacity-100 transition-opacity">Planos</a>
+            <a href="#faq" className="opacity-80 hover:opacity-100 transition-opacity">Dúvidas</a>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/auth')} className="text-sm text-white/70 hover:text-white px-3 py-1.5 transition-colors">Login</button>
-            <button onClick={goCreate} className="text-sm bg-white text-black px-4 py-1.5 rounded-full font-medium hover:bg-white/90 transition-colors">Começar</button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/auth')} className="text-[12px] opacity-80 hover:opacity-100 transition-opacity">Login</button>
+            <button onClick={goCreate} className="text-[12px] font-medium px-4 py-1.5 rounded-full text-white transition-all hover:scale-[1.02]" style={{ backgroundColor: INK }}>Começar</button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at top, rgba(123,80,220,0.15), transparent 60%)' }} />
-        <div className="relative max-w-5xl mx-auto px-6 pt-24 pb-32 text-center">
-          <motion.h1 {...fadeUp} className="text-4xl md:text-7xl font-semibold tracking-tight leading-[1.05]">
-            Da ideia ao conteúdo pronto<br />
-            <span className="text-white/40">em minutos, tão fácil que parece até mágica.</span>
+        <div className="relative max-w-[1100px] mx-auto px-6 pt-20 md:pt-32 pb-24 md:pb-40 text-center">
+          <motion.h1
+            {...fadeUp}
+            className="font-semibold tracking-tight"
+            style={{ fontSize: 'clamp(40px, 7vw, 80px)', lineHeight: 1.05, letterSpacing: '-0.025em', color: INK }}
+          >
+            Da ideia ao conteúdo pronto<br className="hidden md:block" />{' '}
+            <span style={{ color: INK_SOFT }}>em minutos.</span>
+            <br />
+            <span style={{ color: INK_SOFT, fontSize: '0.5em', fontWeight: 400, letterSpacing: '-0.01em' }}>Tão fácil que parece até mágica.</span>
           </motion.h1>
-          <motion.p {...fadeUp} transition={{ duration: 0.7, delay: 0.1 }} className="mt-8 text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed">
+
+          <motion.p
+            {...fadeUp}
+            transition={{ duration: 0.8, delay: 0.1 }}
+            className="mt-8 mx-auto"
+            style={{ fontSize: 'clamp(17px, 1.5vw, 21px)', lineHeight: 1.5, color: INK_SOFT, maxWidth: 640, fontWeight: 400 }}
+          >
             Crie conteúdos que as pessoas param pra ver. Sem designer, sem agência e sem gastar seu dia nisso. Feito para qualquer negócio e qualquer nicho.
           </motion.p>
-          <motion.div {...fadeUp} transition={{ duration: 0.7, delay: 0.2 }} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={goCreate} className="bg-white text-black px-8 py-3.5 rounded-full font-medium hover:bg-white/90 transition-all hover:scale-[1.02]">
+
+          <motion.div {...fadeUp} transition={{ duration: 0.8, delay: 0.2 }} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.02]" style={{ backgroundColor: '#0071e3' }}>
               Criar post grátis
             </button>
-            <button onClick={goPlans} className="text-white px-8 py-3.5 rounded-full font-medium border border-white/15 hover:bg-white/5 transition-colors">
-              Ver planos
+            <button onClick={goPlans} className="text-[15px] font-medium px-1 py-3 transition-opacity hover:opacity-70" style={{ color: '#0071e3' }}>
+              Ver planos ›
             </button>
           </motion.div>
-          <motion.p {...fadeUp} transition={{ duration: 0.7, delay: 0.3 }} className="mt-5 text-xs text-white/35">
+          <motion.p {...fadeUp} transition={{ duration: 0.8, delay: 0.3 }} className="mt-5 text-[12px]" style={{ color: INK_SOFT }}>
             Sem precisar cadastrar cartão
           </motion.p>
+
+          {/* Hero visual mock */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-20 mx-auto rounded-[28px] overflow-hidden relative"
+            style={{ maxWidth: 980, aspectRatio: '16/9', background: 'linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%)', boxShadow: '0 30px 80px -20px rgba(0,0,0,0.15)' }}
+          >
+            <div className="absolute inset-0 flex items-center justify-center" style={{ color: INK_SOFT, fontSize: 13 }}>
+              Pré-visualização do app
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Pain points */}
-      <section className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-5xl mx-auto px-6">
+      <section className="py-24 md:py-32" style={{ backgroundColor: '#ffffff' }}>
+        <div className="max-w-[980px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-16">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-4">Você se identifica?</p>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight">
-              Se você se identificar com alguma dessas situações,<br />
-              <span className="text-white/40">o Ellocontent foi feito para você.</span>
+            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Você se identifica?</p>
+            <h2 className="font-semibold tracking-tight mx-auto" style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', lineHeight: 1.1, letterSpacing: '-0.02em', maxWidth: 760 }}>
+              Se você se identificar com alguma dessas situações,{' '}
+              <span style={{ color: INK_SOFT }}>o Ellocontent foi feito para você.</span>
             </h2>
           </motion.div>
           <div className="grid md:grid-cols-2 gap-3">
@@ -146,38 +149,39 @@ const Landing: React.FC = () => {
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.05 }}
-                className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] text-white/70 text-sm md:text-base leading-relaxed"
+                transition={{ duration: 0.5, delay: i * 0.04 }}
+                className="p-6 rounded-2xl text-[15px] leading-relaxed"
+                style={{ backgroundColor: '#f5f5f7', color: INK }}
               >
                 {p}
               </motion.div>
             ))}
           </div>
-          <motion.p {...fadeUp} className="text-center mt-12 text-white/40 text-lg italic">
+          <motion.p {...fadeUp} className="text-center mt-14 text-[20px]" style={{ color: INK_SOFT, fontWeight: 400 }}>
             Quanto isso custa pra você?
           </motion.p>
         </div>
       </section>
 
       {/* Como funciona */}
-      <section id="como-funciona" className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.p {...fadeUp} className="text-xs uppercase tracking-[0.2em] text-white/40 mb-4">Como funciona</motion.p>
-          <motion.h2 {...fadeUp} className="text-3xl md:text-5xl font-semibold tracking-tight mb-8">
+      <section id="como-funciona" className="py-24 md:py-36" style={{ backgroundColor: '#fbfbfd' }}>
+        <div className="max-w-[820px] mx-auto px-6 text-center">
+          <motion.p {...fadeUp} className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Como funciona</motion.p>
+          <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
             Simples assim.
           </motion.h2>
-          <motion.p {...fadeUp} className="text-lg md:text-xl text-white/55 leading-relaxed max-w-3xl mx-auto">
-            Você digita o que quer falar, pode ser uma ideia, um tema ou até um texto pronto. A IA entende, cria o roteiro, gera as imagens e monta o design. Com poucos cliques você tem um conteúdo pronto para baixar e postar. Sem complicação, sem curva de aprendizado e <span className="text-white">100% editável</span> do jeito que você quiser.
+          <motion.p {...fadeUp} className="leading-relaxed" style={{ fontSize: 'clamp(18px, 1.6vw, 22px)', color: INK_SOFT, fontWeight: 400 }}>
+            Você digita o que quer falar, pode ser uma ideia, um tema ou até um texto pronto. A IA entende, cria o roteiro, gera as imagens e monta o design. Com poucos cliques você tem um conteúdo pronto para baixar e postar. Sem complicação, sem curva de aprendizado e <span style={{ color: INK }}>100% editável</span> do jeito que você quiser.
           </motion.p>
         </div>
       </section>
 
       {/* Recursos */}
-      <section id="recursos" className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6">
+      <section id="recursos" className="py-24 md:py-32" style={{ backgroundColor: '#ffffff' }}>
+        <div className="max-w-[1100px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-16">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-4">Recursos</p>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight">
+            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Recursos</p>
+            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
               O que o Ellocontent te entrega.
             </h2>
           </motion.div>
@@ -191,14 +195,15 @@ const Landing: React.FC = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: i * 0.06 }}
-                  className="p-8 rounded-3xl border border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent hover:border-white/[0.12] transition-all"
+                  className="p-8 rounded-3xl"
+                  style={{ backgroundColor: '#f5f5f7' }}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-6">
-                    <Icon className="w-5 h-5 text-white/80" />
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                    <Icon className="w-5 h-5" style={{ color: '#0071e3' }} />
                   </div>
-                  <p className="text-xs uppercase tracking-wider text-white/40 mb-2">{f.tag}</p>
-                  <h3 className="text-xl font-semibold mb-3 leading-tight">{f.title}</h3>
-                  <p className="text-sm text-white/55 leading-relaxed">{f.desc}</p>
+                  <p className="text-[11px] uppercase tracking-wider mb-2" style={{ color: '#0071e3', fontWeight: 600 }}>{f.tag}</p>
+                  <h3 className="text-[20px] font-semibold mb-3 leading-tight tracking-tight" style={{ color: INK, letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <p className="text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{f.desc}</p>
                 </motion.div>
               );
             })}
@@ -207,13 +212,15 @@ const Landing: React.FC = () => {
       </section>
 
       {/* Galeria */}
-      <section className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-24 md:py-32" style={{ backgroundColor: '#fbfbfd' }}>
+        <div className="max-w-[1100px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-16">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-4">Galeria</p>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight">Veja o que é possível criar.</h2>
+            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Galeria</p>
+            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+              Veja o que é possível criar.
+            </h2>
           </motion.div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <motion.div
                 key={i}
@@ -221,7 +228,8 @@ const Landing: React.FC = () => {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                className="aspect-[4/5] rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-white/[0.01] flex items-center justify-center text-white/30 text-xs"
+                className="aspect-[4/5] rounded-2xl flex items-center justify-center text-[12px]"
+                style={{ background: 'linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%)', color: INK_SOFT }}
               >
                 Exemplo de conteúdo
               </motion.div>
@@ -231,14 +239,18 @@ const Landing: React.FC = () => {
       </section>
 
       {/* Planos */}
-      <section id="planos" className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6">
+      <section id="planos" className="py-24 md:py-32" style={{ backgroundColor: '#ffffff' }}>
+        <div className="max-w-[1200px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-12">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-4">Planos</p>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight mb-8">Planos e Preços.</h2>
-            <div className="inline-flex items-center gap-1 p-1 rounded-full border border-white/10 bg-white/[0.02]">
-              <button onClick={() => setAnnual(false)} className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${!annual ? 'bg-white text-black' : 'text-white/60'}`}>Mensal</button>
-              <button onClick={() => setAnnual(true)} className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${annual ? 'bg-white text-black' : 'text-white/60'}`}>Anual <span className="text-xs opacity-70">−29%</span></button>
+            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Planos</p>
+            <h2 className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+              Planos e Preços.
+            </h2>
+            <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ backgroundColor: '#f5f5f7' }}>
+              <button onClick={() => setAnnual(false)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: !annual ? INK : 'transparent', color: !annual ? '#fff' : INK }}>Mensal</button>
+              <button onClick={() => setAnnual(true)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: annual ? INK : 'transparent', color: annual ? '#fff' : INK }}>
+                Anual <span className="opacity-70 ml-1">−29%</span>
+              </button>
             </div>
           </motion.div>
 
@@ -249,37 +261,43 @@ const Landing: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className={`relative p-6 rounded-3xl border flex flex-col ${p.popular ? 'border-white/30 bg-white/[0.04]' : 'border-white/[0.06] bg-white/[0.02]'}`}
+                transition={{ duration: 0.5, delay: i * 0.06 }}
+                className="relative p-7 rounded-3xl flex flex-col"
+                style={{
+                  backgroundColor: p.popular ? INK : '#f5f5f7',
+                  color: p.popular ? '#fff' : INK,
+                }}
               >
                 {p.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white text-black text-[10px] font-semibold uppercase tracking-wider">Mais popular</div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider" style={{ backgroundColor: '#0071e3', color: '#fff' }}>Mais popular</div>
                 )}
-                <h3 className="text-lg font-semibold mb-1">{p.name}</h3>
-                <p className="text-xs text-white/50 mb-6 min-h-[3em]">{p.desc}</p>
+                <h3 className="text-[20px] font-semibold mb-1 tracking-tight" style={{ letterSpacing: '-0.01em' }}>{p.name}</h3>
+                <p className="text-[13px] mb-6 min-h-[3.2em]" style={{ color: p.popular ? 'rgba(255,255,255,0.6)' : INK_SOFT }}>{p.desc}</p>
                 <div className="mb-6">
                   {p.custom ? (
-                    <div className="text-2xl font-semibold">Sob consulta</div>
+                    <div className="text-[26px] font-semibold tracking-tight">Sob consulta</div>
                   ) : (
-                    <>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-semibold">R${(annual ? p.yearly! : p.monthly!).toFixed(2).replace('.', ',')}</span>
-                        <span className="text-xs text-white/40">/mês</span>
-                      </div>
-                    </>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[36px] font-semibold tracking-tight" style={{ letterSpacing: '-0.02em' }}>R${(annual ? p.yearly! : p.monthly!).toFixed(2).replace('.', ',')}</span>
+                      <span className="text-[12px]" style={{ color: p.popular ? 'rgba(255,255,255,0.5)' : INK_SOFT }}>/mês</span>
+                    </div>
                   )}
-                  <p className="text-xs text-white/40 mt-1">{p.credits}</p>
+                  <p className="text-[12px] mt-1" style={{ color: p.popular ? 'rgba(255,255,255,0.5)' : INK_SOFT }}>{p.credits}</p>
                 </div>
                 <button
                   onClick={p.custom ? () => navigate('/suporte') : goPlans}
-                  className={`w-full py-2.5 rounded-full text-sm font-medium mb-6 transition-colors ${p.popular ? 'bg-white text-black hover:bg-white/90' : 'border border-white/15 text-white hover:bg-white/5'}`}
+                  className="w-full py-2.5 rounded-full text-[13px] font-medium mb-6 transition-all hover:scale-[1.02]"
+                  style={{
+                    backgroundColor: p.popular ? '#fff' : '#0071e3',
+                    color: p.popular ? INK : '#fff',
+                  }}
                 >
                   {p.custom ? 'Falar com vendas' : 'Assinar'}
                 </button>
-                <ul className="space-y-2.5 text-xs text-white/65">
+                <ul className="space-y-2.5 text-[13px]" style={{ color: p.popular ? 'rgba(255,255,255,0.75)' : INK }}>
                   {p.features.map((f, j) => (
                     <li key={j} className="flex gap-2">
-                      <Check className="w-3.5 h-3.5 text-white/40 mt-0.5 shrink-0" />
+                      <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: p.popular ? 'rgba(255,255,255,0.5)' : '#0071e3' }} />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -291,24 +309,26 @@ const Landing: React.FC = () => {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-3xl mx-auto px-6">
+      <section id="faq" className="py-24 md:py-32" style={{ backgroundColor: '#fbfbfd' }}>
+        <div className="max-w-[760px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-12">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/40 mb-4">Dúvidas</p>
-            <h2 className="text-3xl md:text-5xl font-semibold tracking-tight">Ficou alguma dúvida?</h2>
+            <p className="text-[12px] uppercase tracking-[0.15em] mb-5" style={{ color: '#0071e3', fontWeight: 600 }}>Dúvidas</p>
+            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+              Ficou alguma dúvida?
+            </h2>
           </motion.div>
           <div className="space-y-2">
             {faqs.map((f, i) => (
-              <div key={i} className="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+              <div key={i} className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#fff', border: `1px solid ${HAIRLINE}` }}>
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
+                  className="w-full px-6 py-5 flex items-center justify-between text-left transition-colors hover:bg-black/[0.015]"
                 >
-                  <span className="text-sm md:text-base font-medium pr-4">{f.q}</span>
-                  {openFaq === i ? <Minus className="w-4 h-4 text-white/50 shrink-0" /> : <Plus className="w-4 h-4 text-white/50 shrink-0" />}
+                  <span className="text-[15px] font-medium pr-4" style={{ color: INK }}>{f.q}</span>
+                  {openFaq === i ? <Minus className="w-4 h-4 shrink-0" style={{ color: INK_SOFT }} /> : <Plus className="w-4 h-4 shrink-0" style={{ color: INK_SOFT }} />}
                 </button>
                 {openFaq === i && (
-                  <div className="px-6 pb-5 text-sm text-white/55 leading-relaxed">{f.a}</div>
+                  <div className="px-6 pb-5 text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{f.a}</div>
                 )}
               </div>
             ))}
@@ -317,35 +337,33 @@ const Landing: React.FC = () => {
       </section>
 
       {/* CTA Final */}
-      <section className="py-24 md:py-32 border-t border-white/5">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <motion.h2 {...fadeUp} className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">
-            Pronto para criar conteúdo<br /><span className="text-white/40">que gera resultado?</span>
+      <section className="py-28 md:py-40" style={{ backgroundColor: '#ffffff' }}>
+        <div className="max-w-[820px] mx-auto px-6 text-center">
+          <motion.h2 {...fadeUp} className="font-semibold tracking-tight" style={{ fontSize: 'clamp(36px, 5.5vw, 64px)', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
+            Pronto para criar conteúdo<br />
+            <span style={{ color: INK_SOFT }}>que gera resultado?</span>
           </motion.h2>
-          <motion.p {...fadeUp} className="mt-6 text-lg text-white/55 max-w-xl mx-auto">
+          <motion.p {...fadeUp} className="mt-6 mx-auto" style={{ fontSize: 'clamp(17px, 1.5vw, 20px)', color: INK_SOFT, maxWidth: 580 }}>
             Comece agora, gere seu primeiro post gratuitamente e veja na prática o que o Ellocontent faz pelo seu negócio.
           </motion.p>
-          <motion.div {...fadeUp} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button onClick={goCreate} className="bg-white text-black px-8 py-3.5 rounded-full font-medium hover:bg-white/90 transition-all hover:scale-[1.02]">
+          <motion.div {...fadeUp} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.02]" style={{ backgroundColor: '#0071e3' }}>
               Criar post grátis
             </button>
-            <button onClick={goPlans} className="text-white px-8 py-3.5 rounded-full font-medium border border-white/15 hover:bg-white/5 transition-colors">
-              Ver planos
+            <button onClick={goPlans} className="text-[15px] font-medium px-1 py-3 transition-opacity hover:opacity-70" style={{ color: '#0071e3' }}>
+              Ver planos ›
             </button>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-10 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/40">
-          <div className="flex items-center gap-3">
-            <img src={ellocontentLogo} alt="ellocontent" className="h-4 opacity-60" />
-            <span>© 2026 Ellocontent. Todos os direitos reservados.</span>
-          </div>
+      <footer className="py-10" style={{ borderTop: `1px solid ${HAIRLINE}`, backgroundColor: '#f5f5f7' }}>
+        <div className="max-w-[980px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-[12px]" style={{ color: INK_SOFT }}>
+          <span>© 2026 Ellocontent. Todos os direitos reservados.</span>
           <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-white/70 transition-colors">Política de Privacidade</a>
-            <a href="#" className="hover:text-white/70 transition-colors">Termos de Serviço</a>
+            <a href="#" className="hover:underline">Política de Privacidade</a>
+            <a href="#" className="hover:underline">Termos de Serviço</a>
           </div>
         </div>
       </footer>

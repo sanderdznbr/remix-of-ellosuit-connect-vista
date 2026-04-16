@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Loader2, Wand2, Globe, Settings, Sparkles, Search, ExternalLink, Zap } from 'lucide-react';
+import { Loader2, Wand2, Globe, Settings, Sparkles, Search, ExternalLink, Zap, TrendingUp, LayoutGrid, FileText, Copy, Lock } from 'lucide-react';
 import { getAccentTheme, getThemeClasses } from './wizardTheme';
 import PromptMentionInput, { PromptMentionRef } from './PromptMention';
+import { toast } from 'sonner';
 
 interface MentionedPrompt {
   id: string;
@@ -41,6 +42,7 @@ interface Props {
   classifyingTopic?: boolean;
   forceWebSearch?: boolean;
   setForceWebSearch?: (v: boolean) => void;
+  fromTrendData?: { topic: string; format: string; cardText: string; caption: string } | null;
 }
 
 const NEWS_KEYWORDS = [
@@ -71,6 +73,7 @@ const StepTopic: React.FC<Props> = ({
   wizardMode = 'advanced', setContentMode, guestMode = false,
   webSearchSuggestion, onAcceptWebSearch, onDeclineWebSearch, classifyingTopic,
   forceWebSearch = false, setForceWebSearch,
+  fromTrendData,
 }) => {
   const mentionRef = useRef<PromptMentionRef>(null);
   const accent = getAccentTheme(wizardMode);
@@ -82,11 +85,76 @@ const StepTopic: React.FC<Props> = ({
 
   // Auto-detect news topics and enable web search
   useEffect(() => {
-    if (!setForceWebSearch || !topic.trim()) return;
+    if (!setForceWebSearch || !topic.trim() || fromTrendData) return;
     if (detectIsNews(topic) && !forceWebSearch) {
       setForceWebSearch(true);
     }
   }, [topic]);
+
+  // === FROM TREND — LOCKED MODE ===
+  if (fromTrendData) {
+    const isCarousel = fromTrendData.format === 'carrossel';
+    return (
+      <div className="space-y-5" style={{ minHeight: '300px' }}>
+        {/* Header */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-5 h-5" style={{ color: '#a78bfa' }} />
+            <h2 className="text-xl font-bold text-white">Trend selecionada</h2>
+          </div>
+          <p className="text-[13px] text-white/30">Conteúdo pronto baseado nas tendências do dia.</p>
+        </div>
+
+        {/* Topic (locked) */}
+        <div className="rounded-2xl border border-white/[0.08] p-5 relative" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+          <div className="absolute top-3 right-3">
+            <Lock className="w-3.5 h-3.5 text-white/15" />
+          </div>
+          <p className="text-sm text-white/80 leading-relaxed">{topic}</p>
+        </div>
+
+        {/* Format badge */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/[0.06]"
+            style={{ backgroundColor: isCarousel ? 'rgba(139,92,246,0.06)' : 'rgba(59,130,246,0.06)' }}>
+            <LayoutGrid className="w-3.5 h-3.5" style={{ color: isCarousel ? '#a78bfa' : '#60a5fa' }} />
+            <span className="text-xs font-medium" style={{ color: isCarousel ? '#a78bfa' : '#60a5fa' }}>
+              {isCarousel ? 'Carrossel' : 'Post Estático'}
+            </span>
+          </div>
+          <span className="text-[10px] text-white/20">Formato sugerido pela IA</span>
+        </div>
+
+        {/* Card text */}
+        {fromTrendData.cardText && (
+          <div className="rounded-xl border border-white/[0.06] p-4" style={{ backgroundColor: 'rgba(139,92,246,0.03)' }}>
+            <p className="text-[10px] text-white/25 uppercase tracking-wider font-medium mb-2">Texto da arte</p>
+            <p className="text-sm text-white/70 leading-relaxed">{fromTrendData.cardText}</p>
+          </div>
+        )}
+
+        {/* Caption */}
+        {fromTrendData.caption && (
+          <div className="rounded-xl border border-white/[0.06] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] text-white/25 uppercase tracking-wider font-medium">Legenda do Instagram</p>
+              <button onClick={() => { navigator.clipboard.writeText(fromTrendData.caption); toast.success('Legenda copiada!'); }}
+                className="text-white/20 hover:text-white/50 transition-colors cursor-pointer p-1" title="Copiar legenda">
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-xs text-white/50 leading-relaxed">{fromTrendData.caption}</p>
+          </div>
+        )}
+
+        {/* No web search notice */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+          <Globe className="w-3.5 h-3.5 text-white/15" />
+          <span className="text-[11px] text-white/20">Pesquisa web desativada — conteúdo já pesquisado via Trends</span>
+        </div>
+      </div>
+    );
+  }
 
   const topicSuggestions = [
     { emoji: '🐾', label: 'Petshop', prompt: '5 cuidados essenciais com seu pet no verão' },
@@ -131,7 +199,7 @@ const StepTopic: React.FC<Props> = ({
       {/* Normal mode */}
       {!advancedMode && (
         <>
-          {/* Main input — the star of the show */}
+          {/* Main input */}
           <div className="relative">
             {guestMode ? (
               <textarea
@@ -152,7 +220,7 @@ const StepTopic: React.FC<Props> = ({
                 className="!bg-white/[0.03] !border-white/[0.06] !text-white !placeholder-white/20 rounded-2xl min-h-[200px] w-full resize-none text-base leading-relaxed focus:!border-white/15 focus:!ring-0 border px-5 py-4 outline-none transition-colors"
               />
             )}
-            {/* Subtle action row — bottom-right, muted */}
+            {/* Subtle action row */}
             <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
               {!guestMode && (
                 <button
@@ -174,7 +242,7 @@ const StepTopic: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Topic suggestions — only when empty */}
+          {/* Topic suggestions */}
           {!topic.trim() && (
             <div className="space-y-2">
               <p className="text-[11px] text-white/25">Sugestões rápidas:</p>
@@ -198,7 +266,7 @@ const StepTopic: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Web search — compact toggle */}
+          {/* Web search toggle */}
           {setForceWebSearch && !classifyingTopic && !searchingWeb && (
             <button
               onClick={() => setForceWebSearch(!forceWebSearch)}

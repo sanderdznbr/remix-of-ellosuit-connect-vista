@@ -603,13 +603,71 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     );
   }
 
+  // Split trends into today vs older
+  const today = new Date().toISOString().split('T')[0];
+  const { todayTrends, olderTrends } = useMemo(() => {
+    const todayList = trends.filter(t => t.trend_date === today);
+    const olderList = trends.filter(t => t.trend_date !== today);
+    return { todayTrends: todayList, olderTrends: olderList };
+  }, [trends, today]);
+
+  const ITEMS_PER_PAGE = 9;
+  const displayedToday = todayTrends.slice(0, ITEMS_PER_PAGE);
+  const olderPages = Math.ceil(olderTrends.length / ITEMS_PER_PAGE);
+  const displayedOlder = olderTrends.slice(olderPage * ITEMS_PER_PAGE, (olderPage + 1) * ITEMS_PER_PAGE);
+
+  const renderCard = (trend: DailyTrend, i: number) => {
+    const catStyle = CATEGORY_STYLES[trend.category] || { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' };
+    const isNewsHook = trend.source === 'expert_news_ai';
+    return (
+      <motion.div key={trend.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: i * 0.03, duration: 0.35 }}
+        onClick={() => handleCreate(trend)}
+        className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/25 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col"
+        style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+        {/* Top accent bar */}
+        <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, ${catStyle.text}40, transparent)` }} />
+        
+        <div className="p-5 flex-1 flex flex-col relative">
+          {/* Hover glow */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse at top left, rgba(139,92,246,0.05), transparent 60%)' }} />
+          
+          <div className="relative z-10 flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg"
+                  style={{ color: catStyle.text, backgroundColor: catStyle.bg }}>
+                  {trend.category}
+                </span>
+                {isNewsHook && (
+                  <span className="text-[9px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-md"
+                    style={{ color: '#fbbf24', backgroundColor: 'rgba(245,158,11,0.1)' }}>
+                    🔥 News
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ color: '#c4b5fd' }}>
+                <span className="text-[11px] font-medium">Criar</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <h3 className="text-[15px] font-semibold text-white/90 mb-2 leading-snug">{trend.title}</h3>
+            <p className="text-xs text-white/35 leading-relaxed line-clamp-3 flex-1">{trend.description}</p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
   // === TRENDS DASHBOARD ===
   return (
-    <div className="flex-1 px-4 md:px-8 py-6 max-w-4xl mx-auto w-full">
+    <div className="flex-1 px-4 md:px-8 py-6 max-w-5xl mx-auto w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05))' }}>
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(139,92,246,0.05))' }}>
             <TrendingUp className="w-5 h-5" style={{ color: '#a78bfa' }} />
           </div>
           <div>
@@ -617,7 +675,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
             <p className="text-xs text-white/30">Ideias de conteúdo para <span className="text-white/50">{config.niche}</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button onClick={() => { setShowSetup(true); setSetupStep(0); }}
             className="p-2.5 rounded-xl text-white/25 hover:text-white/50 hover:bg-white/[0.04] transition-colors cursor-pointer" title="Reconfigurar">
             <Settings2 className="w-4 h-4" />
@@ -632,76 +690,110 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       </div>
 
       {/* Auto-daily toggle */}
-      <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] px-5 py-4 mb-6" style={{ backgroundColor: autoDaily ? 'rgba(139,92,246,0.06)' : 'rgba(255,255,255,0.02)' }}>
+      <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] px-5 py-3.5 mb-5" style={{ backgroundColor: autoDaily ? 'rgba(139,92,246,0.06)' : 'rgba(255,255,255,0.015)' }}>
         <div className="flex items-center gap-3">
           <Zap className="w-4 h-4" style={{ color: autoDaily ? '#a78bfa' : 'rgba(255,255,255,0.2)' }} />
           <div>
             <p className="text-sm font-medium text-white/80">Atualização automática</p>
-            <p className="text-[11px] text-white/30">Gera novas ideias todos os dias automaticamente</p>
+            <p className="text-[11px] text-white/25">Gera novas ideias todos os dias automaticamente</p>
           </div>
         </div>
         <Switch checked={autoDaily} onCheckedChange={toggleAutoDaily} disabled={togglingAuto} />
       </div>
 
-      {/* Date & count */}
-      {trends.length > 0 && (
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-3.5 h-3.5 text-white/20" />
-          <span className="text-xs text-white/25">
-            {new Date(trends[0].trend_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </span>
-          <span className="text-white/10">·</span>
-          <span className="text-xs text-white/25">{trends.length} ideias</span>
-        </div>
-      )}
+      {/* Tabs */}
+      <div className="flex items-center gap-1 mb-5 p-1 rounded-xl w-fit" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <button onClick={() => setActiveTab('today')}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer"
+          style={{
+            backgroundColor: activeTab === 'today' ? 'rgba(139,92,246,0.15)' : 'transparent',
+            color: activeTab === 'today' ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
+          }}>
+          <Sparkles className="w-3.5 h-3.5" />
+          Hoje ({todayTrends.length})
+        </button>
+        <button onClick={() => { setActiveTab('older'); setOlderPage(0); }}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer"
+          style={{
+            backgroundColor: activeTab === 'older' ? 'rgba(139,92,246,0.15)' : 'transparent',
+            color: activeTab === 'older' ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
+          }}>
+          <Clock className="w-3.5 h-3.5" />
+          Anteriores ({olderTrends.length})
+        </button>
+      </div>
 
-      {trends.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
-            <Sparkles className="w-8 h-8" style={{ color: 'rgba(167,139,250,0.5)' }} />
-          </div>
-          <h3 className="text-lg font-semibold text-white/70 mb-2">Pronto para gerar suas trends!</h3>
-          <p className="text-sm text-white/30 max-w-sm mb-6">Seu nicho está configurado. Clique abaixo para buscar ideias personalizadas.</p>
-          <button onClick={generateTrends} disabled={generating}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white cursor-pointer disabled:opacity-50"
-            style={{ backgroundColor: '#8B5CF6' }}>
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {generating ? 'Gerando...' : 'Gerar Trends Agora'}
-          </button>
-        </div>
+      {/* Active Tab Content */}
+      {activeTab === 'today' ? (
+        <>
+          {/* Date */}
+          {todayTrends.length > 0 && (
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-3.5 h-3.5 text-white/20" />
+              <span className="text-xs text-white/25">
+                {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+              <span className="text-white/10">·</span>
+              <span className="text-xs text-white/25">{todayTrends.length} ideias</span>
+            </div>
+          )}
+
+          {todayTrends.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
+                <Sparkles className="w-7 h-7" style={{ color: 'rgba(167,139,250,0.5)' }} />
+              </div>
+              <h3 className="text-base font-semibold text-white/70 mb-2">Sem trends para hoje</h3>
+              <p className="text-sm text-white/30 max-w-sm mb-5">Clique em Atualizar para gerar ideias baseadas nas notícias de hoje.</p>
+              <button onClick={generateTrends} disabled={generating}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white cursor-pointer disabled:opacity-50"
+                style={{ backgroundColor: '#8B5CF6' }}>
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {generating ? 'Gerando...' : 'Gerar Trends'}
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-3">
+              {displayedToday.map((trend, i) => renderCard(trend, i))}
+            </div>
+          )}
+
+          {todayTrends.length > ITEMS_PER_PAGE && (
+            <p className="text-xs text-white/20 text-center mt-4">
+              +{todayTrends.length - ITEMS_PER_PAGE} ideias nas "Anteriores"
+            </p>
+          )}
+        </>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {trends.map((trend, i) => {
-            const catStyle = CATEGORY_STYLES[trend.category] || { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' };
-            return (
-              <motion.div key={trend.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03, duration: 0.3 }}
-                onClick={() => handleCreate(trend)}
-                className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/20 p-5 transition-all cursor-pointer relative overflow-hidden"
-                style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                {/* Subtle hover glow */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{ background: 'radial-gradient(ellipse at top left, rgba(139,92,246,0.04), transparent 70%)' }} />
-                
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg"
-                      style={{ color: catStyle.text, backgroundColor: catStyle.bg }}>
-                      {trend.category}
-                    </span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: '#c4b5fd' }}>
-                      <span className="text-[11px] font-medium">Criar</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-                  <h3 className="text-[15px] font-semibold text-white/90 mb-2 leading-snug">{trend.title}</h3>
-                  <p className="text-xs text-white/35 leading-relaxed line-clamp-3">{trend.description}</p>
+        <>
+          {olderTrends.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Clock className="w-10 h-10 text-white/15 mb-3" />
+              <p className="text-sm text-white/30">Nenhuma ideia anterior ainda.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-3">
+                {displayedOlder.map((trend, i) => renderCard(trend, i))}
+              </div>
+
+              {/* Pagination */}
+              {olderPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  <button onClick={() => setOlderPage(p => Math.max(0, p - 1))} disabled={olderPage === 0}
+                    className="p-2 rounded-lg text-white/30 hover:text-white/60 disabled:opacity-20 transition-colors cursor-pointer">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs text-white/25">{olderPage + 1} / {olderPages}</span>
+                  <button onClick={() => setOlderPage(p => Math.min(olderPages - 1, p + 1))} disabled={olderPage >= olderPages - 1}
+                    className="p-2 rounded-lg text-white/30 hover:text-white/60 disabled:opacity-20 transition-colors cursor-pointer">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              </motion.div>
-            );
-          })}
-        </div>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );

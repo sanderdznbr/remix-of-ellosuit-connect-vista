@@ -170,7 +170,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [subStep, setSubStep] = useState(0); // 0=Rosto, 1=Logo, 2=Mídias
-  const [galleryTarget, setGalleryTarget] = useState<'face' | 'logo' | 'media' | null>(null);
+  const [galleryTarget, setGalleryTarget] = useState<'face' | 'logo' | 'logoDark' | 'media' | null>(null);
 
   const facePhotos = facePersons.flatMap(p => p.photos);
   const mediaRefs = referenceImages.filter(r => r.category !== 'face');
@@ -281,8 +281,10 @@ const StepPersonalization: React.FC<Props> = (props) => {
       } else if (galleryTarget === 'logo') {
         setLogoUrl(f.url);
         setLogoMode('manual');
+      } else if (galleryTarget === 'logoDark') {
+        setLogoDarkUrl(f.url);
       } else {
-        setReferenceImages(prev => [...prev, { url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const }]);
+        setReferenceImages(prev => [...prev, { url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'general' as const }]);
       }
     });
     setGalleryTarget(null);
@@ -442,6 +444,9 @@ const StepPersonalization: React.FC<Props> = (props) => {
                   <div className="flex items-center gap-1.5">
                     <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f?.[0]) handleLogoUpload(f[0], setLogoDarkUrl); }; input.click(); }}
                       className="px-2.5 py-1 rounded-lg text-[10px] font-medium text-black/40 hover:text-black/60 bg-black/[0.06] hover:bg-black/10 transition-all">Trocar</button>
+                    {user && (
+                      <button onClick={() => setGalleryTarget('logoDark')} className="px-2.5 py-1 rounded-lg text-[10px] font-medium text-black/40 hover:text-black/60 bg-black/[0.06] hover:bg-black/10 transition-all">Galeria</button>
+                    )}
                     <button onClick={() => setLogoDarkUrl('')}
                       className="p-1 rounded-lg bg-black/[0.06] hover:bg-red-500/20 text-black/30 hover:text-red-400 transition-colors">
                       <X className="h-3 w-3" />
@@ -449,10 +454,20 @@ const StepPersonalization: React.FC<Props> = (props) => {
                   </div>
                 </div>
               ) : (
-                <DropZone onFiles={handleLogoDarkFiles} multiple={false}
-                  icon={<Upload className="h-5 w-5 text-white/10" />}
-                  label="Logo escura"
-                  sublabel="Preta / cores escuras" />
+                <div className="flex gap-1.5">
+                  <div className="flex-1">
+                    <DropZone onFiles={handleLogoDarkFiles} multiple={false}
+                      icon={<Upload className="h-5 w-5 text-white/10" />}
+                      label="Logo escura"
+                      sublabel="Preta / cores escuras" />
+                  </div>
+                  {user && (
+                    <button onClick={() => setGalleryTarget('logoDark')}
+                      className="flex items-center px-3 rounded-xl border border-white/[0.06] text-white/25 hover:text-white/50 hover:bg-white/[0.03] transition-colors">
+                      <Folder className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -664,8 +679,8 @@ const StepPersonalization: React.FC<Props> = (props) => {
         open={!!galleryTarget}
         onClose={() => setGalleryTarget(null)}
         onSelectFiles={handleGallerySelect}
-        label={galleryTarget === 'face' ? 'Selecionar foto do rosto' : galleryTarget === 'logo' ? 'Selecionar logomarca' : 'Selecionar mídias'}
-        maxFiles={galleryTarget === 'logo' ? 1 : undefined}
+        label={galleryTarget === 'face' ? 'Selecionar foto do rosto' : (galleryTarget === 'logo' || galleryTarget === 'logoDark') ? 'Selecionar logomarca' : 'Selecionar mídias'}
+        maxFiles={(galleryTarget === 'logo' || galleryTarget === 'logoDark') ? 1 : undefined}
       />
     </div>
   );

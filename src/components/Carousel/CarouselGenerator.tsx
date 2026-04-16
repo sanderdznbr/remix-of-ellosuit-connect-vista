@@ -9280,6 +9280,26 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </>
                         )}
 
+                        {/* Mudar Fonte */}
+                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
+                          <>
+                            <button
+                              onClick={() => setShowFontChangePanel(prev => !prev)}
+                              disabled={changingFont}
+                              className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-pink-300 hover:text-pink-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                              {changingFont ? <Loader2 className="h-4 w-4 text-pink-400 animate-spin" /> : <Type className="h-4 w-4 text-pink-400" />} Mudar Fonte
+                            </button>
+                            {showFontChangePanel && (
+                              <div className="px-3 pb-2">
+                                <FontChangePicker
+                                  onSelectFont={(name, previewUrl) => changeCardFont(name, previewUrl)}
+                                  loading={changingFont}
+                                />
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         <div className="h-px bg-white/[0.06] my-1" />
 
                         {/* Regenerar Tudo */}

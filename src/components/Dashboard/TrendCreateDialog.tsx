@@ -289,7 +289,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
   const isCarousel = trendData.format === 'carrossel';
   const stepIndex = STEPS.findIndex(s => s.key === step);
-  const ctxSuggestions = getContextSuggestions(editedTopic || trendData.topic || '', trendData.category || '');
+  const ctxSuggestions = getContextSuggestions(editedTopic || trendData.topic || '', (trendData as any).category || '');
 
   const canProceed = () => {
     if (step === 'review') return true;

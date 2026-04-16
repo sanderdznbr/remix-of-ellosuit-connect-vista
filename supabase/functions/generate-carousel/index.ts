@@ -801,6 +801,24 @@ Palavras-chave: ${(keywords || []).join(', ')}${
         });
       }
 
+      const sanitizeCardText = (value: unknown) => {
+        const text = typeof value === 'string' ? value : '';
+        return stripPromptCommandNoise(stripInternalBrands(text), fallbackPromptTitle);
+      };
+
+      if (parsed.title) parsed.title = sanitizeCardText(parsed.title);
+      if (Array.isArray(parsed.cards)) {
+        parsed.cards = parsed.cards.map((card: any) => ({
+          ...card,
+          title: sanitizeCardText(card?.title),
+          subtitle: sanitizeCardText(card?.subtitle),
+          bodyTop: sanitizeCardText(card?.bodyTop),
+          bodyBottom: sanitizeCardText(card?.bodyBottom),
+          body: sanitizeCardText(card?.body),
+          ctaLine: sanitizeCardText(card?.ctaLine),
+        }));
+      }
+
       // Validate card count server-side
       if (parsed.cards && Array.isArray(parsed.cards) && parsed.cards.length !== numCards) {
         console.warn(`AI returned ${parsed.cards.length} cards but ${numCards} were requested`);

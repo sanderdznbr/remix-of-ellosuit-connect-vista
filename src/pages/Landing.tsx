@@ -118,7 +118,7 @@ const Landing: React.FC = () => {
             </div>
           </motion.div>
 
-          <motion.h1 {...fadeUp} transition={{ duration: 0.8, delay: 0.05 }} className="font-semibold tracking-tight" style={{ fontSize: 'clamp(40px, 7vw, 84px)', lineHeight: 1.02, letterSpacing: '-0.03em' }}>
+          <motion.h1 {...fadeUp} transition={{ duration: 0.8, delay: 0.05 }} className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(40px, 7vw, 84px)', lineHeight: 1.02, letterSpacing: '-0.03em' }}>
             Da ideia ao conteúdo<br />
             pronto em <span style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #C4B5FD 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>minutos.</span>
           </motion.h1>
@@ -171,7 +171,7 @@ const Landing: React.FC = () => {
         <div className="max-w-[1000px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-14">
             <Eyebrow>Você se identifica?</Eyebrow>
-            <h2 className="font-semibold tracking-tight mx-auto" style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', lineHeight: 1.08, letterSpacing: '-0.025em', maxWidth: 760 }}>
+            <h2 className="font-semibold tracking-tight mx-auto" style={{ color: '#fff', fontSize: 'clamp(28px, 4.5vw, 48px)', lineHeight: 1.08, letterSpacing: '-0.025em', maxWidth: 760 }}>
               Se você se identificar com alguma dessas situações,{' '}
               <span style={{ color: INK_SOFT }}>o Ellocontent foi feito para você.</span>
             </h2>
@@ -201,7 +201,7 @@ const Landing: React.FC = () => {
       <section id="como-funciona" className="py-24 md:py-36" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[820px] mx-auto px-6 text-center">
           <Eyebrow>Como funciona</Eyebrow>
-          <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+          <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-8" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
             Simples assim.
           </motion.h2>
           <motion.p {...fadeUp} className="leading-relaxed" style={{ fontSize: 'clamp(17px, 1.6vw, 21px)', color: INK_SOFT }}>
@@ -215,7 +215,7 @@ const Landing: React.FC = () => {
         <div className="max-w-[1100px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-14">
             <Eyebrow>Recursos</Eyebrow>
-            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+            <h2 className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               O que o Ellocontent te entrega.
             </h2>
           </motion.div>
@@ -250,7 +250,7 @@ const Landing: React.FC = () => {
         <div className="max-w-[1100px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-14">
             <Eyebrow>Galeria</Eyebrow>
-            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+            <h2 className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Veja o que é possível criar.
             </h2>
           </motion.div>
@@ -277,7 +277,7 @@ const Landing: React.FC = () => {
         <div className="max-w-[1200px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-12">
             <Eyebrow>Planos</Eyebrow>
-            <h2 className="font-semibold tracking-tight mb-8" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+            <h2 className="font-semibold tracking-tight mb-8" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Planos e Preços.
             </h2>
             <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: SURFACE }}>
@@ -351,7 +351,7 @@ const Landing: React.FC = () => {
         <div className="max-w-[760px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-12">
             <Eyebrow>Dúvidas</Eyebrow>
-            <h2 className="font-semibold tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+            <h2 className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Ficou alguma dúvida?
             </h2>
           </motion.div>
@@ -378,7 +378,7 @@ const Landing: React.FC = () => {
       <section className="relative py-28 md:py-40 overflow-hidden" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 600px 400px at 50% 100%, rgba(139,92,246,0.18), transparent 70%)' }} />
         <div className="relative max-w-[820px] mx-auto px-6 text-center">
-          <motion.h2 {...fadeUp} className="font-semibold tracking-tight" style={{ fontSize: 'clamp(36px, 5.5vw, 64px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+          <motion.h2 {...fadeUp} className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(36px, 5.5vw, 64px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
             Pronto para criar conteúdo<br />
             <span style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #C4B5FD 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>que gera resultado?</span>
           </motion.h2>

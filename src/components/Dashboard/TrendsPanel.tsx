@@ -157,6 +157,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           logo_url: (cfg as any).logo_url || '', logo_dark_url: (cfg as any).logo_dark_url || '',
           brand_colors: (cfg as any).brand_colors || [],
         });
+        setAutoDaily((cfg as any).auto_daily ?? false);
         setHasConfig(true);
         // Check if niche is a custom value
         if (!NICHE_OPTIONS.includes(cfg.niche)) setCustomNiche(true);

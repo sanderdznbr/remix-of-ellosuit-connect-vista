@@ -565,7 +565,7 @@ function LoggedInPricing() {
 
       toast.success(
         coupon.coupon_type === 'credits'
-          ? `+${coupon.credits_amount} créditos adicionados! 🎉`
+          ? `+${coupon.credits_amount} criativos adicionados! 🎉`
           : `Plano ${coupon.plan_type} ativado por ${coupon.plan_months || 1} mês(es)! 🎉`
       );
       setRedeemCode('');

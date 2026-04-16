@@ -2029,6 +2029,7 @@ The image must look like it was shot by a professional photographer or designed 
     const prevUrl = card.imageUrl;
     if (prevUrl) {
       setCorrectionUndoStack(prev => [...prev, { cardIndex: cardIdx, imageUrl: prevUrl }]);
+      setCorrectionRedoStack([]);
     }
 
     setChangingFont(true);
@@ -2138,6 +2139,7 @@ The image must look like it was shot by a professional photographer or designed 
 
     // Push to undo stack
     setCorrectionUndoStack(prev => [...prev, { cardIndex: cardIdx, imageUrl: card.imageUrl }]);
+    setCorrectionRedoStack([]);
     setUpscaling(true);
 
     try {
@@ -5658,6 +5660,7 @@ FORBIDDEN:
       const prevUrl = carouselData.cards[cardIndex]?.imageUrl;
       if (prevUrl) {
         setCorrectionUndoStack(prev => [...prev, { cardIndex, imageUrl: prevUrl }]);
+        setCorrectionRedoStack([]);
       }
     }
     const newCards = [...carouselData.cards];
@@ -6323,6 +6326,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         const prevUrl = prevCards?.[cardIndex]?.imageUrl;
         if (prevUrl) {
           setCorrectionUndoStack(prev => [...prev, { cardIndex, imageUrl: prevUrl }]);
+          setCorrectionRedoStack([]);
         }
       }
 

@@ -7225,7 +7225,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
             transition={{ duration: 0.3 }}
           >
             <DashboardLayout
-              onStartCarousel={(newTopic?: string, newMentionedPrompts?: any[], newPostFormat?: string) => {
+              onStartCarousel={(newTopic?: string, newMentionedPrompts?: any[], newPostFormat?: string, trendData?: any) => {
                 resetWizardState();
                 setShowWelcome(false);
                 if (newPostFormat && newPostFormat in FORMAT_DIMENSIONS) {
@@ -7237,6 +7237,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 }
                 if (newMentionedPrompts?.length) {
                   setMentionedPrompts(newMentionedPrompts);
+                }
+                // When coming from trends, lock topic and skip web search
+                if (trendData) {
+                  setFromTrendData(trendData);
+                  setSkipWebSearch(true);
+                  setForceWebSearch(false);
                 }
               }}
               onLoadCarousel={async (item: any) => {

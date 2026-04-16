@@ -88,8 +88,8 @@ serve(async (req) => {
     // ── Gather real-world context ──
     const serpApiKey = Deno.env.get("SERPAPI_API_KEY");
     let googleTrends: string[] = [];
-    let topNews: string[] = [];
-    let nicheNews: string[] = [];
+    let topNews: { text: string; thumbnail?: string }[] = [];
+    let nicheNews: { text: string; thumbnail?: string }[] = [];
 
     if (serpApiKey) {
       const [trendsResult, newsResult, nicheNewsResult] = await Promise.allSettled([
@@ -116,8 +116,9 @@ serve(async (req) => {
         topNews = articles.slice(0, 15).map((a: any) => {
           const title = a.title || "";
           const snippet = a.snippet || a.description || "";
-          return `${title}${snippet ? ` — ${snippet}` : ""}`;
-        }).filter(Boolean);
+          const thumbnail = a.thumbnail || a.images?.thumbnail || null;
+          return { text: `${title}${snippet ? ` — ${snippet}` : ""}`, thumbnail };
+        }).filter((n: any) => n.text);
       }
 
       if (nicheNewsResult.status === "fulfilled" && nicheNewsResult.value) {
@@ -125,12 +126,18 @@ serve(async (req) => {
         nicheNews = articles.slice(0, 10).map((a: any) => {
           const title = a.title || "";
           const snippet = a.snippet || a.description || "";
-          return `${title}${snippet ? ` — ${snippet}` : ""}`;
-        }).filter(Boolean);
+          const thumbnail = a.thumbnail || a.images?.thumbnail || null;
+          return { text: `${title}${snippet ? ` — ${snippet}` : ""}`, thumbnail };
+        }).filter((n: any) => n.text);
       }
 
       console.log(`Sources: ${googleTrends.length} trends, ${topNews.length} top news, ${nicheNews.length} niche news`);
     }
+
+    // Build thumbnail lookup for AI to reference
+    const allNewsWithThumbs: { index: number; text: string; thumbnail: string }[] = [];
+    topNews.forEach((n, i) => { if (n.thumbnail) allNewsWithThumbs.push({ index: i, text: n.text.slice(0, 80), thumbnail: n.thumbnail }); });
+    nicheNews.forEach((n, i) => { if (n.thumbnail) allNewsWithThumbs.push({ index: 100 + i, text: n.text.slice(0, 80), thumbnail: n.thumbnail }); });
 
     // ── Expert AI prompt ──
     const todayStr = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });

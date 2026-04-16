@@ -131,6 +131,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'older'>('today');
   const [olderPage, setOlderPage] = useState(0);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [dialogTrend, setDialogTrend] = useState<TrendData | null>(null);
   const nicheRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Sparkles, RefreshCw, Settings2, Loader2, Calendar, ChevronRight, ChevronLeft, Instagram, Globe, Target, Pen, Check, Upload, X, Palette, Image, MessageSquare, ChevronDown, Zap, Clock, ChevronDown as MoreIcon } from 'lucide-react';
+import { TrendingUp, Sparkles, RefreshCw, Settings2, Loader2, Calendar, ChevronRight, ChevronLeft, Instagram, Globe, Target, Pen, Check, Upload, X, Palette, Image, MessageSquare, ChevronDown, Clock, LayoutGrid, FileText, Copy } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -34,6 +34,12 @@ interface DailyTrend {
   trend_date: string;
   relevance_score: number;
   used: boolean;
+  metadata?: {
+    news_hook?: string;
+    format?: string;
+    card_text?: string;
+    caption?: string;
+  };
 }
 
 interface TrendsPanelProps {
@@ -113,9 +119,9 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const [togglingAuto, setTogglingAuto] = useState(false);
   const [activeTab, setActiveTab] = useState<'today' | 'older'>('today');
   const [olderPage, setOlderPage] = useState(0);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const nicheRef = useRef<HTMLDivElement>(null);
 
-  // Close niche dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (nicheRef.current && !nicheRef.current.contains(e.target as Node)) {
@@ -161,7 +167,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         });
         setAutoDaily((cfg as any).auto_daily ?? false);
         setHasConfig(true);
-        // Check if niche is a custom value
         if (!NICHE_OPTIONS.includes(cfg.niche)) setCustomNiche(true);
       } else {
         setHasConfig(false);
@@ -187,8 +192,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       setConfig(p => ({ ...p, [type === 'light' ? 'logo_url' : 'logo_dark_url']: publicUrl }));
-
-      // Auto-extract brand colors from the uploaded logo
       try {
         const colors = await extractColorsFromImage(publicUrl, 6);
         if (colors.length > 0) {
@@ -198,7 +201,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           });
           toast.success(`${colors.length} cor(es) extraída(s) da logo`);
         }
-      } catch { /* ignore color extraction errors */ }
+      } catch { /* ignore */ }
     } catch (err: any) {
       toast.error('Erro no upload: ' + (err?.message || ''));
     } finally {
@@ -263,13 +266,19 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       });
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.error || 'Erro');
-      toast.success(`${result.count} trends geradas!`);
+      toast.success(`${result.count} trends geradas! (1 crédito consumido)`);
       await fetchData();
     } catch (e: any) { toast.error(e.message || 'Erro ao gerar trends'); } finally { setGenerating(false); }
   };
 
   const handleCreate = (trend: DailyTrend) => {
     if (onCreateFromTrend) onCreateFromTrend(trend.title + ': ' + trend.description);
+  };
+
+  const copyCaption = (caption: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(caption);
+    toast.success('Legenda copiada!');
   };
 
   const toggleGoal = (goal: string) => {
@@ -288,7 +297,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       const { error } = await supabase.from('trend_configs').update({ auto_daily: checked } as any).eq('id', config.id);
       if (error) throw error;
       setAutoDaily(checked);
-      toast.success(checked ? 'Atualização automática ativada!' : 'Atualização automática desativada');
+      toast.success(checked ? 'Atualização automática ativada' : 'Desativada');
     } catch (e: any) {
       toast.error('Erro ao salvar: ' + (e?.message || ''));
     } finally {
@@ -296,7 +305,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     }
   };
 
-  // Split trends into today vs older (must be before early returns)
   const todayDate = new Date().toISOString().split('T')[0];
   const { todayTrends, olderTrends } = useMemo(() => {
     const todayList = trends.filter(t => t.trend_date === todayDate);
@@ -348,7 +356,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     return (
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg">
-          {/* Progress */}
           <div className="flex items-center gap-1 mb-8">
             {STEPS.map((s, i) => (
               <div key={s.key} className="flex-1">
@@ -358,7 +365,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           </div>
 
           <motion.div key={setupStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
-            {/* Header */}
             <div className="flex items-center gap-3 mb-1">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
                 <step.icon className="w-4.5 h-4.5" style={{ color: '#a78bfa' }} />
@@ -371,13 +377,12 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
             <p className="text-sm text-white/40 mb-6 ml-12">{step.desc}</p>
 
             <div className="space-y-4 ml-12">
-              {/* Step 0: About */}
               {setupStep === 0 && (
                 <>
                   <div>
                     <label className="text-xs text-white/50 mb-1.5 block font-medium">Conte sobre sua empresa *</label>
                     <textarea value={config.company_description} onChange={e => setConfig(p => ({ ...p, company_description: e.target.value }))}
-                      placeholder="Ex: Somos uma clínica odontológica especializada em estética dental, oferecendo lentes de contato, clareamento e implantes..."
+                      placeholder="Ex: Somos uma clínica odontológica especializada em estética dental..."
                       rows={4} className={inputCls} style={inputStyle} />
                   </div>
                   <div>
@@ -388,7 +393,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                 </>
               )}
 
-              {/* Step 1: Niche & Audience */}
               {setupStep === 1 && (
                 <>
                   <div ref={nicheRef} className="relative">
@@ -442,11 +446,9 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                 </>
               )}
 
-              {/* Step 2: Brand */}
               {setupStep === 2 && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Logo light */}
                     <div>
                       <label className="text-xs text-white/50 mb-1.5 block font-medium">Logo (clara)</label>
                       <div className="relative rounded-xl border border-white/[0.08] overflow-hidden aspect-[3/2] flex items-center justify-center cursor-pointer hover:border-purple-500/30 transition-colors" style={inputStyle}>
@@ -467,7 +469,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                         )}
                       </div>
                     </div>
-                    {/* Logo dark */}
                     <div>
                       <label className="text-xs text-white/50 mb-1.5 block font-medium">Logo (escura)</label>
                       <div className="relative rounded-xl border border-white/[0.08] overflow-hidden aspect-[3/2] flex items-center justify-center cursor-pointer hover:border-purple-500/30 transition-colors bg-white/90">
@@ -489,8 +490,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Brand Colors */}
                   <div>
                     <label className="text-xs text-white/50 mb-2 block font-medium">Cores da marca</label>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -519,7 +518,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                 </>
               )}
 
-              {/* Step 3: Social & Tone */}
               {setupStep === 3 && (
                 <>
                   <div>
@@ -555,7 +553,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                 </>
               )}
 
-              {/* Step 4: Goals */}
               {setupStep === 4 && (
                 <div>
                   <label className="text-xs text-white/50 mb-2 block font-medium">O que você quer alcançar com seu conteúdo?</label>
@@ -583,7 +580,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
               )}
             </div>
 
-            {/* Navigation */}
             <div className="flex items-center justify-between mt-8 ml-12">
               <button onClick={() => setupStep > 0 ? setSetupStep(s => s - 1) : (hasConfig && setShowSetup(false))}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/60 transition-colors cursor-pointer">
@@ -616,45 +612,90 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const olderPages = Math.ceil(olderTrends.length / ITEMS_PER_PAGE);
   const displayedOlder = olderTrends.slice(olderPage * ITEMS_PER_PAGE, (olderPage + 1) * ITEMS_PER_PAGE);
 
+  const getFormatBadge = (trend: DailyTrend) => {
+    const format = trend.metadata?.format;
+    if (format === 'carrossel') return { label: 'Carrossel', color: '#a78bfa', bg: 'rgba(139,92,246,0.1)' };
+    if (format === 'estatico') return { label: 'Estático', color: '#60a5fa', bg: 'rgba(59,130,246,0.1)' };
+    return null;
+  };
+
   const renderCard = (trend: DailyTrend, i: number) => {
     const catStyle = CATEGORY_STYLES[trend.category] || { bg: 'rgba(107,114,128,0.12)', text: '#9ca3af' };
     const isNewsHook = trend.source === 'expert_news_ai';
+    const formatBadge = getFormatBadge(trend);
+    const isExpanded = expandedCard === trend.id;
+    const cardText = trend.metadata?.card_text;
+    const caption = trend.metadata?.caption;
+
     return (
       <motion.div key={trend.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.03, duration: 0.35 }}
-        onClick={() => handleCreate(trend)}
-        className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/25 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col"
+        className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/20 transition-all duration-300 relative overflow-hidden flex flex-col"
         style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
         {/* Top accent bar */}
         <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, ${catStyle.text}40, transparent)` }} />
         
-        <div className="p-5 flex-1 flex flex-col relative">
-          {/* Hover glow */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse at top left, rgba(139,92,246,0.05), transparent 60%)' }} />
-          
-          <div className="relative z-10 flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg"
-                  style={{ color: catStyle.text, backgroundColor: catStyle.bg }}>
-                  {trend.category}
-                </span>
-                {isNewsHook && (
-                  <span className="text-[9px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-md"
-                    style={{ color: '#fbbf24', backgroundColor: 'rgba(245,158,11,0.1)' }}>
-                    🔥 News
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ color: '#c4b5fd' }}>
-                <span className="text-[11px] font-medium">Criar</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
+        <div className="p-5 flex-1 flex flex-col">
+          {/* Badges row */}
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
+              style={{ color: catStyle.text, backgroundColor: catStyle.bg }}>
+              {trend.category}
+            </span>
+            {isNewsHook && (
+              <span className="text-[9px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                style={{ color: '#fbbf24', backgroundColor: 'rgba(245,158,11,0.08)' }}>
+                News
+              </span>
+            )}
+            {formatBadge && (
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-md flex items-center gap-1"
+                style={{ color: formatBadge.color, backgroundColor: formatBadge.bg }}>
+                <LayoutGrid className="w-2.5 h-2.5" />
+                {formatBadge.label}
+              </span>
+            )}
+          </div>
+
+          <h3 className="text-[14px] font-semibold text-white/90 mb-2 leading-snug">{trend.title}</h3>
+          <p className="text-xs text-white/35 leading-relaxed line-clamp-2 mb-3">{trend.description}</p>
+
+          {/* Card text preview */}
+          {cardText && (
+            <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
+              <p className="text-[10px] text-white/20 mb-1 uppercase tracking-wider font-medium">Texto da arte</p>
+              <p className="text-xs text-white/60 leading-relaxed line-clamp-3">{cardText}</p>
             </div>
-            <h3 className="text-[15px] font-semibold text-white/90 mb-2 leading-snug">{trend.title}</h3>
-            <p className="text-xs text-white/35 leading-relaxed line-clamp-3 flex-1">{trend.description}</p>
+          )}
+
+          {/* Caption preview */}
+          {caption && (
+            <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-white/20 uppercase tracking-wider font-medium">Legenda</p>
+                <button onClick={(e) => copyCaption(caption, e)}
+                  className="text-white/20 hover:text-white/50 transition-colors cursor-pointer p-0.5" title="Copiar legenda">
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
+              <p className={`text-[11px] text-white/45 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>{caption}</p>
+              {caption.length > 100 && (
+                <button onClick={(e) => { e.stopPropagation(); setExpandedCard(isExpanded ? null : trend.id); }}
+                  className="text-[10px] text-purple-400/60 hover:text-purple-400 mt-1 cursor-pointer">
+                  {isExpanded ? 'ver menos' : 'ver mais'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Action */}
+          <div className="mt-auto pt-2">
+            <button onClick={() => handleCreate(trend)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer border border-white/[0.06] hover:border-purple-500/30 hover:bg-purple-500/5"
+              style={{ color: '#c4b5fd' }}>
+              <Sparkles className="w-3 h-3" />
+              Criar conteúdo
+            </button>
           </div>
         </div>
       </motion.div>
@@ -664,61 +705,49 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   // === TRENDS DASHBOARD ===
   return (
     <div className="flex-1 px-4 md:px-8 py-6 max-w-5xl mx-auto w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(139,92,246,0.05))' }}>
-            <TrendingUp className="w-5 h-5" style={{ color: '#a78bfa' }} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Trends</h1>
-            <p className="text-xs text-white/30">Ideias de conteúdo para <span className="text-white/50">{config.niche}</span></p>
-          </div>
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-lg font-semibold text-white">Trends</h1>
+          <p className="text-[11px] text-white/25 mt-0.5">
+            {config.niche} · {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Discrete auto-daily indicator */}
+          <div className="flex items-center gap-1.5 mr-1">
+            <Switch checked={autoDaily} onCheckedChange={toggleAutoDaily} disabled={togglingAuto} className="scale-75" />
+            <span className="text-[10px] text-white/20">Auto</span>
+          </div>
           <button onClick={() => { setShowSetup(true); setSetupStep(0); }}
-            className="p-2.5 rounded-xl text-white/25 hover:text-white/50 hover:bg-white/[0.04] transition-colors cursor-pointer" title="Reconfigurar">
+            className="p-2 rounded-xl text-white/20 hover:text-white/40 hover:bg-white/[0.03] transition-colors cursor-pointer" title="Configurar">
             <Settings2 className="w-4 h-4" />
           </button>
           <button onClick={generateTrends} disabled={generating}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-white transition-all cursor-pointer disabled:opacity-50"
             style={{ backgroundColor: '#8B5CF6' }}>
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {generating ? 'Gerando...' : 'Atualizar'}
+            {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {generating ? 'Gerando...' : 'Buscar ideias'}
           </button>
         </div>
       </div>
 
-      {/* Auto-daily toggle */}
-      <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] px-5 py-3.5 mb-5" style={{ backgroundColor: autoDaily ? 'rgba(139,92,246,0.06)' : 'rgba(255,255,255,0.015)' }}>
-        <div className="flex items-center gap-3">
-          <Zap className="w-4 h-4" style={{ color: autoDaily ? '#a78bfa' : 'rgba(255,255,255,0.2)' }} />
-          <div>
-            <p className="text-sm font-medium text-white/80">Atualização automática</p>
-            <p className="text-[11px] text-white/25">Gera novas ideias todos os dias automaticamente</p>
-          </div>
-        </div>
-        <Switch checked={autoDaily} onCheckedChange={toggleAutoDaily} disabled={togglingAuto} />
-      </div>
-
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-5 p-1 rounded-xl w-fit" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+      <div className="flex items-center gap-4 mb-5 border-b border-white/[0.06] pb-px">
         <button onClick={() => setActiveTab('today')}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer"
+          className="text-xs font-medium pb-2.5 transition-all cursor-pointer border-b-2"
           style={{
-            backgroundColor: activeTab === 'today' ? 'rgba(139,92,246,0.15)' : 'transparent',
+            borderColor: activeTab === 'today' ? '#8B5CF6' : 'transparent',
             color: activeTab === 'today' ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
           }}>
-          <Sparkles className="w-3.5 h-3.5" />
           Hoje ({todayTrends.length})
         </button>
         <button onClick={() => { setActiveTab('older'); setOlderPage(0); }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer"
+          className="text-xs font-medium pb-2.5 transition-all cursor-pointer border-b-2"
           style={{
-            backgroundColor: activeTab === 'older' ? 'rgba(139,92,246,0.15)' : 'transparent',
+            borderColor: activeTab === 'older' ? '#8B5CF6' : 'transparent',
             color: activeTab === 'older' ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
           }}>
-          <Clock className="w-3.5 h-3.5" />
           Anteriores ({olderTrends.length})
         </button>
       </div>
@@ -726,30 +755,18 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
       {/* Active Tab Content */}
       {activeTab === 'today' ? (
         <>
-          {/* Date */}
-          {todayTrends.length > 0 && (
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-3.5 h-3.5 text-white/20" />
-              <span className="text-xs text-white/25">
-                {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
-              <span className="text-white/10">·</span>
-              <span className="text-xs text-white/25">{todayTrends.length} ideias</span>
-            </div>
-          )}
-
           {todayTrends.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
-                <Sparkles className="w-7 h-7" style={{ color: 'rgba(167,139,250,0.5)' }} />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(139,92,246,0.08)' }}>
+                <Sparkles className="w-6 h-6" style={{ color: 'rgba(167,139,250,0.4)' }} />
               </div>
-              <h3 className="text-base font-semibold text-white/70 mb-2">Sem trends para hoje</h3>
-              <p className="text-sm text-white/30 max-w-sm mb-5">Clique em Atualizar para gerar ideias baseadas nas notícias de hoje.</p>
+              <h3 className="text-sm font-medium text-white/60 mb-1.5">Sem ideias para hoje</h3>
+              <p className="text-xs text-white/25 max-w-xs mb-5">Clique em "Buscar ideias" para gerar sugestões baseadas nas notícias de hoje.</p>
               <button onClick={generateTrends} disabled={generating}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white cursor-pointer disabled:opacity-50"
                 style={{ backgroundColor: '#8B5CF6' }}>
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {generating ? 'Gerando...' : 'Gerar Trends'}
+                {generating ? 'Gerando...' : 'Buscar ideias'}
               </button>
             </div>
           ) : (
@@ -759,8 +776,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           )}
 
           {todayTrends.length > ITEMS_PER_PAGE && (
-            <p className="text-xs text-white/20 text-center mt-4">
-              +{todayTrends.length - ITEMS_PER_PAGE} ideias nas "Anteriores"
+            <p className="text-xs text-white/15 text-center mt-4">
+              +{todayTrends.length - ITEMS_PER_PAGE} ideias em "Anteriores"
             </p>
           )}
         </>
@@ -768,8 +785,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         <>
           {olderTrends.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Clock className="w-10 h-10 text-white/15 mb-3" />
-              <p className="text-sm text-white/30">Nenhuma ideia anterior ainda.</p>
+              <Clock className="w-8 h-8 text-white/10 mb-3" />
+              <p className="text-xs text-white/25">Nenhuma ideia anterior.</p>
             </div>
           ) : (
             <>
@@ -777,7 +794,6 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
                 {displayedOlder.map((trend, i) => renderCard(trend, i))}
               </div>
 
-              {/* Pagination */}
               {olderPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
                   <button onClick={() => setOlderPage(p => Math.max(0, p - 1))} disabled={olderPage === 0}

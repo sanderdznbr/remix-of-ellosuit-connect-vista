@@ -32,6 +32,9 @@ export interface PlanLimits {
   // Prompts
   maxSavedPrompts: number; // -1 = unlimited
 
+  // Trends
+  monthlyTrendCredits: number;
+
   // Templates
   allowPremiumTemplates: boolean;
 

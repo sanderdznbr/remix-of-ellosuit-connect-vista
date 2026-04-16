@@ -120,7 +120,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
-  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Instagram,
+  Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Redo2, Instagram,
   Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move
 } from 'lucide-react';
 import html2canvas from 'html2canvas';

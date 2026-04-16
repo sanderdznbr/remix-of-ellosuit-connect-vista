@@ -111,6 +111,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const [uploadingLogo, setUploadingLogo] = useState<'light' | 'dark' | null>(null);
   const [autoDaily, setAutoDaily] = useState(false);
   const [togglingAuto, setTogglingAuto] = useState(false);
+  const [activeTab, setActiveTab] = useState<'today' | 'older'>('today');
+  const [olderPage, setOlderPage] = useState(0);
   const nicheRef = useRef<HTMLDivElement>(null);
 
   // Close niche dropdown on outside click

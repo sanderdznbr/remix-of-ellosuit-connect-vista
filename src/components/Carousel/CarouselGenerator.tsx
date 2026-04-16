@@ -524,6 +524,7 @@ const CarouselGenerator: React.FC = () => {
   const [repositioningLogo, setRepositioningLogo] = useState(false);
   const [showFontChangePanel, setShowFontChangePanel] = useState(false);
   const [changingFont, setChangingFont] = useState(false);
+  const [upscaling, setUpscaling] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [showCaptionConfigDialog, setShowCaptionConfigDialog] = useState(false);

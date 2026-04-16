@@ -7287,12 +7287,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   // Auto-set style and trigger generation via useEffect
                   if (trendData.styleId) {
                     setLoadedMarketplaceStyleId(trendData.styleId);
-                    supabase.from('marketplace_styles').select('*')
+                    supabase.from('marketplace_styles').select('id, name, preview_images, style_config, strict_instructions')
                       .eq('id', trendData.styleId).single()
-                      .then(({ data }) => {
-                        if (data) {
-                          setActiveMarketplaceStyle(data);
-                          activeMarketplaceStyleRef.current = data;
+                      .then(({ data: styleData }) => {
+                        if (styleData?.style_config) {
+                          const config = styleData.style_config as any;
+                          config.id = styleData.id;
+                          config.name = styleData.name;
+                          config._previewImages = styleData.preview_images;
+                          config._strictInstructions = (styleData as any).strict_instructions || null;
+                          setActiveMarketplaceStyle(config);
+                          activeMarketplaceStyleRef.current = config;
                         }
                         setPendingTrendGeneration(true);
                       });

@@ -39,6 +39,7 @@ interface DailyTrend {
     format?: string;
     card_text?: string;
     caption?: string;
+    image_url?: string;
   };
 }
 

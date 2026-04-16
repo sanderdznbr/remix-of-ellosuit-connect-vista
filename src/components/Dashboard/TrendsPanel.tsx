@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
+import TrendCreateDialog from './TrendCreateDialog';
 
 interface TrendConfig {
   id?: string;

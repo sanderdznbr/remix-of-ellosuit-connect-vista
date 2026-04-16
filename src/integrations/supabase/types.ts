@@ -6388,6 +6388,7 @@ export type Database = {
       }
       trend_configs: {
         Row: {
+          auto_daily: boolean
           brand_colors: string[] | null
           brand_tone: string | null
           company_description: string | null
@@ -6410,6 +6411,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_daily?: boolean
           brand_colors?: string[] | null
           brand_tone?: string | null
           company_description?: string | null
@@ -6432,6 +6434,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_daily?: boolean
           brand_colors?: string[] | null
           brand_tone?: string | null
           company_description?: string | null

@@ -4545,8 +4545,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             }
           }
           
-          // Include logo as reference image for the AI to render
-          if (logoUrl && logoUrl.startsWith('http')) {
+          // Include logo as reference image for the AI to render (ONLY for full-bleed styles where AI renders the logo)
+          if (logoUrl && logoUrl.startsWith('http') && isFullBleedMkt) {
             capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
           }
 
@@ -4882,14 +4882,16 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for ALL carousel cards ===
-      if (!useRealEstateBlend && logoUrl && updatedCards.length > 0) {
+      // SKIP Canvas overlay for full-bleed styles — AI already renders the logo in the image
+      const isFullBleedForLogo = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
+      if (!useRealEstateBlend && logoUrl && updatedCards.length > 0 && !isFullBleedForLogo) {
         // Save raw (pre-logo) images for repositioning later
         for (let i = 0; i < updatedCards.length; i++) {
           if (updatedCards[i]?.imageUrl) {
             updatedCards[i] = { ...updatedCards[i], imageUrlRaw: updatedCards[i].imageUrl };
           }
         }
-        console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards...');
+        console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards (non-fullbleed)...');
         const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
           const img = document.createElement('img') as HTMLImageElement;
           if (src.startsWith('http')) img.crossOrigin = 'anonymous';
@@ -4924,6 +4926,14 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         } catch (logoErr) {
           console.warn('[LOGO_OVERLAY] Logo load failed:', logoErr);
         }
+      } else if (isFullBleedForLogo && logoUrl && updatedCards.length > 0) {
+        // For full-bleed: just save raw images for repositioning, logo is already in the AI image
+        for (let i = 0; i < updatedCards.length; i++) {
+          if (updatedCards[i]?.imageUrl) {
+            updatedCards[i] = { ...updatedCards[i], imageUrlRaw: updatedCards[i].imageUrl };
+          }
+        }
+        console.log('[LOGO_OVERLAY] Full-bleed style: logo rendered by AI, skipping Canvas overlay');
       }
 
       const finalData = { ...data.data, cards: updatedCards };

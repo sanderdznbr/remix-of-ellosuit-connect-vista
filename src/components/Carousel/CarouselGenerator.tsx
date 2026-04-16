@@ -121,7 +121,7 @@ import {
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
   Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Instagram,
-  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3
+  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -154,6 +154,7 @@ import StepExtremeBehanceRefs from './wizard/StepExtremeBehanceRefs';
 import StepExtremeFonts from './wizard/StepExtremeFonts';
 import StepExtremeSource, { ExtremeSourceMode } from './wizard/StepExtremeSource';
 import StepStyle, { STYLE_PRESETS, StylePreset, LogoPosition } from './wizard/StepStyle';
+import LogoPositionPicker from './wizard/LogoPositionPicker';
 import StepProperty, { PropertyData, createEmptyProperty, buildPropertyPromptContext } from './wizard/StepProperty';
 import StepPropertyPhotos from './wizard/StepPropertyPhotos';
 import StepPropertyCrop from './wizard/StepPropertyCrop';
@@ -238,6 +239,7 @@ interface CarouselCard {
   bodyTop?: string;
   bodyBottom?: string;
   imageUrl?: string;
+  imageUrlRaw?: string; // Pre-logo image for repositioning
   imagePrompt?: string;
   generatedPrompt?: string;
   searchTerms?: string[];
@@ -517,6 +519,8 @@ const CarouselGenerator: React.FC = () => {
   const [recreateVisualIdea, setRecreateVisualIdea] = useState('');
   const [pendingAddCardStyle, setPendingAddCardStyle] = useState<any>(null);
   const [showCaptionPanel, setShowCaptionPanel] = useState(false);
+  const [showLogoRepositionPanel, setShowLogoRepositionPanel] = useState(false);
+  const [repositioningLogo, setRepositioningLogo] = useState(false);
   const [postCaption, setPostCaption] = useState('');
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [showCaptionConfigDialog, setShowCaptionConfigDialog] = useState(false);
@@ -1930,6 +1934,85 @@ The image must look like it was shot by a professional photographer or designed 
     }
   };
 
+  // ===== REPOSITION LOGO =====
+  const repositionLogo = useCallback(async (newPosition: LogoPosition) => {
+    if (!carouselData || !logoUrl || repositioningLogo) return;
+    const hasRawImages = carouselData.cards.some(c => c.imageUrlRaw);
+    if (!hasRawImages) {
+      toast({ title: 'Imagens originais não disponíveis para reposicionar.' });
+      return;
+    }
+    setRepositioningLogo(true);
+    setLogoPosition(newPosition);
+    try {
+      const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+        const img = document.createElement('img') as HTMLImageElement;
+        if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+
+      const logoB64 = logoUrl.startsWith('data:') ? logoUrl : await (async () => {
+        const r = await fetch(logoUrl); const b = await r.blob();
+        return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+      })();
+      const darkLogoB64 = logoDarkUrl ? (logoDarkUrl.startsWith('data:') ? logoDarkUrl : await (async () => {
+        const r = await fetch(logoDarkUrl); const b = await r.blob();
+        return new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onloadend = () => res(rd.result as string); rd.onerror = rej; rd.readAsDataURL(b); });
+      })()) : null;
+
+      const newCards = [...carouselData.cards];
+      for (let i = 0; i < newCards.length; i++) {
+        const rawUrl = newCards[i]?.imageUrlRaw;
+        if (!rawUrl) continue;
+        try {
+          const baseImg = await loadImg(rawUrl);
+          const W = baseImg.width || 1080;
+          const H = baseImg.height || 1350;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(baseImg, 0, 0, W, H);
+
+          // Smart logo selection based on background luminance
+          const probeBounds = getLogoOverlayBounds(W, H, 220, 90, newPosition);
+          const sampleX = Math.round(probeBounds.x + probeBounds.width / 2);
+          const sampleY = Math.round(probeBounds.y + probeBounds.height / 2);
+          const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+          const lum = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255;
+          const bgIsDark = lum < 0.45;
+
+          const chosenB64 = bgIsDark ? logoB64 : (darkLogoB64 || logoB64);
+          const needsInvert = !bgIsDark && !darkLogoB64;
+
+          const logoImg = await loadImg(chosenB64);
+          const bounds = getLogoOverlayBounds(W, H, logoImg.width, logoImg.height, newPosition);
+
+          ctx.save();
+          if (needsInvert) {
+            ctx.filter = 'brightness(0)';
+          } else if (bgIsDark && !darkLogoB64) {
+            ctx.filter = 'brightness(0) invert(1)';
+          }
+          ctx.drawImage(logoImg, bounds.x, bounds.y, bounds.width, bounds.height);
+          ctx.restore();
+
+          newCards[i] = { ...newCards[i], imageUrl: canvas.toDataURL('image/jpeg', 0.92) };
+        } catch (e) {
+          console.warn('[LOGO_REPOSITION] Card', i, 'failed:', e);
+        }
+      }
+      setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+      toast({ title: 'Logo reposicionada!' });
+    } catch (err) {
+      console.error('[LOGO_REPOSITION] Failed:', err);
+      toast({ title: 'Erro ao reposicionar logo', variant: 'destructive' });
+    } finally {
+      setRepositioningLogo(false);
+    }
+  }, [carouselData, logoUrl, logoDarkUrl, repositioningLogo, getLogoOverlayBounds, toast]);
+
 
   // ===== SAVE COVER FROM AI-GENERATED IMAGE (with html2canvas fallback) =====
   const captureCoverImage = async (carouselId: string, companyId: string, explicitData?: CarouselData | null, retryCount = 0) => {
@@ -3089,6 +3172,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         }
       }
 
+      // Save raw (pre-logo) image for repositioning later
+      const rawImageUrl = finalImageUrl;
+
       // === NON-REAL-ESTATE: Programmatic logo overlay via Canvas ===
       if (!useRealEstateBlend && logoUrl && finalImageUrl) {
         try {
@@ -3157,6 +3243,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         title: topic.trim(),
         subtitle: manualPostText.trim() || undefined,
         imageUrl: finalImageUrl,
+        imageUrlRaw: logoUrl ? rawImageUrl : undefined,
         isAiImage: true,
         layout: 'dark',
       };
@@ -4573,6 +4660,12 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for ALL carousel cards ===
       if (!useRealEstateBlend && logoUrl && updatedCards.length > 0) {
+        // Save raw (pre-logo) images for repositioning later
+        for (let i = 0; i < updatedCards.length; i++) {
+          if (updatedCards[i]?.imageUrl) {
+            updatedCards[i] = { ...updatedCards[i], imageUrlRaw: updatedCards[i].imageUrl };
+          }
+        }
         console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards...');
         const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
           const img = document.createElement('img') as HTMLImageElement;
@@ -4591,7 +4684,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           const lp = logoPosition || 'top-left';
 
           for (let i = 0; i < updatedCards.length; i++) {
-            const cardImgUrl = updatedCards[i]?.imageUrl;
+            const cardImgUrl = updatedCards[i]?.imageUrlRaw || updatedCards[i]?.imageUrl;
             if (!cardImgUrl) continue;
             try {
               const canvas = document.createElement('canvas');
@@ -9062,6 +9155,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <FileText className="h-4 w-4 text-purple-400" /> Gerar Legenda
                         </button>
 
+                        {/* Reposicionar Logo */}
+                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                          <>
+                            <button
+                              onClick={() => setShowLogoRepositionPanel(prev => !prev)}
+                              disabled={repositioningLogo}
+                              className="flex items-center gap-3 px-3 py-3 rounded-xl text-[13px] text-teal-300 hover:text-teal-200 hover:bg-white/[0.06] transition-all disabled:opacity-30 w-full">
+                              {repositioningLogo ? <Loader2 className="h-4 w-4 text-teal-400 animate-spin" /> : <Move className="h-4 w-4 text-teal-400" />} Reposicionar Logo
+                            </button>
+                            {showLogoRepositionPanel && (
+                              <div className="px-3 pb-2">
+                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                              </div>
+                            )}
+                          </>
+                        )}
+
                         <div className="h-px bg-white/[0.06] my-1" />
 
                         {/* Regenerar Tudo */}
@@ -9220,6 +9330,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         Mudar estilo
                       </button>
                     </div>
+
+                    {/* Logo reposition */}
+                    {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                      <div className="px-3 py-1">
+                        <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
+                          disabled={repositioningLogo}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.06] transition-all disabled:opacity-40">
+                          {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4" />}
+                          Reposicionar logo
+                        </button>
+                        {showLogoRepositionPanel && (
+                          <div className="px-2 pb-3 pt-1">
+                            <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mx-3 h-px bg-white/[0.05]" />
 
@@ -9556,6 +9683,21 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
 
                         {/* Divider */}
+                        {/* Logo reposition */}
+                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                          <button onClick={() => { setShowMobileToolsSheet(false); setShowLogoRepositionPanel(true); }}
+                            disabled={repositioningLogo}
+                            className="w-full flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/[0.04] active:bg-white/[0.06] transition-all text-left disabled:opacity-40 group">
+                            <div className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(45,212,191,0.12), rgba(45,212,191,0.04))' }}>
+                              {repositioningLogo ? <Loader2 className="h-5 w-5 text-teal-400 animate-spin" /> : <Move className="h-5 w-5 text-teal-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-semibold text-white/90 block group-hover:text-white transition-colors">Reposicionar logo</span>
+                              <span className="text-[11px] text-white/25 leading-tight">Mude o canto onde a logomarca aparece</span>
+                            </div>
+                          </button>
+                        )}
+
                         <div className="mx-2 my-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)' }} />
 
                         {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Palette, Image as ImageIcon, Check, ChevronRight, ChevronLeft, Upload, Edit3, LayoutGrid, FileText, Eye, Camera, Plus, Trash2, MessageSquare, Search, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { X, Sparkles, Loader2, Palette, Image as ImageIcon, Check, ChevronRight, ChevronLeft, Upload, Edit3, LayoutGrid, FileText, Eye, Camera, Plus, Trash2, MessageSquare, Search, ThumbsUp, ThumbsDown, UserRound } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Switch } from '@/components/ui/switch';
@@ -143,6 +143,11 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   const [contextImages, setContextImages] = useState<string[]>([]);
   const [contextDetails, setContextDetails] = useState('');
   const [uploadingContext, setUploadingContext] = useState(false);
+  
+  // Face photo upload (separate from context)
+  const [faceImages, setFaceImages] = useState<string[]>([]);
+  const [uploadingFace, setUploadingFace] = useState(false);
+  const faceFileInputRef = useRef<HTMLInputElement>(null);
 
   // Logo upload
   const [logoUrl, setLogoUrl] = useState('');
@@ -164,6 +169,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
     setContextImages([]);
     setContextDetails('');
     setUseSuggestedPhoto(null);
+    setFaceImages([]);
     loadData();
   }, [open, user]);
 
@@ -271,6 +277,34 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
     setContextImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleFaceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !user) return;
+    setUploadingFace(true);
+    try {
+      const newUrls: string[] = [];
+      for (const file of Array.from(files).slice(0, 3 - faceImages.length)) {
+        const ext = file.name.split('.').pop();
+        const path = `${user.id}/trend-face-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+        const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+        newUrls.push(publicUrl);
+      }
+      setFaceImages(prev => [...prev, ...newUrls]);
+      if (newUrls.length > 0) toast.success(`Foto de rosto adicionada`);
+    } catch (err: any) {
+      toast.error('Erro no upload: ' + (err?.message || ''));
+    } finally {
+      setUploadingFace(false);
+      if (faceFileInputRef.current) faceFileInputRef.current.value = '';
+    }
+  };
+
+  const removeFaceImage = (index: number) => {
+    setFaceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const updateSlideText = (index: number, value: string) => {
     setEditedCardTexts(prev => {
       const copy = [...prev];
@@ -297,6 +331,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
       caption: editedCaption,
       contextImages: finalContextImages.length > 0 ? finalContextImages : undefined,
       contextDetails: contextDetails.trim() || undefined,
+      faceImages: faceImages.length > 0 ? faceImages : undefined,
     };
 
     onConfirm(finalTrend, selectedStyle, useBrandColors);
@@ -547,6 +582,45 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       )}
                     </div>
                     <input ref={contextFileInputRef} type="file" accept="image/*" multiple onChange={handleContextImageUpload} className="hidden" />
+                  </div>
+
+                  {/* Face photo upload - dedicated section */}
+                  <div>
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+                      <UserRound className="w-3 h-3" />
+                      Foto de rosto (para aparecer no post)
+                    </label>
+                    <p className="text-[10px] text-white/20 mb-2">
+                      Envie uma foto do seu rosto para a IA criar o post com a sua imagem
+                    </p>
+                    
+                    <div className="flex gap-2">
+                      {faceImages.map((url, idx) => (
+                        <div key={idx} className="relative rounded-xl overflow-hidden border border-purple-500/20 w-16 h-16 group">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button onClick={() => removeFaceImage(idx)}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <Trash2 className="w-2.5 h-2.5 text-red-400" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {faceImages.length < 3 && (
+                        <button onClick={() => faceFileInputRef.current?.click()} disabled={uploadingFace}
+                          className="rounded-xl border-2 border-dashed border-purple-500/15 w-16 h-16 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-purple-500/30 transition-colors"
+                          style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
+                          {uploadingFace ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-purple-400/30" />
+                          ) : (
+                            <>
+                              <UserRound className="w-4 h-4 text-purple-400/25" />
+                              <span className="text-[7px] text-purple-400/25 font-medium">Rosto</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={faceFileInputRef} type="file" accept="image/*" onChange={handleFaceImageUpload} className="hidden" />
                   </div>
 
                   {/* Context details textarea */}

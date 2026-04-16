@@ -148,7 +148,7 @@ Sua missão: gerar 9 ideias de conteúdo PRONTAS PARA USAR, cada uma com:
 - Título curto e impactante
 - Descrição persuasiva explicando o ângulo
 - FORMATO RECOMENDADO: "carrossel" (múltiplos slides) ou "estatico" (post único)
-- TEXTO DA ARTE: o texto exato que vai na imagem/card (máx 80 chars para estático, máx 40 chars por slide para carrossel)
+- TEXTO DA ARTE: Para ESTÁTICO = texto único (máx 80 chars). Para CARROSSEL = array de textos, um por slide (5-7 slides, máx 40 chars cada)
 - LEGENDA PRONTA: a legenda completa do Instagram (máx 500 chars, sem hashtags, com CTA)
 
 📌 DATA DE HOJE: ${todayStr}
@@ -181,7 +181,7 @@ REGRAS
 1. 5 das 9 ideias DEVEM ser cross-pollination: notícia geral do dia → conexão criativa com o nicho
 2. As outras 4: tendências diretas, dicas, cases ou educativo do nicho
 3. Para cada ideia, decida se funciona melhor como CARROSSEL (conteúdo rico, passo a passo, storytelling) ou ESTÁTICO (frase de impacto, provocação, dica rápida)
-4. O "card_text" é o que vai ESCRITO na arte — deve ser curto, impactante e visual
+4. Para ESTÁTICO: "card_text" = texto único. Para CARROSSEL: "card_texts" = array de 5-7 textos (um por slide)
 5. A "caption" é a legenda do Instagram — deve ter gancho, desenvolvimento e CTA
 6. Tom: ${config.brand_tone || "profissional"}
 
@@ -220,7 +220,8 @@ CATEGORIAS:
                       relevance_score: { type: "number", description: "0-100 relevância para o nicho" },
                       news_hook: { type: "string", description: "A notícia/trend que inspirou, ou vazio" },
                       format: { type: "string", enum: ["carrossel", "estatico"], description: "Formato recomendado" },
-                      card_text: { type: "string", description: "Texto que vai na arte/imagem" },
+                      card_text: { type: "string", description: "Texto da arte para post ESTÁTICO (máx 80 chars)" },
+                      card_texts: { type: "array", items: { type: "string" }, description: "Array de textos dos slides para CARROSSEL (5-7 items, máx 40 chars cada)" },
                       caption: { type: "string", description: "Legenda completa do Instagram, máx 500 chars, sem hashtags" },
                       news_source_index: { type: "number", description: "Index da fonte de notícia que tem imagem disponível (do bloco IMAGENS DISPONÍVEIS), ou -1 se não tem" },
                     },
@@ -290,6 +291,7 @@ CATEGORIAS:
           news_hook: t.news_hook || null,
           format: t.format || "estatico",
           card_text: t.card_text || "",
+          card_texts: Array.isArray(t.card_texts) ? t.card_texts : [],
           caption: t.caption || "",
           image_url: imageUrl,
           sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },

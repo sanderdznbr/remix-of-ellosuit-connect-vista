@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { extractColorsFromImage } from '@/utils/extractColorsFromImage';
+import TrendCreateDialog from './TrendCreateDialog';
 
 interface TrendConfig {
   id?: string;
@@ -38,6 +39,7 @@ interface DailyTrend {
     news_hook?: string;
     format?: string;
     card_text?: string;
+    card_texts?: string[];
     caption?: string;
     image_url?: string;
   };
@@ -47,7 +49,13 @@ export interface TrendData {
   topic: string;
   format: string;
   cardText: string;
+  cardTexts: string[];
   caption: string;
+  styleId?: string;
+  useBrandColors?: boolean;
+  logoUrl?: string;
+  logoDarkUrl?: string;
+  brandColors?: string[];
 }
 
 interface TrendsPanelProps {
@@ -128,6 +136,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const [activeTab, setActiveTab] = useState<'today' | 'older'>('today');
   const [olderPage, setOlderPage] = useState(0);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [dialogTrend, setDialogTrend] = useState<TrendData | null>(null);
   const nicheRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -280,14 +289,29 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   };
 
   const handleCreate = (trend: DailyTrend) => {
+    const trendData: TrendData = {
+      topic: trend.title + ': ' + trend.description,
+      format: trend.metadata?.format || 'estatico',
+      cardText: trend.metadata?.card_text || '',
+      cardTexts: trend.metadata?.card_texts || [],
+      caption: trend.metadata?.caption || '',
+    };
+    setDialogTrend(trendData);
+  };
+
+  const handleDialogConfirm = (td: TrendData, styleId: string, useBrandColors: boolean) => {
+    setDialogTrend(null);
     if (onCreateFromTrend) {
-      const trendData: TrendData = {
-        topic: trend.title + ': ' + trend.description,
-        format: trend.metadata?.format || 'estatico',
-        cardText: trend.metadata?.card_text || '',
-        caption: trend.metadata?.caption || '',
-      };
-      onCreateFromTrend(trendData.topic, trendData);
+      // Pass style and brand info along with trend data
+      const enrichedTrend: TrendData = {
+        ...td,
+        styleId,
+        useBrandColors,
+        logoUrl: config.logo_url || '',
+        logoDarkUrl: config.logo_dark_url || '',
+        brandColors: useBrandColors ? config.brand_colors : [],
+      } as any;
+      onCreateFromTrend(td.topic, enrichedTrend);
     }
   };
 
@@ -641,6 +665,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     const formatBadge = getFormatBadge(trend);
     const isExpanded = expandedCard === trend.id;
     const cardText = trend.metadata?.card_text;
+    const cardTexts = trend.metadata?.card_texts;
+    const isCarousel = trend.metadata?.format === 'carrossel';
     const caption = trend.metadata?.caption;
     const imageUrl = trend.metadata?.image_url;
 
@@ -688,12 +714,24 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           <p className="text-xs text-white/35 leading-relaxed line-clamp-2 mb-3">{trend.description}</p>
 
           {/* Card text preview */}
-          {cardText && (
+          {isCarousel && cardTexts && cardTexts.length > 0 ? (
+            <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
+              <p className="text-[10px] text-white/20 mb-1.5 uppercase tracking-wider font-medium">Slides ({cardTexts.length})</p>
+              <div className="space-y-1">
+                {cardTexts.map((ct, idx) => (
+                  <div key={idx} className="flex items-start gap-1.5">
+                    <span className="text-[9px] text-purple-400/40 font-mono mt-px shrink-0">{idx + 1}.</span>
+                    <p className="text-[11px] text-white/55 leading-snug">{ct}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : cardText ? (
             <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
               <p className="text-[10px] text-white/20 mb-1 uppercase tracking-wider font-medium">Texto da arte</p>
               <p className="text-xs text-white/60 leading-relaxed line-clamp-3">{cardText}</p>
             </div>
-          )}
+          ) : null}
 
           {/* Caption preview */}
           {caption && (
@@ -838,6 +876,12 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
           )}
         </>
       )}
+      <TrendCreateDialog
+        open={!!dialogTrend}
+        onClose={() => setDialogTrend(null)}
+        trendData={dialogTrend}
+        onConfirm={handleDialogConfirm}
+      />
     </div>
   );
 };

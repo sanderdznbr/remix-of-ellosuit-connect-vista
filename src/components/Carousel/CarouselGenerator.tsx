@@ -548,6 +548,7 @@ const CarouselGenerator: React.FC = () => {
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
   const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; cardTexts?: string[]; caption: string; styleId?: string; useBrandColors?: boolean; logoUrl?: string; logoDarkUrl?: string; brandColors?: string[] } | null>(null);
+  const [pendingTrendGeneration, setPendingTrendGeneration] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[]; sources?: { title: string; summary: string; angle: string }[] } | null>(null);
   const [selectedWebSourceIndex, setSelectedWebSourceIndex] = useState<number | null>(null);
   const [extractingUrl, setExtractingUrl] = useState(false);
@@ -1152,6 +1153,7 @@ const CarouselGenerator: React.FC = () => {
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setFromTrendData(null);
+    setPendingTrendGeneration(false);
     setWebSearchResult(null);
     setSelectedWebSourceIndex(null);
     setExtractingUrl(false);
@@ -1561,6 +1563,15 @@ const CarouselGenerator: React.FC = () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
   }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig]);
+
+  // Auto-trigger generation when coming from Trends (after state is flushed)
+  useEffect(() => {
+    if (pendingTrendGeneration && topic.trim()) {
+      setPendingTrendGeneration(false);
+      setTransitionToGenerate(true);
+      setTimeout(() => generateContent(), 1200);
+    }
+  }, [pendingTrendGeneration, topic]);
 
 
   // Export dialog is now a centered modal, no outside-click handler needed
@@ -7262,7 +7273,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     setImageCardCount(1);
                   }
 
-                  // Auto-set style and trigger generation
+                  // Auto-set style and trigger generation via useEffect
                   if (trendData.styleId) {
                     setLoadedMarketplaceStyleId(trendData.styleId);
                     supabase.from('marketplace_styles').select('*')
@@ -7272,18 +7283,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setActiveMarketplaceStyle(data);
                           activeMarketplaceStyleRef.current = data;
                         }
-                        // Auto-trigger generation after style is loaded
-                        setTimeout(() => {
-                          setTransitionToGenerate(true);
-                          setTimeout(() => generateContent(), 1200);
-                        }, 300);
+                        setPendingTrendGeneration(true);
                       });
                   } else {
-                    // No style, still auto-generate
-                    setTimeout(() => {
-                      setTransitionToGenerate(true);
-                      setTimeout(() => generateContent(), 1200);
-                    }, 300);
+                    setPendingTrendGeneration(true);
                   }
                 }
               }}

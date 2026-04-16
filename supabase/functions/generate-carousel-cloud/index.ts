@@ -530,7 +530,10 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
       } else {
         parts.push('PROIBIDO RENDERIZAR LOGOMARCA: NÃO renderize NENHUM nome de marca, logotipo, logo ou texto de branding na imagem. A logomarca será sobreposta automaticamente pelo sistema via Canvas. Deixe a área do logo COMPLETAMENTE LIMPA.');
       }
-      parts.push('QUALIDADE ANTI-IA: Use paleta de cores RESTRITA e COESA (3-4 cores máx). Tipografia com HIERARQUIA CLARA (título bold grande + corpo leve). ESPAÇAMENTO GENEROSO entre elementos. ALINHAMENTO PRECISO em grid editorial. Cores REALISTAS sem saturação exagerada. Iluminação DIRECIONAL com sombras reais. Textura NATURAL com grão sutil. Composição ASSIMÉTRICA intencional. O post deve parecer parte de um feed de marca premium.');
+      // CONSISTENCY ACROSS CAROUSEL — critical for uniform look
+      parts.push(`CONSISTÊNCIA OBRIGATÓRIA DO CARROSSEL (card ${i + 1}/${cards.length}): Este é um SLIDE de um carrossel com ${cards.length} cards. TODOS os cards DEVEM usar EXATAMENTE a mesma fonte tipográfica, mesma paleta de cores, mesmo estilo de layout e mesmos elementos decorativos. O resultado deve parecer que TODOS os slides foram criados no MESMO arquivo de Photoshop. Se a referência usa Montserrat Black em caixa alta para títulos, TODOS os cards usam Montserrat Black em caixa alta. Mesma cor de fundo, mesmos gradientes, mesmos estilos de caixa de texto. ZERO variação tipográfica entre slides.`);
+      parts.push('MARGENS E SAFE AREA: Reserve no mínimo 10% de margem em TODOS os lados. Nenhum texto, elemento ou objeto importante pode tocar ou chegar perto das bordas. Cantos devem ter respiro generoso. Texto centralizado com padding interno consistente.');
+      parts.push('QUALIDADE ANTI-IA: Paleta de cores RESTRITA e COESA (3-4 cores máx). Tipografia com HIERARQUIA CLARA (título bold grande + corpo leve). ESPAÇAMENTO GENEROSO entre elementos. ALINHAMENTO PRECISO em grid editorial. Cores REALISTAS sem saturação exagerada. Composição ASSIMÉTRICA intencional. O post deve parecer parte de um feed de marca premium.');
 
       if (isCover) {
         parts.push(`CAPA (card 1/${cards.length}). Título: "${card.title || cleanTopic}".`);
@@ -552,29 +555,35 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
       }
       // Inject product/screenshot instructions when product images are provided
       if (hasProductImages && isAppScreenshot) {
-        // Randomize mockup presentation for variety across cards
+        // Randomize mockup using hash of card index + topic for true variety
         const mobileVariations = [
-          'iPhone 15 Pro Max segurado elegantemente por uma mão feminina com unhas pintadas, ângulo 30° inclinado para a esquerda',
+          'iPhone 15 Pro Max segurado elegantemente por uma mão, ângulo 30° inclinado',
           'iPhone 16 Pro flutuando em ângulo dinâmico 45° com reflexos e sombra dramática, sem mãos',
-          'iPhone 15 Pro em perspectiva isométrica 3D sobre uma superfície de mármore escuro com iluminação neon roxa',
-          'iPhone 16 segurado por uma mão masculina casual, visto de frente levemente inclinado para a direita',
-          'Dois iPhones flutuando em ângulos complementares com efeito parallax e partículas de luz',
+          'iPhone 15 Pro em perspectiva isométrica 3D com iluminação neon',
+          'iPhone 16 segurado por uma mão casual, visto de frente levemente inclinado',
           'iPhone 15 Pro Max em ângulo frontal com leve rotação 3D, flutuando sobre fundo com bokeh',
+          'Dois iPhones em ângulos complementares com parallax e partículas de luz',
+          'iPhone 16 Pro em ângulo lateral dramático com profundidade de campo',
+          'iPhone 15 Pro visto de cima em ângulo 60° sobre superfície minimalista',
         ];
         const webVariations = [
-          'MacBook Pro aberto em ângulo 3/4 sobre uma mesa de madeira escura com iluminação ambiente quente',
-          'iMac 27" em perspectiva frontal levemente inclinada com reflexo sutil na tela',
-          'MacBook Air flutuando em ângulo isométrico com sombra suave e elementos decorativos ao redor',
-          'MacBook Pro visto de cima em ângulo 60° sobre uma mesa minimalista branca',
-          'Monitor ultrawide em setup gaming/profissional com iluminação RGB ambiente',
+          'MacBook Pro aberto em ângulo 3/4 sobre mesa de madeira escura com iluminação quente',
+          'iMac 27" em perspectiva frontal com reflexo sutil na tela',
+          'MacBook Air flutuando em ângulo isométrico com sombra suave',
+          'MacBook Pro visto de cima em ângulo 60° sobre mesa minimalista branca',
+          'Monitor ultrawide em setup profissional com iluminação ambiente',
           'MacBook Pro em perspectiva lateral dramática com profundidade de campo',
+          'MacBook Air em ângulo 3/4 sobre mesa de mármore com plantas decorativas',
+          'iMac com teclado e trackpad em composição editorial minimalista',
         ];
         const tabletVariations = [
-          'iPad Pro segurado por duas mãos em modo paisagem com ângulo natural de uso',
+          'iPad Pro segurado por duas mãos em modo paisagem',
           'iPad Air flutuando em ângulo 3D com Apple Pencil ao lado',
-          'iPad Pro em modo retrato apoiado no Magic Keyboard com iluminação lateral',
-          'iPad mini segurado por uma mão em ângulo casual, como se o usuário mostrasse a tela',
-          'iPad Pro em perspectiva isométrica flutuando com sombra longa dramática',
+          'iPad Pro em modo retrato apoiado no Magic Keyboard',
+          'iPad mini segurado por uma mão em ângulo casual',
+          'iPad Pro em perspectiva isométrica flutuando com sombra longa',
+          'iPad Air em ângulo lateral sobre mesa de madeira clara',
+          'iPad Pro em modo paisagem com stylus, vista de cima em 45°',
         ];
         const variationMap: Record<string, string[]> = {
           mobile: mobileVariations,
@@ -582,13 +591,16 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
           tablet: tabletVariations,
         };
         const variations = variationMap[screenshotDeviceType] || mobileVariations;
-        const variation = variations[i % variations.length];
+        // Use a hash-like approach to avoid sequential repetition
+        const variationIndex = (i * 3 + Math.floor(i / 2)) % variations.length;
+        const variation = variations[variationIndex];
         parts.push(`OBRIGATÓRIO — MOCKUP COM SCREENSHOT REAL: A imagem de referência de produto contém um SCREENSHOT REAL do aplicativo. Você DEVE:
 1. Criar um mockup 3D fotorrealista: ${variation}
-2. INSERIR o screenshot EXATAMENTE como ele é na tela do dispositivo — NÃO redesenhe, NÃO invente uma UI nova, NÃO modifique o conteúdo da tela
+2. INSERIR o screenshot EXATAMENTE como ele é na tela do dispositivo — NÃO redesenhe, NÃO invente uma UI nova
 3. O screenshot deve ser CLARAMENTE VISÍVEL e LEGÍVEL na tela do dispositivo
-4. A composição deve ser cinematográfica com iluminação profissional e profundidade de campo
-5. CADA CARD deve ter um ÂNGULO e COMPOSIÇÃO DIFERENTES — NUNCA repita o mesmo mockup`);
+4. A composição deve ser cinematográfica com iluminação profissional
+5. CADA CARD deve ter um ÂNGULO e COMPOSIÇÃO COMPLETAMENTE DIFERENTES — PROIBIDO repetir o mesmo enquadramento de outro card
+6. O mockup INTEIRO deve caber dentro da safe area com margens generosas`);
       } else if (hasProductImages) {
         parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista. O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
       }

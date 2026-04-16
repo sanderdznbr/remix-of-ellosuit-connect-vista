@@ -20,7 +20,6 @@ const modes = [
     label: 'Rápido',
     steps: '6 etapas · O mais fácil',
     desc: 'Ideal para quem quer resultado rápido sem configurar nada',
-    credPerCard: 1,
     requiredPlan: null,
     adminOnly: false,
   },
@@ -30,7 +29,6 @@ const modes = [
     label: 'Personalizado',
     steps: '12 etapas · Você escolhe tudo',
     desc: 'Escolha cores, fontes, roteiro e estilo do jeito que quiser',
-    credPerCard: 2,
     requiredPlan: 'Pro',
     adminOnly: false,
   },
@@ -40,7 +38,6 @@ const modes = [
     label: 'Extreme',
     steps: 'IA criativa · Design único',
     desc: 'Descreva o que imagina e a IA cria um design exclusivo pra você',
-    credPerCard: 2,
     badge: 'NOVO',
     requiredPlan: 'Growth',
     adminOnly: false,
@@ -51,7 +48,6 @@ const modes = [
     label: 'Animado',
     steps: 'Cada card vira um vídeo animado',
     desc: 'A IA cria animações e você baixa como vídeo',
-    credPerCard: 2,
     badge: 'NOVO',
     requiredPlan: 'Growth',
     adminOnly: true,
@@ -62,7 +58,6 @@ const modes = [
     label: 'Tweet Post',
     steps: 'Post no formato de tweet',
     desc: 'Crie posts visuais no formato de tweet com foto e engajamento',
-    credPerCard: 1,
     badge: 'BETA',
     requiredPlan: null,
     adminOnly: true,
@@ -70,11 +65,10 @@ const modes = [
 ] as const;
 
 const CREDIT_FAQ = [
-  { q: 'Como funciona o consumo de créditos?', a: 'Cada card gerado consome créditos. O total depende do modo escolhido e da quantidade de cards.' },
-  { q: 'Quanto custa cada modo?', a: 'Simples: 1 créd/card · Avançado: 2 créd/card · Extreme: 2 créd/card · Com rosto (Pro): 4 créd/card.' },
-  { q: 'O que é o "+1 pesquisa"?', a: 'Quando a pesquisa na web está ativada, é cobrado 1 crédito extra fixo por geração (independente do nº de cards).' },
-  { q: 'Exemplo prático', a: 'Carrossel de 6 cards no modo Simples com pesquisa web: (6 × 1) + 1 = 7 créditos.' },
-  { q: 'Os créditos renovam?', a: 'Sim! Créditos do plano renovam todo mês na data da sua assinatura.' },
+  { q: 'Como funciona o consumo?', a: 'Cada geração (carrossel completo ou post único) consome 1 criativo. Simples e direto.' },
+  { q: 'Todos os modos custam igual?', a: 'Sim! Qualquer modo (Rápido, Personalizado, Extreme) consome 1 criativo por geração.' },
+  { q: 'Exemplo prático', a: 'Um carrossel de 5 cards no modo Extreme = 1 criativo. Um post único = 1 criativo.' },
+  { q: 'Os criativos renovam?', a: 'Sim! Criativos do plano renovam todo mês na data da sua assinatura.' },
 ];
 
 const StepMode: React.FC<Props> = ({ 
@@ -211,48 +205,18 @@ const StepMode: React.FC<Props> = ({
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Zap className="w-4 h-4 text-purple-400" />
-                  Como funcionam os créditos?
+                  Como funcionam os criativos?
                 </h3>
                 <button onClick={() => setShowFaq(false)} className="p-1 rounded-lg hover:bg-white/[0.06] text-white/30 hover:text-white/60 transition-colors cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Cost table */}
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-                      <th className="text-left px-3 py-2 text-white/30 font-medium">Modo</th>
-                      <th className="text-right px-3 py-2 text-white/30 font-medium">Por card</th>
-                      <th className="text-right px-3 py-2 text-white/30 font-medium">6 cards*</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-white/[0.04]">
-                      <td className="px-3 py-2 text-white/60">Simples</td>
-                      <td className="px-3 py-2 text-right text-white/50">1</td>
-                      <td className="px-3 py-2 text-right text-white/50 font-medium">7</td>
-                    </tr>
-                    <tr className="border-t border-white/[0.04]">
-                      <td className="px-3 py-2 text-white/60">Avançado</td>
-                      <td className="px-3 py-2 text-right text-white/50">2</td>
-                      <td className="px-3 py-2 text-right text-white/50 font-medium">13</td>
-                    </tr>
-                    <tr className="border-t border-white/[0.04]">
-                      <td className="px-3 py-2 text-white/60">Avançado + Rosto</td>
-                      <td className="px-3 py-2 text-right text-white/50">4</td>
-                      <td className="px-3 py-2 text-right text-white/50 font-medium">25</td>
-                    </tr>
-                    <tr className="border-t border-white/[0.04]">
-                      <td className="px-3 py-2 text-white/60">Extreme</td>
-                      <td className="px-3 py-2 text-right text-white/50">2</td>
-                      <td className="px-3 py-2 text-right text-white/50 font-medium">13</td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Simple explanation */}
+              <div className="rounded-xl p-4 text-center" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                <p className="text-2xl font-bold text-purple-300 mb-1">1 criativo = 1 geração</p>
+                <p className="text-xs text-white/40">Carrossel completo ou post único — qualquer modo, mesmo custo.</p>
               </div>
-              <p className="text-[10px] text-white/15 text-center">* inclui +1 crédito de pesquisa web</p>
 
               {/* FAQ items */}
               <div className="space-y-2.5">

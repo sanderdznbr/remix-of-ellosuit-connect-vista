@@ -12,29 +12,27 @@ import { toast } from '@/hooks/use-toast';
 const PLANS: Record<string, { name: string; annualPrice: number; monthlyPrice: number; credits: number; extraPrice: string; features: string[]; icon: typeof Star }> = {
   test: {
     name: 'Teste', annualPrice: 1.00, monthlyPrice: 1.00, credits: 5, extraPrice: 'R$1,00', icon: Shield,
-    features: ['Plano de teste — R$1,00', '5 créditos para testar', 'Acesso temporário'],
+    features: ['Plano de teste — R$1,00', '5 criativos para testar', 'Acesso temporário'],
   },
   starter: {
-    name: 'Starter', annualPrice: 69.90, monthlyPrice: 89.90, credits: 50, extraPrice: 'R$1,50', icon: Star,
-    features: ['~7 carrosséis simples de 6 cards', '~25 posts estáticos simples', 'Modo Simples', 'Exportação PNG/JPG', 'Galeria de marca — 1GB'],
+    name: 'Starter', annualPrice: 49.90, monthlyPrice: 59.90, credits: 10, extraPrice: 'R$5,90', icon: Star,
+    features: ['10 criativos/mês', 'Carrosséis de até 5 cards', 'Modo Rápido', 'Exportação PNG/JPG', 'Galeria de marca — 1GB'],
   },
   pro: {
-    name: 'Pro', annualPrice: 129.90, monthlyPrice: 159.90, credits: 100, extraPrice: 'R$1,20', icon: Zap,
-    features: ['~14 carrosséis simples ou ~7 avançados', '~50 posts simples ou ~33 avançados', 'Modo Avançado', 'Estilos do Marketplace', 'Suporte prioritário'],
+    name: 'Pro', annualPrice: 99.90, monthlyPrice: 119.90, credits: 30, extraPrice: 'R$4,90', icon: Zap,
+    features: ['30 criativos/mês', 'Modo Personalizado', 'ElloIA Pro + Rosto', 'Estilos do Marketplace', 'Suporte prioritário'],
   },
   growth: {
-    name: 'Growth', annualPrice: 219.90, monthlyPrice: 269.90, credits: 200, extraPrice: 'R$0,90', icon: Crown,
-    features: ['~28 carrosséis simples ou ~15 avançados/Extreme', '~100 posts simples ou ~66 avançados', 'Modo Extreme', 'Templates personalizados', 'Workspace de equipe'],
+    name: 'Growth', annualPrice: 169.90, monthlyPrice: 199.90, credits: 80, extraPrice: 'R$3,90', icon: Crown,
+    features: ['80 criativos/mês', 'Modo Extreme', 'Templates personalizados', 'Animações', 'Suporte via chat'],
   },
 };
 
 const CREDIT_TOPUPS = [
-  { credits: 10, price: 15 },
-  { credits: 25, price: 30 },
-  { credits: 50, price: 55 },
-  { credits: 100, price: 99 },
-  { credits: 250, price: 220 },
-  { credits: 500, price: 399 },
+  { credits: 5, price: 29.50 },
+  { credits: 10, price: 49.00 },
+  { credits: 20, price: 89.00 },
+  { credits: 50, price: 195.00 },
 ];
 
 // ── Format helpers ──

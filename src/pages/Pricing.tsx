@@ -16,21 +16,21 @@ const PLAN_CONFIG: Record<string, {
   monthlyPrice: number;
   credits: number;
 }> = {
-  starter: { label: 'Starter', annualPrice: 69.90, monthlyPrice: 89.90, credits: 50 },
-  pro: { label: 'Pro', annualPrice: 129.90, monthlyPrice: 159.90, credits: 100 },
-  growth: { label: 'Growth', annualPrice: 219.90, monthlyPrice: 269.90, credits: 200 },
+  starter: { label: 'Starter', annualPrice: 49.90, monthlyPrice: 59.90, credits: 10 },
+  pro: { label: 'Pro', annualPrice: 99.90, monthlyPrice: 119.90, credits: 30 },
+  growth: { label: 'Growth', annualPrice: 169.90, monthlyPrice: 199.90, credits: 80 },
 };
 
-// Per-credit pricing by plan: Starter R$1.40, Pro R$1.30, Growth R$1.10
+// Per-criativo pricing by plan
 const CREDIT_UNIT_PRICE: Record<string, number> = {
-  starter: 1.40,
-  pro: 1.30,
-  growth: 1.10,
-  enterprise: 1.10,
-  free: 1.50, // fallback
+  starter: 5.90,
+  pro: 4.90,
+  growth: 3.90,
+  enterprise: 3.90,
+  free: 6.90,
 };
 
-const CREDIT_PACKAGES = [10, 25, 50, 100, 250, 500];
+const CREDIT_PACKAGES = [5, 10, 20, 50];
 
 function getCreditTopups(planKey: string) {
   const unitPrice = CREDIT_UNIT_PRICE[planKey] || CREDIT_UNIT_PRICE.free;
@@ -41,9 +41,9 @@ function getCreditTopups(planKey: string) {
 }
 
 const GIFT_PACKAGES = [
-  { credits: 100, price: 129.90, label: '100 Créditos', description: '~10 carrosséis ou ~14 posts estáticos' },
-  { credits: 200, price: 209.90, label: '200 Créditos', description: '~20 carrosséis ou ~28 posts estáticos' },
-  { credits: 300, price: 239.90, label: '300 Créditos', description: '~30 carrosséis ou ~42 posts estáticos' },
+  { credits: 10, price: 59.90, label: '10 Criativos', description: '10 gerações completas' },
+  { credits: 30, price: 149.90, label: '30 Criativos', description: '30 gerações completas' },
+  { credits: 50, price: 199.90, label: '50 Criativos', description: '50 gerações completas' },
 ];
 
 interface PlanDef {
@@ -66,16 +66,16 @@ const plans: PlanDef[] = [
     key: 'starter',
     name: 'Starter',
     description: 'Ideal para quem está começando a criar conteúdo com IA.',
-    annualPrice: 'R$69,90',
-    monthlyPrice: 'R$89,90',
-    credits: '50 créditos/mês',
+    annualPrice: 'R$49,90',
+    monthlyPrice: 'R$59,90',
+    credits: '10 criativos/mês',
     badge: null,
     includedLabel: 'O que está incluso:',
     features: [
-      '50 créditos mensais',
-      '~7 carrosséis simples de 6 cards',
-      '~25 posts estáticos simples',
-      'Modo **Simples** — rápido e direto',
+      '10 criativos mensais',
+      '1 criativo = 1 geração completa (carrossel ou post)',
+      'Carrosséis de até 5 cards',
+      'Modo **Rápido** — simples e direto',
       'ElloIA Flash',
       'Galeria de marca — 1GB',
       '3 prompts salvos',
@@ -88,16 +88,14 @@ const plans: PlanDef[] = [
     key: 'pro',
     name: 'Pro',
     description: 'Para criadores que publicam conteúdo visual com frequência.',
-    annualPrice: 'R$129,90',
-    monthlyPrice: 'R$159,90',
-    credits: '100 créditos/mês',
+    annualPrice: 'R$99,90',
+    monthlyPrice: 'R$119,90',
+    credits: '30 criativos/mês',
     badge: 'Mais popular',
     includedLabel: 'Tudo do Starter, mais:',
     features: [
-      '100 créditos mensais',
-      '~14 carrosséis simples ou ~7 avançados de 6 cards',
-      '~50 posts simples ou ~33 posts avançados',
-      'Modo **Avançado** — controle total sobre cores, fontes, roteiro e mais',
+      '30 criativos mensais',
+      'Modo **Personalizado** — controle total sobre cores, fontes, roteiro e mais',
       'ElloIA Pro',
       'ElloIA Pro + Rosto Pessoal',
       'Carrossel contínuo panorâmico',
@@ -112,16 +110,14 @@ const plans: PlanDef[] = [
     key: 'growth',
     name: 'Growth',
     description: 'Para quem produz com consistência e quer sempre o melhor resultado.',
-    annualPrice: 'R$219,90',
-    monthlyPrice: 'R$269,90',
-    credits: '200 créditos/mês',
+    annualPrice: 'R$169,90',
+    monthlyPrice: 'R$199,90',
+    credits: '80 criativos/mês',
     badge: null,
     includedLabel: 'Tudo do Pro, mais:',
     features: [
-      '200 créditos mensais',
-      '~28 carrosséis simples ou ~15 avançados/Extreme de 6 cards',
-      '~100 posts simples ou ~66 avançados/Extreme',
-      'Modo **Extreme** — descreva sua visão, a IA entrega designs modernos e virais do mercado',
+      '80 criativos mensais',
+      'Modo **Extreme** — descreva sua visão, a IA entrega designs modernos e virais',
       'Galeria de marca — 10GB',
       { text: 'Carrossel com animação e inserção de vídeos', tags: ['Exclusivo', 'Em breve'] },
       { text: 'Geração de fotos realistas com IA', tags: ['Exclusivo', 'Em breve'] },
@@ -135,7 +131,7 @@ const plans: PlanDef[] = [
     description: 'Para empresas, franquias e agências que precisam de escala e personalização total.',
     annualPrice: 'Sob consulta',
     monthlyPrice: 'Sob consulta',
-    credits: 'Volume e créditos sob medida',
+    credits: 'Volume e criativos sob medida',
     badge: null,
     includedLabel: 'Tudo do Growth, mais:',
     isEnterprise: true,
@@ -144,7 +140,7 @@ const plans: PlanDef[] = [
       {
         title: 'Volume e Acesso',
         items: [
-          'Créditos sob medida — configurados conforme o volume de uso',
+          'Criativos sob medida — configurados conforme o volume de uso',
           'Usuários ilimitados na conta',
           'Múltiplos workspaces por unidade, cliente ou departamento',
         ],
@@ -270,10 +266,10 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
           <div className="w-10 h-10 rounded-xl bg-purple-600 mb-4 flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">Adicionar créditos</h2>
-          <p className="text-sm text-white/40 mb-2">Compre créditos avulsos para usar imediatamente.</p>
+          <h2 className="text-xl font-bold text-white mb-1">Adicionar criativos</h2>
+          <p className="text-sm text-white/40 mb-2">Compre criativos avulsos para usar imediatamente.</p>
           <p className="text-xs text-purple-300/60 mb-6">
-            Seu plano: <span className="font-semibold text-purple-300">{(currentPlan || 'free').charAt(0).toUpperCase() + (currentPlan || 'free').slice(1)}</span> — R${unitPrice.toFixed(2)}/crédito
+            Seu plano: <span className="font-semibold text-purple-300">{(currentPlan || 'free').charAt(0).toUpperCase() + (currentPlan || 'free').slice(1)}</span> — R${unitPrice.toFixed(2)}/criativo
           </p>
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto mb-6">
@@ -287,7 +283,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
                     : 'bg-white/[0.03] border border-white/[0.06] text-white/70 hover:bg-white/[0.06]'
                 }`}
               >
-                <span className="font-medium">+{opt.credits} créditos</span>
+                <span className="font-medium">+{opt.credits} criativos</span>
                 <span className={selectedTopup === i ? 'text-purple-300' : 'text-white/40'}>R${opt.price.toFixed(2)}</span>
               </button>
             ))}
@@ -504,7 +500,7 @@ function LoggedInPricing() {
           redeemed_company_id: companyId,
         } as any).eq('gift_key', code);
 
-        toast.success(`+${gk.credits} créditos adicionados! 🎉`);
+        toast.success(`+${gk.credits} criativos adicionados! 🎉`);
         setRedeemCode('');
         window.location.reload();
         return;
@@ -569,7 +565,7 @@ function LoggedInPricing() {
 
       toast.success(
         coupon.coupon_type === 'credits'
-          ? `+${coupon.credits_amount} créditos adicionados! 🎉`
+          ? `+${coupon.credits_amount} criativos adicionados! 🎉`
           : `Plano ${coupon.plan_type} ativado por ${coupon.plan_months || 1} mês(es)! 🎉`
       );
       setRedeemCode('');
@@ -596,8 +592,8 @@ function LoggedInPricing() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-          <h1 className="text-2xl font-bold text-white mb-1">Plano & Créditos</h1>
-          <p className="text-sm text-white/40 mb-8">Gerencie seu plano e saldo de créditos.</p>
+          <h1 className="text-2xl font-bold text-white mb-1">Plano & Criativos</h1>
+          <p className="text-sm text-white/40 mb-8">Gerencie seu plano e saldo de criativos.</p>
 
           {loading ? (
             <div className="py-20 text-center text-white/30">Carregando...</div>
@@ -616,7 +612,7 @@ function LoggedInPricing() {
 
                 <div className="rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-white/70 text-sm font-medium">Créditos restantes</p>
+                    <p className="text-white/70 text-sm font-medium">Criativos restantes</p>
                     <p className="text-white text-sm font-semibold">{Math.floor(creditBalance)} de {maxCredits}</p>
                   </div>
                   <div className="w-full h-2 rounded-full bg-white/[0.06] mb-3">
@@ -646,7 +642,7 @@ function LoggedInPricing() {
                             <span className="text-white/30 ml-1">({daysLeft} dia{daysLeft !== 1 ? 's' : ''})</span>
                           </p>
                           <p className="text-white/30 text-[10px]">
-                            Seus {maxCredits} créditos serão renovados automaticamente
+                            Seus {maxCredits} criativos serão renovados automaticamente
                           </p>
                         </div>
                       </div>
@@ -655,7 +651,7 @@ function LoggedInPricing() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-white/50">
-                      <Check className="w-3 h-3" /> {maxCredits} créditos mensais inclusos
+                      <Check className="w-3 h-3" /> {maxCredits} criativos mensais inclusos
                     </div>
 
                     <div className="relative">
@@ -663,7 +659,7 @@ function LoggedInPricing() {
                         onClick={() => setShowTopUpDropdown(!showTopUpDropdown)}
                         className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium border border-white/[0.12] text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
                       >
-                        Comprar créditos
+                        Comprar criativos
                         <ChevronDown className="w-3 h-3" />
                       </button>
                       {showTopUpDropdown && (
@@ -676,7 +672,7 @@ function LoggedInPricing() {
                                 onClick={() => { setSelectedTopup(i); setShowTopUpDropdown(false); setShowTopUp(true); }}
                                 className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
                               >
-                                <span>+{opt.credits} créditos</span>
+                                <span>+{opt.credits} criativos</span>
                                 <span className="text-white/40">R${opt.price.toFixed(2)}</span>
                               </button>
                             ))}
@@ -726,7 +722,7 @@ function LoggedInPricing() {
                       <div>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-semibold">Admin Only</span>
                         <h3 className="text-white font-bold text-sm mt-1">Plano Teste — R$1,00</h3>
-                        <p className="text-white/40 text-xs">5 créditos • Para testar pagamento com cartão real</p>
+                        <p className="text-white/40 text-xs">5 criativos • Para testar pagamento com cartão real</p>
                       </div>
                       <button
                         onClick={() => navigate('/checkout?plano=test&billing=monthly')}
@@ -770,7 +766,7 @@ function LoggedInPricing() {
                   style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}
                 >
                   <h3 className="text-white text-sm font-semibold mb-1">🎁 Resgatar código</h3>
-                  <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate créditos ou planos aqui.</p>
+                  <p className="text-white/30 text-xs mb-4">Tem um código de presente? Resgate criativos ou planos aqui.</p>
                   <div className="flex gap-2">
                     <input
                       type="text"

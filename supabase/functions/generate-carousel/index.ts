@@ -691,8 +691,12 @@ Responda APENAS em JSON válido:
   ]
 }`;
 
-      const safeTopic = stripInternalBrands(topic || '');
-      const userMessage = `Tópico: ${safeTopic}\nPalavras-chave: ${(keywords || []).join(', ')}${
+      const fallbackPromptTitle = Array.isArray(promptContexts) && promptContexts.length > 0
+        ? String(promptContexts[0]?.title || '').trim()
+        : '';
+      const safeTopic = stripPromptCommandNoise(stripInternalBrands(topic || ''), fallbackPromptTitle);
+      const userMessage = `Tópico: ${safeTopic}
+Palavras-chave: ${(keywords || []).join(', ')}${
               body.coverAlreadyExists ? `\n\nIMPORTANTE — CAPA JÁ EXISTE: O card 1 (cover) já foi gerado previamente com título "${body.existingCoverTitle || ''}" e subtítulo "${body.existingCoverBody || ''}". Você DEVE gerar conteúdo COMPLETAMENTE DIFERENTE para o card 2 em diante. O card 2 NÃO pode repetir nem parafrasear o título ou subtítulo da capa. Cada card de conteúdo deve abordar um SUBTEMA ou ÂNGULO DIFERENTE do tópico principal.` : ''
               }${
               body.webSearchContent ? `\n\nDADOS REAIS DA WEB (USE OBRIGATORIAMENTE estes dados verificados para criar o conteúdo):\nTítulo: ${body.webSearchContent.title}\nResumo: ${body.webSearchContent.summary}\nFatos:\n${(body.webSearchContent.facts || []).map((f: any, i: number) => `${i + 1}. ${f.heading}: ${f.body} (Fonte: ${f.source})`).join('\n')}\n\nFontes: ${(body.webSearchCitations || []).slice(0, 5).join(', ')}\n\nIMPORTANTE: Baseie TODO o conteúdo nesses dados reais e verificados. Cite estatísticas e fatos reais.` : ''

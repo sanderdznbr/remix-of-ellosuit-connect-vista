@@ -5445,7 +5445,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         }
 
         const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
-        const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+        const loop2MediaRefUrls = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').map(r => r.url);
+        const productRefUrls = [...(productImages.length > 0 ? productImages.map(p => p.url) : []), ...loop2MediaRefUrls];
         const mergedLoop2ProductRefs = [...productRefUrls, ...loop2ExtremeProductRefs];
         const marketplaceRefUrls: string[] = [];
         if (activeMarketplaceStyle?._previewImages?.length) {

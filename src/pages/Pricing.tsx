@@ -592,8 +592,8 @@ function LoggedInPricing() {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-          <h1 className="text-2xl font-bold text-white mb-1">Plano & Créditos</h1>
-          <p className="text-sm text-white/40 mb-8">Gerencie seu plano e saldo de créditos.</p>
+          <h1 className="text-2xl font-bold text-white mb-1">Plano & Criativos</h1>
+          <p className="text-sm text-white/40 mb-8">Gerencie seu plano e saldo de criativos.</p>
 
           {loading ? (
             <div className="py-20 text-center text-white/30">Carregando...</div>
@@ -612,7 +612,7 @@ function LoggedInPricing() {
 
                 <div className="rounded-2xl p-5 border border-white/[0.06]" style={{ backgroundColor: 'rgba(20,20,28,0.8)' }}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-white/70 text-sm font-medium">Créditos restantes</p>
+                    <p className="text-white/70 text-sm font-medium">Criativos restantes</p>
                     <p className="text-white text-sm font-semibold">{Math.floor(creditBalance)} de {maxCredits}</p>
                   </div>
                   <div className="w-full h-2 rounded-full bg-white/[0.06] mb-3">
@@ -642,7 +642,7 @@ function LoggedInPricing() {
                             <span className="text-white/30 ml-1">({daysLeft} dia{daysLeft !== 1 ? 's' : ''})</span>
                           </p>
                           <p className="text-white/30 text-[10px]">
-                            Seus {maxCredits} créditos serão renovados automaticamente
+                            Seus {maxCredits} criativos serão renovados automaticamente
                           </p>
                         </div>
                       </div>
@@ -651,7 +651,7 @@ function LoggedInPricing() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs text-white/50">
-                      <Check className="w-3 h-3" /> {maxCredits} créditos mensais inclusos
+                      <Check className="w-3 h-3" /> {maxCredits} criativos mensais inclusos
                     </div>
 
                     <div className="relative">

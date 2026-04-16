@@ -4580,6 +4580,12 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for ALL carousel cards ===
       if (!useRealEstateBlend && logoUrl && updatedCards.length > 0) {
+        // Save raw (pre-logo) images for repositioning later
+        for (let i = 0; i < updatedCards.length; i++) {
+          if (updatedCards[i]?.imageUrl) {
+            updatedCards[i] = { ...updatedCards[i], imageUrlRaw: updatedCards[i].imageUrl };
+          }
+        }
         console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards...');
         const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
           const img = document.createElement('img') as HTMLImageElement;
@@ -4598,7 +4604,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           const lp = logoPosition || 'top-left';
 
           for (let i = 0; i < updatedCards.length; i++) {
-            const cardImgUrl = updatedCards[i]?.imageUrl;
+            const cardImgUrl = updatedCards[i]?.imageUrlRaw || updatedCards[i]?.imageUrl;
             if (!cardImgUrl) continue;
             try {
               const canvas = document.createElement('canvas');

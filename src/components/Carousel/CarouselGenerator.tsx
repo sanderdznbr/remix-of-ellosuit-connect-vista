@@ -1153,6 +1153,7 @@ const CarouselGenerator: React.FC = () => {
     setSearchingWeb(false);
     setSkipWebSearch(false);
     setFromTrendData(null);
+    setPendingTrendGeneration(false);
     setWebSearchResult(null);
     setSelectedWebSourceIndex(null);
     setExtractingUrl(false);

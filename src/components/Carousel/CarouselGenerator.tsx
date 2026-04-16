@@ -3106,7 +3106,8 @@ The image must look like it was shot by a professional photographer or designed 
       const faceRefUrls = activeFP.length > 0 ? activeFP.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const singlePostFaceMeta = activeFP.length > 1 ? activeFP.map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-      const productRefUrls = productImages.map(p => p.url);
+      const mediaRefUrls = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').map(r => r.url);
+      const productRefUrls = [...productImages.map(p => p.url), ...mediaRefUrls];
       const marketplaceRefUrls: string[] = [];
       if (activeMarketplaceStyleRef.current?._previewImages?.length) {
         const origin = window.location.origin;

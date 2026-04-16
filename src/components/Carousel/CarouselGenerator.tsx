@@ -548,6 +548,7 @@ const CarouselGenerator: React.FC = () => {
   const [searchingWeb, setSearchingWeb] = useState(false);
   const [skipWebSearch, setSkipWebSearch] = useState(false); // default: web search enabled
   const [fromTrendData, setFromTrendData] = useState<{ topic: string; format: string; cardText: string; cardTexts?: string[]; caption: string; styleId?: string; useBrandColors?: boolean; logoUrl?: string; logoDarkUrl?: string; brandColors?: string[] } | null>(null);
+  const [pendingTrendGeneration, setPendingTrendGeneration] = useState(false);
   const [webSearchResult, setWebSearchResult] = useState<{ summary: string; citations: string[]; content?: any; images?: string[]; imageCandidates?: { url: string; title?: string; desc?: string; source?: string }[]; sources?: { title: string; summary: string; angle: string }[] } | null>(null);
   const [selectedWebSourceIndex, setSelectedWebSourceIndex] = useState<number | null>(null);
   const [extractingUrl, setExtractingUrl] = useState(false);

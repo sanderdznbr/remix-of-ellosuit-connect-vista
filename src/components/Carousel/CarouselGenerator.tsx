@@ -7260,6 +7260,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   if (trendData.logoUrl) setLogoUrl(trendData.logoUrl);
                   if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
 
+                  // Set context images as reference images for generation
+                  if (trendData.contextImages?.length) {
+                    setReferenceImages(trendData.contextImages);
+                  }
+                  // Set context details as product context for AI
+                  if (trendData.contextDetails) {
+                    setProductContext(prev => (prev ? prev + '\n' : '') + trendData.contextDetails);
+                  }
+
                   // Set format: carousel vs single-post
                   const isTrendCarousel = trendData.format === 'carrossel';
                   if (isTrendCarousel) {

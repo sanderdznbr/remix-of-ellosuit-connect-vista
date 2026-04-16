@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Palette, Image as ImageIcon, Check, ChevronRight, ChevronLeft, Upload, Edit3, LayoutGrid, FileText, Eye, Camera, Plus, Trash2, MessageSquare } from 'lucide-react';
+import { X, Sparkles, Loader2, Palette, Image as ImageIcon, Check, ChevronRight, ChevronLeft, Upload, Edit3, LayoutGrid, FileText, Eye, Camera, Plus, Trash2, MessageSquare, Search, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Switch } from '@/components/ui/switch';
@@ -27,10 +27,11 @@ interface Props {
   onConfirm: (trendData: TrendData, styleId: string, useBrandColors: boolean) => void;
 }
 
-type WizardStep = 'review' | 'context' | 'brand' | 'style' | 'confirm';
+type WizardStep = 'review' | 'photo' | 'context' | 'brand' | 'style' | 'confirm';
 
 const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'review', label: 'Revisar' },
+  { key: 'photo', label: 'Foto' },
   { key: 'context', label: 'Contexto' },
   { key: 'brand', label: 'Marca' },
   { key: 'style', label: 'Estilo' },
@@ -135,6 +136,9 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   const [editedCaption, setEditedCaption] = useState('');
   const [editedTopic, setEditedTopic] = useState('');
   
+  // Suggested photo step
+  const [useSuggestedPhoto, setUseSuggestedPhoto] = useState<boolean | null>(null);
+  
   // Context step - media and details
   const [contextImages, setContextImages] = useState<string[]>([]);
   const [contextDetails, setContextDetails] = useState('');
@@ -147,11 +151,19 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contextFileInputRef = useRef<HTMLInputElement>(null);
 
+  const suggestedImageUrl = (trendData as any)?.imageUrl || null;
+
+  // Compute active steps (skip 'photo' if no suggested image)
+  const activeSteps = suggestedImageUrl
+    ? STEPS
+    : STEPS.filter(s => s.key !== 'photo');
+
   useEffect(() => {
     if (!open || !user) return;
     setStep('review');
     setContextImages([]);
     setContextDetails('');
+    setUseSuggestedPhoto(null);
     loadData();
   }, [open, user]);
 
@@ -271,13 +283,19 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
     if (!selectedStyle || !trendData) return;
     setCreating(true);
 
+    // If user accepted the suggested photo, add it to context images
+    const finalContextImages = [...contextImages];
+    if (useSuggestedPhoto && suggestedImageUrl && !finalContextImages.includes(suggestedImageUrl)) {
+      finalContextImages.unshift(suggestedImageUrl);
+    }
+
     const finalTrend: TrendData = {
       ...trendData,
       topic: editedTopic,
       cardText: editedCardText,
       cardTexts: editedCardTexts,
       caption: editedCaption,
-      contextImages: contextImages.length > 0 ? contextImages : undefined,
+      contextImages: finalContextImages.length > 0 ? finalContextImages : undefined,
       contextDetails: contextDetails.trim() || undefined,
     };
 
@@ -288,25 +306,26 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   if (!open || !trendData) return null;
 
   const isCarousel = trendData.format === 'carrossel';
-  const stepIndex = STEPS.findIndex(s => s.key === step);
+  const stepIndex = activeSteps.findIndex(s => s.key === step);
   const ctxSuggestions = getContextSuggestions(editedTopic || trendData.topic || '', (trendData as any).category || '');
 
   const canProceed = () => {
     if (step === 'review') return true;
-    if (step === 'context') return true; // optional step
+    if (step === 'photo') return useSuggestedPhoto !== null;
+    if (step === 'context') return true;
     if (step === 'brand') return true;
     if (step === 'style') return !!selectedStyle;
     return true;
   };
 
   const goNext = () => {
-    const idx = STEPS.findIndex(s => s.key === step);
-    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1].key);
+    const idx = activeSteps.findIndex(s => s.key === step);
+    if (idx < activeSteps.length - 1) setStep(activeSteps[idx + 1].key);
   };
 
   const goBack = () => {
-    const idx = STEPS.findIndex(s => s.key === step);
-    if (idx > 0) setStep(STEPS[idx - 1].key);
+    const idx = activeSteps.findIndex(s => s.key === step);
+    if (idx > 0) setStep(activeSteps[idx - 1].key);
   };
 
   return (
@@ -317,34 +336,38 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.25 }}
-          className="relative w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden rounded-2xl border border-white/[0.08] flex flex-col"
-          style={{ backgroundColor: '#0d0d15' }}>
+          className="relative w-full max-w-xl mx-4 max-h-[90vh] overflow-hidden rounded-2xl border border-white/[0.06] flex flex-col shadow-2xl"
+          style={{ backgroundColor: '#0c0c14' }}>
 
-          {/* Header with progress */}
-          <div className="shrink-0 px-6 pt-5 pb-4 border-b border-white/[0.06]">
+          {/* Header */}
+          <div className="shrink-0 px-6 pt-5 pb-4 border-b border-white/[0.04]">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(139,92,246,0.1))' }}>
-                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)' }}>
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold text-white">Criar a partir da Trend</h2>
-                  <p className="text-[10px] text-white/20">{isCarousel ? 'Carrossel' : 'Estático'} · {isCarousel ? `${editedCardTexts.length} slides` : '1 card'}</p>
+                  <h2 className="text-sm font-bold text-white tracking-tight">Criar a partir da Trend</h2>
+                  <p className="text-[10px] text-white/25 mt-0.5">{isCarousel ? 'Carrossel' : 'Post único'} · {isCarousel ? `${editedCardTexts.length} slides` : '1 card'}</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.05] text-white/25 hover:text-white/50 transition-colors cursor-pointer">
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.05] text-white/20 hover:text-white/40 transition-colors cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Step progress */}
+            {/* Step progress - pill style */}
             <div className="flex items-center gap-1">
-              {STEPS.map((s, i) => (
-                <div key={s.key} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full h-1 rounded-full transition-all duration-500"
-                    style={{ backgroundColor: i <= stepIndex ? '#8B5CF6' : 'rgba(255,255,255,0.06)' }} />
-                  <span className="text-[9px] font-medium transition-colors"
-                    style={{ color: i <= stepIndex ? '#c4b5fd' : 'rgba(255,255,255,0.15)' }}>
+              {activeSteps.map((s, i) => (
+                <div key={s.key} className="flex-1 flex flex-col items-center gap-1.5">
+                  <div className="w-full h-[3px] rounded-full transition-all duration-500"
+                    style={{ 
+                      backgroundColor: i < stepIndex ? '#7C3AED' : i === stepIndex ? '#8B5CF6' : 'rgba(255,255,255,0.04)',
+                      boxShadow: i === stepIndex ? '0 0 8px rgba(139,92,246,0.4)' : 'none'
+                    }} />
+                  <span className="text-[8px] font-semibold uppercase tracking-widest transition-colors"
+                    style={{ color: i <= stepIndex ? '#a78bfa' : 'rgba(255,255,255,0.12)' }}>
                     {s.label}
                   </span>
                 </div>
@@ -353,7 +376,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="flex-1 overflow-y-auto px-6 py-5" style={{ WebkitOverflowScrolling: 'touch' as any }}>
             <AnimatePresence mode="wait">
               {/* STEP 1: Review content */}
               {step === 'review' && (
@@ -362,17 +385,17 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                   
                   {/* Topic */}
                   <div>
-                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 block">Tema</label>
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-1.5 block">Tema</label>
                     <textarea value={editedTopic} onChange={e => setEditedTopic(e.target.value)}
                       rows={2}
-                      className="w-full px-3 py-2.5 rounded-xl text-xs text-white/80 border border-white/[0.08] focus:border-purple-500/30 outline-none transition-colors resize-none leading-relaxed"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.03)' }} />
+                      className="w-full px-3.5 py-3 rounded-xl text-xs text-white/80 border border-white/[0.06] focus:border-purple-500/40 outline-none transition-all resize-none leading-relaxed"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.025)' }} />
                   </div>
 
                   {/* Card texts */}
                   {isCarousel && editedCardTexts.length > 0 ? (
                     <div>
-                      <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 flex items-center gap-1.5">
+                      <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-1.5 flex items-center gap-1.5">
                         <LayoutGrid className="w-3 h-3" /> Textos dos slides
                       </label>
                       <div className="space-y-1.5">
@@ -380,7 +403,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                           <div key={idx} className="flex items-center gap-2">
                             <span className="text-[10px] text-purple-400/40 font-mono w-4 text-right shrink-0">{idx + 1}</span>
                             <input value={ct} onChange={e => updateSlideText(idx, e.target.value)}
-                              className="flex-1 px-3 py-2 rounded-lg text-[11px] text-white/70 border border-white/[0.06] focus:border-purple-500/30 outline-none transition-colors"
+                              className="flex-1 px-3 py-2 rounded-lg text-[11px] text-white/70 border border-white/[0.05] focus:border-purple-500/30 outline-none transition-colors"
                               style={{ backgroundColor: 'rgba(255,255,255,0.02)' }} />
                           </div>
                         ))}
@@ -388,37 +411,92 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                     </div>
                   ) : (
                     <div>
-                      <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 flex items-center gap-1.5">
+                      <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-1.5 flex items-center gap-1.5">
                         <FileText className="w-3 h-3" /> Texto da arte
                       </label>
                       <input value={editedCardText} onChange={e => setEditedCardText(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl text-xs text-white/70 border border-white/[0.08] focus:border-purple-500/30 outline-none transition-colors"
-                        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }} />
+                        className="w-full px-3.5 py-3 rounded-xl text-xs text-white/70 border border-white/[0.06] focus:border-purple-500/30 outline-none transition-colors"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.025)' }} />
                     </div>
                   )}
 
                   {/* Caption */}
                   <div>
-                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 block">Legenda do Instagram</label>
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-1.5 block">Legenda do Instagram</label>
                     <textarea value={editedCaption} onChange={e => setEditedCaption(e.target.value)}
-                      rows={4}
-                      className="w-full px-3 py-2.5 rounded-xl text-[11px] text-white/60 border border-white/[0.08] focus:border-purple-500/30 outline-none transition-colors resize-none leading-relaxed"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.03)' }} />
+                      rows={3}
+                      className="w-full px-3.5 py-3 rounded-xl text-[11px] text-white/50 border border-white/[0.06] focus:border-purple-500/30 outline-none transition-colors resize-none leading-relaxed"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.025)' }} />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 2: Suggested Photo */}
+              {step === 'photo' && suggestedImageUrl && (
+                <motion.div key="photo" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                  className="space-y-5">
+
+                  {/* Header */}
+                  <div className="text-center">
+                    <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(59,130,246,0.08))' }}>
+                      <Search className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-1">Encontramos essa foto</h3>
+                    <p className="text-[11px] text-white/30 leading-relaxed max-w-xs mx-auto">
+                      Relacionada ao assunto da trend. Deseja usar como referência visual no post?
+                    </p>
                   </div>
 
-                  {/* News image preview if available */}
-                  {(trendData as any).imageUrl && (
-                    <div>
-                      <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 block">Foto sugerida</label>
-                      <div className="rounded-xl overflow-hidden border border-white/[0.06] h-32">
-                        <img src={(trendData as any).imageUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    </div>
+                  {/* Image preview */}
+                  <div className="rounded-2xl overflow-hidden border border-white/[0.06] shadow-lg">
+                    <img src={suggestedImageUrl} alt="Foto sugerida" className="w-full h-48 object-cover" />
+                  </div>
+
+                  {/* Yes / No buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setUseSuggestedPhoto(true)}
+                      className="flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-semibold transition-all border-2 cursor-pointer"
+                      style={{
+                        backgroundColor: useSuggestedPhoto === true ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.02)',
+                        borderColor: useSuggestedPhoto === true ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.06)',
+                        color: useSuggestedPhoto === true ? '#4ade80' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >
+                      <ThumbsUp className="w-4 h-4" />
+                      Sim, usar
+                    </button>
+                    <button
+                      onClick={() => setUseSuggestedPhoto(false)}
+                      className="flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-semibold transition-all border-2 cursor-pointer"
+                      style={{
+                        backgroundColor: useSuggestedPhoto === false ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.02)',
+                        borderColor: useSuggestedPhoto === false ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.06)',
+                        color: useSuggestedPhoto === false ? '#f87171' : 'rgba(255,255,255,0.4)',
+                      }}
+                    >
+                      <ThumbsDown className="w-4 h-4" />
+                      Não, pular
+                    </button>
+                  </div>
+
+                  {useSuggestedPhoto === true && (
+                    <motion.p initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                      className="text-[10px] text-green-400/50 text-center">
+                      ✓ A foto será usada como referência visual na geração
+                    </motion.p>
+                  )}
+                  {useSuggestedPhoto === false && (
+                    <motion.p initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                      className="text-[10px] text-white/20 text-center">
+                      A IA irá gerar imagens do zero baseadas no tema
+                    </motion.p>
                   )}
                 </motion.div>
               )}
 
-              {/* STEP 2: Smart Context (adaptive per content) */}
+              {/* STEP 3: Smart Context (adaptive per content) */}
               {step === 'context' && (
                 <motion.div key="context" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                   className="space-y-5">
@@ -430,21 +508,21 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       <Camera className="w-5 h-5 text-cyan-400" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-white">{ctxSuggestions.title}</h3>
+                      <h3 className="text-sm font-bold text-white">{ctxSuggestions.title}</h3>
                       <p className="text-[11px] text-white/30 mt-0.5 leading-relaxed">{ctxSuggestions.subtitle}</p>
                     </div>
                   </div>
 
                   {/* Image upload area */}
                   <div>
-                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 flex items-center gap-1.5">
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
                       <Camera className="w-3 h-3" />
                       {ctxSuggestions.suggestions.find(s => s.icon === 'camera')?.label || 'Fotos de apoio'}
                     </label>
                     
                     <div className="grid grid-cols-3 gap-2">
                       {contextImages.map((url, idx) => (
-                        <div key={idx} className="relative rounded-xl overflow-hidden border border-white/[0.08] aspect-square group">
+                        <div key={idx} className="relative rounded-xl overflow-hidden border border-white/[0.06] aspect-square group">
                           <img src={url} alt="" className="w-full h-full object-cover" />
                           <button onClick={() => removeContextImage(idx)}
                             className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -455,7 +533,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       
                       {contextImages.length < 5 && (
                         <button onClick={() => contextFileInputRef.current?.click()} disabled={uploadingContext}
-                          className="rounded-xl border-2 border-dashed border-white/[0.08] aspect-square flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-cyan-500/30 transition-colors"
+                          className="rounded-xl border-2 border-dashed border-white/[0.06] aspect-square flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-cyan-500/30 transition-colors"
                           style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
                           {uploadingContext ? (
                             <Loader2 className="w-5 h-5 animate-spin text-white/20" />
@@ -473,7 +551,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
                   {/* Context details textarea */}
                   <div>
-                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-1.5 flex items-center gap-1.5">
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-1.5 flex items-center gap-1.5">
                       <MessageSquare className="w-3 h-3" />
                       {ctxSuggestions.suggestions.find(s => s.icon === 'details')?.label || 'Detalhes adicionais'}
                     </label>
@@ -482,30 +560,29 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       onChange={e => setContextDetails(e.target.value)}
                       placeholder={ctxSuggestions.suggestions.find(s => s.icon === 'details')?.placeholder || 'Informações extras...'}
                       rows={3}
-                      className="w-full px-3 py-2.5 rounded-xl text-xs text-white/70 border border-white/[0.08] focus:border-cyan-500/30 outline-none transition-colors resize-none leading-relaxed placeholder:text-white/15"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                      className="w-full px-3.5 py-3 rounded-xl text-xs text-white/70 border border-white/[0.06] focus:border-cyan-500/30 outline-none transition-colors resize-none leading-relaxed placeholder:text-white/12"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}
                     />
                   </div>
 
-                  {/* Skip hint */}
-                  <p className="text-[10px] text-white/15 text-center">
-                    Esta etapa é opcional — pule se preferir usar apenas a foto sugerida pela IA
+                  <p className="text-[10px] text-white/12 text-center">
+                    Etapa opcional — pule se preferir que a IA crie tudo automaticamente
                   </p>
                 </motion.div>
               )}
 
-              {/* STEP 3: Brand */}
+              {/* STEP 4: Brand */}
               {step === 'brand' && (
                 <motion.div key="brand" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                   className="space-y-5">
 
                   <div>
-                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-3 block">Logomarca</label>
+                    <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-3 block">Logomarca</label>
                     <div className="flex items-center gap-4">
                       {logoUrl ? (
                         <div className="relative group">
-                          <div className="w-16 h-16 rounded-xl border border-white/[0.08] overflow-hidden flex items-center justify-center"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+                          <div className="w-16 h-16 rounded-xl border border-white/[0.06] overflow-hidden flex items-center justify-center"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.025)' }}>
                             <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-1" />
                           </div>
                           <button onClick={() => fileInputRef.current?.click()}
@@ -515,8 +592,8 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                         </div>
                       ) : (
                         <button onClick={() => fileInputRef.current?.click()} disabled={uploadingLogo}
-                          className="w-16 h-16 rounded-xl border-2 border-dashed border-white/[0.1] flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-purple-500/30 transition-colors"
-                          style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                          className="w-16 h-16 rounded-xl border-2 border-dashed border-white/[0.08] flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-purple-500/30 transition-colors"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
                           {uploadingLogo ? (
                             <Loader2 className="w-4 h-4 animate-spin text-white/20" />
                           ) : (
@@ -529,14 +606,14 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       )}
                       <div>
                         <p className="text-xs text-white/50 font-medium">{logoUrl ? 'Logo configurada' : 'Sem logo'}</p>
-                        <p className="text-[10px] text-white/20">PNG ou SVG recomendado</p>
+                        <p className="text-[10px] text-white/15">PNG ou SVG recomendado</p>
                       </div>
                     </div>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                   </div>
 
                   {/* Brand colors toggle */}
-                  <div className="rounded-xl border border-white/[0.06] p-4 space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                  <div className="rounded-xl border border-white/[0.04] p-4 space-y-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Palette className="w-3.5 h-3.5 text-white/25" />
@@ -556,10 +633,10 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                 </motion.div>
               )}
 
-              {/* STEP 4: Style */}
+              {/* STEP 5: Style */}
               {step === 'style' && (
                 <motion.div key="style" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                  <label className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-3 block">Selecione o estilo</label>
+                  <label className="text-[10px] text-white/30 uppercase tracking-wider font-semibold mb-3 block">Selecione o estilo</label>
                   {loading ? (
                     <div className="flex items-center gap-2 py-12 justify-center">
                       <Loader2 className="w-4 h-4 animate-spin text-white/20" />
@@ -575,12 +652,12 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                         return (
                           <button key={style.id} onClick={() => setSelectedStyle(style.id)}
                             className="relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer group aspect-square"
-                            style={{ borderColor: isSelected ? '#8B5CF6' : 'rgba(255,255,255,0.06)' }}>
+                            style={{ borderColor: isSelected ? '#8B5CF6' : 'rgba(255,255,255,0.04)' }}>
                             {preview ? (
                               <img src={preview} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.08)' }}>
-                                <ImageIcon className="w-5 h-5 text-white/15" />
+                              <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.06)' }}>
+                                <ImageIcon className="w-5 h-5 text-white/10" />
                               </div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
@@ -600,59 +677,79 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                 </motion.div>
               )}
 
-              {/* STEP 5: Confirm */}
+              {/* STEP 6: Confirm */}
               {step === 'confirm' && (
                 <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                   className="space-y-4">
                   
-                  <div className="text-center py-4">
-                    <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                  <div className="text-center py-3">
+                    <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
                       style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(139,92,246,0.08))' }}>
                       <Eye className="w-6 h-6 text-purple-400" />
                     </div>
-                    <h3 className="text-base font-semibold text-white mb-1">Tudo pronto!</h3>
-                    <p className="text-xs text-white/30">Confira o resumo e crie seu conteúdo</p>
+                    <h3 className="text-base font-bold text-white mb-1">Tudo pronto!</h3>
+                    <p className="text-[11px] text-white/25">Confira o resumo e crie seu conteúdo</p>
                   </div>
 
                   {/* Summary cards */}
                   <div className="space-y-2">
-                    <div className="rounded-xl border border-white/[0.06] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                      <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">Tema</p>
+                    <div className="rounded-xl border border-white/[0.04] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                      <p className="text-[10px] text-white/20 uppercase tracking-wider mb-1">Tema</p>
                       <p className="text-xs text-white/60 line-clamp-2">{editedTopic.split(': ')[0]}</p>
                     </div>
 
                     <div className="flex gap-2">
-                      <div className="flex-1 rounded-xl border border-white/[0.06] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">Formato</p>
+                      <div className="flex-1 rounded-xl border border-white/[0.04] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                        <p className="text-[10px] text-white/20 uppercase tracking-wider mb-1">Formato</p>
                         <p className="text-xs text-white/60">{isCarousel ? `Carrossel (${editedCardTexts.length} slides)` : 'Post estático'}</p>
                       </div>
-                      <div className="flex-1 rounded-xl border border-white/[0.06] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">Estilo</p>
+                      <div className="flex-1 rounded-xl border border-white/[0.04] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                        <p className="text-[10px] text-white/20 uppercase tracking-wider mb-1">Estilo</p>
                         <p className="text-xs text-white/60 truncate">{styles.find(s => s.id === selectedStyle)?.name || '—'}</p>
                       </div>
                     </div>
 
+                    {/* Photo decision summary */}
+                    {suggestedImageUrl && useSuggestedPhoto !== null && (
+                      <div className="rounded-xl border border-white/[0.04] p-3 flex items-center gap-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                        {useSuggestedPhoto ? (
+                          <>
+                            <img src={suggestedImageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.06]" />
+                            <div>
+                              <p className="text-[10px] text-white/20 uppercase tracking-wider">Foto sugerida</p>
+                              <p className="text-xs text-green-400/70">Incluída como referência</p>
+                            </div>
+                          </>
+                        ) : (
+                          <div>
+                            <p className="text-[10px] text-white/20 uppercase tracking-wider">Foto sugerida</p>
+                            <p className="text-xs text-white/30">Não utilizada</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Context summary */}
                     {(contextImages.length > 0 || contextDetails) && (
-                      <div className="rounded-xl border border-white/[0.06] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <p className="text-[10px] text-white/25 uppercase tracking-wider mb-2">Contexto</p>
+                      <div className="rounded-xl border border-white/[0.04] p-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                        <p className="text-[10px] text-white/20 uppercase tracking-wider mb-2">Contexto</p>
                         {contextImages.length > 0 && (
                           <div className="flex gap-1.5 mb-2">
                             {contextImages.map((url, i) => (
-                              <img key={i} src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.06]" />
+                              <img key={i} src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-white/[0.04]" />
                             ))}
                           </div>
                         )}
-                        {contextDetails && <p className="text-[11px] text-white/40 line-clamp-2">{contextDetails}</p>}
+                        {contextDetails && <p className="text-[11px] text-white/35 line-clamp-2">{contextDetails}</p>}
                       </div>
                     )}
 
                     {logoUrl && (
-                      <div className="rounded-xl border border-white/[0.06] p-3 flex items-center gap-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                        <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }} />
+                      <div className="rounded-xl border border-white/[0.04] p-3 flex items-center gap-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+                        <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
                         <div>
-                          <p className="text-[10px] text-white/25 uppercase tracking-wider">Marca</p>
-                          <p className="text-xs text-white/60">Logo + {useBrandColors ? 'cores da marca' : 'sem cores'}</p>
+                          <p className="text-[10px] text-white/20 uppercase tracking-wider">Marca</p>
+                          <p className="text-xs text-white/50">Logo + {useBrandColors ? 'cores da marca' : 'sem cores'}</p>
                         </div>
                       </div>
                     )}
@@ -663,11 +760,11 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-4 border-t border-white/[0.06] flex items-center justify-between"
-            style={{ backgroundColor: '#0d0d15' }}>
+          <div className="shrink-0 px-6 py-4 border-t border-white/[0.04] flex items-center justify-between"
+            style={{ backgroundColor: '#0a0a12' }}>
             {stepIndex > 0 ? (
               <button onClick={goBack}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs text-white/30 hover:text-white/50 transition-colors cursor-pointer">
+                className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs text-white/25 hover:text-white/40 transition-colors cursor-pointer">
                 <ChevronLeft className="w-3.5 h-3.5" /> Voltar
               </button>
             ) : (
@@ -676,16 +773,16 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
             {step === 'confirm' ? (
               <button onClick={handleConfirm} disabled={!selectedStyle || creating}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all cursor-pointer disabled:opacity-30"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all cursor-pointer disabled:opacity-30"
                 style={{ background: 'linear-gradient(135deg, #7C3AED, #6D28D9)' }}>
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 Criar conteúdo
               </button>
             ) : (
               <button onClick={goNext} disabled={!canProceed()}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-medium text-white transition-all cursor-pointer disabled:opacity-30"
-                style={{ backgroundColor: '#8B5CF6' }}>
-                {step === 'context' ? 'Continuar' : 'Continuar'} <ChevronRight className="w-3.5 h-3.5" />
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-20"
+                style={{ backgroundColor: canProceed() ? '#7C3AED' : 'rgba(255,255,255,0.04)' }}>
+                Continuar <ChevronRight className="w-3.5 h-3.5" />
               </button>
             )}
           </div>

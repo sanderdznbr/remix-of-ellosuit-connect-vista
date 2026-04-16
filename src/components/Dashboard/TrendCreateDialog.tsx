@@ -46,8 +46,8 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
       if (!cu) return;
 
       const [stylesRes, configRes] = await Promise.all([
-        supabase.from('marketplace_styles').select('id, name, preview_images, cover_url, category')
-          .eq('is_active', true).order('sort_order', { ascending: true }),
+        supabase.from('marketplace_styles').select('id, name, preview_images, category')
+          .eq('is_active', true).order('sort_order', { ascending: true }) as any,
         supabase.from('trend_configs').select('logo_url, brand_colors')
           .eq('company_id', cu.company_id).single(),
       ]);

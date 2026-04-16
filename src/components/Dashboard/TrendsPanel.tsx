@@ -284,15 +284,29 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   };
 
   const handleCreate = (trend: DailyTrend) => {
+    const trendData: TrendData = {
+      topic: trend.title + ': ' + trend.description,
+      format: trend.metadata?.format || 'estatico',
+      cardText: trend.metadata?.card_text || '',
+      cardTexts: trend.metadata?.card_texts || [],
+      caption: trend.metadata?.caption || '',
+    };
+    setDialogTrend(trendData);
+  };
+
+  const handleDialogConfirm = (td: TrendData, styleId: string, useBrandColors: boolean) => {
+    setDialogTrend(null);
     if (onCreateFromTrend) {
-      const trendData: TrendData = {
-        topic: trend.title + ': ' + trend.description,
-        format: trend.metadata?.format || 'estatico',
-        cardText: trend.metadata?.card_text || '',
-        cardTexts: trend.metadata?.card_texts || [],
-        caption: trend.metadata?.caption || '',
-      };
-      onCreateFromTrend(trendData.topic, trendData);
+      // Pass style and brand info along with trend data
+      const enrichedTrend: TrendData = {
+        ...td,
+        styleId,
+        useBrandColors,
+        logoUrl: config.logo_url || '',
+        logoDarkUrl: config.logo_dark_url || '',
+        brandColors: useBrandColors ? config.brand_colors : [],
+      } as any;
+      onCreateFromTrend(td.topic, enrichedTrend);
     }
   };
 

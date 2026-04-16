@@ -500,7 +500,7 @@ function LoggedInPricing() {
           redeemed_company_id: companyId,
         } as any).eq('gift_key', code);
 
-        toast.success(`+${gk.credits} créditos adicionados! 🎉`);
+        toast.success(`+${gk.credits} criativos adicionados! 🎉`);
         setRedeemCode('');
         window.location.reload();
         return;

@@ -3164,6 +3164,13 @@ The image must look like it was shot by a professional photographer or designed 
         };
         promptParts.push(productPromptMap[productAnalysis.type] || productPromptMap.unknown);
         promptParts.push('PRIORIDADE #1: O produto da foto de referência DEVE aparecer na imagem gerada. NÃO substitua por outro produto diferente.');
+      } else if (mediaRefUrls.length > 0) {
+        promptParts.push(`MÍDIA DO USUÁRIO (OBRIGATÓRIO — PRIORIDADE MÁXIMA): O usuário enviou ${mediaRefUrls.length} foto(s) de referência que DEVEM ser incorporadas na composição do post. Essas fotos mostram o CONTEÚDO REAL que o usuário quer no post. REGRAS:
+1. A(s) foto(s) de referência DEVEM aparecer na imagem final — use-as como elemento central da composição.
+2. NÃO ignore as fotos enviadas. NÃO substitua por objetos genéricos (ex: se o usuário enviou um notebook, NÃO troque por celular).
+3. Preserve fielmente o que aparece nas fotos: tipo de dispositivo, objeto, cenário, etc.
+4. Integre a(s) foto(s) com o design editorial, mas mantenha-as reconhecíveis.
+5. O post DEVE refletir visualmente as mídias enviadas pelo usuário.`);
       } else if (productRefUrls.length > 0) {
         promptParts.push('PRODUTO: Use a foto de referência do produto como base. O produto DEVE aparecer fielmente na imagem gerada.');
       }

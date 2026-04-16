@@ -3106,7 +3106,8 @@ The image must look like it was shot by a professional photographer or designed 
       const faceRefUrls = activeFP.length > 0 ? activeFP.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url);
       const singlePostFaceMeta = activeFP.length > 1 ? activeFP.map(p => ({ label: p.label, gender: p.gender, wearsGlasses: p.wearsGlasses, photoCount: p.photos.length })) : undefined;
       const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
-      const productRefUrls = productImages.map(p => p.url);
+      const mediaRefUrls = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').map(r => r.url);
+      const productRefUrls = [...productImages.map(p => p.url), ...mediaRefUrls];
       const marketplaceRefUrls: string[] = [];
       if (activeMarketplaceStyleRef.current?._previewImages?.length) {
         const origin = window.location.origin;
@@ -3163,6 +3164,13 @@ The image must look like it was shot by a professional photographer or designed 
         };
         promptParts.push(productPromptMap[productAnalysis.type] || productPromptMap.unknown);
         promptParts.push('PRIORIDADE #1: O produto da foto de referência DEVE aparecer na imagem gerada. NÃO substitua por outro produto diferente.');
+      } else if (mediaRefUrls.length > 0) {
+        promptParts.push(`MÍDIA DO USUÁRIO (OBRIGATÓRIO — PRIORIDADE MÁXIMA): O usuário enviou ${mediaRefUrls.length} foto(s) de referência que DEVEM ser incorporadas na composição do post. Essas fotos mostram o CONTEÚDO REAL que o usuário quer no post. REGRAS:
+1. A(s) foto(s) de referência DEVEM aparecer na imagem final — use-as como elemento central da composição.
+2. NÃO ignore as fotos enviadas. NÃO substitua por objetos genéricos (ex: se o usuário enviou um notebook, NÃO troque por celular).
+3. Preserve fielmente o que aparece nas fotos: tipo de dispositivo, objeto, cenário, etc.
+4. Integre a(s) foto(s) com o design editorial, mas mantenha-as reconhecíveis.
+5. O post DEVE refletir visualmente as mídias enviadas pelo usuário.`);
       } else if (productRefUrls.length > 0) {
         promptParts.push('PRODUTO: Use a foto de referência do produto como base. O produto DEVE aparecer fielmente na imagem gerada.');
       }
@@ -4439,10 +4447,14 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
               unknown: `Use the uploaded product photo as creative reference for "${productAnalysis.description}". ${sizeInstruction} You DON'T need to replicate it exactly — change angles, contexts, compositions. Keep the product recognizable but create visually unique and diverse scenes.`,
             };
             imgPrompt += '. ' + (productPromptMap[productAnalysis.type] || productPromptMap.unknown);
+          } else if (referenceImages.some(r => r.category === 'general' && r.source === 'upload')) {
+            const mediaCount = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').length;
+            imgPrompt += `. MÍDIA DO USUÁRIO (OBRIGATÓRIO): O usuário enviou ${mediaCount} foto(s) de referência que DEVEM ser incorporadas na composição. Use o conteúdo dessas fotos como elemento central — NÃO ignore e NÃO substitua por objetos genéricos diferentes.`;
           }
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
-          const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+          const carouselMediaRefUrls = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').map(r => r.url);
+          const productRefUrls = [...(productImages.length > 0 ? productImages.map(p => p.url) : []), ...carouselMediaRefUrls];
           // === EXTREME MODE: Inject uploaded photos as product/style/face refs ===
           const carouselExtremeRefs = getExtremeFormPhotoRefs();
           const carouselExtremeFaceRefs = carouselExtremeRefs.filter(r => r.category === 'face').map(r => r.url);
@@ -5433,7 +5445,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         }
 
         const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
-        const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+        const loop2MediaRefUrls = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').map(r => r.url);
+        const productRefUrls = [...(productImages.length > 0 ? productImages.map(p => p.url) : []), ...loop2MediaRefUrls];
         const mergedLoop2ProductRefs = [...productRefUrls, ...loop2ExtremeProductRefs];
         const marketplaceRefUrls: string[] = [];
         if (activeMarketplaceStyle?._previewImages?.length) {

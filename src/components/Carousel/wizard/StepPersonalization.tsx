@@ -281,8 +281,10 @@ const StepPersonalization: React.FC<Props> = (props) => {
       } else if (galleryTarget === 'logo') {
         setLogoUrl(f.url);
         setLogoMode('manual');
+      } else if (galleryTarget === 'logoDark') {
+        setLogoDarkUrl(f.url);
       } else {
-        setReferenceImages(prev => [...prev, { url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'style' as const }]);
+        setReferenceImages(prev => [...prev, { url: f.url, thumb: f.url, label: f.name, source: 'upload' as const, category: 'general' as const }]);
       }
     });
     setGalleryTarget(null);

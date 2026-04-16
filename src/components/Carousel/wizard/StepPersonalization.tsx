@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { User, Building2, Upload, X, Folder, ShoppingBag, Palette, ImagePlus, Sparkles, Monitor, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { User, Building2, Upload, X, Folder, ShoppingBag, Palette, ImagePlus, Sparkles, Monitor, ChevronRight, ChevronLeft, Check, Moon, Sun } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -207,9 +207,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
     });
   };
 
-  const handleLogoFiles = async (files: File[]) => {
-    const file = files[0];
-    if (!file) return;
+  const handleLogoUpload = async (file: File, setter: (v: string) => void) => {
     if (user) {
       try {
         const ext = file.name.split('.').pop() || 'png';
@@ -217,7 +215,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
         const { error } = await supabase.storage.from('brand-assets').upload(path, file);
         if (error) throw error;
         const { data } = supabase.storage.from('brand-assets').getPublicUrl(path);
-        setLogoUrl(data.publicUrl);
+        setter(data.publicUrl);
         setLogoMode('manual');
         return;
       } catch {}
@@ -225,11 +223,23 @@ const StepPersonalization: React.FC<Props> = (props) => {
     const reader = new FileReader();
     reader.onload = ev => {
       if (ev.target?.result) {
-        setLogoUrl(ev.target.result as string);
+        setter(ev.target.result as string);
         setLogoMode('manual');
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleLogoFiles = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    handleLogoUpload(file, setLogoUrl);
+  };
+
+  const handleLogoDarkFiles = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    handleLogoUpload(file, setLogoDarkUrl);
   };
 
   const handleMediaFiles = (files: File[]) => {
@@ -370,48 +380,92 @@ const StepPersonalization: React.FC<Props> = (props) => {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-white/90">Logomarca</h2>
-                <p className="text-xs text-white/30">Insira a logo que aparecerá no post</p>
+                <p className="text-xs text-white/30">Envie duas versões — a IA escolhe a melhor para cada fundo</p>
               </div>
             </div>
           </div>
 
-          {logoUrl ? (
-            <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-              <div className="w-16 h-16 rounded-xl ring-1 ring-white/[0.08] bg-white/[0.03] flex items-center justify-center shrink-0">
-                <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-1" />
+          {/* Dual logo upload grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Light logo (for dark backgrounds) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Moon className="h-3.5 w-3.5 text-white/30" />
+                <p className="text-[10px] font-medium text-white/40">Para fundo escuro</p>
               </div>
-              <div className="flex-1 space-y-2">
-                <div className="flex gap-1.5 flex-wrap">
-                  <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f) handleLogoFiles(Array.from(f)); }; input.click(); }}
-                    className="text-[10px] px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-white/65 transition-colors">Trocar</button>
-                  {user && (
-                    <button onClick={() => setGalleryTarget('logo')} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-white/65 transition-colors">Galeria</button>
-                  )}
-                  <button onClick={() => { setLogoUrl(''); }} className="text-[10px] px-3 py-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-red-400/60 transition-colors ml-auto">
-                    <X className="h-3 w-3" />
-                  </button>
+              {logoUrl ? (
+                <div className="flex flex-col items-center gap-3 py-4 rounded-xl bg-[#111]/80 border border-white/[0.08]">
+                  <div className="w-16 h-16 rounded-lg bg-[#0a0a0a] border border-white/[0.08] flex items-center justify-center overflow-hidden p-1.5">
+                    <img src={logoUrl} alt="Logo clara" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f?.[0]) handleLogoUpload(f[0], setLogoUrl); }; input.click(); }}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-medium text-white/50 hover:text-white/70 bg-white/[0.04] hover:bg-white/[0.08] transition-all">Trocar</button>
+                    {user && (
+                      <button onClick={() => setGalleryTarget('logo')} className="px-2.5 py-1 rounded-lg text-[10px] font-medium text-white/50 hover:text-white/70 bg-white/[0.04] hover:bg-white/[0.08] transition-all">Galeria</button>
+                    )}
+                    <button onClick={() => setLogoUrl('')}
+                      className="p-1 rounded-lg bg-white/[0.04] hover:bg-red-500/20 text-white/30 hover:text-red-400 transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <DropZone onFiles={handleLogoFiles} multiple={false} large
-                  icon={<Upload className="h-6 w-6 text-white/10" />}
-                  label="Arraste ou clique para enviar"
-                  sublabel="1 arquivo de logomarca" />
-              </div>
-              {user && (
-                <button onClick={() => setGalleryTarget('logo')}
-                  className="flex items-center px-4 rounded-xl border border-white/[0.06] text-white/25 hover:text-white/50 hover:bg-white/[0.03] transition-colors">
-                  <Folder className="h-4 w-4" />
-                </button>
+              ) : (
+                <div className="flex gap-1.5">
+                  <div className="flex-1">
+                    <DropZone onFiles={handleLogoFiles} multiple={false}
+                      icon={<Upload className="h-5 w-5 text-white/10" />}
+                      label="Logo clara"
+                      sublabel="Branca / cores claras" />
+                  </div>
+                  {user && (
+                    <button onClick={() => setGalleryTarget('logo')}
+                      className="flex items-center px-3 rounded-xl border border-white/[0.06] text-white/25 hover:text-white/50 hover:bg-white/[0.03] transition-colors">
+                      <Folder className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
+
+            {/* Dark logo (for light backgrounds) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Sun className="h-3.5 w-3.5 text-white/30" />
+                <p className="text-[10px] font-medium text-white/40">Para fundo claro</p>
+              </div>
+              {logoDarkUrl ? (
+                <div className="flex flex-col items-center gap-3 py-4 rounded-xl bg-white/[0.7] border border-white/[0.15]">
+                  <div className="w-16 h-16 rounded-lg bg-white border border-black/10 flex items-center justify-center overflow-hidden p-1.5">
+                    <img src={logoDarkUrl} alt="Logo escura" className="max-w-full max-h-full object-contain" />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const f = (e.target as HTMLInputElement).files; if (f?.[0]) handleLogoUpload(f[0], setLogoDarkUrl); }; input.click(); }}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-medium text-black/40 hover:text-black/60 bg-black/[0.06] hover:bg-black/10 transition-all">Trocar</button>
+                    <button onClick={() => setLogoDarkUrl('')}
+                      className="p-1 rounded-lg bg-black/[0.06] hover:bg-red-500/20 text-black/30 hover:text-red-400 transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <DropZone onFiles={handleLogoDarkFiles} multiple={false}
+                  icon={<Upload className="h-5 w-5 text-white/10" />}
+                  label="Logo escura"
+                  sublabel="Preta / cores escuras" />
+              )}
+            </div>
+          </div>
+
+          {/* Hint */}
+          {!logoUrl && !logoDarkUrl && (
+            <p className="text-[10px] text-white/20 text-center">
+              💡 Envie ao menos uma versão. O ideal é ter as duas para contraste perfeito.
+            </p>
           )}
 
           {/* Logo position + brand colors */}
-          {logoUrl && (
+          {(logoUrl || logoDarkUrl) && (
             <div className="space-y-3">
               <div className="space-y-2">
                 <p className="text-xs text-white/45">Posição da logo no post final</p>
@@ -420,7 +474,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
               </div>
             </div>
           )}
-          {logoUrl && (
+          {(logoUrl || logoDarkUrl) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-white/30">Cores da marca</span>

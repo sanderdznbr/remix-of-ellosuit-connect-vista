@@ -14,15 +14,16 @@ const fadeUp = {
 // Brand tokens (ellocontent)
 const BG = '#0a0a0f';
 const BG_SOFT = '#0f0f15';
-const SURFACE = 'rgba(255,255,255,0.03)';
-const SURFACE_HOVER = 'rgba(255,255,255,0.05)';
-const HAIRLINE = 'rgba(255,255,255,0.07)';
-const HAIRLINE_STRONG = 'rgba(255,255,255,0.12)';
-const INK = '#f5f5f7';
-const INK_SOFT = 'rgba(245,245,247,0.55)';
-const INK_DIM = 'rgba(245,245,247,0.4)';
-const PURPLE = '#8B5CF6';
-const PURPLE_DEEP = '#7B50DC';
+const SURFACE = 'rgba(255,255,255,0.04)';
+const SURFACE_HOVER = 'rgba(255,255,255,0.07)';
+const HAIRLINE = 'rgba(255,255,255,0.08)';
+const HAIRLINE_STRONG = 'rgba(255,255,255,0.14)';
+const INK = '#ffffff';
+const INK_SOFT = 'rgba(255,255,255,0.78)';
+const INK_DIM = 'rgba(255,255,255,0.55)';
+const PURPLE = '#A78BFA';
+const PURPLE_DEEP = '#8B5CF6';
+const PURPLE_GLOW = '#C4B5FD';
 
 const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif";
 

@@ -109,6 +109,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const [customNiche, setCustomNiche] = useState(false);
   const [newColor, setNewColor] = useState('#8B5CF6');
   const [uploadingLogo, setUploadingLogo] = useState<'light' | 'dark' | null>(null);
+  const [autoDaily, setAutoDaily] = useState(false);
+  const [togglingAuto, setTogglingAuto] = useState(false);
   const nicheRef = useRef<HTMLDivElement>(null);
 
   // Close niche dropdown on outside click

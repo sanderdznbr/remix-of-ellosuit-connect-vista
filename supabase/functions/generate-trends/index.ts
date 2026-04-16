@@ -166,14 +166,14 @@ REGRAS DE OURO
    Exemplo: "MC Ryan preso por lavagem de dinheiro" → para um dentista: "Investir no sorriso nunca dá problema com a justiça 😄 Mas investir errado sim..."
    Exemplo: "Dólar bate recorde" → para um restaurante: "Enquanto o dólar sobe, nosso cardápio continua acessível..."
    
-2. Pelo menos 3 das 8 ideias devem ser CROSS-POLLINATION (notícia geral → conexão criativa com o nicho)
-3. As outras podem ser tendências diretas do nicho, dicas, cases ou conteúdo educativo
+2. EXATAMENTE 5 das 9 ideias DEVEM SER CROSS-POLLINATION (notícia/evento geral do dia → conexão criativa com o nicho). Use a categoria "trend" para essas.
+3. As outras 4 podem ser tendências diretas do nicho, dicas, cases ou conteúdo educativo
 4. Tom: ${config.brand_tone || "profissional"} mas SEMPRE com um gancho de curiosidade
 5. Títulos CURTOS e impactantes (máx 60 chars), que façam a pessoa parar o scroll
 6. Descrições com o ÂNGULO persuasivo: explique POR QUE esse conteúdo vai engajar
 
 CATEGORIAS PERMITIDAS:
-- "trend" → quando usa uma tendência/notícia do momento
+- "trend" → quando usa uma tendência/notícia do momento (OBRIGATÓRIO em pelo menos 5 ideias)
 - "vendas" → quando o objetivo é converter
 - "educativo" → quando ensina algo
 - "engajamento" → quando provoca interação
@@ -181,7 +181,7 @@ CATEGORIAS PERMITIDAS:
 - "case" → estudo de caso / prova social
 - "dica" → dica prática e rápida
 
-Gere exatamente 8 ideias diversificadas e BRILHANTES.`;
+Gere exatamente 9 ideias diversificadas e BRILHANTES.`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

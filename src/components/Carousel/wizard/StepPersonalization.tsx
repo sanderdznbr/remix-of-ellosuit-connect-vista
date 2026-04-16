@@ -465,7 +465,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
           )}
 
           {/* Logo position + brand colors */}
-          {logoUrl && (
+          {(logoUrl || logoDarkUrl) && (
             <div className="space-y-3">
               <div className="space-y-2">
                 <p className="text-xs text-white/45">Posição da logo no post final</p>
@@ -474,7 +474,7 @@ const StepPersonalization: React.FC<Props> = (props) => {
               </div>
             </div>
           )}
-          {logoUrl && (
+          {(logoUrl || logoDarkUrl) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-white/30">Cores da marca</span>

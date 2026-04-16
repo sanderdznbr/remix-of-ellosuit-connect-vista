@@ -42,7 +42,7 @@ interface Props {
   classifyingTopic?: boolean;
   forceWebSearch?: boolean;
   setForceWebSearch?: (v: boolean) => void;
-  fromTrendData?: { topic: string; format: string; cardText: string; caption: string } | null;
+  fromTrendData?: { topic: string; format: string; cardText: string; cardTexts?: string[]; caption: string } | null;
 }
 
 const NEWS_KEYWORDS = [
@@ -126,12 +126,24 @@ const StepTopic: React.FC<Props> = ({
         </div>
 
         {/* Card text */}
-        {fromTrendData.cardText && (
+        {isCarousel && Array.isArray(fromTrendData.cardTexts) && fromTrendData.cardTexts.length > 0 ? (
+          <div className="rounded-xl border border-white/[0.06] p-4" style={{ backgroundColor: 'rgba(139,92,246,0.03)' }}>
+            <p className="text-[10px] text-white/25 uppercase tracking-wider font-medium mb-2">Textos exatos dos slides</p>
+            <div className="space-y-2">
+              {fromTrendData.cardTexts.map((text, index) => (
+                <div key={`${index}-${text}`} className="flex items-start gap-2 rounded-lg border border-white/[0.05] px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                  <span className="text-[10px] text-purple-400/40 font-mono w-4 text-right shrink-0 mt-0.5">{index + 1}</span>
+                  <p className="text-sm text-white/70 leading-relaxed">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : fromTrendData.cardText ? (
           <div className="rounded-xl border border-white/[0.06] p-4" style={{ backgroundColor: 'rgba(139,92,246,0.03)' }}>
             <p className="text-[10px] text-white/25 uppercase tracking-wider font-medium mb-2">Texto da arte</p>
             <p className="text-sm text-white/70 leading-relaxed">{fromTrendData.cardText}</p>
           </div>
-        )}
+        ) : null}
 
         {/* Caption */}
         {fromTrendData.caption && (

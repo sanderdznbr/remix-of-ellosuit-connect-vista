@@ -1,6 +1,5 @@
 // Edge function: Change font style on a generated card image
-// Step 1: AI removes all text from the image (clean background)
-// Step 2: AI re-renders the same text with the chosen font style reference
+// Uses a better model and strict prompt for dimension/quality preservation
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +18,7 @@ async function callAI(apiKey: string, messages: any[], retries = 2): Promise<str
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-image',
+          model: 'google/gemini-3-pro-image-preview',
           messages,
           modalities: ['image', 'text'],
         }),
@@ -77,13 +76,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const {
-      imageUrl,         // base64 data URL or https URL of the current card image
-      textContent,      // { title, subtitle, body } - the text currently on the card
-      fontReference,    // font name (e.g. "Playfair Display") or Envato preview image URL
-      fontPreviewUrl,   // optional: Envato font preview image URL for visual reference
-      accentColor,      // optional: accent color for decorative elements
-    } = body;
+    const { imageUrl, fontReference, fontPreviewUrl } = body;
 
     if (!imageUrl) {
       return new Response(JSON.stringify({ error: 'imageUrl is required' }), {
@@ -91,63 +84,56 @@ Deno.serve(async (req) => {
       });
     }
 
-    const texts = textContent || {};
-    const accent = accentColor || '#8B5CF6';
-
-    // Build text content description
-    const textParts: string[] = [];
-    if (texts.title) textParts.push(`TÍTULO: "${texts.title}"`);
-    if (texts.subtitle) textParts.push(`SUBTÍTULO: "${texts.subtitle}"`);
-    if (texts.body) textParts.push(`CORPO: "${texts.body}"`);
-    if (texts.bodyTop) textParts.push(`TEXTO PRINCIPAL: "${texts.bodyTop}"`);
-    if (texts.bodyBottom) textParts.push(`TEXTO SECUNDÁRIO: "${texts.bodyBottom}"`);
-    
-    const textDescription = textParts.length > 0 
-      ? textParts.join('\n') 
-      : 'Mantenha o mesmo texto que está na imagem original.';
-
     console.log(`=== CHANGE FONT === Font: ${fontReference || 'custom'}`);
 
-    // Build the message content array
+    // Determine font style description
+    let fontStyleDesc = 'uma tipografia moderna e diferente da original';
+    if (fontReference) {
+      const name = fontReference.toLowerCase();
+      if (['playfair', 'merriweather', 'lora', 'garamond', 'crimson', 'baskerville', 'serif'].some(k => name.includes(k))) {
+        fontStyleDesc = `tipografia serifada elegante no estilo "${fontReference}" — com serifas refinadas, contraste alto entre traços grossos e finos, aspecto clássico e sofisticado`;
+      } else if (['bebas', 'oswald', 'anton', 'archivo', 'impact'].some(k => name.includes(k))) {
+        fontStyleDesc = `tipografia bold condensada no estilo "${fontReference}" — letras altas e estreitas, peso pesado, impactante e chamativa`;
+      } else if (['space grotesk', 'sora', 'outfit', 'clash'].some(k => name.includes(k))) {
+        fontStyleDesc = `tipografia geométrica moderna no estilo "${fontReference}" — formas limpas, geométricas, contemporânea e tech`;
+      } else {
+        fontStyleDesc = `tipografia no estilo "${fontReference}" — mantenha as características visuais distintas dessa família tipográfica`;
+      }
+    }
+
     const contentParts: any[] = [];
 
-    // Main instruction
     contentParts.push({
       type: 'text',
-      text: `Você é um designer gráfico especialista em tipografia. Sua tarefa é MUDAR A FONTE/TIPOGRAFIA de uma imagem de post para Instagram.
+      text: `TAREFA: Edite APENAS a tipografia/fonte dos textos nesta imagem de post para Instagram.
 
-TAREFA EM 2 PASSOS:
-1. REMOVA completamente todos os textos/letras/palavras da imagem original, preenchendo as áreas com continuação natural do fundo (inpainting perfeito).
-2. ADICIONE os mesmos textos de volta, mas usando uma tipografia COMPLETAMENTE DIFERENTE da original.
+INSTRUÇÃO PRINCIPAL:
+Leia todos os textos visíveis na imagem original. Remova-os (preencha com o fundo natural por trás) e reescreva EXATAMENTE os mesmos textos, nas MESMAS posições, com EXATAMENTE o mesmo tamanho, cor e alinhamento — mas usando uma tipografia diferente.
 
-TEXTOS QUE DEVEM ESTAR NA IMAGEM FINAL (copie EXATAMENTE):
-${textDescription}
+NOVA TIPOGRAFIA: ${fontStyleDesc}
 
-ESTILO DA NOVA TIPOGRAFIA:
-${fontReference ? `Use uma tipografia no estilo "${fontReference}" — ${fontReference.includes('Serif') || fontReference.includes('Playfair') || fontReference.includes('Garamond') || fontReference.includes('Merriweather') || fontReference.includes('Lora') ? 'serifada, elegante e clássica' : fontReference.includes('Bebas') || fontReference.includes('Oswald') || fontReference.includes('Anton') || fontReference.includes('Archivo') ? 'bold, condensada e impactante' : 'moderna, limpa e geométrica'}.` : 'Use uma tipografia moderna e diferente da original.'}
+REGRAS ABSOLUTAS — VIOLAÇÃO = FALHA:
+1. DIMENSÕES: A imagem de saída DEVE ter EXATAMENTE as mesmas dimensões (pixels) da imagem de entrada. NÃO redimensione, NÃO corte, NÃO faça zoom.
+2. FUNDO INTOCÁVEL: Fotos, pessoas, elementos gráficos, cores de fundo, gradientes, formas decorativas — tudo DEVE permanecer PIXEL A PIXEL idêntico. Mude APENAS as letras/textos.
+3. POSIÇÃO DOS TEXTOS: Cada bloco de texto deve estar na MESMA posição (x, y) da imagem original. NÃO mova textos para cima, baixo, esquerda ou direita.
+4. CONTEÚDO DOS TEXTOS: Copie CARACTERE POR CARACTERE. NÃO altere, NÃO resuma, NÃO adicione palavras.
+5. TAMANHO DOS TEXTOS: Mantenha o MESMO tamanho relativo de cada bloco de texto. Título grande continua grande, corpo pequeno continua pequeno.
+6. COR DOS TEXTOS: Mantenha as mesmas cores (branco continua branco, colorido continua colorido).
+7. QUALIDADE: Mantenha a mesma resolução e nitidez. NÃO comprima, NÃO degrade a qualidade.
+8. NÃO adicione bordas, molduras, marcas d'água ou qualquer elemento novo.
 
-REGRAS CRÍTICAS:
-- O fundo, fotos, elementos decorativos e layout devem permanecer IDÊNTICOS — mude APENAS a tipografia
-- Mantenha EXATAMENTE as mesmas posições de texto
-- Mantenha EXATAMENTE o mesmo conteúdo textual (copie caractere por caractere)
-- A nova fonte deve ser profissional e legível
-- Mantenha o mesmo esquema de cores do texto
-- Formato: mesma proporção da imagem original
-- Cor de destaque: ${accent}
-- NÃO altere as fotos, elementos gráficos ou fundo`
+A ÚNICA diferença entre a imagem original e a nova deve ser o DESENHO/ESTILO das letras (a família tipográfica).`
     });
 
-    // Add the original image
     contentParts.push({
       type: 'image_url',
       image_url: { url: imageUrl }
     });
 
-    // Add font preview image if available (Envato visual reference)
     if (fontPreviewUrl) {
       contentParts.push({
         type: 'text',
-        text: `A imagem abaixo mostra a REFERÊNCIA VISUAL da fonte desejada. Use esta tipografia como referência para renderizar os textos:`
+        text: 'Referência visual da tipografia desejada (use este estilo de letras):'
       });
       contentParts.push({
         type: 'image_url',

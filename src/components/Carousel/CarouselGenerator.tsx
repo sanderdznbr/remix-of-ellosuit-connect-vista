@@ -7256,32 +7256,51 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   setFromTrendData(trendData);
                   setSkipWebSearch(true);
                   setForceWebSearch(false);
+
                   // Auto-set branding from dialog
                   if (trendData.logoUrl) setLogoUrl(trendData.logoUrl);
                   if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
 
-                  // Set context images as reference images for generation
-                  if (trendData.contextImages?.length) {
-                    setReferenceImages(trendData.contextImages);
-                  }
-                  // Enrich topic with context details for AI
+                  // Use Trend media as STRONG visual references, matching normal generation fidelity
+                  const trendContextRefs = (trendData.contextImages || [])
+                    .filter((url: string) => typeof url === 'string' && url.trim())
+                    .map((url: string, index: number) => ({
+                      url,
+                      thumb: url,
+                      label: `Trend ref ${index + 1}`,
+                      source: 'upload' as const,
+                      category: 'general' as const,
+                    }));
+                  setReferenceImages(trendContextRefs as any);
+                  setProductImages((trendData.contextImages || [])
+                    .filter((url: string) => typeof url === 'string' && url.trim())
+                    .map((url: string) => ({ url, thumb: url, file: null as any })));
+
+                  // Enrich topic with user details for AI
                   if (trendData.contextDetails) {
                     const enrichedTopic = (trendData.topic || '') + '\n\nCONTEXTO ADICIONAL DO USUÁRIO: ' + trendData.contextDetails;
                     setTopic(enrichedTopic);
                     setOriginalTopic(enrichedTopic);
                   }
 
-                  // Set format: carousel vs single-post
-                  const isTrendCarousel = trendData.format === 'carrossel';
-                  if (isTrendCarousel) {
+                  // Apply manual copy from Trend so the result follows the reviewed content
+                  if (trendData.format === 'carrossel') {
+                    const slideTexts = (trendData.cardTexts || []).filter((text: string) => typeof text === 'string' && text.trim());
                     setContentMode('carousel');
-                    const slideCount = trendData.cardTexts?.length || 5;
+                    const slideCount = slideTexts.length || 5;
                     setCardCount(slideCount);
                     setImageCardCount(Math.min(slideCount, 3));
+                    setManualPostText('');
+                    setManualCardTexts(slideTexts.map((text: string, index: number) => ({
+                      title: index === 0 ? text.trim() : '',
+                      body: index === 0 ? '' : text.trim(),
+                    })));
                   } else {
                     setContentMode('single-post');
                     setCardCount(1);
                     setImageCardCount(1);
+                    setManualCardTexts([]);
+                    setManualPostText((trendData.cardText || '').trim());
                   }
 
                   // Auto-set style and trigger generation via useEffect

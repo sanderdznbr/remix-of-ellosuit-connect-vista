@@ -110,7 +110,6 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   };
 
   const getPreviewUrl = (style: MarketplaceStyle) => {
-    if (style.cover_url) return style.cover_url;
     const imgs = style.preview_images;
     if (Array.isArray(imgs) && imgs.length > 0) return typeof imgs[0] === 'string' ? imgs[0] : imgs[0]?.url;
     return null;

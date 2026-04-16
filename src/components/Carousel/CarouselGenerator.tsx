@@ -3289,8 +3289,9 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           }
         } catch (e) { console.warn('[SINGLE_POST] Font base64 conversion failed:', e); }
       }
-      // Include logo as reference image for AI
-      if (logoUrl && logoUrl.startsWith('http')) {
+      // Include logo as reference image for AI (ONLY for full-bleed styles where AI renders the logo)
+      const singleIsFullBleed = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
+      if (logoUrl && logoUrl.startsWith('http') && singleIsFullBleed) {
         effectiveProductRefs = [...(effectiveProductRefs || []), logoUrl];
       }
 
@@ -3395,7 +3396,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const rawImageUrl = finalImageUrl;
 
       // === NON-REAL-ESTATE: Programmatic logo overlay via Canvas ===
-      if (!useRealEstateBlend && logoUrl && finalImageUrl) {
+      // Skip Canvas overlay for full-bleed styles — AI already renders the logo
+      if (!useRealEstateBlend && logoUrl && finalImageUrl && !singleIsFullBleed) {
         try {
           console.log('[LOGO_OVERLAY] Adding logo to single post...');
           const W = cardW, H = cardH;
@@ -4363,6 +4365,24 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const baseNegativePrompt = styleNeg || 'no text, no words, no letters, no typography, no writing, no captions, no watermarks, no logos, no UI elements, no glowing particles, no floating orbs, no network lines, no hexagonal grid, no digital matrix, no abstract tech background, no bokeh circles, no constellation pattern, no holographic effect, no neural network visual';
       const isFullBleedStyle = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
 
+      // === 40% TEXT-ONLY RULE: enforce that ~40% of content cards have no image (non-full-bleed only) ===
+      if (!isFullBleedStyle) {
+        const contentCards = updatedCards.filter((c, idx) => c.type !== 'cover' && c.type !== 'cta' && idx > 0 && idx < updatedCards.length - 1);
+        const contentIndices = updatedCards.map((c, idx) => idx).filter(idx => updatedCards[idx].type !== 'cover' && updatedCards[idx].type !== 'cta' && idx > 0 && idx < updatedCards.length - 1);
+        const maxImageContentCards = Math.ceil(contentCards.length * 0.6); // 60% can have images, 40% text-only
+        let imageContentCount = 0;
+        for (const idx of contentIndices) {
+          if (updatedCards[idx].needsImage || imageCardIndices.includes(idx)) {
+            imageContentCount++;
+            if (imageContentCount > maxImageContentCards) {
+              // Force this card to be text-only
+              updatedCards[idx] = { ...updatedCards[idx], needsImage: false };
+              console.log(`[40% RULE] Card ${idx} forced to text-only (cap reached: ${maxImageContentCards}/${contentCards.length})`);
+            }
+          }
+        }
+      }
+
       for (let i = 0; i < updatedCards.length; i++) {
         const card = updatedCards[i];
         if (isFullBleedStyle || card.needsImage || card.type === 'cover' || card.type === 'cta' || imageCardIndices.includes(i)) {
@@ -4545,12 +4565,13 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
             }
           }
           
-          // Include logo as reference image for the AI to render
-          if (logoUrl && logoUrl.startsWith('http')) {
-            capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
-          }
-
            const isFullBleedMkt = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
+           
+           // Include logo as reference image for the AI to render (ONLY for full-bleed styles where AI renders the logo)
+           if (logoUrl && logoUrl.startsWith('http') && isFullBleedMkt) {
+             capturedProductRefs = [...(capturedProductRefs || []), logoUrl];
+           }
+
            const capturedNegative = isFullBleedMkt 
               ? [activeMarketplaceStyleRef.current?.imageGeneration?.negative_prompt || '', capturedFaceRefs && capturedFaceRefs.length > 0 ? '' : 'Do NOT copy the exact faces or identities of people from the reference images. Use different people with varied appearances. Only copy the visual design style, layout, typography and color scheme.'].filter(Boolean).join(', ')
               : finalNegative;
@@ -4882,14 +4903,16 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       }
 
       // === NON-REAL-ESTATE: Programmatic logo overlay for ALL carousel cards ===
-      if (!useRealEstateBlend && logoUrl && updatedCards.length > 0) {
+      // SKIP Canvas overlay for full-bleed styles — AI already renders the logo in the image
+      const isFullBleedForLogo = !!activeMarketplaceStyleRef.current?.imageGeneration?.prompt_style;
+      if (!useRealEstateBlend && logoUrl && updatedCards.length > 0 && !isFullBleedForLogo) {
         // Save raw (pre-logo) images for repositioning later
         for (let i = 0; i < updatedCards.length; i++) {
           if (updatedCards[i]?.imageUrl) {
             updatedCards[i] = { ...updatedCards[i], imageUrlRaw: updatedCards[i].imageUrl };
           }
         }
-        console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards...');
+        console.log('[LOGO_OVERLAY] Adding logo to', updatedCards.length, 'carousel cards (non-fullbleed)...');
         const loadImg = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
           const img = document.createElement('img') as HTMLImageElement;
           if (src.startsWith('http')) img.crossOrigin = 'anonymous';
@@ -4924,6 +4947,14 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         } catch (logoErr) {
           console.warn('[LOGO_OVERLAY] Logo load failed:', logoErr);
         }
+      } else if (isFullBleedForLogo && logoUrl && updatedCards.length > 0) {
+        // For full-bleed: just save raw images for repositioning, logo is already in the AI image
+        for (let i = 0; i < updatedCards.length; i++) {
+          if (updatedCards[i]?.imageUrl) {
+            updatedCards[i] = { ...updatedCards[i], imageUrlRaw: updatedCards[i].imageUrl };
+          }
+        }
+        console.log('[LOGO_OVERLAY] Full-bleed style: logo rendered by AI, skipping Canvas overlay');
       }
 
       const finalData = { ...data.data, cards: updatedCards };

@@ -643,6 +643,8 @@ Respeite RIGOROSAMENTE estes limites para que o texto caiba perfeitamente no lay
 
 ${imageCardIndices.length > 0 ? `IMPORTANTE: Os cards nas posições ${imageCardIndices.join(', ')} DEVEM ter imagens (needsImage=true). Os demais podem ser somente texto.` : ''}
 
+REGRA DE DIVERSIDADE VISUAL (40% SEM IMAGEM): Para manter dinamismo e variar o ritmo visual do carrossel, pelo menos 40% dos cards de CONTEÚDO (excluindo capa e CTA) devem ter needsImage=false. Esses cards serão renderizados apenas com texto e elementos gráficos (sem foto/mockup/mídia). Distribua os cards sem imagem de forma intercalada — NÃO coloque todos juntos. Exemplo para 7 cards: capa(imagem) + conteúdo1(imagem) + conteúdo2(SEM) + conteúdo3(imagem) + conteúdo4(SEM) + conteúdo5(SEM) + CTA(imagem).
+
 IMPORTANTE sobre imagePrompt e searchTerms:
 - Se o tópico menciona PESSOAS REAIS (celebridades, influenciadores), inclua o nome deles em searchTerms para buscar fotos de referência
 - Se menciona MARCAS, inclua o nome + "logo" ou "produto" em searchTerms

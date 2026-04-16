@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Minus, Sparkles, Palette, User, Zap, AtSign, FolderOpen, Check } from 'lucide-react';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import '@/styles/carousel-loader.css';
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },

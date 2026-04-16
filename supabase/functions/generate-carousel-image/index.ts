@@ -131,12 +131,13 @@ Deno.serve(async (req) => {
 
     const safeAreaInstruction = `ÁREA SEGURA OBRIGATÓRIA (PRIORIDADE MÁXIMA):
 - TODOS os elementos importantes (título, subtítulo, CTA, mockup, tela, produto, pessoa e logo) DEVEM ficar 100% dentro do canvas.
-- Reserve margens internas mínimas de 8% da largura nas laterais e 8% da altura no topo e na base. Nenhuma letra, palavra, logo, aparelho, tela ou detalhe importante pode tocar, encostar ou ultrapassar as bordas.
-- NUNCA posicione texto nos cantos extremos. Os quatro cantos devem ter respiro visual real.
+- Reserve margens internas mínimas de 10% da largura nas laterais e 10% da altura no topo e na base. Nenhuma letra, palavra, logo, aparelho, tela ou detalhe importante pode tocar, encostar ou ultrapassar as bordas.
+- NUNCA posicione texto nos cantos extremos. Os quatro cantos devem ter respiro visual real e generoso.
 - Se houver muito conteúdo, REDUZA a quantidade de texto, diminua a escala tipográfica ou reorganize o layout. NUNCA permita texto cortado, truncado, vazando ou saindo da arte.
-- Todo texto visível deve caber integralmente dentro da imagem com padding consistente.
-- Mockups e dispositivos também devem ficar completamente contidos dentro do canvas; não corte topo, base ou laterais do aparelho se isso comprometer legibilidade ou proporção.
-- Para screenshots em mockups, a tela deve ficar centralizada e corretamente encaixada no dispositivo, sem escapar da moldura.`;
+- Todo texto visível deve caber integralmente dentro da imagem com padding consistente e uniforme em todos os slides.
+- Mockups e dispositivos também devem ficar completamente contidos dentro do canvas; não corte topo, base ou laterais do aparelho.
+- Para screenshots em mockups, a tela deve ficar centralizada e corretamente encaixada no dispositivo, sem escapar da moldura.
+- CONSISTÊNCIA DE MARGENS: Se este é um carrossel, use EXATAMENTE as mesmas margens e posicionamento em TODOS os slides.`;
     const compactSafeAreaReminder = 'SAFE AREA OBRIGATÓRIA: mantenha texto, mockup, tela e logo 100% dentro do canvas, com margens internas mínimas de 8% em todos os lados; nada pode tocar ou ultrapassar as bordas. PRIORIZE RESPIRO EXTRA NO TOPO E NOS CANTOS SUPERIORES.';
 
     // Filter out URLs from domains that block hotlinking

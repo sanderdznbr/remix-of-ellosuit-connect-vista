@@ -4450,7 +4450,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
           }
           
           const finalNegative = [baseNegativePrompt, imageSettings.negativePrompt].filter(Boolean).join(', ');
-          const productRefUrls = productImages.length > 0 ? productImages.map(p => p.url) : [];
+          const carouselMediaRefUrls = referenceImages.filter(r => r.category === 'general' && r.source === 'upload').map(r => r.url);
+          const productRefUrls = [...(productImages.length > 0 ? productImages.map(p => p.url) : []), ...carouselMediaRefUrls];
           // === EXTREME MODE: Inject uploaded photos as product/style/face refs ===
           const carouselExtremeRefs = getExtremeFormPhotoRefs();
           const carouselExtremeFaceRefs = carouselExtremeRefs.filter(r => r.category === 'face').map(r => r.url);

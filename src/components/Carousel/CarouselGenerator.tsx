@@ -308,7 +308,12 @@ const CarouselGenerator: React.FC = () => {
   const previewH = previewW * (cardH / cardW);
   
   // Content mode: carousel vs single-post
-  const [contentMode, setContentMode] = useState<'carousel' | 'single-post'>('carousel');
+  const [contentMode, _setContentMode] = useState<'carousel' | 'single-post'>('carousel');
+  const contentModeRef = useRef<'carousel' | 'single-post'>('carousel');
+  const setContentMode = useCallback((mode: 'carousel' | 'single-post') => {
+    contentModeRef.current = mode;
+    _setContentMode(mode);
+  }, []);
   const [manualPostText, setManualPostText] = useState('');
   const [manualCardTexts, setManualCardTexts] = useState<{ title?: string; body?: string }[]>([]);
   const [cardPhotoAssignments, setCardPhotoAssignments] = useState<Record<number, string>>({});
@@ -3491,8 +3496,10 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
   };
 
   const generateContent = async () => {
+    // Use ref for contentMode to avoid stale closure (critical for Trends async flow)
+    const effectiveContentMode = contentModeRef.current;
     console.log('[GENERATE_FLOW] generateContent() called');
-    console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', contentMode, 'cardCount:', cardCount);
+    console.log('[GENERATE_FLOW] postFormat:', postFormat, 'contentMode:', effectiveContentMode, 'cardCount:', cardCount);
     console.log('[GENERATE_FLOW] generating:', generating, 'generationInFlightRef:', generationInFlightRef.current);
     console.log('[GENERATE_FLOW] snapshot ref:', JSON.stringify({
       exists: !!generationSnapshotRef.current,
@@ -3511,7 +3518,7 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
     }
 
     // === SINGLE POST MODE ===
-    if (contentMode === 'single-post') {
+    if (effectiveContentMode === 'single-post') {
       console.log('[GENERATE_FLOW] Routing to generateSinglePost()');
       return generateSinglePost();
     }

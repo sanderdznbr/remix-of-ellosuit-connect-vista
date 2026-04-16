@@ -3396,7 +3396,8 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       const rawImageUrl = finalImageUrl;
 
       // === NON-REAL-ESTATE: Programmatic logo overlay via Canvas ===
-      if (!useRealEstateBlend && logoUrl && finalImageUrl) {
+      // Skip Canvas overlay for full-bleed styles — AI already renders the logo
+      if (!useRealEstateBlend && logoUrl && finalImageUrl && !singleIsFullBleed) {
         try {
           console.log('[LOGO_OVERLAY] Adding logo to single post...');
           const W = cardW, H = cardH;

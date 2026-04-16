@@ -819,6 +819,19 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                     )}
 
                     {logoUrl && (
+                    {/* Face summary */}
+                    {faceImages.length > 0 && (
+                      <div className="rounded-xl border border-purple-500/10 p-3" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
+                        <p className="text-[10px] text-white/20 uppercase tracking-wider mb-2">Rosto</p>
+                        <div className="flex gap-1.5">
+                          {faceImages.map((url, i) => (
+                            <img key={i} src={url} alt="" className="w-10 h-10 rounded-full object-cover border border-purple-500/20" />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {logoUrl && (
                       <div className="rounded-xl border border-white/[0.04] p-3 flex items-center gap-3" style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
                         <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
                         <div>

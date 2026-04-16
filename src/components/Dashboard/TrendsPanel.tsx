@@ -51,6 +51,11 @@ export interface TrendData {
   cardText: string;
   cardTexts: string[];
   caption: string;
+  styleId?: string;
+  useBrandColors?: boolean;
+  logoUrl?: string;
+  logoDarkUrl?: string;
+  brandColors?: string[];
 }
 
 interface TrendsPanelProps {

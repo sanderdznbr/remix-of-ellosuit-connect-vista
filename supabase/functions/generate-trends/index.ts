@@ -190,7 +190,7 @@ REGRAS
 1. 5 das 9 ideias DEVEM ser cross-pollination: notícia geral do dia → conexão criativa com o nicho
 2. As outras 4: tendências diretas, dicas, cases ou educativo do nicho
 3. Para cada ideia, decida se funciona melhor como CARROSSEL (conteúdo rico, passo a passo, storytelling) ou ESTÁTICO (frase de impacto, provocação, dica rápida)
-4. Para ESTÁTICO: "card_text" = texto único. Para CARROSSEL: "card_texts" = array com EXATAMENTE 5 textos (um por slide)
+4. Para ESTÁTICO: "card_text" = texto único. Para CARROSSEL: "card_texts" = array com EXATAMENTE 5 objetos {title, subtitle} (um por slide). O title é o título principal do slide (máx 40 chars), o subtitle é o texto de apoio/complemento (máx 80 chars)
 5. A "caption" é a legenda do Instagram — deve ter gancho, desenvolvimento e CTA
 6. Tom: ${config.brand_tone || "profissional"}
 7. "image_search_query" deve ser uma frase ESPECÍFICA para buscar foto ideal (ex: "dentista sorrindo consultório moderno")
@@ -231,7 +231,7 @@ CATEGORIAS:
                       news_hook: { type: "string", description: "A notícia/trend que inspirou, ou vazio" },
                       format: { type: "string", enum: ["carrossel", "estatico"], description: "Formato recomendado" },
                       card_text: { type: "string", description: "Texto da arte para post ESTÁTICO (máx 80 chars)" },
-                      card_texts: { type: "array", minItems: 5, maxItems: 5, items: { type: "string" }, description: "Array de textos dos slides para CARROSSEL (EXATAMENTE 5 items, máx 40 chars cada)" },
+                      card_texts: { type: "array", minItems: 5, maxItems: 5, items: { type: "object", properties: { title: { type: "string", description: "Título principal do slide, máx 40 chars" }, subtitle: { type: "string", description: "Texto de apoio/subtítulo do slide, máx 80 chars" } }, required: ["title", "subtitle"] }, description: "Array de objetos {title, subtitle} dos slides para CARROSSEL (EXATAMENTE 5 items)" },
                       caption: { type: "string", description: "Legenda completa do Instagram, máx 500 chars, sem hashtags" },
                       news_source_index: { type: "number", description: "Index da fonte de notícia que tem imagem disponível, ou -1" },
                       image_search_query: { type: "string", description: "Frase de busca para encontrar foto ideal para este post" },
@@ -273,25 +273,35 @@ CATEGORIAS:
     const parsed = JSON.parse(toolCall.function.arguments);
     const trends = (parsed.trends || []).map((trend: any) => {
       const format = trend?.format || "estatico";
-      const cardTexts = Array.isArray(trend?.card_texts)
-        ? trend.card_texts
-            .filter((text: unknown) => typeof text === "string")
-            .map((text: string) => text.trim())
-            .filter(Boolean)
-            .slice(0, 5)
-        : [];
+      // Normalize card_texts to array of {title, subtitle} objects
+      let cardTexts: { title: string; subtitle: string }[] = [];
+      if (Array.isArray(trend?.card_texts)) {
+        cardTexts = trend.card_texts
+          .map((item: any) => {
+            if (typeof item === "object" && item !== null) {
+              return { title: (item.title || "").trim(), subtitle: (item.subtitle || "").trim() };
+            }
+            // Backward compat: plain string → title only
+            if (typeof item === "string") {
+              return { title: item.trim(), subtitle: "" };
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .slice(0, 5);
+      }
 
       if (format === "carrossel") {
         const fallbackTexts = [
-          trend?.title?.trim() || "Capa",
-          "Ponto principal",
-          "Detalhe importante",
-          "Como aplicar",
-          "Próximo passo",
+          { title: trend?.title?.trim() || "Capa", subtitle: "Descubra tudo sobre este assunto" },
+          { title: "Ponto principal", subtitle: "O conceito mais importante" },
+          { title: "Detalhe importante", subtitle: "Entenda o porquê" },
+          { title: "Como aplicar", subtitle: "Coloque em prática agora" },
+          { title: "Próximo passo", subtitle: "Siga para mais conteúdo!" },
         ];
 
         while (cardTexts.length < 5) {
-          cardTexts.push(fallbackTexts[cardTexts.length] || `Slide ${cardTexts.length + 1}`);
+          cardTexts.push(fallbackTexts[cardTexts.length] || { title: `Slide ${cardTexts.length + 1}`, subtitle: "" });
         }
       }
 

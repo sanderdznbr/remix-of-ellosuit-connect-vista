@@ -49,7 +49,7 @@ export interface TrendData {
   topic: string;
   format: string;
   cardText: string;
-  cardTexts: string[];
+  cardTexts: { title: string; subtitle: string }[];
   caption: string;
   styleId?: string;
   useBrandColors?: boolean;
@@ -296,8 +296,15 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
   const handleCreate = (trend: DailyTrend) => {
     const normalizedCardTexts = Array.isArray(trend.metadata?.card_texts)
       ? trend.metadata.card_texts
-          .filter((text): text is string => typeof text === 'string')
-          .map(text => text.trim())
+          .map((item: any) => {
+            if (typeof item === 'object' && item !== null) {
+              return { title: (item.title || '').trim(), subtitle: (item.subtitle || '').trim() };
+            }
+            if (typeof item === 'string') {
+              return { title: item.trim(), subtitle: '' };
+            }
+            return null;
+          })
           .filter(Boolean)
           .slice(0, 5)
       : [];
@@ -733,12 +740,19 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
             <div className="rounded-lg px-3 py-2 mb-3 border border-white/[0.04]" style={{ backgroundColor: 'rgba(139,92,246,0.04)' }}>
               <p className="text-[10px] text-white/20 mb-1.5 uppercase tracking-wider font-medium">Slides ({cardTexts.length})</p>
               <div className="space-y-1">
-                {cardTexts.map((ct, idx) => (
-                  <div key={idx} className="flex items-start gap-1.5">
-                    <span className="text-[9px] text-purple-400/40 font-mono mt-px shrink-0">{idx + 1}.</span>
-                    <p className="text-[11px] text-white/55 leading-snug">{ct}</p>
-                  </div>
-                ))}
+                {cardTexts.map((ct: any, idx: number) => {
+                  const title = typeof ct === 'string' ? ct : ct?.title || '';
+                  const subtitle = typeof ct === 'string' ? '' : ct?.subtitle || '';
+                  return (
+                    <div key={idx} className="flex items-start gap-1.5">
+                      <span className="text-[9px] text-purple-400/40 font-mono mt-px shrink-0">{idx + 1}.</span>
+                      <div>
+                        <p className="text-[11px] text-white/55 leading-snug">{title}</p>
+                        {subtitle && <p className="text-[10px] text-white/30 leading-snug">{subtitle}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : cardText ? (

@@ -132,7 +132,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
 
   // Editable content
   const [editedCardText, setEditedCardText] = useState('');
-  const [editedCardTexts, setEditedCardTexts] = useState<string[]>([]);
+  const [editedCardTexts, setEditedCardTexts] = useState<{ title: string; subtitle: string }[]>([]);
   const [editedCaption, setEditedCaption] = useState('');
   const [editedTopic, setEditedTopic] = useState('');
   
@@ -305,10 +305,10 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
     setFaceImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const updateSlideText = (index: number, value: string) => {
+  const updateSlideText = (index: number, field: 'title' | 'subtitle', value: string) => {
     setEditedCardTexts(prev => {
       const copy = [...prev];
-      copy[index] = value;
+      copy[index] = { ...copy[index], [field]: value };
       return copy;
     });
   };
@@ -435,11 +435,18 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
                       </label>
                       <div className="space-y-1.5">
                         {editedCardTexts.map((ct, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <span className="text-[10px] text-purple-400/40 font-mono w-4 text-right shrink-0">{idx + 1}</span>
-                            <input value={ct} onChange={e => updateSlideText(idx, e.target.value)}
-                              className="flex-1 px-3 py-2 rounded-lg text-[11px] text-white/70 border border-white/[0.05] focus:border-purple-500/30 outline-none transition-colors"
-                              style={{ backgroundColor: 'rgba(255,255,255,0.02)' }} />
+                          <div key={idx} className="flex items-start gap-2">
+                            <span className="text-[10px] text-purple-400/40 font-mono w-4 text-right shrink-0 mt-2.5">{idx + 1}</span>
+                            <div className="flex-1 space-y-1">
+                              <input value={ct.title} onChange={e => updateSlideText(idx, 'title', e.target.value)}
+                                placeholder="Título do slide"
+                                className="w-full px-3 py-2 rounded-lg text-[11px] text-white/70 border border-white/[0.05] focus:border-purple-500/30 outline-none transition-colors"
+                                style={{ backgroundColor: 'rgba(255,255,255,0.02)' }} />
+                              <input value={ct.subtitle} onChange={e => updateSlideText(idx, 'subtitle', e.target.value)}
+                                placeholder="Subtítulo / texto de apoio"
+                                className="w-full px-3 py-1.5 rounded-lg text-[10px] text-white/45 border border-white/[0.03] focus:border-purple-500/20 outline-none transition-colors"
+                                style={{ backgroundColor: 'rgba(255,255,255,0.015)' }} />
+                            </div>
                           </div>
                         ))}
                       </div>

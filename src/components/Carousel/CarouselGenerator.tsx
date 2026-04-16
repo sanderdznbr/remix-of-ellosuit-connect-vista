@@ -2140,8 +2140,10 @@ The image must look like it was shot by a professional photographer or designed 
     setUpscaling(true);
 
     try {
+      // Send the RAW image (without logo) to avoid logo duplication
+      const imageToUpscale = (card as any).imageUrlRaw || card.imageUrl;
       const { data, error } = await supabase.functions.invoke('upscale-image', {
-        body: { imageUrl: card.imageUrl },
+        body: { imageUrl: imageToUpscale },
       });
 
       if (error) throw error;

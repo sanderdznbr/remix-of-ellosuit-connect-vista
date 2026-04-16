@@ -1,0 +1,1 @@
+ALTER TABLE public.trend_configs ADD COLUMN IF NOT EXISTS auto_daily boolean NOT NULL DEFAULT false;

@@ -266,10 +266,10 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
           <div className="w-10 h-10 rounded-xl bg-purple-600 mb-4 flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">Adicionar créditos</h2>
-          <p className="text-sm text-white/40 mb-2">Compre créditos avulsos para usar imediatamente.</p>
+          <h2 className="text-xl font-bold text-white mb-1">Adicionar criativos</h2>
+          <p className="text-sm text-white/40 mb-2">Compre criativos avulsos para usar imediatamente.</p>
           <p className="text-xs text-purple-300/60 mb-6">
-            Seu plano: <span className="font-semibold text-purple-300">{(currentPlan || 'free').charAt(0).toUpperCase() + (currentPlan || 'free').slice(1)}</span> — R${unitPrice.toFixed(2)}/crédito
+            Seu plano: <span className="font-semibold text-purple-300">{(currentPlan || 'free').charAt(0).toUpperCase() + (currentPlan || 'free').slice(1)}</span> — R${unitPrice.toFixed(2)}/criativo
           </p>
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto mb-6">
@@ -283,7 +283,7 @@ const TopUpModal: React.FC<TopUpModalProps> = ({ open, onClose, currentPlan, com
                     : 'bg-white/[0.03] border border-white/[0.06] text-white/70 hover:bg-white/[0.06]'
                 }`}
               >
-                <span className="font-medium">+{opt.credits} créditos</span>
+                <span className="font-medium">+{opt.credits} criativos</span>
                 <span className={selectedTopup === i ? 'text-purple-300' : 'text-white/40'}>R${opt.price.toFixed(2)}</span>
               </button>
             ))}

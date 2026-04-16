@@ -7245,6 +7245,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   setFromTrendData(trendData);
                   setSkipWebSearch(true);
                   setForceWebSearch(false);
+                  // Auto-set style from dialog
+                  if (trendData.styleId) {
+                    setLoadedMarketplaceStyleId(trendData.styleId);
+                    // Load the full style object
+                    supabase.from('marketplace_styles').select('*')
+                      .eq('id', trendData.styleId).single()
+                      .then(({ data }) => {
+                        if (data) {
+                          setActiveMarketplaceStyle(data);
+                          activeMarketplaceStyleRef.current = data;
+                        }
+                      });
+                  }
+                  // Auto-set branding from dialog
+                  if (trendData.logoUrl) setLogoUrl(trendData.logoUrl);
+                  if (trendData.logoDarkUrl) setLogoDarkUrl(trendData.logoDarkUrl);
                 }
               }}
               onLoadCarousel={async (item: any) => {

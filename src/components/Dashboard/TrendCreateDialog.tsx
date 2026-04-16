@@ -11,7 +11,6 @@ interface MarketplaceStyle {
   id: string;
   name: string;
   preview_images: any;
-  cover_url?: string;
   category?: string;
 }
 
@@ -78,7 +77,7 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
       if (!cu) return;
 
       const [stylesRes, configRes] = await Promise.all([
-        supabase.from('marketplace_styles').select('id, name, preview_images, cover_url, category')
+        supabase.from('marketplace_styles').select('id, name, preview_images, category')
           .eq('is_active', true).order('sort_order', { ascending: true }) as any,
         supabase.from('trend_configs').select('logo_url, logo_dark_url, brand_colors')
           .eq('company_id', cu.company_id).single(),
@@ -111,7 +110,6 @@ const TrendCreateDialog: React.FC<Props> = ({ open, onClose, trendData, onConfir
   };
 
   const getPreviewUrl = (style: MarketplaceStyle) => {
-    if (style.cover_url) return style.cover_url;
     const imgs = style.preview_images;
     if (Array.isArray(imgs) && imgs.length > 0) return typeof imgs[0] === 'string' ? imgs[0] : imgs[0]?.url;
     return null;

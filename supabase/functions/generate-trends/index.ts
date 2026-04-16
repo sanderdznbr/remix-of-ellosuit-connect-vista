@@ -222,6 +222,7 @@ CATEGORIAS:
                       format: { type: "string", enum: ["carrossel", "estatico"], description: "Formato recomendado" },
                       card_text: { type: "string", description: "Texto que vai na arte/imagem" },
                       caption: { type: "string", description: "Legenda completa do Instagram, máx 500 chars, sem hashtags" },
+                      news_source_index: { type: "number", description: "Index da fonte de notícia que tem imagem disponível (do bloco IMAGENS DISPONÍVEIS), ou -1 se não tem" },
                     },
                     required: ["title", "description", "category", "relevance_score", "format", "card_text", "caption"],
                   },

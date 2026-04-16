@@ -38,6 +38,7 @@ interface DailyTrend {
     news_hook?: string;
     format?: string;
     card_text?: string;
+    card_texts?: string[];
     caption?: string;
     image_url?: string;
   };
@@ -47,6 +48,7 @@ export interface TrendData {
   topic: string;
   format: string;
   cardText: string;
+  cardTexts: string[];
   caption: string;
 }
 

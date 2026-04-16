@@ -153,14 +153,15 @@ const Landing: React.FC = () => {
               boxShadow: '0 60px 140px -30px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.06) inset',
             }}
           >
-            <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ bottom: '-55%', filter: 'blur(4px)' }}>
-              <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 70vw, 900px)', height: 'clamp(500px, 70vw, 900px)' }}>
-                <div className="carousel-loader-spinner" />
+            {/* Video placeholder — replace with <video> when asset is ready */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              {/* TODO: <video src="/path-to-video.mp4" autoPlay muted loop playsInline className="w-full h-full object-cover" /> */}
+              <div className="flex flex-col items-center gap-3" style={{ color: INK_DIM }}>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.12)', border: `1px solid ${HAIRLINE_STRONG}` }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill={PURPLE}/></svg>
+                </div>
+                <span className="text-[12px] font-medium">Vídeo em breve</span>
               </div>
-            </div>
-            <div className="absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: 'rgba(20,16,30,0.7)', border: `1px solid ${HAIRLINE_STRONG}`, backdropFilter: 'blur(20px)' }}>
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: PURPLE }} />
-              <span className="text-[12px] font-medium" style={{ color: INK_SOFT }}>Gerando seu conteúdo…</span>
             </div>
           </motion.div>
         </div>

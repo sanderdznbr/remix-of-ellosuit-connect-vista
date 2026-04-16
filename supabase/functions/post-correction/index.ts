@@ -57,26 +57,26 @@ serve(async (req) => {
       // WITH ATTACHMENT: 3 images
       contentParts.push({
         type: "text",
-        text: `Edit this image. I'm sending you THREE images:
+        text: `INPAINTING EDIT — Return the COMPLETE full-resolution image.
 
-1. THE FULL POST/ARTWORK (first image below) — This is the COMPLETE image you must return edited. Study everything: the person, their clothing, skin tone, proportions, the background environment, lighting, colors, typography, and overall composition.
+I am sending you THREE images:
 
-2. A MASK (second image) — A black-and-white image the SAME SIZE as the post. The WHITE areas show EXACTLY where you should make changes. The BLACK areas must remain COMPLETELY UNCHANGED — copy them pixel-for-pixel from the original.
+1. **ORIGINAL IMAGE** (first image) — The COMPLETE artwork/post. You MUST return an image with the EXACT SAME pixel dimensions.
 
-3. A REFERENCE IMAGE (third image) — Use this as visual reference for what to place or change in the white mask area.
+2. **MASK** (second image) — Same dimensions as the original. WHITE = areas to edit. BLACK = areas that MUST remain IDENTICAL to the original — do NOT change a single pixel in black areas.
 
-WHAT THE USER WANTS: "${editPrompt}"
+3. **REFERENCE IMAGE** (third image) — Visual reference for what to place/change in the white mask area.
 
-YOUR TASK:
-- Return the COMPLETE image (same exact dimensions as image 1)
-- ONLY modify the WHITE areas of the mask
-- Keep EVERYTHING in the black areas identical to the original
-- The edit must blend PERFECTLY with the surrounding image — match lighting, shadows, color temperature, skin tone, clothing texture
-- If moving/changing body parts: maintain correct anatomy, proportions, and natural connections to the rest of the body
-- The background behind edited areas must match the original environment (walls, textures, objects) — NEVER use white, blank, or generic fills
-- The result must look like the original photograph, just with the requested change — completely photorealistic, no artifacts, no seams
+USER REQUEST: "${editPrompt}"
 
-Return ONLY the edited image, nothing else.`
+CRITICAL OUTPUT RULES:
+- Output dimensions MUST EXACTLY MATCH image 1 (same width × same height)
+- Do NOT crop, zoom, resize, or change the aspect ratio
+- BLACK mask areas: copy pixel-for-pixel from the original — zero changes
+- WHITE mask areas: apply the requested edit, blending seamlessly with surroundings
+- Match lighting, shadows, color temperature, and textures perfectly
+- The result must be photorealistic with no seams or artifacts
+- Return ONLY the complete edited image`
       });
       contentParts.push({ type: "image_url", image_url: { url: originalImageDataUrl } });
       contentParts.push({ type: "image_url", image_url: { url: maskImageDataUrl } });
@@ -85,24 +85,24 @@ Return ONLY the edited image, nothing else.`
       // WITHOUT ATTACHMENT: 2 images
       contentParts.push({
         type: "text",
-        text: `Edit this image. I'm sending you TWO images:
+        text: `INPAINTING EDIT — Return the COMPLETE full-resolution image.
 
-1. THE FULL POST/ARTWORK (first image below) — This is the COMPLETE image you must return edited. Study everything: the person, their clothing, skin tone, proportions, the background environment, lighting, colors, typography, and overall composition.
+I am sending you TWO images:
 
-2. A MASK (second image) — A black-and-white image the SAME SIZE as the post. The WHITE areas show EXACTLY where you should make changes. The BLACK areas must remain COMPLETELY UNCHANGED — copy them pixel-for-pixel from the original.
+1. **ORIGINAL IMAGE** (first image) — The COMPLETE artwork/post. You MUST return an image with the EXACT SAME pixel dimensions.
 
-WHAT THE USER WANTS: "${editPrompt}"
+2. **MASK** (second image) — Same dimensions as the original. WHITE = areas to edit. BLACK = areas that MUST remain IDENTICAL to the original — do NOT change a single pixel in black areas.
 
-YOUR TASK:
-- Return the COMPLETE image (same exact dimensions as image 1)
-- ONLY modify the WHITE areas of the mask
-- Keep EVERYTHING in the black areas identical to the original
-- The edit must blend PERFECTLY with the surrounding image — match lighting, shadows, color temperature, skin tone, clothing texture
-- If moving/changing body parts: maintain correct anatomy, proportions, and natural connections to the rest of the body
-- The background behind edited areas must match the original environment (walls, textures, objects) — NEVER use white, blank, or generic fills
-- The result must look like the original photograph, just with the requested change — completely photorealistic, no artifacts, no seams
+USER REQUEST: "${editPrompt}"
 
-Return ONLY the edited image, nothing else.`
+CRITICAL OUTPUT RULES:
+- Output dimensions MUST EXACTLY MATCH image 1 (same width × same height)
+- Do NOT crop, zoom, resize, or change the aspect ratio
+- BLACK mask areas: copy pixel-for-pixel from the original — zero changes
+- WHITE mask areas: apply the requested edit, blending seamlessly with surroundings
+- Match lighting, shadows, color temperature, and textures perfectly
+- The result must be photorealistic with no seams or artifacts
+- Return ONLY the complete edited image`
       });
       contentParts.push({ type: "image_url", image_url: { url: originalImageDataUrl } });
       contentParts.push({ type: "image_url", image_url: { url: maskImageDataUrl } });

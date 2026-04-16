@@ -12674,12 +12674,14 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   const ctx = canvas.getContext('2d')!;
                   ctx.drawImage(origImg, 0, 0, W, H);
 
-                  // Draw AI result
-                  const aiCanvas = document.createElement('canvas');
-                  aiCanvas.width = W;
-                  aiCanvas.height = H;
-                  const aiCtx = aiCanvas.getContext('2d')!;
-                  aiCtx.drawImage(aiImg, 0, 0, W, H);
+                   // Draw AI result — always force to original dimensions
+                   // (handles cases where AI returns different size)
+                   const aiCanvas = document.createElement('canvas');
+                   aiCanvas.width = W;
+                   aiCanvas.height = H;
+                   const aiCtx = aiCanvas.getContext('2d')!;
+                   // If AI returned different dimensions, this stretches it to match original
+                   aiCtx.drawImage(aiImg, 0, 0, W, H);
 
                   // Draw mask and create feathered alpha
                   const maskCanvas = document.createElement('canvas');

@@ -501,12 +501,11 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
   const antiFaceNeg = hasFaceRefsForCarousel && !styleRecommendsNoFaces
     ? 'no humans, no people, no portraits, no faces'
     : '';
+  // Apenas 1 card do carrossel pode ter mockup de aparelho completo (a capa).
+  // O resto deve usar abordagens editoriais variadas (crops, painéis, módulos).
   const preferredDeviceMockupIndices = (() => {
     if (!(hasProductImages && isAppScreenshot)) return new Set<number>();
-    const anchors = cards.length <= 5
-      ? [0, cards.length - 1]
-      : [0, Math.floor((cards.length - 1) / 2), cards.length - 1];
-    return new Set(anchors.filter((idx) => idx >= 0 && idx < cards.length));
+    return new Set<number>([0]);
   })();
 
   for (let i = 0; i < cards.length; i++) {

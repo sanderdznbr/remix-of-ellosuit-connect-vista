@@ -7273,7 +7273,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     setImageCardCount(1);
                   }
 
-                  // Auto-set style and trigger generation
+                  // Auto-set style and trigger generation via useEffect
                   if (trendData.styleId) {
                     setLoadedMarketplaceStyleId(trendData.styleId);
                     supabase.from('marketplace_styles').select('*')
@@ -7283,18 +7283,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           setActiveMarketplaceStyle(data);
                           activeMarketplaceStyleRef.current = data;
                         }
-                        // Auto-trigger generation after style is loaded
-                        setTimeout(() => {
-                          setTransitionToGenerate(true);
-                          setTimeout(() => generateContent(), 1200);
-                        }, 300);
+                        setPendingTrendGeneration(true);
                       });
                   } else {
-                    // No style, still auto-generate
-                    setTimeout(() => {
-                      setTransitionToGenerate(true);
-                      setTimeout(() => generateContent(), 1200);
-                    }, 300);
+                    setPendingTrendGeneration(true);
                   }
                 }
               }}

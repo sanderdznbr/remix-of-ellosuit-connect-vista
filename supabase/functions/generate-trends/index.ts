@@ -291,6 +291,7 @@ CATEGORIAS:
           news_hook: t.news_hook || null,
           format: t.format || "estatico",
           card_text: t.card_text || "",
+          card_texts: Array.isArray(t.card_texts) ? t.card_texts : [],
           caption: t.caption || "",
           image_url: imageUrl,
           sources_count: { google_trends: googleTrends.length, top_news: topNews.length, niche_news: nicheNews.length },

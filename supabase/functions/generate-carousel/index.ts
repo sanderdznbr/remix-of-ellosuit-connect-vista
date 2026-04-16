@@ -1,11 +1,30 @@
 // Edge function for carousel generation
 
 const INTERNAL_BRAND_PATTERN = /\b(?:ello\s*content|ellocontent|ello\s*suit|ellosuit|@ellocontent|@ellosuit)\b/gi;
-const stripInternalBrands = (value: string = '') =>
-  value
-    .replace(INTERNAL_BRAND_PATTERN, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+const INTERNAL_BRAND_DETECTION = /\b(?:ello\s*content|ellocontent|ello\s*suit|ellosuit|@ellocontent|@ellosuit)\b/i;
+const normalizeText = (value: string = '') => value.replace(/\s{2,}/g, ' ').trim();
+const stripInternalBrands = (value: string = '') => normalizeText(value.replace(INTERNAL_BRAND_PATTERN, ''));
+const stripPromptCommandNoise = (value: string = '', fallbackTitle: string = '') => {
+  const normalized = normalizeText(
+    value
+      .replace(/\(\s*@\s*\)/g, fallbackTitle ? ` ${fallbackTitle} ` : ' ')
+      .replace(/\(@([^)]*)\)/g, (_match, inner) => {
+        const mentionTitle = String(inner || '').trim();
+        return mentionTitle ? ` ${mentionTitle} ` : (fallbackTitle ? ` ${fallbackTitle} ` : ' ');
+      })
+      .replace(/@([\p{L}\p{N}_.-]+)/gu, '$1')
+  );
+
+  const stripped = normalizeText(
+    normalized
+      .replace(/^\s*(crie|criar|gere|gerar|faça|fazer|monte|montar)\s+(um|uma|o|a)?\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)?\s*(sobre|para|de|do|da)?\s*/i, '')
+      .replace(/^\s*(post|carrossel|arte|vídeo|video|card|cards|animação|animacao)\s*(sobre|para|de|do|da)\s*/i, '')
+      .replace(/^\s*(tema do carrossel|tópico|tema)\s*:?\s*/i, '')
+      .replace(/\(\s*\)/g, ' ')
+  );
+
+  return stripped || normalizeText(fallbackTitle || normalized);
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

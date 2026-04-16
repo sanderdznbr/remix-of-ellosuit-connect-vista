@@ -1576,7 +1576,7 @@ const CarouselGenerator: React.FC = () => {
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
     };
-  }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig]);
+  }, [carouselData, topic, keywords, bgColor, accentColor, textColor, selectedFont, brandName, userName, dateLabel, imageSettings, activePresetId, logoUrl, logoPosition, logoMode, showHeader, activeMarketplaceStyle, loadedMarketplaceStyleId, user, generating, regeneratingAll, regeneratingCard, isGuest, referenceImages, faceGender, wearsGlasses, facePersons, allPeopleOnCover, buildGenerationConfig, wizardMode, tweetConfig, correctionUndoStack, correctionRedoStack]);
 
   // Auto-trigger generation when coming from Trends (after state is flushed)
   useEffect(() => {

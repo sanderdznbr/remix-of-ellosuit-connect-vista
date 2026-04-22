@@ -149,7 +149,7 @@ const ChatCreator: React.FC = () => {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: data.message || '...',
-        widget: data.widget || null,
+        widget: data.widget && data.widget !== 'none' ? data.widget : null,
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, aiMsg]);

@@ -37,6 +37,8 @@ const FORMAT_TO_RATIO: Record<string, string> = {
   story: '9:16',
 };
 
+const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 async function getCompanyId(sb: any, userId: string): Promise<string | null> {
   const { data } = await sb
     .from('company_users')
@@ -45,6 +47,23 @@ async function getCompanyId(sb: any, userId: string): Promise<string | null> {
     .limit(1)
     .maybeSingle();
   return data?.company_id || null;
+}
+
+async function getStyleContext(sb: any, styleId?: string | null) {
+  if (!isUuid(styleId)) return null;
+
+  const { data, error } = await sb
+    .from('marketplace_styles')
+    .select('id, name, description, preview_images, strict_instructions, style_config')
+    .eq('id', styleId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('style context error:', error);
+    return null;
+  }
+
+  return data || null;
 }
 
 // Convert a remote image URL to base64 data URL so we can pass it inline to the edit model.
@@ -128,6 +147,7 @@ Deno.serve(async (req) => {
     }
 
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
+    const style = await getStyleContext(sb, brief.styleId);
 
     // === Build the multimodal edit prompt ===
     const colors = brief.brandColors?.length
@@ -135,13 +155,26 @@ Deno.serve(async (req) => {
       : '';
     const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : '';
     const faceLine = brief.hasFace && brief.faceUrl
-      ? `Include the person from the attached face reference photo, integrated naturally into the scene with high facial fidelity.`
+      ? `Include the exact person from the attached face reference photo, preserving facial identity, hair, skin tone, age impression, and overall likeness with high fidelity. Never replace with a generic person.`
       : '';
     const logoLine = brief.hasLogo && brief.logoUrl
       ? `Place the attached logo subtly in a corner (small, balanced, not intrusive).`
       : '';
+    const styleRules = [
+      style?.name ? `Marketplace style to match: ${style.name}.` : '',
+      style?.description ? `Style description: ${style.description}` : '',
+      style?.strict_instructions ? `Mandatory style rules: ${style.strict_instructions}` : '',
+      style?.style_config?.imageGeneration?.prompt_style ? `Aesthetic DNA: ${style.style_config.imageGeneration.prompt_style}` : '',
+      brief.audience ? `Target audience: ${brief.audience}.` : '',
+      brief.tone ? `Tone: ${brief.tone}.` : '',
+    ].filter(Boolean).join('\n');
 
     const editPrompt = `Take this background image and turn it into a finished, premium Instagram post about: "${brief.topic}".
+
+CREATIVE GOAL:
+- The final image must feel like one original campaign idea tailored specifically to this topic.
+- Avoid generic social media compositions, generic office props, or stock-like solutions.
+- Make the concept immediately communicate the topic and value proposition.
 
 OVERLAY TEXT REQUIREMENTS (render the text directly in the image, perfectly legible):
 - Headline / hook: a short, powerful Brazilian Portuguese sentence (max 7 words) about the topic
@@ -154,14 +187,22 @@ ${brand}
 ${colors}
 ${faceLine}
 ${logoLine}
+${styleRules}
 
 Aspect ratio: ${ratio}.
 Style: high-end editorial Instagram post — magazine quality.
-Do NOT add watermarks. Keep the original background composition; only add the text and (optionally) the logo/face.`;
+Do NOT add watermarks. Keep the original background composition as the base, but evolve it into a specific branded concept; do not simply slap text on top.
+Respect the marketplace style language faithfully.`;
 
     // Build content array with all reference images
     const content: any[] = [{ type: 'text', text: editPrompt }];
     content.push({ type: 'image_url', image_url: { url: backgroundUrl } });
+
+    if (Array.isArray(style?.preview_images)) {
+      for (const refUrl of style.preview_images.slice(0, 4)) {
+        content.push({ type: 'image_url', image_url: { url: refUrl } });
+      }
+    }
 
     if (brief.hasFace && brief.faceUrl) {
       const faceData = brief.faceUrl.startsWith('data:') ? brief.faceUrl : await urlToDataUrl(brief.faceUrl);
@@ -248,7 +289,7 @@ Do NOT add watermarks. Keep the original background composition; only add the te
           brandColors: brief.brandColors,
         },
         card_count: 1,
-        marketplace_style_id: brief.styleId || null,
+        marketplace_style_id: isUuid(brief.styleId) ? brief.styleId : null,
       })
       .select('id')
       .single();

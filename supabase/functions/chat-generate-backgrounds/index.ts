@@ -14,9 +14,37 @@ interface Brief {
   format?: 'portrait' | 'square' | 'story';
   styleId?: string | null;
   styleName?: string | null;
+  hasFace?: boolean;
+  hasLogo?: boolean;
   brandColors?: string[];
   audience?: string;
   tone?: string;
+}
+
+const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+async function getStyleContext(styleId?: string | null) {
+  if (!isUuid(styleId)) return null;
+
+  try {
+    const resp = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/marketplace_styles?id=eq.${styleId}&select=name,description,preview_images,strict_instructions,style_config`, {
+      headers: {
+        apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+        Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''}`,
+      },
+    });
+
+    if (!resp.ok) {
+      console.error('style context fetch failed:', resp.status, await resp.text());
+      return null;
+    }
+
+    const rows = await resp.json();
+    return rows?.[0] || null;
+  } catch (err) {
+    console.error('style context fetch error:', err);
+    return null;
+  }
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {
@@ -74,25 +102,42 @@ Deno.serve(async (req) => {
     }
 
     const ratio = FORMAT_TO_RATIO[brief?.format || 'portrait'] || '4:5';
+    const style = await getStyleContext(brief?.styleId);
     const palette = brief?.brandColors?.length
       ? `Use a color palette inspired by: ${brief.brandColors.join(', ')}.`
       : 'Use a modern, editorial color palette.';
-    const styleHint = brief?.styleName
-      ? `Visual reference style: "${brief.styleName}".`
-      : '';
+    const styleHint = [
+      brief?.styleName ? `Visual reference style: "${brief.styleName}".` : '',
+      style?.description ? `Style description: ${style.description}` : '',
+      style?.strict_instructions ? `Mandatory style rules: ${style.strict_instructions}` : '',
+      style?.style_config?.imageGeneration?.prompt_style ? `Aesthetic DNA: ${style.style_config.imageGeneration.prompt_style}` : '',
+      Array.isArray(style?.preview_images) && style.preview_images.length
+        ? `Reference these style images for composition language: ${style.preview_images.slice(0, 4).join(', ')}`
+        : '',
+    ].filter(Boolean).join('\n');
+    const audienceHint = brief?.audience ? `Target audience: ${brief.audience}.` : '';
+    const toneHint = brief?.tone ? `Tone: ${brief.tone}.` : '';
+    const identityHint = [
+      brief?.hasFace ? 'Reserve composition space for integrating the person later; do not place a generic anonymous model.' : '',
+      brief?.hasLogo ? 'Leave a subtle brand-safe corner or anchor point for a logo later.' : '',
+    ].filter(Boolean).join(' ');
 
     // Two distinct visual directions so the user has a real choice
     const promptA = `Editorial high-end social media background image for an Instagram post about: "${topic}".
 Direction A — CINEMATIC & MOODY: dramatic lighting, rich shadows, depth, atmospheric, premium magazine feel.
 ${styleHint} ${palette}
+${audienceHint} ${toneHint} ${identityHint}
+Scene direction: the image must visually communicate the topic, not a generic workspace or stock setup. Build one singular concept that someone would immediately associate with this theme.
 Composition: leave clean negative space (top-center or bottom) where text will be placed later.
-No people faces unless the topic requires it. No text, no logos.`;
+No text, no logos, no captions, no watermark, no mockup device unless directly relevant to the topic.`;
 
     const promptB = `Editorial high-end social media background image for an Instagram post about: "${topic}".
 Direction B — BRIGHT & MINIMAL: clean, airy, soft natural light, modern minimal composition, refined and elegant.
 ${styleHint} ${palette}
+${audienceHint} ${toneHint} ${identityHint}
+Scene direction: the image must visually communicate the topic, not a generic desk or random objects. Build one unique concept tied directly to the subject.
 Composition: large negative space for text overlay later.
-No people faces unless the topic requires it. No text, no logos.`;
+No text, no logos, no captions, no watermark, no mockup device unless directly relevant to the topic.`;
 
     console.log('chat-generate-backgrounds: generating 2 options', { topic, ratio });
 

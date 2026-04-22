@@ -79,6 +79,16 @@ const FORMAT_OPTIONS = [
 ] as const;
 
 const PURPLE = '#8B5CF6';
+const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => typeof reader.result === 'string'
+    ? resolve(reader.result)
+    : reject(new Error('Falha ao ler arquivo'));
+  reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+  reader.readAsDataURL(file);
+});
 
 const ChatCreator: React.FC = () => {
   const navigate = useNavigate();
@@ -180,7 +190,20 @@ const ChatCreator: React.FC = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const newBrief = { ...currentBrief, ...(data.brief_update || {}) };
+      const briefUpdate = (data?.brief_update && typeof data.brief_update === 'object') ? data.brief_update : {};
+      const invalidStyleId = typeof briefUpdate.styleId === 'string' && !isUuid(briefUpdate.styleId);
+      if (invalidStyleId) {
+        console.warn('chat-creator returned invalid styleId, preserving previous selection:', briefUpdate.styleId);
+      }
+
+      const newBrief = {
+        ...currentBrief,
+        ...briefUpdate,
+        ...(invalidStyleId ? {
+          styleId: currentBrief.styleId ?? null,
+          styleName: currentBrief.styleName ?? briefUpdate.styleName ?? null,
+        } : {}),
+      };
       setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
@@ -347,7 +370,7 @@ const ChatCreator: React.FC = () => {
   };
 
 
-  const sendMessage = (text: string) => {
+  const sendMessage = (text: string, briefOverride?: BriefState) => {
     const trimmed = text.trim();
     if (!trimmed || loading || generating) return;
 
@@ -360,7 +383,7 @@ const ChatCreator: React.FC = () => {
     const newMessages = [...messages, userMsg];
     setMessages(prev => [...prev, userMsg]);
     setInput('');
-    callAI(newMessages, brief);
+    callAI(newMessages, briefOverride ?? brief);
   };
 
   // === In-chat generation pipeline ===
@@ -438,40 +461,44 @@ const ChatCreator: React.FC = () => {
 
   const handleStylePick = (style: MarketplaceStyle | null) => {
     const label = style ? `Quero o estilo "${style.name}"` : 'Pode escolher um estilo pra mim';
-    setBrief(prev => ({ ...prev, styleId: style?.id || null, styleName: style?.name || null }));
-    sendMessage(label);
+    const nextBrief = { ...brief, styleId: style?.id || null, styleName: style?.name || null };
+    setBrief(nextBrief);
+    sendMessage(label, nextBrief);
   };
 
   const handleContentTypePick = (contentType: 'single' | 'carousel', cards?: number) => {
-    setBrief(prev => ({ ...prev, contentType, cardCount: cards }));
+    const nextBrief = { ...brief, contentType, cardCount: cards };
+    setBrief(nextBrief);
     const label = contentType === 'carousel'
       ? `Quero um carrossel com ${cards || 5} slides`
       : 'Quero um post único';
-    sendMessage(label);
+    sendMessage(label, nextBrief);
   };
 
   const handleFormatPick = (format: string) => {
-    setBrief(prev => ({ ...prev, format: format as any }));
+    const nextBrief = { ...brief, format: format as any };
+    setBrief(nextBrief);
     const label = `Quero no formato ${format === 'portrait' ? 'Retrato 4:5' : format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'}`;
-    sendMessage(label);
+    sendMessage(label, nextBrief);
   };
 
   const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => {
-    setBrief(prev => ({
-      ...prev,
+    const nextBrief = {
+      ...brief,
       hasFace: data.face,
       hasLogo: data.logo,
       hasBrandColors: data.colors,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
       brandColors: data.brandColors,
-    }));
+    };
+    setBrief(nextBrief);
     const parts: string[] = [];
     if (data.face) parts.push('rosto' + (data.faceUrl ? ' (foto enviada)' : ''));
     if (data.logo) parts.push('logo' + (data.logoUrl ? ' (enviada)' : ''));
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
-    sendMessage(label);
+    sendMessage(label, nextBrief);
   };
 
   const handleConfirm = () => {
@@ -908,7 +935,7 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 };
 
 // Personalization with inline upload
-const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => void; userId?: string }> = ({ onPick, userId }) => {
+const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
   const [colors, setColors] = useState(false);
@@ -933,36 +960,28 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
     else setLogoPreview(null);
   };
 
-  const uploadToStorage = async (file: File, folder: string): Promise<string | undefined> => {
-    if (!userId) return undefined;
-    try {
-      const ext = file.name.split('.').pop() || 'png';
-      const path = `${userId}/${folder}/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from('user-uploads').upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from('user-uploads').getPublicUrl(path);
-      return data.publicUrl;
-    } catch (err) {
-      console.error('Upload error:', err);
-      return undefined;
-    }
-  };
-
   const handleConfirm = async () => {
     setUploading(true);
-    let faceUrl: string | undefined;
-    let logoUrl: string | undefined;
-    if (face && faceFile) faceUrl = await uploadToStorage(faceFile, 'faces');
-    if (logo && logoFile) logoUrl = await uploadToStorage(logoFile, 'logos');
-    setUploading(false);
-    onPick({
-      face,
-      logo,
-      colors,
-      faceUrl,
-      logoUrl,
-      brandColors: colors ? brandColors : undefined,
-    });
+    try {
+      const [faceUrl, logoUrl] = await Promise.all([
+        face && faceFile ? fileToDataUrl(faceFile) : Promise.resolve(undefined),
+        logo && logoFile ? fileToDataUrl(logoFile) : Promise.resolve(undefined),
+      ]);
+
+      onPick({
+        face,
+        logo,
+        colors,
+        faceUrl,
+        logoUrl,
+        brandColors: colors ? brandColors : undefined,
+      });
+    } catch (err) {
+      console.error('Inline media encode error:', err);
+      toast.error('Não consegui ler a imagem enviada. Tente outra foto.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const addColor = () => setBrandColors(prev => [...prev, '#000000']);

@@ -1943,6 +1943,7 @@ The image must look like it was shot by a professional photographer or designed 
     fontReferenceName?: string;
     isCarousel?: boolean;
     forceModel?: 'gemini' | 'nano-banana' | 'gpt-image-2' | 'higgsfield';
+    editSourceImage?: string;
   }): Promise<string | null> => {
     // Use the model selected by the user (nano-banana = quality default, gemini = fast)
     // forceModel takes precedence — used for edit-only passes that need Gemini 3 Pro Image.

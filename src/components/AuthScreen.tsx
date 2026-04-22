@@ -125,60 +125,88 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Orb animation */}
-      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
-          <div className="carousel-loader-spinner" />
+    <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+      {/* ─── LEFT: Brand / Orb ─── */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06]">
+        {/* Orb */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 55vw, 850px)', height: 'clamp(500px, 55vw, 850px)' }}>
+            <div className="carousel-loader-spinner" />
+          </div>
         </div>
+        {/* Soft vignette */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 0%, rgba(10,10,15,0.4) 70%, rgba(10,10,15,0.95) 100%)' }} />
+
+        {/* Logo top */}
+        <motion.div
+          className="absolute top-8 left-8 z-10"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          <img src={ellocontentLogo} alt="elloContent" className="h-6 cursor-pointer" onClick={() => navigate('/')} />
+        </motion.div>
+
+        {/* Tagline */}
+        <motion.div
+          className="absolute bottom-12 left-12 right-12 z-10"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.7 }}
+        >
+          <h2 className="text-white text-3xl xl:text-4xl font-semibold leading-tight tracking-tight mb-3">
+            Crie posts que<br />
+            <span className="text-white/50">conectam, em segundos.</span>
+          </h2>
+          <p className="text-white/40 text-sm max-w-md leading-relaxed">
+            A plataforma de IA mais elegante para criar conteúdo visual para suas redes.
+          </p>
+        </motion.div>
       </div>
 
-      {/* Top Navbar */}
-      <motion.nav
-        className="relative z-20 flex items-center justify-between px-5 md:px-8 py-4"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        <div className="flex items-center gap-6 md:gap-8">
-          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6 cursor-pointer" onClick={() => navigate('/')} />
-        </div>
-        <div className="flex items-center gap-3">
+      {/* ─── RIGHT: Form ─── */}
+      <div className="w-full lg:w-1/2 flex flex-col relative">
+        {/* Mobile-only logo on top of right side (lg hidden case never reached because mobile uses MobileAuthScreen) */}
+        <motion.nav
+          className="flex items-center justify-between px-6 lg:px-10 py-5"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          <img src={ellocontentLogo} alt="elloContent" className="h-5 cursor-pointer lg:invisible" onClick={() => navigate('/')} />
           {mode === 'signin' ? (
             <button
               onClick={() => navigate('/register')}
-              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+              className="text-white/80 text-sm font-medium px-4 py-1.5 rounded-full border border-white/15 hover:bg-white/5 hover:border-white/30 transition-all cursor-pointer"
             >
               Cadastre-se
             </button>
           ) : (
             <button
               onClick={switchMode}
-              className="text-white text-sm font-medium px-4 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors cursor-pointer"
+              className="text-white/80 text-sm font-medium px-4 py-1.5 rounded-full border border-white/15 hover:bg-white/5 hover:border-white/30 transition-all cursor-pointer"
             >
               Entrar
             </button>
           )}
-        </div>
-      </motion.nav>
+        </motion.nav>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-4">
-        <motion.div
-          className="w-full max-w-sm space-y-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-        >
-          {/* Title */}
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-bold text-white">
-              {mode === 'signin' ? 'Bem-vindo de volta!' : 'Crie sua conta'}
-            </h1>
-            <p className="text-sm text-white/40">
-              {mode === 'signin' ? 'Entre no seu ellocontent' : 'Comece agora gratuitamente'}
-            </p>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10">
+          <motion.div
+            className="w-full max-w-[360px] space-y-7"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+          >
+            {/* Title */}
+            <div className="space-y-1.5">
+              <h1 className="text-[28px] font-semibold text-white tracking-tight leading-tight">
+                {mode === 'signin' ? 'Bem-vindo de volta' : 'Crie sua conta'}
+              </h1>
+              <p className="text-sm text-white/40">
+                {mode === 'signin' ? 'Entre na sua conta para continuar' : 'Comece agora, é gratuito'}
+              </p>
+            </div>
 
           {error && (
             <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">

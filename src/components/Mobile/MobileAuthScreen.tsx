@@ -21,9 +21,9 @@ const MobileAuthScreen = () => {
     const prevBg = document.documentElement.style.backgroundColor || '';
     const prevBodyBg = document.body.style.backgroundColor || '';
 
-    if (meta) meta.setAttribute('content', '#0F071D');
-    document.documentElement.style.backgroundColor = '#0F071D';
-    document.body.style.backgroundColor = '#0F071D';
+    if (meta) meta.setAttribute('content', '#0a0a0f');
+    document.documentElement.style.backgroundColor = '#0a0a0f';
+    document.body.style.backgroundColor = '#0a0a0f';
 
     return () => {
       if (meta) meta.setAttribute('content', prevTheme);
@@ -101,7 +101,7 @@ const MobileAuthScreen = () => {
   const inputClass = "h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50";
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0F071D' }}>
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* Top bar */}
       <motion.div
         className="relative z-20 flex items-center justify-center px-5 pt-8 pb-2"

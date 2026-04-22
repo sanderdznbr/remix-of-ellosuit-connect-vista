@@ -127,9 +127,9 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0F071D' }}>
+    <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
       {/* ─── LEFT: Brand / Image ─── */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#130825]">
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#0d0d12]">
         {heroImage ? (
           <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover contrast-[1.1] brightness-[1.05]" />
         ) : (
@@ -138,7 +138,7 @@ const AuthScreen = () => {
           </div>
         )}
         {/* Soft vignette for legibility of overlay text */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(15,7,29,0.3) 0%, rgba(15,7,29,0) 30%, rgba(15,7,29,0) 60%, rgba(15,7,29,0.85) 100%)' }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0) 30%, rgba(10,10,15,0) 60%, rgba(10,10,15,0.85) 100%)' }} />
 
         {/* Logo top */}
         <motion.div
@@ -153,17 +153,41 @@ const AuthScreen = () => {
         {/* Tagline */}
         <motion.div
           className="absolute bottom-12 left-12 right-12 z-10"
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.7 }}
+          transition={{ delay: 0.5, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="text-white text-3xl xl:text-4xl font-semibold leading-tight tracking-tight mb-3">
-            Crie posts que<br />
-            <span className="text-white/50">conectam, em segundos.</span>
-          </h2>
-          <p className="text-white/40 text-sm max-w-md leading-relaxed">
+          <motion.h2
+            className="text-white text-5xl xl:text-6xl 2xl:text-7xl font-semibold leading-[1.05] tracking-tight mb-5"
+            initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ delay: 0.6, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.span
+              className="block"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            >
+              Crie posts que
+            </motion.span>
+            <motion.span
+              className="block text-white/50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.95, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            >
+              conectam, em segundos.
+            </motion.span>
+          </motion.h2>
+          <motion.p
+            className="text-white/40 text-sm max-w-md leading-relaxed"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.25, duration: 0.7 }}
+          >
             A plataforma de IA mais elegante para criar conteúdo visual para suas redes.
-          </p>
+          </motion.p>
         </motion.div>
       </div>
 

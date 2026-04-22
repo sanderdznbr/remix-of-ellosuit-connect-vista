@@ -2027,6 +2027,7 @@ The image must look like it was shot by a professional photographer or designed 
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
         ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
+        ...(opts.editSourceImage ? { editSourceImage: opts.editSourceImage } : {}),
       },
     });
     

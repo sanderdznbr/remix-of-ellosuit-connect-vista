@@ -1357,6 +1357,8 @@ function AdminContent() {
         )}
 
         {tab === 'content' && <div className="max-w-2xl"><ContentDocumentParser /></div>}
+
+        {tab === 'appearance' && <div className="max-w-2xl"><AuthHeroUploader /></div>}
       </motion.div>
     </div>
   );

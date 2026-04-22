@@ -437,6 +437,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               )}
             </div>
             <div className="flex items-center justify-between px-3 pb-3">
+              <div className="flex items-center gap-1">
               <div className="relative">
                 <button
                   onClick={() => setFormatDropdownOpen(!formatDropdownOpen)}

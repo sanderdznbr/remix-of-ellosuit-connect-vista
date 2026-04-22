@@ -90,6 +90,11 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+const cloneBrief = (source: BriefState): BriefState => ({
+  ...source,
+  brandColors: source.brandColors ? [...source.brandColors] : undefined,
+});
+
 const ChatCreator: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -99,6 +104,7 @@ const ChatCreator: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [pendingGenerationBrief, setPendingGenerationBrief] = useState<BriefState | null>(null);
   const [styles, setStyles] = useState<MarketplaceStyle[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -416,7 +422,7 @@ const ChatCreator: React.FC = () => {
 
       // Remove the loading widget then show the picker
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
-      appendAssistantWithWidget('Pronto! Qual desses fundos você prefere?', 'background_picker', { backgrounds });
+      appendAssistantWithWidget('Pronto! Qual desses fundos você prefere?', 'background_picker', { backgrounds, briefSnapshot: cloneBrief(b) });
     } catch (err: any) {
       console.error('background generation error:', err);
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
@@ -503,11 +509,13 @@ const ChatCreator: React.FC = () => {
 
   const handleConfirm = () => {
     if (generating || loading) return;
-    startBackgroundGeneration(brief);
+    const snapshot = cloneBrief(brief);
+    setPendingGenerationBrief(snapshot);
+    startBackgroundGeneration(snapshot);
   };
 
-  const handleBackgroundPick = (bg: BackgroundOption) => {
-    composeFinalPost(brief, bg);
+  const handleBackgroundPick = (bg: BackgroundOption, briefSnapshot?: BriefState) => {
+    composeFinalPost(briefSnapshot || pendingGenerationBrief || cloneBrief(brief), bg);
   };
 
   const renderWidget = (msg: ChatMessage) => {
@@ -528,7 +536,7 @@ const ChatCreator: React.FC = () => {
     }
     if (msg.widget === 'background_picker') {
       const bgs: BackgroundOption[] = msg.widgetData?.backgrounds || [];
-      return <BackgroundPickerWidget backgrounds={bgs} onPick={handleBackgroundPick} disabled={generating} />;
+      return <BackgroundPickerWidget backgrounds={bgs} onPick={(bg) => handleBackgroundPick(bg, msg.widgetData?.briefSnapshot)} disabled={generating} />;
     }
     if (msg.widget === 'generating_post') {
       return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;

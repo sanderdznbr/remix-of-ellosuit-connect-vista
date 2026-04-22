@@ -1570,11 +1570,14 @@ const CarouselGenerator: React.FC = () => {
       console.log('[CHAT_PREFILL] Face injected:', chatPrefill.faceUrl);
     }
 
-    if (qStyle) {
+    // Only fetch style if it looks like a UUID (chat AI may invent fake IDs)
+    const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+    if (qStyle && isUuid(qStyle)) {
       supabase.from('marketplace_styles')
         .select('id, name, preview_images, style_config, strict_instructions')
-        .eq('id', qStyle).single()
-        .then(({ data }) => {
+        .eq('id', qStyle).maybeSingle()
+        .then(({ data, error }) => {
+          if (error) console.warn('[CHAT_PREFILL] Style fetch error:', error);
           if (data) {
             setLoadedMarketplaceStyleId(data.id);
             if (data.style_config) {
@@ -1589,12 +1592,12 @@ const CarouselGenerator: React.FC = () => {
               console.log('[CHAT_PREFILL] Marketplace style loaded:', data.name);
             }
           }
-          // Delay autostart so React has time to flush face/logo/brand state into the
-          // refs that generateContent() reads.
+          // Always autostart, even if style fetch failed
           if (qAutostart) setTimeout(() => setPendingTrendGeneration(true), 350);
         });
-    } else if (qAutostart) {
-      setTimeout(() => setPendingTrendGeneration(true), 350);
+    } else {
+      if (qStyle) console.warn('[CHAT_PREFILL] Ignoring non-UUID styleId:', qStyle);
+      if (qAutostart) setTimeout(() => setPendingTrendGeneration(true), 350);
     }
     setShowWelcome(false);
     // Skip web search to go straight to generation

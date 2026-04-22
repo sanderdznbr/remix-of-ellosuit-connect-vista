@@ -1493,7 +1493,8 @@ const CarouselGenerator: React.FC = () => {
     if (!qTopic && !qStyle) return;
     if (qTopic) { setTopic(qTopic); setOriginalTopic(qTopic); }
     if (qFormat && qFormat in FORMAT_DIMENSIONS) setPostFormat(qFormat as PostFormatType);
-    if (qMode === 'carousel' || qMode === 'single') setContentMode(qMode);
+    if (qMode === 'carousel') setContentMode('carousel');
+    else if (qMode === 'single') setContentMode('single-post');
     if (qCards) setCardCount(Math.max(1, parseInt(qCards, 10) || 5));
     if (qStyle) {
       supabase.from('marketplace_styles')

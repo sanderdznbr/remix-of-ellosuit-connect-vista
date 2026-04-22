@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -64,6 +65,7 @@ interface DashboardHomeProps {
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCarousel, onViewAllProjects, onResumeJob }) => {
   const { user } = useAuth();
   const { isMobile } = useIsMobile();
+  const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
@@ -266,7 +268,10 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       toast.error('Aguarde o post atual terminar antes de criar outro.');
       return;
     }
-    if (inputValue.trim()) onStartCarousel(inputValue.trim(), mentionedPrompts, postFormat);
+    const text = inputValue.trim();
+    if (!text) return;
+    // Route everything through the new conversational chat creator
+    navigate(`/criar?prompt=${encodeURIComponent(text)}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -17,7 +17,9 @@ const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
-type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | null;
+type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | 'background_picker' | 'generating_post' | 'final_result' | null;
+
+interface BackgroundOption { id: string; label: string; url: string; }
 
 interface ChatMessage {
   id: string;

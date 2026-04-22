@@ -33,3 +33,7 @@ project_id = "jwddiyuezqrpuakazvgg"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.chat-generate-backgrounds]
+    verify_jwt = false
+  [functions.chat-compose-final]
+    verify_jwt = false

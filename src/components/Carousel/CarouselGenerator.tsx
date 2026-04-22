@@ -188,6 +188,7 @@ const FORMAT_DIMENSIONS = {
   story: { w: 1080, h: 1920 },
 } as const;
 type PostFormatType = keyof typeof FORMAT_DIMENSIONS;
+const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
 const CARD_W = 1080;
 const CARD_H = 1350;

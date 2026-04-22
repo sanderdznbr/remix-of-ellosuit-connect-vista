@@ -122,7 +122,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   };
 
   return (
-    <aside className={`relative ${collapsed ? 'w-[60px]' : 'w-[240px]'} h-[calc(100vh-24px)] flex flex-col shrink-0 rounded-2xl m-3 overflow-hidden transition-all duration-300`} style={{ backgroundColor: '#09090d', border: '1px solid rgba(255,255,255,0.04)' }}>
+    <aside className={`relative ${collapsed ? 'w-[60px]' : 'w-[240px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`} style={{ backgroundColor: '#09090d', borderColor: 'rgba(255,255,255,0.04)' }}>
       {/* Purple ambient glow background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[400px] h-[250px] opacity-[0.18]" style={{ background: 'radial-gradient(ellipse at center, #7C3AED 0%, #4C1D95 40%, transparent 70%)', filter: 'blur(50px)' }} />

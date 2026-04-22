@@ -9,6 +9,7 @@ import {
   Heading,
   Html,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -17,18 +18,26 @@ interface ReauthenticationEmailProps {
 }
 
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Your verification code</Preview>
+    <Preview>Seu código de verificação ellocontent</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
-        <Text style={text}>Use the code below to confirm your identity:</Text>
-        <Text style={codeStyle}>{token}</Text>
-        <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
-        </Text>
+        <Section style={header}>
+          <Text style={brand}>ellocontent</Text>
+        </Section>
+        <Section style={card}>
+          <Heading style={h1}>Confirme sua identidade</Heading>
+          <Text style={text}>
+            Use o código abaixo para confirmar sua identidade:
+          </Text>
+          <Text style={codeStyle}>{token}</Text>
+          <Text style={footer}>
+            Este código expira em poucos minutos. Se você não solicitou,
+            ignore este e-mail.
+          </Text>
+        </Section>
+        <Text style={signature}>— Equipe ellocontent</Text>
       </Container>
     </Body>
   </Html>
@@ -36,25 +45,63 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
 
 export default ReauthenticationEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+  margin: 0,
+  padding: '40px 20px',
+}
+const container = { maxWidth: '520px', margin: '0 auto' }
+const header = { padding: '0 0 24px', textAlign: 'center' as const }
+const brand = {
+  fontSize: '20px',
+  fontWeight: '700' as const,
+  color: '#5B00FF',
+  letterSpacing: '-0.02em',
+  margin: 0,
+}
+const card = {
+  backgroundColor: '#fafafa',
+  borderRadius: '16px',
+  padding: '40px 32px',
+  border: '1px solid #eeeeee',
+}
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  fontSize: '24px',
+  fontWeight: '600' as const,
+  color: '#0a0a0a',
+  letterSpacing: '-0.02em',
+  margin: '0 0 16px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: '#52525b',
+  lineHeight: '1.6',
+  margin: '0 0 16px',
 }
 const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 30px',
+  fontFamily: '"SF Mono", Menlo, Consolas, monospace',
+  fontSize: '32px',
+  fontWeight: '700' as const,
+  color: '#5B00FF',
+  letterSpacing: '0.3em',
+  textAlign: 'center' as const,
+  margin: '24px 0',
+  padding: '16px',
+  backgroundColor: '#ffffff',
+  borderRadius: '10px',
+  border: '1px solid #eeeeee',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = {
+  fontSize: '13px',
+  color: '#999999',
+  lineHeight: '1.5',
+  margin: '24px 0 0',
+}
+const signature = {
+  fontSize: '12px',
+  color: '#999999',
+  textAlign: 'center' as const,
+  margin: '24px 0 0',
+}

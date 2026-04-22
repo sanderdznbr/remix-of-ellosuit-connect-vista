@@ -9,8 +9,8 @@ import {
   Head,
   Heading,
   Html,
-  Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -27,33 +27,29 @@ export const EmailChangeEmail = ({
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
+    <Preview>Confirme a alteração do seu e-mail no {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
-        <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
-          <Link href={`mailto:${email}`} style={link}>
-            {email}
-          </Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
-          </Link>
-          .
-        </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
-        </Text>
+        <Section style={header}>
+          <Text style={brand}>ellocontent</Text>
+        </Section>
+        <Section style={card}>
+          <Heading style={h1}>Confirmar alteração de e-mail</Heading>
+          <Text style={text}>
+            Você solicitou alterar o e-mail da sua conta no {siteName} de{' '}
+            <strong>{email}</strong> para <strong>{newEmail}</strong>.
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            Confirmar alteração
+          </Button>
+          <Text style={footer}>
+            Se você não fez esta solicitação, recomendamos proteger sua conta
+            imediatamente.
+          </Text>
+        </Section>
+        <Text style={signature}>— Equipe ellocontent</Text>
       </Container>
     </Body>
   </Html>
@@ -61,27 +57,60 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+  margin: 0,
+  padding: '40px 20px',
+}
+const container = { maxWidth: '520px', margin: '0 auto' }
+const header = { padding: '0 0 24px', textAlign: 'center' as const }
+const brand = {
+  fontSize: '20px',
+  fontWeight: '700' as const,
+  color: '#5B00FF',
+  letterSpacing: '-0.02em',
+  margin: 0,
+}
+const card = {
+  backgroundColor: '#fafafa',
+  borderRadius: '16px',
+  padding: '40px 32px',
+  border: '1px solid #eeeeee',
+}
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  fontSize: '24px',
+  fontWeight: '600' as const,
+  color: '#0a0a0a',
+  letterSpacing: '-0.02em',
+  margin: '0 0 16px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: '#52525b',
+  lineHeight: '1.6',
+  margin: '0 0 28px',
 }
-const link = { color: 'inherit', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#5B00FF',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontWeight: '600' as const,
+  borderRadius: '10px',
+  padding: '14px 28px',
   textDecoration: 'none',
+  display: 'inline-block',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = {
+  fontSize: '13px',
+  color: '#999999',
+  lineHeight: '1.5',
+  margin: '32px 0 0',
+}
+const signature = {
+  fontSize: '12px',
+  color: '#999999',
+  textAlign: 'center' as const,
+  margin: '24px 0 0',
+}

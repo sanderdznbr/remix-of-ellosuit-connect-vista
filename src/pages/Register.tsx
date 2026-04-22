@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { getAffiliateRef } from '@/hooks/useAffiliateTracking';
-import ellocontentLogo from '@/assets/ellocontent_logo.png';
-import '@/styles/carousel-loader.css';
+import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 
 const TOTAL_STEPS = 2;
 
@@ -25,7 +23,7 @@ const formatPhone = (value: string) => {
   return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
 };
 
-const inputClass = "h-12 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50";
+const inputClass = "h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50";
 const labelClass = "text-xs font-medium text-white/40 uppercase tracking-wide";
 
 export default function Register() {
@@ -89,7 +87,6 @@ export default function Register() {
         return;
       }
       if (data?.user) {
-        // Track affiliate referral
         const affiliateRef = getAffiliateRef();
         if (affiliateRef) {
           supabase
@@ -123,216 +120,128 @@ export default function Register() {
     }
   };
 
+  const topRight = (
+    <button
+      onClick={handleBack}
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-white/70 px-4 py-1.5 rounded-full border border-white/15 hover:bg-white/5 hover:border-white/30 transition-all"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
+      {step === 0 ? 'Login' : 'Voltar'}
+    </button>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Orb animation */}
-      <div className="absolute bottom-[-500px] md:bottom-[-750px] lg:bottom-[-950px] left-1/2 -translate-x-1/2 pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 'clamp(600px, 110vw, 1500px)', height: 'clamp(600px, 110vw, 1500px)' }}>
-          <div className="carousel-loader-spinner" />
-        </div>
+    <AuthSplitLayout
+      topRightSlot={topRight}
+      tagline={{
+        title: <>Comece grátis,<br /><span className="text-white/50">crie em segundos.</span></>,
+        subtitle: 'Crie sua conta e descubra a forma mais elegante de produzir conteúdo com IA.',
+      }}
+    >
+      {/* Progress bar */}
+      <div className="flex gap-1.5">
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors ${i <= step ? 'bg-purple-500' : 'bg-white/10'}`}
+          />
+        ))}
       </div>
 
-      {/* Top Navbar */}
-      <motion.nav
-        className="relative z-20 flex items-center justify-between px-5 md:px-8 py-4"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        <div className="flex items-center gap-6">
-          <img src={ellocontentLogo} alt="elloContent" className="h-5 md:h-6 cursor-pointer" onClick={() => navigate('/')} />
-        </div>
-        <button
-          onClick={handleBack}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-white/50 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {step === 0 ? 'Voltar ao login' : 'Voltar'}
-        </button>
-      </motion.nav>
+      {/* Title */}
+      <div className="space-y-1.5">
+        <h1 className="text-[28px] font-semibold text-white tracking-tight leading-tight">
+          {step === TOTAL_STEPS - 1 ? 'Quase lá!' : 'Crie sua conta'}
+        </h1>
+        <p className="text-sm text-white/40">{STEP_SUBTITLES[step]}</p>
+      </div>
 
-      {/* Content */}
-      <div className="flex-1 flex items-center justify-center relative z-10 px-4 py-10">
-        <motion.div
-          className="w-full max-w-md"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-        >
-          {/* Progress bar */}
-          <div className="flex gap-1.5 mb-10">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-1 flex-1 rounded-full transition-colors ${
-                  i <= step ? 'bg-purple-500' : 'bg-white/10'
-                }`}
-              />
-            ))}
+      {error && (
+        <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">
+          <AlertDescription className="text-red-300">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {step === 0 && (
+        <div className="space-y-4">
+          <div>
+            <Label className={labelClass}>Nome completo</Label>
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Como devemos te chamar?" className={`${inputClass} mt-1.5`} autoFocus />
           </div>
+          <div>
+            <Label className={labelClass}>Empresa</Label>
+            <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Nome da sua empresa" className={`${inputClass} mt-1.5`} />
+          </div>
+          <div>
+            <Label className={labelClass}>WhatsApp</Label>
+            <Input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="(11) 99999-9999" className={`${inputClass} mt-1.5`} />
+          </div>
+        </div>
+      )}
 
-          {/* Title */}
-          <h1 className="text-2xl font-bold text-white mb-1">
-            {step === TOTAL_STEPS - 1 ? 'Quase lá!' : 'Crie sua conta'}
-          </h1>
-          <p className="text-sm text-white/40 mb-8">{STEP_SUBTITLES[step]}</p>
-
-          {/* Error */}
-          {error && (
-            <Alert variant="destructive" className="mb-6 bg-red-500/10 border-red-500/30">
-              <AlertDescription className="text-red-300">{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Step 0 — Personal */}
-          {step === 0 && (
-            <div className="space-y-5">
-              <div>
-                <Label className={labelClass}>Nome completo</Label>
-                <Input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Como devemos te chamar?"
-                  className={`${inputClass} mt-1.5`}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <Label className={labelClass}>Empresa</Label>
-                <Input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Nome da sua empresa"
-                  className={`${inputClass} mt-1.5`}
-                />
-              </div>
-              <div>
-                <Label className={labelClass}>WhatsApp</Label>
-                <Input
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  placeholder="(11) 99999-9999"
-                  className={`${inputClass} mt-1.5`}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Step 1 — Email + Password */}
-          {step === 1 && (
-            <div className="space-y-5">
-              <div>
-                <Label className={labelClass}>Email</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="voce@suaempresa.com"
-                  className={`${inputClass} mt-1.5`}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <Label className={labelClass}>Confirmar email</Label>
-                <Input
-                  type="email"
-                  value={confirmEmail}
-                  onChange={(e) => setConfirmEmail(e.target.value)}
-                  placeholder="Repita o email"
-                  className={`${inputClass} mt-1.5`}
-                />
-                {confirmEmail.length > 0 && email !== confirmEmail && (
-                  <p className="text-xs text-red-400 mt-1.5">Os emails não coincidem</p>
-                )}
-              </div>
-              <div>
-                <Label className={labelClass}>Senha</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    className={`${inputClass} pr-10`}
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {password.length > 0 && (
-                  <div className="flex gap-1.5 mt-2">
-                    <div className={`h-1 flex-1 rounded-full transition-colors ${password.length >= 6 ? 'bg-purple-500' : 'bg-white/10'}`} />
-                    <div className={`h-1 flex-1 rounded-full transition-colors ${password.length >= 8 ? 'bg-purple-500' : 'bg-white/10'}`} />
-                    <div className={`h-1 flex-1 rounded-full transition-colors ${/[A-Z]/.test(password) && /\d/.test(password) ? 'bg-purple-500' : 'bg-white/10'}`} />
-                  </div>
-                )}
-              </div>
-              <div>
-                <Label className={labelClass}>Confirmar senha</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    type={showConfirm ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repita a senha"
-                    className={`${inputClass} pr-10`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
-                  >
-                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {confirmPassword.length > 0 && password !== confirmPassword && (
-                  <p className="text-xs text-red-400 mt-1.5">As senhas não coincidem</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* CTA Button */}
-          <div className="mt-8">
-            {step < TOTAL_STEPS - 1 ? (
-              <Button
-                onClick={handleNext}
-                className="w-full h-12 rounded-xl text-sm font-medium"
-                style={{ backgroundColor: '#7B50DC' }}
-              >
-                Continuar
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                className="w-full h-12 rounded-xl text-sm font-medium"
-                style={{ backgroundColor: '#7B50DC' }}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Criando conta...</>
-                ) : (
-                  'Criar conta'
-                )}
-              </Button>
+      {step === 1 && (
+        <div className="space-y-4">
+          <div>
+            <Label className={labelClass}>Email</Label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@suaempresa.com" className={`${inputClass} mt-1.5`} autoFocus />
+          </div>
+          <div>
+            <Label className={labelClass}>Confirmar email</Label>
+            <Input type="email" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder="Repita o email" className={`${inputClass} mt-1.5`} />
+            {confirmEmail.length > 0 && email !== confirmEmail && (
+              <p className="text-xs text-red-400 mt-1.5">Os emails não coincidem</p>
             )}
           </div>
+          <div>
+            <Label className={labelClass}>Senha</Label>
+            <div className="relative mt-1.5">
+              <Input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className={`${inputClass} pr-10`} minLength={6} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {password.length > 0 && (
+              <div className="flex gap-1.5 mt-2">
+                <div className={`h-1 flex-1 rounded-full transition-colors ${password.length >= 6 ? 'bg-purple-500' : 'bg-white/10'}`} />
+                <div className={`h-1 flex-1 rounded-full transition-colors ${password.length >= 8 ? 'bg-purple-500' : 'bg-white/10'}`} />
+                <div className={`h-1 flex-1 rounded-full transition-colors ${/[A-Z]/.test(password) && /\d/.test(password) ? 'bg-purple-500' : 'bg-white/10'}`} />
+              </div>
+            )}
+          </div>
+          <div>
+            <Label className={labelClass}>Confirmar senha</Label>
+            <div className="relative mt-1.5">
+              <Input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a senha" className={`${inputClass} pr-10`} />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {confirmPassword.length > 0 && password !== confirmPassword && (
+              <p className="text-xs text-red-400 mt-1.5">As senhas não coincidem</p>
+            )}
+          </div>
+        </div>
+      )}
 
-          {/* Login link */}
-          <p className="text-center text-xs text-white/30 mt-6">
-            Já tem uma conta?{' '}
-            <button onClick={() => navigate('/auth')} className="text-purple-400 font-medium hover:underline">
-              Entrar
-            </button>
-          </p>
-        </motion.div>
+      <div>
+        {step < TOTAL_STEPS - 1 ? (
+          <Button onClick={handleNext} className="w-full h-10 rounded-full text-sm font-medium" style={{ backgroundColor: '#7B50DC' }}>
+            Continuar
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : (
+          <Button onClick={handleSubmit} className="w-full h-10 rounded-full text-sm font-medium" style={{ backgroundColor: '#7B50DC' }} disabled={isLoading}>
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Criando conta...</> : 'Criar conta'}
+          </Button>
+        )}
       </div>
-    </div>
+
+      <p className="text-center text-xs text-white/30">
+        Já tem uma conta?{' '}
+        <button onClick={() => navigate('/auth')} className="text-purple-400 font-medium hover:underline">
+          Entrar
+        </button>
+      </p>
+    </AuthSplitLayout>
   );
 }

@@ -9,8 +9,8 @@ import {
   Head,
   Heading,
   Html,
-  Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -21,25 +21,35 @@ interface EmailChangeEmailProps {
   confirmationUrl: string
 }
 
-export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }: EmailChangeEmailProps) => (
+export const EmailChangeEmail = ({
+  siteName,
+  email,
+  newEmail,
+  confirmationUrl,
+}: EmailChangeEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme a alteração do seu e-mail no elloSuit</Preview>
+    <Preview>Confirme a alteração do seu e-mail no {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirme a alteração do seu e-mail</Heading>
-        <Text style={text}>
-          Você solicitou a alteração do seu e-mail no elloSuit de{' '}
-          <Link href={`mailto:${email}`} style={link}>{email}</Link>{' '}
-          para{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirmar Alteração
-        </Button>
-        <Text style={footer}>
-          Se você não solicitou essa alteração, proteja sua conta imediatamente.
-        </Text>
+        <Section style={header}>
+          <Text style={brand}>ellocontent</Text>
+        </Section>
+        <Section style={card}>
+          <Heading style={h1}>Confirmar alteração de e-mail</Heading>
+          <Text style={text}>
+            Você solicitou alterar o e-mail da sua conta no {siteName} de{' '}
+            <strong>{email}</strong> para <strong>{newEmail}</strong>.
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            Confirmar alteração
+          </Button>
+          <Text style={footer}>
+            Se você não fez esta solicitação, recomendamos proteger sua conta
+            imediatamente.
+          </Text>
+        </Section>
+        <Text style={signature}>— Equipe ellocontent</Text>
       </Container>
     </Body>
   </Html>
@@ -47,10 +57,60 @@ export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }:
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif" }
-const container = { padding: '40px 25px', maxWidth: '480px', margin: '0 auto' }
-const h1 = { fontSize: '24px', fontWeight: 'bold' as const, color: '#1a1a2e', margin: '0 0 20px' }
-const text = { fontSize: '14px', color: '#55575d', lineHeight: '1.6', margin: '0 0 25px' }
-const link = { color: '#7B50DC', textDecoration: 'underline' }
-const button = { backgroundColor: '#7B50DC', color: '#ffffff', fontSize: '14px', fontWeight: '600' as const, borderRadius: '10px', padding: '14px 24px', textDecoration: 'none' }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+  margin: 0,
+  padding: '40px 20px',
+}
+const container = { maxWidth: '520px', margin: '0 auto' }
+const header = { padding: '0 0 24px', textAlign: 'center' as const }
+const brand = {
+  fontSize: '20px',
+  fontWeight: '700' as const,
+  color: '#5B00FF',
+  letterSpacing: '-0.02em',
+  margin: 0,
+}
+const card = {
+  backgroundColor: '#fafafa',
+  borderRadius: '16px',
+  padding: '40px 32px',
+  border: '1px solid #eeeeee',
+}
+const h1 = {
+  fontSize: '24px',
+  fontWeight: '600' as const,
+  color: '#0a0a0a',
+  letterSpacing: '-0.02em',
+  margin: '0 0 16px',
+}
+const text = {
+  fontSize: '15px',
+  color: '#52525b',
+  lineHeight: '1.6',
+  margin: '0 0 28px',
+}
+const button = {
+  backgroundColor: '#5B00FF',
+  color: '#ffffff',
+  fontSize: '15px',
+  fontWeight: '600' as const,
+  borderRadius: '10px',
+  padding: '14px 28px',
+  textDecoration: 'none',
+  display: 'inline-block',
+}
+const footer = {
+  fontSize: '13px',
+  color: '#999999',
+  lineHeight: '1.5',
+  margin: '32px 0 0',
+}
+const signature = {
+  fontSize: '12px',
+  color: '#999999',
+  textAlign: 'center' as const,
+  margin: '24px 0 0',
+}

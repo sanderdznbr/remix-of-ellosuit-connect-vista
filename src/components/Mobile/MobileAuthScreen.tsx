@@ -102,16 +102,9 @@ const MobileAuthScreen = () => {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Orb animation */}
-      <div className="absolute bottom-[-400px] left-1/2 -translate-x-1/2 pointer-events-none">
-        <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 120vw, 900px)', height: 'clamp(500px, 120vw, 900px)' }}>
-          <div className="carousel-loader-spinner" />
-        </div>
-      </div>
-
       {/* Top bar */}
       <motion.div
-        className="relative z-20 flex items-center justify-center px-5 pt-6 pb-2"
+        className="relative z-20 flex items-center justify-center px-5 pt-8 pb-2"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}

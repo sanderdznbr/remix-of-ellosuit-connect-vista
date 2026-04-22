@@ -9,7 +9,7 @@ let cachedUrl: string | null | undefined = undefined;
  * Cached in-memory across mounts so the request only happens once per session.
  */
 export function useAuthHeroImage() {
-  const [url, setUrl] = useState<string | null>(cachedUrl ?? null);
+  const [url, setUrl] = useState<string | null>(cachedUrl ?? defaultAuthHero);
   const [loading, setLoading] = useState(cachedUrl === undefined);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function useAuthHeroImage() {
       .eq('key', 'auth_hero_image')
       .maybeSingle()
       .then(({ data }) => {
-        const v = (data?.value as any)?.url ?? null;
+        const v = (data?.value as any)?.url ?? defaultAuthHero;
         cachedUrl = v;
         if (active) {
           setUrl(v);

@@ -499,6 +499,16 @@ const ChatCreator: React.FC = () => {
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
     }
+    if (msg.widget === 'background_picker') {
+      const bgs: BackgroundOption[] = msg.widgetData?.backgrounds || [];
+      return <BackgroundPickerWidget backgrounds={bgs} onPick={handleBackgroundPick} disabled={generating} />;
+    }
+    if (msg.widget === 'generating_post') {
+      return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;
+    }
+    if (msg.widget === 'final_result') {
+      return <FinalResultWidget carouselId={msg.widgetData?.carouselId} imageUrl={msg.widgetData?.imageUrl} onOpen={(id) => navigate(`/${id}`)} />;
+    }
     return null;
   };
 

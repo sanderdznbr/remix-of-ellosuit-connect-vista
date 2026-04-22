@@ -620,15 +620,18 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
           throw { status: 451, reason: 'nsfw' };
         }
         
-        const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+        const extractPatterns = ['"url":"data:image/', '"url": "data:image/', '"url":"http', '"url": "http'];
         for (const pattern of extractPatterns) {
           const idx = raw.indexOf(pattern);
           if (idx === -1) continue;
-          const urlStart = raw.indexOf('"', idx + 5) + 1;
+          
+          const isHttp = pattern.includes('http');
+          const urlStart = isHttp ? raw.indexOf('http', idx) : raw.indexOf('data:image/', idx);
           const urlEnd = raw.indexOf('"', urlStart);
+          
           if (urlEnd === -1) continue;
           const url = raw.slice(urlStart, urlEnd);
-          console.log(`${label}: image extracted (${url.length} chars)`);
+          console.log(`${label}: image extracted (${url.length} chars, starts with ${url.slice(0, 30)})`);
           return url;
         }
         console.log(`${label}: no image in response (${raw.length} chars)`);

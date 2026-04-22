@@ -21,6 +21,21 @@ interface Brief {
   tone?: string;
 }
 
+async function urlToDataUrl(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const ct = resp.headers.get('content-type') || 'image/png';
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return `data:${ct};base64,${btoa(bin)}`;
+  } catch (err) {
+    console.error('style image fetch error:', err);
+    return null;
+  }
+}
+
 const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 async function getStyleContext(styleId?: string | null) {
@@ -53,8 +68,19 @@ const FORMAT_TO_RATIO: Record<string, string> = {
   story: '9:16',
 };
 
-async function generateBackground(prompt: string, ratio: string): Promise<string | null> {
+async function generateBackground(prompt: string, ratio: string, styleRefs: string[] = []): Promise<string | null> {
   try {
+    const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [{
+      type: 'text',
+      text: `${prompt}
+
+IMPORTANT: aspect ratio ${ratio}. NO text, NO words, NO logos, NO captions in the image. Pure visual scene/background only — text will be added later.`,
+    }];
+
+    for (const ref of styleRefs) {
+      content.push({ type: 'image_url', image_url: { url: ref } });
+    }
+
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,7 +92,7 @@ async function generateBackground(prompt: string, ratio: string): Promise<string
         messages: [
           {
             role: 'user',
-            content: `${prompt}\n\nIMPORTANT: aspect ratio ${ratio}. NO text, NO words, NO logos, NO captions in the image. Pure visual scene/background only — text will be added later.`,
+            content,
           },
         ],
         modalities: ['image', 'text'],
@@ -103,6 +129,8 @@ Deno.serve(async (req) => {
 
     const ratio = FORMAT_TO_RATIO[brief?.format || 'portrait'] || '4:5';
     const style = await getStyleContext(brief?.styleId);
+    const styleReferenceUrls = Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 3) : [];
+    const styleReferenceDataUrls = (await Promise.all(styleReferenceUrls.map(urlToDataUrl))).filter(Boolean) as string[];
     const palette = brief?.brandColors?.length
       ? `Use a color palette inspired by: ${brief.brandColors.join(', ')}.`
       : 'Use a modern, editorial color palette.';
@@ -112,7 +140,7 @@ Deno.serve(async (req) => {
       style?.strict_instructions ? `Mandatory style rules: ${style.strict_instructions}` : '',
       style?.style_config?.imageGeneration?.prompt_style ? `Aesthetic DNA: ${style.style_config.imageGeneration.prompt_style}` : '',
       Array.isArray(style?.preview_images) && style.preview_images.length
-        ? `Reference these style images for composition language: ${style.preview_images.slice(0, 4).join(', ')}`
+        ? 'Use the attached style reference images as a hard visual target for color, photography treatment, crop language, contrast, and composition rhythm.'
         : '',
     ].filter(Boolean).join('\n');
     const audienceHint = brief?.audience ? `Target audience: ${brief.audience}.` : '';
@@ -127,23 +155,25 @@ Deno.serve(async (req) => {
 Direction A — CINEMATIC & MOODY: dramatic lighting, rich shadows, depth, atmospheric, premium magazine feel.
 ${styleHint} ${palette}
 ${audienceHint} ${toneHint} ${identityHint}
-Scene direction: the image must visually communicate the topic, not a generic workspace or stock setup. Build one singular concept that someone would immediately associate with this theme.
-Composition: leave clean negative space (top-center or bottom) where text will be placed later.
+Scene direction: the image must visually communicate the topic, not a generic workspace or stock setup. Build one singular concept that someone would immediately associate with this theme, product, promise, or transformation.
+If the topic is about AI creation, content production, brand growth, automation, or marketing, create a distinctive branded campaign scene rather than a random laptop-on-desk shot.
+Composition: leave clean negative space where text will be placed later, but keep the focal concept dominant and specific.
 No text, no logos, no captions, no watermark, no mockup device unless directly relevant to the topic.`;
 
     const promptB = `Editorial high-end social media background image for an Instagram post about: "${topic}".
 Direction B — BRIGHT & MINIMAL: clean, airy, soft natural light, modern minimal composition, refined and elegant.
 ${styleHint} ${palette}
 ${audienceHint} ${toneHint} ${identityHint}
-Scene direction: the image must visually communicate the topic, not a generic desk or random objects. Build one unique concept tied directly to the subject.
-Composition: large negative space for text overlay later.
+Scene direction: the image must visually communicate the topic, not a generic desk or random objects. Build one unique concept tied directly to the subject, service, benefit, or emotional outcome.
+If the topic is about AI creation, content production, brand growth, automation, or marketing, create a polished editorial campaign scene with symbolic elements specific to the promise.
+Composition: large negative space for text overlay later, but do not let the image become empty or generic.
 No text, no logos, no captions, no watermark, no mockup device unless directly relevant to the topic.`;
 
     console.log('chat-generate-backgrounds: generating 2 options', { topic, ratio });
 
     const [optionA, optionB] = await Promise.all([
-      generateBackground(promptA, ratio),
-      generateBackground(promptB, ratio),
+      generateBackground(promptA, ratio, styleReferenceDataUrls),
+      generateBackground(promptB, ratio, styleReferenceDataUrls),
     ]);
 
     if (!optionA && !optionB) {

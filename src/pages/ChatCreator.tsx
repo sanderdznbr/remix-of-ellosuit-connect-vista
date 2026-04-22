@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ interface ConversationSummary {
 const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
 
-type WidgetType = 'style_picker' | 'format_picker' | 'personalization' | 'confirm_generate' | null;
+type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | null;
 
 interface ChatMessage {
   id: string;
@@ -38,6 +38,9 @@ interface BriefState {
   hasLogo?: boolean;
   hasBrandColors?: boolean;
   brandName?: string;
+  brandColors?: string[];
+  faceUrl?: string;
+  logoUrl?: string;
   audience?: string;
   tone?: string;
 }
@@ -51,9 +54,9 @@ interface MarketplaceStyle {
 }
 
 const FORMAT_OPTIONS = [
-  { value: 'portrait', label: 'Retrato 4:5', icon: RectangleVertical },
-  { value: 'square', label: 'Quadrado 1:1', icon: Square },
-  { value: 'story', label: 'Stories 9:16', icon: Smartphone },
+  { value: 'portrait', label: 'Retrato', sub: '4:5 — Feed', icon: RectangleVertical },
+  { value: 'square', label: 'Quadrado', sub: '1:1 — Clássico', icon: Square },
+  { value: 'story', label: 'Stories', sub: '9:16 — Vertical', icon: Smartphone },
 ] as const;
 
 const PURPLE = '#8B5CF6';
@@ -110,7 +113,7 @@ const ChatCreator: React.FC = () => {
     } catch {}
   }, [messages, brief, activeConvId]);
 
-  // Load 4 recommended styles for the picker widget
+  // Load recommended styles for the picker widget
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -118,7 +121,7 @@ const ChatCreator: React.FC = () => {
         .select('id, name, preview_images, category, is_free')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
-        .limit(8);
+        .limit(12);
       if (data) setStyles(data as any);
     })();
   }, []);
@@ -129,6 +132,22 @@ const ChatCreator: React.FC = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  // Append AI messages with a small delay between each so it feels like typing
+  const appendAIMessages = useCallback(async (texts: string[], widget: WidgetType) => {
+    for (let i = 0; i < texts.length; i++) {
+      const isLast = i === texts.length - 1;
+      // small "typing" pause between messages
+      if (i > 0) await new Promise(r => setTimeout(r, 550));
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: texts[i],
+        widget: isLast ? widget : null,
+        timestamp: Date.now(),
+      }]);
+    }
+  }, []);
 
   const callAI = useCallback(async (history: ChatMessage[], currentBrief: BriefState) => {
     setLoading(true);
@@ -145,26 +164,21 @@ const ChatCreator: React.FC = () => {
       const newBrief = { ...currentBrief, ...(data.brief_update || {}) };
       setBrief(newBrief);
 
-      const aiMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.message || '...',
-        widget: data.widget && data.widget !== 'none' ? data.widget : null,
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, aiMsg]);
+      const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
+      const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+
+      setLoading(false);
+      await appendAIMessages(texts, widget);
 
       if (data.ready) {
-        // Auto-trigger generation
         setTimeout(() => triggerGenerate(newBrief), 600);
       }
     } catch (err: any) {
       console.error('chat-creator error:', err);
       toast.error(err?.message || 'Erro ao conversar com a IA');
-    } finally {
       setLoading(false);
     }
-  }, []);
+  }, [appendAIMessages]);
 
   // Process initial prompt from query string
   useEffect(() => {
@@ -173,7 +187,6 @@ const ChatCreator: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get('prompt') || params.get('topic');
 
-    // Ensure we have an active conversation
     let convId = localStorage.getItem(ACTIVE_KEY);
     if (initialPrompt || !convId) {
       convId = crypto.randomUUID();
@@ -181,7 +194,6 @@ const ChatCreator: React.FC = () => {
       setActiveConvId(convId);
     } else {
       setActiveConvId(convId);
-      // Try to restore messages
       try {
         const raw = localStorage.getItem(`ello_chat_msgs_${convId}`);
         if (raw) {
@@ -208,7 +220,12 @@ const ChatCreator: React.FC = () => {
       setMessages([{
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Oi! Eu sou a Ello 👋 Me conta: o que você quer criar hoje?',
+        content: 'Oi! Eu sou a Ello 👋',
+        timestamp: Date.now(),
+      }, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Me conta o que você quer criar hoje? Pode escrever do seu jeito mesmo.',
         timestamp: Date.now(),
       }]);
     }
@@ -221,7 +238,12 @@ const ChatCreator: React.FC = () => {
     setMessages([{
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: 'Oi! Eu sou a Ello 👋 Me conta: o que você quer criar hoje?',
+      content: 'Oi! Eu sou a Ello 👋',
+      timestamp: Date.now(),
+    }, {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: 'Me conta o que você quer criar hoje?',
       timestamp: Date.now(),
     }]);
     setBrief({});
@@ -301,7 +323,7 @@ const ChatCreator: React.FC = () => {
   };
 
 
-  const sendMessage = (text: string, hiddenContext?: string) => {
+  const sendMessage = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading || generating) return;
 
@@ -312,14 +334,6 @@ const ChatCreator: React.FC = () => {
       timestamp: Date.now(),
     };
     const newMessages = [...messages, userMsg];
-    if (hiddenContext) {
-      newMessages.push({
-        id: crypto.randomUUID(),
-        role: 'user',
-        content: hiddenContext,
-        timestamp: Date.now(),
-      } as any);
-    }
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     callAI(newMessages, brief);
@@ -334,7 +348,6 @@ const ChatCreator: React.FC = () => {
     if (b.contentType) params.set('mode', b.contentType);
     if (b.cardCount) params.set('cards', String(b.cardCount));
     params.set('autostart', '1');
-    // Navigate to home which renders CarouselGenerator with these hints
     setTimeout(() => navigate(`/?${params.toString()}`), 800);
   };
 
@@ -344,20 +357,34 @@ const ChatCreator: React.FC = () => {
     sendMessage(label);
   };
 
-  const handleFormatPick = (format: string, contentType: 'single' | 'carousel', cards?: number) => {
-    setBrief(prev => ({ ...prev, format: format as any, contentType, cardCount: cards }));
+  const handleContentTypePick = (contentType: 'single' | 'carousel', cards?: number) => {
+    setBrief(prev => ({ ...prev, contentType, cardCount: cards }));
     const label = contentType === 'carousel'
-      ? `Quero um carrossel ${format === 'portrait' ? 'retrato' : format === 'square' ? 'quadrado' : 'stories'} com ${cards || 5} cards`
-      : `Quero um post único ${format === 'portrait' ? 'retrato' : format === 'square' ? 'quadrado' : 'stories'}`;
+      ? `Quero um carrossel com ${cards || 5} slides`
+      : 'Quero um post único';
     sendMessage(label);
   };
 
-  const handlePersonalization = (choices: { face: boolean; logo: boolean; colors: boolean }) => {
-    setBrief(prev => ({ ...prev, hasFace: choices.face, hasLogo: choices.logo, hasBrandColors: choices.colors }));
+  const handleFormatPick = (format: string) => {
+    setBrief(prev => ({ ...prev, format: format as any }));
+    const label = `Quero no formato ${format === 'portrait' ? 'Retrato 4:5' : format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'}`;
+    sendMessage(label);
+  };
+
+  const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => {
+    setBrief(prev => ({
+      ...prev,
+      hasFace: data.face,
+      hasLogo: data.logo,
+      hasBrandColors: data.colors,
+      faceUrl: data.faceUrl,
+      logoUrl: data.logoUrl,
+      brandColors: data.brandColors,
+    }));
     const parts: string[] = [];
-    if (choices.face) parts.push('rosto');
-    if (choices.logo) parts.push('logo');
-    if (choices.colors) parts.push('cores da marca');
+    if (data.face) parts.push('rosto' + (data.faceUrl ? ' (foto enviada)' : ''));
+    if (data.logo) parts.push('logo' + (data.logoUrl ? ' (enviada)' : ''));
+    if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
     sendMessage(label);
   };
@@ -368,13 +395,16 @@ const ChatCreator: React.FC = () => {
 
   const renderWidget = (msg: ChatMessage) => {
     if (msg.widget === 'style_picker') {
-      return <StylePickerWidget styles={styles} onPick={handleStylePick} />;
+      return <StyleSliderWidget styles={styles} onPick={handleStylePick} />;
+    }
+    if (msg.widget === 'content_type_picker') {
+      return <ContentTypePickerWidget onPick={handleContentTypePick} />;
     }
     if (msg.widget === 'format_picker') {
       return <FormatPickerWidget onPick={handleFormatPick} />;
     }
     if (msg.widget === 'personalization') {
-      return <PersonalizationWidget onPick={handlePersonalization} />;
+      return <PersonalizationWidget onPick={handlePersonalization} userId={user?.id} />;
     }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
@@ -459,36 +489,53 @@ const ChatCreator: React.FC = () => {
 
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
-          <div className="max-w-2xl mx-auto space-y-6">
+          <div className="max-w-2xl mx-auto space-y-3">
             <AnimatePresence initial={false}>
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {msg.role === 'assistant' ? (
-                    <div className="flex gap-3 max-w-[85%]">
-                      <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center mt-0.5" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-                        <Sparkles className="h-3.5 w-3.5 text-white" />
+              {messages.map((msg, idx) => {
+                const prev = messages[idx - 1];
+                const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant');
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {msg.role === 'assistant' ? (
+                      <div className="flex gap-3 max-w-[88%] w-full">
+                        <div className="w-8 shrink-0">
+                          {showAvatar && (
+                            <div className="h-8 w-8 rounded-full flex items-center justify-center mt-0.5" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
+                              <Sparkles className="h-3.5 w-3.5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <div
+                            className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                          >
+                            {msg.content}
+                          </div>
+                          {msg.widget && (
+                            <div className="pt-1">
+                              {renderWidget(msg)}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="space-y-3">
-                        <div className="text-[15px] text-white/90 leading-relaxed whitespace-pre-wrap">{msg.content}</div>
-                        {renderWidget(msg)}
+                    ) : (
+                      <div
+                        className="px-4 py-2.5 rounded-2xl rounded-tr-md max-w-[85%] text-[15px]"
+                        style={{ backgroundColor: 'rgba(139, 92, 246, 0.18)', border: '1px solid rgba(139,92,246,0.3)', color: '#fff' }}
+                      >
+                        {msg.content}
                       </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="px-4 py-2.5 rounded-2xl rounded-tr-md max-w-[85%] text-[15px]"
-                      style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139,92,246,0.25)', color: '#fff' }}
-                    >
-                      {msg.content}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                    )}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
 
             {(loading || generating) && (
@@ -496,7 +543,7 @@ const ChatCreator: React.FC = () => {
                 <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
                   <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
                 </div>
-                <div className="flex items-center gap-1.5 px-4 py-3">
+                <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                   {[0, 1, 2].map(i => (
                     <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" style={{ animation: `bounce 1.4s ${i * 0.15}s infinite ease-in-out` }} />
                   ))}
@@ -584,7 +631,7 @@ const ChatCreator: React.FC = () => {
           </div>
         </div>
 
-        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }`}</style>
+        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } } .ello-scroll::-webkit-scrollbar { display: none; } .ello-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
       </div>
     </div>
   );
@@ -592,140 +639,364 @@ const ChatCreator: React.FC = () => {
 
 // ============= WIDGETS =============
 
-const StylePickerWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: MarketplaceStyle | null) => void }> = ({ styles, onPick }) => {
-  const top4 = styles.slice(0, 4);
+const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: MarketplaceStyle | null) => void }> = ({ styles, onPick }) => {
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (dir: 'left' | 'right') => {
+    if (!sliderRef.current) return;
+    const w = sliderRef.current.clientWidth;
+    sliderRef.current.scrollBy({ left: dir === 'left' ? -w * 0.7 : w * 0.7, behavior: 'smooth' });
+  };
+
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2 max-w-md">
-        {top4.map((s) => {
-          const preview = s.preview_images?.[0];
-          return (
+    <div className="space-y-2 -mr-4">
+      <div className="relative">
+        <div
+          ref={sliderRef}
+          className="ello-scroll flex gap-3 overflow-x-auto pb-2 pr-4 snap-x snap-mandatory"
+          style={{ scrollPaddingLeft: 0 }}
+        >
+          {styles.map((s) => {
+            const preview = s.preview_images?.[0];
+            return (
+              <button
+                key={s.id}
+                onClick={() => onPick(s)}
+                className="group relative shrink-0 w-[180px] aspect-[4/5] rounded-xl overflow-hidden border border-white/10 hover:border-white/40 transition-all snap-start"
+                style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+              >
+                {preview ? (
+                  <img src={preview} alt={s.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/30">
+                    <ImageIcon className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/90 to-transparent">
+                  <p className="text-[12px] font-semibold text-white truncate">{s.name}</p>
+                </div>
+                {s.is_free && (
+                  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ backgroundColor: PURPLE }}>
+                    FREE
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {styles.length > 2 && (
+          <>
             <button
-              key={s.id}
-              onClick={() => onPick(s)}
-              className="group relative aspect-[4/5] rounded-xl overflow-hidden border border-white/10 hover:border-white/30 transition-all"
-              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center backdrop-blur-md text-white/90 hover:bg-black/80 transition-colors -ml-1"
+              style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+              aria-label="Anterior"
             >
-              {preview ? (
-                <img src={preview} alt={s.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/30">
-                  <ImageIcon className="h-8 w-8" />
-                </div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                <p className="text-[11px] font-medium text-white truncate">{s.name}</p>
-              </div>
-              {s.is_free && (
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ backgroundColor: PURPLE }}>
-                  FREE
-                </div>
-              )}
+              <ChevronLeft className="h-4 w-4" />
             </button>
-          );
-        })}
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center backdrop-blur-md text-white/90 hover:bg-black/80 transition-colors"
+              style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+              aria-label="Próximo"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </>
+        )}
       </div>
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => onPick(null)} className="text-xs px-3 py-1.5 rounded-full text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors">
-          Escolha por mim
+      <div className="flex gap-2 flex-wrap pt-1">
+        <button onClick={() => onPick(null)} className="text-xs px-3 py-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/5 transition-colors border border-white/10">
+          ✨ Escolha por mim
         </button>
-        <button onClick={() => onPick(null)} className="text-xs px-3 py-1.5 rounded-full text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors">
-          Pular estilo
+        <button onClick={() => onPick(null)} className="text-xs px-3 py-1.5 rounded-full text-white/50 hover:text-white/80 transition-colors">
+          Pular
         </button>
       </div>
     </div>
   );
 };
 
-const FormatPickerWidget: React.FC<{ onPick: (format: string, type: 'single' | 'carousel', cards?: number) => void }> = ({ onPick }) => {
-  const [type, setType] = useState<'single' | 'carousel' | null>(null);
-  const [cards, setCards] = useState(5);
+const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', cards?: number) => void }> = ({ onPick }) => {
+  const [carouselCards, setCarouselCards] = useState<number | null>(null);
 
-  if (!type) {
+  if (carouselCards !== null) {
     return (
-      <div className="flex gap-2 flex-wrap max-w-md">
-        <button onClick={() => setType('single')} className="flex-1 min-w-[140px] flex items-center gap-2 px-4 py-3 rounded-xl border border-white/10 hover:border-white/30 transition-all text-left" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-          <ImageIcon className="h-4 w-4 text-white/70" />
-          <div>
-            <div className="text-sm font-medium text-white">Post único</div>
-            <div className="text-[11px] text-white/40">1 card</div>
-          </div>
-        </button>
-        <button onClick={() => setType('carousel')} className="flex-1 min-w-[140px] flex items-center gap-2 px-4 py-3 rounded-xl border border-white/10 hover:border-white/30 transition-all text-left" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-          <Layers className="h-4 w-4 text-white/70" />
-          <div>
-            <div className="text-sm font-medium text-white">Carrossel</div>
-            <div className="text-[11px] text-white/40">vários slides</div>
-          </div>
-        </button>
+      <div className="space-y-2.5 max-w-md">
+        <div className="text-xs text-white/60 mb-1">Quantos slides?</div>
+        <div className="grid grid-cols-4 gap-2">
+          {[3, 5, 7, 10].map(n => (
+            <button
+              key={n}
+              onClick={() => onPick('carousel', n)}
+              className="flex flex-col items-center justify-center py-3 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+            >
+              <span className="text-lg font-bold text-white">{n}</span>
+              <span className="text-[10px] text-white/40">slides</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setCarouselCards(null)} className="text-[11px] text-white/40 hover:text-white/70">← voltar</button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3 max-w-md">
-      {type === 'carousel' && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-white/60">Quantos cards?</span>
-          <div className="flex gap-1">
-            {[3, 5, 7, 10].map(n => (
-              <button key={n} onClick={() => setCards(n)} className="h-7 w-7 rounded-md text-xs font-medium transition-all" style={{ backgroundColor: cards === n ? PURPLE : 'rgba(255,255,255,0.06)', color: '#fff' }}>
-                {n}
-              </button>
-            ))}
-          </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md">
+      <button
+        onClick={() => onPick('single')}
+        className="flex items-start gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left"
+        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+          <ImageIcon className="h-5 w-5" style={{ color: PURPLE }} />
         </div>
-      )}
-      <div className="flex gap-2 flex-wrap">
-        {FORMAT_OPTIONS.map(f => {
-          const Icon = f.icon;
-          return (
-            <button key={f.value} onClick={() => onPick(f.value, type, type === 'carousel' ? cards : undefined)} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 hover:border-white/30 transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-              <Icon className="h-3.5 w-3.5 text-white/70" />
-              <span className="text-xs text-white">{f.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <button onClick={() => setType(null)} className="text-[11px] text-white/40 hover:text-white/70">← voltar</button>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-white">Post único</div>
+          <div className="text-[11px] text-white/50 mt-0.5">Uma única arte impactante</div>
+        </div>
+      </button>
+      <button
+        onClick={() => setCarouselCards(5)}
+        className="flex items-start gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left"
+        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+          <Layers className="h-5 w-5" style={{ color: PURPLE }} />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-white">Carrossel</div>
+          <div className="text-[11px] text-white/50 mt-0.5">Vários slides pra contar uma história</div>
+        </div>
+      </button>
     </div>
   );
 };
 
-const PersonalizationWidget: React.FC<{ onPick: (c: { face: boolean; logo: boolean; colors: boolean }) => void }> = ({ onPick }) => {
-  const [choices, setChoices] = useState({ face: false, logo: false, colors: false });
-  const toggle = (k: keyof typeof choices) => setChoices(prev => ({ ...prev, [k]: !prev[k] }));
+const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ onPick }) => {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-md">
+      {FORMAT_OPTIONS.map(f => {
+        const Icon = f.icon;
+        return (
+          <button
+            key={f.value}
+            onClick={() => onPick(f.value)}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all"
+            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+          >
+            <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+              <Icon className="h-5 w-5" style={{ color: PURPLE }} />
+            </div>
+            <div className="text-center">
+              <div className="text-sm font-semibold text-white">{f.label}</div>
+              <div className="text-[10px] text-white/50">{f.sub}</div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
-  const items = [
-    { key: 'face' as const, label: 'Foto do rosto', icon: User },
-    { key: 'logo' as const, label: 'Logo da marca', icon: ImageIcon },
-    { key: 'colors' as const, label: 'Cores da marca', icon: Palette },
-  ];
+// Personalization with inline upload
+const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => void; userId?: string }> = ({ onPick, userId }) => {
+  const [face, setFace] = useState(false);
+  const [logo, setLogo] = useState(false);
+  const [colors, setColors] = useState(false);
+  const [faceFile, setFaceFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [facePreview, setFacePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
+  const [uploading, setUploading] = useState(false);
+
+  const faceInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const onFaceFile = (f: File | null) => {
+    setFaceFile(f);
+    if (f) setFacePreview(URL.createObjectURL(f));
+    else setFacePreview(null);
+  };
+  const onLogoFile = (f: File | null) => {
+    setLogoFile(f);
+    if (f) setLogoPreview(URL.createObjectURL(f));
+    else setLogoPreview(null);
+  };
+
+  const uploadToStorage = async (file: File, folder: string): Promise<string | undefined> => {
+    if (!userId) return undefined;
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${userId}/${folder}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from('user-uploads').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('user-uploads').getPublicUrl(path);
+      return data.publicUrl;
+    } catch (err) {
+      console.error('Upload error:', err);
+      return undefined;
+    }
+  };
+
+  const handleConfirm = async () => {
+    setUploading(true);
+    let faceUrl: string | undefined;
+    let logoUrl: string | undefined;
+    if (face && faceFile) faceUrl = await uploadToStorage(faceFile, 'faces');
+    if (logo && logoFile) logoUrl = await uploadToStorage(logoFile, 'logos');
+    setUploading(false);
+    onPick({
+      face,
+      logo,
+      colors,
+      faceUrl,
+      logoUrl,
+      brandColors: colors ? brandColors : undefined,
+    });
+  };
+
+  const addColor = () => setBrandColors(prev => [...prev, '#000000']);
+  const updateColor = (i: number, v: string) => setBrandColors(prev => prev.map((c, idx) => idx === i ? v : c));
+  const removeColor = (i: number) => setBrandColors(prev => prev.filter((_, idx) => idx !== i));
 
   return (
-    <div className="space-y-2 max-w-md">
-      <div className="flex flex-wrap gap-2">
-        {items.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => toggle(key)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all"
-            style={{
-              backgroundColor: choices[key] ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.03)',
-              borderColor: choices[key] ? PURPLE : 'rgba(255,255,255,0.1)',
-            }}
-          >
-            <Icon className="h-3.5 w-3.5" style={{ color: choices[key] ? PURPLE : 'rgba(255,255,255,0.6)' }} />
-            <span className="text-xs text-white">{label}</span>
-            {choices[key] && <Check className="h-3 w-3" style={{ color: PURPLE }} />}
-          </button>
-        ))}
+    <div className="space-y-3 max-w-md">
+      {/* Face */}
+      <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: face ? PURPLE : 'rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={() => setFace(v => !v)}
+          className="w-full flex items-center gap-3 p-3"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: face ? PURPLE : 'rgba(255,255,255,0.06)' }}>
+            <User className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-white">Foto do rosto</div>
+            <div className="text-[11px] text-white/50">Apareça nas artes</div>
+          </div>
+          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: face ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: face ? PURPLE : 'transparent' }}>
+            {face && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </button>
+        {face && (
+          <div className="px-3 pb-3">
+            <input ref={faceInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFaceFile(e.target.files?.[0] || null)} />
+            {facePreview ? (
+              <div className="flex items-center gap-2 rounded-lg p-2" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
+                <img src={facePreview} className="h-12 w-12 rounded-md object-cover" alt="Preview" />
+                <span className="text-xs text-white/80 flex-1 truncate">{faceFile?.name}</span>
+                <button onClick={() => onFaceFile(null)} className="text-white/50 hover:text-white p-1"><X className="h-3.5 w-3.5" /></button>
+              </div>
+            ) : (
+              <button
+                onClick={() => faceInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Upload className="h-4 w-4" style={{ color: PURPLE }} />
+                <span className="text-xs font-medium text-white/90">Clique pra enviar uma foto sua</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={() => onPick(choices)} className="text-xs h-8" style={{ backgroundColor: PURPLE }}>
-          Confirmar
+
+      {/* Logo */}
+      <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: logo ? PURPLE : 'rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={() => setLogo(v => !v)}
+          className="w-full flex items-center gap-3 p-3"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: logo ? PURPLE : 'rgba(255,255,255,0.06)' }}>
+            <ImageIcon className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-white">Logo da marca</div>
+            <div className="text-[11px] text-white/50">PNG com fundo transparente</div>
+          </div>
+          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: logo ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: logo ? PURPLE : 'transparent' }}>
+            {logo && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </button>
+        {logo && (
+          <div className="px-3 pb-3">
+            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onLogoFile(e.target.files?.[0] || null)} />
+            {logoPreview ? (
+              <div className="flex items-center gap-2 rounded-lg p-2" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
+                <img src={logoPreview} className="h-12 w-12 rounded-md object-contain bg-white/10" alt="Preview" />
+                <span className="text-xs text-white/80 flex-1 truncate">{logoFile?.name}</span>
+                <button onClick={() => onLogoFile(null)} className="text-white/50 hover:text-white p-1"><X className="h-3.5 w-3.5" /></button>
+              </div>
+            ) : (
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Upload className="h-4 w-4" style={{ color: PURPLE }} />
+                <span className="text-xs font-medium text-white/90">Clique pra enviar sua logo</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Colors */}
+      <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors ? PURPLE : 'rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={() => setColors(v => !v)}
+          className="w-full flex items-center gap-3 p-3"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: colors ? PURPLE : 'rgba(255,255,255,0.06)' }}>
+            <Palette className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-white">Cores da marca</div>
+            <div className="text-[11px] text-white/50">Use suas cores na arte</div>
+          </div>
+          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: colors ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: colors ? PURPLE : 'transparent' }}>
+            {colors && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </button>
+        {colors && (
+          <div className="px-3 pb-3 space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {brandColors.map((c, i) => (
+                <div key={i} className="flex items-center gap-1.5 rounded-lg p-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                  <input
+                    type="color"
+                    value={c}
+                    onChange={(e) => updateColor(i, e.target.value)}
+                    className="h-8 w-8 rounded cursor-pointer border border-white/10"
+                    style={{ backgroundColor: c }}
+                  />
+                  <span className="text-[11px] font-mono text-white/70 uppercase">{c}</span>
+                  {brandColors.length > 1 && (
+                    <button onClick={() => removeColor(i)} className="text-white/40 hover:text-white p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {brandColors.length < 4 && (
+                <button onClick={addColor} className="h-11 px-3 rounded-lg border border-dashed border-white/20 text-xs text-white/60 hover:text-white hover:border-white/40 transition-colors">
+                  + cor
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button size="sm" disabled={uploading} onClick={handleConfirm} className="text-xs h-9 px-4" style={{ backgroundColor: PURPLE }}>
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+          {uploading ? 'Enviando...' : 'Confirmar'}
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => onPick({ face: false, logo: false, colors: false })} className="text-xs h-8 text-white/60">
+        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, colors: false })} className="text-xs h-9 text-white/60">
           Pular
         </Button>
       </div>
@@ -740,7 +1011,7 @@ const ConfirmWidget: React.FC<{ brief: BriefState; onConfirm: () => void }> = ({
         {brief.topic && <Row label="Tema" value={brief.topic} />}
         {brief.styleName && <Row label="Estilo" value={brief.styleName} />}
         {brief.format && <Row label="Formato" value={brief.format === 'portrait' ? 'Retrato 4:5' : brief.format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'} />}
-        {brief.contentType && <Row label="Tipo" value={brief.contentType === 'carousel' ? `Carrossel${brief.cardCount ? ` (${brief.cardCount} cards)` : ''}` : 'Post único'} />}
+        {brief.contentType && <Row label="Tipo" value={brief.contentType === 'carousel' ? `Carrossel${brief.cardCount ? ` (${brief.cardCount} slides)` : ''}` : 'Post único'} />}
       </div>
       <Button onClick={onConfirm} className="w-full h-10" style={{ backgroundColor: PURPLE }}>
         <Sparkles className="h-4 w-4 mr-2" />

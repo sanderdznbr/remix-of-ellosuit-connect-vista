@@ -437,6 +437,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               )}
             </div>
             <div className="flex items-center justify-between px-3 pb-3">
+              <div className="flex items-center gap-1">
               <div className="relative">
                 <button
                   onClick={() => setFormatDropdownOpen(!formatDropdownOpen)}
@@ -492,11 +493,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               <button
                 onClick={handleAdvancedMode}
                 disabled={isGenerating}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer mr-1 text-white/35 hover:text-white/70 hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-7 h-7 rounded-md flex items-center justify-center transition-all cursor-pointer text-white/30 hover:text-white/70 hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Modo avançado (wizard com etapas)"
               >
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="w-3.5 h-3.5" />
               </button>
+              </div>
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || isGenerating}

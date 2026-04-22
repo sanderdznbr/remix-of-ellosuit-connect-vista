@@ -563,17 +563,23 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     const forcePremiumForPanorama = isPanoramicMode;
     const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
     
-    // GPT Image 2 only when there are NO multi-image references
-    // (it doesn't honor our face/style/general layered prompts — falls back to Gemini Pro for fidelity)
+    // GPT Image 2 strategy:
+    // - NO refs + not panoramic → direct gpt-image-2 (text-to-image)
+    // - WITH refs (face/style/general) → 2-STEP PIPELINE:
+    //     Step 1: Gemini 3 Pro generates the visual base WITHOUT TEXT (faithful to refs/face)
+    //     Step 2: GPT Image 2 receives that image as input and adds the perfect text on top
     const wantsGptImage2 = requestedModel.includes('gpt-image-2');
     const hasAnyRefs = validFaceRefs.length > 0 || validStyleRefs.length > 0 || validGeneralRefs.length > 0;
-    const useGptImage2 = wantsGptImage2 && !hasAnyRefs && !isPanoramicMode;
+    const useGptImage2Direct = wantsGptImage2 && !hasAnyRefs && !isPanoramicMode;
+    const useGptImage2Pipeline = wantsGptImage2 && hasAnyRefs && !isPanoramicMode;
     
-    if (wantsGptImage2 && !useGptImage2) {
-      console.log(`⚠️ GPT Image 2 requested but ${hasAnyRefs ? 'has refs (face/style/general)' : 'panoramic mode'} — falling back to Gemini 3 Pro for multi-ref fidelity`);
+    if (useGptImage2Pipeline) {
+      console.log(`🎨 GPT Image 2 PIPELINE mode: Gemini 3 Pro will generate base (no text) → GPT Image 2 will add text overlay`);
+    } else if (wantsGptImage2 && !useGptImage2Direct) {
+      console.log(`⚠️ GPT Image 2 requested but panoramic mode active — falling back to Gemini 3 Pro`);
     }
     
-    const primaryModel = useGptImage2
+    const primaryModel = useGptImage2Direct
       ? 'openai/gpt-image-2'
       : (usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview');
       

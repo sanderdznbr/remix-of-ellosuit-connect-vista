@@ -80,6 +80,9 @@ const FORMAT_OPTIONS = [
 
 const PURPLE = '#8B5CF6';
 const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+const MAX_AI_HISTORY_MESSAGES = 12;
+const MAX_AI_MESSAGE_LENGTH = 1200;
+const MAX_AI_FIELD_LENGTH = 240;
 
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader();
@@ -93,6 +96,37 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
 const cloneBrief = (source: BriefState): BriefState => ({
   ...source,
   brandColors: source.brandColors ? [...source.brandColors] : undefined,
+});
+
+const sanitizeTextForAI = (value?: string, maxLength = MAX_AI_FIELD_LENGTH) => {
+  if (!value) return undefined;
+  return value.replace(/\s+/g, ' ').trim().slice(0, maxLength) || undefined;
+};
+
+const sanitizeMessagesForAI = (history: ChatMessage[]) => history
+  .slice(-MAX_AI_HISTORY_MESSAGES)
+  .map((message) => ({
+    role: message.role,
+    content: message.content.replace(/\s+/g, ' ').trim().slice(0, MAX_AI_MESSAGE_LENGTH),
+  }))
+  .filter((message) => message.content.length > 0);
+
+const sanitizeBriefForAI = (source: BriefState) => ({
+  topic: sanitizeTextForAI(source.topic, 320),
+  format: source.format,
+  contentType: source.contentType,
+  cardCount: typeof source.cardCount === 'number' ? source.cardCount : undefined,
+  styleId: isUuid(source.styleId) ? source.styleId : null,
+  styleName: sanitizeTextForAI(source.styleName, 120),
+  hasFace: !!source.hasFace,
+  hasLogo: !!source.hasLogo,
+  hasBrandColors: !!source.hasBrandColors,
+  brandName: sanitizeTextForAI(source.brandName, 120),
+  brandColors: source.brandColors?.slice(0, 4),
+  audience: sanitizeTextForAI(source.audience, 160),
+  tone: sanitizeTextForAI(source.tone, 120),
+  faceProvided: !!source.faceUrl,
+  logoProvided: !!source.logoUrl,
 });
 
 const ChatCreator: React.FC = () => {
@@ -189,11 +223,20 @@ const ChatCreator: React.FC = () => {
     try {
       const { data, error } = await supabase.functions.invoke('chat-creator', {
         body: {
-          messages: history.map(m => ({ role: m.role, content: m.content })),
-          brief: currentBrief,
+          messages: sanitizeMessagesForAI(history),
+          brief: sanitizeBriefForAI(currentBrief),
         },
       });
       if (error) throw error;
+
+      if (data?.error && data?.fallback) {
+        const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.error];
+        const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+        setLoading(false);
+        await appendAIMessages(texts, widget);
+        return;
+      }
+
       if (data?.error) throw new Error(data.error);
 
       const briefUpdate = (data?.brief_update && typeof data.brief_update === 'object') ? data.brief_update : {};

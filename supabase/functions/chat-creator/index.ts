@@ -30,6 +30,67 @@ interface BriefState {
   ready?: boolean;
 }
 
+interface SanitizedBriefState extends BriefState {
+  faceProvided?: boolean;
+  logoProvided?: boolean;
+}
+
+interface ApiResponse {
+  ok: boolean;
+  messages?: string[];
+  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'confirm_generate' | 'none';
+  brief_update?: Partial<BriefState>;
+  ready?: boolean;
+  error?: string;
+  fallback?: boolean;
+}
+
+const MAX_HISTORY_MESSAGES = 12;
+const MAX_MESSAGE_LENGTH = 1200;
+const MAX_BRIEF_TEXT_LENGTH = 240;
+
+function jsonResponse(payload: ApiResponse, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+function trimText(value?: string, maxLength = MAX_BRIEF_TEXT_LENGTH) {
+  if (!value) return undefined;
+  return value.replace(/\s+/g, ' ').trim().slice(0, maxLength) || undefined;
+}
+
+function sanitizeMessages(messages: InMessage[] = []) {
+  return messages
+    .filter((message) => message.role !== 'system')
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map((message) => ({
+      role: message.role,
+      content: (message.content || '').replace(/\s+/g, ' ').trim().slice(0, MAX_MESSAGE_LENGTH),
+    }))
+    .filter((message) => message.content.length > 0);
+}
+
+function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
+  return {
+    topic: trimText(brief?.topic, 320),
+    format: brief?.format,
+    contentType: brief?.contentType,
+    cardCount: typeof brief?.cardCount === 'number' ? brief.cardCount : undefined,
+    styleId: brief?.styleId ?? null,
+    styleName: trimText(brief?.styleName, 120),
+    hasFace: !!brief?.hasFace,
+    hasLogo: !!brief?.hasLogo,
+    hasBrandColors: !!brief?.hasBrandColors,
+    brandName: trimText(brief?.brandName, 120),
+    audience: trimText(brief?.audience, 160),
+    tone: trimText(brief?.tone, 120),
+    faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
+    logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
+  };
+}
+
 const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpática e descontraída da plataforma ellocontent. Você conversa por chat ajudando a pessoa a criar posts e carrosséis incríveis pro Instagram.
 
 🎯 PERSONALIDADE:
@@ -127,16 +188,26 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+    if (!LOVABLE_API_KEY) {
+      return jsonResponse({
+        ok: false,
+        error: 'LOVABLE_API_KEY not configured',
+        fallback: true,
+        messages: ['Tive um problema interno pra continuar daqui.'],
+        widget: 'none',
+      });
+    }
 
     const { messages, brief } = await req.json() as { messages: InMessage[]; brief: BriefState };
+    const safeMessages = sanitizeMessages(messages || []);
+    const safeBrief = sanitizeBrief(brief);
 
-    const briefSummary = `Estado atual coletado: ${JSON.stringify(brief || {})}`;
+    const briefSummary = `Estado atual coletado: ${JSON.stringify(safeBrief)}`;
 
     const aiMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: briefSummary },
-      ...messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content })),
+      ...safeMessages,
     ];
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -154,23 +225,32 @@ Deno.serve(async (req) => {
     });
 
     if (response.status === 429) {
-      return new Response(JSON.stringify({ error: 'Limite de requisições atingido. Tente novamente em alguns segundos.' }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return jsonResponse({
+        ok: false,
+        error: 'Limite de requisições atingido. Tente novamente em alguns segundos.',
+        fallback: true,
+        messages: ['Recebi muitas requisições agora 😅', 'Tenta de novo em alguns segundos pra eu continuar.'],
+        widget: 'none',
       });
     }
     if (response.status === 402) {
-      return new Response(JSON.stringify({ error: 'Créditos de IA esgotados no workspace.' }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return jsonResponse({
+        ok: false,
+        error: 'Créditos de IA esgotados no workspace.',
+        fallback: true,
+        messages: ['Os créditos de IA do workspace acabaram.', 'Depois de recarregar, eu sigo daqui com você.'],
+        widget: 'none',
       });
     }
     if (!response.ok) {
       const t = await response.text();
       console.error('AI gateway error:', response.status, t);
-      return new Response(JSON.stringify({ error: 'AI gateway error' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return jsonResponse({
+        ok: false,
+        error: 'AI gateway error',
+        fallback: true,
+        messages: ['A conversa ficou grande demais pra IA processar de uma vez.'],
+        widget: 'confirm_generate',
       });
     }
 
@@ -190,14 +270,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ ok: true, ...parsed });
   } catch (e) {
     console.error('chat-creator error:', e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return jsonResponse({
+      ok: false,
+      error: e instanceof Error ? e.message : 'Unknown error',
+      fallback: true,
+      messages: ['Tive um imprevisto aqui do meu lado.'],
+      widget: 'none',
     });
   }
 });

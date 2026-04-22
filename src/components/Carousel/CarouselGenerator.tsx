@@ -1483,6 +1483,29 @@ const CarouselGenerator: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Pre-fill wizard from /criar (chat) redirect: ?topic=&styleId=&format=
+  useEffect(() => {
+    const qTopic = searchParams.get('topic');
+    const qStyle = searchParams.get('styleId');
+    const qFormat = searchParams.get('format');
+    const qMode = searchParams.get('mode');
+    const qCards = searchParams.get('cards');
+    if (!qTopic && !qStyle) return;
+    if (qTopic) { setTopic(qTopic); setOriginalTopic(qTopic); }
+    if (qFormat && qFormat in FORMAT_DIMENSIONS) setPostFormat(qFormat as PostFormatType);
+    if (qMode === 'carousel' || qMode === 'single') setContentMode(qMode);
+    if (qCards) setCardCount(Math.max(1, parseInt(qCards, 10) || 5));
+    if (qStyle) {
+      supabase.from('marketplace_styles')
+        .select('id, name, preview_images, style_config, strict_instructions')
+        .eq('id', qStyle).single()
+        .then(({ data }) => { if (data) setLoadedMarketplaceStyleId(data.id); });
+    }
+    setShowWelcome(false);
+    // Clean URL so refresh doesn't retrigger
+    window.history.replaceState({}, '', window.location.pathname);
+  }, [searchParams]);
+
   // Helper: build generation_config to persist prompt + wizard settings
   const buildGenerationConfig = useCallback(() => ({
     topic,

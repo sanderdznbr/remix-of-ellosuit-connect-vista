@@ -138,7 +138,7 @@ const AuthScreen = () => {
           </div>
         )}
         {/* Soft vignette for legibility of overlay text */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0) 30%, rgba(10,10,15,0) 60%, rgba(10,10,15,0.85) 100%)' }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(15,7,29,0.3) 0%, rgba(15,7,29,0) 30%, rgba(15,7,29,0) 60%, rgba(15,7,29,0.85) 100%)' }} />
 
         {/* Logo top */}
         <motion.div

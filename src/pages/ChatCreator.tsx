@@ -70,10 +70,46 @@ const ChatCreator: React.FC = () => {
   const [styles, setStyles] = useState<MarketplaceStyle[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const initRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  // Load 4 recommended styles for the picker widget
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [recording, setRecording] = useState(false);
+
+  // Load conversations index
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setConversations(JSON.parse(raw));
+      const active = localStorage.getItem(ACTIVE_KEY);
+      if (active) setActiveConvId(active);
+    } catch {}
+  }, []);
+
+  // Persist conversation when messages change
+  useEffect(() => {
+    if (!activeConvId || messages.length === 0) return;
+    try {
+      const firstUser = messages.find(m => m.role === 'user');
+      const title = (firstUser?.content || 'Nova conversa').slice(0, 60);
+      localStorage.setItem(`ello_chat_msgs_${activeConvId}`, JSON.stringify({ messages, brief }));
+      setConversations(prev => {
+        const existing = prev.find(c => c.id === activeConvId);
+        const updated = existing
+          ? prev.map(c => c.id === activeConvId ? { ...c, title, updatedAt: Date.now() } : c)
+          : [{ id: activeConvId, title, updatedAt: Date.now() }, ...prev];
+        const sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sorted));
+        return sorted;
+      });
+    } catch {}
+  }, [messages, brief, activeConvId]);
+
     (async () => {
       const { data } = await supabase
         .from('marketplace_styles')

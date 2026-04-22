@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import { useAuthHeroImage } from '@/hooks/useAuthHeroImage';
 import '@/styles/carousel-loader.css';
 
 interface AuthSplitLayoutProps {

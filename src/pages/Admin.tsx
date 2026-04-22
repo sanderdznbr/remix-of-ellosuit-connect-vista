@@ -596,6 +596,7 @@ function AdminContent() {
     { key: 'coupons', label: 'Cupons', icon: Tag },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
     { key: 'content', label: 'Conteúdo', icon: FileText },
+    { key: 'appearance', label: 'Aparência', icon: ImageIcon },
   ];
 
   const statusColor = (s: string) => {

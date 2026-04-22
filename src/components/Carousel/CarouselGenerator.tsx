@@ -609,14 +609,17 @@ const CarouselGenerator: React.FC = () => {
   const adminModelStep = isAdminUser ? ['Modelo IA'] : [];
 
   const hasFaceRefsForGen = referenceImages.some(r => r.category === 'face') || facePersons.some(p => p.photos.length > 0);
-  const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud';
+  // No avançado, mostrar etapa "Modo Imagem" para o usuário escolher entre 2-passos ou 1-passo
+  const showBaseImageModeStep = wizardMode === 'advanced' && hasFaceRefsForGen && imageSettings.generationMode !== 'cloud';
+  // Etapa de aprovação só aparece no modo "two-step"
+  const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud' && (wizardMode !== 'advanced' || baseImageMode === 'two-step');
 
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...adminModelStep, 'Velocidade']
     : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...adminModelStep, 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showBaseImageModeStep ? ['Modo Imagem'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
   const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : []), ...adminModelStep]

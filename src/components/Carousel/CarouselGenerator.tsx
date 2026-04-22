@@ -1912,7 +1912,46 @@ The image must look like it was shot by a professional photographer or designed 
     return null;
   };
 
-  const getLogoOverlayBounds = useCallback((canvasW: number, canvasH: number, logoW: number, logoH: number, position: string) => {
+  const generateBaseImageCandidates = async () => {
+    if (generatingBaseCandidates) return;
+    setGeneratingBaseCandidates(true);
+    setBaseImageCandidates([]);
+    setSelectedBaseImage(null);
+    try {
+      let basePromptText = topic.trim();
+      if (manualCardTexts.length > 0 && manualCardTexts[0].title) basePromptText = manualCardTexts[0].title;
+      const activeFP = facePersons.filter(p => p.photos.length > 0);
+      const faceRefUrls = activeFP.length > 0
+        ? activeFP.flatMap(p => p.photos.map(ph => ph.url))
+        : referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      const marketplaceRefUrls: string[] = [];
+      if (activeMarketplaceStyleRef.current?._previewImages?.length) {
+        const origin = window.location.origin;
+        const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
+          .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+        marketplaceRefUrls.push(...allPreviews.slice(0, 5));
+      }
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+      const basePrompt = buildImagePrompt(`Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.`, 0);
+      const promises = [0, 1].map((i) => generateImage({
+        prompt: basePrompt + ` (Opção ${i + 1})`,
+        faceReferenceUrls: faceRefUrls,
+        styleReferenceUrls: allStyleRefs,
+        isCarousel: contentMode === 'carousel',
+      }));
+      const results = await Promise.all(promises);
+      const filtered = results.filter((url): url is string => !!url);
+      setBaseImageCandidates(filtered);
+      if (filtered.length > 0) setSelectedBaseImage(filtered[0]);
+    } catch (err) {
+      console.error('[BaseImageCandidates] Error:', err);
+      sonnerToast.error('Erro ao gerar opções de imagem');
+    } finally {
+      setGeneratingBaseCandidates(false);
+    }
+  };
+
     const safePad = Math.max(72, Math.round(Math.min(canvasW, canvasH) * 0.08));
     const maxLW = Math.min(170, canvasW * 0.16, canvasW - safePad * 2);
     const maxLH = Math.min(72, canvasH * 0.055, canvasH - safePad * 2);

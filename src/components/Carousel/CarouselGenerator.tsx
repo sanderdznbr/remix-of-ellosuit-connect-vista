@@ -2061,11 +2061,10 @@ The image must look like it was shot by a professional photographer or designed 
       const baseFaceMeta = facePersons
         .filter(p => p.photos.length > 0)
         .map(p => ({
-          id: p.id,
           label: p.label,
           gender: p.gender,
           wearsGlasses: p.wearsGlasses,
-          photoUrls: p.photos.map(ph => ph.url),
+          photoCount: p.photos.length,
         }));
 
       const faceFidelityClause = faceRefUrls.length > 0

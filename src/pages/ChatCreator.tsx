@@ -110,6 +110,8 @@ const ChatCreator: React.FC = () => {
     } catch {}
   }, [messages, brief, activeConvId]);
 
+  // Load 4 recommended styles for the picker widget
+  useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('marketplace_styles')

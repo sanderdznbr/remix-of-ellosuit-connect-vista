@@ -352,22 +352,23 @@ const AuthScreen = () => {
                 Entrar
               </button>
             )}
-          </p>
+            </p>
 
-          {/* Coming Soon Popup */}
-          {showComingSoon && (
-            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-              🚀 Disponível em breve no lançamento!
+            {/* Coming Soon Popup */}
+            {showComingSoon && (
+              <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+                🚀 Disponível em breve no lançamento!
+              </div>
+            )}
+
+            {/* Legal links */}
+            <div className="flex justify-center gap-4 text-xs text-white/20 pt-2">
+              <a href="https://www.ellosuit.online/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
+              <span>•</span>
+              <a href="https://www.ellosuit.online/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
             </div>
-          )}
-
-          {/* Legal links */}
-          <div className="flex justify-center gap-4 text-xs text-white/20 pt-4 pb-2">
-            <a href="https://www.ellosuit.online/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
-            <span>•</span>
-            <a href="https://www.ellosuit.online/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

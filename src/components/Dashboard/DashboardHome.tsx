@@ -490,6 +490,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 </AnimatePresence>
               </div>
               <button
+                onClick={handleAdvancedMode}
+                disabled={isGenerating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer mr-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                }}
+                title="Abrir o modo avançado (wizard com etapas: simples, avançado, extreme)"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-medium">Modo avançado</span>
+              </button>
+              <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || isGenerating}
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"

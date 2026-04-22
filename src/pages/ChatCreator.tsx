@@ -370,7 +370,7 @@ const ChatCreator: React.FC = () => {
   };
 
 
-  const sendMessage = (text: string) => {
+  const sendMessage = (text: string, briefOverride?: BriefState) => {
     const trimmed = text.trim();
     if (!trimmed || loading || generating) return;
 
@@ -383,7 +383,7 @@ const ChatCreator: React.FC = () => {
     const newMessages = [...messages, userMsg];
     setMessages(prev => [...prev, userMsg]);
     setInput('');
-    callAI(newMessages, brief);
+    callAI(newMessages, briefOverride ?? brief);
   };
 
   // === In-chat generation pipeline ===
@@ -461,40 +461,44 @@ const ChatCreator: React.FC = () => {
 
   const handleStylePick = (style: MarketplaceStyle | null) => {
     const label = style ? `Quero o estilo "${style.name}"` : 'Pode escolher um estilo pra mim';
-    setBrief(prev => ({ ...prev, styleId: style?.id || null, styleName: style?.name || null }));
-    sendMessage(label);
+    const nextBrief = { ...brief, styleId: style?.id || null, styleName: style?.name || null };
+    setBrief(nextBrief);
+    sendMessage(label, nextBrief);
   };
 
   const handleContentTypePick = (contentType: 'single' | 'carousel', cards?: number) => {
-    setBrief(prev => ({ ...prev, contentType, cardCount: cards }));
+    const nextBrief = { ...brief, contentType, cardCount: cards };
+    setBrief(nextBrief);
     const label = contentType === 'carousel'
       ? `Quero um carrossel com ${cards || 5} slides`
       : 'Quero um post único';
-    sendMessage(label);
+    sendMessage(label, nextBrief);
   };
 
   const handleFormatPick = (format: string) => {
-    setBrief(prev => ({ ...prev, format: format as any }));
+    const nextBrief = { ...brief, format: format as any };
+    setBrief(nextBrief);
     const label = `Quero no formato ${format === 'portrait' ? 'Retrato 4:5' : format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'}`;
-    sendMessage(label);
+    sendMessage(label, nextBrief);
   };
 
   const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => {
-    setBrief(prev => ({
-      ...prev,
+    const nextBrief = {
+      ...brief,
       hasFace: data.face,
       hasLogo: data.logo,
       hasBrandColors: data.colors,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
       brandColors: data.brandColors,
-    }));
+    };
+    setBrief(nextBrief);
     const parts: string[] = [];
     if (data.face) parts.push('rosto' + (data.faceUrl ? ' (foto enviada)' : ''));
     if (data.logo) parts.push('logo' + (data.logoUrl ? ' (enviada)' : ''));
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
-    sendMessage(label);
+    sendMessage(label, nextBrief);
   };
 
   const handleConfirm = () => {

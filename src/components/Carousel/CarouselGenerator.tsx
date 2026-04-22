@@ -418,6 +418,9 @@ const CarouselGenerator: React.FC = () => {
   const [baseImageCandidates, setBaseImageCandidates] = useState<string[]>([]);
   const [selectedBaseImage, setSelectedBaseImage] = useState<string | null>(null);
   const [generatingBaseCandidates, setGeneratingBaseCandidates] = useState(false);
+  // 'two-step' = gera imagem base + escolhe + compõe texto depois (Gemini + edição)
+  // 'single-pass' = manda tudo direto pro Gemini Pro de uma vez (sem aprovação intermediária)
+  const [baseImageMode, setBaseImageMode] = useState<'two-step' | 'single-pass'>('two-step');
 
   // Step 4: Style
   const [showHeader, setShowHeader] = useState(true);
@@ -606,14 +609,17 @@ const CarouselGenerator: React.FC = () => {
   const adminModelStep = isAdminUser ? ['Modelo IA'] : [];
 
   const hasFaceRefsForGen = referenceImages.some(r => r.category === 'face') || facePersons.some(p => p.photos.length > 0);
-  const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud';
+  // No avançado, mostrar etapa "Modo Imagem" para o usuário escolher entre 2-passos ou 1-passo
+  const showBaseImageModeStep = wizardMode === 'advanced' && hasFaceRefsForGen && imageSettings.generationMode !== 'cloud';
+  // Etapa de aprovação só aparece no modo "two-step"
+  const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud' && (wizardMode !== 'advanced' || baseImageMode === 'two-step');
 
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...adminModelStep, 'Velocidade']
     : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...adminModelStep, 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showBaseImageModeStep ? ['Modo Imagem'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
   const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : []), ...adminModelStep]
@@ -2077,17 +2083,23 @@ The image must look like it was shot by a professional photographer or designed 
         ? `\n\nABSOLUTE FACIAL FIDELITY REQUIREMENT: The attached face reference photo(s) show the EXACT real person(s) that MUST appear in this image. Reproduce identity with maximum fidelity: same facial structure, same eyes, same nose, same mouth, same skin tone, same hair, same age. NEVER replace with a generic model. NEVER invent another face. NEVER stylize the face away from the reference. Treat the face as a portrait reference, not as inspiration.`
         : '';
 
+      // Variações de pose/enquadramento por opção (criatividade — NUNCA copiar pose da referência)
+      const creativeVariations = [
+        'Pose dinâmica de 3/4 olhando levemente para o lado, postura confiante. Enquadramento médio (peito até cabeça). Composição assimétrica deixando ~40% do espaço lateral livre para texto.',
+        'Pose lateral, perfil parcial com olhar direto na câmera, postura editorial. Enquadramento mais aberto (cintura até cabeça). Composição com sujeito deslocado para um dos lados, deixando o lado oposto LIMPO para tipografia.',
+      ];
+
       const basePrompt = buildImagePrompt(
-        `Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.${faceFidelityClause}`,
+        `Tema: ${basePromptText}. Gere uma imagem base ÉPICA, EDITORIAL E CRIATIVA. CRÍTICO: a foto de referência serve APENAS para identidade facial — NÃO copie a pose, NÃO copie o enquadramento, NÃO copie o fundo da referência. Crie uma cena completamente nova, cinematográfica, profissional. SEMPRE deixe uma área de respiro generosa (negative space) para texto ser inserido depois — composição com o sujeito posicionado de forma que sobre espaço claro e limpo na imagem para tipografia. Sem textos, sem logos, apenas a arte visual pura.${faceFidelityClause}`,
         0,
       );
       const promises = [0, 1].map((i) => generateImage({
-        prompt: basePrompt + ` (Opção ${i + 1})`,
+        prompt: basePrompt + `\n\nVARIAÇÃO DESTA OPÇÃO: ${creativeVariations[i]}`,
         faceReferenceUrls: faceRefUrls,
         styleReferenceUrls: allStyleRefs,
         isCarousel: contentMode === 'carousel',
         facePersonsMetadata: baseFaceMeta.length > 0 ? baseFaceMeta : undefined,
-        negativePrompt: 'generic model, different person, altered identity, stylized face, cartoon face, wrong skin tone, wrong eye color, wrong hair, deformed face, low facial resemblance',
+        negativePrompt: 'generic model, different person, altered identity, stylized face, cartoon face, wrong skin tone, wrong eye color, wrong hair, deformed face, low facial resemblance, copied pose from reference, same framing as reference, centered subject filling entire frame, no negative space, no breathing room, cluttered composition, busy background filling whole frame',
       }));
       const results = await Promise.all(promises);
       const filtered = results.filter((url): url is string => !!url);
@@ -8655,6 +8667,44 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         onEnvatoFontSelect={setAdvancedEnvatoFont}
                         hasMarketplaceStyle={!!activeMarketplaceStyle?.imageGeneration?.prompt_style}
                       />
+                    )}
+                    {currentStepName === 'Modo Imagem' && (
+                      <div className="space-y-6 max-w-2xl mx-auto">
+                        <div className="text-center space-y-2">
+                          <h3 className="text-xl font-bold text-white">Como gerar a imagem?</h3>
+                          <p className="text-sm text-white/50">Escolha o pipeline de geração para este post.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button
+                            onClick={() => setBaseImageMode('two-step')}
+                            className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                              baseImageMode === 'two-step'
+                                ? 'border-white bg-white/[0.06]'
+                                : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className="text-xs font-bold text-white/40 mb-2">2 ETAPAS</div>
+                            <div className="text-base font-bold text-white mb-1">Imagem base + texto</div>
+                            <div className="text-xs text-white/50 leading-relaxed">
+                              Gera 2 opções de imagem base (Gemini), você escolhe a favorita e depois compomos o texto por cima. Mais controle.
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => setBaseImageMode('single-pass')}
+                            className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                              baseImageMode === 'single-pass'
+                                ? 'border-white bg-white/[0.06]'
+                                : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className="text-xs font-bold text-white/40 mb-2">1 PASSO</div>
+                            <div className="text-base font-bold text-white mb-1">Tudo de uma vez</div>
+                            <div className="text-xs text-white/50 leading-relaxed">
+                              Manda tudo direto pro Gemini Pro (imagem + texto + estilo) em uma única geração. Mais rápido, sem aprovação intermediária.
+                            </div>
+                          </button>
+                        </div>
+                      </div>
                     )}
                     {currentStepName === 'Imagem Base' && (
                       <StepBaseImageApproval

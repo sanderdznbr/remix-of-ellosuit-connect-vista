@@ -435,7 +435,8 @@ const ChatCreator: React.FC = () => {
   };
 
   const handleConfirm = () => {
-    sendMessage('Pode gerar!');
+    if (generating || loading) return;
+    triggerGenerate(brief);
   };
 
   const renderWidget = (msg: ChatMessage) => {

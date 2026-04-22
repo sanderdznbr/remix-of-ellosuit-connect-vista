@@ -1,7 +1,8 @@
-// Composes the final social media post by editing the chosen background
-// with text + logo + face + brand identity. Uses Gemini 3 Pro Image for
-// every stage so style, references, face and instructions stay coherent.
-// Persists the result to generated_carousels and returns the carousel id + url.
+// Generates the FINAL Instagram post in a single Gemini 3 Pro Image call.
+// Mirrors the advanced wizard flow: capture all references (face, logo, style,
+// brand colors, instructions, topic) and send them together so the model
+// produces a finished, coherent, on-brand post in one pass.
+// Persists the result to generated_carousels and returns carousel id + url.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -51,22 +52,18 @@ async function getCompanyId(sb: any, userId: string): Promise<string | null> {
 
 async function getStyleContext(sb: any, styleId?: string | null) {
   if (!isUuid(styleId)) return null;
-
   const { data, error } = await sb
     .from('marketplace_styles')
     .select('id, name, description, preview_images, strict_instructions, style_config')
     .eq('id', styleId)
     .maybeSingle();
-
   if (error) {
     console.error('style context error:', error);
     return null;
   }
-
   return data || null;
 }
 
-// Convert a remote image URL to base64 data URL so we can pass it inline to the edit model.
 async function urlToDataUrl(url: string): Promise<string | null> {
   try {
     const resp = await fetch(url);
@@ -102,35 +99,6 @@ async function uploadCover(sb: any, companyId: string, carouselId: string, dataU
     console.error('uploadCover exception:', e);
     return null;
   }
-}
-
-function buildReferenceContent(backgroundUrl: string, style: any, brief: Brief, faceData: string | null, logoData: string | null) {
-  const content: any[] = [
-    {
-      type: 'text',
-      text: [
-        'REFERENCE MAP:',
-        'Image 1 = chosen background base. Keep its composition as the structural starting point.',
-        Array.isArray(style?.preview_images) && style.preview_images.length
-          ? 'Next images = marketplace style references. Match their visual DNA very closely: photo treatment, crop language, typography attitude, color contrast, pacing, and editorial finish.'
-          : null,
-        faceData ? 'Face reference image = the exact real person to use. Preserve identity faithfully; never replace with a generic model.' : null,
-        logoData ? 'Logo reference image = the exact logo asset to place subtly and cleanly.' : null,
-      ].filter(Boolean).join('\n'),
-    },
-    { type: 'image_url', image_url: { url: backgroundUrl } },
-  ];
-
-  if (Array.isArray(style?.preview_images)) {
-    for (const refUrl of style.preview_images.slice(0, 4)) {
-      content.push({ type: 'image_url', image_url: { url: refUrl } });
-    }
-  }
-
-  if (faceData) content.push({ type: 'image_url', image_url: { url: faceData } });
-  if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
-
-  return content;
 }
 
 async function extractImageUrl(resp: Response): Promise<string | null> {
@@ -182,9 +150,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { brief, backgroundUrl } = (await req.json()) as { brief: Brief; backgroundUrl: string };
-    if (!brief?.topic || !backgroundUrl) {
-      return new Response(JSON.stringify({ error: 'topic e backgroundUrl são obrigatórios' }), {
+    const { brief } = (await req.json()) as { brief: Brief };
+    if (!brief?.topic) {
+      return new Response(JSON.stringify({ error: 'topic é obrigatório' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -193,92 +161,88 @@ Deno.serve(async (req) => {
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
     const style = await getStyleContext(sb, brief.styleId);
 
-    // === Build the multimodal edit prompt ===
-    const colors = brief.brandColors?.length
-      ? `Brand palette: ${brief.brandColors.join(', ')}.`
-      : '';
+    // === Resolve all reference assets in parallel ===
+    const [faceData, logoData, ...styleRefDataUrls] = await Promise.all([
+      brief.hasFace && brief.faceUrl
+        ? (brief.faceUrl.startsWith('data:') ? Promise.resolve(brief.faceUrl) : urlToDataUrl(brief.faceUrl))
+        : Promise.resolve(null),
+      brief.hasLogo && brief.logoUrl
+        ? (brief.logoUrl.startsWith('data:') ? Promise.resolve(brief.logoUrl) : urlToDataUrl(brief.logoUrl))
+        : Promise.resolve(null),
+      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 4).map(urlToDataUrl) : []),
+    ]);
+    const styleRefs = styleRefDataUrls.filter(Boolean) as string[];
+
+    // === Build the unified prompt (single pass) ===
+    const colors = brief.brandColors?.length ? `Brand palette: ${brief.brandColors.join(', ')}.` : '';
     const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : '';
-    const faceLine = brief.hasFace && brief.faceUrl
-      ? `Include the exact person from the attached face reference photo, preserving facial identity, hair, skin tone, age impression, body language energy, and overall likeness with high fidelity. This is mandatory. Never replace with a generic person, never invent another face, and never omit the person.`
+    const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
+    const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
+    const faceLine = faceData
+      ? 'A face reference photo is attached. The exact real person from that photo MUST appear in the final composition with high facial fidelity (identity, hair, skin tone, age, expression). Never replace with a generic model. Never invent another face. Never omit the person.'
       : '';
-    const logoLine = brief.hasLogo && brief.logoUrl
-      ? `Place the attached logo subtly in a corner (small, balanced, not intrusive).`
+    const logoLine = logoData
+      ? 'A logo asset is attached. Place it subtly and cleanly in a corner — small, balanced, never intrusive.'
       : '';
     const styleRules = [
-      style?.name ? `Marketplace style to match: ${style.name}.` : '',
+      style?.name ? `Selected marketplace style: "${style.name}".` : '',
       style?.description ? `Style description: ${style.description}` : '',
-      style?.strict_instructions ? `Mandatory style rules: ${style.strict_instructions}` : '',
+      style?.strict_instructions ? `MANDATORY style rules (must obey strictly): ${style.strict_instructions}` : '',
       style?.style_config?.imageGeneration?.prompt_style ? `Aesthetic DNA: ${style.style_config.imageGeneration.prompt_style}` : '',
-      brief.audience ? `Target audience: ${brief.audience}.` : '',
-      brief.tone ? `Tone: ${brief.tone}.` : '',
+      styleRefs.length ? 'Style reference images are attached AFTER the face/logo. Match their visual DNA closely: photo treatment, color contrast, crop language, typography attitude, editorial finish, pacing.' : '',
     ].filter(Boolean).join('\n');
 
-    const faceData = brief.hasFace && brief.faceUrl
-      ? (brief.faceUrl.startsWith('data:') ? brief.faceUrl : await urlToDataUrl(brief.faceUrl))
-      : null;
-    const logoData = brief.hasLogo && brief.logoUrl
-      ? (brief.logoUrl.startsWith('data:') ? brief.logoUrl : await urlToDataUrl(brief.logoUrl))
-      : null;
-
-    const basePrompt = `Take this background image and turn it into a finished, premium Instagram post about: "${brief.topic}".
+    const unifiedPrompt = `Create a finished, premium Instagram ${brief.contentType === 'carousel' ? 'carousel cover' : 'single post'} about: "${brief.topic}".
 
 CREATIVE GOAL:
-- The final image must feel like one original campaign idea tailored specifically to this topic.
-- Avoid generic social media compositions, generic office props, or stock-like solutions.
-- Make the concept immediately communicate the topic and value proposition.
-- The final piece must clearly reflect the selected marketplace style, not just any premium aesthetic.
-- If a face reference is attached, the real person must be visibly present in the final composition.
+- ONE original, specific campaign concept tied directly to this topic.
+- NOT a generic stock scene, not a generic laptop-on-desk, not random office props.
+- The visual must immediately communicate the topic and value proposition.
+- Editorial, magazine-grade finish. Premium typography in PORTUGUÊS BRASILEIRO.
 
 ${brand}
 ${colors}
+${audienceLine}
+${toneLine}
 ${faceLine}
 ${logoLine}
-${styleRules}
 
-Aspect ratio: ${ratio}.
-Style: high-end editorial Instagram post — magazine quality.
-Do NOT add watermarks. Keep the original background composition as the base, but evolve it into a specific branded concept; do not simply slap text on top.
-Respect the marketplace style language faithfully.
+STYLE GUIDANCE:
+${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
+
+TYPOGRAPHY (text rendered inside the image):
+- Language: PORTUGUÊS BRASILEIRO with perfect spelling.
+- Headline / hook: short, powerful, max 7 words.
+- Optional supporting line: max 12 words.
+- Place text in a clean safe area; never cover the person's face.
+- Typography must feel editorial, bold, on-brand for the selected style.
+
+OUTPUT:
+- Aspect ratio: ${ratio}.
+- No watermarks. No fake handles. No nonsense placeholder text.
+- Single, polished, ready-to-publish image.
 
 NON-NEGOTIABLE CHECKLIST:
-- Do not output a generic stock-looking scene.
-- Do not ignore the attached style references.
-- Do not ignore the attached face reference when present.
-- Do not invent a different person.
-- Build a unique concept tied directly to the topic instead of a vague AI or workspace visual.
-- DO NOT render any text yet in this stage.`;
+1. Concept must be unique and clearly tied to the topic.
+2. Must obey the marketplace style references (if attached).
+3. Must include the real person from the face reference (if attached).
+4. Must include the brand logo subtly (if attached).
+5. Must use the brand palette (if provided).
+6. All text must be legible and in correct Portuguese.`;
 
-    const overlayPrompt = `The image above is the FINAL VISUAL BASE for an Instagram post about: "${brief.topic}".
+    // === Build multimodal payload ===
+    const content: any[] = [{ type: 'text', text: unifiedPrompt }];
+    if (faceData) content.push({ type: 'image_url', image_url: { url: faceData } });
+    if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
+    for (const ref of styleRefs) content.push({ type: 'image_url', image_url: { url: ref } });
 
-Your only job now is to add the final typography and branding overlay without changing the scene.
-
-ABSOLUTE RULES:
-1. KEEP the image 100% IDENTICAL — same person, same face, same background, same pose, same lighting, same composition.
-2. ONLY add the text/typography and subtle brand finishing.
-3. Text MUST be in PORTUGUÊS BRASILEIRO, with perfect spelling and perfectly legible letterforms.
-4. Place text in the cleanest safe area, without covering the person's face.
-5. Headline / hook: short and powerful, max 7 words.
-6. Optional supporting text: max 12 words.
-7. Typography should feel editorial, premium, bold, and aligned to the selected style.
-8. If a logo exists, keep it subtle and balanced.
-9. Output must stay in aspect ratio ${ratio}.
-
-BRAND CONTEXT:
-${brand}
-${colors}
-${styleRules}`;
-
-    const content = [
-      { type: 'text', text: basePrompt },
-      ...buildReferenceContent(backgroundUrl, style, brief, faceData, logoData),
-    ];
-
-    console.log('chat-compose-final: composing', {
+    console.log('chat-compose-final: single-pass generation', {
       topic: brief.topic,
       ratio,
-      refs: content.length - 1,
       hasFace: !!faceData,
-      hasStyleRefs: Array.isArray(style?.preview_images) && style.preview_images.length > 0,
+      hasLogo: !!logoData,
+      styleRefs: styleRefs.length,
+      style: style?.name,
     });
 
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -309,53 +273,21 @@ ${styleRules}`;
     if (!resp.ok) {
       const t = await resp.text();
       console.error('compose AI gateway error:', resp.status, t);
-      return new Response(JSON.stringify({ error: 'Falha ao compor o post' }), {
+      return new Response(JSON.stringify({ error: 'Falha ao gerar o post' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const baseImage = await extractImageUrl(resp);
-    if (!baseImage) {
+    const finalImage = await extractImageUrl(resp);
+    if (!finalImage) {
       return new Response(JSON.stringify({ error: 'A IA não retornou imagem.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    let finalImage = baseImage;
-    const overlayResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-pro-image-preview',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: overlayPrompt },
-            { type: 'image_url', image_url: { url: baseImage } },
-            ...(Array.isArray(style?.preview_images)
-              ? style.preview_images.slice(0, 2).map((url: string) => ({ type: 'image_url', image_url: { url } }))
-              : []),
-            ...(faceData ? [{ type: 'image_url', image_url: { url: faceData } }] : []),
-            ...(logoData ? [{ type: 'image_url', image_url: { url: logoData } }] : []),
-          ],
-        }],
-        modalities: ['image', 'text'],
-      }),
-    });
-
-    if (overlayResp.ok) {
-      const overlayImage = await extractImageUrl(overlayResp);
-      if (overlayImage) finalImage = overlayImage;
-    } else {
-      console.error('overlay AI gateway error:', overlayResp.status, await overlayResp.text());
-    }
-
-    // === Persist to generated_carousels so user can open / edit later ===
+    // === Persist ===
     const card = {
       type: 'cover',
       title: brief.topic,
@@ -394,11 +326,9 @@ ${styleRules}`;
       });
     }
 
-    // Upload cover (base64 → covers bucket) and update cover_url
     const coverUrl = await uploadCover(sb, companyId, inserted.id, finalImage);
     if (coverUrl) {
       await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', inserted.id);
-      // Replace inline base64 with the public URL inside carousel_data so the editor loads quickly
       const updatedCards = [{ ...card, imageUrl: coverUrl }];
       await sb.from('generated_carousels').update({
         carousel_data: { title: brief.topic, cards: updatedCards },
@@ -406,10 +336,7 @@ ${styleRules}`;
     }
 
     return new Response(
-      JSON.stringify({
-        carouselId: inserted.id,
-        imageUrl: coverUrl || finalImage,
-      }),
+      JSON.stringify({ carouselId: inserted.id, imageUrl: coverUrl || finalImage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (e) {

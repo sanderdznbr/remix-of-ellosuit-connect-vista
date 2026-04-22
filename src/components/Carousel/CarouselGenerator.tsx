@@ -163,6 +163,7 @@ import { PropertyCardData } from './RealEstateCardTemplates';
 import SocialPublishDialog from './SocialPublishDialog';
 import CarouselTour from './CarouselTour';
 import StepPersonalization from './wizard/StepPersonalization';
+import StepBaseImageApproval from './wizard/StepBaseImageApproval';
 import WizardCreditIndicator from './wizard/WizardCreditIndicator';
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
@@ -409,6 +410,9 @@ const CarouselGenerator: React.FC = () => {
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
+  const [baseImageCandidates, setBaseImageCandidates] = useState<string[]>([]);
+  const [selectedBaseImage, setSelectedBaseImage] = useState<string | null>(null);
+  const [generatingBaseCandidates, setGeneratingBaseCandidates] = useState(false);
 
   // Step 4: Style
   const [showHeader, setShowHeader] = useState(true);
@@ -596,12 +600,15 @@ const CarouselGenerator: React.FC = () => {
   const isAdminUser = user?.email === 'admin@gmail.com';
   const adminModelStep = isAdminUser ? ['Modelo IA'] : [];
 
+  const hasFaceRefsForGen = referenceImages.some(r => r.category === 'face') || facePersons.some(p => p.photos.length > 0);
+  const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud';
+
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...adminModelStep, 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...adminModelStep, 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
   const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : []), ...adminModelStep]
@@ -1813,6 +1820,61 @@ The image must look like it was shot by a professional photographer or designed 
     fontReferenceName?: string;
     isCarousel?: boolean;
   }): Promise<string | null> => {
+    // ... keep existing code
+  };
+
+  const generateBaseImageCandidates = async () => {
+    if (generatingBaseCandidates) return;
+    setGeneratingBaseCandidates(true);
+    setBaseImageCandidates([]);
+    setSelectedBaseImage(null);
+
+    try {
+      // Get the cover card's text if possible, otherwise use topic
+      let basePromptText = topic.trim();
+      if (manualCardTexts.length > 0 && manualCardTexts[0].title) {
+        basePromptText = manualCardTexts[0].title;
+      }
+
+      const activeFP = facePersons.filter(p => p.photos.length > 0);
+      const faceRefUrls = activeFP.length > 0 ? activeFP.flatMap(p => p.photos.map(ph => ph.url)) : referenceImages.filter(r => r.category === 'face').map(r => r.url);
+      const styleRefUrls = referenceImages.filter(r => r.category === 'style').map(r => r.url);
+      
+      const marketplaceRefUrls: string[] = [];
+      if (activeMarketplaceStyleRef.current?._previewImages?.length) {
+        const origin = window.location.origin;
+        const allPreviews = (activeMarketplaceStyleRef.current._previewImages as string[])
+          .map((p: string) => p.startsWith('http') ? p : `${origin}${p}`);
+        marketplaceRefUrls.push(...allPreviews.slice(0, 5));
+      }
+
+      const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
+
+      const basePrompt = buildImagePrompt(`Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.`, 0);
+
+      console.log('[BaseImageCandidates] Generating 2 options...');
+      
+      // Generate 2 options in parallel (or sequential if batch is 1)
+      const promises = [0, 1].map((i) => generateImage({
+        prompt: basePrompt + ` (Opção ${i+1})`,
+        faceReferenceUrls: faceRefUrls,
+        styleReferenceUrls: allStyleRefs,
+        isCarousel: contentMode === 'carousel'
+      }));
+
+      const results = await Promise.all(promises);
+      const filtered = results.filter((url): url is string => !!url);
+      
+      console.log('[BaseImageCandidates] Generated:', filtered.length);
+      setBaseImageCandidates(filtered);
+      if (filtered.length > 0) setSelectedBaseImage(filtered[0]);
+    } catch (err) {
+      console.error('[BaseImageCandidates] Error:', err);
+      sonnerToast.error('Erro ao gerar opções de imagem');
+    } finally {
+      setGeneratingBaseCandidates(false);
+    }
+  };
     // Use the model selected by the user (nano-banana = quality default, gemini = fast)
     const resolvedModel = imageSettings.model === 'auto'
       ? 'nano-banana'
@@ -3336,16 +3398,35 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
         effectiveProductRefs = [...(effectiveProductRefs || []), logoUrl];
       }
 
-      const imageUrl = await generateImage({
-        prompt: finalPrompt,
-        faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
-        styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
-        referenceImageUrls: effectiveProductRefs,
-        negativePrompt: negPrompt,
-        facePersonsMetadata: singlePostFaceMeta,
-        fontReferenceImage: fontBase64,
-        fontReferenceName: fontName,
-      });
+      let imageUrl = null;
+
+      if (selectedBaseImage) {
+        console.log('[SINGLE_POST] Using approved base image:', selectedBaseImage);
+        // Use the selected base image as a reference and tell AI to keep it but add text
+        const finalPromptWithBase = `MANDATORY: USE THE ATTACHED REFERENCE IMAGE AS THE EXACT BASE. KEEP THE ENTIRE COMPOSITION, PEOPLE, AND STYLE 100% IDENTICAL. DO NOT CHANGE ANYTHING FROM THE BASE IMAGE. YOUR ONLY TASK IS TO ADD THE FOLLOWING TEXTS PROFESSIONALLY:\n\n${finalPrompt}`;
+        
+        imageUrl = await generateImage({
+          prompt: finalPromptWithBase,
+          faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
+          styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+          referenceImageUrls: [selectedBaseImage, ...(effectiveProductRefs || [])],
+          negativePrompt: negPrompt,
+          facePersonsMetadata: singlePostFaceMeta,
+          fontReferenceImage: fontBase64,
+          fontReferenceName: fontName,
+        });
+      } else {
+        imageUrl = await generateImage({
+          prompt: finalPrompt,
+          faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
+          styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
+          referenceImageUrls: effectiveProductRefs,
+          negativePrompt: negPrompt,
+          facePersonsMetadata: singlePostFaceMeta,
+          fontReferenceImage: fontBase64,
+          fontReferenceName: fontName,
+        });
+      }
 
       if (!imageUrl) throw new Error('Não foi possível gerar a imagem do post');
 
@@ -4770,9 +4851,27 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const lastCardIndex = Math.max(...imageFactories.map(f => f.index));
         const lastFactory = imageFactories.find(p => p.index === lastCardIndex && p.index !== 0);
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
-
         if (coverFactory) {
-          let coverUrl = await coverFactory.factory();
+          let coverUrl = null;
+          
+          if (selectedBaseImage) {
+             console.log('[CAROUSEL] Using approved base image for cover:', selectedBaseImage);
+             const coverPromptWithBase = `MANDATORY: USE THE ATTACHED REFERENCE IMAGE AS THE EXACT BASE. KEEP THE ENTIRE COMPOSITION, PEOPLE, AND STYLE 100% IDENTICAL. DO NOT CHANGE ANYTHING FROM THE BASE IMAGE. YOUR ONLY TASK IS TO ADD THE FOLLOWING TEXTS PROFESSIONALLY:\n\n${coverFactory.prompt}`;
+             
+             coverUrl = await generateImage({
+                prompt: coverPromptWithBase,
+                faceReferenceUrls: capturedFaceRefs,
+                styleReferenceUrls: capturedStyleRefs,
+                referenceImageUrls: [selectedBaseImage, ...(capturedProductRefs || [])],
+                negativePrompt: capturedNegative,
+                facePersonsMetadata: cardFacePersonsMeta,
+                fontReferenceImage: carouselFontBase64,
+                fontReferenceName: carouselFontName,
+             });
+          } else {
+             coverUrl = await coverFactory.factory();
+          }
+
           // Retry cover once if it fails — cover is critical
           if (!coverUrl) {
             console.warn('[COVER RETRY] Cover generation failed, retrying...');
@@ -4819,7 +4918,6 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           }
         }
       }
-
       // ========== REAL ESTATE POST-PROCESSING: Blend real photo + AI overlay ==========
       if (useRealEstateBlend && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
         setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');
@@ -7489,9 +7587,18 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
   const canProceed = currentStepName === 'Modo' ? true : currentStepName === 'Tweet Config' ? (tweetConfig.displayName.trim().length > 0) : currentStepName === 'tweet2' ? (tweet2Config.displayName.trim().length > 0) : currentStepName === 'Tema' ? (topic.trim().length > 0 || manualPostText.trim().length > 0) : currentStepName === 'Estilo' ? (wizardMode === 'extreme' || wizardMode === 'tweet' || wizardMode === 'tweet2' ? true : !!activeMarketplaceStyle) : currentStepName === 'Pesquisa' ? (selectedWebSourceIndex !== null) : true;
 
-  // Auto-generate roteiro when entering the Roteiro step (no manual button press needed)
+  // Auto-generate roteiro when entering the Roteiro step
   const autoRoteiroTriggered = useRef(false);
+  const baseImageTriggered = useRef(false);
+
   useEffect(() => {
+    if (currentStepName === 'Imagem Base' && !baseImageTriggered.current && !generatingBaseCandidates && baseImageCandidates.length === 0) {
+      baseImageTriggered.current = true;
+      generateBaseImageCandidates();
+    } else if (currentStepName !== 'Imagem Base') {
+      baseImageTriggered.current = false;
+    }
+
     if (currentStepName !== 'Roteiro') {
       autoRoteiroTriggered.current = false;
       return;
@@ -8414,6 +8521,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         envatoFont={advancedEnvatoFont}
                         onEnvatoFontSelect={setAdvancedEnvatoFont}
                         hasMarketplaceStyle={!!activeMarketplaceStyle?.imageGeneration?.prompt_style}
+                      />
+                    )}
+                    {currentStepName === 'Imagem Base' && (
+                      <StepBaseImageApproval
+                        candidates={baseImageCandidates}
+                        selectedImage={selectedBaseImage}
+                        onSelect={setSelectedBaseImage}
+                        onRegenerate={generateBaseImageCandidates}
+                        generating={generatingBaseCandidates}
+                        accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'}
                       />
                     )}
                     {currentStepName === 'Roteiro' && (

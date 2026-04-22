@@ -1942,11 +1942,16 @@ The image must look like it was shot by a professional photographer or designed 
     fontReferenceImage?: string;
     fontReferenceName?: string;
     isCarousel?: boolean;
+    forceModel?: 'gemini' | 'nano-banana' | 'gpt-image-2' | 'higgsfield';
+    editSourceImage?: string;
   }): Promise<string | null> => {
     // Use the model selected by the user (nano-banana = quality default, gemini = fast)
-    const resolvedModel = imageSettings.model === 'auto'
-      ? 'nano-banana'
-      : imageSettings.model;
+    // forceModel takes precedence — used for edit-only passes that need Gemini 3 Pro Image.
+    const resolvedModel = opts.forceModel
+      ? opts.forceModel
+      : imageSettings.model === 'auto'
+        ? 'nano-banana'
+        : imageSettings.model;
 
     // === HIGGSFIELD PATH ===
     if (resolvedModel === 'higgsfield') {
@@ -2022,6 +2027,7 @@ The image must look like it was shot by a professional photographer or designed 
         ...(useBrandColors && logoBrandColors.length > 0 ? { brandColors: logoBrandColors } : {}),
         ...(useCustomColors && customColors.length > 0 ? { customColors } : {}),
         ...(opts.fontReferenceImage ? { fontReferenceImage: opts.fontReferenceImage, fontReferenceName: opts.fontReferenceName } : {}),
+        ...(opts.editSourceImage ? { editSourceImage: opts.editSourceImage } : {}),
       },
     });
     
@@ -2056,12 +2062,32 @@ The image must look like it was shot by a professional photographer or designed 
         marketplaceRefUrls.push(...allPreviews.slice(0, 5));
       }
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
-      const basePrompt = buildImagePrompt(`Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.`, 0);
+
+      // Build face metadata so the backend enforces facial identity
+      const baseFaceMeta = facePersons
+        .filter(p => p.photos.length > 0)
+        .map(p => ({
+          label: p.label,
+          gender: p.gender,
+          wearsGlasses: p.wearsGlasses,
+          photoCount: p.photos.length,
+        }));
+
+      const faceFidelityClause = faceRefUrls.length > 0
+        ? `\n\nABSOLUTE FACIAL FIDELITY REQUIREMENT: The attached face reference photo(s) show the EXACT real person(s) that MUST appear in this image. Reproduce identity with maximum fidelity: same facial structure, same eyes, same nose, same mouth, same skin tone, same hair, same age. NEVER replace with a generic model. NEVER invent another face. NEVER stylize the face away from the reference. Treat the face as a portrait reference, not as inspiration.`
+        : '';
+
+      const basePrompt = buildImagePrompt(
+        `Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.${faceFidelityClause}`,
+        0,
+      );
       const promises = [0, 1].map((i) => generateImage({
         prompt: basePrompt + ` (Opção ${i + 1})`,
         faceReferenceUrls: faceRefUrls,
         styleReferenceUrls: allStyleRefs,
         isCarousel: contentMode === 'carousel',
+        facePersonsMetadata: baseFaceMeta.length > 0 ? baseFaceMeta : undefined,
+        negativePrompt: 'generic model, different person, altered identity, stylized face, cartoon face, wrong skin tone, wrong eye color, wrong hair, deformed face, low facial resemblance',
       }));
       const results = await Promise.all(promises);
       const filtered = results.filter((url): url is string => !!url);
@@ -3509,17 +3535,34 @@ REGRAS DE PRESERVAÇÃO ABSOLUTA:
       let imageUrl = null;
 
       if (selectedBaseImage) {
-        console.log('[SINGLE_POST] Using approved base image:', selectedBaseImage);
-        // Use the selected base image as a reference and tell AI to keep it but add text
-        const finalPromptWithBase = `MANDATORY: USE THE ATTACHED REFERENCE IMAGE AS THE EXACT BASE. KEEP THE ENTIRE COMPOSITION, PEOPLE, AND STYLE 100% IDENTICAL. DO NOT CHANGE ANYTHING FROM THE BASE IMAGE. YOUR ONLY TASK IS TO ADD THE FOLLOWING TEXTS PROFESSIONALLY:\n\n${finalPrompt}`;
-        
+        console.log('[SINGLE_POST] Using approved base image as PURE EDIT (text overlay only):', selectedBaseImage);
+        // CRITICAL: this is a PURE EDIT pass. The base image is final — we ONLY add typography on top.
+        // Do NOT re-send face/style references here, otherwise the model recomposes the scene
+        // and replaces the approved base with a freshly generated one.
+        const editPrompt = `EDIT MODE — TEXT OVERLAY ONLY.
+
+You are receiving ONE input image (the FIRST attached image). That image is the FINAL approved background and MUST be preserved EXACTLY pixel-for-pixel:
+- Do NOT regenerate, recompose, restyle, recolor, recrop, relight, upscale or "improve" the image.
+- Do NOT change, replace, move or alter the person, the face, the pose, the clothing, the background, the props, the lighting, the colors, the framing, the depth of field or ANY visual element.
+- Treat the input image as a locked layer. Your ONLY job is to render typography ON TOP of it.
+
+WHAT TO RENDER ON TOP:
+${finalPrompt}
+
+TYPOGRAPHY RULES:
+- Render the text cleanly OVER the existing image, in the safe area, without covering the face.
+- Match the typographic DNA of the selected style (font, weight, hierarchy, spacing).
+- Use the brand colors provided in the prompt above for the type treatment.
+- No watermarks, no fake handles, no nonsense placeholder text.
+
+OUTPUT: the same approved image, untouched, with the requested text professionally typeset on top. Nothing else.`;
+
         imageUrl = await generateImage({
-          prompt: finalPromptWithBase,
-          faceReferenceUrls: mergedFaceRefs.length > 0 ? mergedFaceRefs : undefined,
-          styleReferenceUrls: allStyleRefs.length > 0 ? allStyleRefs : undefined,
-          referenceImageUrls: [selectedBaseImage, ...(effectiveProductRefs || [])],
-          negativePrompt: negPrompt,
-          facePersonsMetadata: singlePostFaceMeta,
+          prompt: editPrompt,
+          // Use the dedicated EDIT path on the backend — keeps the source image untouched
+          // and only adds the typography on top. No face/style refs (would cause recomposition).
+          editSourceImage: selectedBaseImage,
+          negativePrompt: 'regenerated background, new composition, different person, replaced face, altered scene, recropped image, restyled image, recolored image, different framing, modified subject',
           fontReferenceImage: fontBase64,
           fontReferenceName: fontName,
         });

@@ -8668,6 +8668,44 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         hasMarketplaceStyle={!!activeMarketplaceStyle?.imageGeneration?.prompt_style}
                       />
                     )}
+                    {currentStepName === 'Modo Imagem' && (
+                      <div className="space-y-6 max-w-2xl mx-auto">
+                        <div className="text-center space-y-2">
+                          <h3 className="text-xl font-bold text-white">Como gerar a imagem?</h3>
+                          <p className="text-sm text-white/50">Escolha o pipeline de geração para este post.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button
+                            onClick={() => setBaseImageMode('two-step')}
+                            className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                              baseImageMode === 'two-step'
+                                ? 'border-white bg-white/[0.06]'
+                                : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className="text-xs font-bold text-white/40 mb-2">2 ETAPAS</div>
+                            <div className="text-base font-bold text-white mb-1">Imagem base + texto</div>
+                            <div className="text-xs text-white/50 leading-relaxed">
+                              Gera 2 opções de imagem base (Gemini), você escolhe a favorita e depois compomos o texto por cima. Mais controle.
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => setBaseImageMode('single-pass')}
+                            className={`text-left p-5 rounded-2xl border-2 transition-all ${
+                              baseImageMode === 'single-pass'
+                                ? 'border-white bg-white/[0.06]'
+                                : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <div className="text-xs font-bold text-white/40 mb-2">1 PASSO</div>
+                            <div className="text-base font-bold text-white mb-1">Tudo de uma vez</div>
+                            <div className="text-xs text-white/50 leading-relaxed">
+                              Manda tudo direto pro Gemini Pro (imagem + texto + estilo) em uma única geração. Mais rápido, sem aprovação intermediária.
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {currentStepName === 'Imagem Base' && (
                       <StepBaseImageApproval
                         candidates={baseImageCandidates}

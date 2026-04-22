@@ -34,6 +34,7 @@ const Comunidade = lazy(() => import('./pages/Comunidade'));
 const Ajuda = lazy(() => import('./pages/Ajuda'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
+const ChatCreator = lazy(() => import('./pages/ChatCreator'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,6 +119,7 @@ const App = () => (
                   <Route path="/comunidade" element={<Comunidade />} />
                   <Route path="/ajuda" element={<Ajuda />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
+                  <Route path="/criar" element={<ChatCreator />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

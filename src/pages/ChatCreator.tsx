@@ -931,7 +931,7 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 };
 
 // Personalization with inline upload
-const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => void; userId?: string }> = ({ onPick, userId }) => {
+const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
   const [colors, setColors] = useState(false);

@@ -4918,7 +4918,6 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           }
         }
       }
-
       // ========== REAL ESTATE POST-PROCESSING: Blend real photo + AI overlay ==========
       if (useRealEstateBlend && propertyPhotoDataUrls.length > 0 && propertyPhotoDataUrls.some(p => p.length > 0)) {
         setImageGenProgress('🏠 Mesclando fotos reais com overlay IA...');

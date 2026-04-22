@@ -8653,6 +8653,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         generationMode={imageSettings.generationMode}
                         setGenerationMode={(m) => setImageSettings(prev => ({ ...prev, generationMode: m }))} />
                     )}
+                    {currentStepName === 'Modelo IA' && isAdminUser && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md" style={{ background: 'rgba(168,85,247,0.15)', color: '#c4b5fd', border: '1px solid rgba(168,85,247,0.3)' }}>
+                            Admin Only
+                          </span>
+                          <span className="text-[11px] text-white/40">Visível apenas para administradores</span>
+                        </div>
+                        <StepImageSettings
+                          settings={imageSettings}
+                          onChange={setImageSettings}
+                        />
+                      </div>
+                    )}
                     </motion.div>
                   </AnimatePresence>
 

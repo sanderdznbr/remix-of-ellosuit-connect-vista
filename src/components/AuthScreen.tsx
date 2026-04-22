@@ -180,14 +180,6 @@ const AuthScreen = () => {
               conectam, em segundos.
             </motion.span>
           </motion.h2>
-          <motion.p
-            className="text-white/40 text-sm max-w-md leading-relaxed"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.25, duration: 0.7 }}
-          >
-            A plataforma de IA mais elegante para criar conteúdo visual para suas redes.
-          </motion.p>
         </motion.div>
       </div>
 

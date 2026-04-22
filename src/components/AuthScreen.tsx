@@ -126,16 +126,15 @@ const AuthScreen = () => {
 
   return (
     <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* ─── LEFT: Brand / Orb ─── */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06]">
-        {/* Orb */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 55vw, 850px)', height: 'clamp(500px, 55vw, 850px)' }}>
-            <div className="carousel-loader-spinner" />
-          </div>
+      {/* ─── LEFT: Brand / Image Placeholder ─── */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#0d0d12]">
+        {/* Image placeholder — replace src with the final photo */}
+        <div className="absolute inset-0 flex items-center justify-center text-white/20 text-xs uppercase tracking-[0.2em] select-none">
+          {/* <img src="/path/to/photo.jpg" alt="" className="w-full h-full object-cover" /> */}
+          Image placeholder
         </div>
-        {/* Soft vignette */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 0%, rgba(10,10,15,0.4) 70%, rgba(10,10,15,0.95) 100%)' }} />
+        {/* Soft vignette for legibility of overlay text */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0) 30%, rgba(10,10,15,0) 60%, rgba(10,10,15,0.85) 100%)' }} />
 
         {/* Logo top */}
         <motion.div

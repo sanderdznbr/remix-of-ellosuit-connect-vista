@@ -10,6 +10,7 @@ import {
   Heading,
   Html,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -22,23 +23,29 @@ export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
 }: RecoveryEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Reset your password for {siteName}</Preview>
+    <Preview>Redefina sua senha do {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Reset your password</Heading>
-        <Text style={text}>
-          We received a request to reset your password for {siteName}. Click
-          the button below to choose a new password.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
-        <Text style={footer}>
-          If you didn't request a password reset, you can safely ignore this
-          email. Your password will not be changed.
-        </Text>
+        <Section style={header}>
+          <Text style={brand}>ellocontent</Text>
+        </Section>
+        <Section style={card}>
+          <Heading style={h1}>Redefinir sua senha</Heading>
+          <Text style={text}>
+            Recebemos uma solicitação para redefinir a senha da sua conta no{' '}
+            {siteName}. Clique no botão abaixo para escolher uma nova senha.
+          </Text>
+          <Button style={button} href={confirmationUrl}>
+            Redefinir senha
+          </Button>
+          <Text style={footer}>
+            Se você não solicitou a redefinição, pode ignorar este e-mail com
+            segurança. Sua senha não será alterada.
+          </Text>
+        </Section>
+        <Text style={signature}>— Equipe ellocontent</Text>
       </Container>
     </Body>
   </Html>
@@ -46,26 +53,60 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif',
+  margin: 0,
+  padding: '40px 20px',
+}
+const container = { maxWidth: '520px', margin: '0 auto' }
+const header = { padding: '0 0 24px', textAlign: 'center' as const }
+const brand = {
+  fontSize: '20px',
+  fontWeight: '700' as const,
+  color: '#5B00FF',
+  letterSpacing: '-0.02em',
+  margin: 0,
+}
+const card = {
+  backgroundColor: '#fafafa',
+  borderRadius: '16px',
+  padding: '40px 32px',
+  border: '1px solid #eeeeee',
+}
 const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  fontSize: '24px',
+  fontWeight: '600' as const,
+  color: '#0a0a0a',
+  letterSpacing: '-0.02em',
+  margin: '0 0 16px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  fontSize: '15px',
+  color: '#52525b',
+  lineHeight: '1.6',
+  margin: '0 0 28px',
 }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#5B00FF',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontWeight: '600' as const,
+  borderRadius: '10px',
+  padding: '14px 28px',
   textDecoration: 'none',
+  display: 'inline-block',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = {
+  fontSize: '13px',
+  color: '#999999',
+  lineHeight: '1.5',
+  margin: '32px 0 0',
+}
+const signature = {
+  fontSize: '12px',
+  color: '#999999',
+  textAlign: 'center' as const,
+  margin: '24px 0 0',
+}

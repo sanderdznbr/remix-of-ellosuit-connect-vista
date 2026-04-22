@@ -418,6 +418,9 @@ const CarouselGenerator: React.FC = () => {
   const [baseImageCandidates, setBaseImageCandidates] = useState<string[]>([]);
   const [selectedBaseImage, setSelectedBaseImage] = useState<string | null>(null);
   const [generatingBaseCandidates, setGeneratingBaseCandidates] = useState(false);
+  // 'two-step' = gera imagem base + escolhe + compõe texto depois (Gemini + edição)
+  // 'single-pass' = manda tudo direto pro Gemini Pro de uma vez (sem aprovação intermediária)
+  const [baseImageMode, setBaseImageMode] = useState<'two-step' | 'single-pass'>('two-step');
 
   // Step 4: Style
   const [showHeader, setShowHeader] = useState(true);

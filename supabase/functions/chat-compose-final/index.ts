@@ -133,6 +133,21 @@ function buildReferenceContent(backgroundUrl: string, style: any, brief: Brief, 
   return content;
 }
 
+async function extractImageUrl(resp: Response): Promise<string | null> {
+  const raw = await resp.text();
+  const patterns = ['"url":"data:image/', '"url": "data:image/', '"url":"http', '"url": "http'];
+  for (const pattern of patterns) {
+    const idx = raw.indexOf(pattern);
+    if (idx === -1) continue;
+    const isHttp = pattern.includes('http');
+    const urlStart = isHttp ? raw.indexOf('http', idx) : raw.indexOf('data:image/', idx);
+    const urlEnd = raw.indexOf('"', urlStart);
+    if (urlStart !== -1 && urlEnd !== -1) return raw.slice(urlStart, urlEnd);
+  }
+  console.error('image extraction failed:', raw.slice(0, 500));
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -205,7 +220,7 @@ Deno.serve(async (req) => {
       ? (brief.logoUrl.startsWith('data:') ? brief.logoUrl : await urlToDataUrl(brief.logoUrl))
       : null;
 
-    const editPrompt = `Take this background image and turn it into a finished, premium Instagram post about: "${brief.topic}".
+    const basePrompt = `Take this background image and turn it into a finished, premium Instagram post about: "${brief.topic}".
 
 CREATIVE GOAL:
 - The final image must feel like one original campaign idea tailored specifically to this topic.
@@ -213,13 +228,6 @@ CREATIVE GOAL:
 - Make the concept immediately communicate the topic and value proposition.
 - The final piece must clearly reflect the selected marketplace style, not just any premium aesthetic.
 - If a face reference is attached, the real person must be visibly present in the final composition.
-
-OVERLAY TEXT REQUIREMENTS (render the text directly in the image, perfectly legible):
-- Headline / hook: a short, powerful Brazilian Portuguese sentence (max 7 words) about the topic
-- Optional supporting text (max 12 words) below or beside the headline
-- Typography: editorial, modern, bold weights for the headline; respect existing composition negative space
-- Strong contrast between text and background (use overlay/shadow if needed for legibility)
-- Place text in the cleanest area of the background
 
 ${brand}
 ${colors}
@@ -237,10 +245,31 @@ NON-NEGOTIABLE CHECKLIST:
 - Do not ignore the attached style references.
 - Do not ignore the attached face reference when present.
 - Do not invent a different person.
-- Build a unique concept tied directly to the topic instead of a vague AI or workspace visual.`;
+- Build a unique concept tied directly to the topic instead of a vague AI or workspace visual.
+- DO NOT render any text yet in this stage.`;
+
+    const overlayPrompt = `The image above is the FINAL VISUAL BASE for an Instagram post about: "${brief.topic}".
+
+Your only job now is to add the final typography and branding overlay without changing the scene.
+
+ABSOLUTE RULES:
+1. KEEP the image 100% IDENTICAL — same person, same face, same background, same pose, same lighting, same composition.
+2. ONLY add the text/typography and subtle brand finishing.
+3. Text MUST be in PORTUGUÊS BRASILEIRO, with perfect spelling and perfectly legible letterforms.
+4. Place text in the cleanest safe area, without covering the person's face.
+5. Headline / hook: short and powerful, max 7 words.
+6. Optional supporting text: max 12 words.
+7. Typography should feel editorial, premium, bold, and aligned to the selected style.
+8. If a logo exists, keep it subtle and balanced.
+9. Output must stay in aspect ratio ${ratio}.
+
+BRAND CONTEXT:
+${brand}
+${colors}
+${styleRules}`;
 
     const content = [
-      { type: 'text', text: editPrompt },
+      { type: 'text', text: basePrompt },
       ...buildReferenceContent(backgroundUrl, style, brief, faceData, logoData),
     ];
 
@@ -259,7 +288,7 @@ NON-NEGOTIABLE CHECKLIST:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-image-2',
+        model: 'google/gemini-3-pro-image-preview',
         messages: [{ role: 'user', content }],
         modalities: ['image', 'text'],
       }),
@@ -286,14 +315,39 @@ NON-NEGOTIABLE CHECKLIST:
       });
     }
 
-    const data = await resp.json();
-    const finalImage: string | undefined = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!finalImage) {
-      console.error('compose: no image in response', JSON.stringify(data).slice(0, 500));
+    const baseImage = await extractImageUrl(resp);
+    if (!baseImage) {
       return new Response(JSON.stringify({ error: 'A IA não retornou imagem.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    let finalImage = baseImage;
+    const overlayResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-image-2',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: baseImage } },
+            { type: 'text', text: overlayPrompt },
+          ],
+        }],
+        modalities: ['image', 'text'],
+      }),
+    });
+
+    if (overlayResp.ok) {
+      const overlayImage = await extractImageUrl(overlayResp);
+      if (overlayImage) finalImage = overlayImage;
+    } else {
+      console.error('overlay AI gateway error:', overlayResp.status, await overlayResp.text());
     }
 
     // === Persist to generated_carousels so user can open / edit later ===

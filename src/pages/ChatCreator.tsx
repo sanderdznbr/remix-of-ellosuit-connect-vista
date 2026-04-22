@@ -228,6 +228,15 @@ const ChatCreator: React.FC = () => {
         },
       });
       if (error) throw error;
+
+      if (data?.error && data?.fallback) {
+        const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.error];
+        const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+        setLoading(false);
+        await appendAIMessages(texts, widget);
+        return;
+      }
+
       if (data?.error) throw new Error(data.error);
 
       const briefUpdate = (data?.brief_update && typeof data.brief_update === 'object') ? data.brief_update : {};

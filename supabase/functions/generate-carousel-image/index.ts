@@ -563,13 +563,22 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     const forcePremiumForPanorama = isPanoramicMode;
     const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
     
-    // Support for OpenAI GPT Image 2
-    const primaryModel = requestedModel.includes('gpt-image-2') 
+    // GPT Image 2 only when there are NO multi-image references
+    // (it doesn't honor our face/style/general layered prompts — falls back to Gemini Pro for fidelity)
+    const wantsGptImage2 = requestedModel.includes('gpt-image-2');
+    const hasAnyRefs = validFaceRefs.length > 0 || validStyleRefs.length > 0 || validGeneralRefs.length > 0;
+    const useGptImage2 = wantsGptImage2 && !hasAnyRefs && !isPanoramicMode;
+    
+    if (wantsGptImage2 && !useGptImage2) {
+      console.log(`⚠️ GPT Image 2 requested but ${hasAnyRefs ? 'has refs (face/style/general)' : 'panoramic mode'} — falling back to Gemini 3 Pro for multi-ref fidelity`);
+    }
+    
+    const primaryModel = useGptImage2
       ? 'openai/gpt-image-2'
       : (usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview');
       
     const fallbackModel = 'google/gemini-3.1-flash-image-preview';
-    console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
+    console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio, 'refs:', { face: validFaceRefs.length, style: validStyleRefs.length, general: validGeneralRefs.length });
 
     async function tryGenerate(model: string, content: any[], attempt: number, maxRetries = 3): Promise<string | null> {
       for (let retry = 0; retry <= maxRetries; retry++) {

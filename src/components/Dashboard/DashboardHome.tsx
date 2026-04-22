@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -272,6 +272,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     if (!text) return;
     // Route everything through the new conversational chat creator
     navigate(`/criar?prompt=${encodeURIComponent(text)}`);
+  };
+
+  const handleAdvancedMode = () => {
+    if (isGenerating) {
+      toast.error('Aguarde o post atual terminar antes de criar outro.');
+      return;
+    }
+    const text = inputValue.trim();
+    onStartCarousel(text || undefined, mentionedPrompts.length ? mentionedPrompts : undefined, postFormat);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

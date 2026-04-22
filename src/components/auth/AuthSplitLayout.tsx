@@ -23,6 +23,7 @@ const defaultTagline = {
 
 export default function AuthSplitLayout({ topRightSlot, children, tagline = defaultTagline }: AuthSplitLayoutProps) {
   const navigate = useNavigate();
+  const { url: heroImage } = useAuthHeroImage();
 
   return (
     <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>

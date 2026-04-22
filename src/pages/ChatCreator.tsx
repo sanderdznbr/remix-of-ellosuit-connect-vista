@@ -185,11 +185,16 @@ const ChatCreator: React.FC = () => {
       const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
 
       setLoading(false);
-      await appendAIMessages(texts, widget);
 
-      if (data.ready) {
-        setTimeout(() => triggerGenerate(newBrief), 600);
-      }
+      // If model says ready but didn't show the confirm widget, force-show it
+      // so the user always has explicit control over when generation starts.
+      const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
+        ? 'confirm_generate'
+        : widget;
+
+      await appendAIMessages(texts, finalWidget);
+      // NOTE: never auto-trigger generation. The user must click "Gerar agora"
+      // in the ConfirmWidget. This prevents accidental skips after uploads.
     } catch (err: any) {
       console.error('chat-creator error:', err);
       toast.error(err?.message || 'Erro ao conversar com a IA');

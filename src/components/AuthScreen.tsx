@@ -127,18 +127,18 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+    <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0F071D' }}>
       {/* ─── LEFT: Brand / Image ─── */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#0d0d12]">
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#130825]">
         {heroImage ? (
-          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover contrast-[1.1] brightness-[1.05]" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-white/20 text-xs uppercase tracking-[0.2em] select-none">
             Image placeholder
           </div>
         )}
         {/* Soft vignette for legibility of overlay text */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0) 30%, rgba(10,10,15,0) 60%, rgba(10,10,15,0.85) 100%)' }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(15,7,29,0.3) 0%, rgba(15,7,29,0) 30%, rgba(15,7,29,0) 60%, rgba(15,7,29,0.85) 100%)' }} />
 
         {/* Logo top */}
         <motion.div

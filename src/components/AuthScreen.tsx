@@ -17,6 +17,7 @@ import { useAuthHeroImage } from '@/hooks/useAuthHeroImage';
 
 const AuthScreen = () => {
   const { isMobile } = useIsMobile();
+  const { url: heroImage } = useAuthHeroImage();
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [isLoading, setIsLoading] = useState(false);

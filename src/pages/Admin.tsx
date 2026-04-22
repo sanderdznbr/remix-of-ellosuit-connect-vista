@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ContentDocumentParser from '@/components/Admin/ContentDocumentParser';
+import AuthHeroUploader from '@/components/Admin/AuthHeroUploader';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -26,7 +27,7 @@ const PURPLE_SOFT = 'rgba(123,80,220,0.15)';
 type Tab =
   | 'overview' | 'analytics' | 'users' | 'posts'
   | 'subscriptions' | 'payments' | 'logs'
-  | 'support' | 'coupons' | 'actions' | 'content';
+  | 'support' | 'coupons' | 'actions' | 'content' | 'appearance';
 
 const fmt = (n: number) => `R$ ${(n || 0).toFixed(2).replace('.', ',')}`;
 const fmtDate = (d: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
@@ -595,6 +596,7 @@ function AdminContent() {
     { key: 'coupons', label: 'Cupons', icon: Tag },
     { key: 'actions', label: 'Ações Manuais', icon: Gift },
     { key: 'content', label: 'Conteúdo', icon: FileText },
+    { key: 'appearance', label: 'Aparência', icon: ImageIcon },
   ];
 
   const statusColor = (s: string) => {
@@ -1355,6 +1357,8 @@ function AdminContent() {
         )}
 
         {tab === 'content' && <div className="max-w-2xl"><ContentDocumentParser /></div>}
+
+        {tab === 'appearance' && <div className="max-w-2xl"><AuthHeroUploader /></div>}
       </motion.div>
     </div>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import { useAuthHeroImage } from '@/hooks/useAuthHeroImage';
 import '@/styles/carousel-loader.css';
 
 interface AuthSplitLayoutProps {
@@ -22,15 +23,19 @@ const defaultTagline = {
 
 export default function AuthSplitLayout({ topRightSlot, children, tagline = defaultTagline }: AuthSplitLayoutProps) {
   const navigate = useNavigate();
+  const { url: heroImage } = useAuthHeroImage();
 
   return (
     <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* ─── LEFT: Brand / Image Placeholder ─── */}
+      {/* ─── LEFT: Brand / Image ─── */}
       <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#0d0d12]">
-        <div className="absolute inset-0 flex items-center justify-center text-white/20 text-xs uppercase tracking-[0.2em] select-none">
-          {/* <img src="/path/to/photo.jpg" alt="" className="w-full h-full object-cover" /> */}
-          Image placeholder
-        </div>
+        {heroImage ? (
+          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-white/20 text-xs uppercase tracking-[0.2em] select-none">
+            Image placeholder
+          </div>
+        )}
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0) 30%, rgba(10,10,15,0) 60%, rgba(10,10,15,0.85) 100%)' }} />
 
         <motion.div

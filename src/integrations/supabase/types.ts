@@ -2457,6 +2457,27 @@ export type Database = {
           },
         ]
       }
+      ellocontent_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       ellocontent_subscriptions: {
         Row: {
           beehive_secure_id: string | null

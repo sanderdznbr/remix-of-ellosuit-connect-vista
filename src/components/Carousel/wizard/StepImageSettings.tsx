@@ -56,15 +56,10 @@ const StepImageSettings: React.FC<Props> = ({ settings, onChange }) => {
       <div>
         <SectionLabel>Modelo de IA</SectionLabel>
         <div className="grid grid-cols-2 gap-2">
-          <ModelCard selected={settings.model === 'auto'} onClick={() => update({ model: 'auto' })} title="Automático" desc="Nano Banana + Gemini fallback" />
-          <ModelCard selected={settings.model === 'gemini'} onClick={() => update({ model: 'gemini' })} title="Gemini Flash" desc="Rápido, boa qualidade" />
+          <ModelCard selected={settings.model === 'auto'} onClick={() => update({ model: 'auto' })} title="Automático" desc="IA inteligente por contexto" />
+          <ModelCard selected={settings.model === 'gpt-image-2'} onClick={() => update({ model: 'gpt-image-2' })} title="GPT Image 2" desc="Melhor texto e fotorrealismo" />
           <ModelCard selected={settings.model === 'nano-banana'} onClick={() => update({ model: 'nano-banana' })} title="Nano Banana Pro" desc="Alta qualidade Gemini" />
-          <button disabled
-            className="p-4 rounded-xl text-left border bg-white/[0.02] border-white/[0.06] opacity-40 cursor-not-allowed relative">
-            <span className="text-sm font-semibold text-white/90">Higgsfield</span>
-            <span className="block text-[11px] text-white/40 mt-1">Multi-modelo externo</span>
-            <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-white/[0.06] text-[9px] font-bold text-white/30 uppercase tracking-wider">Em breve</span>
-          </button>
+          <ModelCard selected={settings.model === 'gemini'} onClick={() => update({ model: 'gemini' })} title="Gemini Flash" desc="Rápido, boa qualidade" />
         </div>
       </div>
 

@@ -18,7 +18,7 @@ export interface FacePerson {
 }
 
 export interface ImageSettings {
-  model: 'gemini' | 'nano-banana' | 'higgsfield' | 'auto';
+  model: 'gemini' | 'nano-banana' | 'gpt-image-2' | 'higgsfield' | 'auto';
   higgsFieldModel: string;
   fidelity: 'high' | 'balanced' | 'creative';
   negativePrompt: string;

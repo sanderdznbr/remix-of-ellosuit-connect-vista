@@ -4797,25 +4797,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const lastFactory = imageFactories.find(p => p.index === lastCardIndex && p.index !== 0);
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
         if (coverFactory) {
-          let coverUrl = null;
-          
-          if (selectedBaseImage) {
-             console.log('[CAROUSEL] Using approved base image for cover:', selectedBaseImage);
-             const coverPromptWithBase = `MANDATORY: USE THE ATTACHED REFERENCE IMAGE AS THE EXACT BASE. KEEP THE ENTIRE COMPOSITION, PEOPLE, AND STYLE 100% IDENTICAL. DO NOT CHANGE ANYTHING FROM THE BASE IMAGE. YOUR ONLY TASK IS TO ADD THE FOLLOWING TEXTS PROFESSIONALLY:\n\n${coverFactory.prompt}`;
-             
-             coverUrl = await generateImage({
-                prompt: coverPromptWithBase,
-                faceReferenceUrls: capturedFaceRefs,
-                styleReferenceUrls: capturedStyleRefs,
-                referenceImageUrls: [selectedBaseImage, ...(capturedProductRefs || [])],
-                negativePrompt: capturedNegative,
-                facePersonsMetadata: cardFacePersonsMeta,
-                fontReferenceImage: carouselFontBase64,
-                fontReferenceName: carouselFontName,
-             });
-          } else {
-             coverUrl = await coverFactory.factory();
-          }
+          let coverUrl = await coverFactory.factory();
 
           // Retry cover once if it fails — cover is critical
           if (!coverUrl) {

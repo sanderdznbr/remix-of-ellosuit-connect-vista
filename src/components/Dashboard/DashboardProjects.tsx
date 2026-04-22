@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -17,6 +18,8 @@ interface DashboardProjectsProps {
 
 const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, onLoadCarousel, filterMode = 'all', searchQuery = '' }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const goCreate = () => navigate('/criar');
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('recent');
@@ -275,7 +278,7 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
         >
           {/* Create new */}
           <div
-            onClick={() => onStartCarousel()}
+            onClick={goCreate}
             className={`${
               viewMode === 'grid'
                 ? 'aspect-[3/4] rounded-lg flex flex-col items-center justify-center gap-2'

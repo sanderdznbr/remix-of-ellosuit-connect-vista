@@ -413,17 +413,24 @@ const ChatCreator: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#0A0A0A' }}>
-      {/* Sidebar - Conversation history */}
+    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+      {/* Sidebar - Conversation history (fixed full-height) */}
       <aside
-        className="hidden md:flex flex-col border-r border-white/5 transition-all duration-300 shrink-0"
+        className="hidden md:flex flex-col border-r border-white/5 transition-all duration-300 shrink-0 h-screen sticky top-0"
         style={{
           width: sidebarOpen ? 260 : 0,
           backgroundColor: '#0D0D0D',
           overflow: 'hidden',
         }}
       >
-        <div className="p-3 border-b border-white/5">
+        <div className="p-3 border-b border-white/5 space-y-2">
+          <button
+            onClick={() => navigate('/')}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors text-xs font-medium"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar para home
+          </button>
           <button
             onClick={handleNewChat}
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-white/90 hover:bg-white/5 transition-colors text-sm font-medium border border-white/10"

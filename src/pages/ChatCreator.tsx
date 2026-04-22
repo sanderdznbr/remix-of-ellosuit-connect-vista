@@ -17,7 +17,9 @@ const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
-type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | null;
+type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | 'background_picker' | 'generating_post' | 'final_result' | null;
+
+interface BackgroundOption { id: string; label: string; url: string; }
 
 interface ChatMessage {
   id: string;
@@ -361,41 +363,78 @@ const ChatCreator: React.FC = () => {
     callAI(newMessages, brief);
   };
 
-  const triggerGenerate = (b: BriefState) => {
+  // === In-chat generation pipeline ===
+  // 1) After confirm: call chat-generate-backgrounds → 2 options
+  // 2) User picks one background → call chat-compose-final
+  // 3) Show final result card with link to /{carouselId}
+  const appendAssistantWithWidget = useCallback((text: string, widget: WidgetType, widgetData?: any) => {
+    setMessages(prev => [...prev, {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: text,
+      widget,
+      widgetData,
+      timestamp: Date.now(),
+    }]);
+  }, []);
+
+  const startBackgroundGeneration = useCallback(async (b: BriefState) => {
+    if (generating) return;
     setGenerating(true);
-    const prefill: ChatGenerationPrefill = {
-      topic: b.topic,
-      styleId: b.styleId,
-      styleName: b.styleName,
-      format: b.format,
-      contentType: b.contentType,
-      cardCount: b.cardCount,
-      hasFace: b.hasFace,
-      hasLogo: b.hasLogo,
-      hasBrandColors: b.hasBrandColors,
-      brandName: b.brandName,
-      brandColors: b.brandColors,
-      faceUrl: b.faceUrl,
-      logoUrl: b.logoUrl,
-    };
+    appendAssistantWithWidget('Vou criar 2 opções de fundo pra você escolher. Isso leva uns 20s...', 'generating_post', { phase: 'backgrounds' });
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-generate-backgrounds', {
+        body: { brief: b },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const backgrounds: BackgroundOption[] = data?.backgrounds || [];
+      if (!backgrounds.length) throw new Error('Nenhum fundo retornado');
+
+      // Remove the loading widget then show the picker
+      setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
+      appendAssistantWithWidget('Pronto! Qual desses fundos você prefere?', 'background_picker', { backgrounds });
+    } catch (err: any) {
+      console.error('background generation error:', err);
+      setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
+      toast.error(err?.message || 'Erro ao gerar os fundos');
+      appendAssistantWithWidget('Tive um problema gerando os fundos. Quer tentar de novo?', 'confirm_generate');
+    } finally {
+      setGenerating(false);
+    }
+  }, [generating, appendAssistantWithWidget]);
+
+  const composeFinalPost = useCallback(async (b: BriefState, background: BackgroundOption) => {
+    if (generating) return;
+    setGenerating(true);
+    // Remove the background picker so it can't be clicked again, show progress
+    setMessages(prev => prev.map(m =>
+      m.widget === 'background_picker' ? { ...m, widget: null, widgetData: undefined } : m
+    ));
+    appendAssistantWithWidget('Show! Agora vou montar seu post sobre esse fundo. Mais 20-30s...', 'generating_post', { phase: 'compose' });
 
     try {
-      sessionStorage.setItem(CHAT_PREFILL_STORAGE_KEY, JSON.stringify(prefill));
-    } catch (error) {
-      console.error('Failed to persist chat prefill:', error);
-    }
+      const { data, error } = await supabase.functions.invoke('chat-compose-final', {
+        body: { brief: b, backgroundUrl: background.url },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-    const isUuid = (s?: string | null) => !!s && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-    const params = new URLSearchParams();
-    if (b.topic) params.set('topic', b.topic);
-    if (isUuid(b.styleId)) params.set('styleId', b.styleId!);
-    if (b.format) params.set('format', b.format);
-    if (b.contentType) params.set('mode', b.contentType);
-    if (b.cardCount) params.set('cards', String(b.cardCount));
-    params.set('autostart', '1');
-    params.set('chatPrefill', '1');
-    setTimeout(() => navigate(`/?${params.toString()}`), 800);
-  };
+      const carouselId: string | undefined = data?.carouselId;
+      const imageUrl: string | undefined = data?.imageUrl;
+      if (!carouselId || !imageUrl) throw new Error('Resposta incompleta');
+
+      setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
+      appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
+    } catch (err: any) {
+      console.error('compose error:', err);
+      setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
+      toast.error(err?.message || 'Erro ao montar o post');
+      appendAssistantWithWidget('Tive um problema na composição final. Quer tentar de novo?', 'confirm_generate');
+    } finally {
+      setGenerating(false);
+    }
+  }, [generating, appendAssistantWithWidget]);
 
   const handleStylePick = (style: MarketplaceStyle | null) => {
     const label = style ? `Quero o estilo "${style.name}"` : 'Pode escolher um estilo pra mim';
@@ -437,7 +476,11 @@ const ChatCreator: React.FC = () => {
 
   const handleConfirm = () => {
     if (generating || loading) return;
-    triggerGenerate(brief);
+    startBackgroundGeneration(brief);
+  };
+
+  const handleBackgroundPick = (bg: BackgroundOption) => {
+    composeFinalPost(brief, bg);
   };
 
   const renderWidget = (msg: ChatMessage) => {
@@ -455,6 +498,16 @@ const ChatCreator: React.FC = () => {
     }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
+    }
+    if (msg.widget === 'background_picker') {
+      const bgs: BackgroundOption[] = msg.widgetData?.backgrounds || [];
+      return <BackgroundPickerWidget backgrounds={bgs} onPick={handleBackgroundPick} disabled={generating} />;
+    }
+    if (msg.widget === 'generating_post') {
+      return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;
+    }
+    if (msg.widget === 'final_result') {
+      return <FinalResultWidget carouselId={msg.widgetData?.carouselId} imageUrl={msg.widgetData?.imageUrl} onOpen={(id) => navigate(`/${id}`)} />;
     }
     return null;
   };
@@ -1081,5 +1134,83 @@ const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <span className="text-white/90 truncate">{value}</span>
   </div>
 );
+
+// === In-chat generation widgets ===
+const BackgroundPickerWidget: React.FC<{ backgrounds: BackgroundOption[]; onPick: (bg: BackgroundOption) => void; disabled?: boolean }> = ({ backgrounds, onPick, disabled }) => {
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <div className="space-y-2 max-w-md">
+      <div className="grid grid-cols-2 gap-2.5">
+        {backgrounds.map((bg) => {
+          const isPicked = picked === bg.id;
+          return (
+            <button
+              key={bg.id}
+              onClick={() => { if (!disabled) { setPicked(bg.id); onPick(bg); } }}
+              disabled={disabled || !!picked}
+              className="group relative aspect-[4/5] rounded-xl overflow-hidden border-2 transition-all disabled:opacity-60"
+              style={{
+                borderColor: isPicked ? PURPLE : 'rgba(255,255,255,0.1)',
+                backgroundColor: 'rgba(255,255,255,0.03)',
+              }}
+            >
+              <img src={bg.url} alt={bg.label} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                <p className="text-[11px] font-semibold text-white">{bg.label}</p>
+              </div>
+              {isPicked && (
+                <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.4)' }}>
+                  <Check className="h-8 w-8 text-white" />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-white/40 pt-1">A IA vai adicionar texto, logo e identidade no fundo escolhido.</p>
+    </div>
+  );
+};
+
+const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phase }) => {
+  return (
+    <div className="rounded-xl p-4 max-w-md" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+      <div className="flex items-center gap-3">
+        <div className="relative h-10 w-10 shrink-0">
+          <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+          <div className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: PURPLE, borderTopColor: 'transparent' }} />
+          <Sparkles className="absolute inset-0 m-auto h-4 w-4 text-white/80" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">
+            {phase === 'backgrounds' ? 'Criando 2 opções de fundo...' : 'Compondo seu post...'}
+          </p>
+          <p className="text-[11px] text-white/50 mt-0.5">
+            {phase === 'backgrounds' ? 'Gemini 3 Pro está pintando os cenários' : 'Adicionando texto, logo e identidade'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FinalResultWidget: React.FC<{ carouselId?: string; imageUrl?: string; onOpen: (id: string) => void }> = ({ carouselId, imageUrl, onOpen }) => {
+  if (!carouselId || !imageUrl) return null;
+  return (
+    <div className="space-y-2.5 max-w-md">
+      <div className="rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
+      </div>
+      <Button
+        onClick={() => onOpen(carouselId)}
+        className="w-full h-10"
+        style={{ backgroundColor: PURPLE }}
+      >
+        <Sparkles className="h-4 w-4 mr-2" />
+        Abrir post no editor
+      </Button>
+    </div>
+  );
+};
 
 export default ChatCreator;

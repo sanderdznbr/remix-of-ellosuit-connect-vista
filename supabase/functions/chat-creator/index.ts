@@ -66,9 +66,9 @@ function buildTool() {
         properties: {
           message: { type: 'string', description: 'Short natural text to show in the chat bubble' },
           widget: {
-            type: ['string', 'null'],
-            enum: ['style_picker', 'format_picker', 'personalization', 'confirm_generate', null],
-            description: 'Optional UI widget to show under the message',
+            type: 'string',
+            enum: ['style_picker', 'format_picker', 'personalization', 'confirm_generate', 'none'],
+            description: 'Optional UI widget to show under the message. Use "none" if no widget.',
           },
           brief_update: {
             type: 'object',
@@ -78,8 +78,8 @@ function buildTool() {
               format: { type: 'string', enum: ['portrait', 'square', 'story'] },
               contentType: { type: 'string', enum: ['single', 'carousel'] },
               cardCount: { type: 'number' },
-              styleId: { type: ['string', 'null'] },
-              styleName: { type: ['string', 'null'] },
+              styleId: { type: 'string' },
+              styleName: { type: 'string' },
               hasFace: { type: 'boolean' },
               hasLogo: { type: 'boolean' },
               hasBrandColors: { type: 'boolean' },
@@ -87,12 +87,10 @@ function buildTool() {
               audience: { type: 'string' },
               tone: { type: 'string' },
             },
-            additionalProperties: true,
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },
         },
         required: ['message'],
-        additionalProperties: false,
       },
     },
   };

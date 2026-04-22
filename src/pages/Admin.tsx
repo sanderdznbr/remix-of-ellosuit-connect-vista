@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ContentDocumentParser from '@/components/Admin/ContentDocumentParser';
+import AuthHeroUploader from '@/components/Admin/AuthHeroUploader';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {

@@ -4851,7 +4851,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         const lastCardIndex = Math.max(...imageFactories.map(f => f.index));
         const lastFactory = imageFactories.find(p => p.index === lastCardIndex && p.index !== 0);
         const middleFactories = imageFactories.filter(p => p.index !== 0 && p.index !== lastCardIndex);
-
+        if (coverFactory) {
           let coverUrl = null;
           
           if (selectedBaseImage) {

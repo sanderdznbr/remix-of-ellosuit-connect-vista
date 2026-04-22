@@ -1952,6 +1952,7 @@ The image must look like it was shot by a professional photographer or designed 
     }
   };
 
+  const getLogoOverlayBounds = useCallback((canvasW: number, canvasH: number, logoW: number, logoH: number, position: string) => {
     const safePad = Math.max(72, Math.round(Math.min(canvasW, canvasH) * 0.08));
     const maxLW = Math.min(170, canvasW * 0.16, canvasW - safePad * 2);
     const maxLH = Math.min(72, canvasH * 0.055, canvasH - safePad * 2);

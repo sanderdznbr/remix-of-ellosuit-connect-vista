@@ -1502,7 +1502,19 @@ const CarouselGenerator: React.FC = () => {
         .select('id, name, preview_images, style_config, strict_instructions')
         .eq('id', qStyle).single()
         .then(({ data }) => {
-          if (data) setLoadedMarketplaceStyleId(data.id);
+          if (data) {
+            setLoadedMarketplaceStyleId(data.id);
+            if (data.style_config) {
+              const config = data.style_config as any;
+              config.id = data.id;
+              config.name = data.name;
+              config._previewImages = data.preview_images;
+              config._strictInstructions = (data as any).strict_instructions || null;
+              setActiveMarketplaceStyle(config);
+              activeMarketplaceStyleRef.current = config;
+              setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+            }
+          }
           if (qAutostart) setPendingTrendGeneration(true);
         });
     } else if (qAutostart) {

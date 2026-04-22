@@ -555,13 +555,19 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
 
     // Model selection
     const requestedModel = (imageModel || 'auto').toString().toLowerCase();
-    const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana';
+    const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana' || requestedModel.includes('gpt-image');
     const resolvedModel = requestedModel === 'auto'
       ? ((hasFaceRefs || hasStyleRefs || isPanoramicMode) ? 'elloia' : 'gemini')
       : requestedModel;
+    
     const forcePremiumForPanorama = isPanoramicMode;
     const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
-    const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview';
+    
+    // Support for OpenAI GPT Image 2
+    const primaryModel = requestedModel.includes('gpt-image-2') 
+      ? 'openai/gpt-image-2'
+      : (usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview');
+      
     const fallbackModel = 'google/gemini-3.1-flash-image-preview';
     console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 

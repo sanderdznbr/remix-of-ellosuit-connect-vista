@@ -1,6 +1,6 @@
 // Composes the final social media post by editing the chosen background
-// with text + logo + face + brand identity. Uses Nano Banana 2
-// (gemini-3.1-flash-image-preview) which excels at edit + text rendering.
+// with text + logo + face + brand identity. Uses Gemini 3 Pro Image for
+// every stage so style, references, face and instructions stay coherent.
 // Persists the result to generated_carousels and returns the carousel id + url.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -331,12 +331,17 @@ ${styleRules}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-image-2',
+        model: 'google/gemini-3-pro-image-preview',
         messages: [{
           role: 'user',
           content: [
-            { type: 'image_url', image_url: { url: baseImage } },
             { type: 'text', text: overlayPrompt },
+            { type: 'image_url', image_url: { url: baseImage } },
+            ...(Array.isArray(style?.preview_images)
+              ? style.preview_images.slice(0, 2).map((url: string) => ({ type: 'image_url', image_url: { url } }))
+              : []),
+            ...(faceData ? [{ type: 'image_url', image_url: { url: faceData } }] : []),
+            ...(logoData ? [{ type: 'image_url', image_url: { url: logoData } }] : []),
           ],
         }],
         modalities: ['image', 'text'],

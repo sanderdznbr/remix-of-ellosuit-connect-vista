@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -274,6 +274,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     navigate(`/criar?prompt=${encodeURIComponent(text)}`);
   };
 
+  const handleAdvancedMode = () => {
+    if (isGenerating) {
+      toast.error('Aguarde o post atual terminar antes de criar outro.');
+      return;
+    }
+    const text = inputValue.trim();
+    onStartCarousel(text || undefined, mentionedPrompts.length ? mentionedPrompts : undefined, postFormat);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
   };
@@ -480,6 +489,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   )}
                 </AnimatePresence>
               </div>
+              <button
+                onClick={handleAdvancedMode}
+                disabled={isGenerating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer mr-1 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{
+                  color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                }}
+                title="Abrir o modo avançado (wizard com etapas: simples, avançado, extreme)"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-medium">Modo avançado</span>
+              </button>
               <button
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || isGenerating}

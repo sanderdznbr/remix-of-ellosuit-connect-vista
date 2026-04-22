@@ -190,6 +190,10 @@ const FORMAT_DIMENSIONS = {
 type PostFormatType = keyof typeof FORMAT_DIMENSIONS;
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
+// Module-level guard so StrictMode's double-effect doesn't lose the chat prefill
+// (sessionStorage gets cleared on the first run, so the second run wouldn't see it).
+let __chatPrefillProcessed = false;
+
 const CARD_W = 1080;
 const CARD_H = 1350;
 const PREVIEW_W = 300;

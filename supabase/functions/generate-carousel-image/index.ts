@@ -835,6 +835,83 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
       }
     }
 
+    // === STAGE GPT IMAGE 2 PIPELINE: add perfect text overlay ===
+    // When user picked GPT Image 2 with refs, Gemini already generated the visual base.
+    // Now feed it to GPT Image 2 to render the typography perfectly on top.
+    if (useGptImage2Pipeline && generatedImage) {
+      console.log('🖋️ Stage GPT: feeding Gemini base image to GPT Image 2 for perfect text overlay...');
+
+      const aspectInstrGpt = outputAspectRatio === '9:16'
+        ? 'OUTPUT FORMAT: PORTRAIT 9:16 (1080x1920). Tall vertical canvas, NO black bars.'
+        : outputAspectRatio === '4:5'
+          ? 'OUTPUT FORMAT: PORTRAIT 4:5 (1080x1350). NO black bars.'
+          : `OUTPUT FORMAT: ${outputAspectRatio}. Fill the entire canvas, NO black bars.`;
+
+      const gptOverlayContent: any[] = [
+        { type: 'image_url', image_url: { url: generatedImage } },
+        {
+          type: 'text',
+          text: `The image above is the FINAL VISUAL BASE (background, person, scene, composition, colors). Your job: ADD THE TEXT/TYPOGRAPHY perfectly on top of this exact image.
+
+ABSOLUTE RULES:
+1. KEEP the image above 100% IDENTICAL — same person, same face, same pose, same background, same composition, same colors. DO NOT regenerate the scene.
+2. ONLY add the typographic text described below, rendered with PERFECT, READABLE letterforms (no garbled characters, no broken letters).
+3. Text MUST be in PORTUGUÊS BRASILEIRO, spelled correctly.
+4. Place text in the safe areas — do not cover the main subject's face.
+5. ${aspectInstrGpt}
+6. Respect the visual style/typography described in the brief: clean, professional, social-media editorial.
+
+CONTENT BRIEF (extract the text headlines/CTAs from this and render them in the image):
+${stripInternalBrands(imagePrompt).slice(0, 1500)}
+
+${compactSafeAreaReminder}`,
+        },
+      ];
+
+      try {
+        const gptRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'openai/gpt-image-2',
+            messages: [{ role: 'user', content: gptOverlayContent }],
+            modalities: ['image', 'text'],
+          }),
+        });
+
+        if (gptRes.ok) {
+          const raw = await gptRes.text();
+          const extractPatterns = ['"url":"data:image/', '"url": "data:image/', '"url":"http', '"url": "http'];
+          let gptImage: string | null = null;
+          for (const pattern of extractPatterns) {
+            const idx = raw.indexOf(pattern);
+            if (idx === -1) continue;
+            const isHttp = pattern.includes('http');
+            const urlStart = isHttp ? raw.indexOf('http', idx) : raw.indexOf('data:image/', idx);
+            const urlEnd = raw.indexOf('"', urlStart);
+            if (urlEnd === -1) continue;
+            gptImage = raw.slice(urlStart, urlEnd);
+            break;
+          }
+          if (gptImage) {
+            console.log(`🖋️ Stage GPT SUCCESS — text overlay applied (${gptImage.length} chars)`);
+            generatedImage = gptImage;
+          } else {
+            console.log('🖋️ Stage GPT: no image returned, keeping Gemini base');
+          }
+        } else {
+          const errText = await gptRes.text();
+          console.error('🖋️ Stage GPT error:', gptRes.status, errText.slice(0, 300));
+          console.log('🖋️ Stage GPT failed, keeping Gemini base image');
+        }
+      } catch (gptErr: any) {
+        console.error('🖋️ Stage GPT exception:', gptErr);
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, imageUrl: generatedImage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

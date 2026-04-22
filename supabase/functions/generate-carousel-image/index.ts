@@ -555,13 +555,19 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
 
     // Model selection
     const requestedModel = (imageModel || 'auto').toString().toLowerCase();
-    const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana';
+    const prefersPremiumModel = requestedModel === 'elloia' || requestedModel === 'nano-banana' || requestedModel.includes('gpt-image');
     const resolvedModel = requestedModel === 'auto'
       ? ((hasFaceRefs || hasStyleRefs || isPanoramicMode) ? 'elloia' : 'gemini')
       : requestedModel;
+    
     const forcePremiumForPanorama = isPanoramicMode;
     const usePremium = forcePremiumForPanorama || resolvedModel === 'elloia' || resolvedModel === 'nano-banana' || prefersPremiumModel;
-    const primaryModel = usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview';
+    
+    // Support for OpenAI GPT Image 2
+    const primaryModel = requestedModel.includes('gpt-image-2') 
+      ? 'openai/gpt-image-2'
+      : (usePremium ? 'google/gemini-3-pro-image-preview' : 'google/gemini-3.1-flash-image-preview');
+      
     const fallbackModel = 'google/gemini-3.1-flash-image-preview';
     console.log('Model:', primaryModel, 'panoramic:', isPanoramicMode, 'aspect:', outputAspectRatio);
 
@@ -614,15 +620,18 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
           throw { status: 451, reason: 'nsfw' };
         }
         
-        const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+        const extractPatterns = ['"url":"data:image/', '"url": "data:image/', '"url":"http', '"url": "http'];
         for (const pattern of extractPatterns) {
           const idx = raw.indexOf(pattern);
           if (idx === -1) continue;
-          const urlStart = raw.indexOf('"', idx + 5) + 1;
+          
+          const isHttp = pattern.includes('http');
+          const urlStart = isHttp ? raw.indexOf('http', idx) : raw.indexOf('data:image/', idx);
           const urlEnd = raw.indexOf('"', urlStart);
+          
           if (urlEnd === -1) continue;
           const url = raw.slice(urlStart, urlEnd);
-          console.log(`${label}: image extracted (${url.length} chars)`);
+          console.log(`${label}: image extracted (${url.length} chars, starts with ${url.slice(0, 30)})`);
           return url;
         }
         console.log(`${label}: no image in response (${raw.length} chars)`);
@@ -779,12 +788,15 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         
         if (refineRes.ok) {
           const raw = await refineRes.text();
-          const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+          const extractPatterns = ['"url":"data:image/', '"url": "data:image/', '"url":"http', '"url": "http'];
           for (const pattern of extractPatterns) {
             const idx = raw.indexOf(pattern);
             if (idx === -1) continue;
-            const urlStart = raw.indexOf('"', idx + 5) + 1;
+            
+            const isHttp = pattern.includes('http');
+            const urlStart = isHttp ? raw.indexOf('http', idx) : raw.indexOf('data:image/', idx);
             const urlEnd = raw.indexOf('"', urlStart);
+            
             if (urlEnd === -1) continue;
             refinedImage = raw.slice(urlStart, urlEnd);
             break;

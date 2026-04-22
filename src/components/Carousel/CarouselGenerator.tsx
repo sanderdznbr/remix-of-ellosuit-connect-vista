@@ -190,6 +190,10 @@ const FORMAT_DIMENSIONS = {
 type PostFormatType = keyof typeof FORMAT_DIMENSIONS;
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
+// Module-level guard so StrictMode's double-effect doesn't lose the chat prefill
+// (sessionStorage gets cleared on the first run, so the second run wouldn't see it).
+let __chatPrefillProcessed = false;
+
 const CARD_W = 1080;
 const CARD_H = 1350;
 const PREVIEW_W = 300;
@@ -1494,6 +1498,8 @@ const CarouselGenerator: React.FC = () => {
     const qChatPrefill = searchParams.get('chatPrefill') === '1';
     const qAutostart = searchParams.get('autostart') === '1';
     if (!qTopic && !qStyle) return;
+    if (__chatPrefillProcessed) return;
+    __chatPrefillProcessed = true;
 
     let chatPrefill: {
       topic?: string;
@@ -1547,11 +1553,8 @@ const CarouselGenerator: React.FC = () => {
       };
 
       setReferenceImages(prev => {
-        const withoutPreviousChatFace = prev.filter(r => r.personId !== 'chat-face-1');
-        if (withoutPreviousChatFace.some(r => r.category === 'face' && r.url === chatPrefill?.faceUrl)) {
-          return withoutPreviousChatFace;
-        }
-        return [faceRef, ...withoutPreviousChatFace];
+        const cleaned = prev.filter(r => r.personId !== 'chat-face-1' && !(r.category === 'face' && r.url === chatPrefill?.faceUrl));
+        return [faceRef, ...cleaned];
       });
 
       setFacePersons([{
@@ -1564,6 +1567,7 @@ const CarouselGenerator: React.FC = () => {
       setFaceGender('auto');
       setPeopleMode('none');
       setAllPeopleOnCover(true);
+      console.log('[CHAT_PREFILL] Face injected:', chatPrefill.faceUrl);
     }
 
     if (qStyle) {
@@ -1582,12 +1586,15 @@ const CarouselGenerator: React.FC = () => {
               setActiveMarketplaceStyle(config);
               activeMarketplaceStyleRef.current = config;
               setIsLoadedFullBleed(!!config?.imageGeneration?.prompt_style);
+              console.log('[CHAT_PREFILL] Marketplace style loaded:', data.name);
             }
           }
-          if (qAutostart) setPendingTrendGeneration(true);
+          // Delay autostart so React has time to flush face/logo/brand state into the
+          // refs that generateContent() reads.
+          if (qAutostart) setTimeout(() => setPendingTrendGeneration(true), 350);
         });
     } else if (qAutostart) {
-      setPendingTrendGeneration(true);
+      setTimeout(() => setPendingTrendGeneration(true), 350);
     }
     setShowWelcome(false);
     // Skip web search to go straight to generation

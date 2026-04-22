@@ -1,11 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Home, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, ChevronRight, X } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+interface ConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: number;
+}
+
+const STORAGE_KEY = 'ello_chat_conversations_v1';
+const ACTIVE_KEY = 'ello_chat_active_v1';
 
 type WidgetType = 'style_picker' | 'format_picker' | 'personalization' | 'confirm_generate' | null;
 

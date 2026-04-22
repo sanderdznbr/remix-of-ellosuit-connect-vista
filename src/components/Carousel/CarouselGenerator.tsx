@@ -3559,12 +3559,12 @@ OUTPUT: the same approved image, untouched, with the requested text professional
 
         imageUrl = await generateImage({
           prompt: editPrompt,
-          // Pass ONLY the base image as the reference — do not re-send face/style refs
-          referenceImageUrls: [selectedBaseImage],
+          // Use the dedicated EDIT path on the backend — keeps the source image untouched
+          // and only adds the typography on top. No face/style refs (would cause recomposition).
+          editSourceImage: selectedBaseImage,
           negativePrompt: 'regenerated background, new composition, different person, replaced face, altered scene, recropped image, restyled image, recolored image, different framing, modified subject',
           fontReferenceImage: fontBase64,
           fontReferenceName: fontName,
-          forceModel: 'gemini',
         });
       } else {
         imageUrl = await generateImage({

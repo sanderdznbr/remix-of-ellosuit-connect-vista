@@ -385,9 +385,10 @@ const ChatCreator: React.FC = () => {
       console.error('Failed to persist chat prefill:', error);
     }
 
+    const isUuid = (s?: string | null) => !!s && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
     const params = new URLSearchParams();
     if (b.topic) params.set('topic', b.topic);
-    if (b.styleId) params.set('styleId', b.styleId);
+    if (isUuid(b.styleId)) params.set('styleId', b.styleId!);
     if (b.format) params.set('format', b.format);
     if (b.contentType) params.set('mode', b.contentType);
     if (b.cardCount) params.set('cards', String(b.cardCount));

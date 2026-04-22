@@ -2056,12 +2056,33 @@ The image must look like it was shot by a professional photographer or designed 
         marketplaceRefUrls.push(...allPreviews.slice(0, 5));
       }
       const allStyleRefs = [...styleRefUrls, ...marketplaceRefUrls];
-      const basePrompt = buildImagePrompt(`Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.`, 0);
+
+      // Build face metadata so the backend enforces facial identity
+      const baseFaceMeta = facePersons
+        .filter(p => p.photos.length > 0)
+        .map(p => ({
+          id: p.id,
+          label: p.label,
+          gender: p.gender,
+          wearsGlasses: p.wearsGlasses,
+          photoUrls: p.photos.map(ph => ph.url),
+        }));
+
+      const faceFidelityClause = faceRefUrls.length > 0
+        ? `\n\nABSOLUTE FACIAL FIDELITY REQUIREMENT: The attached face reference photo(s) show the EXACT real person(s) that MUST appear in this image. Reproduce identity with maximum fidelity: same facial structure, same eyes, same nose, same mouth, same skin tone, same hair, same age. NEVER replace with a generic model. NEVER invent another face. NEVER stylize the face away from the reference. Treat the face as a portrait reference, not as inspiration.`
+        : '';
+
+      const basePrompt = buildImagePrompt(
+        `Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.${faceFidelityClause}`,
+        0,
+      );
       const promises = [0, 1].map((i) => generateImage({
         prompt: basePrompt + ` (Opção ${i + 1})`,
         faceReferenceUrls: faceRefUrls,
         styleReferenceUrls: allStyleRefs,
         isCarousel: contentMode === 'carousel',
+        facePersonsMetadata: baseFaceMeta.length > 0 ? baseFaceMeta : undefined,
+        negativePrompt: 'generic model, different person, altered identity, stylized face, cartoon face, wrong skin tone, wrong eye color, wrong hair, deformed face, low facial resemblance',
       }));
       const results = await Promise.all(promises);
       const filtered = results.filter((url): url is string => !!url);

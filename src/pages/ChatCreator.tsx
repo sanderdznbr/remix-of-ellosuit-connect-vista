@@ -450,44 +450,15 @@ const ChatCreator: React.FC = () => {
     }]);
   }, []);
 
-  const startBackgroundGeneration = useCallback(async (b: BriefState) => {
+  // Single-pass generation: capture everything (style, face, logo, brand, topic)
+  // and send to chat-compose-final which calls Gemini 3 Pro Image once.
+  const generateFinalPost = useCallback(async (b: BriefState) => {
     if (generating) return;
     setGenerating(true);
-    appendAssistantWithWidget('Vou criar 2 opções de fundo pra você escolher. Isso leva uns 20s...', 'generating_post', { phase: 'backgrounds' });
-    try {
-      const { data, error } = await supabase.functions.invoke('chat-generate-backgrounds', {
-        body: { brief: b },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      const backgrounds: BackgroundOption[] = data?.backgrounds || [];
-      if (!backgrounds.length) throw new Error('Nenhum fundo retornado');
-
-      // Remove the loading widget then show the picker
-      setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
-      appendAssistantWithWidget('Pronto! Qual desses fundos você prefere?', 'background_picker', { backgrounds, briefSnapshot: cloneBrief(b) });
-    } catch (err: any) {
-      console.error('background generation error:', err);
-      setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
-      toast.error(err?.message || 'Erro ao gerar os fundos');
-      appendAssistantWithWidget('Tive um problema gerando os fundos. Quer tentar de novo?', 'confirm_generate');
-    } finally {
-      setGenerating(false);
-    }
-  }, [generating, appendAssistantWithWidget]);
-
-  const composeFinalPost = useCallback(async (b: BriefState, background: BackgroundOption) => {
-    if (generating) return;
-    setGenerating(true);
-    // Remove the background picker so it can't be clicked again, show progress
-    setMessages(prev => prev.map(m =>
-      m.widget === 'background_picker' ? { ...m, widget: null, widgetData: undefined } : m
-    ));
-    appendAssistantWithWidget('Show! Agora vou montar seu post sobre esse fundo. Mais 20-30s...', 'generating_post', { phase: 'compose' });
-
+    appendAssistantWithWidget('Beleza! Tô gerando seu post agora com tudo que você passou. Isso leva uns 30-45s...', 'generating_post', { phase: 'compose' });
     try {
       const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-        body: { brief: b, backgroundUrl: background.url },
+        body: { brief: b },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -501,8 +472,8 @@ const ChatCreator: React.FC = () => {
     } catch (err: any) {
       console.error('compose error:', err);
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
-      toast.error(err?.message || 'Erro ao montar o post');
-      appendAssistantWithWidget('Tive um problema na composição final. Quer tentar de novo?', 'confirm_generate');
+      toast.error(err?.message || 'Erro ao gerar o post');
+      appendAssistantWithWidget('Tive um problema gerando o post. Quer tentar de novo?', 'confirm_generate');
     } finally {
       setGenerating(false);
     }
@@ -554,11 +525,7 @@ const ChatCreator: React.FC = () => {
     if (generating || loading) return;
     const snapshot = cloneBrief(brief);
     setPendingGenerationBrief(snapshot);
-    startBackgroundGeneration(snapshot);
-  };
-
-  const handleBackgroundPick = (bg: BackgroundOption, briefSnapshot?: BriefState) => {
-    composeFinalPost(briefSnapshot || pendingGenerationBrief || cloneBrief(brief), bg);
+    generateFinalPost(snapshot);
   };
 
   const renderWidget = (msg: ChatMessage) => {
@@ -576,10 +543,6 @@ const ChatCreator: React.FC = () => {
     }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
-    }
-    if (msg.widget === 'background_picker') {
-      const bgs: BackgroundOption[] = msg.widgetData?.backgrounds || [];
-      return <BackgroundPickerWidget backgrounds={bgs} onPick={(bg) => handleBackgroundPick(bg, msg.widgetData?.briefSnapshot)} disabled={generating} />;
     }
     if (msg.widget === 'generating_post') {
       return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;

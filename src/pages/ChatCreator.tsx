@@ -1135,4 +1135,82 @@ const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   </div>
 );
 
+// === In-chat generation widgets ===
+const BackgroundPickerWidget: React.FC<{ backgrounds: BackgroundOption[]; onPick: (bg: BackgroundOption) => void; disabled?: boolean }> = ({ backgrounds, onPick, disabled }) => {
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <div className="space-y-2 max-w-md">
+      <div className="grid grid-cols-2 gap-2.5">
+        {backgrounds.map((bg) => {
+          const isPicked = picked === bg.id;
+          return (
+            <button
+              key={bg.id}
+              onClick={() => { if (!disabled) { setPicked(bg.id); onPick(bg); } }}
+              disabled={disabled || !!picked}
+              className="group relative aspect-[4/5] rounded-xl overflow-hidden border-2 transition-all disabled:opacity-60"
+              style={{
+                borderColor: isPicked ? PURPLE : 'rgba(255,255,255,0.1)',
+                backgroundColor: 'rgba(255,255,255,0.03)',
+              }}
+            >
+              <img src={bg.url} alt={bg.label} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                <p className="text-[11px] font-semibold text-white">{bg.label}</p>
+              </div>
+              {isPicked && (
+                <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.4)' }}>
+                  <Check className="h-8 w-8 text-white" />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-white/40 pt-1">A IA vai adicionar texto, logo e identidade no fundo escolhido.</p>
+    </div>
+  );
+};
+
+const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phase }) => {
+  return (
+    <div className="rounded-xl p-4 max-w-md" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+      <div className="flex items-center gap-3">
+        <div className="relative h-10 w-10 shrink-0">
+          <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+          <div className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: PURPLE, borderTopColor: 'transparent' }} />
+          <Sparkles className="absolute inset-0 m-auto h-4 w-4 text-white/80" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">
+            {phase === 'backgrounds' ? 'Criando 2 opções de fundo...' : 'Compondo seu post...'}
+          </p>
+          <p className="text-[11px] text-white/50 mt-0.5">
+            {phase === 'backgrounds' ? 'Gemini 3 Pro está pintando os cenários' : 'Adicionando texto, logo e identidade'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FinalResultWidget: React.FC<{ carouselId?: string; imageUrl?: string; onOpen: (id: string) => void }> = ({ carouselId, imageUrl, onOpen }) => {
+  if (!carouselId || !imageUrl) return null;
+  return (
+    <div className="space-y-2.5 max-w-md">
+      <div className="rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
+      </div>
+      <Button
+        onClick={() => onOpen(carouselId)}
+        className="w-full h-10"
+        style={{ backgroundColor: PURPLE }}
+      >
+        <Sparkles className="h-4 w-4 mr-2" />
+        Abrir post no editor
+      </Button>
+    </div>
+  );
+};
+
 export default ChatCreator;

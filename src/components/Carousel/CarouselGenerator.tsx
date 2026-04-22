@@ -163,6 +163,7 @@ import { PropertyCardData } from './RealEstateCardTemplates';
 import SocialPublishDialog from './SocialPublishDialog';
 import CarouselTour from './CarouselTour';
 import StepPersonalization from './wizard/StepPersonalization';
+import StepBaseImageApproval from './wizard/StepBaseImageApproval';
 import WizardCreditIndicator from './wizard/WizardCreditIndicator';
 import GeneratingAnimation from './GeneratingAnimation';
 import WelcomeScreen from './WelcomeScreen';
@@ -409,6 +410,9 @@ const CarouselGenerator: React.FC = () => {
 
   // Step 3: Image settings
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
+  const [baseImageCandidates, setBaseImageCandidates] = useState<string[]>([]);
+  const [selectedBaseImage, setSelectedBaseImage] = useState<string | null>(null);
+  const [generatingBaseCandidates, setGeneratingBaseCandidates] = useState(false);
 
   // Step 4: Style
   const [showHeader, setShowHeader] = useState(true);
@@ -596,12 +600,15 @@ const CarouselGenerator: React.FC = () => {
   const isAdminUser = user?.email === 'admin@gmail.com';
   const adminModelStep = isAdminUser ? ['Modelo IA'] : [];
 
+  const hasFaceRefsForGen = referenceImages.some(r => r.category === 'face') || facePersons.some(p => p.photos.length > 0);
+  const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud';
+
   const SIMPLE_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...adminModelStep, 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...adminModelStep, 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
     ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
   const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : []), ...adminModelStep]
@@ -8414,6 +8421,16 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         envatoFont={advancedEnvatoFont}
                         onEnvatoFontSelect={setAdvancedEnvatoFont}
                         hasMarketplaceStyle={!!activeMarketplaceStyle?.imageGeneration?.prompt_style}
+                      />
+                    )}
+                    {currentStepName === 'Imagem Base' && (
+                      <StepBaseImageApproval
+                        candidates={baseImageCandidates}
+                        selectedImage={selectedBaseImage}
+                        onSelect={setSelectedBaseImage}
+                        onRegenerate={generateBaseImageCandidates}
+                        generating={generatingBaseCandidates}
+                        accentTheme={wizardMode === 'extreme' ? 'orange' : wizardMode === 'advanced' ? 'red' : 'purple'}
                       />
                     )}
                     {currentStepName === 'Roteiro' && (

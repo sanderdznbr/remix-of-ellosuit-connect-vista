@@ -172,6 +172,29 @@ const ChatCreator: React.FC = () => {
     initRef.current = true;
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get('prompt') || params.get('topic');
+
+    // Ensure we have an active conversation
+    let convId = localStorage.getItem(ACTIVE_KEY);
+    if (initialPrompt || !convId) {
+      convId = crypto.randomUUID();
+      localStorage.setItem(ACTIVE_KEY, convId);
+      setActiveConvId(convId);
+    } else {
+      setActiveConvId(convId);
+      // Try to restore messages
+      try {
+        const raw = localStorage.getItem(`ello_chat_msgs_${convId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.messages?.length) {
+            setMessages(parsed.messages);
+            if (parsed.brief) setBrief(parsed.brief);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     if (initialPrompt) {
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -182,7 +205,6 @@ const ChatCreator: React.FC = () => {
       setMessages([userMsg]);
       callAI([userMsg], {});
     } else {
-      // Greeting
       setMessages([{
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -191,6 +213,93 @@ const ChatCreator: React.FC = () => {
       }]);
     }
   }, [location.search, callAI]);
+
+  const handleNewChat = () => {
+    const newId = crypto.randomUUID();
+    localStorage.setItem(ACTIVE_KEY, newId);
+    setActiveConvId(newId);
+    setMessages([{
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: 'Oi! Eu sou a Ello 👋 Me conta: o que você quer criar hoje?',
+      timestamp: Date.now(),
+    }]);
+    setBrief({});
+    setInput('');
+    setAttachments([]);
+  };
+
+  const handleSelectConversation = (id: string) => {
+    if (id === activeConvId) return;
+    localStorage.setItem(ACTIVE_KEY, id);
+    setActiveConvId(id);
+    try {
+      const raw = localStorage.getItem(`ello_chat_msgs_${id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setMessages(parsed.messages || []);
+        setBrief(parsed.brief || {});
+      } else {
+        setMessages([]);
+        setBrief({});
+      }
+    } catch {
+      setMessages([]);
+      setBrief({});
+    }
+  };
+
+  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    localStorage.removeItem(`ello_chat_msgs_${id}`);
+    setConversations(prev => {
+      const next = prev.filter(c => c.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+    if (id === activeConvId) handleNewChat();
+  };
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      setAttachments(prev => [...prev, ...files]);
+      toast.success(`${files.length} arquivo(s) anexado(s)`);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (idx: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      mr.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const file = new File([blob], `audio-${Date.now()}.webm`, { type: 'audio/webm' });
+        setAttachments(prev => [...prev, file]);
+        stream.getTracks().forEach(t => t.stop());
+        toast.success('Áudio gravado');
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch (err) {
+      toast.error('Não foi possível acessar o microfone');
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
+
 
   const sendMessage = (text: string, hiddenContext?: string) => {
     const trimmed = text.trim();

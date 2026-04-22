@@ -2,7 +2,10 @@
 // Adaptive conversational AI that guides the user from idea to a generated post.
 // Uses Lovable AI Gateway (Gemini) with tool-calling for structured output.
 
-import { corsHeaders } from '@supabase/supabase-js/cors';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 

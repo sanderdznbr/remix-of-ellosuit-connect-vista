@@ -788,12 +788,15 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
         
         if (refineRes.ok) {
           const raw = await refineRes.text();
-          const extractPatterns = ['"url":"data:image/', '"url": "data:image/'];
+          const extractPatterns = ['"url":"data:image/', '"url": "data:image/', '"url":"http', '"url": "http'];
           for (const pattern of extractPatterns) {
             const idx = raw.indexOf(pattern);
             if (idx === -1) continue;
-            const urlStart = raw.indexOf('"', idx + 5) + 1;
+            
+            const isHttp = pattern.includes('http');
+            const urlStart = isHttp ? raw.indexOf('http', idx) : raw.indexOf('data:image/', idx);
             const urlEnd = raw.indexOf('"', urlStart);
+            
             if (urlEnd === -1) continue;
             refinedImage = raw.slice(urlStart, urlEnd);
             break;

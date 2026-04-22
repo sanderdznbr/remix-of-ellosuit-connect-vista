@@ -104,6 +104,35 @@ async function uploadCover(sb: any, companyId: string, carouselId: string, dataU
   }
 }
 
+function buildReferenceContent(backgroundUrl: string, style: any, brief: Brief, faceData: string | null, logoData: string | null) {
+  const content: any[] = [
+    {
+      type: 'text',
+      text: [
+        'REFERENCE MAP:',
+        'Image 1 = chosen background base. Keep its composition as the structural starting point.',
+        Array.isArray(style?.preview_images) && style.preview_images.length
+          ? 'Next images = marketplace style references. Match their visual DNA very closely: photo treatment, crop language, typography attitude, color contrast, pacing, and editorial finish.'
+          : null,
+        faceData ? 'Face reference image = the exact real person to use. Preserve identity faithfully; never replace with a generic model.' : null,
+        logoData ? 'Logo reference image = the exact logo asset to place subtly and cleanly.' : null,
+      ].filter(Boolean).join('\n'),
+    },
+    { type: 'image_url', image_url: { url: backgroundUrl } },
+  ];
+
+  if (Array.isArray(style?.preview_images)) {
+    for (const refUrl of style.preview_images.slice(0, 4)) {
+      content.push({ type: 'image_url', image_url: { url: refUrl } });
+    }
+  }
+
+  if (faceData) content.push({ type: 'image_url', image_url: { url: faceData } });
+  if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
+
+  return content;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -155,7 +184,7 @@ Deno.serve(async (req) => {
       : '';
     const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : '';
     const faceLine = brief.hasFace && brief.faceUrl
-      ? `Include the exact person from the attached face reference photo, preserving facial identity, hair, skin tone, age impression, and overall likeness with high fidelity. Never replace with a generic person.`
+      ? `Include the exact person from the attached face reference photo, preserving facial identity, hair, skin tone, age impression, body language energy, and overall likeness with high fidelity. This is mandatory. Never replace with a generic person, never invent another face, and never omit the person.`
       : '';
     const logoLine = brief.hasLogo && brief.logoUrl
       ? `Place the attached logo subtly in a corner (small, balanced, not intrusive).`
@@ -169,12 +198,21 @@ Deno.serve(async (req) => {
       brief.tone ? `Tone: ${brief.tone}.` : '',
     ].filter(Boolean).join('\n');
 
+    const faceData = brief.hasFace && brief.faceUrl
+      ? (brief.faceUrl.startsWith('data:') ? brief.faceUrl : await urlToDataUrl(brief.faceUrl))
+      : null;
+    const logoData = brief.hasLogo && brief.logoUrl
+      ? (brief.logoUrl.startsWith('data:') ? brief.logoUrl : await urlToDataUrl(brief.logoUrl))
+      : null;
+
     const editPrompt = `Take this background image and turn it into a finished, premium Instagram post about: "${brief.topic}".
 
 CREATIVE GOAL:
 - The final image must feel like one original campaign idea tailored specifically to this topic.
 - Avoid generic social media compositions, generic office props, or stock-like solutions.
 - Make the concept immediately communicate the topic and value proposition.
+- The final piece must clearly reflect the selected marketplace style, not just any premium aesthetic.
+- If a face reference is attached, the real person must be visibly present in the final composition.
 
 OVERLAY TEXT REQUIREMENTS (render the text directly in the image, perfectly legible):
 - Headline / hook: a short, powerful Brazilian Portuguese sentence (max 7 words) about the topic
@@ -192,31 +230,26 @@ ${styleRules}
 Aspect ratio: ${ratio}.
 Style: high-end editorial Instagram post — magazine quality.
 Do NOT add watermarks. Keep the original background composition as the base, but evolve it into a specific branded concept; do not simply slap text on top.
-Respect the marketplace style language faithfully.`;
+Respect the marketplace style language faithfully.
 
-    // Build content array with all reference images
-    const content: any[] = [{ type: 'text', text: editPrompt }];
-    content.push({ type: 'image_url', image_url: { url: backgroundUrl } });
+NON-NEGOTIABLE CHECKLIST:
+- Do not output a generic stock-looking scene.
+- Do not ignore the attached style references.
+- Do not ignore the attached face reference when present.
+- Do not invent a different person.
+- Build a unique concept tied directly to the topic instead of a vague AI or workspace visual.`;
 
-    if (Array.isArray(style?.preview_images)) {
-      for (const refUrl of style.preview_images.slice(0, 4)) {
-        content.push({ type: 'image_url', image_url: { url: refUrl } });
-      }
-    }
-
-    if (brief.hasFace && brief.faceUrl) {
-      const faceData = brief.faceUrl.startsWith('data:') ? brief.faceUrl : await urlToDataUrl(brief.faceUrl);
-      if (faceData) content.push({ type: 'image_url', image_url: { url: faceData } });
-    }
-    if (brief.hasLogo && brief.logoUrl) {
-      const logoData = brief.logoUrl.startsWith('data:') ? brief.logoUrl : await urlToDataUrl(brief.logoUrl);
-      if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
-    }
+    const content = [
+      { type: 'text', text: editPrompt },
+      ...buildReferenceContent(backgroundUrl, style, brief, faceData, logoData),
+    ];
 
     console.log('chat-compose-final: composing', {
       topic: brief.topic,
       ratio,
       refs: content.length - 1,
+      hasFace: !!faceData,
+      hasStyleRefs: Array.isArray(style?.preview_images) && style.preview_images.length > 0,
     });
 
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -226,7 +259,7 @@ Respect the marketplace style language faithfully.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3.1-flash-image-preview', // Nano Banana 2 — strong on text + edits
+        model: 'openai/gpt-image-2',
         messages: [{ role: 'user', content }],
         modalities: ['image', 'text'],
       }),

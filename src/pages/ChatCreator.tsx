@@ -525,11 +525,7 @@ const ChatCreator: React.FC = () => {
     if (generating || loading) return;
     const snapshot = cloneBrief(brief);
     setPendingGenerationBrief(snapshot);
-    startBackgroundGeneration(snapshot);
-  };
-
-  const handleBackgroundPick = (bg: BackgroundOption, briefSnapshot?: BriefState) => {
-    composeFinalPost(briefSnapshot || pendingGenerationBrief || cloneBrief(brief), bg);
+    generateFinalPost(snapshot);
   };
 
   const renderWidget = (msg: ChatMessage) => {
@@ -547,10 +543,6 @@ const ChatCreator: React.FC = () => {
     }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
-    }
-    if (msg.widget === 'background_picker') {
-      const bgs: BackgroundOption[] = msg.widgetData?.backgrounds || [];
-      return <BackgroundPickerWidget backgrounds={bgs} onPick={(bg) => handleBackgroundPick(bg, msg.widgetData?.briefSnapshot)} disabled={generating} />;
     }
     if (msg.widget === 'generating_post') {
       return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;

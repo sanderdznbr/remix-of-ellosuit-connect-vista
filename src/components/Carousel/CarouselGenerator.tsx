@@ -2083,17 +2083,23 @@ The image must look like it was shot by a professional photographer or designed 
         ? `\n\nABSOLUTE FACIAL FIDELITY REQUIREMENT: The attached face reference photo(s) show the EXACT real person(s) that MUST appear in this image. Reproduce identity with maximum fidelity: same facial structure, same eyes, same nose, same mouth, same skin tone, same hair, same age. NEVER replace with a generic model. NEVER invent another face. NEVER stylize the face away from the reference. Treat the face as a portrait reference, not as inspiration.`
         : '';
 
+      // Variações de pose/enquadramento por opção (criatividade — NUNCA copiar pose da referência)
+      const creativeVariations = [
+        'Pose dinâmica de 3/4 olhando levemente para o lado, postura confiante. Enquadramento médio (peito até cabeça). Composição assimétrica deixando ~40% do espaço lateral livre para texto.',
+        'Pose lateral, perfil parcial com olhar direto na câmera, postura editorial. Enquadramento mais aberto (cintura até cabeça). Composição com sujeito deslocado para um dos lados, deixando o lado oposto LIMPO para tipografia.',
+      ];
+
       const basePrompt = buildImagePrompt(
-        `Tema: ${basePromptText}. Gere uma imagem base épica e editorial. FOCO TOTAL NO VISUAL E NO ROSTO. Sem textos, sem logos, apenas a arte visual pura.${faceFidelityClause}`,
+        `Tema: ${basePromptText}. Gere uma imagem base ÉPICA, EDITORIAL E CRIATIVA. CRÍTICO: a foto de referência serve APENAS para identidade facial — NÃO copie a pose, NÃO copie o enquadramento, NÃO copie o fundo da referência. Crie uma cena completamente nova, cinematográfica, profissional. SEMPRE deixe uma área de respiro generosa (negative space) para texto ser inserido depois — composição com o sujeito posicionado de forma que sobre espaço claro e limpo na imagem para tipografia. Sem textos, sem logos, apenas a arte visual pura.${faceFidelityClause}`,
         0,
       );
       const promises = [0, 1].map((i) => generateImage({
-        prompt: basePrompt + ` (Opção ${i + 1})`,
+        prompt: basePrompt + `\n\nVARIAÇÃO DESTA OPÇÃO: ${creativeVariations[i]}`,
         faceReferenceUrls: faceRefUrls,
         styleReferenceUrls: allStyleRefs,
         isCarousel: contentMode === 'carousel',
         facePersonsMetadata: baseFaceMeta.length > 0 ? baseFaceMeta : undefined,
-        negativePrompt: 'generic model, different person, altered identity, stylized face, cartoon face, wrong skin tone, wrong eye color, wrong hair, deformed face, low facial resemblance',
+        negativePrompt: 'generic model, different person, altered identity, stylized face, cartoon face, wrong skin tone, wrong eye color, wrong hair, deformed face, low facial resemblance, copied pose from reference, same framing as reference, centered subject filling entire frame, no negative space, no breathing room, cluttered composition, busy background filling whole frame',
       }));
       const results = await Promise.all(promises);
       const filtered = results.filter((url): url is string => !!url);

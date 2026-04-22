@@ -188,6 +188,7 @@ const FORMAT_DIMENSIONS = {
   story: { w: 1080, h: 1920 },
 } as const;
 type PostFormatType = keyof typeof FORMAT_DIMENSIONS;
+const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
 const CARD_W = 1080;
 const CARD_H = 1350;
@@ -1490,13 +1491,81 @@ const CarouselGenerator: React.FC = () => {
     const qFormat = searchParams.get('format');
     const qMode = searchParams.get('mode');
     const qCards = searchParams.get('cards');
+    const qChatPrefill = searchParams.get('chatPrefill') === '1';
     const qAutostart = searchParams.get('autostart') === '1';
     if (!qTopic && !qStyle) return;
+
+    let chatPrefill: {
+      topic?: string;
+      styleId?: string | null;
+      format?: PostFormatType;
+      contentType?: 'single' | 'carousel';
+      cardCount?: number;
+      hasFace?: boolean;
+      hasLogo?: boolean;
+      hasBrandColors?: boolean;
+      brandName?: string;
+      brandColors?: string[];
+      faceUrl?: string;
+      logoUrl?: string;
+    } | null = null;
+
+    if (qChatPrefill) {
+      try {
+        const raw = sessionStorage.getItem(CHAT_PREFILL_STORAGE_KEY);
+        if (raw) {
+          chatPrefill = JSON.parse(raw);
+          sessionStorage.removeItem(CHAT_PREFILL_STORAGE_KEY);
+        }
+      } catch (error) {
+        console.error('Failed to restore chat prefill:', error);
+      }
+    }
+
     if (qTopic) { setTopic(qTopic); setOriginalTopic(qTopic); }
     if (qFormat && qFormat in FORMAT_DIMENSIONS) setPostFormat(qFormat as PostFormatType);
     if (qMode === 'carousel') setContentMode('carousel');
     else if (qMode === 'single') setContentMode('single-post');
     if (qCards) setCardCount(Math.max(1, parseInt(qCards, 10) || 5));
+
+    if (chatPrefill?.brandName) setBrandName(chatPrefill.brandName);
+    if (chatPrefill?.hasBrandColors !== undefined) setUseBrandColors(!!chatPrefill.hasBrandColors);
+    if (Array.isArray(chatPrefill?.brandColors) && chatPrefill!.brandColors.length > 0) {
+      setLogoBrandColors(chatPrefill!.brandColors);
+    }
+    if (chatPrefill?.logoUrl) {
+      setLogoUrl(chatPrefill.logoUrl);
+    }
+    if (chatPrefill?.faceUrl) {
+      const faceRef = {
+        url: chatPrefill.faceUrl,
+        thumb: chatPrefill.faceUrl,
+        label: 'Rosto do chat',
+        source: 'upload' as const,
+        category: 'face' as const,
+        personId: 'chat-face-1',
+      };
+
+      setReferenceImages(prev => {
+        const withoutPreviousChatFace = prev.filter(r => r.personId !== 'chat-face-1');
+        if (withoutPreviousChatFace.some(r => r.category === 'face' && r.url === chatPrefill?.faceUrl)) {
+          return withoutPreviousChatFace;
+        }
+        return [faceRef, ...withoutPreviousChatFace];
+      });
+
+      setFacePersons([{
+        id: 'chat-face-1',
+        label: 'Pessoa 1',
+        photos: [faceRef],
+        gender: 'auto',
+        wearsGlasses: false,
+      }]);
+      setFaceGender('auto');
+      setPeopleMode('none');
+      setAllPeopleOnCover(true);
+    }
+
     if (qStyle) {
       supabase.from('marketplace_styles')
         .select('id, name, preview_images, style_config, strict_instructions')

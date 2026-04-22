@@ -15,6 +15,7 @@ interface ConversationSummary {
 
 const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
+const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
 type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | null;
 
@@ -43,6 +44,22 @@ interface BriefState {
   logoUrl?: string;
   audience?: string;
   tone?: string;
+}
+
+interface ChatGenerationPrefill {
+  topic?: string;
+  styleId?: string | null;
+  styleName?: string | null;
+  format?: 'portrait' | 'square' | 'story';
+  contentType?: 'single' | 'carousel';
+  cardCount?: number;
+  hasFace?: boolean;
+  hasLogo?: boolean;
+  hasBrandColors?: boolean;
+  brandName?: string;
+  brandColors?: string[];
+  faceUrl?: string;
+  logoUrl?: string;
 }
 
 interface MarketplaceStyle {
@@ -341,6 +358,28 @@ const ChatCreator: React.FC = () => {
 
   const triggerGenerate = (b: BriefState) => {
     setGenerating(true);
+    const prefill: ChatGenerationPrefill = {
+      topic: b.topic,
+      styleId: b.styleId,
+      styleName: b.styleName,
+      format: b.format,
+      contentType: b.contentType,
+      cardCount: b.cardCount,
+      hasFace: b.hasFace,
+      hasLogo: b.hasLogo,
+      hasBrandColors: b.hasBrandColors,
+      brandName: b.brandName,
+      brandColors: b.brandColors,
+      faceUrl: b.faceUrl,
+      logoUrl: b.logoUrl,
+    };
+
+    try {
+      sessionStorage.setItem(CHAT_PREFILL_STORAGE_KEY, JSON.stringify(prefill));
+    } catch (error) {
+      console.error('Failed to persist chat prefill:', error);
+    }
+
     const params = new URLSearchParams();
     if (b.topic) params.set('topic', b.topic);
     if (b.styleId) params.set('styleId', b.styleId);
@@ -348,6 +387,7 @@ const ChatCreator: React.FC = () => {
     if (b.contentType) params.set('mode', b.contentType);
     if (b.cardCount) params.set('cards', String(b.cardCount));
     params.set('autostart', '1');
+    params.set('chatPrefill', '1');
     setTimeout(() => navigate(`/?${params.toString()}`), 800);
   };
 

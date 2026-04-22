@@ -1,11 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Home, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, ChevronRight, X } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+interface ConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: number;
+}
+
+const STORAGE_KEY = 'ello_chat_conversations_v1';
+const ACTIVE_KEY = 'ello_chat_active_v1';
 
 type WidgetType = 'style_picker' | 'format_picker' | 'personalization' | 'confirm_generate' | null;
 
@@ -61,7 +70,45 @@ const ChatCreator: React.FC = () => {
   const [styles, setStyles] = useState<MarketplaceStyle[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const initRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [recording, setRecording] = useState(false);
+
+  // Load conversations index
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setConversations(JSON.parse(raw));
+      const active = localStorage.getItem(ACTIVE_KEY);
+      if (active) setActiveConvId(active);
+    } catch {}
+  }, []);
+
+  // Persist conversation when messages change
+  useEffect(() => {
+    if (!activeConvId || messages.length === 0) return;
+    try {
+      const firstUser = messages.find(m => m.role === 'user');
+      const title = (firstUser?.content || 'Nova conversa').slice(0, 60);
+      localStorage.setItem(`ello_chat_msgs_${activeConvId}`, JSON.stringify({ messages, brief }));
+      setConversations(prev => {
+        const existing = prev.find(c => c.id === activeConvId);
+        const updated = existing
+          ? prev.map(c => c.id === activeConvId ? { ...c, title, updatedAt: Date.now() } : c)
+          : [{ id: activeConvId, title, updatedAt: Date.now() }, ...prev];
+        const sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sorted));
+        return sorted;
+      });
+    } catch {}
+  }, [messages, brief, activeConvId]);
 
   // Load 4 recommended styles for the picker widget
   useEffect(() => {
@@ -125,6 +172,29 @@ const ChatCreator: React.FC = () => {
     initRef.current = true;
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get('prompt') || params.get('topic');
+
+    // Ensure we have an active conversation
+    let convId = localStorage.getItem(ACTIVE_KEY);
+    if (initialPrompt || !convId) {
+      convId = crypto.randomUUID();
+      localStorage.setItem(ACTIVE_KEY, convId);
+      setActiveConvId(convId);
+    } else {
+      setActiveConvId(convId);
+      // Try to restore messages
+      try {
+        const raw = localStorage.getItem(`ello_chat_msgs_${convId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.messages?.length) {
+            setMessages(parsed.messages);
+            if (parsed.brief) setBrief(parsed.brief);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     if (initialPrompt) {
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -135,7 +205,6 @@ const ChatCreator: React.FC = () => {
       setMessages([userMsg]);
       callAI([userMsg], {});
     } else {
-      // Greeting
       setMessages([{
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -144,6 +213,93 @@ const ChatCreator: React.FC = () => {
       }]);
     }
   }, [location.search, callAI]);
+
+  const handleNewChat = () => {
+    const newId = crypto.randomUUID();
+    localStorage.setItem(ACTIVE_KEY, newId);
+    setActiveConvId(newId);
+    setMessages([{
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: 'Oi! Eu sou a Ello 👋 Me conta: o que você quer criar hoje?',
+      timestamp: Date.now(),
+    }]);
+    setBrief({});
+    setInput('');
+    setAttachments([]);
+  };
+
+  const handleSelectConversation = (id: string) => {
+    if (id === activeConvId) return;
+    localStorage.setItem(ACTIVE_KEY, id);
+    setActiveConvId(id);
+    try {
+      const raw = localStorage.getItem(`ello_chat_msgs_${id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setMessages(parsed.messages || []);
+        setBrief(parsed.brief || {});
+      } else {
+        setMessages([]);
+        setBrief({});
+      }
+    } catch {
+      setMessages([]);
+      setBrief({});
+    }
+  };
+
+  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    localStorage.removeItem(`ello_chat_msgs_${id}`);
+    setConversations(prev => {
+      const next = prev.filter(c => c.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+    if (id === activeConvId) handleNewChat();
+  };
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      setAttachments(prev => [...prev, ...files]);
+      toast.success(`${files.length} arquivo(s) anexado(s)`);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (idx: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mr.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+      mr.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const file = new File([blob], `audio-${Date.now()}.webm`, { type: 'audio/webm' });
+        setAttachments(prev => [...prev, file]);
+        stream.getTracks().forEach(t => t.stop());
+        toast.success('Áudio gravado');
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch (err) {
+      toast.error('Não foi possível acessar o microfone');
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
+
 
   const sendMessage = (text: string, hiddenContext?: string) => {
     const trimmed = text.trim();
@@ -227,105 +383,209 @@ const ChatCreator: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0A0A0A' }}>
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-white/5 backdrop-blur-md sticky top-0 z-20" style={{ backgroundColor: 'rgba(10,10,10,0.85)' }}>
-        <button onClick={() => navigate('/')} className="flex items-center gap-2 text-white/60 hover:text-white transition-colors">
-          <Home className="h-4 w-4" />
-          <span className="text-sm font-medium">Início</span>
-        </button>
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-sm font-semibold text-white">Ello</span>
+    <div className="min-h-screen flex" style={{ backgroundColor: '#0A0A0A' }}>
+      {/* Sidebar - Conversation history */}
+      <aside
+        className="hidden md:flex flex-col border-r border-white/5 transition-all duration-300 shrink-0"
+        style={{
+          width: sidebarOpen ? 260 : 0,
+          backgroundColor: '#0D0D0D',
+          overflow: 'hidden',
+        }}
+      >
+        <div className="p-3 border-b border-white/5">
+          <button
+            onClick={handleNewChat}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-white/90 hover:bg-white/5 transition-colors text-sm font-medium border border-white/10"
+          >
+            <Plus className="h-4 w-4" />
+            Nova conversa
+          </button>
         </div>
-        <div className="w-16" />
-      </header>
-
-      {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+          {conversations.length === 0 ? (
+            <div className="text-xs text-white/30 px-3 py-4 text-center">Nenhuma conversa ainda</div>
+          ) : (
+            conversations.map(c => (
+              <button
+                key={c.id}
+                onClick={() => handleSelectConversation(c.id)}
+                className="group w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors"
+                style={{
+                  backgroundColor: c.id === activeConvId ? 'rgba(139,92,246,0.15)' : 'transparent',
+                  color: c.id === activeConvId ? '#fff' : 'rgba(255,255,255,0.7)',
+                }}
               >
-                {msg.role === 'assistant' ? (
-                  <div className="flex gap-3 max-w-[85%]">
-                    <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center mt-0.5" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-                      <Sparkles className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <div className="space-y-3">
-                      <div className="text-[15px] text-white/90 leading-relaxed whitespace-pre-wrap">{msg.content}</div>
-                      {renderWidget(msg)}
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className="px-4 py-2.5 rounded-2xl rounded-tr-md max-w-[85%] text-[15px]"
-                    style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139,92,246,0.25)', color: '#fff' }}
-                  >
-                    {msg.content}
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {(loading || generating) && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-              <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-                <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
-              </div>
-              <div className="flex items-center gap-1.5 px-4 py-3">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" style={{ animation: `bounce 1.4s ${i * 0.15}s infinite ease-in-out` }} />
-                ))}
-                {generating && <span className="text-xs text-white/50 ml-2">Abrindo o estúdio...</span>}
-              </div>
-            </motion.div>
+                <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                <span className="flex-1 truncate text-[13px]">{c.title}</span>
+                <span
+                  onClick={(e) => handleDeleteConversation(c.id, e)}
+                  className="opacity-0 group-hover:opacity-100 text-white/40 hover:text-white/90 transition-opacity"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </span>
+              </button>
+            ))
           )}
         </div>
-      </div>
+      </aside>
 
-      {/* Input */}
-      <div className="px-4 pb-6 pt-2 sticky bottom-0" style={{ background: 'linear-gradient(to top, #0A0A0A 70%, transparent)' }}>
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-end gap-2 rounded-2xl px-3 py-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(input);
-                }
-              }}
-              placeholder={generating ? 'Gerando seu post...' : 'Responda à Ello...'}
-              disabled={loading || generating}
-              rows={1}
-              className="flex-1 bg-transparent outline-none resize-none text-[15px] text-white placeholder:text-white/30 max-h-32 py-1.5"
-              style={{ minHeight: '24px' }}
-            />
-            <button
-              onClick={() => sendMessage(input)}
-              disabled={!input.trim() || loading || generating}
-              className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
-              style={{ backgroundColor: input.trim() ? PURPLE : 'rgba(255,255,255,0.1)' }}
-            >
-              {loading ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <ArrowUp className="h-4 w-4 text-white" />}
-            </button>
+      {/* Main column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="flex items-center justify-between px-4 py-3 border-b border-white/5 backdrop-blur-md sticky top-0 z-20" style={{ backgroundColor: 'rgba(10,10,10,0.85)' }}>
+          <button
+            onClick={() => setSidebarOpen(s => !s)}
+            className="hidden md:flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label="Alternar sidebar"
+          >
+            {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-sm font-semibold text-white">Ello</span>
+          </div>
+          <button
+            onClick={handleNewChat}
+            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors md:hidden"
+            aria-label="Nova conversa"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <div className="hidden md:block w-8" />
+        </header>
+
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {msg.role === 'assistant' ? (
+                    <div className="flex gap-3 max-w-[85%]">
+                      <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center mt-0.5" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
+                        <Sparkles className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="text-[15px] text-white/90 leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                        {renderWidget(msg)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="px-4 py-2.5 rounded-2xl rounded-tr-md max-w-[85%] text-[15px]"
+                      style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139,92,246,0.25)', color: '#fff' }}
+                    >
+                      {msg.content}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {(loading || generating) && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+                <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
+                  <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
+                </div>
+                <div className="flex items-center gap-1.5 px-4 py-3">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" style={{ animation: `bounce 1.4s ${i * 0.15}s infinite ease-in-out` }} />
+                  ))}
+                  {generating && <span className="text-xs text-white/50 ml-2">Abrindo o estúdio...</span>}
+                </div>
+              </motion.div>
+            )}
           </div>
         </div>
-      </div>
 
-      <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }`}</style>
+        {/* Input */}
+        <div className="px-4 pb-6 pt-2 sticky bottom-0" style={{ background: 'linear-gradient(to top, #0A0A0A 70%, transparent)' }}>
+          <div className="max-w-2xl mx-auto space-y-2">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((f, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white/80"
+                    style={{ backgroundColor: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)' }}
+                  >
+                    {f.type.startsWith('audio') ? <Mic className="h-3 w-3" /> : <Paperclip className="h-3 w-3" />}
+                    <span className="truncate max-w-[140px]">{f.name}</span>
+                    <button onClick={() => removeAttachment(idx)} className="text-white/50 hover:text-white">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-end gap-2 rounded-2xl px-2 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFilesSelected}
+                className="hidden"
+                accept="image/*,application/pdf,.doc,.docx,.txt"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading || generating}
+                className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30"
+                aria-label="Anexar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              <button
+                onClick={recording ? stopRecording : startRecording}
+                disabled={loading || generating}
+                className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center transition-colors disabled:opacity-30"
+                style={{
+                  color: recording ? '#fff' : 'rgba(255,255,255,0.6)',
+                  backgroundColor: recording ? '#EF4444' : 'transparent',
+                }}
+                aria-label={recording ? 'Parar gravação' : 'Gravar áudio'}
+              >
+                <Mic className={`h-4 w-4 ${recording ? 'animate-pulse' : ''}`} />
+              </button>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(input);
+                  }
+                }}
+                placeholder={generating ? 'Gerando seu post...' : recording ? 'Gravando áudio...' : 'Responda à Ello...'}
+                disabled={loading || generating}
+                rows={1}
+                className="flex-1 bg-transparent outline-none resize-none text-[15px] text-white placeholder:text-white/30 max-h-32 py-1.5 px-1"
+                style={{ minHeight: '24px' }}
+              />
+              <button
+                onClick={() => sendMessage(input)}
+                disabled={(!input.trim() && attachments.length === 0) || loading || generating}
+                className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
+                style={{ backgroundColor: (input.trim() || attachments.length > 0) ? PURPLE : 'rgba(255,255,255,0.1)' }}
+              >
+                {loading ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <ArrowUp className="h-4 w-4 text-white" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }`}</style>
+      </div>
     </div>
   );
 };

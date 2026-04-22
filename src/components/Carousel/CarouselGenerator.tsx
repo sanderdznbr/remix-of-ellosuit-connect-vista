@@ -1942,11 +1942,15 @@ The image must look like it was shot by a professional photographer or designed 
     fontReferenceImage?: string;
     fontReferenceName?: string;
     isCarousel?: boolean;
+    forceModel?: 'gemini' | 'nano-banana' | 'gpt-image-2' | 'higgsfield';
   }): Promise<string | null> => {
     // Use the model selected by the user (nano-banana = quality default, gemini = fast)
-    const resolvedModel = imageSettings.model === 'auto'
-      ? 'nano-banana'
-      : imageSettings.model;
+    // forceModel takes precedence — used for edit-only passes that need Gemini 3 Pro Image.
+    const resolvedModel = opts.forceModel
+      ? opts.forceModel
+      : imageSettings.model === 'auto'
+        ? 'nano-banana'
+        : imageSettings.model;
 
     // === HIGGSFIELD PATH ===
     if (resolvedModel === 'higgsfield') {

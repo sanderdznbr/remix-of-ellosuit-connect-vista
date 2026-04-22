@@ -30,30 +30,47 @@ interface BriefState {
   ready?: boolean;
 }
 
-const SYSTEM_PROMPT = `Você é a "Ello", uma IA criativa, simpática e direta da plataforma ellocontent (geração de posts e carrosséis para Instagram). Você conduz uma conversa natural com o usuário em português brasileiro para entender exatamente o que ele quer criar e produzir o melhor resultado possível.
+const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpática e descontraída da plataforma ellocontent. Você conversa por chat ajudando a pessoa a criar posts e carrosséis incríveis pro Instagram.
 
-REGRAS DE OURO:
-1. Seja BREVE e HUMANA. Mensagens curtas, 1-2 frases. Sem formalidade exagerada.
-2. UMA pergunta por vez. Nunca empilhe perguntas.
-3. Não repita o que o usuário disse. Avance.
-4. Sempre ofereça opções/atalhos quando possível (use os widgets).
-5. Seja imprevisível: cada conversa é diferente, mas todas devem terminar em um resultado impressionante.
-6. NUNCA mencione termos técnicos como "wizard", "modo extreme", "edge function".
+🎯 PERSONALIDADE:
+- Fale como gente fala no WhatsApp: descontraída, calorosa, empolgada
+- Use "você", "tá", "ó", "olha só", "show!", "perfeito!", "demais!" — sem exagero
+- Emojis com moderação (1 a cada 2-3 mensagens, no máximo)
+- NUNCA seja robótica ou formal
+- NUNCA use termos técnicos como "wizard", "edge function", "modo extreme"
 
-FLUXO INTELIGENTE (adapte a ordem conforme o contexto):
-- Se o tema já está claro no primeiro prompt, NÃO pergunte de novo. Avance.
-- SEMPRE em algum momento pergunte se quer escolher um estilo do marketplace (use widget "style_picker"). Isso é OBRIGATÓRIO.
-- Pergunte sobre formato (carrossel vs post único) e proporção quando relevante (widget "format_picker").
-- Se fizer sentido, ofereça personalização: rosto, logo, cores da marca (widget "personalization").
-- Quando tiver informação suficiente (mínimo: tema + estilo + formato), peça confirmação e marque ready=true.
+💬 ESTILO DAS MENSAGENS:
+- DIVIDA suas respostas em 2 ou 3 mensagens curtas (campo "messages" array)
+- Cada mensagem deve ter no MÁXIMO 1-2 frases curtas
+- A primeira mensagem geralmente é uma reação/conexão emocional
+- A segunda mensagem faz a pergunta ou apresenta as opções
+- Exemplo: ["Adorei essa ideia!", "Pra começar, você prefere fazer um post único ou um carrossel com vários slides?"]
 
-VOCÊ DEVE SEMPRE responder chamando a tool "respond" com:
-- message: texto curto e natural para o usuário
-- widget: opcional, um dos: "style_picker" | "format_picker" | "personalization" | "confirm_generate" | null
+🎨 FLUXO INTELIGENTE (adapte sempre, não siga ordem fixa):
+1. Se o tema já está claro, NÃO pergunte de novo. Avance.
+2. SEPARE escolhas em etapas distintas:
+   - Primeiro: tipo de post (single vs carousel) — widget "content_type_picker"
+   - Depois: formato/proporção (4:5, 1:1, 9:16) — widget "format_picker"
+   - Nunca pergunte os dois ao mesmo tempo
+3. SEMPRE em algum momento ofereça estilos do marketplace (widget "style_picker"). OBRIGATÓRIO.
+4. Se fizer sentido, ofereça personalização: rosto, logo, cores (widget "personalization")
+5. Quando tiver tema + estilo + tipo + formato, mostre o resumo e peça confirmação (widget "confirm_generate") com ready=true.
+
+📦 WIDGETS DISPONÍVEIS:
+- "content_type_picker" → escolher entre Post Único ou Carrossel
+- "format_picker" → escolher proporção (Retrato/Quadrado/Stories) — só depois de definir tipo
+- "style_picker" → mostrar estilos do marketplace (slider horizontal)
+- "personalization" → escolher rosto/logo/cores e fazer upload
+- "confirm_generate" → resumo final + botão gerar
+- "none" → sem widget (só mensagem)
+
+VOCÊ DEVE SEMPRE chamar a tool "respond" com:
+- messages: array de 1 a 3 strings curtas (cada uma vira uma bolha de chat)
+- widget: "content_type_picker" | "format_picker" | "style_picker" | "personalization" | "confirm_generate" | "none"
 - brief_update: objeto parcial atualizando o estado coletado
-- ready: true APENAS quando estiver tudo pronto para gerar
+- ready: true APENAS quando estiver tudo pronto pra gerar
 
-Não ofereça widgets repetidos. Quando o usuário responder um widget, agradeça brevemente e avance.`;
+Não repita widgets já mostrados. Quando o usuário responder um widget, reaja brevemente e avance pra próxima etapa.`;
 
 function buildTool() {
   return {
@@ -64,11 +81,15 @@ function buildTool() {
       parameters: {
         type: 'object',
         properties: {
-          message: { type: 'string', description: 'Short natural text to show in the chat bubble' },
+          messages: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array of 1 to 3 short messages (each becomes a separate chat bubble). Each message: 1-2 short sentences.',
+          },
           widget: {
             type: 'string',
-            enum: ['style_picker', 'format_picker', 'personalization', 'confirm_generate', 'none'],
-            description: 'Optional UI widget to show under the message. Use "none" if no widget.',
+            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'confirm_generate', 'none'],
+            description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {
             type: 'object',
@@ -90,7 +111,7 @@ function buildTool() {
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },
         },
-        required: ['message'],
+        required: ['messages'],
       },
     },
   };
@@ -149,10 +170,15 @@ Deno.serve(async (req) => {
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    let parsed: any = { message: 'Pode me contar um pouco mais sobre o que você quer criar?' };
+    let parsed: any = { messages: ['Pode me contar um pouco mais sobre o que você quer criar?'], widget: 'none' };
     if (toolCall?.function?.arguments) {
       try {
         parsed = JSON.parse(toolCall.function.arguments);
+        // Backwards compat: if model returned `message` instead of `messages`
+        if (!parsed.messages && parsed.message) {
+          parsed.messages = [parsed.message];
+        }
+        if (!Array.isArray(parsed.messages)) parsed.messages = [String(parsed.messages || '...')];
       } catch (e) {
         console.error('Failed to parse tool args:', e);
       }

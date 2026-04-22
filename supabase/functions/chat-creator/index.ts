@@ -105,7 +105,7 @@ function buildTool() {
               format: { type: 'string', enum: ['portrait', 'square', 'story'] },
               contentType: { type: 'string', enum: ['single', 'carousel'] },
               cardCount: { type: 'number' },
-              styleId: { type: 'string' },
+              styleId: { type: 'string', description: 'UUID of the style. NEVER invent — only use IDs the user picked from the style_picker widget.' },
               styleName: { type: 'string' },
               hasFace: { type: 'boolean' },
               hasLogo: { type: 'boolean' },

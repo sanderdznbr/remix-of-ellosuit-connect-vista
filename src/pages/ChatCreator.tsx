@@ -1236,13 +1236,108 @@ const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phas
   );
 };
 
-const FinalResultWidget: React.FC<{ carouselId?: string; imageUrl?: string; onOpen: (id: string) => void }> = ({ carouselId, imageUrl, onOpen }) => {
+const FinalResultWidget: React.FC<{
+  carouselId?: string;
+  imageUrl?: string;
+  onOpen: (id: string) => void;
+  onImageUpdated?: (newUrl: string) => void;
+}> = ({ carouselId, imageUrl, onOpen, onImageUpdated }) => {
+  const [showAdjust, setShowAdjust] = React.useState(false);
+  const [adjustText, setAdjustText] = React.useState('');
+  const [adjusting, setAdjusting] = React.useState(false);
+
   if (!carouselId || !imageUrl) return null;
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `post-${carouselId.slice(0, 8)}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Imagem baixada');
+    } catch {
+      toast.error('Não foi possível baixar');
+    }
+  };
+
+  const handleAdjust = async () => {
+    const text = adjustText.trim();
+    if (!text || adjusting) return;
+    setAdjusting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-adjust-image', {
+        body: { carouselId, instruction: text },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.imageUrl) {
+        onImageUpdated?.(data.imageUrl);
+        toast.success('Pronto, ajustei pra você!');
+        setAdjustText('');
+        setShowAdjust(false);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao ajustar');
+    } finally {
+      setAdjusting(false);
+    }
+  };
+
   return (
     <div className="space-y-2.5 max-w-md">
       <div className="rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
         <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          onClick={handleDownload}
+          variant="outline"
+          className="h-10 border-white/15 text-white/90 hover:bg-white/5"
+        >
+          <Upload className="h-4 w-4 mr-2 rotate-180" />
+          Baixar
+        </Button>
+        <Button
+          onClick={() => setShowAdjust(s => !s)}
+          variant="outline"
+          className="h-10 border-white/15 text-white/90 hover:bg-white/5"
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          Ajustar
+        </Button>
+      </div>
+
+      {showAdjust && (
+        <div className="space-y-2 rounded-xl border border-white/10 p-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+          <textarea
+            value={adjustText}
+            onChange={(e) => setAdjustText(e.target.value)}
+            placeholder="O que você quer mudar? Ex: 'troque o fundo para um escritório moderno', 'mude a cor do título para dourado', 'tire o copo de água'..."
+            className="w-full bg-transparent text-sm text-white/90 placeholder:text-white/40 outline-none resize-none min-h-[72px]"
+            disabled={adjusting}
+          />
+          <Button
+            onClick={handleAdjust}
+            disabled={adjusting || !adjustText.trim()}
+            className="w-full h-9"
+            style={{ backgroundColor: PURPLE }}
+          >
+            {adjusting ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ajustando...</>
+            ) : (
+              <><Sparkles className="h-4 w-4 mr-2" /> Aplicar ajuste</>
+            )}
+          </Button>
+        </div>
+      )}
+
       <Button
         onClick={() => onOpen(carouselId)}
         className="w-full h-10"

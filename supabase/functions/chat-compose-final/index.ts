@@ -161,6 +161,73 @@ Deno.serve(async (req) => {
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
     const style = await getStyleContext(sb, brief.styleId);
 
+    // === STEP 1: Generate professional art direction (creative brief) ===
+    // A senior creative director writes a detailed visual concept BEFORE the image is generated.
+    // This avoids generic stock scenes and guarantees the photo is purposefully designed for the topic.
+    let artDirection = '';
+    try {
+      const directionPrompt = `Você é um diretor de arte sênior de revista editorial (estilo GQ, Vogue Business, Monocle). Um post de Instagram precisa ser criado sobre o tema:
+
+"${brief.topic}"
+
+${brief.brandName ? `Marca: ${brief.brandName}.` : ''}
+${brief.audience ? `Público: ${brief.audience}.` : ''}
+${brief.tone ? `Tom: ${brief.tone}.` : ''}
+${brief.hasFace ? 'IMPORTANTE: o post mostrará uma pessoa real (temos a foto do rosto dela como referência de identidade). Você precisa dirigir a CENA ao redor dessa pessoa.' : ''}
+${style?.name ? `Estilo visual selecionado: ${style.name}. ${style.description || ''}` : ''}
+
+Crie uma DIREÇÃO DE ARTE específica e original para uma única foto editorial premium. Responda em JSON com EXATAMENTE estes campos (todos em português brasileiro, frases curtas e visuais):
+
+{
+  "concept": "conceito criativo único em 1 frase — não genérico, ligado diretamente ao tema",
+  "scene": "descrição do ambiente/cenário específico (ex: 'rooftop industrial ao entardecer com luzes neon', 'estúdio minimalista com fundo concreto')",
+  "pose": "pose corporal específica e dinâmica (ex: 'caminhando de lado olhando para fora do quadro', 'sentado de perfil com cotovelo no joelho, olhar focado')",
+  "expression": "expressão facial específica (ex: 'sorriso confiante e contido', 'olhar intenso e determinado')",
+  "wardrobe": "figurino específico que combina com o tema (ex: 'blazer preto sobre camiseta branca, calça wide-leg')",
+  "cameraAngle": "ângulo e enquadramento (ex: '3/4 perfil, plano médio, leve contra-plongée')",
+  "lighting": "iluminação cinematográfica (ex: 'luz dura lateral dourada com sombra forte oposta')",
+  "moodKeywords": "3-5 palavras-chave de mood (ex: 'editorial, ousado, sofisticado, urbano')",
+  "textZone": "onde fica a área limpa para o texto (ex: 'terço superior à esquerda, fundo escuro liso')"
+}
+
+Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa sorrindo em um escritório".`;
+
+      const dirResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [{ role: 'user', content: directionPrompt }],
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (dirResp.ok) {
+        const dj = await dirResp.json();
+        const raw = dj?.choices?.[0]?.message?.content || '';
+        try {
+          const parsed = JSON.parse(raw);
+          artDirection = `🎬 DIREÇÃO DE ARTE (siga rigorosamente — esta é a visão profissional para esta foto específica):
+• CONCEITO: ${parsed.concept}
+• CENÁRIO: ${parsed.scene}
+• POSE DO PERSONAGEM: ${parsed.pose}
+• EXPRESSÃO: ${parsed.expression}
+• FIGURINO: ${parsed.wardrobe}
+• CÂMERA: ${parsed.cameraAngle}
+• ILUMINAÇÃO: ${parsed.lighting}
+• MOOD: ${parsed.moodKeywords}
+• ÁREA DE TEXTO LIVRE: ${parsed.textZone}`;
+          console.log('🎬 Art direction generated:', parsed.concept);
+        } catch (e) {
+          console.warn('Art direction JSON parse failed, using raw:', e);
+          artDirection = raw ? `🎬 DIREÇÃO DE ARTE:\n${raw}` : '';
+        }
+      } else {
+        console.warn('Art direction call failed:', dirResp.status);
+      }
+    } catch (e) {
+      console.warn('Art direction step skipped:', e);
+    }
+
     // === Resolve all reference assets in parallel ===
     const [faceData, logoData, ...styleRefDataUrls] = await Promise.all([
       brief.hasFace && brief.faceUrl

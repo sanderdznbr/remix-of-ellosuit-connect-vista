@@ -548,7 +548,16 @@ const ChatCreator: React.FC = () => {
       return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;
     }
     if (msg.widget === 'final_result') {
-      return <FinalResultWidget carouselId={msg.widgetData?.carouselId} imageUrl={msg.widgetData?.imageUrl} onOpen={(id) => navigate(`/${id}`)} />;
+      return <FinalResultWidget
+        carouselId={msg.widgetData?.carouselId}
+        imageUrl={msg.widgetData?.imageUrl}
+        onOpen={(id) => navigate(`/${id}`)}
+        onImageUpdated={(newUrl) => {
+          setMessages(prev => prev.map(m => m.id === msg.id
+            ? { ...m, widgetData: { ...m.widgetData, imageUrl: newUrl } }
+            : m));
+        }}
+      />;
     }
     return null;
   };

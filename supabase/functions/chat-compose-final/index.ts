@@ -179,14 +179,31 @@ Deno.serve(async (req) => {
     const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
     const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
     const faceLine = faceData
-      ? `A face reference photo is attached — USE IT ONLY FOR FACIAL IDENTITY (face shape, eyes, nose, mouth, skin tone, hair, age, ethnicity, gender). DO NOT copy the pose, framing, expression, lighting, background, clothing, crop, or camera angle from the reference. Reinvent the scene completely:
-- New POSE (different body angle, hands, head tilt — never frontal mugshot unless the concept demands it)
-- New EXPRESSION fitting the topic emotion (confident, thoughtful, laughing, in-action, looking away, etc.)
-- New CAMERA ANGLE (3/4 profile, low angle, over-the-shoulder, wide editorial, candid lifestyle…)
-- New ENVIRONMENT / BACKGROUND tied to the topic concept
-- New CLOTHING / STYLING fitting the brand and concept
-- New LIGHTING (cinematic, natural, studio, neon — whatever the concept asks)
-The reference is a face ID card, NOT a composition template. Be bold and creative with the staging while keeping the person 100% recognizable. Always leave clean negative space (top OR bottom third) for the headline text — never cover the face with text.`
+      ? `⚠️ CRITICAL — FACE REFERENCE HANDLING ⚠️
+The attached photo is a FACE IDENTITY REFERENCE ONLY. Treat it like a passport photo / Face ID card.
+
+EXTRACT ONLY: facial features (eyes, nose, mouth, face shape), skin tone, hair color/style, age, ethnicity, gender, beard/mustache if present.
+
+ABSOLUTELY FORBIDDEN — these will RUIN the result:
+❌ DO NOT cut-and-paste, crop, or composite the face from the reference into the scene
+❌ DO NOT keep the same pose, body angle, head tilt, or framing as the reference
+❌ DO NOT keep the same shirt, t-shirt, jacket, logo, print, or any clothing from the reference
+❌ DO NOT keep the same background, wall, lighting, or environment from the reference
+❌ DO NOT keep the same expression (no copying the same neutral selfie face)
+❌ DO NOT mirror, flip, or directly trace the reference photo
+❌ NEVER show clothing prints/text from the reference (e.g. brand logos, mirrored letters)
+
+REQUIRED — REINVENT the entire scene from scratch:
+✅ REPAINT the person from scratch as a brand-new editorial photograph, only borrowing the FACIAL IDENTITY
+✅ Give them a NEW POSE: dynamic, in-action, gesturing, walking, leaning, sitting cinematically, looking off-camera, hands working, etc.
+✅ Give them a NEW EXPRESSION matching the topic mood (smiling, focused, intense, joyful, curious — NOT a flat selfie stare)
+✅ Give them BRAND-NEW CLOTHING styled for the concept (clean shirt, blazer, designer outfit, lab coat, casual chic — whatever fits the topic; never reuse the reference outfit)
+✅ Use a NEW CAMERA ANGLE: 3/4 profile, low hero angle, over-the-shoulder, wide editorial cinematic, candid lifestyle, side profile — anything BUT a centered frontal selfie
+✅ Build a NEW ENVIRONMENT that visually tells the story of the topic (studio, location, conceptual set, on-location lifestyle scene)
+✅ Apply NEW LIGHTING (cinematic, soft window light, hard editorial, neon, golden hour — chosen by the concept)
+✅ Leave clean negative space (top OR bottom third) for typography — face must NEVER be covered by text
+
+Think of it like a film director casting a real actor: you have the actor's face, now stage a brand-new scene around them. The reference is the casting headshot, NOT the final shot.`
       : '';
     const logoLine = logoData
       ? 'A logo asset is attached. Place it subtly and cleanly in a corner — small, balanced, never intrusive.'
@@ -206,7 +223,8 @@ CREATIVE GOAL:
 - NOT a generic stock scene, not a generic laptop-on-desk, not random office props.
 - The visual must immediately communicate the topic and value proposition.
 - Editorial, magazine-grade finish. Premium typography in PORTUGUÊS BRASILEIRO.
-- BE BOLD with composition: unexpected angles, dynamic poses, editorial staging. Never replicate the reference photo's pose/framing — reinvent the scene every time.
+- BE BOLD with composition: unexpected angles, dynamic poses, editorial staging.
+- 🚫 NEVER replicate the face reference photo's pose, framing, clothing, or background. The face reference is ONLY for identity — the entire scene must be reinvented from scratch like a fresh photoshoot directed for this exact topic.
 - Reserve a clean text safe-area (top OR bottom third) for the headline — text must never overlap the face.
 
 ${brand}

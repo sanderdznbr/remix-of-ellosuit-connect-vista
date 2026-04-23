@@ -223,7 +223,8 @@ CREATIVE GOAL:
 - NOT a generic stock scene, not a generic laptop-on-desk, not random office props.
 - The visual must immediately communicate the topic and value proposition.
 - Editorial, magazine-grade finish. Premium typography in PORTUGUÊS BRASILEIRO.
-- BE BOLD with composition: unexpected angles, dynamic poses, editorial staging. Never replicate the reference photo's pose/framing — reinvent the scene every time.
+- BE BOLD with composition: unexpected angles, dynamic poses, editorial staging.
+- 🚫 NEVER replicate the face reference photo's pose, framing, clothing, or background. The face reference is ONLY for identity — the entire scene must be reinvented from scratch like a fresh photoshoot directed for this exact topic.
 - Reserve a clean text safe-area (top OR bottom third) for the headline — text must never overlap the face.
 
 ${brand}

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -1295,38 +1295,41 @@ const FinalResultWidget: React.FC<{
         <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button
+      <div className="flex items-center gap-2">
+        <button
           onClick={handleDownload}
-          variant="outline"
-          className="h-10 border-white/15 text-white/90 hover:bg-white/5"
+          className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-white/90 transition-colors"
         >
-          <Upload className="h-4 w-4 mr-2 rotate-180" />
+          <Download className="h-4 w-4" />
           Baixar
-        </Button>
-        <Button
+        </button>
+        <button
           onClick={() => setShowAdjust(s => !s)}
-          variant="outline"
-          className="h-10 border-white/15 text-white/90 hover:bg-white/5"
+          className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full border text-sm font-medium transition-colors"
+          style={{
+            backgroundColor: showAdjust ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
+            borderColor: 'rgba(139,92,246,0.3)',
+            color: '#C4B5FD',
+          }}
         >
-          <Sparkles className="h-4 w-4 mr-2" />
+          <Wand2 className="h-4 w-4" />
           Ajustar
-        </Button>
+        </button>
       </div>
 
       {showAdjust && (
-        <div className="space-y-2 rounded-xl border border-white/10 p-2.5" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        <div className="space-y-2 rounded-2xl border border-white/10 p-3" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
           <textarea
             value={adjustText}
             onChange={(e) => setAdjustText(e.target.value)}
-            placeholder="O que você quer mudar? Ex: 'troque o fundo para um escritório moderno', 'mude a cor do título para dourado', 'tire o copo de água'..."
+            placeholder="O que você quer mudar? Ex: troque o fundo, mude a cor do título..."
             className="w-full bg-transparent text-sm text-white/90 placeholder:text-white/40 outline-none resize-none min-h-[72px]"
             disabled={adjusting}
           />
           <Button
             onClick={handleAdjust}
             disabled={adjusting || !adjustText.trim()}
-            className="w-full h-9"
+            className="w-full h-9 rounded-full"
             style={{ backgroundColor: PURPLE }}
           >
             {adjusting ? (
@@ -1337,15 +1340,6 @@ const FinalResultWidget: React.FC<{
           </Button>
         </div>
       )}
-
-      <Button
-        onClick={() => onOpen(carouselId)}
-        className="w-full h-10"
-        style={{ backgroundColor: PURPLE }}
-      >
-        <Sparkles className="h-4 w-4 mr-2" />
-        Abrir post no editor
-      </Button>
     </div>
   );
 };

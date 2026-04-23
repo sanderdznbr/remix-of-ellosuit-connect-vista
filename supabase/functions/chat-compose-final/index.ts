@@ -298,6 +298,7 @@ ${brand}
 ${colors}
 ${audienceLine}
 ${toneLine}
+${artDirection}
 ${faceLine}
 ${logoLine}
 

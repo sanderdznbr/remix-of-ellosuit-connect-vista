@@ -179,7 +179,14 @@ Deno.serve(async (req) => {
     const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
     const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
     const faceLine = faceData
-      ? 'A face reference photo is attached. The exact real person from that photo MUST appear in the final composition with high facial fidelity (identity, hair, skin tone, age, expression). Never replace with a generic model. Never invent another face. Never omit the person.'
+      ? `A face reference photo is attached — USE IT ONLY FOR FACIAL IDENTITY (face shape, eyes, nose, mouth, skin tone, hair, age, ethnicity, gender). DO NOT copy the pose, framing, expression, lighting, background, clothing, crop, or camera angle from the reference. Reinvent the scene completely:
+- New POSE (different body angle, hands, head tilt — never frontal mugshot unless the concept demands it)
+- New EXPRESSION fitting the topic emotion (confident, thoughtful, laughing, in-action, looking away, etc.)
+- New CAMERA ANGLE (3/4 profile, low angle, over-the-shoulder, wide editorial, candid lifestyle…)
+- New ENVIRONMENT / BACKGROUND tied to the topic concept
+- New CLOTHING / STYLING fitting the brand and concept
+- New LIGHTING (cinematic, natural, studio, neon — whatever the concept asks)
+The reference is a face ID card, NOT a composition template. Be bold and creative with the staging while keeping the person 100% recognizable. Always leave clean negative space (top OR bottom third) for the headline text — never cover the face with text.`
       : '';
     const logoLine = logoData
       ? 'A logo asset is attached. Place it subtly and cleanly in a corner — small, balanced, never intrusive.'
@@ -199,6 +206,8 @@ CREATIVE GOAL:
 - NOT a generic stock scene, not a generic laptop-on-desk, not random office props.
 - The visual must immediately communicate the topic and value proposition.
 - Editorial, magazine-grade finish. Premium typography in PORTUGUÊS BRASILEIRO.
+- BE BOLD with composition: unexpected angles, dynamic poses, editorial staging. Never replicate the reference photo's pose/framing — reinvent the scene every time.
+- Reserve a clean text safe-area (top OR bottom third) for the headline — text must never overlap the face.
 
 ${brand}
 ${colors}

@@ -111,12 +111,6 @@ const Landing: React.FC = () => {
         <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)' }} />
 
         <div className="relative max-w-[1100px] mx-auto px-6 pt-20 md:pt-28 pb-24 md:pb-32 text-center">
-          <motion.div {...fadeUp}>
-            <div className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: 'rgba(139,92,246,0.06)' }}>
-              <Sparkles className="w-3 h-3" style={{ color: PURPLE }} />
-              <span className="text-[11px] font-medium tracking-wide" style={{ color: 'rgba(245,245,247,0.7)' }}>Conteúdo com IA, criado em minutos</span>
-            </div>
-          </motion.div>
 
           <motion.h1 {...fadeUp} transition={{ duration: 0.8, delay: 0.05 }} className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(40px, 7vw, 84px)', lineHeight: 1.02, letterSpacing: '-0.03em' }}>
             Da ideia ao conteúdo<br />

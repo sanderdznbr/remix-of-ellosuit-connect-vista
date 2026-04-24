@@ -687,12 +687,12 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     if (!generatedImage && usePremium) {
       const retryContent: any[] = [];
       // Always send face refs in retries for best fidelity
-      const activeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r));
+      const activeFaceRefs = validFaceRefs.filter((r: string) => !blockedUrls.has(r));
       if (activeFaceRefs.length > 0) {
         retryContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL OBRIGATÓRIA — reproduza este EXATO rosto:` });
         for (const ref of activeFaceRefs.slice(0, 4)) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      const activeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      const activeStyleRefs = validStyleRefs.filter((r: string) => !blockedUrls.has(r)).slice(0, 4);
       for (const ref of activeStyleRefs) retryContent.push({ type: 'image_url', image_url: { url: ref } });
       if (isVisualCloneMode) {
         retryContent.push({ type: 'text', text: `Crie um post Instagram IDÊNTICO ao estilo das ${activeStyleRefs.length} referências de estilo. Conteúdo: ${imagePrompt.slice(0, 500)}. Texto em PORTUGUÊS BRASILEIRO. Full bleed. ${formatInstruction} ${compactSafeAreaReminder}` });
@@ -711,12 +711,12 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     // Attempt 3: pro model, minimal refs
     if (!generatedImage && usePremium) {
       const textOnlyContent: any[] = [];
-      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 3);
+      const safeFaceRefs = validFaceRefs.filter((r: string) => !blockedUrls.has(r)).slice(0, 3);
       if (safeFaceRefs.length > 0) {
         textOnlyContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
         for (const ref of safeFaceRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       }
-      const safeStyleRefs = validStyleRefs.filter(r => !blockedUrls.has(r)).slice(0, 2);
+      const safeStyleRefs = validStyleRefs.filter((r: string) => !blockedUrls.has(r)).slice(0, 2);
       for (const ref of safeStyleRefs) textOnlyContent.push({ type: 'image_url', image_url: { url: ref } });
       if (stylePrompt) {
         textOnlyContent.push({ type: 'text', text: `${stylePrompt}\n\n${imagePrompt}\n\n${formatInstruction}. Texto em PORTUGUÊS BRASILEIRO. ${compactSafeAreaReminder}` });
@@ -731,7 +731,7 @@ INSTRUÇÕES PRECISAS PARA O MOCKUP:
     // Attempt 4: flash fallback
     if (!generatedImage) {
       const fallbackContent: any[] = [];
-      const safeFaceRefs = validFaceRefs.filter(r => !blockedUrls.has(r)).slice(0, 4);
+      const safeFaceRefs = validFaceRefs.filter((r: string) => !blockedUrls.has(r)).slice(0, 4);
       if (safeFaceRefs.length > 0) {
         fallbackContent.push({ type: 'text', text: `⚠️ IDENTIDADE FACIAL:` });
         for (const ref of safeFaceRefs) fallbackContent.push({ type: 'image_url', image_url: { url: ref } });
@@ -915,9 +915,9 @@ ${compactSafeAreaReminder}`,
     return new Response(JSON.stringify({ success: true, imageUrl: generatedImage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error in generate-carousel-image:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal error' }), {
+    return new Response(JSON.stringify({ error: err?.message || 'Internal error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

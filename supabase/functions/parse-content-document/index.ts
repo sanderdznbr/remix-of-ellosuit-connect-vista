@@ -135,9 +135,9 @@ Retorne o JSON no formato:
     return new Response(JSON.stringify({ posts, totalPosts: posts.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error?.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

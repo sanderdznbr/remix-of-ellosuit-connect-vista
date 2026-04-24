@@ -119,10 +119,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cancel error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Cancel failed' }),
+      JSON.stringify({ error: error?.message || 'Cancel failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

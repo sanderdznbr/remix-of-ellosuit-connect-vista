@@ -5,6 +5,7 @@
 // Persists the result to generated_carousels and returns carousel id + url.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { encodeBase64 } from 'https://deno.land/std@0.224.0/encoding/base64.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,9 +71,9 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     if (!resp.ok) return null;
     const ct = resp.headers.get('content-type') || 'image/png';
     const buf = new Uint8Array(await resp.arrayBuffer());
-    let bin = '';
-    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    return `data:${ct};base64,${btoa(bin)}`;
+    // Native base64 — orders of magnitude cheaper than the per-byte
+    // String.fromCharCode loop, which was burning CPU budget.
+    return `data:${ct};base64,${encodeBase64(buf)}`;
   } catch {
     return null;
   }
@@ -239,7 +240,7 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
       brief.hasLogo && brief.logoUrl
         ? (brief.logoUrl.startsWith('data:') ? Promise.resolve(brief.logoUrl) : urlToDataUrl(brief.logoUrl))
         : Promise.resolve(null),
-      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 4).map(urlToDataUrl) : []),
+      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2).map(urlToDataUrl) : []),
     ]);
 
     const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);

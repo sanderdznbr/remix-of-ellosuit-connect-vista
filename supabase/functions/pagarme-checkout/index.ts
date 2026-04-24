@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
             await adminClient.from('coupon_redemptions').insert({
               coupon_id: couponId, user_id: userId, company_id: companyId,
             });
-            await adminClient.rpc('increment_coupon_uses', { p_coupon_id: couponId }).catch(() => {});
+            try { await adminClient.rpc('increment_coupon_uses', { p_coupon_id: couponId }); } catch (_) {}
           }
         }
       };

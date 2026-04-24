@@ -857,8 +857,36 @@ const ChatCreator: React.FC = () => {
 
 // ============= WIDGETS =============
 
-const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: MarketplaceStyle | null) => void }> = ({ styles, onPick }) => {
+// Score how well a style matches a topic (simple keyword overlap on name + category)
+const scoreStyleForTopic = (s: MarketplaceStyle, topic: string): number => {
+  if (!topic) return 0;
+  const t = topic.toLowerCase();
+  const tokens = t.split(/[\s,.;:!?\-_/]+/).filter(w => w.length >= 3);
+  const hay = `${s.name || ''} ${s.category || ''}`.toLowerCase();
+  let score = 0;
+  for (const tok of tokens) {
+    if (hay.includes(tok)) score += 2;
+  }
+  const cat = (s.category || '').toLowerCase();
+  if (/tech|app|sistema|software|saas|ia/.test(t) && /tech|digital|moderno|minimal/.test(cat)) score += 3;
+  if (/agro|fazenda|rural|campo/.test(t) && /agro|rural/.test(cat)) score += 4;
+  if (/imóvel|imove|imobil|casa|apartamento/.test(t) && /imobil|real/.test(cat)) score += 4;
+  if (/comida|food|restaurante|gastr/.test(t) && /food|gastr/.test(cat)) score += 4;
+  if (/moda|fashion|roupa/.test(t) && /moda|fashion/.test(cat)) score += 4;
+  return score;
+};
+
+const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; topic: string; onPick: (s: MarketplaceStyle | null) => void }> = ({ styles, topic, onPick }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+
+  const sortedStyles = React.useMemo(() => {
+    if (!topic) return styles;
+    return [...styles]
+      .map(s => ({ s, score: scoreStyleForTopic(s, topic) }))
+      .sort((a, b) => b.score - a.score)
+      .map(x => x.s);
+  }, [styles, topic]);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!sliderRef.current) return;
@@ -874,7 +902,7 @@ const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: Mark
           className="ello-scroll flex gap-3 overflow-x-auto pb-2 pr-4 snap-x snap-mandatory"
           style={{ scrollPaddingLeft: 0 }}
         >
-          {styles.map((s) => {
+          {sortedStyles.map((s) => {
             const preview = s.preview_images?.[0];
             return (
               <button
@@ -902,7 +930,7 @@ const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: Mark
             );
           })}
         </div>
-        {styles.length > 2 && (
+        {sortedStyles.length > 2 && (
           <>
             <button
               onClick={() => scroll('left')}
@@ -923,7 +951,14 @@ const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: Mark
           </>
         )}
       </div>
-      <div className="flex gap-2 flex-wrap pt-1">
+      <div className="flex gap-2 flex-wrap pt-1 items-center">
+        <button
+          onClick={() => setGalleryOpen(true)}
+          className="text-xs px-3 py-1.5 rounded-full font-semibold text-white transition-colors flex items-center gap-1.5"
+          style={{ backgroundColor: 'rgba(139,92,246,0.18)', border: '1px solid rgba(139,92,246,0.35)' }}
+        >
+          <Layers className="h-3 w-3" /> Ver todos os estilos ({styles.length})
+        </button>
         <button onClick={() => onPick(null)} className="text-xs px-3 py-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/5 transition-colors border border-white/10">
           ✨ Escolha por mim
         </button>
@@ -931,9 +966,150 @@ const StyleSliderWidget: React.FC<{ styles: MarketplaceStyle[]; onPick: (s: Mark
           Pular
         </button>
       </div>
+
+      {galleryOpen && (
+        <StyleGalleryModal
+          styles={styles}
+          topic={topic}
+          onClose={() => setGalleryOpen(false)}
+          onPick={(s) => { setGalleryOpen(false); onPick(s); }}
+        />
+      )}
     </div>
   );
 };
+
+const StyleGalleryModal: React.FC<{
+  styles: MarketplaceStyle[];
+  topic: string;
+  onClose: () => void;
+  onPick: (s: MarketplaceStyle) => void;
+}> = ({ styles, topic, onClose, onPick }) => {
+  const [search, setSearch] = useState('');
+
+  const recommended = React.useMemo(() => {
+    if (!topic) return [];
+    return [...styles]
+      .map(s => ({ s, score: scoreStyleForTopic(s, topic) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map(x => x.s);
+  }, [styles, topic]);
+
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return styles;
+    return styles.filter(s =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.category || '').toLowerCase().includes(q)
+    );
+  }, [styles, search]);
+
+  const byCategory = React.useMemo(() => {
+    const map = new Map<string, MarketplaceStyle[]>();
+    for (const s of filtered) {
+      const cat = (s.category || 'Outros').trim() || 'Outros';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(s);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filtered]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const renderRow = (title: string, items: MarketplaceStyle[], badge?: string) => (
+    <div key={title} className="space-y-2">
+      <div className="flex items-center gap-2 px-1">
+        <h3 className="text-sm font-bold text-white">{title}</h3>
+        {badge && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: PURPLE }}>{badge}</span>
+        )}
+        <span className="text-xs text-white/40">· {items.length}</span>
+      </div>
+      <div className="ello-scroll flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+        {items.map(s => {
+          const preview = s.preview_images?.[0];
+          return (
+            <button
+              key={`${title}-${s.id}`}
+              onClick={() => onPick(s)}
+              className="group relative shrink-0 w-[160px] aspect-[4/5] rounded-xl overflow-hidden border border-white/10 hover:border-purple-500/60 hover:scale-[1.03] transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+            >
+              {preview ? (
+                <img src={preview} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white/30">
+                  <ImageIcon className="h-8 w-8" />
+                </div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                <p className="text-[11px] font-semibold text-white truncate">{s.name}</p>
+              </div>
+              {s.is_free && (
+                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ backgroundColor: PURPLE }}>
+                  FREE
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-6xl max-h-[90vh] rounded-2xl overflow-hidden flex flex-col"
+        style={{ backgroundColor: '#0F0F14', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/5">
+          <div>
+            <h2 className="text-lg font-bold text-white">Galeria de estilos</h2>
+            <p className="text-xs text-white/40">{styles.length} estilos disponíveis · {topic ? `recomendados para "${topic}"` : 'navegue por categoria'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar estilo..."
+              className="text-sm rounded-lg px-3 py-2 text-white placeholder-white/30 outline-none w-56"
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            />
+            <button
+              onClick={onClose}
+              className="h-9 w-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/5"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
+          {recommended.length > 0 && !search && renderRow('Recomendados pro seu tema', recommended, 'IA')}
+          {byCategory.length === 0 ? (
+            <div className="text-center py-12 text-white/40 text-sm">Nenhum estilo encontrado.</div>
+          ) : (
+            byCategory.map(([cat, items]) => renderRow(cat, items))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', cards?: number) => void }> = ({ onPick }) => {
   const [carouselCards, setCarouselCards] = useState<number | null>(null);

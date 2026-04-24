@@ -164,9 +164,8 @@ Deno.serve(async (req) => {
     // === STEP 1: Generate professional art direction (creative brief) ===
     // A senior creative director writes a detailed visual concept BEFORE the image is generated.
     // This avoids generic stock scenes and guarantees the photo is purposefully designed for the topic.
-    let artDirection = '';
-    try {
-      const directionPrompt = `Você é um diretor de arte sênior de revista editorial (estilo GQ, Vogue Business, Monocle). Um post de Instagram precisa ser criado sobre o tema:
+    // === STEP 1: Generate art direction AND fetch references in parallel ===
+    const directionPrompt = `Você é um diretor de arte sênior de revista editorial (estilo GQ, Vogue Business, Monocle). Um post de Instagram precisa ser criado sobre o tema:
 
 "${brief.topic}"
 
@@ -180,33 +179,39 @@ Crie uma DIREÇÃO DE ARTE específica e original para uma única foto editorial
 
 {
   "concept": "conceito criativo único em 1 frase — não genérico, ligado diretamente ao tema",
-  "scene": "descrição do ambiente/cenário específico (ex: 'rooftop industrial ao entardecer com luzes neon', 'estúdio minimalista com fundo concreto')",
-  "pose": "pose corporal específica e dinâmica (ex: 'caminhando de lado olhando para fora do quadro', 'sentado de perfil com cotovelo no joelho, olhar focado')",
-  "expression": "expressão facial específica (ex: 'sorriso confiante e contido', 'olhar intenso e determinado')",
-  "wardrobe": "figurino específico que combina com o tema (ex: 'blazer preto sobre camiseta branca, calça wide-leg')",
-  "cameraAngle": "ângulo e enquadramento (ex: '3/4 perfil, plano médio, leve contra-plongée')",
-  "lighting": "iluminação cinematográfica (ex: 'luz dura lateral dourada com sombra forte oposta')",
-  "moodKeywords": "3-5 palavras-chave de mood (ex: 'editorial, ousado, sofisticado, urbano')",
-  "textZone": "onde fica a área limpa para o texto (ex: 'terço superior à esquerda, fundo escuro liso')"
+  "scene": "descrição do ambiente/cenário específico",
+  "pose": "pose corporal específica e dinâmica",
+  "expression": "expressão facial específica",
+  "wardrobe": "figurino específico que combina com o tema",
+  "cameraAngle": "ângulo e enquadramento",
+  "lighting": "iluminação cinematográfica",
+  "moodKeywords": "3-5 palavras-chave de mood",
+  "textZone": "onde fica a área limpa para o texto"
 }
 
 Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa sorrindo em um escritório".`;
 
-      const dirResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
-          messages: [{ role: 'user', content: directionPrompt }],
-          response_format: { type: 'json_object' },
-        }),
-      });
-      if (dirResp.ok) {
+    const artDirectionPromise = (async (): Promise<string> => {
+      try {
+        const dirResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'google/gemini-3-flash-preview',
+            messages: [{ role: 'user', content: directionPrompt }],
+            response_format: { type: 'json_object' },
+          }),
+        });
+        if (!dirResp.ok) {
+          console.warn('Art direction call failed:', dirResp.status);
+          return '';
+        }
         const dj = await dirResp.json();
         const raw = dj?.choices?.[0]?.message?.content || '';
         try {
           const parsed = JSON.parse(raw);
-          artDirection = `🎬 DIREÇÃO DE ARTE (siga rigorosamente — esta é a visão profissional para esta foto específica):
+          console.log('🎬 Art direction generated:', parsed.concept);
+          return `🎬 DIREÇÃO DE ARTE (siga rigorosamente — esta é a visão profissional para esta foto específica):
 • CONCEITO: ${parsed.concept}
 • CENÁRIO: ${parsed.scene}
 • POSE DO PERSONAGEM: ${parsed.pose}
@@ -216,20 +221,18 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
 • ILUMINAÇÃO: ${parsed.lighting}
 • MOOD: ${parsed.moodKeywords}
 • ÁREA DE TEXTO LIVRE: ${parsed.textZone}`;
-          console.log('🎬 Art direction generated:', parsed.concept);
         } catch (e) {
           console.warn('Art direction JSON parse failed, using raw:', e);
-          artDirection = raw ? `🎬 DIREÇÃO DE ARTE:\n${raw}` : '';
+          return raw ? `🎬 DIREÇÃO DE ARTE:\n${raw}` : '';
         }
-      } else {
-        console.warn('Art direction call failed:', dirResp.status);
+      } catch (e) {
+        console.warn('Art direction step skipped:', e);
+        return '';
       }
-    } catch (e) {
-      console.warn('Art direction step skipped:', e);
-    }
+    })();
 
-    // === Resolve all reference assets in parallel ===
-    const [faceData, logoData, ...styleRefDataUrls] = await Promise.all([
+    // === Resolve all reference assets in parallel (alongside art direction) ===
+    const refsPromise = Promise.all([
       brief.hasFace && brief.faceUrl
         ? (brief.faceUrl.startsWith('data:') ? Promise.resolve(brief.faceUrl) : urlToDataUrl(brief.faceUrl))
         : Promise.resolve(null),
@@ -238,7 +241,11 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
         : Promise.resolve(null),
       ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 4).map(urlToDataUrl) : []),
     ]);
+
+    const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);
+    const [faceData, logoData, ...styleRefDataUrls] = refsResolved;
     const styleRefs = styleRefDataUrls.filter(Boolean) as string[];
+
 
     // === Build the unified prompt (single pass) ===
     const colors = brief.brandColors?.length ? `Brand palette: ${brief.brandColors.join(', ')}.` : '';
@@ -432,19 +439,35 @@ NON-NEGOTIABLE CHECKLIST:
       });
     }
 
-    const coverUrl = await uploadCover(sb, companyId, inserted.id, finalImage);
-    if (coverUrl) {
-      await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', inserted.id);
-      const updatedCards = [{ ...card, imageUrl: coverUrl }];
-      await sb.from('generated_carousels').update({
-        carousel_data: { title: brief.topic, cards: updatedCards },
-      }).eq('id', inserted.id);
+    // Offload cover upload + DB updates to the background to stay under the
+    // edge function CPU budget. The frontend already has `finalImage` to render.
+    const carouselId = inserted.id;
+    const bgWork = (async () => {
+      try {
+        const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
+        if (coverUrl) {
+          await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
+          const updatedCards = [{ ...card, imageUrl: coverUrl }];
+          await sb.from('generated_carousels').update({
+            carousel_data: { title: brief.topic, cards: updatedCards },
+          }).eq('id', carouselId);
+        }
+      } catch (err) {
+        console.error('background cover upload failed:', err);
+      }
+    })();
+
+    // @ts-ignore EdgeRuntime is provided by Supabase edge runtime
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(bgWork);
     }
 
     return new Response(
-      JSON.stringify({ carouselId: inserted.id, imageUrl: coverUrl || finalImage }),
+      JSON.stringify({ carouselId, imageUrl: finalImage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
+
   } catch (e) {
     console.error('chat-compose-final error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {

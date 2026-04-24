@@ -71,9 +71,9 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     if (!resp.ok) return null;
     const ct = resp.headers.get('content-type') || 'image/png';
     const buf = new Uint8Array(await resp.arrayBuffer());
-    let bin = '';
-    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    return `data:${ct};base64,${btoa(bin)}`;
+    // Native base64 — orders of magnitude cheaper than the per-byte
+    // String.fromCharCode loop, which was burning CPU budget.
+    return `data:${ct};base64,${encodeBase64(buf)}`;
   } catch {
     return null;
   }

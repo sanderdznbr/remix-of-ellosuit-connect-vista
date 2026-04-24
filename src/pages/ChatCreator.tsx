@@ -182,16 +182,54 @@ const ChatCreator: React.FC = () => {
     } catch {}
   }, [messages, brief, activeConvId]);
 
-  // Load recommended styles for the picker widget
+  // Load ALL available styles for the picker widget (admin sees all, users see free + purchased)
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from('marketplace_styles')
-        .select('id, name, preview_images, category, is_free')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .limit(12);
-      if (data) setStyles(data as any);
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData?.user?.id;
+
+        // adminmaster sees all
+        let isAdmin = false;
+        if (uid) {
+          const { data: adm } = await supabase.rpc('is_adminmaster', { _user_id: uid });
+          isAdmin = !!adm;
+        }
+
+        if (isAdmin || !uid) {
+          const { data } = await supabase
+            .from('marketplace_styles')
+            .select('id, name, preview_images, category, is_free')
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true });
+          if (data) setStyles(data as any);
+          return;
+        }
+
+        const [{ data: purchased }, { data: freeStyles }] = await Promise.all([
+          supabase.from('purchased_styles').select('style_id').eq('user_id', uid),
+          supabase
+            .from('marketplace_styles')
+            .select('id, name, preview_images, category, is_free')
+            .eq('is_active', true)
+            .eq('is_free', true)
+            .order('sort_order', { ascending: true }),
+        ]);
+        const purchasedIds = (purchased as any[] || []).map(p => p.style_id);
+        let allStyles = (freeStyles as any[]) || [];
+        if (purchasedIds.length) {
+          const { data: paid } = await supabase
+            .from('marketplace_styles')
+            .select('id, name, preview_images, category, is_free')
+            .in('id', purchasedIds)
+            .eq('is_active', true);
+          const existingIds = new Set(allStyles.map(s => s.id));
+          (paid || []).forEach((s: any) => { if (!existingIds.has(s.id)) allStyles.push(s); });
+        }
+        setStyles(allStyles as any);
+      } catch (err) {
+        console.error('Load styles error:', err);
+      }
     })();
   }, []);
 

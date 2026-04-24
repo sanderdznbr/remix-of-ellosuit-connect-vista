@@ -392,6 +392,17 @@ NON-NEGOTIABLE CHECKLIST:
     };
     const carouselData = { title: brief.topic, cards: [card] };
 
+    // Validate that the marketplace style actually exists before referencing it
+    let validStyleId: string | null = null;
+    if (isUuid(brief.styleId)) {
+      const { data: styleRow } = await sb
+        .from('marketplace_styles')
+        .select('id')
+        .eq('id', brief.styleId)
+        .maybeSingle();
+      if (styleRow?.id) validStyleId = styleRow.id;
+    }
+
     const { data: inserted, error: insertErr } = await sb
       .from('generated_carousels')
       .insert({
@@ -408,7 +419,7 @@ NON-NEGOTIABLE CHECKLIST:
           brandColors: brief.brandColors,
         },
         card_count: 1,
-        marketplace_style_id: isUuid(brief.styleId) ? brief.styleId : null,
+        marketplace_style_id: validStyleId,
       })
       .select('id')
       .single();

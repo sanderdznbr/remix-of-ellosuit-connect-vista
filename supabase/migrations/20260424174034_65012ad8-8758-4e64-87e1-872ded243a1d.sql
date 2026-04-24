@@ -1,0 +1,2 @@
+DELETE FROM public.ellocontent_subscriptions WHERE id='c92592d9-03be-4702-9544-d27f920b08cb';
+UPDATE public.subscriptions SET plan_type='free', status='free', monthly_price=0 WHERE company_id IN (SELECT company_id FROM public.company_users WHERE user_id='96bf847e-0ac5-41e3-8387-eddb237ba6a4');

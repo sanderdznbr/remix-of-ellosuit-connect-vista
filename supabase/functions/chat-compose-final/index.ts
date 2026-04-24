@@ -240,7 +240,7 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
       brief.hasLogo && brief.logoUrl
         ? (brief.logoUrl.startsWith('data:') ? Promise.resolve(brief.logoUrl) : urlToDataUrl(brief.logoUrl))
         : Promise.resolve(null),
-      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 4).map(urlToDataUrl) : []),
+      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2).map(urlToDataUrl) : []),
     ]);
 
     const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);

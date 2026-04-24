@@ -591,7 +591,7 @@ const ChatCreator: React.FC = () => {
 
   const renderWidget = (msg: ChatMessage) => {
     if (msg.widget === 'style_picker') {
-      return <StyleSliderWidget styles={styles} onPick={handleStylePick} />;
+      return <StyleSliderWidget styles={styles} topic={brief.topic || ''} onPick={handleStylePick} />;
     }
     if (msg.widget === 'content_type_picker') {
       return <ContentTypePickerWidget onPick={handleContentTypePick} />;

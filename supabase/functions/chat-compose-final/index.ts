@@ -432,19 +432,35 @@ NON-NEGOTIABLE CHECKLIST:
       });
     }
 
-    const coverUrl = await uploadCover(sb, companyId, inserted.id, finalImage);
-    if (coverUrl) {
-      await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', inserted.id);
-      const updatedCards = [{ ...card, imageUrl: coverUrl }];
-      await sb.from('generated_carousels').update({
-        carousel_data: { title: brief.topic, cards: updatedCards },
-      }).eq('id', inserted.id);
+    // Offload cover upload + DB updates to the background to stay under the
+    // edge function CPU budget. The frontend already has `finalImage` to render.
+    const carouselId = inserted.id;
+    const bgWork = (async () => {
+      try {
+        const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
+        if (coverUrl) {
+          await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
+          const updatedCards = [{ ...card, imageUrl: coverUrl }];
+          await sb.from('generated_carousels').update({
+            carousel_data: { title: brief.topic, cards: updatedCards },
+          }).eq('id', carouselId);
+        }
+      } catch (err) {
+        console.error('background cover upload failed:', err);
+      }
+    })();
+
+    // @ts-ignore EdgeRuntime is provided by Supabase edge runtime
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(bgWork);
     }
 
     return new Response(
-      JSON.stringify({ carouselId: inserted.id, imageUrl: coverUrl || finalImage }),
+      JSON.stringify({ carouselId, imageUrl: finalImage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
+
   } catch (e) {
     console.error('chat-compose-final error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {

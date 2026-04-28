@@ -28,6 +28,7 @@ interface BriefState {
   audience?: string;
   tone?: string;
   ready?: boolean;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
 interface SanitizedBriefState extends BriefState {

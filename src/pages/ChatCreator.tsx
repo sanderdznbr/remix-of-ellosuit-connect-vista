@@ -276,8 +276,8 @@ const ChatCreator: React.FC = () => {
       if (data?.error && data?.fallback) {
         const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.error];
         const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
-        setLoading(false);
         await appendAIMessages(texts, widget);
+        setLoading(false);
         return;
       }
 
@@ -302,7 +302,9 @@ const ChatCreator: React.FC = () => {
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
       const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
 
-      setLoading(false);
+      // We keep loading=true until all messages are appended to avoid the UI "flickering" 
+      // or looking idle while the assistant is still "typing" its messages.
+
 
       // If model says ready but didn't show the confirm widget, force-show it
       // so the user always has explicit control over when generation starts.
@@ -311,8 +313,7 @@ const ChatCreator: React.FC = () => {
         : widget;
 
       await appendAIMessages(texts, finalWidget);
-      // NOTE: never auto-trigger generation. The user must click "Gerar agora"
-      // in the ConfirmWidget. This prevents accidental skips after uploads.
+      setLoading(false);
     } catch (err: any) {
       console.error('chat-creator error:', err);
       toast.error(err?.message || 'Erro ao conversar com a IA');
@@ -868,7 +869,11 @@ const ChatCreator: React.FC = () => {
                   {[0, 1, 2].map(i => (
                     <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" style={{ animation: `bounce 1.4s ${i * 0.15}s infinite ease-in-out` }} />
                   ))}
-                  {generating && <span className="text-xs text-white/50 ml-2">Abrindo o estúdio...</span>}
+                  {generating ? (
+                    <span className="text-xs text-white/50 ml-2">Abrindo o estúdio...</span>
+                  ) : (
+                    <span className="text-xs text-white/50 ml-2">A Ello está pensando...</span>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -1872,24 +1872,27 @@ const ConfirmWidget: React.FC<{
   const [searchResults, setSearchResults] = useState<Record<number, string[]>>({});
   const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
 
-  const handleSearchImages = async () => {
+  const handleSearchImages = async (cardIdx?: number) => {
     if (!brief.suggested_content || searching) return;
     setSearching(true);
     try {
-      const queries = brief.suggested_content.map((card, i) => ({
-        index: i,
-        query: `${card.title || brief.topic} photo photography`
-      }));
+      const cardsToSearch = typeof cardIdx === 'number' 
+        ? [{ index: cardIdx, query: customQueries[cardIdx] || `${brief.suggested_content[cardIdx].title || brief.topic} photo photography` }]
+        : brief.suggested_content.map((card, i) => ({
+            index: i,
+            query: customQueries[i] || `${card.title || brief.topic} photo photography`
+          }));
 
       const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { per_card_queries: queries }
+        body: { per_card_queries: cardsToSearch }
       });
 
       if (error) throw error;
       if (data?.card_images) {
-        setSearchResults(data.card_images);
-        toast.success("Fotos reais encontradas!");
+        setSearchResults(prev => ({ ...prev, ...data.card_images }));
+        toast.success(typeof cardIdx === 'number' ? `Fotos para o card ${cardIdx + 1} atualizadas!` : "Fotos reais encontradas!");
       }
     } catch (err) {
       console.error('Image search error:', err);

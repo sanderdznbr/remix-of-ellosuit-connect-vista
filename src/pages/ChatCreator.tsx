@@ -1882,13 +1882,17 @@ const ConfirmWidget: React.FC<{
   const [searchResults, setSearchResults] = useState<Record<number, string[]>>({});
   const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
-  const [customQueries, setCustomQueries] = useState<Record<number, string>>(() => {
-    const initial: Record<number, string> = {};
-    brief.suggested_content?.forEach((card, i) => {
-      if (card.searchTerm) initial[i] = card.searchTerm;
-    });
-    return initial;
-  });
+  const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (brief.suggested_content) {
+      const initial: Record<number, string> = {};
+      brief.suggested_content.forEach((card, i) => {
+        if (card.searchTerm) initial[i] = card.searchTerm;
+      });
+      setCustomQueries(initial);
+    }
+  }, [brief.suggested_content]);
 
   useEffect(() => {
     if (brief.imageSource === "real" && brief.suggested_content && Object.keys(searchResults).length === 0 && !searching) {

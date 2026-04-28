@@ -630,7 +630,11 @@ const ChatCreator: React.FC = () => {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
     }
     if (msg.widget === 'generating_post') {
-      return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;
+      return <GeneratingWidget 
+        phase={msg.widgetData?.phase || 'compose'} 
+        current={msg.widgetData?.current} 
+        total={msg.widgetData?.total} 
+      />;
     }
     if (msg.widget === 'final_result') {
       return <FinalResultWidget

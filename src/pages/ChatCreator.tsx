@@ -709,7 +709,7 @@ const ChatCreator: React.FC = () => {
       return <ImageModelPickerWidget onPick={(model) => {
         const nextBrief = { ...brief, imageModel: model };
         setBrief(nextBrief);
-        sendMessage(model === 'ello-image-1' ? 'Prefiro a Ello image 1' : 'Prefiro a chat-gpt-2', nextBrief);
+        sendMessage(model === 'ello-pro' ? 'Prefiro a ellocontent pro' : 'Prefiro a ellocontent fast', nextBrief);
       }} />;
     }
     if (msg.widget === 'confirm_generate') {

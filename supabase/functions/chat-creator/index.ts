@@ -164,6 +164,7 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 - "format_picker" → escolher proporção.
 - "style_picker" → mostrar estilos do marketplace.
 - "personalization" → escolher rostos/logos/cores.
+- "image_source_picker" → escolher entre Ilustrações (IA) ou Post Real (Fotos).
 - "approve_content" → Sugestão de texto para a arte. O brief_update deve conter o campo 'suggested_content'.
 - "confirm_generate" → resumo final + botão gerar.
 - "image_model_picker" → escolher entre ellocontent pro e ellocontent fast.
@@ -173,7 +174,7 @@ A Ello tem livre acesso ao Brave Search para pesquisar imagens reais e contextua
 
 VOCÊ DEVE SEMPRE chamar a tool "respond" com:
 - messages: array de 1 a 3 strings curtas (cada uma vira uma bolha de chat)
-- widget: "content_type_picker" | "format_picker" | "style_picker" | "personalization" | "approve_content" | "confirm_generate" | "image_model_picker" | "none"
+- widget: "content_type_picker" | "format_picker" | "style_picker" | "personalization" | "image_source_picker" | "approve_content" | "confirm_generate" | "image_model_picker" | "none"
 - brief_update: objeto parcial atualizando o estado coletado
 - ready: true APENAS após o usuário confirmar no widget "confirm_generate"
 

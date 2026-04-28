@@ -129,6 +129,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   tone: sanitizeTextForAI(source.tone, 120),
   faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
   logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
+  suggested_content: source.suggested_content,
 });
 
 const ChatCreator: React.FC = () => {

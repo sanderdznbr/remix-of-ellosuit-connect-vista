@@ -1891,13 +1891,22 @@ const ConfirmWidget: React.FC<{
             query: customQueries[i] || `${card.title || brief.topic} photo photography`
           }));
 
-      const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { per_card_queries: cardsToSearch }
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'web-search', query: cardsToSearch.map(c => c.query).join(' ') }
       });
 
       if (error) throw error;
-      if (data?.card_images) {
-        setSearchResults(prev => ({ ...prev, ...data.card_images }));
+      if (data?.images) {
+        const images = data.images.map((img: any) => img.url);
+        const nextResults: Record<number, string[]> = {};
+        if (typeof cardIdx === 'number') {
+          nextResults[cardIdx] = images;
+        } else {
+          brief.suggested_content?.forEach((_, i) => {
+            nextResults[i] = images;
+          });
+        }
+        setSearchResults(prev => ({ ...prev, ...nextResults }));
         toast.success(typeof cardIdx === 'number' ? `Fotos para o card ${cardIdx + 1} atualizadas!` : "Fotos reais encontradas!");
       }
     } catch (err) {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';

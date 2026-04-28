@@ -311,10 +311,9 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         attempts++;
         try {
           // Both options use Lovable AI Gateway image models with full prompt fidelity, aspect ratio
-          // and multi-image reference support. "chat-gpt-2" maps to the latest Nano Banana 2 (pro tier)
-          // — equivalent quality and capabilities to Gemini 3 Pro, just an alternate visual personality.
-          const isGpt2 = brief.imageModel === 'chat-gpt-2';
-          const aiModel = isGpt2 ? 'google/gemini-3.1-flash-image-preview' : 'google/gemini-3-pro-image-preview';
+          // and multi-image reference support.
+          const isFast = brief.imageModel === 'ello-fast';
+          const aiModel = isFast ? 'google/gemini-3.1-flash-image-preview' : 'google/gemini-3-pro-image-preview';
           
           const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',

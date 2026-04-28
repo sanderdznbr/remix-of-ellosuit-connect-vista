@@ -1950,42 +1950,64 @@ const ConfirmWidget: React.FC<{
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={handleSearchImages} 
+              onClick={() => handleSearchImages()} 
               disabled={searching}
               className="h-7 text-[10px] text-violet-400 hover:text-violet-300 hover:bg-violet-400/10 gap-1.5"
             >
               {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              {Object.keys(searchResults).length > 0 ? 'Atualizar fotos' : 'Buscar fotos sugeridas'}
+              {Object.keys(searchResults).length > 0 ? 'Atualizar todas' : 'Buscar todas'}
             </Button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {(brief.suggested_content || [{}]).map((card, i) => {
               const options = searchResults[i] || [];
               const selected = selectedImages[i];
               return (
-                <div key={i} className="space-y-2">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-bold text-white/40 uppercase">Card {i + 1}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleUploadClick(i)}
-                      className="h-6 text-[9px] text-white/60 hover:text-white gap-1"
+                <div key={i} className="space-y-3 bg-white/[0.02] border border-white/5 rounded-xl p-3 transition-all hover:border-white/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Card {i + 1}</span>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleUploadClick(i)}
+                        className="h-6 text-[9px] text-white/60 hover:text-white gap-1 hover:bg-white/5"
+                      >
+                        <Upload className="h-2.5 w-2.5" />
+                        Upload
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input 
+                      type="text"
+                      placeholder="Termo de busca (ex: carro luxo foto)"
+                      value={customQueries[i] || ''}
+                      onChange={(e) => setCustomQueries(prev => ({ ...prev, [i]: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearchImages(i)}
+                      className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-white focus:outline-none focus:border-violet-500/50 transition-all"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSearchImages(i)}
+                      disabled={searching}
+                      className="h-8 w-8 shrink-0 bg-violet-600/20 text-violet-400 hover:bg-violet-600 hover:text-white rounded-lg p-0"
                     >
-                      <Upload className="h-2.5 w-2.5" />
-                      Mandar minha foto
+                      {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                   
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                     {selected && !options.includes(selected) && (
                       <div 
-                        className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/20"
+                        className="relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/20"
                       >
                         <img src={selected} className="h-full w-full object-cover" />
-                        <div className="absolute top-0.5 right-0.5 bg-violet-500 rounded-full p-0.5">
-                          <Check className="h-2 w-2 text-white" />
+                        <div className="absolute top-1 right-1 bg-violet-500 rounded-full p-0.5">
+                          <Check className="h-2.5 w-2.5 text-white" />
                         </div>
                       </div>
                     )}
@@ -1993,19 +2015,19 @@ const ConfirmWidget: React.FC<{
                       <button
                         key={optIdx}
                         onClick={() => handleSelectImage(i, url)}
-                        className={`relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${selected === url ? 'border-violet-500 scale-105' : 'border-white/10 opacity-60 hover:opacity-100'}`}
+                        className={`relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${selected === url ? 'border-violet-500 scale-105' : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/20'}`}
                       >
                         <img src={url} className="h-full w-full object-cover" />
                         {selected === url && (
-                          <div className="absolute top-0.5 right-0.5 bg-violet-500 rounded-full p-0.5">
-                            <Check className="h-2 w-2 text-white" />
+                          <div className="absolute top-1 right-1 bg-violet-500 rounded-full p-0.5">
+                            <Check className="h-2.5 w-2.5 text-white" />
                           </div>
                         )}
                       </button>
                     ))}
                     {options.length === 0 && !selected && (
-                      <div className="h-16 flex-1 bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center">
-                        <span className="text-[9px] text-white/20 italic">Aguardando busca ou upload...</span>
+                      <div className="h-20 flex-1 bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center">
+                        <span className="text-[10px] text-white/20 italic">Digite um termo e clique na lupa</span>
                       </div>
                     )}
                   </div>

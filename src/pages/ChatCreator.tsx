@@ -1496,6 +1496,7 @@ const ConfirmWidget: React.FC<{ brief: BriefState; onConfirm: () => void }> = ({
         {brief.styleName && <Row label="Estilo" value={brief.styleName} />}
         {brief.format && <Row label="Formato" value={brief.format === 'portrait' ? 'Retrato 4:5' : brief.format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'} />}
         {brief.contentType && <Row label="Tipo" value={brief.contentType === 'carousel' ? `Carrossel${brief.cardCount ? ` (${brief.cardCount} slides)` : ''}` : 'Post único'} />}
+        {brief.suggested_content && <Row label="Texto" value="Aprovado ✓" />}
       </div>
       <Button onClick={onConfirm} className="w-full h-10" style={{ backgroundColor: PURPLE }}>
         <Sparkles className="h-4 w-4 mr-2" />

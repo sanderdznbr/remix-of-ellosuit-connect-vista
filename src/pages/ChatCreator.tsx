@@ -53,7 +53,7 @@ interface BriefState {
   imageModel?: 'ello-pro' | 'ello-fast';
   imageSource?: 'ai' | 'real';
   selectedImages?: string[];
-  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
 }
 
 interface ChatGenerationPrefill {

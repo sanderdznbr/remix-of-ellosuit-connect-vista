@@ -123,7 +123,7 @@ function selectStylePreviewUrls(
     classifications[url] === cardKind
   );
   const fallback = previews.filter((url: string) => !matching.includes(url));
-  return [...matching, ...fallback].slice(0, 4);
+  return [...matching, ...fallback].slice(0, 2);
 }
 
 async function urlToDataUrl(url: string): Promise<string | null> {

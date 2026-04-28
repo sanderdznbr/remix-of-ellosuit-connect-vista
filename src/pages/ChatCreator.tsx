@@ -360,7 +360,8 @@ const ChatCreator: React.FC = () => {
       setMessages([{
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Oi! Eu sou a Ello 👋',
+        content: 'Oi! 👋',
+
         timestamp: Date.now(),
       }, {
         id: crypto.randomUUID(),
@@ -378,7 +379,7 @@ const ChatCreator: React.FC = () => {
     setMessages([{
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: 'Oi! Eu sou a Ello 👋',
+      content: 'Oi! 👋',
       timestamp: Date.now(),
     }, {
       id: crypto.randomUUID(),
@@ -933,7 +934,7 @@ const ChatCreator: React.FC = () => {
                     sendMessage(input);
                   }
                 }}
-                placeholder={generating ? 'Gerando seu post...' : recording ? 'Gravando áudio...' : 'Responda à Ello...'}
+                placeholder={generating ? 'Gerando seu post...' : recording ? 'Gravando áudio...' : 'Responda aqui...'}
                 disabled={loading || generating}
                 rows={1}
                 className="flex-1 bg-transparent outline-none resize-none text-[15px] text-white placeholder:text-white/30 max-h-32 py-1.5 px-1"

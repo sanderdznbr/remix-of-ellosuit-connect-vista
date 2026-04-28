@@ -329,7 +329,11 @@ Think of it like a film director casting a real actor: you have the actor's face
       styleRefs.length ? 'Style reference images are attached AFTER the face/logo. Match their visual DNA closely: photo treatment, color contrast, crop language, typography attitude, editorial finish, pacing.' : '',
     ].filter(Boolean).join('\n');
 
-    const unifiedPrompt = `Create a finished, premium Instagram ${brief.contentType === 'carousel' ? 'carousel cover' : 'single post'} about: "${brief.topic}".
+    const unifiedPromptTemplate = (cardIndex: number) => {
+      const isCover = cardIndex === 0;
+      const cardText = brief.suggested_content?.[cardIndex];
+      
+      return `Create a finished, premium Instagram ${isCover ? (brief.contentType === 'carousel' ? 'carousel cover' : 'single post') : `slide #${cardIndex + 1}`} about: "${brief.topic}".
 
 CREATIVE GOAL:
 - ONE original, specific campaign concept tied directly to this topic.
@@ -354,12 +358,11 @@ ${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
 
 TYPOGRAPHY (MANDATORY TEXT CONTENT):
 - Language: PORTUGUÊS BRASILEIRO with perfect spelling.
-${brief.suggested_content && brief.suggested_content.length > 0 ? `
-- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO:
-  ${brief.suggested_content.map((c, i) => `[Card ${i + 1}]
-  Título: ${c.title || ''}
-  Subtítulo: ${c.subtitle || ''}
-  Corpo: ${c.body || ''}`).join('\n')}
+${cardText ? `
+- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO PARA ESTE CARD ESPECÍFICO:
+  Título: ${cardText.title || ''}
+  Subtítulo: ${cardText.subtitle || ''}
+  Corpo: ${cardText.body || ''}
 ` : `
 - Headline / hook: short, powerful, max 7 words.
 - Optional supporting line: max 12 words.
@@ -379,6 +382,7 @@ NON-NEGOTIABLE CHECKLIST:
 4. Must include the brand logo subtly (if attached).
 5. Must use the brand palette (if provided).
 6. All text must be legible and in correct Portuguese.`;
+    };
 
     // === Build multimodal payload ===
     const content: any[] = [{ type: 'text', text: unifiedPrompt }];

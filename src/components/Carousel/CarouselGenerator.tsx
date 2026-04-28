@@ -2772,9 +2772,9 @@ The image must look like it was shot by a professional photographer or designed 
     // Restore post format from DB column or generation_config
     const savedFormat = item.post_format || item.generation_config?.postFormat;
     if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);
-    // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
-    const isChatGenerated = item.id === 'ba6547fc-22d3-49d4-99f2-0c17e2f79038' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards.every((c: any) => !!c.imageUrl && !c.title && !c.body && !c.bodyTop && !c.subtitle && !c.bodyBottom));
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || isChatGenerated;
+    // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or editorial nature of AI generation
+    const isAiSeries = item.style_config?.source === 'chat-creator' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards.every((c: any) => c.isAiImage && !c.title && !c.body && !c.bodyTop && !c.subtitle && !c.bodyBottom));
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || isAiSeries;
     setIsLoadedFullBleed(hasMarketplaceStyle);
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
     if (item.style_config) {

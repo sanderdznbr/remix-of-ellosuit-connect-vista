@@ -2773,8 +2773,10 @@ The image must look like it was shot by a professional photographer or designed 
     const savedFormat = item.post_format || item.generation_config?.postFormat;
     if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);
     // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or editorial nature of AI generation
+    // ONLY the "CONTENT" style allows canvas/overlay text; all others are full-bleed with NO overlay text.
     const isAiSeries = item.style_config?.source === 'chat-creator' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards.every((c: any) => c.isAiImage && !c.title && !c.body && !c.bodyTop && !c.subtitle && !c.bodyBottom));
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || isAiSeries;
+    const isManualContentStyle = item.style_config?.activePresetId === 'content' || item.style_config?.styleName?.toLowerCase() === 'content';
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || (isAiSeries && !isManualContentStyle);
     setIsLoadedFullBleed(hasMarketplaceStyle);
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
     if (item.style_config) {

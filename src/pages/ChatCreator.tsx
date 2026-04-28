@@ -869,7 +869,11 @@ const ChatCreator: React.FC = () => {
                   {[0, 1, 2].map(i => (
                     <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" style={{ animation: `bounce 1.4s ${i * 0.15}s infinite ease-in-out` }} />
                   ))}
-                  {generating && <span className="text-xs text-white/50 ml-2">Abrindo o estúdio...</span>}
+                  {generating ? (
+                    <span className="text-xs text-white/50 ml-2">Abrindo o estúdio...</span>
+                  ) : (
+                    <span className="text-xs text-white/50 ml-2">A Ello está pensando...</span>
+                  )}
                 </div>
               </motion.div>
             )}

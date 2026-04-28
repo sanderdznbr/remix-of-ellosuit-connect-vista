@@ -30,6 +30,7 @@ interface BriefState {
   ready?: boolean;
   imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  userIdea?: string;
 }
 
 interface SanitizedBriefState extends BriefState {

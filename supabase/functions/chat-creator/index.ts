@@ -28,7 +28,7 @@ interface BriefState {
   audience?: string;
   tone?: string;
   ready?: boolean;
-  imageModel?: 'ello-image-1' | 'chat-gpt-2';
+  imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
@@ -136,11 +136,11 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 
 
 
-  9. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
-    - OBRIGATÓRIO: Apresente as opções "Ello image 1" (padrão) e "chat-gpt-2".
-    - Explique que a "Ello image 1" é nossa recomendação.
+   9. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
+    - OBRIGATÓRIO: Apresente as opções "ellocontent pro. (gemini 3 pro)" (padrão) e "ellocontent fast. (gemini fast)".
+    - Explique que a "ellocontent pro" é nossa recomendação.
     - MANDATÓRIO: Use o widget "image_model_picker" para esta etapa.
-    - O campo 'imageModel' no 'brief_update' deve ser preenchido com 'ello-image-1' ou 'chat-gpt-2'.
+    - O campo 'imageModel' no 'brief_update' deve ser preenchido com 'ello-pro' ou 'ello-fast'.
 
  10. Quando o usuário aprovar o texto e o modelo de imagem, mostre o resumo e peça confirmação final (widget "confirm_generate") com ready=true.
 
@@ -158,7 +158,7 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 - "personalization" → escolher rostos/logos/cores.
 - "approve_content" → Sugestão de texto para a arte. O brief_update deve conter o campo 'suggested_content'.
 - "confirm_generate" → resumo final + botão gerar.
-- "image_model_picker" → escolher entre Ello image 1 e chat-gpt-2.
+- "image_model_picker" → escolher entre ellocontent pro e ellocontent fast.
 - "none" → sem widget (só mensagem)
 
 A Ello tem livre acesso ao Brave Search para pesquisar imagens reais e contextuais sobre o assunto e usá-las como referência para a IA gerar as artes.
@@ -207,7 +207,7 @@ function buildTool() {
               brandName: { type: 'string' },
               audience: { type: 'string' },
               tone: { type: 'string' },
-              imageModel: { type: 'string', enum: ['ello-image-1', 'chat-gpt-2'] },
+              imageModel: { type: 'string', enum: ['ello-pro', 'ello-fast'] },
               suggested_content: { 
                 type: 'array', 
                 items: { 

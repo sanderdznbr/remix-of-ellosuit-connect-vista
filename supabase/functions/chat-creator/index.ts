@@ -203,6 +203,7 @@ function buildTool() {
               brandName: { type: 'string' },
               audience: { type: 'string' },
               tone: { type: 'string' },
+              imageModel: { type: 'string', enum: ['ello-image-1', 'chat-gpt-2'] },
               suggested_content: { 
                 type: 'array', 
                 items: { 

@@ -2773,7 +2773,7 @@ The image must look like it was shot by a professional photographer or designed 
     const savedFormat = item.post_format || item.generation_config?.postFormat;
     if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);
     // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
-    const isChatGenerated = item.id === 'ba6547fc-22d3-49d4-99f2-0c17e2f79038' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards[0].imageUrl && !item.carousel_data.cards[0].title);
+    const isChatGenerated = item.id === 'ba6547fc-22d3-49d4-99f2-0c17e2f79038' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards.every((c: any) => c.imageUrl && !c.title && !c.body));
     const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || isChatGenerated;
     setIsLoadedFullBleed(hasMarketplaceStyle);
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);

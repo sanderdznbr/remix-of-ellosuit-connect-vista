@@ -1351,7 +1351,7 @@ const ApproveContentWidget: React.FC<{
     }
   }, [content]);
 
-  const updateField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string) => {
+  const updateField = (idx: number, field: 'title' | 'subtitle' | 'body' | 'searchTerm', value: string) => {
     const next = draft.map((c, i) => i === idx ? { ...c, [field]: value } : c);
     setDraft(next);
     onChange(next);

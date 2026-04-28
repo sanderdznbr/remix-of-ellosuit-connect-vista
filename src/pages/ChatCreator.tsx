@@ -588,7 +588,16 @@ const ChatCreator: React.FC = () => {
       return (
         <ApproveContentWidget 
           content={brief.suggested_content || []} 
-          onApprove={() => sendMessage("Amei o texto! Pode seguir.")}
+          onChange={(updated) => setBrief(prev => ({ ...prev, suggested_content: updated }))}
+          onApprove={(finalContent) => {
+            const updatedBrief = { ...brief, suggested_content: finalContent };
+            setBrief(updatedBrief);
+            sendMessage("Amei o texto! Pode seguir com esse exato conteúdo.", updatedBrief);
+          }}
+          onRequestNew={() => {
+            const tone = brief.tone ? ` mantendo o tom ${brief.tone}` : '';
+            sendMessage(`Quero uma nova sugestão de texto${tone}, preservando o mesmo formato, tipo e estilo já definidos. Reescreva do zero com outra abordagem criativa.`);
+          }}
           onEdit={() => {
             inputRef.current?.focus();
             toast.info("Digite as alterações que você deseja.");

@@ -1213,6 +1213,63 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 };
 
 // Personalization with inline upload
+const ApproveContentWidget: React.FC<{ 
+  content: Array<{ title?: string; subtitle?: string; body?: string }>; 
+  onApprove: () => void;
+  onEdit: () => void;
+}> = ({ content, onApprove, onEdit }) => {
+  return (
+    <div className="space-y-3 w-full max-w-md">
+      <div className="grid gap-3">
+        {content.map((item, idx) => (
+          <div 
+            key={idx} 
+            className="p-4 rounded-xl border border-white/10 space-y-2 bg-white/5"
+          >
+            {content.length > 1 && (
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-1">
+                Slide {idx + 1}
+              </div>
+            )}
+            {item.title && (
+              <div className="text-sm font-bold text-white leading-tight">
+                {item.title}
+              </div>
+            )}
+            {item.subtitle && (
+              <div className="text-xs text-white/60 font-medium">
+                {item.subtitle}
+              </div>
+            )}
+            {item.body && (
+              <div className="text-[13px] text-white/80 leading-relaxed italic">
+                "{item.body}"
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Button 
+          onClick={onApprove}
+          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-10 gap-2"
+        >
+          <Check className="h-4 w-4" />
+          Aprovar texto
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={onEdit}
+          className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2"
+        >
+          <Wand2 className="h-4 w-4" />
+          Mudar algo
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);

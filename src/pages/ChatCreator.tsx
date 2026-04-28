@@ -313,8 +313,7 @@ const ChatCreator: React.FC = () => {
         : widget;
 
       await appendAIMessages(texts, finalWidget);
-      // NOTE: never auto-trigger generation. The user must click "Gerar agora"
-      // in the ConfirmWidget. This prevents accidental skips after uploads.
+      setLoading(false);
     } catch (err: any) {
       console.error('chat-creator error:', err);
       toast.error(err?.message || 'Erro ao conversar com a IA');

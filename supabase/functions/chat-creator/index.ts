@@ -28,6 +28,7 @@ interface BriefState {
   audience?: string;
   tone?: string;
   ready?: boolean;
+  imageModel?: 'ello-image-1' | 'chat-gpt-2';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 

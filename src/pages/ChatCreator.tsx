@@ -1686,6 +1686,29 @@ const FinalResultWidget: React.FC<{
   const [adjustText, setAdjustText] = React.useState('');
   const [adjusting, setAdjusting] = React.useState(false);
 
+  useEffect(() => {
+    if (isCarousel && carouselId) {
+      const fetchSlides = async () => {
+        setLoadingSlides(true);
+        try {
+          const { data, error } = await supabase
+            .from('carousel_slides')
+            .select('image_url')
+            .eq('carousel_id', carouselId)
+            .order('slide_index', { ascending: true });
+          
+          if (error) throw error;
+          if (data) setSlides(data);
+        } catch (err) {
+          console.error('Error fetching slides:', err);
+        } finally {
+          setLoadingSlides(false);
+        }
+      };
+      fetchSlides();
+    }
+  }, [isCarousel, carouselId]);
+
   if (!carouselId || !imageUrl) return null;
 
   const handleDownload = async () => {

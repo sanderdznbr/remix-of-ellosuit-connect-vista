@@ -146,11 +146,11 @@ async function uploadCover(
   sb: any,
   companyId: string,
   carouselId: string,
-  dataUrl: string,
+  url: string,
 ): Promise<string | null> {
-  if (!dataUrl || !dataUrl.startsWith("data:")) return null;
+  if (!url) return null;
   try {
-    const resp = await fetch(dataUrl);
+    const resp = await fetch(url);
     const blob = await resp.blob();
     const path = `${companyId}/${carouselId}/cover.jpg`;
     const { error } = await sb.storage.from("covers").upload(

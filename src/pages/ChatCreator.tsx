@@ -531,31 +531,9 @@ const ChatCreator: React.FC = () => {
     const nextBrief = { ...brief, contentType, cardCount: cards };
     setBrief(nextBrief);
 
-    // Carrosséis exigem o fluxo completo do Estúdio (wizard avançado).
-    // O chat-compose-final só gera 1 card, então redirecionamos para o wizard
-    // levando o tópico já capturado pelo chat.
-    if (contentType === 'carousel') {
-      try {
-        localStorage.setItem(CHAT_PREFILL_STORAGE_KEY, JSON.stringify({
-          topic: nextBrief.topic || '',
-          cardCount: cards || 5,
-          styleId: nextBrief.styleId || null,
-          styleName: nextBrief.styleName || null,
-          format: nextBrief.format || 'portrait',
-          contentType: 'carousel',
-          ts: Date.now(),
-        }));
-      } catch {}
-      toast.info('Carrosséis são gerados no Estúdio. Te levando pra lá com o tema preenchido…');
-      const params = new URLSearchParams();
-      if (nextBrief.topic) params.set('topic', nextBrief.topic);
-      params.set('cards', String(cards || 5));
-      params.set('mode', 'carousel');
-      setTimeout(() => navigate(`/?${params.toString()}`), 600);
-      return;
-    }
-
-    const label = 'Quero um post único';
+    const label = contentType === 'carousel' ? `Quero um carrossel com ${cards || 5} slides` : 'Quero um post único';
+    sendMessage(label, nextBrief);
+  };
     sendMessage(label, nextBrief);
   };
 

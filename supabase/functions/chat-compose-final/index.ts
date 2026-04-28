@@ -27,8 +27,10 @@ interface Brief {
   brandColors?: string[];
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasPrints?: boolean;
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  printUrl?: string | string[];
   audience?: string;
   tone?: string;
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;

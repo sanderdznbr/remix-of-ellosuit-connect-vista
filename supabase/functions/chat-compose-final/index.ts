@@ -264,9 +264,20 @@ The final card must look like a designed template from the selected marketplace 
       const isCover = idx === 0;
       const cardText = brief.suggested_content?.[idx];
       const totalCards = brief.cardCount || brief.suggested_content?.length || 1;
+      const cardKind = inferCardKind(cardText, idx);
       return `Create a premium Instagram ${isCover ? 'cover (card 1)' : `content card #${idx + 1} of ${totalCards}`} about "${brief.topic}".
 Editorial magazine grade. PORTUGUÊS BRASILEIRO.
 BE CREATIVE AND VARIED: Use diverse visual metaphors, different angles, and distinct compositions for each card to avoid repetition.
+CARD KIND: ${cardKind.toUpperCase()} — ${cardKind === 'text'
+        ? 'use a typography-led layout. Text, hierarchy, grid, contrast, and decorative elements are the main design; imagery must be secondary/supporting.'
+        : 'use a strong visual/editorial hero composition, but still copy the selected style template system.'}
+
+
+🚨 STYLE FIDELITY — NON-NEGOTIABLE:
+- The selected marketplace style is the template. Do NOT generate a generic editorial post.
+- Copy the style references' composition system: title placement, line breaks, font personality, scale contrast, spacing, grids, decorative shapes, color treatment, texture, photo masking/cropping, and visual rhythm.
+- Real/web photos are only subject matter. They must be transformed into the style, not used as the style.
+- Avoid centered default title + subtitle over a photo unless that exact pattern exists in the attached style references.
 
 
 🚫 ABSOLUTE NO BORDERS / NO FRAMES / NO MARGINS / NO CANVAS TEXT:

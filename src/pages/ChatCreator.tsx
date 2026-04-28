@@ -1237,8 +1237,14 @@ const ApproveContentWidget: React.FC<{
 }> = ({ content, onApprove, onEdit, onChange, onRequestNew }) => {
   const [draft, setDraft] = useState(content);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  useEffect(() => { setDraft(content); }, [content]);
+  useEffect(() => { 
+    setDraft(content); 
+    if (content.length > 0 && currentSlide >= content.length) {
+      setCurrentSlide(0);
+    }
+  }, [content]);
 
   const updateField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string) => {
     const next = draft.map((c, i) => i === idx ? { ...c, [field]: value } : c);
@@ -1277,7 +1283,7 @@ const ApproveContentWidget: React.FC<{
             className={`w-full bg-black/30 border rounded-lg px-2 py-1.5 outline-none resize-none ${styles[field]} ${over ? 'border-red-500/60' : 'border-white/15 focus:border-violet-500/60'}`}
           />
         ) : (
-          value ? (field === 'body' ? <div className={styles[field]}>"{value}"</div> : <div className={styles[field]}>{value}</div>) : null
+          value ? (field === 'body' ? <div className={styles[field]}>"{value}"</div> : <div className={styles[field]}>{value}</div>) : <div className="text-white/20 text-xs italic">Sem {limit.label.toLowerCase()}</div>
         )}
         {(isEditing || over) && (value || isEditing) && (
           <div className={`text-[10px] ${over ? 'text-red-400' : 'text-white/40'}`}>
@@ -1288,44 +1294,81 @@ const ApproveContentWidget: React.FC<{
     );
   };
 
+  if (draft.length === 0) return null;
+
+  const activeItem = draft[currentSlide];
+  const isEditing = editingIdx === currentSlide;
+  const issues = validate(activeItem);
+
   return (
-    <div className="space-y-3 w-full max-w-md">
-      <div className="grid gap-3">
-        {draft.map((item, idx) => {
-          const isEditing = editingIdx === idx;
-          const issues = validate(item);
-          return (
-            <div 
-              key={idx} 
-              className={`p-4 rounded-xl border space-y-2 transition-all ${issues.length > 0 ? 'border-red-500/40 bg-red-500/5' : 'border-white/10 bg-white/5'}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                {draft.length > 1 ? (
-                  <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider">
-                    Slide {idx + 1}
-                  </div>
-                ) : <div />}
-                <button
-                  onClick={() => setEditingIdx(isEditing ? null : idx)}
-                  className="text-[10px] font-medium text-violet-400 hover:text-violet-300 uppercase tracking-wider"
-                >
-                  {isEditing ? 'Concluir' : 'Editar'}
-                </button>
-              </div>
-              {renderField(idx, 'title', item.title, isEditing)}
-              {renderField(idx, 'subtitle', item.subtitle, isEditing)}
-              {renderField(idx, 'body', item.body, isEditing)}
+    <div className="space-y-4 w-full max-w-md">
+      <div className="relative group">
+        <div 
+          className={`p-5 rounded-2xl border min-h-[180px] flex flex-col justify-center space-y-3 transition-all ${issues.length > 0 ? 'border-red-500/40 bg-red-500/5' : 'border-white/10 bg-white/5'}`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-2">
+              Card {currentSlide + 1} de {draft.length}
+              {issues.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
             </div>
-          );
-        })}
+            <button
+              onClick={() => setEditingIdx(isEditing ? null : currentSlide)}
+              className="text-[10px] font-bold text-violet-400 hover:text-violet-300 uppercase tracking-wider transition-colors"
+            >
+              {isEditing ? 'Concluir' : 'Editar Card'}
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {renderField(currentSlide, 'title', activeItem.title, isEditing)}
+            {renderField(currentSlide, 'subtitle', activeItem.subtitle, isEditing)}
+            {renderField(currentSlide, 'body', activeItem.body, isEditing)}
+          </div>
+        </div>
+
+        {draft.length > 1 && (
+          <>
+            <button 
+              onClick={() => {
+                setCurrentSlide(prev => (prev - 1 + draft.length) % draft.length);
+                setEditingIdx(null);
+              }}
+              className="absolute -left-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/80 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-violet-600/80 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={() => {
+                setCurrentSlide(prev => (prev + 1) % draft.length);
+                setEditingIdx(null);
+              }}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/80 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-violet-600/80 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="flex justify-center gap-1.5">
+        {draft.map((_, i) => (
+          <button 
+            key={i} 
+            onClick={() => { setCurrentSlide(i); setEditingIdx(null); }}
+            className={`h-1 rounded-full transition-all ${i === currentSlide ? 'w-4 bg-violet-500' : 'w-1.5 bg-white/10 hover:bg-white/20'}`}
+          />
+        ))}
       </div>
 
       {hasIssues && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1">
-          <div className="text-[11px] font-bold text-red-400 uppercase tracking-wider">⚠ Ajuste antes de aprovar</div>
-          {allIssues.map((iss, i) => (
-            <div key={i} className="text-[11px] text-red-300/90">Slide {iss.slide}: {iss.msg}</div>
-          ))}
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 space-y-1">
+          <div className="text-[11px] font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+            <X className="h-3 w-3" />
+            Ajuste antes de aprovar
+          </div>
+          <div className="text-[10px] text-red-300/80">
+            {allIssues.length === 1 ? 'Há 1 item fora dos limites.' : `Há ${allIssues.length} itens fora dos limites.`} Verifique os cards marcados.
+          </div>
         </div>
       )}
 
@@ -1333,26 +1376,26 @@ const ApproveContentWidget: React.FC<{
         <Button 
           onClick={() => onApprove(draft)}
           disabled={hasIssues}
-          className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl h-10 gap-2"
+          className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl h-11 gap-2 font-medium"
         >
           <Check className="h-4 w-4" />
-          Aprovar texto
+          Aprovar conteúdo
         </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button 
             variant="outline"
             onClick={onRequestNew}
-            className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2 text-xs"
+            className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2 text-[11px] font-medium"
           >
-            <Sparkles className="h-3.5 w-3.5" />
+            <Sparkles className="h-3.5 w-3.5 text-violet-400" />
             Nova sugestão
           </Button>
           <Button 
             variant="outline"
             onClick={onEdit}
-            className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2 text-xs"
+            className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2 text-[11px] font-medium"
           >
-            <Wand2 className="h-3.5 w-3.5" />
+            <Wand2 className="h-3.5 w-3.5 text-violet-400" />
             Pedir mudança
           </Button>
         </div>

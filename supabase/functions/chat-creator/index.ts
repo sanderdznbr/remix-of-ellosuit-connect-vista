@@ -230,6 +230,7 @@ function buildTool() {
                 description: 'Array of slides/cards content. For single post, array of 1. For carousel, array of cardCount.'
               },
               userIdea: { type: 'string', description: 'Idéia específica do usuário para o post ou carrossel' },
+              imageSource: { type: 'string', enum: ['ai', 'real'], description: 'Se o usuário prefere ilustrações geradas ou fotos reais' },
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },

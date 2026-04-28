@@ -162,6 +162,23 @@ Deno.serve(async (req) => {
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
     const style = await getStyleContext(sb, brief.styleId);
 
+    // === STEP 0: Check credits before starting expensive AI work ===
+    const { data: balance } = await sb
+      .from('ai_credit_balances')
+      .select('balance')
+      .eq('company_id', companyId)
+      .maybeSingle();
+
+    const creditCost = brief.hasFace ? 5 : 2; // Fixed single post cost vs face customization
+    if (!balance || (balance.balance < creditCost)) {
+      return new Response(JSON.stringify({ 
+        error: `Você precisa de pelo menos ${creditCost} créditos para gerar este post. Saldo atual: ${balance?.balance || 0}` 
+      }), {
+        status: 402,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // === STEP 1: Generate professional art direction (creative brief) ===
     // A senior creative director writes a detailed visual concept BEFORE the image is generated.
     // This avoids generic stock scenes and guarantees the photo is purposefully designed for the topic.

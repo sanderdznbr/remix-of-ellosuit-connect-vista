@@ -276,8 +276,8 @@ const ChatCreator: React.FC = () => {
       if (data?.error && data?.fallback) {
         const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.error];
         const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
-        setLoading(false);
         await appendAIMessages(texts, widget);
+        setLoading(false);
         return;
       }
 

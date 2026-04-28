@@ -507,7 +507,8 @@ NON-NEGOTIABLE CHECKLIST:
         const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
         if (coverUrl) {
           await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
-          const updatedCards = [{ ...card, imageUrl: coverUrl }];
+          const updatedCards = [...cards];
+          updatedCards[0] = { ...updatedCards[0], imageUrl: coverUrl };
           await sb.from('generated_carousels').update({
             carousel_data: { title: brief.topic, cards: updatedCards },
           }).eq('id', carouselId);

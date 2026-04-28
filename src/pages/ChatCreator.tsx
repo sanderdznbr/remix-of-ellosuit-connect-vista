@@ -1679,6 +1679,9 @@ const FinalResultWidget: React.FC<{
   onOpen: (id: string) => void;
   onImageUpdated?: (newUrl: string) => void;
 }> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated }) => {
+  const [slides, setSlides] = React.useState<{ image_url: string }[]>([]);
+  const [loadingSlides, setLoadingSlides] = React.useState(false);
+  const [currentSlide, setCurrentSlide] = React.useState(0);
   const [showAdjust, setShowAdjust] = React.useState(false);
   const [adjustText, setAdjustText] = React.useState('');
   const [adjusting, setAdjusting] = React.useState(false);

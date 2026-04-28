@@ -1674,9 +1674,10 @@ const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phas
 const FinalResultWidget: React.FC<{
   carouselId?: string;
   imageUrl?: string;
+  isCarousel?: boolean;
   onOpen: (id: string) => void;
   onImageUpdated?: (newUrl: string) => void;
-}> = ({ carouselId, imageUrl, onOpen, onImageUpdated }) => {
+}> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated }) => {
   const [showAdjust, setShowAdjust] = React.useState(false);
   const [adjustText, setAdjustText] = React.useState('');
   const [adjusting, setAdjusting] = React.useState(false);

@@ -93,6 +93,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
     suggested_content: brief?.suggested_content,
+    userIdea: trimText(brief?.userIdea, 500),
   };
 }
 

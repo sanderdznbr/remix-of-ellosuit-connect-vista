@@ -205,7 +205,9 @@ Deno.serve(async (req) => {
     const faceLine = faceData ? `⚠️ FACE REFERENCE ATTACHED. REINVENT THE ENTIRE SCENE. USE FACE IDENTITY ONLY.` : '';
     const logoLine = logoData ? 'Logo is attached. Place subtly in a corner.' : '';
     const printsLine = additionalPrints.length > 0 ? 'Reference screenshots attached. Use for UI context.' : '';
-    const selectedCardLine = selectedCardRef ? `⚠️ MANDATORY BACKGROUND PHOTO ATTACHED. REPRODUCE THIS EXACT PHOTO BUT OVERLAY THE SPECIFIED TEXT ON TOP OF IT. Maintain the photographic content exactly, just add the typography and branding.` : '';
+    const selectedCardLine = selectedCardRef ? `⚠️ REAL PHOTO ATTACHED — USE IT AS THE PRIMARY VISUAL SUBJECT (the person/scene MUST be recognizable and identical), but COMPOSE the card following the STYLE REFERENCES' editorial layout, typography, color treatment, color overlays, gradients, decorative elements, and text placement system.
+DO NOT just slap the photo as a flat full-bleed background with text on top. Instead, treat the photo like a magazine editor would: integrate it into the style's compositional grid (cropped, masked, duotoned, color-graded, layered with shapes/text blocks/gradients/typographic frames as the style dictates).
+Preserve the subject's identity and key visual elements of the photo, but apply the style's creative DNA (color palette, type system, layout, decorative geometry, mood). The text MUST be distributed according to the style's hierarchy — not just stacked at the top.` : '';
 
     const styleRules = [
       style?.name ? `Style: "${style.name}".` : '',

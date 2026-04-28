@@ -3758,6 +3758,7 @@ export type Database = {
           is_featured: boolean
           is_free: boolean
           name: string
+          preview_classifications: Json | null
           preview_images: string[]
           price_brl: number
           price_credits: number
@@ -3776,6 +3777,7 @@ export type Database = {
           is_featured?: boolean
           is_free?: boolean
           name: string
+          preview_classifications?: Json | null
           preview_images?: string[]
           price_brl?: number
           price_credits?: number
@@ -3794,6 +3796,7 @@ export type Database = {
           is_featured?: boolean
           is_free?: boolean
           name?: string
+          preview_classifications?: Json | null
           preview_images?: string[]
           price_brl?: number
           price_credits?: number

@@ -514,37 +514,65 @@ const ChatCreator: React.FC = () => {
       const generatedImages: string[] = [];
 
       if (isCarousel) {
-        // CLIENT-SIDE SEQUENTIAL LOOP: prevents WORKER_RESOURCE_LIMIT by making 
-        // one edge function call per card. This is exactly how the Studio works.
         for (let i = 0; i < totalCards; i++) {
+          const startTime = Date.now();
+          console.log(`[Card ${i+1}/${totalCards}] Inciando geração...`);
+
           setMessages(prev => prev.map(m => 
             m.widget === 'generating_post' 
               ? { ...m, widgetData: { ...m.widgetData, current: i + 1 } } 
               : m
           ));
 
-          const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-            body: { brief: b, cardIndex: i },
-          });
+          let cardImage = null;
+          let retryCount = 0;
+          const maxRetries = 1;
 
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-          if (!data?.imageUrl) throw new Error(`Falha no card ${i+1}`);
+          while (retryCount <= maxRetries && !cardImage) {
+            try {
+              const { data, error } = await supabase.functions.invoke('chat-compose-final', {
+                body: { 
+                  brief: {
+                    ...b,
+                    faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
+                    logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
+                    printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
+                  }, 
+                  cardIndex: i 
+                },
+              });
 
-          generatedImages.push(data.imageUrl);
+              if (error) throw error;
+              if (data?.error) throw new Error(data.error);
+              cardImage = data?.imageUrl;
+            } catch (e: any) {
+              retryCount++;
+              console.error(`[Card ${i+1}] Erro na tentativa ${retryCount}:`, e);
+              if (retryCount > maxRetries) throw e;
+              await new Promise(r => setTimeout(r, 2000));
+            }
+          }
+
+          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          console.log(`[Card ${i+1}/${totalCards}] Sucesso! Tempo: ${duration}s`);
+          generatedImages.push(cardImage);
         }
       } else {
-        // Single post mode
         const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-          body: { brief: b },
+          body: { 
+            brief: {
+              ...b,
+              faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
+              logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
+              printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
+            }
+          },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         if (data?.imageUrl) generatedImages.push(data.imageUrl);
       }
 
-      // FINAL STEP: Persist all generated images into a carousel record
-      // We pass the full brief and the array of URLs we just created.
       const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke('chat-compose-final', {
         body: { brief: b, images: generatedImages },
       });

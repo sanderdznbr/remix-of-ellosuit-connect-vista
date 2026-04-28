@@ -30,6 +30,7 @@ interface BriefState {
   ready?: boolean;
   imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  userIdea?: string;
 }
 
 interface SanitizedBriefState extends BriefState {
@@ -92,6 +93,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
     suggested_content: brief?.suggested_content,
+    userIdea: trimText(brief?.userIdea, 500),
   };
 }
 
@@ -113,7 +115,8 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 
 🎨 FLUXO INTELIGENTE (adapte sempre, não siga ordem fixa):
 1. Se o tema já está claro, NÃO pergunte de novo. Avance.
-2. SEMPRE pergunte se o post deve ser Único (estático) ou Carrossel antes de qualquer outra configuração técnica. É a primeira escolha estrutural.
+2. SEMPRE pergunte se o usuário já tem alguma ideia específica para a capa ou para o carrossel inteiro. Se ele tiver, salve no campo 'userIdea' e use essa ideia como base para o conteúdo e para o prompt de imagem.
+3. SEMPRE pergunte se o post deve ser Único (estático) ou Carrossel antes de qualquer outra configuração técnica. É a primeira escolha estrutural.
    - Use o widget "content_type_picker".
 3. SE FOR CARROSSEL: a PRÓXIMA pergunta DEVE ser obrigatoriamente "Quantos slides você quer?" — NÃO avance para formato ou estilo sem antes saber o cardCount.
 4. DETECTE O CONTEXTO: Se o usuário quer falar de um PRODUTO, SISTEMA, SOFTWARE ou APP específico (ex: "ellocontent", "meu sistema de vendas", "app de exercícios"), você deve ser inteligente e pedir Prints/Screenshots do sistema além de fotos e logos.
@@ -220,6 +223,7 @@ function buildTool() {
                 },
                 description: 'Array of slides/cards content. For single post, array of 1. For carousel, array of cardCount.'
               },
+              userIdea: { type: 'string', description: 'Idéia específica do usuário para o post ou carrossel' },
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },

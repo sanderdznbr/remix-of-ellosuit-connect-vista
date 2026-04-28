@@ -35,6 +35,7 @@ interface Brief {
   tone?: string;
   imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  userIdea?: string;
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {
@@ -168,6 +169,7 @@ Deno.serve(async (req) => {
     const colors = brief.brandColors?.length ? `Brand palette: ${brief.brandColors.join(', ')}.` : '';
     const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
     const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
+    const userIdeaLine = brief.userIdea ? `⚠️ USER SPECIFIC IDEA/INSTRUCTION: "${brief.userIdea}". FOLLOW THIS IDEA CLOSELY FOR THE VISUAL COMPOSITION.` : '';
 
     // Face / Logo / Prints references
     const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);
@@ -235,6 +237,7 @@ BE CREATIVE AND VARIED: Use diverse visual metaphors, different angles, and dist
 - Text safe area: top/bottom thirds, generous spacing, legible at thumbnail size.
 
 ${brand} ${colors} ${audienceLine} ${toneLine}
+${userIdeaLine}
 ${faceLine} ${logoLine} ${printsLine}
 ${styleRules}
 ${coverRefLine}

@@ -608,6 +608,18 @@ const ChatCreator: React.FC = () => {
     if (msg.widget === 'personalization') {
       return <PersonalizationWidget onPick={handlePersonalization} userId={user?.id} />;
     }
+    if (msg.widget === 'approve_content') {
+      return (
+        <ApproveContentWidget 
+          content={brief.suggested_content || []} 
+          onApprove={() => sendMessage("Amei o texto! Pode seguir.")}
+          onEdit={() => {
+            inputRef.current?.focus();
+            toast.info("Digite as alterações que você deseja.");
+          }}
+        />
+      );
+    }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
     }

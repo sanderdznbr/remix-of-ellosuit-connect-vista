@@ -2776,8 +2776,18 @@ The image must look like it was shot by a professional photographer or designed 
     // ONLY the "CONTENT" style allows canvas/overlay text; all others are full-bleed with NO overlay text.
     const isAiSeries = item.style_config?.source === 'chat-creator' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards.every((c: any) => c.isAiImage && !c.title && !c.body && !c.bodyTop && !c.subtitle && !c.bodyBottom));
     const isManualContentStyle = item.style_config?.activePresetId === 'content' || item.style_config?.styleName?.toLowerCase() === 'content';
-    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || (isAiSeries && !isManualContentStyle);
-    setIsLoadedFullBleed(hasMarketplaceStyle);
+    const isMarketplaceContentStyle = item.marketplace_style_id && (item.marketplace_style_name?.toLowerCase() === 'content' || item.marketplace_style?.name?.toLowerCase() === 'content');
+    
+    // Final classification: if it's NOT Content (manual or marketplace), it's full-bleed.
+    const isContent = isManualContentStyle || isMarketplaceContentStyle;
+    const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || isAiSeries;
+    
+    // Auto-apply logic: Force full-bleed if not explicitly Content
+    const shouldBeFullBleed = !isContent && (hasMarketplaceStyle || isAiSeries);
+    
+    setIsLoadedFullBleed(shouldBeFullBleed);
+    console.log('Post loading validation:', { isContent, isAiSeries, shouldBeFullBleed, styleName: item.style_config?.styleName });
+    
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
     if (item.style_config) {
       const sc = item.style_config;

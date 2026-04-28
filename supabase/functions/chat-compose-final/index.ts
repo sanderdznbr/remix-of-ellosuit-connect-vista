@@ -340,10 +340,18 @@ ${logoLine}
 STYLE GUIDANCE:
 ${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
 
-TYPOGRAPHY (text rendered inside the image):
+TYPOGRAPHY (MANDATORY TEXT CONTENT):
 - Language: PORTUGUÊS BRASILEIRO with perfect spelling.
+${brief.suggested_content && brief.suggested_content.length > 0 ? `
+- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO:
+  ${brief.suggested_content.map((c, i) => `[Card ${i + 1}]
+  Título: ${c.title || ''}
+  Subtítulo: ${c.subtitle || ''}
+  Corpo: ${c.body || ''}`).join('\n')}
+` : `
 - Headline / hook: short, powerful, max 7 words.
 - Optional supporting line: max 12 words.
+`}
 - Place text in a clean safe area; never cover the person's face.
 - Typography must feel editorial, bold, on-brand for the selected style.
 

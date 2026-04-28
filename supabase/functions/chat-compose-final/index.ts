@@ -61,7 +61,7 @@ async function getStyleContext(sb: any, styleId?: string | null) {
   if (!isUuid(styleId)) return null;
   const { data, error } = await sb
     .from('marketplace_styles')
-    .select('id, name, description, preview_images, strict_instructions, style_config')
+    .select('id, name, description, preview_images, preview_classifications, strict_instructions, style_config')
     .eq('id', styleId)
     .maybeSingle();
   if (error) {
@@ -69,6 +69,40 @@ async function getStyleContext(sb: any, styleId?: string | null) {
     return null;
   }
   return data || null;
+}
+
+async function getStyleContextByName(sb: any, styleName?: string | null) {
+  const name = (styleName || '').trim();
+  if (!name) return null;
+  const { data, error } = await sb
+    .from('marketplace_styles')
+    .select('id, name, description, preview_images, preview_classifications, strict_instructions, style_config')
+    .ilike('name', name)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('style context by name error:', error);
+    return null;
+  }
+  return data || null;
+}
+
+function inferCardKind(card: { title?: string; subtitle?: string; body?: string } | undefined, idx: number): 'cover' | 'text' {
+  if (idx === 0) return 'cover';
+  const bodyWords = (card?.body || '').trim().split(/\s+/).filter(Boolean).length;
+  const subtitleWords = (card?.subtitle || '').trim().split(/\s+/).filter(Boolean).length;
+  return bodyWords + subtitleWords >= 10 ? 'text' : 'cover';
+}
+
+function selectStylePreviewUrls(style: any, cardKind: 'cover' | 'text'): string[] {
+  const previews = Array.isArray(style?.preview_images) ? style.preview_images.filter(Boolean) : [];
+  if (!previews.length) return [];
+  const classifications = style?.preview_classifications && typeof style.preview_classifications === 'object'
+    ? style.preview_classifications
+    : {};
+  const matching = previews.filter((url: string) => classifications[url] === cardKind);
+  const fallback = previews.filter((url: string) => !matching.includes(url));
+  return [...matching, ...fallback].slice(0, 4);
 }
 
 async function urlToDataUrl(url: string): Promise<string | null> {

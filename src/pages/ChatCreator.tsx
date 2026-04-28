@@ -1329,6 +1329,7 @@ const LIMITS = {
   title: { words: 12, label: 'Título / Hook', max: 12 },
   subtitle: { words: 20, label: 'Subtítulo', max: 20 },
   body: { words: 45, label: 'Corpo', max: 45 },
+  searchTerm: { words: 10, label: 'Termo de Busca (Foto)', max: 10 },
 } as const;
 
 const countWords = (s?: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;

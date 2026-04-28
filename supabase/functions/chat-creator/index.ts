@@ -230,7 +230,8 @@ function buildTool() {
                   properties: {
                     title: { type: 'string' },
                     subtitle: { type: 'string' },
-                    body: { type: 'string' }
+                    body: { type: 'string' },
+                    searchTerm: { type: 'string', description: 'Termo de busca ultra-específico em INGLÊS para este slide (obrigatório para Fotos Reais)' }
                   }
                 },
                 description: 'Array of slides/cards content. For single post, array of 1. For carousel, array of cardCount.'

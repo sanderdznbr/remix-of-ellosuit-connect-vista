@@ -718,8 +718,15 @@ const ChatCreator: React.FC = () => {
         sendMessage(model === 'ello-pro' ? 'Prefiro a ellocontent pro' : 'Prefiro a ellocontent fast', nextBrief);
       }} />;
     }
-    if (msg.widget === 'confirm_generate') {
-      return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
+    if (msg.widget === "image_source_picker") {
+      return <ImageSourcePickerWidget onPick={(source) => {
+        const nextBrief = { ...brief, imageSource: source };
+        setBrief(nextBrief);
+        sendMessage(source === "ai" ? "Quero Ilustrações (IA)" : "Quero Post Real (Fotos)", nextBrief);
+      }} />;
+    }
+    if (msg.widget === "confirm_generate") {
+      return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} />;
     }
     if (msg.widget === 'generating_post') {
       return <GeneratingWidget 

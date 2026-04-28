@@ -1,0 +1,2 @@
+-- No changes needed to the schema, just documentation of the logic implementation in Edge Functions.
+-- The RPC `consume_ai_credits` is already present in the database.

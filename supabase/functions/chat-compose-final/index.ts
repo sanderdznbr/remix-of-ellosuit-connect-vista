@@ -162,6 +162,23 @@ Deno.serve(async (req) => {
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
     const style = await getStyleContext(sb, brief.styleId);
 
+    // === STEP 0: Check credits before starting expensive AI work ===
+    const { data: balance } = await sb
+      .from('ai_credit_balances')
+      .select('balance')
+      .eq('company_id', companyId)
+      .maybeSingle();
+
+    const creditCost = brief.hasFace ? 5 : 2; // Fixed single post cost vs face customization
+    if (!balance || (balance.balance < creditCost)) {
+      return new Response(JSON.stringify({ 
+        error: `Você precisa de pelo menos ${creditCost} créditos para gerar este post. Saldo atual: ${balance?.balance || 0}` 
+      }), {
+        status: 402,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // === STEP 1: Generate professional art direction (creative brief) ===
     // A senior creative director writes a detailed visual concept BEFORE the image is generated.
     // This avoids generic stock scenes and guarantees the photo is purposefully designed for the topic.
@@ -445,6 +462,16 @@ NON-NEGOTIABLE CHECKLIST:
     const carouselId = inserted.id;
     const bgWork = (async () => {
       try {
+        // 1. Consume credits
+        const creditCost = brief.hasFace ? 5 : 2;
+        await sb.rpc('consume_ai_credits', {
+          p_company_id: companyId,
+          p_agent_id: null,
+          p_amount: creditCost,
+          p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
+        });
+
+        // 2. Upload cover + update DB
         const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
         if (coverUrl) {
           await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
@@ -454,7 +481,7 @@ NON-NEGOTIABLE CHECKLIST:
           }).eq('id', carouselId);
         }
       } catch (err) {
-        console.error('background cover upload failed:', err);
+        console.error('background background task failed:', err);
       }
     })();
 

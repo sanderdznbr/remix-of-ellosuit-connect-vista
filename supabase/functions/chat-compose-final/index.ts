@@ -35,6 +35,7 @@ interface Brief {
   tone?: string;
   imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  userIdea?: string;
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {

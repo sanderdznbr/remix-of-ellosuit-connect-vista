@@ -29,7 +29,7 @@ interface BriefState {
   tone?: string;
   ready?: boolean;
   imageModel?: 'ello-pro' | 'ello-fast';
-  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
   userIdea?: string;
   imageSource?: 'ai' | 'real';
 }

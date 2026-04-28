@@ -2010,71 +2010,69 @@ const FinalResultWidget: React.FC<{
   };
 
   return (
-    <div className="space-y-2.5 max-w-md">
+    <div className="space-y-3 max-w-md">
       <div className="relative group rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-        {(slides.length > 0 || isCarousel) ? (
-          <div className="relative aspect-[4/5]">
-            <img 
-              src={slides.length > 0 ? slides[currentSlide]?.image_url : imageUrl} 
-              alt={`Slide ${currentSlide + 1}`} 
-              className="w-full h-full object-cover transition-opacity duration-300" 
-            />
-            {loadingSlides && slides.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                <Loader2 className="h-6 w-6 text-white animate-spin" />
+        <div className="relative aspect-[4/5]">
+          <img 
+            src={slides.length > 0 ? slides[currentSlide]?.image_url : imageUrl} 
+            alt={`Slide ${currentSlide + 1}`} 
+            className="w-full h-full object-cover transition-opacity duration-300" 
+          />
+          {loadingSlides && slides.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+              <Loader2 className="h-6 w-6 text-white animate-spin" />
+            </div>
+          )}
+          {slides.length > 1 && (
+            <>
+              <button 
+                onClick={() => setCurrentSlide(prev => (prev > 0 ? prev - 1 : slides.length - 1))}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => setCurrentSlide(prev => (prev < slides.length - 1 ? prev + 1 : 0))}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-[10px] text-white font-medium">
+                {currentSlide + 1} / {slides.length}
               </div>
-            )}
-            {slides.length > 1 && (
-              <>
-                <button 
-                  onClick={() => setCurrentSlide(prev => (prev > 0 ? prev - 1 : slides.length - 1))}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button 
-                  onClick={() => setCurrentSlide(prev => (prev < slides.length - 1 ? prev + 1 : 0))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-[10px] text-white font-medium">
-                  {currentSlide + 1} / {slides.length}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="relative aspect-[4/5]">
-            <img src={imageUrl} alt="Post gerado" className="w-full h-full object-cover" />
-            {loadingSlides && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                <Loader2 className="h-6 w-6 text-white animate-spin" />
-              </div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
+
+      {slides.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {slides.map((slide, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentSlide(idx)}
+              className="relative flex-shrink-0 w-16 aspect-[4/5] rounded-lg overflow-hidden border-2 transition-all"
+              style={{ 
+                borderColor: currentSlide === idx ? PURPLE : 'transparent',
+                opacity: currentSlide === idx ? 1 : 0.6
+              }}
+            >
+              <img src={slide.image_url} className="w-full h-full object-cover" alt={`Miniatura ${idx + 1}`} />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          {isCarousel ? (
-            <button
-              onClick={() => onOpen(carouselId)}
-              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-violet-600 hover:bg-violet-700 text-sm font-medium text-white transition-colors"
-            >
-              <ImageIcon className="h-4 w-4" />
-              Ver carrossel completo
-            </button>
-          ) : (
-            <button
-              onClick={handleDownload}
-              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-white/90 transition-colors"
-            >
-              <Download className="h-4 w-4" />
-              Baixar
-            </button>
-          )}
+          <button
+            onClick={() => onOpen(carouselId)}
+            className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-violet-600 hover:bg-violet-700 text-sm font-medium text-white transition-colors"
+          >
+            <ImageIcon className="h-4 w-4" />
+            {isCarousel ? 'Abrir no estúdio' : 'Abrir no estúdio'}
+          </button>
+          
           <button
             onClick={() => setShowAdjust(s => !s)}
             className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full border text-sm font-medium transition-colors"
@@ -2088,15 +2086,14 @@ const FinalResultWidget: React.FC<{
             Ajustar
           </button>
         </div>
-        {isCarousel && (
-          <button
-            onClick={handleDownload}
-            className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white/70 transition-colors"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Baixar capa
-          </button>
-        )}
+        
+        <button
+          onClick={handleDownload}
+          className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white/70 transition-colors"
+        >
+          <Download className="h-3.5 w-3.5" />
+          {isCarousel ? 'Baixar todos os slides' : 'Baixar imagem'}
+        </button>
       </div>
 
       {showAdjust && (

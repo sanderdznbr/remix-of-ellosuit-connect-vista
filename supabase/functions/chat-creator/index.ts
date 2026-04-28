@@ -89,6 +89,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     tone: trimText(brief?.tone, 120),
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
+    suggested_content: brief?.suggested_content,
   };
 }
 

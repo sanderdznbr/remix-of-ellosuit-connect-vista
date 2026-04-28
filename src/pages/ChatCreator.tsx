@@ -509,7 +509,13 @@ const ChatCreator: React.FC = () => {
       if (!carouselId || !imageUrl) throw new Error('Resposta incompleta');
 
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
-      appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
+      
+      // Check if it's a carousel or single post
+      if (b.contentType === 'carousel') {
+        appendAssistantWithWidget('Prontíssimo! Seu carrossel foi criado com sucesso. Clique no botão abaixo para ver e baixar todos os slides 👇', 'final_result', { carouselId, imageUrl, isCarousel: true });
+      } else {
+        appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
+      }
     } catch (err: any) {
       console.error('compose error:', err);
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
@@ -615,6 +621,7 @@ const ChatCreator: React.FC = () => {
       return <FinalResultWidget
         carouselId={msg.widgetData?.carouselId}
         imageUrl={msg.widgetData?.imageUrl}
+        isCarousel={msg.widgetData?.isCarousel}
         onOpen={(id) => navigate(`/${id}`)}
         onImageUpdated={(newUrl) => {
           setMessages(prev => prev.map(m => m.id === msg.id
@@ -1668,9 +1675,10 @@ const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phas
 const FinalResultWidget: React.FC<{
   carouselId?: string;
   imageUrl?: string;
+  isCarousel?: boolean;
   onOpen: (id: string) => void;
   onImageUpdated?: (newUrl: string) => void;
-}> = ({ carouselId, imageUrl, onOpen, onImageUpdated }) => {
+}> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated }) => {
   const [showAdjust, setShowAdjust] = React.useState(false);
   const [adjustText, setAdjustText] = React.useState('');
   const [adjusting, setAdjusting] = React.useState(false);
@@ -1724,26 +1732,47 @@ const FinalResultWidget: React.FC<{
         <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleDownload}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-white/90 transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          Baixar
-        </button>
-        <button
-          onClick={() => setShowAdjust(s => !s)}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full border text-sm font-medium transition-colors"
-          style={{
-            backgroundColor: showAdjust ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
-            borderColor: 'rgba(139,92,246,0.3)',
-            color: '#C4B5FD',
-          }}
-        >
-          <Wand2 className="h-4 w-4" />
-          Ajustar
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {isCarousel ? (
+            <button
+              onClick={() => onOpen(carouselId)}
+              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-violet-600 hover:bg-violet-700 text-sm font-medium text-white transition-colors"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Ver carrossel completo
+            </button>
+          ) : (
+            <button
+              onClick={handleDownload}
+              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-white/90 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Baixar
+            </button>
+          )}
+          <button
+            onClick={() => setShowAdjust(s => !s)}
+            className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full border text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: showAdjust ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
+              borderColor: 'rgba(139,92,246,0.3)',
+              color: '#C4B5FD',
+            }}
+          >
+            <Wand2 className="h-4 w-4" />
+            Ajustar
+          </button>
+        </div>
+        {isCarousel && (
+          <button
+            onClick={handleDownload}
+            className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white/70 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Baixar capa
+          </button>
+        )}
       </div>
 
       {showAdjust && (

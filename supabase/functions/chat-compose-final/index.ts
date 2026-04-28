@@ -385,43 +385,58 @@ NON-NEGOTIABLE CHECKLIST:
       style: style?.name,
     });
 
-    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-pro-image-preview',
-        messages: [{ role: 'user', content }],
-        modalities: ['image', 'text'],
-      }),
-    });
+    let finalImage: string | null = null;
+    let attempts = 0;
+    const maxAttempts = 2;
 
-    if (resp.status === 429) {
-      return new Response(JSON.stringify({ error: 'Limite de requisições atingido. Tente novamente.' }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (resp.status === 402) {
-      return new Response(JSON.stringify({ error: 'Créditos de IA esgotados.' }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error('compose AI gateway error:', resp.status, t);
-      return new Response(JSON.stringify({ error: 'Falha ao gerar o post' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    while (attempts < maxAttempts && !finalImage) {
+      attempts++;
+      try {
+        const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-pro-image-preview',
+            messages: [{ role: 'user', content }],
+            modalities: ['image', 'text'],
+          }),
+        });
+
+        if (resp.status === 429) {
+          if (attempts < maxAttempts) {
+            console.warn(`Attempt ${attempts} failed with 429, retrying...`);
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+          return new Response(JSON.stringify({ error: 'Limite de requisições atingido. Tente novamente.' }), {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!resp.ok) {
+          const t = await resp.text();
+          console.error(`Attempt ${attempts} failed:`, resp.status, t);
+          if (attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+          }
+          throw new Error('Falha ao gerar o post após múltiplas tentativas');
+        }
+
+        finalImage = await extractImageUrl(resp);
+      } catch (err) {
+        console.error(`Attempt ${attempts} exception:`, err);
+        if (attempts >= maxAttempts) throw err;
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
 
-    const finalImage = await extractImageUrl(resp);
     if (!finalImage) {
-      return new Response(JSON.stringify({ error: 'A IA não retornou imagem.' }), {
+      return new Response(JSON.stringify({ error: 'A IA não retornou imagem após tentativas.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

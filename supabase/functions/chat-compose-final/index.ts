@@ -385,86 +385,85 @@ NON-NEGOTIABLE CHECKLIST:
     };
 
     const totalCards = brief.suggested_content?.length || 1;
-    const generatedImages: string[] = [];
     
-    // Base multimodal content structure (images) - optimized for worker limits
-    // Only send the essential identity/style references once, and limit the total count
-    const baseMultimodalContent: any[] = [];
-    if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
-    // Limit additional faces/logos/prints to avoid WORKER_RESOURCE_LIMIT
-    for (const f of additionalFaces.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: f } });
-    if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
-    for (const p of additionalPrints.slice(0, 2)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
-    for (const ref of styleRefs.slice(0, 2)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
+    // IF cardIndex IS PROVIDED: single card mode (from client-side loop)
+    if (typeof cardIndex === 'number') {
+      console.log(`chat-compose-final: single-card mode for card ${cardIndex+1}/${totalCards}`);
+      
+      const cardContent = [
+        { type: 'text', text: unifiedPromptTemplate(cardIndex) },
+        if (faceData) ({ type: 'image_url', image_url: { url: faceData } }),
+        if (logoData) ({ type: 'image_url', image_url: { url: logoData } }),
+        ...additionalPrints.slice(0, 1).map(p => ({ type: 'image_url', image_url: { url: p } })),
+        ...styleRefs.slice(0, 1).map(ref => ({ type: 'image_url', image_url: { url: ref } }))
+      ].filter(Boolean);
 
-    console.log(`chat-compose-final: generating ${totalCards} cards. Payload optimized.`);
-
-
-    for (let i = 0; i < totalCards; i++) {
       let cardImage: string | null = null;
       let attempts = 0;
       const maxAttempts = 2;
-      
-      const cardContent = [
-        { type: 'text', text: unifiedPromptTemplate(i) },
-        ...baseMultimodalContent
-      ];
 
       while (attempts < maxAttempts && !cardImage) {
         attempts++;
         const startTime = Date.now();
         try {
-          console.log(`[Card ${i+1}] Attempt ${attempts} starting...`);
           const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: 'google/gemini-3-pro-image-preview',
               messages: [{ role: 'user', content: cardContent }],
               modalities: ['image', 'text'],
             }),
           });
-
-          const duration = Date.now() - startTime;
-
           if (resp.status === 429) {
-            console.warn(`[Card ${i+1}] Attempt ${attempts} rate limited (429) after ${duration}ms. Retrying...`);
             await new Promise(r => setTimeout(r, 4000));
             continue;
           }
-
-          if (!resp.ok) {
-            const t = await resp.text();
-            console.error(`[Card ${i+1}] Attempt ${attempts} failed with status ${resp.status} after ${duration}ms:`, t.slice(0, 500));
-            continue;
-          }
-
+          if (!resp.ok) continue;
           cardImage = await extractImageUrl(resp);
-          console.log(`[Card ${i+1}] Attempt ${attempts} success in ${duration}ms`);
-        } catch (err) {
-          const duration = Date.now() - startTime;
-          console.error(`[Card ${i+1}] Attempt ${attempts} exception after ${duration}ms:`, err);
-        }
+          console.log(`[Card ${cardIndex+1}] Success in ${Date.now() - startTime}ms`);
+        } catch (e) { console.error(`[Card ${cardIndex+1}] error:`, e); }
       }
 
-      if (cardImage) {
-        generatedImages.push(cardImage);
-        console.log(`✅ Generated card ${i+1}/${totalCards}`);
-      } else {
-        console.error(`❌ Total failure on card ${i+1} after ${maxAttempts} attempts`);
-        throw new Error(`Falha ao gerar o card ${i+1} do carrossel.`);
-      }
+      if (!cardImage) throw new Error(`Falha ao gerar o card ${cardIndex+1}.`);
+      return new Response(JSON.stringify({ imageUrl: cardImage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    if (generatedImages.length === 0) {
-      return new Response(JSON.stringify({ error: 'A IA não retornou imagens após tentativas.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // IF cardIndex IS NOT PROVIDED: fallback to internal sequential generation (or single post)
+    const generatedImages: string[] = [];
+    const baseMultimodalContent: any[] = [];
+    if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
+    if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
+    for (const p of additionalPrints.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
+    for (const ref of styleRefs.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
+
+    console.log(`chat-compose-final: internal-loop generation for ${totalCards} cards`);
+
+    for (let i = 0; i < totalCards; i++) {
+      let cardImage: string | null = null;
+      let attempts = 0;
+      const cardContent = [{ type: 'text', text: unifiedPromptTemplate(i) }, ...baseMultimodalContent];
+
+      while (attempts < 2 && !cardImage) {
+        attempts++;
+        try {
+          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-3-pro-image-preview',
+              messages: [{ role: 'user', content: cardContent }],
+              modalities: ['image', 'text'],
+            }),
+          });
+          if (!resp.ok) continue;
+          cardImage = await extractImageUrl(resp);
+        } catch (e) {}
+      }
+      if (cardImage) generatedImages.push(cardImage);
+      else throw new Error(`Falha ao gerar card ${i+1}`);
     }
+
 
 
     // === Persist ===

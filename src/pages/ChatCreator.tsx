@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2 } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
+import GalleryPicker from '@/components/Carousel/wizard/GalleryPicker';
 import { toast } from 'sonner';
 
 interface ConversationSummary {
@@ -42,8 +43,8 @@ interface BriefState {
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
-  faceUrl?: string;
-  logoUrl?: string;
+  faceUrl?: string | string[];
+  logoUrl?: string | string[];
   audience?: string;
   tone?: string;
 }
@@ -60,8 +61,8 @@ interface ChatGenerationPrefill {
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
-  faceUrl?: string;
-  logoUrl?: string;
+  faceUrl?: string | string[];
+  logoUrl?: string | string[];
 }
 
 interface MarketplaceStyle {
@@ -125,8 +126,8 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   brandColors: source.brandColors?.slice(0, 4),
   audience: sanitizeTextForAI(source.audience, 160),
   tone: sanitizeTextForAI(source.tone, 120),
-  faceProvided: !!source.faceUrl,
-  logoProvided: !!source.logoUrl,
+  faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
+  logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
 });
 
 const ChatCreator: React.FC = () => {
@@ -563,7 +564,7 @@ const ChatCreator: React.FC = () => {
     sendMessage(label, nextBrief);
   };
 
-  const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => {
+  const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => {
     const nextBrief = {
       ...brief,
       hasFace: data.face,
@@ -575,8 +576,11 @@ const ChatCreator: React.FC = () => {
     };
     setBrief(nextBrief);
     const parts: string[] = [];
-    if (data.face) parts.push('rosto' + (data.faceUrl ? ' (foto enviada)' : ''));
-    if (data.logo) parts.push('logo' + (data.logoUrl ? ' (enviada)' : ''));
+    const faceCount = Array.isArray(data.faceUrl) ? data.faceUrl.length : (data.faceUrl ? 1 : 0);
+    const logoCount = Array.isArray(data.logoUrl) ? data.logoUrl.length : (data.logoUrl ? 1 : 0);
+    
+    if (data.face) parts.push(`rosto${faceCount > 0 ? ` (${faceCount} foto${faceCount > 1 ? 's' : ''})` : ''}`);
+    if (data.logo) parts.push(`logo${logoCount > 0 ? ` (${logoCount} foto${logoCount > 1 ? 's' : ''})` : ''}`);
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
     sendMessage(label, nextBrief);
@@ -1195,50 +1199,48 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 };
 
 // Personalization with inline upload
-const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string; logoUrl?: string; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
+const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
   const [colors, setColors] = useState(false);
-  const [faceFile, setFaceFile] = useState<File | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [facePreview, setFacePreview] = useState<string | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faceFiles, setFaceFiles] = useState<{url: string, file?: File}[]>([]);
+  const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
   const [uploading, setUploading] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | null>(null);
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const onFaceFile = (f: File | null) => {
-    setFaceFile(f);
-    if (f) setFacePreview(URL.createObjectURL(f));
-    else setFacePreview(null);
+  const onFaceFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
+    setFaceFiles(prev => [...prev, ...newFiles]);
   };
-  const onLogoFile = (f: File | null) => {
-    setLogoFile(f);
-    if (f) setLogoPreview(URL.createObjectURL(f));
-    else setLogoPreview(null);
+
+  const onLogoFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
+    setLogoFiles(prev => [...prev, ...newFiles]);
   };
 
   const handleConfirm = async () => {
     setUploading(true);
     try {
-      const [faceUrl, logoUrl] = await Promise.all([
-        face && faceFile ? fileToDataUrl(faceFile) : Promise.resolve(undefined),
-        logo && logoFile ? fileToDataUrl(logoFile) : Promise.resolve(undefined),
-      ]);
+      const faceUrls = await Promise.all(faceFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
+      const logoUrls = await Promise.all(logoFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
       onPick({
         face,
         logo,
         colors,
-        faceUrl,
-        logoUrl,
+        faceUrl: faceUrls.length > 0 ? (faceUrls.length === 1 ? faceUrls[0] : faceUrls) : undefined,
+        logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
         brandColors: colors ? brandColors : undefined,
       });
     } catch (err) {
       console.error('Inline media encode error:', err);
-      toast.error('Não consegui ler a imagem enviada. Tente outra foto.');
+      toast.error('Não consegui ler as imagens enviadas. Tente novamente.');
     } finally {
       setUploading(false);
     }
@@ -1261,31 +1263,50 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
           </div>
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-white">Foto do rosto</div>
-            <div className="text-[11px] text-white/50">Apareça nas artes</div>
+            <div className="text-[11px] text-white/50">Apareça nas artes (pode subir várias)</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: face ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: face ? PURPLE : 'transparent' }}>
             {face && <Check className="h-3 w-3 text-white" />}
           </div>
         </button>
         {face && (
-          <div className="px-3 pb-3">
-            <input ref={faceInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFaceFile(e.target.files?.[0] || null)} />
-            {facePreview ? (
-              <div className="flex items-center gap-2 rounded-lg p-2" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
-                <img src={facePreview} className="h-12 w-12 rounded-md object-cover" alt="Preview" />
-                <span className="text-xs text-white/80 flex-1 truncate">{faceFile?.name}</span>
-                <button onClick={() => onFaceFile(null)} className="text-white/50 hover:text-white p-1"><X className="h-3.5 w-3.5" /></button>
+          <div className="px-3 pb-3 space-y-2">
+            <input ref={faceInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFaceFilesSelected(e.target.files)} />
+            
+            {faceFiles.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {faceFiles.map((f, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group">
+                    <img src={f.url} className="w-full h-full object-cover" alt="Face preview" />
+                    <button 
+                      onClick={() => setFaceFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => faceInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
                 style={{ borderColor: 'rgba(139,92,246,0.4)' }}
               >
-                <Upload className="h-4 w-4" style={{ color: PURPLE }} />
-                <span className="text-xs font-medium text-white/90">Clique pra enviar uma foto sua</span>
+                <Upload className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Upload</span>
               </button>
-            )}
+              <button
+                onClick={() => setGalleryOpen('face')}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Folder className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Galeria</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1308,27 +1329,57 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
           </div>
         </button>
         {logo && (
-          <div className="px-3 pb-3">
-            <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onLogoFile(e.target.files?.[0] || null)} />
-            {logoPreview ? (
-              <div className="flex items-center gap-2 rounded-lg p-2" style={{ backgroundColor: 'rgba(139,92,246,0.1)' }}>
-                <img src={logoPreview} className="h-12 w-12 rounded-md object-contain bg-white/10" alt="Preview" />
-                <span className="text-xs text-white/80 flex-1 truncate">{logoFile?.name}</span>
-                <button onClick={() => onLogoFile(null)} className="text-white/50 hover:text-white p-1"><X className="h-3.5 w-3.5" /></button>
+          <div className="px-3 pb-3 space-y-2">
+            <input ref={logoInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => onLogoFilesSelected(e.target.files)} />
+            
+            {logoFiles.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {logoFiles.map((f, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group bg-white/5">
+                    <img src={f.url} className="w-full h-full object-contain p-1" alt="Logo preview" />
+                    <button 
+                      onClick={() => setLogoFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => logoInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
                 style={{ borderColor: 'rgba(139,92,246,0.4)' }}
               >
-                <Upload className="h-4 w-4" style={{ color: PURPLE }} />
-                <span className="text-xs font-medium text-white/90">Clique pra enviar sua logo</span>
+                <Upload className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Upload</span>
               </button>
-            )}
+              <button
+                onClick={() => setGalleryOpen('logo')}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Folder className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Galeria</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      <GalleryPicker 
+        open={!!galleryOpen}
+        onClose={() => setGalleryOpen(null)}
+        onSelectFiles={(selected) => {
+          const newItems = selected.map(s => ({ url: s.url }));
+          if (galleryOpen === 'face') setFaceFiles(prev => [...prev, ...newItems]);
+          if (galleryOpen === 'logo') setLogoFiles(prev => [...prev, ...newItems]);
+          setGalleryOpen(null);
+        }}
+      />
 
       {/* Colors */}
       <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors ? PURPLE : 'rgba(255,255,255,0.1)' }}>

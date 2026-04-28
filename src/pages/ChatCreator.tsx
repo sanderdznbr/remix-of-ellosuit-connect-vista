@@ -40,11 +40,13 @@ interface BriefState {
   styleName?: string | null;
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasPrints?: boolean;
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  printUrl?: string | string[];
   audience?: string;
   tone?: string;
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
@@ -548,23 +550,36 @@ const ChatCreator: React.FC = () => {
     sendMessage(label, nextBrief);
   };
 
-  const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => {
+  const handlePersonalization = (data: { 
+    face: boolean; 
+    logo: boolean; 
+    prints: boolean;
+    colors: boolean; 
+    faceUrl?: string | string[]; 
+    logoUrl?: string | string[]; 
+    printUrl?: string | string[];
+    brandColors?: string[] 
+  }) => {
     const nextBrief = {
       ...brief,
       hasFace: data.face,
       hasLogo: data.logo,
+      hasPrints: data.prints,
       hasBrandColors: data.colors,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
+      printUrl: data.printUrl,
       brandColors: data.brandColors,
     };
     setBrief(nextBrief);
     const parts: string[] = [];
     const faceCount = Array.isArray(data.faceUrl) ? data.faceUrl.length : (data.faceUrl ? 1 : 0);
     const logoCount = Array.isArray(data.logoUrl) ? data.logoUrl.length : (data.logoUrl ? 1 : 0);
+    const printCount = Array.isArray(data.printUrl) ? data.printUrl.length : (data.printUrl ? 1 : 0);
     
     if (data.face) parts.push(`rosto${faceCount > 0 ? ` (${faceCount} foto${faceCount > 1 ? 's' : ''})` : ''}`);
     if (data.logo) parts.push(`logo${logoCount > 0 ? ` (${logoCount} foto${logoCount > 1 ? 's' : ''})` : ''}`);
+    if (data.prints) parts.push(`prints do sistema${printCount > 0 ? ` (${printCount} print${printCount > 1 ? 's' : ''})` : ''}`);
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
     sendMessage(label, nextBrief);
@@ -1346,15 +1361,30 @@ const ApproveContentWidget: React.FC<{
   );
 };
 
-const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
+const PersonalizationWidget: React.FC<{ 
+  onPick: (d: { 
+    face: boolean; 
+    logo: boolean; 
+    prints: boolean;
+    colors: boolean; 
+    faceUrl?: string | string[]; 
+    logoUrl?: string | string[]; 
+    printUrl?: string | string[];
+    brandColors?: string[] 
+  }) => void; 
+  userId?: string 
+}> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
+  const [prints, setPrints] = useState(false);
   const [colors, setColors] = useState(false);
   const [faceFiles, setFaceFiles] = useState<{url: string, file?: File}[]>([]);
   const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
+  const [printFiles, setPrintFiles] = useState<{url: string, file?: File}[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
   const [uploading, setUploading] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'prints' | null>(null);
+
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -1371,18 +1401,27 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
     setLogoFiles(prev => [...prev, ...newFiles]);
   };
 
+  const onPrintFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
+    setPrintFiles(prev => [...prev, ...newFiles]);
+  };
+
   const handleConfirm = async () => {
     setUploading(true);
     try {
       const faceUrls = await Promise.all(faceFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const logoUrls = await Promise.all(logoFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
+      const printUrls = await Promise.all(printFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
       onPick({
         face,
         logo,
+        prints,
         colors,
         faceUrl: faceUrls.length > 0 ? (faceUrls.length === 1 ? faceUrls[0] : faceUrls) : undefined,
         logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
+        printUrl: printUrls.length > 0 ? (printUrls.length === 1 ? printUrls[0] : printUrls) : undefined,
         brandColors: colors ? brandColors : undefined,
       });
     } catch (err) {
@@ -1394,6 +1433,7 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
   };
 
   const addColor = () => setBrandColors(prev => [...prev, '#000000']);
+
   const updateColor = (i: number, v: string) => setBrandColors(prev => prev.map((c, idx) => idx === i ? v : c));
   const removeColor = (i: number) => setBrandColors(prev => prev.filter((_, idx) => idx !== i));
 
@@ -1517,6 +1557,65 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
         )}
       </div>
 
+      {/* Prints do Sistema */}
+      <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: prints ? PURPLE : 'rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={() => setPrints(v => !v)}
+          className="w-full flex items-center gap-3 p-3"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: prints ? PURPLE : 'rgba(255,255,255,0.06)' }}>
+            <Smartphone className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-white">Prints / Screenshots</div>
+            <div className="text-[11px] text-white/50">Fotos das telas do seu sistema</div>
+          </div>
+          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: prints ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: prints ? PURPLE : 'transparent' }}>
+            {prints && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </button>
+        {prints && (
+          <div className="px-3 pb-3 space-y-2">
+            <input type="file" accept="image/*" multiple className="hidden" id="prints-upload" onChange={(e) => onPrintFilesSelected(e.target.files)} />
+            
+            {printFiles.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {printFiles.map((f, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group">
+                    <img src={f.url} className="w-full h-full object-cover" alt="Print preview" />
+                    <button 
+                      onClick={() => setPrintFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => document.getElementById('prints-upload')?.click()}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Upload className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Upload</span>
+              </button>
+              <button
+                onClick={() => setGalleryOpen('prints')}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Folder className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Galeria</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <GalleryPicker 
         open={!!galleryOpen}
         onClose={() => setGalleryOpen(null)}
@@ -1524,9 +1623,11 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
           const newItems = selected.map(s => ({ url: s.url }));
           if (galleryOpen === 'face') setFaceFiles(prev => [...prev, ...newItems]);
           if (galleryOpen === 'logo') setLogoFiles(prev => [...prev, ...newItems]);
+          if (galleryOpen === 'prints') setPrintFiles(prev => [...prev, ...newItems]);
           setGalleryOpen(null);
         }}
       />
+
 
       {/* Colors */}
       <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors ? PURPLE : 'rgba(255,255,255,0.1)' }}>
@@ -1580,7 +1681,7 @@ const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boole
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
           {uploading ? 'Enviando...' : 'Confirmar'}
         </Button>
-        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, colors: false })} className="text-xs h-9 text-white/60">
+        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, prints: false, colors: false })} className="text-xs h-9 text-white/60">
           Pular
         </Button>
       </div>

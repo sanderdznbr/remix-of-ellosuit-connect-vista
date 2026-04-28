@@ -27,8 +27,10 @@ interface Brief {
   brandColors?: string[];
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasPrints?: boolean;
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  printUrl?: string | string[];
   audience?: string;
   tone?: string;
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
@@ -253,6 +255,7 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
     // === Resolve all reference assets in parallel (alongside art direction) ===
     const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);
     const logoUrlArray = Array.isArray(brief.logoUrl) ? brief.logoUrl : (brief.logoUrl ? [brief.logoUrl] : []);
+    const printUrlArray = Array.isArray(brief.printUrl) ? brief.printUrl : (brief.printUrl ? [brief.printUrl] : []);
 
     const refsPromise = Promise.all([
       brief.hasFace && faceUrlArray.length > 0
@@ -261,18 +264,22 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
       brief.hasLogo && logoUrlArray.length > 0
         ? Promise.all(logoUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
         : Promise.resolve([]),
+      brief.hasPrints && printUrlArray.length > 0
+        ? Promise.all(printUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
+        : Promise.resolve([]),
       ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2).map(urlToDataUrl) : []),
     ]);
 
     const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);
-    const [facesResolved, logosResolved, ...styleRefDataUrls] = refsResolved;
-    const faceData = facesResolved?.[0] || null; // Gemini 3 Pro Image handles best with a primary face
+    const [facesResolved, logosResolved, printsResolved, ...styleRefDataUrls] = refsResolved;
+    const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;
     const styleRefs = styleRefDataUrls.filter(Boolean) as string[];
 
-    // If there are multiple face refs, we can add them as context too
     const additionalFaces = facesResolved.slice(1).filter(Boolean);
     const additionalLogos = logosResolved.slice(1).filter(Boolean);
+    const additionalPrints = printsResolved.filter(Boolean);
+
 
 
     // === Build the unified prompt (single pass) ===
@@ -310,7 +317,11 @@ Think of it like a film director casting a real actor: you have the actor's face
     const logoLine = logoData
       ? 'A logo asset is attached. Place it subtly and cleanly in a corner — small, balanced, never intrusive.'
       : '';
+    const printsLine = additionalPrints.length > 0
+      ? '⚠️ SYSTEM SCREENSHOTS ATTACHED ⚠️\nReference images of the software/app/system are attached. Use them as visual context for what the system looks like. Match the UI aesthetic if you show screens or devices in the scene.'
+      : '';
     const styleRules = [
+
       style?.name ? `Selected marketplace style: "${style.name}".` : '',
       style?.description ? `Style description: ${style.description}` : '',
       style?.strict_instructions ? `MANDATORY style rules (must obey strictly): ${style.strict_instructions}` : '',
@@ -336,6 +347,7 @@ ${toneLine}
 ${artDirection}
 ${faceLine}
 ${logoLine}
+${printsLine}
 
 STYLE GUIDANCE:
 ${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
@@ -374,6 +386,7 @@ NON-NEGOTIABLE CHECKLIST:
     for (const f of additionalFaces) content.push({ type: 'image_url', image_url: { url: f } });
     if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
     for (const l of additionalLogos) content.push({ type: 'image_url', image_url: { url: l } });
+    for (const p of additionalPrints) content.push({ type: 'image_url', image_url: { url: p } });
     for (const ref of styleRefs) content.push({ type: 'image_url', image_url: { url: ref } });
 
     console.log('chat-compose-final: single-pass generation', {

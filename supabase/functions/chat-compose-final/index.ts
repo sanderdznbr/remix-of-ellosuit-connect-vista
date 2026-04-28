@@ -295,7 +295,8 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         faceData ? { type: 'image_url', image_url: { url: faceData } } : null,
         logoData ? { type: 'image_url', image_url: { url: logoData } } : null,
         ...additionalPrints.slice(0, 1).map(p => ({ type: 'image_url', image_url: { url: p } })),
-        ...styleRefs.slice(0, 1).map(ref => ({ type: 'image_url', image_url: { url: ref } }))
+        ...styleRefs.slice(0, 2).map(ref => ({ type: 'image_url', image_url: { url: ref } })),
+        coverRef ? { type: 'image_url', image_url: { url: coverRef } } : null,
       ].filter(Boolean);
 
       let cardImage: string | null = null;

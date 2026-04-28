@@ -1198,58 +1198,142 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 };
 
 // Personalization with inline upload
+const LIMITS = {
+  title: { words: 7, label: 'Título / Hook', max: 7 },
+  subtitle: { words: 12, label: 'Subtítulo', max: 12 },
+  body: { words: 30, label: 'Corpo', max: 30 },
+} as const;
+
+const countWords = (s?: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;
+
 const ApproveContentWidget: React.FC<{ 
   content: Array<{ title?: string; subtitle?: string; body?: string }>; 
-  onApprove: () => void;
+  onApprove: (finalContent: Array<{ title?: string; subtitle?: string; body?: string }>) => void;
   onEdit: () => void;
-}> = ({ content, onApprove, onEdit }) => {
+  onChange: (updated: Array<{ title?: string; subtitle?: string; body?: string }>) => void;
+  onRequestNew: () => void;
+}> = ({ content, onApprove, onEdit, onChange, onRequestNew }) => {
+  const [draft, setDraft] = useState(content);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+  useEffect(() => { setDraft(content); }, [content]);
+
+  const updateField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string) => {
+    const next = draft.map((c, i) => i === idx ? { ...c, [field]: value } : c);
+    setDraft(next);
+    onChange(next);
+  };
+
+  const validate = (item: { title?: string; subtitle?: string; body?: string }) => {
+    const issues: string[] = [];
+    if (item.title && countWords(item.title) > LIMITS.title.max) issues.push(`Título com ${countWords(item.title)}/${LIMITS.title.max} palavras`);
+    if (item.subtitle && countWords(item.subtitle) > LIMITS.subtitle.max) issues.push(`Subtítulo com ${countWords(item.subtitle)}/${LIMITS.subtitle.max} palavras`);
+    if (item.body && countWords(item.body) > LIMITS.body.max) issues.push(`Corpo com ${countWords(item.body)}/${LIMITS.body.max} palavras`);
+    return issues;
+  };
+
+  const allIssues = draft.flatMap((d, i) => validate(d).map(msg => ({ slide: i + 1, msg })));
+  const hasIssues = allIssues.length > 0;
+
+  const renderField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string | undefined, isEditing: boolean) => {
+    const limit = LIMITS[field];
+    const words = countWords(value);
+    const over = words > limit.max;
+    const styles: Record<string, string> = {
+      title: 'text-sm font-bold text-white leading-tight',
+      subtitle: 'text-xs text-white/60 font-medium',
+      body: 'text-[13px] text-white/80 leading-relaxed italic',
+    };
+    return (
+      <div className="space-y-1">
+        {isEditing ? (
+          <textarea
+            value={value || ''}
+            onChange={(e) => updateField(idx, field, e.target.value)}
+            placeholder={limit.label}
+            rows={field === 'body' ? 3 : 1}
+            className={`w-full bg-black/30 border rounded-lg px-2 py-1.5 outline-none resize-none ${styles[field]} ${over ? 'border-red-500/60' : 'border-white/15 focus:border-violet-500/60'}`}
+          />
+        ) : (
+          value ? (field === 'body' ? <div className={styles[field]}>"{value}"</div> : <div className={styles[field]}>{value}</div>) : null
+        )}
+        {(isEditing || over) && (value || isEditing) && (
+          <div className={`text-[10px] ${over ? 'text-red-400' : 'text-white/40'}`}>
+            {limit.label} · {words}/{limit.max} palavras {over && '— acima do limite'}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-3 w-full max-w-md">
       <div className="grid gap-3">
-        {content.map((item, idx) => (
-          <div 
-            key={idx} 
-            className="p-4 rounded-xl border border-white/10 space-y-2 bg-white/5"
-          >
-            {content.length > 1 && (
-              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-1">
-                Slide {idx + 1}
+        {draft.map((item, idx) => {
+          const isEditing = editingIdx === idx;
+          const issues = validate(item);
+          return (
+            <div 
+              key={idx} 
+              className={`p-4 rounded-xl border space-y-2 transition-all ${issues.length > 0 ? 'border-red-500/40 bg-red-500/5' : 'border-white/10 bg-white/5'}`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                {draft.length > 1 ? (
+                  <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                    Slide {idx + 1}
+                  </div>
+                ) : <div />}
+                <button
+                  onClick={() => setEditingIdx(isEditing ? null : idx)}
+                  className="text-[10px] font-medium text-violet-400 hover:text-violet-300 uppercase tracking-wider"
+                >
+                  {isEditing ? 'Concluir' : 'Editar'}
+                </button>
               </div>
-            )}
-            {item.title && (
-              <div className="text-sm font-bold text-white leading-tight">
-                {item.title}
-              </div>
-            )}
-            {item.subtitle && (
-              <div className="text-xs text-white/60 font-medium">
-                {item.subtitle}
-              </div>
-            )}
-            {item.body && (
-              <div className="text-[13px] text-white/80 leading-relaxed italic">
-                "{item.body}"
-              </div>
-            )}
-          </div>
-        ))}
+              {renderField(idx, 'title', item.title, isEditing)}
+              {renderField(idx, 'subtitle', item.subtitle, isEditing)}
+              {renderField(idx, 'body', item.body, isEditing)}
+            </div>
+          );
+        })}
       </div>
-      <div className="flex gap-2">
+
+      {hasIssues && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1">
+          <div className="text-[11px] font-bold text-red-400 uppercase tracking-wider">⚠ Ajuste antes de aprovar</div>
+          {allIssues.map((iss, i) => (
+            <div key={i} className="text-[11px] text-red-300/90">Slide {iss.slide}: {iss.msg}</div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
         <Button 
-          onClick={onApprove}
-          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-10 gap-2"
+          onClick={() => onApprove(draft)}
+          disabled={hasIssues}
+          className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl h-10 gap-2"
         >
           <Check className="h-4 w-4" />
           Aprovar texto
         </Button>
-        <Button 
-          variant="outline"
-          onClick={onEdit}
-          className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2"
-        >
-          <Wand2 className="h-4 w-4" />
-          Mudar algo
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button 
+            variant="outline"
+            onClick={onRequestNew}
+            className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2 text-xs"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Nova sugestão
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={onEdit}
+            className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2 text-xs"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Pedir mudança
+          </Button>
+        </div>
       </div>
     </div>
   );

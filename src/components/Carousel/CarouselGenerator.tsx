@@ -7407,7 +7407,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
     // Chat-generated carousels: detect by metadata (prompt_style) or lack of structured text.
     // If the card has an imageUrl and absolutely no title/body, it's a full-bleed chat generation.
-    const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme' || (card.imageUrl && !card.title && !card.body && !card.bodyTop && !card.subtitle && !card.bodyBottom);
+    const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme' || (!!card.imageUrl && !card.title && !card.body && !card.bodyTop && !card.subtitle && !card.bodyBottom);
     
     if (isFullBleed && card.imageUrl && card.type !== 'tweet' && card.type !== 'tweet2') {
       return renderMarketplaceFullBleedCard(card, index, isExport);

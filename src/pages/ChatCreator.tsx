@@ -1732,26 +1732,47 @@ const FinalResultWidget: React.FC<{
         <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleDownload}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-white/90 transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          Baixar
-        </button>
-        <button
-          onClick={() => setShowAdjust(s => !s)}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full border text-sm font-medium transition-colors"
-          style={{
-            backgroundColor: showAdjust ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
-            borderColor: 'rgba(139,92,246,0.3)',
-            color: '#C4B5FD',
-          }}
-        >
-          <Wand2 className="h-4 w-4" />
-          Ajustar
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {isCarousel ? (
+            <button
+              onClick={() => onOpen(carouselId)}
+              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-violet-600 hover:bg-violet-700 text-sm font-medium text-white transition-colors"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Ver carrossel completo
+            </button>
+          ) : (
+            <button
+              onClick={handleDownload}
+              className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm font-medium text-white/90 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Baixar
+            </button>
+          )}
+          <button
+            onClick={() => setShowAdjust(s => !s)}
+            className="flex-1 inline-flex items-center justify-center gap-2 h-10 rounded-full border text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: showAdjust ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
+              borderColor: 'rgba(139,92,246,0.3)',
+              color: '#C4B5FD',
+            }}
+          >
+            <Wand2 className="h-4 w-4" />
+            Ajustar
+          </button>
+        </div>
+        {isCarousel && (
+          <button
+            onClick={handleDownload}
+            className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white/70 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Baixar capa
+          </button>
+        )}
       </div>
 
       {showAdjust && (

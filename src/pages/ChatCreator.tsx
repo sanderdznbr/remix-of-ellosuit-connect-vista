@@ -1895,10 +1895,10 @@ const ConfirmWidget: React.FC<{
     setSearching(true);
     try {
       const cardsToSearch = typeof cardIdx === 'number' 
-        ? [{ index: cardIdx, query: customQueries[cardIdx] || `${brief.suggested_content[cardIdx].title || brief.topic} photo photography` }]
+        ? [{ index: cardIdx, query: customQueries[cardIdx] || brief.suggested_content[cardIdx].searchTerm || `${brief.suggested_content[cardIdx].title || brief.topic} photo photography` }]
         : brief.suggested_content.map((card, i) => ({
             index: i,
-            query: customQueries[i] || `${card.title || brief.topic} photo photography`
+            query: customQueries[i] || card.searchTerm || `${card.title || brief.topic} photo photography`
           }));
 
       const { data, error } = await supabase.functions.invoke('generate-carousel', {

@@ -509,7 +509,13 @@ const ChatCreator: React.FC = () => {
       if (!carouselId || !imageUrl) throw new Error('Resposta incompleta');
 
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
-      appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
+      
+      // Check if it's a carousel or single post
+      if (b.contentType === 'carousel') {
+        appendAssistantWithWidget('Prontíssimo! Seu carrossel foi criado com sucesso. Clique no botão abaixo para ver e baixar todos os slides 👇', 'final_result', { carouselId, imageUrl, isCarousel: true });
+      } else {
+        appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
+      }
     } catch (err: any) {
       console.error('compose error:', err);
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));

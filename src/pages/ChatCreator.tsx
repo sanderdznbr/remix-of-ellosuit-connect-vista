@@ -550,23 +550,36 @@ const ChatCreator: React.FC = () => {
     sendMessage(label, nextBrief);
   };
 
-  const handlePersonalization = (data: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => {
+  const handlePersonalization = (data: { 
+    face: boolean; 
+    logo: boolean; 
+    prints: boolean;
+    colors: boolean; 
+    faceUrl?: string | string[]; 
+    logoUrl?: string | string[]; 
+    printUrl?: string | string[];
+    brandColors?: string[] 
+  }) => {
     const nextBrief = {
       ...brief,
       hasFace: data.face,
       hasLogo: data.logo,
+      hasPrints: data.prints,
       hasBrandColors: data.colors,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
+      printUrl: data.printUrl,
       brandColors: data.brandColors,
     };
     setBrief(nextBrief);
     const parts: string[] = [];
     const faceCount = Array.isArray(data.faceUrl) ? data.faceUrl.length : (data.faceUrl ? 1 : 0);
     const logoCount = Array.isArray(data.logoUrl) ? data.logoUrl.length : (data.logoUrl ? 1 : 0);
+    const printCount = Array.isArray(data.printUrl) ? data.printUrl.length : (data.printUrl ? 1 : 0);
     
     if (data.face) parts.push(`rosto${faceCount > 0 ? ` (${faceCount} foto${faceCount > 1 ? 's' : ''})` : ''}`);
     if (data.logo) parts.push(`logo${logoCount > 0 ? ` (${logoCount} foto${logoCount > 1 ? 's' : ''})` : ''}`);
+    if (data.prints) parts.push(`prints do sistema${printCount > 0 ? ` (${printCount} print${printCount > 1 ? 's' : ''})` : ''}`);
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
     sendMessage(label, nextBrief);

@@ -159,7 +159,7 @@ function buildTool() {
           },
           widget: {
             type: 'string',
-            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'confirm_generate', 'none'],
+            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'none'],
             description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {

@@ -1304,9 +1304,9 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 
 // Personalization with inline upload
 const LIMITS = {
-  title: { words: 7, label: 'Título / Hook', max: 7 },
-  subtitle: { words: 12, label: 'Subtítulo', max: 12 },
-  body: { words: 30, label: 'Corpo', max: 30 },
+  title: { words: 12, label: 'Título / Hook', max: 12 },
+  subtitle: { words: 20, label: 'Subtítulo', max: 20 },
+  body: { words: 45, label: 'Corpo', max: 45 },
 } as const;
 
 const countWords = (s?: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;

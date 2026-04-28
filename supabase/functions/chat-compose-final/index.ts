@@ -387,16 +387,18 @@ NON-NEGOTIABLE CHECKLIST:
     const totalCards = brief.suggested_content?.length || 1;
     const generatedImages: string[] = [];
     
-    // Base multimodal content structure (images)
+    // Base multimodal content structure (images) - optimized for worker limits
+    // Only send the essential identity/style references once, and limit the total count
     const baseMultimodalContent: any[] = [];
     if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
-    for (const f of additionalFaces) baseMultimodalContent.push({ type: 'image_url', image_url: { url: f } });
+    // Limit additional faces/logos/prints to avoid WORKER_RESOURCE_LIMIT
+    for (const f of additionalFaces.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: f } });
     if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
-    for (const l of additionalLogos) baseMultimodalContent.push({ type: 'image_url', image_url: { url: l } });
-    for (const p of additionalPrints) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
-    for (const ref of styleRefs) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
+    for (const p of additionalPrints.slice(0, 2)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
+    for (const ref of styleRefs.slice(0, 2)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
 
-    console.log(`chat-compose-final: generating ${totalCards} cards for ${brief.topic}`);
+    console.log(`chat-compose-final: generating ${totalCards} cards. Payload optimized.`);
+
 
     for (let i = 0; i < totalCards; i++) {
       let cardImage: string | null = null;

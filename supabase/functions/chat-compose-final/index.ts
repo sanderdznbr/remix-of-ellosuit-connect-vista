@@ -386,6 +386,7 @@ NON-NEGOTIABLE CHECKLIST:
     for (const f of additionalFaces) content.push({ type: 'image_url', image_url: { url: f } });
     if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
     for (const l of additionalLogos) content.push({ type: 'image_url', image_url: { url: l } });
+    for (const p of additionalPrints) content.push({ type: 'image_url', image_url: { url: p } });
     for (const ref of styleRefs) content.push({ type: 'image_url', image_url: { url: ref } });
 
     console.log('chat-compose-final: single-pass generation', {

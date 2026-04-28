@@ -1346,15 +1346,30 @@ const ApproveContentWidget: React.FC<{
   );
 };
 
-const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
+const PersonalizationWidget: React.FC<{ 
+  onPick: (d: { 
+    face: boolean; 
+    logo: boolean; 
+    prints: boolean;
+    colors: boolean; 
+    faceUrl?: string | string[]; 
+    logoUrl?: string | string[]; 
+    printUrl?: string | string[];
+    brandColors?: string[] 
+  }) => void; 
+  userId?: string 
+}> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
+  const [prints, setPrints] = useState(false);
   const [colors, setColors] = useState(false);
   const [faceFiles, setFaceFiles] = useState<{url: string, file?: File}[]>([]);
   const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
+  const [printFiles, setPrintFiles] = useState<{url: string, file?: File}[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
   const [uploading, setUploading] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'prints' | null>(null);
+
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);

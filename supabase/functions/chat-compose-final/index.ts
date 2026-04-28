@@ -123,17 +123,21 @@ function selectStylePreviewUrls(
     classifications[url] === cardKind
   );
   const fallback = previews.filter((url: string) => !matching.includes(url));
-  return [...matching, ...fallback].slice(0, 4);
+  return [...matching, ...fallback].slice(0, 2);
 }
 
 async function urlToDataUrl(url: string): Promise<string | null> {
+  if (!url) return null;
+  if (url.startsWith("data:")) return url;
   try {
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const ct = resp.headers.get("content-type") || "image/png";
-    const buf = new Uint8Array(await resp.arrayBuffer());
-    return `data:${ct};base64,${encodeBase64(buf)}`;
-  } catch {
+    const arrayBuffer = await resp.arrayBuffer();
+    // Use a more memory-efficient way to encode if possible, but encodeBase64 is standard in Deno
+    return `data:${ct};base64,${encodeBase64(new Uint8Array(arrayBuffer))}`;
+  } catch (e) {
+    console.error("urlToDataUrl error:", e);
     return null;
   }
 }
@@ -142,17 +146,16 @@ async function uploadCover(
   sb: any,
   companyId: string,
   carouselId: string,
-  dataUrl: string,
+  url: string,
 ): Promise<string | null> {
+  if (!url) return null;
   try {
-    const base64 = dataUrl.split(",")[1];
-    const bin = atob(base64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const resp = await fetch(url);
+    const blob = await resp.blob();
     const path = `${companyId}/${carouselId}/cover.jpg`;
     const { error } = await sb.storage.from("covers").upload(
       path,
-      bytes.buffer,
+      blob,
       {
         contentType: "image/jpeg",
         upsert: true,

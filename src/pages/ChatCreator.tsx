@@ -621,6 +621,7 @@ const ChatCreator: React.FC = () => {
       return <FinalResultWidget
         carouselId={msg.widgetData?.carouselId}
         imageUrl={msg.widgetData?.imageUrl}
+        isCarousel={msg.widgetData?.isCarousel}
         onOpen={(id) => navigate(`/${id}`)}
         onImageUpdated={(newUrl) => {
           setMessages(prev => prev.map(m => m.id === msg.id

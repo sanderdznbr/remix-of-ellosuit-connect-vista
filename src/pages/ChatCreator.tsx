@@ -534,8 +534,6 @@ const ChatCreator: React.FC = () => {
     const label = contentType === 'carousel' ? `Quero um carrossel com ${cards || 5} slides` : 'Quero um post único';
     sendMessage(label, nextBrief);
   };
-    sendMessage(label, nextBrief);
-  };
 
   const handleFormatPick = (format: string) => {
     const nextBrief = { ...brief, format: format as any };

@@ -7405,11 +7405,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }
 
-    // Chat-generated carousels: detect by carousel_id format or metadata if needed, 
-    // but the most reliable way is if it's a full-bleed style generated from /criar.
-    // If the card has an imageUrl but is NOT a tweet/tweet2, and we're in a marketplace style,
-    // we should prefer the full-bleed renderer to avoid template overlays.
+    // Chat-generated carousels: detect by metadata (prompt_style) or lack of structured text.
+    // If the card has an imageUrl and absolutely no title/body, it's a full-bleed chat generation.
     const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme' || (card.imageUrl && !card.title && !card.body && !card.bodyTop);
+    
     if (isFullBleed && card.imageUrl && card.type !== 'tweet' && card.type !== 'tweet2') {
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }

@@ -1386,18 +1386,27 @@ const PersonalizationWidget: React.FC<{
     setLogoFiles(prev => [...prev, ...newFiles]);
   };
 
+  const onPrintFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
+    setPrintFiles(prev => [...prev, ...newFiles]);
+  };
+
   const handleConfirm = async () => {
     setUploading(true);
     try {
       const faceUrls = await Promise.all(faceFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const logoUrls = await Promise.all(logoFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
+      const printUrls = await Promise.all(printFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
       onPick({
         face,
         logo,
+        prints,
         colors,
         faceUrl: faceUrls.length > 0 ? (faceUrls.length === 1 ? faceUrls[0] : faceUrls) : undefined,
         logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
+        printUrl: printUrls.length > 0 ? (printUrls.length === 1 ? printUrls[0] : printUrls) : undefined,
         brandColors: colors ? brandColors : undefined,
       });
     } catch (err) {
@@ -1409,6 +1418,7 @@ const PersonalizationWidget: React.FC<{
   };
 
   const addColor = () => setBrandColors(prev => [...prev, '#000000']);
+
   const updateColor = (i: number, v: string) => setBrandColors(prev => prev.map((c, idx) => idx === i ? v : c));
   const removeColor = (i: number) => setBrandColors(prev => prev.filter((_, idx) => idx !== i));
 

@@ -1794,9 +1794,12 @@ const BackgroundPickerWidget: React.FC<{ backgrounds: BackgroundOption[]; onPick
   );
 };
 
-const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phase }) => {
+const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose'; current?: number; total?: number }> = ({ phase, current, total }) => {
+  const isCompose = phase === 'compose';
+  const progress = total ? Math.round(((current || 0) / total) * 100) : 0;
+  
   return (
-    <div className="rounded-xl p-4 max-w-md" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+    <div className="rounded-xl p-4 max-w-md w-full space-y-3" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
       <div className="flex items-center gap-3">
         <div className="relative h-10 w-10 shrink-0">
           <div className="absolute inset-0 rounded-full border-2 border-white/10" />
@@ -1805,13 +1808,38 @@ const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phas
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white">
-            {phase === 'backgrounds' ? 'Criando 2 opções de fundo...' : 'Compondo seu post...'}
+            {isCompose 
+              ? (total && total > 1 ? `Gerando card ${current} de ${total}...` : 'Compondo seu post...') 
+              : 'Criando 2 opções de fundo...'}
           </p>
           <p className="text-[11px] text-white/50 mt-0.5">
-            {phase === 'backgrounds' ? 'Gemini 3 Pro está pintando os cenários' : 'Adicionando texto, logo e identidade'}
+            {isCompose 
+              ? 'Adicionando texto, logo e identidade' 
+              : 'Gemini 3 Pro está pintando os cenários'}
           </p>
         </div>
+        {isCompose && total && total > 1 && (
+          <div className="text-xs font-bold text-violet-400">
+            {progress}%
+          </div>
+        )}
       </div>
+
+      {isCompose && total && total > 1 && (
+        <div className="space-y-1.5">
+          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              className="h-full bg-violet-600"
+            />
+          </div>
+          <div className="flex justify-between items-center text-[10px] text-white/30 uppercase tracking-wider font-bold">
+            <span>Início</span>
+            <span>Finalizando</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

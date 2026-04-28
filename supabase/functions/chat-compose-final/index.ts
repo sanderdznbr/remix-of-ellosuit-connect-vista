@@ -428,14 +428,26 @@ NON-NEGOTIABLE CHECKLIST:
     }
 
     // === Persist ===
-    const card = {
-      type: 'cover',
-      title: brief.topic,
-      imageUrl: finalImage,
-      isAiImage: true,
-      layout: 'dark',
-    };
-    const carouselData = { title: brief.topic, cards: [card] };
+    // === Persist ===
+    const cards = brief.suggested_content && brief.suggested_content.length > 0
+      ? brief.suggested_content.map((c, i) => ({
+          type: i === 0 ? 'cover' : 'body',
+          title: c.title,
+          subtitle: c.subtitle,
+          body: c.body,
+          imageUrl: i === 0 ? finalImage : null,
+          isAiImage: i === 0,
+          layout: 'dark',
+        }))
+      : [{
+          type: 'cover',
+          title: brief.topic,
+          imageUrl: finalImage,
+          isAiImage: true,
+          layout: 'dark',
+        }];
+    
+    const carouselData = { title: brief.topic, cards };
 
     // Validate that the marketplace style actually exists before referencing it
     let validStyleId: string | null = null;

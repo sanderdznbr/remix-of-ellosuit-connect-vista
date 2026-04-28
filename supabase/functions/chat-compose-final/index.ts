@@ -197,7 +197,10 @@ Deno.serve(async (req) => {
     }
 
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
-    const style = await getStyleContext(sb, brief.styleId);
+    const style = (await getStyleContext(sb, brief.styleId)) || (await getStyleContextByName(sb, brief.styleName));
+    const currentCardKind = typeof cardIndex === 'number'
+      ? inferCardKind(brief.suggested_content?.[cardIndex], cardIndex)
+      : 'cover';
 
     // Context strings
     const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : '';
@@ -212,8 +215,8 @@ Deno.serve(async (req) => {
     const logoUrlArray = Array.isArray(brief.logoUrl) ? brief.logoUrl : (brief.logoUrl ? [brief.logoUrl] : []);
     const printUrlArray = Array.isArray(brief.printUrl) ? brief.printUrl : (brief.printUrl ? [brief.printUrl] : []);
 
-    // Load up to 2 style preview images for stronger visual DNA reference
-    const stylePreviewSlice = Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2) : [];
+    // Load matching style references first; real photos are content references, never style references.
+    const stylePreviewSlice = selectStylePreviewUrls(style, currentCardKind);
 
     const refsPromise = Promise.all([
       brief.hasFace && faceUrlArray.length > 0 ? Promise.all(faceUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
@@ -239,14 +242,18 @@ Deno.serve(async (req) => {
     const faceLine = faceData ? `⚠️ FACE REFERENCE ATTACHED. REINVENT THE ENTIRE SCENE. USE FACE IDENTITY ONLY.` : '';
     const logoLine = logoData ? 'Logo is attached. Place subtly in a corner.' : '';
     const printsLine = additionalPrints.length > 0 ? 'Reference screenshots attached. Use for UI context.' : '';
-    const selectedCardLine = selectedCardRef ? `⚠️ REAL PHOTO ATTACHED — USE IT AS THE PRIMARY VISUAL SUBJECT (the person/scene MUST be recognizable and identical), but COMPOSE the card following the STYLE REFERENCES' editorial layout, typography, color treatment, color overlays, gradients, decorative elements, and text placement system.
-DO NOT just slap the photo as a flat full-bleed background with text on top. Instead, treat the photo like a magazine editor would: integrate it into the style's compositional grid (cropped, masked, duotoned, color-graded, layered with shapes/text blocks/gradients/typographic frames as the style dictates).
-Preserve the subject's identity and key visual elements of the photo, but apply the style's creative DNA (color palette, type system, layout, decorative geometry, mood). The text MUST be distributed according to the style's hierarchy — not just stacked at the top.` : '';
+    const selectedCardLine = selectedCardRef ? `⚠️ REAL PHOTO ATTACHED — CONTENT REFERENCE ONLY, NOT THE STYLE.
+STRICT PRIORITY ORDER: (1) STYLE REFERENCES control layout/typography/colors/composition, (2) text hierarchy, (3) real photo subject.
+Use the real photo only as raw material for the subject/scene. Rebuild it inside the selected style's composition: crop, mask, cut out, duotone, blend, collage, frame with graphic shapes, overlays, gradients, depth, texture, and editorial typography exactly as the style references suggest.
+FORBIDDEN FAILURE MODE: do not place the real photo full-bleed as a plain background with simple white text on top. If the result looks like a default photo + title overlay, it is wrong.
+The final card must look like a designed template from the selected marketplace style, with intentional text distribution, hierarchy, spacing, and graphic system.` : '';
 
     const styleRules = [
       style?.name ? `Style: "${style.name}".` : '',
+      style?.description ? `Style description: ${style.description}` : '',
       style?.strict_instructions ? `MANDATORY rules: ${style.strict_instructions}` : '',
-      styleRefs.length ? `${styleRefs.length} style reference image(s) attached. THESE DEFINE THE VISUAL DNA — match colors, typography, layout, mood, treatment.` : '',
+      style?.style_config?.imageGeneration?.prompt_style ? `AESTHETIC DNA FROM STYLE CONFIG: ${style.style_config.imageGeneration.prompt_style}` : '',
+      styleRefs.length ? `${styleRefs.length} style reference image(s) attached for this ${currentCardKind.toUpperCase()} card. THESE ARE THE HARD VISUAL TARGET — copy the design system: colors, typography, layout grid, spacing, photo treatment, graphic elements, rhythm, hierarchy.` : '',
     ].filter(Boolean).join('\n');
 
     const coverRefLine = coverRef

@@ -36,6 +36,7 @@ interface Brief {
   imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
   userIdea?: string;
+  selectedImages?: string[];
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {
@@ -170,6 +171,7 @@ Deno.serve(async (req) => {
     const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
     const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
     const userIdeaLine = brief.userIdea ? `⚠️ USER SPECIFIC IDEA/INSTRUCTION: "${brief.userIdea}". FOLLOW THIS IDEA CLOSELY FOR THE VISUAL COMPOSITION.` : '';
+    const selectedImageForCard = (typeof cardIndex === 'number' && brief.selectedImages?.[cardIndex]) ? brief.selectedImages[cardIndex] : null;
 
     // Face / Logo / Prints references
     const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);
@@ -185,6 +187,7 @@ Deno.serve(async (req) => {
       brief.hasPrints && printUrlArray.length > 0 ? Promise.all(printUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
       ...stylePreviewSlice.map(urlToDataUrl),
       coverImageUrl ? urlToDataUrl(coverImageUrl) : Promise.resolve(null),
+      selectedImageForCard ? (selectedImageForCard.startsWith('data:') ? Promise.resolve(selectedImageForCard) : urlToDataUrl(selectedImageForCard)) : Promise.resolve(null),
     ]);
 
     const refsResolved = await refsPromise;
@@ -193,6 +196,7 @@ Deno.serve(async (req) => {
     const printsResolved = refsResolved[2];
     const styleRefs = refsResolved.slice(3, 3 + stylePreviewSlice.length).filter(Boolean) as string[];
     const coverRef = refsResolved[3 + stylePreviewSlice.length] as string | null;
+    const selectedCardRef = refsResolved[4 + stylePreviewSlice.length] as string | null;
 
     const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;
@@ -201,6 +205,7 @@ Deno.serve(async (req) => {
     const faceLine = faceData ? `⚠️ FACE REFERENCE ATTACHED. REINVENT THE ENTIRE SCENE. USE FACE IDENTITY ONLY.` : '';
     const logoLine = logoData ? 'Logo is attached. Place subtly in a corner.' : '';
     const printsLine = additionalPrints.length > 0 ? 'Reference screenshots attached. Use for UI context.' : '';
+    const selectedCardLine = selectedCardRef ? `⚠️ MANDATORY BACKGROUND PHOTO ATTACHED. REPRODUCE THIS EXACT PHOTO BUT OVERLAY THE SPECIFIED TEXT ON TOP OF IT. Maintain the photographic content exactly, just add the typography and branding.` : '';
 
     const styleRules = [
       style?.name ? `Style: "${style.name}".` : '',
@@ -306,6 +311,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         ...additionalPrints.slice(0, 1).map(p => ({ type: 'image_url', image_url: { url: p } })),
         ...styleRefs.slice(0, 2).map(ref => ({ type: 'image_url', image_url: { url: ref } })),
         coverRef ? { type: 'image_url', image_url: { url: coverRef } } : null,
+        selectedCardRef ? { type: 'image_url', image_url: { url: selectedCardRef } } : null,
       ].filter(Boolean);
 
       let cardImage: string | null = null;

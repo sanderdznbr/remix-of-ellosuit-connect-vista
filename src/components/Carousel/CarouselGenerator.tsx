@@ -7409,7 +7409,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
     // but the most reliable way is if it's a full-bleed style generated from /criar.
     // If the card has an imageUrl but is NOT a tweet/tweet2, and we're in a marketplace style,
     // we should prefer the full-bleed renderer to avoid template overlays.
-    const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
+    const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme' || (card.imageUrl && !card.title && !card.body && !card.bodyTop);
     if (isFullBleed && card.imageUrl && card.type !== 'tweet' && card.type !== 'tweet2') {
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }

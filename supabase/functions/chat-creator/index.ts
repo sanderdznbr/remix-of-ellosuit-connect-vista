@@ -31,6 +31,7 @@ interface BriefState {
   imageModel?: 'ello-pro' | 'ello-fast';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
   userIdea?: string;
+  imageSource?: 'ai' | 'real';
 }
 
 interface SanitizedBriefState extends BriefState {
@@ -94,6 +95,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
     suggested_content: brief?.suggested_content,
     userIdea: trimText(brief?.userIdea, 500),
+    imageSource: brief?.imageSource,
   };
 }
 
@@ -120,26 +122,29 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
    - Use o widget "content_type_picker".
 3. SE FOR CARROSSEL: a PRÓXIMA pergunta DEVE ser obrigatoriamente "Quantos slides você quer?" — NÃO avance para formato ou estilo sem antes saber o cardCount.
 4. DETECTE O CONTEXTO: Se o usuário quer falar de um PRODUTO, SISTEMA, SOFTWARE ou APP específico (ex: "ellocontent", "meu sistema de vendas", "app de exercícios"), você deve ser inteligente e pedir Prints/Screenshots do sistema além de fotos e logos.
-   - Nesse caso, na etapa de personalização, destaque que seria ótimo ter "alguns prints da tela" para a IA se basear.
+    - Nesse caso, na etapa de personalização, destaque que seria ótimo ter "alguns prints da tela" para a IA se basear.
 5. Depois: formato/proporção (4:5, 1:1, 9:16) — widget "format_picker". Nunca pergunte proporção antes de saber se é único ou carrossel.
 6. SEMPRE em algum momento ofereça estilos do marketplace (widget "style_picker"). OBRIGATÓRIO.
 7. Ofereça personalização (widget "personalization"): rosto, logo, prints do sistema, cores.
-8. ETAPA DE TEXTO (CRÍTICA): Sempre antes de gerar, sugira o TEXTO que irá na arte.
-   - OBRIGATÓRIO: Se for carrossel, você DEVE gerar conteúdo para EXATAMENTE o número de slides (cardCount) definido anteriormente. Se cardCount=7, sugira 7 slides no 'suggested_content'.
-   - MANDATÓRIO: Quando você apresentar as sugestões de texto nas "messages", você DEVE OBRIGATORIAMENTE usar o widget "approve_content" e preencher o array 'suggested_content' no 'brief_update' na MESMA resposta. Nunca envie as mensagens de texto sem o widget de aprovação.
-   - VARIE O FORMATO DOS CARDS: Não use o padrão "título + subtítulo + corpo" em todos os slides.
-     * Use cards de "apenas texto" (somente o campo 'body') para explicar detalhes, contar histórias ou dar continuidade ao slide anterior.
-     * Deixe títulos e subtítulos apenas para a capa e cards de transição/destaque.
-    - REGRAS DE LIMITE DE TEXTO (MANDATÓRIO):
-      * Título/Hook: Máximo 12 palavras.
-      * Subtítulo: Máximo 20 palavras.
-      * Corpo: Máximo 45 palavras.
-   - O conteúdo deve combinar com o estilo visual selecionado (styleName).
-   - Use o widget "approve_content" e preencha 'suggested_content' no brief_update.
 
+8. ESCOLHA DE IMAGEM (NOVO - OBRIGATÓRIO): Pergunte se o usuário prefere "Ilustrações por IA" ou "Post Real (com fotos reais)".
+   - Use o widget "image_source_picker".
+   - Se for "Post Real", explique que ele poderá pesquisar fotos ou subir as dele.
 
+9. ETAPA DE TEXTO (CRÍTICA): Sempre antes de gerar, sugira o TEXTO que irá na arte.
+    - OBRIGATÓRIO: Se for carrossel, você DEVE gerar conteúdo para EXATAMENTE o número de slides (cardCount) definido anteriormente. Se cardCount=7, sugira 7 slides no 'suggested_content'.
+    - MANDATÓRIO: Quando você apresentar as sugestões de texto nas "messages", você DEVE OBRIGATORIAMENTE usar o widget "approve_content" e preencher o array 'suggested_content' no 'brief_update' na MESMA resposta. Nunca envie as mensagens de texto sem o widget de aprovação.
+    - VARIE O FORMATO DOS CARDS: Não use o padrão "título + subtítulo + corpo" em todos os slides.
+      * Use cards de "apenas texto" (somente o campo 'body') para explicar detalhes, contar histórias ou dar continuidade ao slide anterior.
+      * Deixe títulos e subtítulos apenas para a capa e cards de transição/destaque.
+     - REGRAS DE LIMITE DE TEXTO (MANDATÓRIO):
+       * Título/Hook: Máximo 12 palavras.
+       * Subtítulo: Máximo 20 palavras.
+       * Corpo: Máximo 45 palavras.
+    - O conteúdo deve combinar com o estilo visual selecionado (styleName). Se o usuário escolheu um estilo específico, garanta que os textos e a proposta visual sigam esse estilo.
+    - Use o widget "approve_content" e preencha 'suggested_content' no brief_update.
 
-   9. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
+10. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
     - OBRIGATÓRIO: Apresente as opções "ellocontent pro. (gemini 3 pro)" (padrão) e "ellocontent fast. (gemini fast)".
     - Explique que a "ellocontent pro" é nossa recomendação.
     - MANDATÓRIO: Use o widget "image_model_picker" para esta etapa.
@@ -191,7 +196,7 @@ function buildTool() {
           },
           widget: {
             type: 'string',
-            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'none'],
+            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'none'],
             description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {

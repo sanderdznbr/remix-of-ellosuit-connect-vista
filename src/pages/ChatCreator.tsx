@@ -1430,6 +1430,7 @@ const ApproveContentWidget: React.FC<{
             {renderField(currentSlide, 'title', activeItem.title, isEditing)}
             {renderField(currentSlide, 'subtitle', activeItem.subtitle, isEditing)}
             {renderField(currentSlide, 'body', activeItem.body, isEditing)}
+            {activeItem.searchTerm && renderField(currentSlide, 'searchTerm', activeItem.searchTerm, isEditing)}
           </div>
         </div>
 

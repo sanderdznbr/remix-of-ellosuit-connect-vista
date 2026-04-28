@@ -47,6 +47,7 @@ interface BriefState {
   logoUrl?: string | string[];
   audience?: string;
   tone?: string;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
 interface ChatGenerationPrefill {

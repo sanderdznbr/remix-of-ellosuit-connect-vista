@@ -1891,8 +1891,8 @@ const ConfirmWidget: React.FC<{
             query: customQueries[i] || `${card.title || brief.topic} photo photography`
           }));
 
-      const { data, error } = await supabase.functions.invoke('search-news', {
-        body: { per_card_queries: cardsToSearch }
+      const { data, error } = await supabase.functions.invoke('generate-carousel', {
+        body: { action: 'web-search', query: cardsToSearch[0].query }
       });
 
       if (error) throw error;

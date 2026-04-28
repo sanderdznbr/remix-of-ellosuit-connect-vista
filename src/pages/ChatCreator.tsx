@@ -1692,13 +1692,13 @@ const FinalResultWidget: React.FC<{
         setLoadingSlides(true);
         try {
           const { data, error } = await supabase
-            .from('carousel_slides')
+            .from('carousel_slides' as any)
             .select('image_url')
             .eq('carousel_id', carouselId)
             .order('slide_index', { ascending: true });
           
           if (error) throw error;
-          if (data) setSlides(data);
+          if (data) setSlides(data as any);
         } catch (err) {
           console.error('Error fetching slides:', err);
         } finally {

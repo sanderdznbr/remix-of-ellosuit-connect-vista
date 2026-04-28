@@ -1907,24 +1907,25 @@ const ConfirmWidget: React.FC<{
             query: customQueries[i] || card.searchTerm || `${card.title || brief.topic} photo photography`
           }));
 
-      const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: { action: 'web-search', query: cardsToSearch.map(c => c.query).join(' ') }
-      });
+      const nextResults: Record<number, string[]> = { ...searchResults };
 
-      if (error) throw error;
-      if (data?.images) {
-        const images = data.images.map((img: any) => img.url);
-        const nextResults: Record<number, string[]> = {};
-        if (typeof cardIdx === 'number') {
-          nextResults[cardIdx] = images;
-        } else {
-          brief.suggested_content?.forEach((_, i) => {
-            nextResults[i] = images;
+      // Use a small delay between requests if multiple to avoid hitting rate limits too hard
+      for (const item of cardsToSearch) {
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-carousel', {
+            body: { action: 'web-search', query: item.query }
           });
+
+          if (!error && data?.images) {
+            nextResults[item.index] = data.images.map((img: any) => img.url);
+          }
+        } catch (err) {
+          console.error(`Search error for card ${item.index}:`, err);
         }
-        setSearchResults(prev => ({ ...prev, ...nextResults }));
-        toast.success(typeof cardIdx === 'number' ? `Fotos para o card ${cardIdx + 1} atualizadas!` : "Fotos reais encontradas!");
       }
+
+      setSearchResults(nextResults);
+      toast.success(typeof cardIdx === 'number' ? `Fotos para o card ${cardIdx + 1} atualizadas!` : "Fotos reais encontradas!");
     } catch (err) {
       console.error('Image search error:', err);
       toast.error("Erro ao buscar fotos reais");

@@ -577,6 +577,7 @@ const ChatCreator: React.FC = () => {
               faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
               logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
               printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
+              selectedImages: b.selectedImages,
             }
           },
         });

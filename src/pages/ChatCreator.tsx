@@ -53,7 +53,7 @@ interface BriefState {
   imageModel?: 'ello-pro' | 'ello-fast';
   imageSource?: 'ai' | 'real';
   selectedImages?: string[];
-  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
 }
 
 interface ChatGenerationPrefill {
@@ -1329,15 +1329,16 @@ const LIMITS = {
   title: { words: 12, label: 'Título / Hook', max: 12 },
   subtitle: { words: 20, label: 'Subtítulo', max: 20 },
   body: { words: 45, label: 'Corpo', max: 45 },
+  searchTerm: { words: 10, label: 'Termo de Busca (Foto)', max: 10 },
 } as const;
 
 const countWords = (s?: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;
 
 const ApproveContentWidget: React.FC<{ 
-  content: Array<{ title?: string; subtitle?: string; body?: string }>; 
-  onApprove: (finalContent: Array<{ title?: string; subtitle?: string; body?: string }>) => void;
+  content: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>; 
+  onApprove: (finalContent: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>) => void;
   onEdit: () => void;
-  onChange: (updated: Array<{ title?: string; subtitle?: string; body?: string }>) => void;
+  onChange: (updated: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>) => void;
   onRequestNew: () => void;
 }> = ({ content, onApprove, onEdit, onChange, onRequestNew }) => {
   const [draft, setDraft] = useState(content);
@@ -1351,7 +1352,7 @@ const ApproveContentWidget: React.FC<{
     }
   }, [content]);
 
-  const updateField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string) => {
+  const updateField = (idx: number, field: 'title' | 'subtitle' | 'body' | 'searchTerm', value: string) => {
     const next = draft.map((c, i) => i === idx ? { ...c, [field]: value } : c);
     setDraft(next);
     onChange(next);
@@ -1368,7 +1369,7 @@ const ApproveContentWidget: React.FC<{
   const allIssues = draft.flatMap((d, i) => validate(d).map(msg => ({ slide: i + 1, msg })));
   const hasIssues = allIssues.length > 0;
 
-  const renderField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string | undefined, isEditing: boolean) => {
+  const renderField = (idx: number, field: 'title' | 'subtitle' | 'body' | 'searchTerm', value: string | undefined, isEditing: boolean) => {
     const limit = LIMITS[field];
     const words = countWords(value);
     const over = words > limit.max;
@@ -1376,6 +1377,7 @@ const ApproveContentWidget: React.FC<{
       title: 'text-sm font-bold text-white leading-tight',
       subtitle: 'text-xs text-white/60 font-medium',
       body: 'text-[13px] text-white/80 leading-relaxed italic',
+      searchTerm: 'text-[11px] text-violet-400 font-medium bg-violet-400/5 px-2 py-1 rounded-md border border-violet-400/20',
     };
     return (
       <div className="space-y-1">
@@ -1428,6 +1430,7 @@ const ApproveContentWidget: React.FC<{
             {renderField(currentSlide, 'title', activeItem.title, isEditing)}
             {renderField(currentSlide, 'subtitle', activeItem.subtitle, isEditing)}
             {renderField(currentSlide, 'body', activeItem.body, isEditing)}
+            {activeItem.searchTerm && renderField(currentSlide, 'searchTerm', activeItem.searchTerm, isEditing)}
           </div>
         </div>
 
@@ -1879,7 +1882,13 @@ const ConfirmWidget: React.FC<{
   const [searchResults, setSearchResults] = useState<Record<number, string[]>>({});
   const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
-  const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
+  const [customQueries, setCustomQueries] = useState<Record<number, string>>(() => {
+    const initial: Record<number, string> = {};
+    brief.suggested_content?.forEach((card, i) => {
+      if (card.searchTerm) initial[i] = card.searchTerm;
+    });
+    return initial;
+  });
 
   useEffect(() => {
     if (brief.imageSource === "real" && brief.suggested_content && Object.keys(searchResults).length === 0 && !searching) {
@@ -1892,30 +1901,31 @@ const ConfirmWidget: React.FC<{
     setSearching(true);
     try {
       const cardsToSearch = typeof cardIdx === 'number' 
-        ? [{ index: cardIdx, query: customQueries[cardIdx] || `${brief.suggested_content[cardIdx].title || brief.topic} photo photography` }]
+        ? [{ index: cardIdx, query: customQueries[cardIdx] || brief.suggested_content[cardIdx].searchTerm || `${brief.suggested_content[cardIdx].title || brief.topic} photo photography` }]
         : brief.suggested_content.map((card, i) => ({
             index: i,
-            query: customQueries[i] || `${card.title || brief.topic} photo photography`
+            query: customQueries[i] || card.searchTerm || `${card.title || brief.topic} photo photography`
           }));
 
-      const { data, error } = await supabase.functions.invoke('generate-carousel', {
-        body: { action: 'web-search', query: cardsToSearch.map(c => c.query).join(' ') }
-      });
+      const nextResults: Record<number, string[]> = { ...searchResults };
 
-      if (error) throw error;
-      if (data?.images) {
-        const images = data.images.map((img: any) => img.url);
-        const nextResults: Record<number, string[]> = {};
-        if (typeof cardIdx === 'number') {
-          nextResults[cardIdx] = images;
-        } else {
-          brief.suggested_content?.forEach((_, i) => {
-            nextResults[i] = images;
+      // Use a small delay between requests if multiple to avoid hitting rate limits too hard
+      for (const item of cardsToSearch) {
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-carousel', {
+            body: { action: 'web-search', query: item.query }
           });
+
+          if (!error && data?.images) {
+            nextResults[item.index] = data.images.map((img: any) => img.url);
+          }
+        } catch (err) {
+          console.error(`Search error for card ${item.index}:`, err);
         }
-        setSearchResults(prev => ({ ...prev, ...nextResults }));
-        toast.success(typeof cardIdx === 'number' ? `Fotos para o card ${cardIdx + 1} atualizadas!` : "Fotos reais encontradas!");
       }
+
+      setSearchResults(nextResults);
+      toast.success(typeof cardIdx === 'number' ? `Fotos para o card ${cardIdx + 1} atualizadas!` : "Fotos reais encontradas!");
     } catch (err) {
       console.error('Image search error:', err);
       toast.error("Erro ao buscar fotos reais");

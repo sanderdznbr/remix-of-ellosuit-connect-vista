@@ -29,7 +29,7 @@ interface BriefState {
   tone?: string;
   ready?: boolean;
   imageModel?: 'ello-pro' | 'ello-fast';
-  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
   userIdea?: string;
   imageSource?: 'ai' | 'real';
 }
@@ -134,16 +134,18 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
    - Se o usuário escolher "Post Real", reaja com entusiasmo e explique que agora ele deve aprovar o texto para que possamos buscar as melhores fotos reais.
 
 9. ETAPA DE TEXTO (CRÍTICA): Sempre antes de gerar, sugira o TEXTO que irá na arte.
-    - OBRIGATÓRIO: Se for carrossel, você DEVE gerar conteúdo para EXATAMENTE o número de slides (cardCount) definido anteriormente. Se cardCount=7, sugira 7 slides no 'suggested_content'.
-    - MANDATÓRIO: Quando você apresentar as sugestões de texto nas "messages", você DEVE OBRIGATORIAMENTE usar o widget "approve_content" e preencher o array 'suggested_content' no 'brief_update' na MESMA resposta. Nunca envie as mensagens de texto sem o widget de aprovação.
+    - OBRIGATÓRIO: Se for carrossel, você DEVE gerar conteúdo para EXATAMENTE o número de slides (cardCount) definido anteriormente.
+    - MANDATÓRIO: Quando você apresentar as sugestões de texto nas "messages", você DEVE OBRIGATORIAMENTE usar o widget "approve_content" e preencher o array 'suggested_content' no 'brief_update'.
+    - TERMOS DE BUSCA (REAL PHOTOS): Se o usuário escolheu "Post Real" (imageSource: 'real'), você DEVE OBRIGATORIAMENTE incluir um campo 'searchTerm' em CADA item do 'suggested_content'.
+      * O 'searchTerm' deve ser um termo de busca curto e eficiente em INGLÊS (para melhores resultados no Brave Search).
+      * Cada slide DEVE ter um 'searchTerm' diferente e específico para o conteúdo daquele slide, mas mantendo a identidade visual do tema.
+      * Ex: para um carrossel de café, Slide 1 pode ser "aesthetic coffee cup morning sunlight", Slide 2 "barista pouring latte art close up", etc.
     - VARIE O FORMATO DOS CARDS: Não use o padrão "título + subtítulo + corpo" em todos os slides.
-      * Use cards de "apenas texto" (somente o campo 'body') para explicar detalhes, contar histórias ou dar continuidade ao slide anterior.
-      * Deixe títulos e subtítulos apenas para a capa e cards de transição/destaque.
-     - REGRAS DE LIMITE DE TEXTO (MANDATÓRIO):
+      * Use cards de "apenas texto" (somente o campo 'body') para explicar detalhes.
+    - REGRAS DE LIMITE DE TEXTO:
        * Título/Hook: Máximo 12 palavras.
        * Subtítulo: Máximo 20 palavras.
        * Corpo: Máximo 45 palavras.
-    - O conteúdo deve combinar com o estilo visual selecionado (styleName). Se o usuário escolheu um estilo específico, garanta que os textos e a proposta visual sigam esse estilo.
     - Use o widget "approve_content" e preencha 'suggested_content' no brief_update.
 
 10. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.

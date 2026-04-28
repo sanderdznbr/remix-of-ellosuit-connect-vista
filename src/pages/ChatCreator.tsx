@@ -19,7 +19,7 @@ const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
-type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'generating_post' | 'final_result' | null;
+type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'image_model_picker' | 'generating_post' | 'final_result' | null;
 
 interface BackgroundOption { id: string; label: string; url: string; }
 
@@ -704,6 +704,13 @@ const ChatCreator: React.FC = () => {
           }}
         />
       );
+    }
+    if (msg.widget === 'image_model_picker') {
+      return <ImageModelPickerWidget onPick={(model) => {
+        const nextBrief = { ...brief, imageModel: model };
+        setBrief(nextBrief);
+        sendMessage(model === 'ello-image-1' ? 'Prefiro a Ello image 1' : 'Prefiro a chat-gpt-2', nextBrief);
+      }} />;
     }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
@@ -1813,6 +1820,39 @@ const PersonalizationWidget: React.FC<{
           Pular
         </Button>
       </div>
+    </div>
+  );
+};
+
+const ImageModelPickerWidget: React.FC<{ onPick: (model: 'ello-image-1' | 'chat-gpt-2') => void }> = ({ onPick }) => {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+      <button
+        onClick={() => onPick('ello-image-1')}
+        className="flex items-center gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group"
+        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-white/5 group-hover:bg-white/10 transition-colors">
+          <img src="/logo.png" alt="Ello" className="h-6 w-6 object-contain" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-white">Ello image 1</div>
+          <div className="text-[10px] text-white/50 mt-0.5">Otimizada para design</div>
+        </div>
+      </button>
+      <button
+        onClick={() => onPick('chat-gpt-2')}
+        className="flex items-center gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group"
+        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-white/5 group-hover:bg-white/10 transition-colors">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" className="h-6 w-6 object-contain" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-white">chat-gpt-2</div>
+          <div className="text-[10px] text-white/50 mt-0.5">Versátil e criativa</div>
+        </div>
+      </button>
     </div>
   );
 };

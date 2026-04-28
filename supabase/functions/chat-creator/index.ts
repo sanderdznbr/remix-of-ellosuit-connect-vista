@@ -40,7 +40,7 @@ interface SanitizedBriefState extends BriefState {
 interface ApiResponse {
   ok: boolean;
   messages?: string[];
-  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'none';
+  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'image_model_picker' | 'none';
   brief_update?: Partial<BriefState>;
   ready?: boolean;
   error?: string;
@@ -136,10 +136,10 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 
 
 
- 9. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
-    - OBRIGATÓRIO: Apresente as opções "Ello image 1" (atual, padrão) e "chat-gpt-2".
-    - Explique brevemente que a "Ello image 1" é otimizada para o nosso design e a "chat-gpt-2" é uma alternativa.
-    - Use as "messages" para perguntar e deixe o usuário responder via texto ou você pode sugerir que ele escolha no próximo passo.
+  9. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
+    - OBRIGATÓRIO: Apresente as opções "Ello image 1" (padrão) e "chat-gpt-2".
+    - Explique que a "Ello image 1" é nossa recomendação.
+    - MANDATÓRIO: Use o widget "image_model_picker" para esta etapa.
     - O campo 'imageModel' no 'brief_update' deve ser preenchido com 'ello-image-1' ou 'chat-gpt-2'.
 
  10. Quando o usuário aprovar o texto e o modelo de imagem, mostre o resumo e peça confirmação final (widget "confirm_generate") com ready=true.
@@ -158,11 +158,12 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 - "personalization" → escolher rostos/logos/cores.
 - "approve_content" → Sugestão de texto para a arte. O brief_update deve conter o campo 'suggested_content'.
 - "confirm_generate" → resumo final + botão gerar.
+- "image_model_picker" → escolher entre Ello image 1 e chat-gpt-2.
 - "none" → sem widget (só mensagem)
 
 VOCÊ DEVE SEMPRE chamar a tool "respond" com:
 - messages: array de 1 a 3 strings curtas (cada uma vira uma bolha de chat)
-- widget: "content_type_picker" | "format_picker" | "style_picker" | "personalization" | "approve_content" | "confirm_generate" | "none"
+- widget: "content_type_picker" | "format_picker" | "style_picker" | "personalization" | "approve_content" | "confirm_generate" | "image_model_picker" | "none"
 - brief_update: objeto parcial atualizando o estado coletado
 - ready: true APENAS após o usuário confirmar no widget "confirm_generate"
 
@@ -184,7 +185,7 @@ function buildTool() {
           },
           widget: {
             type: 'string',
-            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'none'],
+            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'none'],
             description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {

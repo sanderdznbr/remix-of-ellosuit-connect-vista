@@ -462,23 +462,18 @@ NON-NEGOTIABLE CHECKLIST:
 
     // === Persist ===
     // === Persist ===
-    const cards = brief.suggested_content && brief.suggested_content.length > 0
-      ? brief.suggested_content.map((c, i) => ({
-          type: i === 0 ? 'cover' : 'body',
-          title: c.title,
-          subtitle: c.subtitle,
-          body: c.body,
-          imageUrl: i === 0 ? finalImage : null,
-          isAiImage: i === 0,
-          layout: 'dark',
-        }))
-      : [{
-          type: 'cover',
-          title: brief.topic,
-          imageUrl: finalImage,
-          isAiImage: true,
-          layout: 'dark',
-        }];
+    const cards = generatedImages.map((img, i) => {
+      const text = brief.suggested_content?.[i] || {};
+      return {
+        type: i === 0 ? 'cover' : 'body',
+        title: text.title,
+        subtitle: text.subtitle,
+        body: text.body,
+        imageUrl: img,
+        isAiImage: true,
+        layout: 'dark',
+      };
+    });
     
     const carouselData = { title: brief.topic, cards };
 
@@ -508,11 +503,12 @@ NON-NEGOTIABLE CHECKLIST:
           styleName: brief.styleName,
           brandColors: brief.brandColors,
         },
-        card_count: 1,
+        card_count: cards.length,
         marketplace_style_id: validStyleId,
       })
       .select('id')
       .single();
+
 
     if (insertErr || !inserted) {
       console.error('insert carousel error:', insertErr);

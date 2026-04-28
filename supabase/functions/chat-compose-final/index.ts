@@ -347,6 +347,7 @@ ${toneLine}
 ${artDirection}
 ${faceLine}
 ${logoLine}
+${printsLine}
 
 STYLE GUIDANCE:
 ${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}

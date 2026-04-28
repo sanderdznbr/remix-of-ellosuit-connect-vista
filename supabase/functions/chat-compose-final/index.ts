@@ -387,16 +387,18 @@ NON-NEGOTIABLE CHECKLIST:
     const totalCards = brief.suggested_content?.length || 1;
     const generatedImages: string[] = [];
     
-    // Base multimodal content structure (images)
+    // Base multimodal content structure (images) - optimized for worker limits
+    // Only send the essential identity/style references once, and limit the total count
     const baseMultimodalContent: any[] = [];
     if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
-    for (const f of additionalFaces) baseMultimodalContent.push({ type: 'image_url', image_url: { url: f } });
+    // Limit additional faces/logos/prints to avoid WORKER_RESOURCE_LIMIT
+    for (const f of additionalFaces.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: f } });
     if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
-    for (const l of additionalLogos) baseMultimodalContent.push({ type: 'image_url', image_url: { url: l } });
-    for (const p of additionalPrints) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
-    for (const ref of styleRefs) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
+    for (const p of additionalPrints.slice(0, 2)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
+    for (const ref of styleRefs.slice(0, 2)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
 
-    console.log(`chat-compose-final: generating ${totalCards} cards for ${brief.topic}`);
+    console.log(`chat-compose-final: generating ${totalCards} cards. Payload optimized.`);
+
 
     for (let i = 0; i < totalCards; i++) {
       let cardImage: string | null = null;
@@ -410,7 +412,9 @@ NON-NEGOTIABLE CHECKLIST:
 
       while (attempts < maxAttempts && !cardImage) {
         attempts++;
+        const startTime = Date.now();
         try {
+          console.log(`[Card ${i+1}] Attempt ${attempts} starting...`);
           const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -424,21 +428,25 @@ NON-NEGOTIABLE CHECKLIST:
             }),
           });
 
+          const duration = Date.now() - startTime;
+
           if (resp.status === 429) {
-            console.warn(`Card ${i+1} attempt ${attempts} failed with 429, retrying...`);
-            await new Promise(r => setTimeout(r, 3000));
+            console.warn(`[Card ${i+1}] Attempt ${attempts} rate limited (429) after ${duration}ms. Retrying...`);
+            await new Promise(r => setTimeout(r, 4000));
             continue;
           }
 
           if (!resp.ok) {
             const t = await resp.text();
-            console.error(`Card ${i+1} attempt ${attempts} failed:`, resp.status, t);
+            console.error(`[Card ${i+1}] Attempt ${attempts} failed with status ${resp.status} after ${duration}ms:`, t.slice(0, 500));
             continue;
           }
 
           cardImage = await extractImageUrl(resp);
+          console.log(`[Card ${i+1}] Attempt ${attempts} success in ${duration}ms`);
         } catch (err) {
-          console.error(`Card ${i+1} attempt ${attempts} exception:`, err);
+          const duration = Date.now() - startTime;
+          console.error(`[Card ${i+1}] Attempt ${attempts} exception after ${duration}ms:`, err);
         }
       }
 
@@ -446,8 +454,7 @@ NON-NEGOTIABLE CHECKLIST:
         generatedImages.push(cardImage);
         console.log(`✅ Generated card ${i+1}/${totalCards}`);
       } else {
-        console.error(`❌ Failed to generate card ${i+1} after ${maxAttempts} attempts`);
-        // We can either stop or push a placeholder. Let's throw to avoid partial results
+        console.error(`❌ Total failure on card ${i+1} after ${maxAttempts} attempts`);
         throw new Error(`Falha ao gerar o card ${i+1} do carrossel.`);
       }
     }

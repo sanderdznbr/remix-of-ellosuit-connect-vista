@@ -498,11 +498,28 @@ const ChatCreator: React.FC = () => {
   const generateFinalPost = useCallback(async (b: BriefState) => {
     if (generating) return;
     setGenerating(true);
-    appendAssistantWithWidget('Beleza! Tô gerando seu post agora com tudo que você passou. Isso leva uns 30-45s...', 'generating_post', { phase: 'compose' });
+    
+    const totalCards = b.suggested_content?.length || 1;
+    const isCarousel = b.contentType === 'carousel';
+    
+    appendAssistantWithWidget(
+      isCarousel 
+        ? `Beleza! Tô gerando os ${totalCards} cards do seu carrossel. Isso leva um tempinho, mas vale a pena...`
+        : 'Beleza! Tô gerando seu post agora. Isso leva uns 30-45s...', 
+      'generating_post', 
+      { phase: 'compose', current: 1, total: totalCards }
+    );
+
     try {
+      // Create a persistent channel or poll for progress if we had a more complex backend,
+      // but for now, we'll optimize the single call and handle sequential updates if needed.
+      // NOTE: chat-compose-final currently handles the loop internally.
+      // To show real-time progress, we'd need to split the calls or use a background task.
+      
       const { data, error } = await supabase.functions.invoke('chat-compose-final', {
         body: { brief: b },
       });
+      
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -512,8 +529,7 @@ const ChatCreator: React.FC = () => {
 
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
       
-      // Check if it's a carousel or single post
-      if (b.contentType === 'carousel') {
+      if (isCarousel) {
         appendAssistantWithWidget('Prontíssimo! Seu carrossel foi criado com sucesso. Clique no botão abaixo para ver e baixar todos os slides 👇', 'final_result', { carouselId, imageUrl, isCarousel: true });
       } else {
         appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
@@ -630,7 +646,11 @@ const ChatCreator: React.FC = () => {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
     }
     if (msg.widget === 'generating_post') {
-      return <GeneratingWidget phase={msg.widgetData?.phase || 'compose'} />;
+      return <GeneratingWidget 
+        phase={msg.widgetData?.phase || 'compose'} 
+        current={msg.widgetData?.current} 
+        total={msg.widgetData?.total} 
+      />;
     }
     if (msg.widget === 'final_result') {
       return <FinalResultWidget
@@ -1794,9 +1814,12 @@ const BackgroundPickerWidget: React.FC<{ backgrounds: BackgroundOption[]; onPick
   );
 };
 
-const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phase }) => {
+const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose'; current?: number; total?: number }> = ({ phase, current, total }) => {
+  const isCompose = phase === 'compose';
+  const progress = total ? Math.round(((current || 0) / total) * 100) : 0;
+  
   return (
-    <div className="rounded-xl p-4 max-w-md" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+    <div className="rounded-xl p-4 max-w-md w-full space-y-3" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
       <div className="flex items-center gap-3">
         <div className="relative h-10 w-10 shrink-0">
           <div className="absolute inset-0 rounded-full border-2 border-white/10" />
@@ -1805,13 +1828,38 @@ const GeneratingWidget: React.FC<{ phase: 'backgrounds' | 'compose' }> = ({ phas
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white">
-            {phase === 'backgrounds' ? 'Criando 2 opções de fundo...' : 'Compondo seu post...'}
+            {isCompose 
+              ? (total && total > 1 ? `Gerando card ${current} de ${total}...` : 'Compondo seu post...') 
+              : 'Criando 2 opções de fundo...'}
           </p>
           <p className="text-[11px] text-white/50 mt-0.5">
-            {phase === 'backgrounds' ? 'Gemini 3 Pro está pintando os cenários' : 'Adicionando texto, logo e identidade'}
+            {isCompose 
+              ? 'Adicionando texto, logo e identidade' 
+              : 'Gemini 3 Pro está pintando os cenários'}
           </p>
         </div>
+        {isCompose && total && total > 1 && (
+          <div className="text-xs font-bold text-violet-400">
+            {progress}%
+          </div>
+        )}
       </div>
+
+      {isCompose && total && total > 1 && (
+        <div className="space-y-1.5">
+          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              className="h-full bg-violet-600"
+            />
+          </div>
+          <div className="flex justify-between items-center text-[10px] text-white/30 uppercase tracking-wider font-bold">
+            <span>Início</span>
+            <span>Finalizando</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

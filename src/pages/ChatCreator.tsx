@@ -1883,6 +1883,7 @@ const ConfirmWidget: React.FC<{
   const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
+  const lastSearchedContentRef = useRef<string>("");
 
   useEffect(() => {
     if (brief.suggested_content) {
@@ -1896,13 +1897,14 @@ const ConfirmWidget: React.FC<{
 
   useEffect(() => {
     const hasContent = brief.suggested_content && brief.suggested_content.length > 0;
-    const hasNoResults = Object.keys(searchResults).length === 0;
+    const contentKey = JSON.stringify(brief.suggested_content || []);
+    const alreadySearched = lastSearchedContentRef.current === contentKey;
     
-    if (brief.imageSource === "real" && hasContent && hasNoResults && !searching) {
-      console.log("Auto-triggering image search for real photos...");
+    if (brief.imageSource === "real" && hasContent && !alreadySearched && !searching) {
+      lastSearchedContentRef.current = contentKey;
       handleSearchImages();
     }
-  }, [brief.imageSource, brief.suggested_content, searchResults, searching]);
+  }, [brief.imageSource, brief.suggested_content, searching]);
 
   const handleSearchImages = async (cardIdx?: number) => {
     if (!brief.suggested_content || searching) return;

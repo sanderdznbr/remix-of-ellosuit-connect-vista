@@ -1935,7 +1935,7 @@ const FinalResultWidget: React.FC<{
   const [adjusting, setAdjusting] = React.useState(false);
 
   useEffect(() => {
-    if (isCarousel && carouselId) {
+    if (carouselId) {
       const fetchSlides = async () => {
         setLoadingSlides(true);
         try {
@@ -1946,7 +1946,9 @@ const FinalResultWidget: React.FC<{
             .order('slide_index', { ascending: true });
           
           if (error) throw error;
-          if (data) setSlides(data as any);
+          if (data && data.length > 0) {
+            setSlides(data as any);
+          }
         } catch (err) {
           console.error('Error fetching slides:', err);
         } finally {
@@ -1955,7 +1957,7 @@ const FinalResultWidget: React.FC<{
       };
       fetchSlides();
     }
-  }, [isCarousel, carouselId]);
+  }, [carouselId]);
 
   if (!carouselId || !imageUrl) return null;
 
@@ -2003,13 +2005,18 @@ const FinalResultWidget: React.FC<{
   return (
     <div className="space-y-2.5 max-w-md">
       <div className="relative group rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-        {isCarousel && slides.length > 0 ? (
+        {(slides.length > 0 || isCarousel) ? (
           <div className="relative aspect-[4/5]">
             <img 
-              src={slides[currentSlide]?.image_url || imageUrl} 
+              src={slides.length > 0 ? slides[currentSlide]?.image_url : imageUrl} 
               alt={`Slide ${currentSlide + 1}`} 
               className="w-full h-full object-cover transition-opacity duration-300" 
             />
+            {loadingSlides && slides.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              </div>
+            )}
             {slides.length > 1 && (
               <>
                 <button 

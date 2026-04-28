@@ -174,9 +174,9 @@ Deno.serve(async (req) => {
     const printUrlArray = Array.isArray(brief.printUrl) ? brief.printUrl : (brief.printUrl ? [brief.printUrl] : []);
 
     const refsPromise = Promise.all([
-      brief.hasFace && faceUrlArray.length > 0 ? Promise.all(faceUrlArray.map(urlToDataUrl)) : Promise.resolve([]),
-      brief.hasLogo && logoUrlArray.length > 0 ? Promise.all(logoUrlArray.map(urlToDataUrl)) : Promise.resolve([]),
-      brief.hasPrints && printUrlArray.length > 0 ? Promise.all(printUrlArray.map(urlToDataUrl)) : Promise.resolve([]),
+      brief.hasFace && faceUrlArray.length > 0 ? Promise.all(faceUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
+      brief.hasLogo && logoUrlArray.length > 0 ? Promise.all(logoUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
+      brief.hasPrints && printUrlArray.length > 0 ? Promise.all(printUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
       ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 1).map(urlToDataUrl) : []),
     ]);
 

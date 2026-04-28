@@ -1542,6 +1542,65 @@ const PersonalizationWidget: React.FC<{
         )}
       </div>
 
+      {/* Prints do Sistema */}
+      <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: prints ? PURPLE : 'rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={() => setPrints(v => !v)}
+          className="w-full flex items-center gap-3 p-3"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: prints ? PURPLE : 'rgba(255,255,255,0.06)' }}>
+            <Smartphone className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-white">Prints / Screenshots</div>
+            <div className="text-[11px] text-white/50">Fotos das telas do seu sistema</div>
+          </div>
+          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: prints ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: prints ? PURPLE : 'transparent' }}>
+            {prints && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </button>
+        {prints && (
+          <div className="px-3 pb-3 space-y-2">
+            <input type="file" accept="image/*" multiple className="hidden" id="prints-upload" onChange={(e) => onPrintFilesSelected(e.target.files)} />
+            
+            {printFiles.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {printFiles.map((f, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group">
+                    <img src={f.url} className="w-full h-full object-cover" alt="Print preview" />
+                    <button 
+                      onClick={() => setPrintFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => document.getElementById('prints-upload')?.click()}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Upload className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Upload</span>
+              </button>
+              <button
+                onClick={() => setGalleryOpen('prints')}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Folder className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Galeria</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <GalleryPicker 
         open={!!galleryOpen}
         onClose={() => setGalleryOpen(null)}
@@ -1549,9 +1608,11 @@ const PersonalizationWidget: React.FC<{
           const newItems = selected.map(s => ({ url: s.url }));
           if (galleryOpen === 'face') setFaceFiles(prev => [...prev, ...newItems]);
           if (galleryOpen === 'logo') setLogoFiles(prev => [...prev, ...newItems]);
+          if (galleryOpen === 'prints') setPrintFiles(prev => [...prev, ...newItems]);
           setGalleryOpen(null);
         }}
       />
+
 
       {/* Colors */}
       <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors ? PURPLE : 'rgba(255,255,255,0.1)' }}>

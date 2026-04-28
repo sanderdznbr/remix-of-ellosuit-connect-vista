@@ -511,21 +511,49 @@ const ChatCreator: React.FC = () => {
     );
 
     try {
-      // Create a persistent channel or poll for progress if we had a more complex backend,
-      // but for now, we'll optimize the single call and handle sequential updates if needed.
-      // NOTE: chat-compose-final currently handles the loop internally.
-      // To show real-time progress, we'd need to split the calls or use a background task.
-      
-      const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-        body: { brief: b },
-      });
-      
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const generatedImages: string[] = [];
 
-      const carouselId: string | undefined = data?.carouselId;
-      const imageUrl: string | undefined = data?.imageUrl;
-      if (!carouselId || !imageUrl) throw new Error('Resposta incompleta');
+      if (isCarousel) {
+        // CLIENT-SIDE SEQUENTIAL LOOP: prevents WORKER_RESOURCE_LIMIT by making 
+        // one edge function call per card. This is exactly how the Studio works.
+        for (let i = 0; i < totalCards; i++) {
+          setMessages(prev => prev.map(m => 
+            m.widget === 'generating_post' 
+              ? { ...m, widgetData: { ...m.widgetData, current: i + 1 } } 
+              : m
+          ));
+
+          const { data, error } = await supabase.functions.invoke('chat-compose-final', {
+            body: { brief: b, cardIndex: i },
+          });
+
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          if (!data?.imageUrl) throw new Error(`Falha no card ${i+1}`);
+
+          generatedImages.push(data.imageUrl);
+        }
+      } else {
+        // Single post mode
+        const { data, error } = await supabase.functions.invoke('chat-compose-final', {
+          body: { brief: b },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (data?.imageUrl) generatedImages.push(data.imageUrl);
+      }
+
+      // FINAL STEP: Persist all generated images into a carousel record
+      // We pass the full brief and the array of URLs we just created.
+      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke('chat-compose-final', {
+        body: { brief: b, images: generatedImages },
+      });
+
+      if (finalizeError) throw finalizeError;
+      const carouselId = finalizeData?.carouselId;
+      const imageUrl = finalizeData?.imageUrl || generatedImages[0];
+
+      if (!carouselId) throw new Error('Falha ao finalizar carrossel');
 
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
       

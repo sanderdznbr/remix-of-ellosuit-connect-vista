@@ -216,12 +216,16 @@ Deno.serve(async (req) => {
       const totalCards = brief.cardCount || brief.suggested_content?.length || 1;
       return `Create a premium Instagram ${isCover ? 'cover (card 1)' : `content card #${idx + 1} of ${totalCards}`} about "${brief.topic}".
 Editorial magazine grade. PORTUGUÊS BRASILEIRO.
+BE CREATIVE AND VARIED: Use diverse visual metaphors, different angles, and distinct compositions for each card to avoid repetition.
+
 
 🚫 ABSOLUTE NO BORDERS / NO FRAMES / NO MARGINS / NO CANVAS TEXT:
 - The image MUST be 100% FULL BLEED — fill the entire ${ratio} canvas edge to edge.
 - ABSOLUTELY FORBIDDEN: white borders, white frames, white margins, polaroid frames, photo frames, paper edges, card mockups, any framing element around the artwork.
 - ABSOLUTELY FORBIDDEN: NEVER use white backgrounds with floating text that looks like a "canvas" or a simple text slide. The background MUST be rich, textured, or photographic.
 - The artwork itself IS the entire canvas. NO inner padding/border separating the design from the canvas edge. Background bleeds to all 4 edges.
+- DO NOT add metadata, captions, or watermarks that look like a UI/canvas.
+
 
 🎨 VISUAL DNA CONSISTENCY (CRITICAL):
 - This is part of a coherent carousel series. ${isCover ? 'Establish the strong visual identity.' : 'STRICTLY MATCH the visual DNA of the cover and previous cards.'}

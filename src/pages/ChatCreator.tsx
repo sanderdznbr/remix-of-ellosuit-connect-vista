@@ -1861,20 +1861,168 @@ const ImageModelPickerWidget: React.FC<{ onPick: (model: 'ello-pro' | 'ello-fast
   );
 };
 
-const ConfirmWidget: React.FC<{ brief: BriefState; onConfirm: () => void }> = ({ brief, onConfirm }) => {
+const ConfirmWidget: React.FC<{ 
+  brief: BriefState; 
+  onConfirm: () => void;
+  onImageUpdate?: (images: string[]) => void;
+}> = ({ brief, onConfirm, onImageUpdate }) => {
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Record<number, string[]>>({});
+  const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+
+  const handleSearchImages = async () => {
+    if (!brief.suggested_content || searching) return;
+    setSearching(true);
+    try {
+      const queries = brief.suggested_content.map((card, i) => ({
+        index: i,
+        query: `${card.title || brief.topic} photo photography`
+      }));
+
+      const { data, error } = await supabase.functions.invoke('search-news', {
+        body: { per_card_queries: queries }
+      });
+
+      if (error) throw error;
+      if (data?.card_images) {
+        setSearchResults(data.card_images);
+        toast.success("Fotos reais encontradas!");
+      }
+    } catch (err) {
+      console.error('Image search error:', err);
+      toast.error("Erro ao buscar fotos reais");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSelectImage = (cardIdx: number, url: string) => {
+    const next = [...selectedImages];
+    next[cardIdx] = url;
+    setSelectedImages(next);
+    onImageUpdate?.(next);
+  };
+
+  const handleUploadClick = (idx: number) => {
+    setUploadingIdx(idx);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        try {
+          const dataUrl = await fileToDataUrl(file);
+          handleSelectImage(idx, dataUrl);
+          toast.success(`Foto para o card ${idx + 1} carregada!`);
+        } catch (err) {
+          toast.error("Erro ao carregar imagem");
+        }
+      }
+      setUploadingIdx(null);
+    };
+    input.click();
+  };
+
+  const isReal = brief.imageSource === 'real';
+
   return (
-    <div className="space-y-3 max-w-md">
+    <div className="space-y-4 max-w-md w-full">
       <div className="rounded-xl p-3 space-y-1.5" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
         {brief.topic && <Row label="Tema" value={brief.topic} />}
         {brief.styleName && <Row label="Estilo" value={brief.styleName} />}
         {brief.format && <Row label="Formato" value={brief.format === 'portrait' ? 'Retrato 4:5' : brief.format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'} />}
         {brief.contentType && <Row label="Tipo" value={brief.contentType === 'carousel' ? `Carrossel${brief.cardCount ? ` (${brief.cardCount} slides)` : ''}` : 'Post único'} />}
+        {brief.imageSource && <Row label="Imagens" value={brief.imageSource === 'real' ? '📸 Fotos Reais' : '🤖 Ilustrações IA'} />}
         {brief.suggested_content && <Row label="Texto" value="Aprovado ✓" />}
       </div>
-      <Button onClick={onConfirm} className="w-full h-10" style={{ backgroundColor: PURPLE }}>
+
+      {isReal && (
+        <div className="space-y-3 p-1">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[11px] font-bold text-white/50 uppercase tracking-widest">Selecionar fotos reais</h4>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSearchImages} 
+              disabled={searching}
+              className="h-7 text-[10px] text-violet-400 hover:text-violet-300 hover:bg-violet-400/10 gap-1.5"
+            >
+              {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {Object.keys(searchResults).length > 0 ? 'Atualizar fotos' : 'Buscar fotos sugeridas'}
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {(brief.suggested_content || [{}]).map((card, i) => {
+              const options = searchResults[i] || [];
+              const selected = selectedImages[i];
+              return (
+                <div key={i} className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-bold text-white/40 uppercase">Card {i + 1}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleUploadClick(i)}
+                      className="h-6 text-[9px] text-white/60 hover:text-white gap-1"
+                    >
+                      <Upload className="h-2.5 w-2.5" />
+                      Mandar minha foto
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    {selected && !options.includes(selected) && (
+                      <div 
+                        className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/20"
+                      >
+                        <img src={selected} className="h-full w-full object-cover" />
+                        <div className="absolute top-0.5 right-0.5 bg-violet-500 rounded-full p-0.5">
+                          <Check className="h-2 w-2 text-white" />
+                        </div>
+                      </div>
+                    )}
+                    {options.map((url, optIdx) => (
+                      <button
+                        key={optIdx}
+                        onClick={() => handleSelectImage(i, url)}
+                        className={`relative h-16 w-16 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${selected === url ? 'border-violet-500 scale-105' : 'border-white/10 opacity-60 hover:opacity-100'}`}
+                      >
+                        <img src={url} className="h-full w-full object-cover" />
+                        {selected === url && (
+                          <div className="absolute top-0.5 right-0.5 bg-violet-500 rounded-full p-0.5">
+                            <Check className="h-2 w-2 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                    {options.length === 0 && !selected && (
+                      <div className="h-16 flex-1 bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center">
+                        <span className="text-[9px] text-white/20 italic">Aguardando busca ou upload...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <Button 
+        onClick={onConfirm} 
+        disabled={isReal && (brief.suggested_content?.length || 1) !== selectedImages.filter(Boolean).length}
+        className="w-full h-11 rounded-xl text-sm font-bold shadow-lg shadow-violet-500/20" 
+        style={{ backgroundColor: PURPLE }}
+      >
         <Sparkles className="h-4 w-4 mr-2" />
-        Gerar agora
+        {isReal ? 'Gerar com fotos selecionadas' : 'Gerar post agora'}
       </Button>
+      {isReal && (brief.suggested_content?.length || 1) !== selectedImages.filter(Boolean).length && (
+        <p className="text-[10px] text-center text-white/30 italic">Selecione uma foto para cada card para continuar</p>
+      )}
     </div>
   );
 };

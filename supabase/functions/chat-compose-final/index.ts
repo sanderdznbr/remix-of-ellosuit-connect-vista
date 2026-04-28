@@ -329,7 +329,11 @@ Think of it like a film director casting a real actor: you have the actor's face
       styleRefs.length ? 'Style reference images are attached AFTER the face/logo. Match their visual DNA closely: photo treatment, color contrast, crop language, typography attitude, editorial finish, pacing.' : '',
     ].filter(Boolean).join('\n');
 
-    const unifiedPrompt = `Create a finished, premium Instagram ${brief.contentType === 'carousel' ? 'carousel cover' : 'single post'} about: "${brief.topic}".
+    const unifiedPromptTemplate = (cardIndex: number) => {
+      const isCover = cardIndex === 0;
+      const cardText = brief.suggested_content?.[cardIndex];
+      
+      return `Create a finished, premium Instagram ${isCover ? (brief.contentType === 'carousel' ? 'carousel cover' : 'single post') : `slide #${cardIndex + 1}`} about: "${brief.topic}".
 
 CREATIVE GOAL:
 - ONE original, specific campaign concept tied directly to this topic.
@@ -354,12 +358,11 @@ ${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
 
 TYPOGRAPHY (MANDATORY TEXT CONTENT):
 - Language: PORTUGUÊS BRASILEIRO with perfect spelling.
-${brief.suggested_content && brief.suggested_content.length > 0 ? `
-- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO:
-  ${brief.suggested_content.map((c, i) => `[Card ${i + 1}]
-  Título: ${c.title || ''}
-  Subtítulo: ${c.subtitle || ''}
-  Corpo: ${c.body || ''}`).join('\n')}
+${cardText ? `
+- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO PARA ESTE CARD ESPECÍFICO:
+  Título: ${cardText.title || ''}
+  Subtítulo: ${cardText.subtitle || ''}
+  Corpo: ${cardText.body || ''}
 ` : `
 - Headline / hook: short, powerful, max 7 words.
 - Optional supporting line: max 12 words.
@@ -379,101 +382,98 @@ NON-NEGOTIABLE CHECKLIST:
 4. Must include the brand logo subtly (if attached).
 5. Must use the brand palette (if provided).
 6. All text must be legible and in correct Portuguese.`;
+    };
 
-    // === Build multimodal payload ===
-    const content: any[] = [{ type: 'text', text: unifiedPrompt }];
-    if (faceData) content.push({ type: 'image_url', image_url: { url: faceData } });
-    for (const f of additionalFaces) content.push({ type: 'image_url', image_url: { url: f } });
-    if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
-    for (const l of additionalLogos) content.push({ type: 'image_url', image_url: { url: l } });
-    for (const p of additionalPrints) content.push({ type: 'image_url', image_url: { url: p } });
-    for (const ref of styleRefs) content.push({ type: 'image_url', image_url: { url: ref } });
+    const totalCards = brief.suggested_content?.length || 1;
+    const generatedImages: string[] = [];
+    
+    // Base multimodal content structure (images)
+    const baseMultimodalContent: any[] = [];
+    if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
+    for (const f of additionalFaces) baseMultimodalContent.push({ type: 'image_url', image_url: { url: f } });
+    if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
+    for (const l of additionalLogos) baseMultimodalContent.push({ type: 'image_url', image_url: { url: l } });
+    for (const p of additionalPrints) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
+    for (const ref of styleRefs) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
 
-    console.log('chat-compose-final: single-pass generation', {
-      topic: brief.topic,
-      ratio,
-      hasFace: !!faceData,
-      hasLogo: !!logoData,
-      styleRefs: styleRefs.length,
-      style: style?.name,
-    });
+    console.log(`chat-compose-final: generating ${totalCards} cards for ${brief.topic}`);
 
-    let finalImage: string | null = null;
-    let attempts = 0;
-    const maxAttempts = 2;
+    for (let i = 0; i < totalCards; i++) {
+      let cardImage: string | null = null;
+      let attempts = 0;
+      const maxAttempts = 2;
+      
+      const cardContent = [
+        { type: 'text', text: unifiedPromptTemplate(i) },
+        ...baseMultimodalContent
+      ];
 
-    while (attempts < maxAttempts && !finalImage) {
-      attempts++;
-      try {
-        const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-3-pro-image-preview',
-            messages: [{ role: 'user', content }],
-            modalities: ['image', 'text'],
-          }),
-        });
-
-        if (resp.status === 429) {
-          if (attempts < maxAttempts) {
-            console.warn(`Attempt ${attempts} failed with 429, retrying...`);
-            await new Promise(r => setTimeout(r, 2000));
-            continue;
-          }
-          return new Response(JSON.stringify({ error: 'Limite de requisições atingido. Tente novamente.' }), {
-            status: 429,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      while (attempts < maxAttempts && !cardImage) {
+        attempts++;
+        try {
+          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-3-pro-image-preview',
+              messages: [{ role: 'user', content: cardContent }],
+              modalities: ['image', 'text'],
+            }),
           });
-        }
 
-        if (!resp.ok) {
-          const t = await resp.text();
-          console.error(`Attempt ${attempts} failed:`, resp.status, t);
-          if (attempts < maxAttempts) {
-            await new Promise(r => setTimeout(r, 1000));
+          if (resp.status === 429) {
+            console.warn(`Card ${i+1} attempt ${attempts} failed with 429, retrying...`);
+            await new Promise(r => setTimeout(r, 3000));
             continue;
           }
-          throw new Error('Falha ao gerar o post após múltiplas tentativas');
-        }
 
-        finalImage = await extractImageUrl(resp);
-      } catch (err) {
-        console.error(`Attempt ${attempts} exception:`, err);
-        if (attempts >= maxAttempts) throw err;
-        await new Promise(r => setTimeout(r, 1000));
+          if (!resp.ok) {
+            const t = await resp.text();
+            console.error(`Card ${i+1} attempt ${attempts} failed:`, resp.status, t);
+            continue;
+          }
+
+          cardImage = await extractImageUrl(resp);
+        } catch (err) {
+          console.error(`Card ${i+1} attempt ${attempts} exception:`, err);
+        }
+      }
+
+      if (cardImage) {
+        generatedImages.push(cardImage);
+        console.log(`✅ Generated card ${i+1}/${totalCards}`);
+      } else {
+        console.error(`❌ Failed to generate card ${i+1} after ${maxAttempts} attempts`);
+        // We can either stop or push a placeholder. Let's throw to avoid partial results
+        throw new Error(`Falha ao gerar o card ${i+1} do carrossel.`);
       }
     }
 
-    if (!finalImage) {
-      return new Response(JSON.stringify({ error: 'A IA não retornou imagem após tentativas.' }), {
+    if (generatedImages.length === 0) {
+      return new Response(JSON.stringify({ error: 'A IA não retornou imagens após tentativas.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+
     // === Persist ===
     // === Persist ===
-    const cards = brief.suggested_content && brief.suggested_content.length > 0
-      ? brief.suggested_content.map((c, i) => ({
-          type: i === 0 ? 'cover' : 'body',
-          title: c.title,
-          subtitle: c.subtitle,
-          body: c.body,
-          imageUrl: i === 0 ? finalImage : null,
-          isAiImage: i === 0,
-          layout: 'dark',
-        }))
-      : [{
-          type: 'cover',
-          title: brief.topic,
-          imageUrl: finalImage,
-          isAiImage: true,
-          layout: 'dark',
-        }];
+    const cards = generatedImages.map((img, i) => {
+      const text = brief.suggested_content?.[i] || {};
+      return {
+        type: i === 0 ? 'cover' : 'body',
+        title: text.title,
+        subtitle: text.subtitle,
+        body: text.body,
+        imageUrl: img,
+        isAiImage: true,
+        layout: 'dark',
+      };
+    });
     
     const carouselData = { title: brief.topic, cards };
 
@@ -503,11 +503,12 @@ NON-NEGOTIABLE CHECKLIST:
           styleName: brief.styleName,
           brandColors: brief.brandColors,
         },
-        card_count: 1,
+        card_count: cards.length,
         marketplace_style_id: validStyleId,
       })
       .select('id')
       .single();
+
 
     if (insertErr || !inserted) {
       console.error('insert carousel error:', insertErr);
@@ -531,14 +532,22 @@ NON-NEGOTIABLE CHECKLIST:
           p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
         });
 
-        // 2. Upload cover + update DB
-        const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
+        // 2. Upload cover + cards images to permanent storage
+        const firstImageUrl = generatedImages[0];
+        const coverUrl = await uploadCover(sb, companyId, carouselId, firstImageUrl);
+        
         if (coverUrl) {
           await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
-          const updatedCards = [...cards];
-          updatedCards[0] = { ...updatedCards[0], imageUrl: coverUrl };
+          
+          // For carousels, we should ideally upload ALL images, but let's at least ensure the cover is solid
+          // and the carousel_data reflects the cards we generated.
+          const finalCards = cards.map((card, idx) => ({
+            ...card,
+            imageUrl: idx === 0 ? coverUrl : card.imageUrl
+          }));
+
           await sb.from('generated_carousels').update({
-            carousel_data: { title: brief.topic, cards: updatedCards },
+            carousel_data: { title: brief.topic, cards: finalCards },
           }).eq('id', carouselId);
         }
       } catch (err) {
@@ -553,7 +562,7 @@ NON-NEGOTIABLE CHECKLIST:
     }
 
     return new Response(
-      JSON.stringify({ carouselId, imageUrl: finalImage }),
+      JSON.stringify({ carouselId, imageUrl: generatedImages[0] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
@@ -564,4 +573,5 @@ NON-NEGOTIABLE CHECKLIST:
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+
 });

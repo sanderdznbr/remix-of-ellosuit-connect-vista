@@ -2773,7 +2773,7 @@ The image must look like it was shot by a professional photographer or designed 
     const savedFormat = item.post_format || item.generation_config?.postFormat;
     if (savedFormat && savedFormat in FORMAT_DIMENSIONS) setPostFormat(savedFormat as PostFormatType);
     // Detect full-bleed: trust explicit marketplace_style_id, persisted isFullBleed flag, or extreme mode
-    const isChatGenerated = item.id === 'ba6547fc-22d3-49d4-99f2-0c17e2f79038' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards[0].imageUrl && !item.carousel_data.cards[0].title);
+    const isChatGenerated = item.id === 'ba6547fc-22d3-49d4-99f2-0c17e2f79038' || (item.carousel_data?.cards?.length > 0 && item.carousel_data.cards.every((c: any) => !!c.imageUrl && !c.title && !c.body && !c.bodyTop && !c.subtitle && !c.bodyBottom));
     const hasMarketplaceStyle = !!item.marketplace_style_id || !!item.style_config?.isFullBleed || item.generation_config?.wizardMode === 'extreme' || isChatGenerated;
     setIsLoadedFullBleed(hasMarketplaceStyle);
     setLoadedMarketplaceStyleId(item.marketplace_style_id || null);
@@ -7400,16 +7400,15 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
   };
 
   const renderCardPreview = (card: CarouselCard, index: number, isExport = false) => {
-    // Real estate: now uses AI-generated full-bleed images (same as marketplace full-bleed)
+    // Real estate: now uses AI-generated full-bleed images
     if (isRealEstateStyle) {
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }
 
-    // Chat-generated carousels: detect by carousel_id format or metadata if needed, 
-    // but the most reliable way is if it's a full-bleed style generated from /criar.
-    // If the card has an imageUrl but is NOT a tweet/tweet2, and we're in a marketplace style,
-    // we should prefer the full-bleed renderer to avoid template overlays.
-    const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme';
+    // Chat-generated carousels: detect by lack of structured text.
+    const isChatGen = !!card.imageUrl && !card.title && !card.body && !card.bodyTop && !card.subtitle && !card.bodyBottom;
+    const isFullBleed = !!activeMarketplaceStyle?.imageGeneration?.prompt_style || isLoadedFullBleed || wizardMode === 'extreme' || isChatGen || (!!card.imageUrl && card.imageUrl.includes('generated-carousels'));
+    
     if (isFullBleed && card.imageUrl && card.type !== 'tweet' && card.type !== 'tweet2') {
       return renderMarketplaceFullBleedCard(card, index, isExport);
     }

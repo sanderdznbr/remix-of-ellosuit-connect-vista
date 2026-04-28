@@ -255,6 +255,7 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
     // === Resolve all reference assets in parallel (alongside art direction) ===
     const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);
     const logoUrlArray = Array.isArray(brief.logoUrl) ? brief.logoUrl : (brief.logoUrl ? [brief.logoUrl] : []);
+    const printUrlArray = Array.isArray(brief.printUrl) ? brief.printUrl : (brief.printUrl ? [brief.printUrl] : []);
 
     const refsPromise = Promise.all([
       brief.hasFace && faceUrlArray.length > 0
@@ -263,18 +264,22 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
       brief.hasLogo && logoUrlArray.length > 0
         ? Promise.all(logoUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
         : Promise.resolve([]),
+      brief.hasPrints && printUrlArray.length > 0
+        ? Promise.all(printUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
+        : Promise.resolve([]),
       ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2).map(urlToDataUrl) : []),
     ]);
 
     const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);
-    const [facesResolved, logosResolved, ...styleRefDataUrls] = refsResolved;
-    const faceData = facesResolved?.[0] || null; // Gemini 3 Pro Image handles best with a primary face
+    const [facesResolved, logosResolved, printsResolved, ...styleRefDataUrls] = refsResolved;
+    const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;
     const styleRefs = styleRefDataUrls.filter(Boolean) as string[];
 
-    // If there are multiple face refs, we can add them as context too
     const additionalFaces = facesResolved.slice(1).filter(Boolean);
     const additionalLogos = logosResolved.slice(1).filter(Boolean);
+    const additionalPrints = printsResolved.filter(Boolean);
+
 
 
     // === Build the unified prompt (single pass) ===

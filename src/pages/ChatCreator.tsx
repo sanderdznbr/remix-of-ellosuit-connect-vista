@@ -1935,7 +1935,7 @@ const FinalResultWidget: React.FC<{
   const [adjusting, setAdjusting] = React.useState(false);
 
   useEffect(() => {
-    if (isCarousel && carouselId) {
+    if (carouselId) {
       const fetchSlides = async () => {
         setLoadingSlides(true);
         try {
@@ -1946,7 +1946,9 @@ const FinalResultWidget: React.FC<{
             .order('slide_index', { ascending: true });
           
           if (error) throw error;
-          if (data) setSlides(data as any);
+          if (data && data.length > 0) {
+            setSlides(data as any);
+          }
         } catch (err) {
           console.error('Error fetching slides:', err);
         } finally {
@@ -1955,7 +1957,7 @@ const FinalResultWidget: React.FC<{
       };
       fetchSlides();
     }
-  }, [isCarousel, carouselId]);
+  }, [carouselId]);
 
   if (!carouselId || !imageUrl) return null;
 

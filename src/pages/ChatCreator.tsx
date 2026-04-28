@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import GalleryPicker from '@/components/Carousel/wizard/GalleryPicker';
 import { toast } from 'sonner';
+import '@/styles/carousel-loader.css';
 
 interface ConversationSummary {
   id: string;
@@ -359,7 +360,8 @@ const ChatCreator: React.FC = () => {
       setMessages([{
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Oi! Eu sou a Ello 👋',
+        content: 'Oi! 👋',
+
         timestamp: Date.now(),
       }, {
         id: crypto.randomUUID(),
@@ -377,7 +379,7 @@ const ChatCreator: React.FC = () => {
     setMessages([{
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: 'Oi! Eu sou a Ello 👋',
+      content: 'Oi! 👋',
       timestamp: Date.now(),
     }, {
       id: crypto.randomUUID(),
@@ -792,12 +794,8 @@ const ChatCreator: React.FC = () => {
           >
             {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
           </button>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-sm font-semibold text-white">Ello</span>
-          </div>
+          <div className="flex-1" />
+
           <button
             onClick={handleNewChat}
             className="flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors md:hidden"
@@ -805,7 +803,7 @@ const ChatCreator: React.FC = () => {
           >
             <Plus className="h-4 w-4" />
           </button>
-          <div className="hidden md:block w-8" />
+          <div className="w-8" />
         </header>
 
         {/* Messages */}
@@ -827,10 +825,11 @@ const ChatCreator: React.FC = () => {
                       <div className="flex gap-3 max-w-[88%] w-full">
                         <div className="w-8 shrink-0">
                           {showAvatar && (
-                            <div className="h-8 w-8 rounded-full flex items-center justify-center mt-0.5" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-                              <Sparkles className="h-3.5 w-3.5 text-white" />
+                            <div className="h-8 w-8 flex items-center justify-center mt-0.5 relative shrink-0">
+                              <div className="carousel-loader-spinner" style={{ width: 28, height: 28 }} />
                             </div>
                           )}
+
                         </div>
                         <div className="space-y-2 flex-1 min-w-0">
                           <div
@@ -861,9 +860,10 @@ const ChatCreator: React.FC = () => {
 
             {(loading || generating) && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-                <div className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${PURPLE}, #6D28D9)` }}>
-                  <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
+                <div className="h-8 w-8 flex items-center justify-center relative shrink-0">
+                  <div className="carousel-loader-spinner" style={{ width: 28, height: 28 }} />
                 </div>
+
                 <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                   {[0, 1, 2].map(i => (
                     <div key={i} className="h-1.5 w-1.5 rounded-full bg-white/40" style={{ animation: `bounce 1.4s ${i * 0.15}s infinite ease-in-out` }} />
@@ -934,7 +934,7 @@ const ChatCreator: React.FC = () => {
                     sendMessage(input);
                   }
                 }}
-                placeholder={generating ? 'Gerando seu post...' : recording ? 'Gravando áudio...' : 'Responda à Ello...'}
+                placeholder={generating ? 'Gerando seu post...' : recording ? 'Gravando áudio...' : 'Responda aqui...'}
                 disabled={loading || generating}
                 rows={1}
                 className="flex-1 bg-transparent outline-none resize-none text-[15px] text-white placeholder:text-white/30 max-h-32 py-1.5 px-1"

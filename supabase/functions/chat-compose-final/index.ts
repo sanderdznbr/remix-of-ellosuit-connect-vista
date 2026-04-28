@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { brief } = (await req.json()) as { brief: Brief };
+    const { brief, cardIndex } = (await req.json()) as { brief: Brief, cardIndex?: number };
     if (!brief?.topic) {
       return new Response(JSON.stringify({ error: 'topic é obrigatório' }), {
         status: 400,

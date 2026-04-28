@@ -40,11 +40,13 @@ interface BriefState {
   styleName?: string | null;
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasPrints?: boolean;
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  printUrl?: string | string[];
   audience?: string;
   tone?: string;
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;

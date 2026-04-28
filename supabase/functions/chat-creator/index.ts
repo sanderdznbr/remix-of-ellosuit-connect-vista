@@ -178,6 +178,18 @@ function buildTool() {
               brandName: { type: 'string' },
               audience: { type: 'string' },
               tone: { type: 'string' },
+              suggested_content: { 
+                type: 'array', 
+                items: { 
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    subtitle: { type: 'string' },
+                    body: { type: 'string' }
+                  }
+                },
+                description: 'Array of slides/cards content. For single post, array of 1. For carousel, array of cardCount.'
+              },
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },

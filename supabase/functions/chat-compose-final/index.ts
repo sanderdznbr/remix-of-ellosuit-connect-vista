@@ -237,6 +237,7 @@ BE CREATIVE AND VARIED: Use diverse visual metaphors, different angles, and dist
 - Text safe area: top/bottom thirds, generous spacing, legible at thumbnail size.
 
 ${brand} ${colors} ${audienceLine} ${toneLine}
+${userIdeaLine}
 ${faceLine} ${logoLine} ${printsLine}
 ${styleRules}
 ${coverRefLine}

@@ -244,6 +244,7 @@ BE CREATIVE AND VARIED: Use diverse visual metaphors, different angles, and dist
 ${brand} ${colors} ${audienceLine} ${toneLine}
 ${userIdeaLine}
 ${faceLine} ${logoLine} ${printsLine}
+${selectedCardLine}
 ${styleRules}
 ${coverRefLine}
 

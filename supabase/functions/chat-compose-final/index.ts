@@ -462,6 +462,16 @@ NON-NEGOTIABLE CHECKLIST:
     const carouselId = inserted.id;
     const bgWork = (async () => {
       try {
+        // 1. Consume credits
+        const creditCost = brief.hasFace ? 5 : 2;
+        await sb.rpc('consume_ai_credits', {
+          p_company_id: companyId,
+          p_agent_id: null,
+          p_amount: creditCost,
+          p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
+        });
+
+        // 2. Upload cover + update DB
         const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
         if (coverUrl) {
           await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
@@ -471,7 +481,7 @@ NON-NEGOTIABLE CHECKLIST:
           }).eq('id', carouselId);
         }
       } catch (err) {
-        console.error('background cover upload failed:', err);
+        console.error('background background task failed:', err);
       }
     })();
 

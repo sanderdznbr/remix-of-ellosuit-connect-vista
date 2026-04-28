@@ -302,7 +302,9 @@ const ChatCreator: React.FC = () => {
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
       const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
 
-      setLoading(false);
+      // We keep loading=true until all messages are appended to avoid the UI "flickering" 
+      // or looking idle while the assistant is still "typing" its messages.
+
 
       // If model says ready but didn't show the confirm widget, force-show it
       // so the user always has explicit control over when generation starts.

@@ -392,8 +392,8 @@ NON-NEGOTIABLE CHECKLIST:
       
       const cardContent = [
         { type: 'text', text: unifiedPromptTemplate(cardIndex) },
-        if (faceData) ({ type: 'image_url', image_url: { url: faceData } }),
-        if (logoData) ({ type: 'image_url', image_url: { url: logoData } }),
+        faceData ? { type: 'image_url', image_url: { url: faceData } } : null,
+        logoData ? { type: 'image_url', image_url: { url: logoData } } : null,
         ...additionalPrints.slice(0, 1).map(p => ({ type: 'image_url', image_url: { url: p } })),
         ...styleRefs.slice(0, 1).map(ref => ({ type: 'image_url', image_url: { url: ref } }))
       ].filter(Boolean);

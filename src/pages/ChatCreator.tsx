@@ -538,7 +538,9 @@ const ChatCreator: React.FC = () => {
                     logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
                     printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
                   }, 
-                  cardIndex: i 
+                  cardIndex: i,
+                  // Send cover (card 0) as visual anchor for cards 2+ to keep DNA consistent
+                  coverImageUrl: i > 0 && generatedImages[0] ? generatedImages[0] : undefined,
                 },
               });
 

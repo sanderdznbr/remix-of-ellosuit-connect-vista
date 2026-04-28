@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { brief, cardIndex, images } = (await req.json()) as { brief: Brief, cardIndex?: number, images?: string[] };
+    const { brief, cardIndex, images, coverImageUrl } = (await req.json()) as { brief: Brief, cardIndex?: number, images?: string[], coverImageUrl?: string };
     if (!brief?.topic) {
       return new Response(JSON.stringify({ error: 'topic é obrigatório' }), {
         status: 400,
@@ -173,18 +173,23 @@ Deno.serve(async (req) => {
     const logoUrlArray = Array.isArray(brief.logoUrl) ? brief.logoUrl : (brief.logoUrl ? [brief.logoUrl] : []);
     const printUrlArray = Array.isArray(brief.printUrl) ? brief.printUrl : (brief.printUrl ? [brief.printUrl] : []);
 
+    // Load up to 2 style preview images for stronger visual DNA reference
+    const stylePreviewSlice = Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2) : [];
+
     const refsPromise = Promise.all([
       brief.hasFace && faceUrlArray.length > 0 ? Promise.all(faceUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
       brief.hasLogo && logoUrlArray.length > 0 ? Promise.all(logoUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
       brief.hasPrints && printUrlArray.length > 0 ? Promise.all(printUrlArray.slice(0, 1).map(urlToDataUrl)) : Promise.resolve([]),
-      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 1).map(urlToDataUrl) : []),
+      ...stylePreviewSlice.map(urlToDataUrl),
+      coverImageUrl ? urlToDataUrl(coverImageUrl) : Promise.resolve(null),
     ]);
 
     const refsResolved = await refsPromise;
     const facesResolved = refsResolved[0];
     const logosResolved = refsResolved[1];
     const printsResolved = refsResolved[2];
-    const styleRefs = refsResolved.slice(3).filter(Boolean) as string[];
+    const styleRefs = refsResolved.slice(3, 3 + stylePreviewSlice.length).filter(Boolean) as string[];
+    const coverRef = refsResolved[3 + stylePreviewSlice.length] as string | null;
 
     const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;
@@ -197,18 +202,41 @@ Deno.serve(async (req) => {
     const styleRules = [
       style?.name ? `Style: "${style.name}".` : '',
       style?.strict_instructions ? `MANDATORY rules: ${style.strict_instructions}` : '',
-      styleRefs.length ? 'Style reference attached. Match visual DNA.' : '',
+      styleRefs.length ? `${styleRefs.length} style reference image(s) attached. THESE DEFINE THE VISUAL DNA — match colors, typography, layout, mood, treatment.` : '',
     ].filter(Boolean).join('\n');
+
+    const coverRefLine = coverRef
+      ? `⚠️ PREVIOUS COVER IMAGE ATTACHED — IT IS THE VISUAL ANCHOR OF THIS CAROUSEL. This new card MUST look like part of the SAME visual series: SAME color palette, SAME typography family/weights/sizes hierarchy, SAME layout system, SAME mood/treatment/lighting, SAME graphic elements. Continue the editorial DNA. Different content/composition but identical brand language.`
+      : '';
 
     const unifiedPromptTemplate = (idx: number) => {
       const isCover = idx === 0;
       const cardText = brief.suggested_content?.[idx];
-      return `Create premium Instagram ${isCover ? 'cover' : `card #${idx + 1}`} about "${brief.topic}". 
-Editorial magazine grade. Clean text area. Top/Bottom third safe area. PORTUGUÊS BRASILEIRO.
+      const totalCards = brief.cardCount || brief.suggested_content?.length || 1;
+      return `Create a premium Instagram ${isCover ? 'cover (card 1)' : `content card #${idx + 1} of ${totalCards}`} about "${brief.topic}".
+Editorial magazine grade. PORTUGUÊS BRASILEIRO.
+
+🚫 ABSOLUTE NO BORDERS / NO FRAMES / NO MARGINS:
+- The image MUST be 100% FULL BLEED — fill the entire ${ratio} canvas edge to edge.
+- ABSOLUTELY FORBIDDEN: white borders, white frames, white margins, polaroid frames, photo frames, paper edges, card mockups, any framing element around the artwork.
+- The artwork itself IS the entire canvas. NO inner padding/border separating the design from the canvas edge. Background bleeds to all 4 edges.
+
+🎨 VISUAL DNA CONSISTENCY (CRITICAL):
+- This is part of a coherent carousel series. ${isCover ? 'Establish the strong visual identity.' : 'STRICTLY MATCH the visual DNA of the cover and previous cards.'}
+- Same typography family, weights, hierarchy and treatment as the style references${isCover ? '' : ' and the attached cover'}.
+- Same color palette (no new colors introduced per card).
+- Same composition logic, photo treatment, decorative elements, lighting mood.
+- Text safe area: top/bottom thirds, generous spacing, legible at thumbnail size.
+
 ${brand} ${colors} ${audienceLine} ${toneLine}
-${faceLine} ${logoLine} ${printsLine} ${styleRules}
-TEXT: ${cardText ? `Title: ${cardText.title || ''}, Sub: ${cardText.subtitle || ''}, Body: ${cardText.body || ''}` : 'Powerful hook, max 7 words.'}
-RATIO: ${ratio}. Single polished image.`;
+${faceLine} ${logoLine} ${printsLine}
+${styleRules}
+${coverRefLine}
+
+TEXT TO RENDER ON THIS CARD: ${cardText
+        ? `${cardText.title ? `Title: "${cardText.title}". ` : ''}${cardText.subtitle ? `Subtitle: "${cardText.subtitle}". ` : ''}${cardText.body ? `Body: "${cardText.body}".` : ''}`
+        : 'Powerful hook, max 7 words.'}
+ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished and on-brand.`;
     };
 
     // Mode 1: Finalization (saving all cards to DB)
@@ -267,7 +295,8 @@ RATIO: ${ratio}. Single polished image.`;
         faceData ? { type: 'image_url', image_url: { url: faceData } } : null,
         logoData ? { type: 'image_url', image_url: { url: logoData } } : null,
         ...additionalPrints.slice(0, 1).map(p => ({ type: 'image_url', image_url: { url: p } })),
-        ...styleRefs.slice(0, 1).map(ref => ({ type: 'image_url', image_url: { url: ref } }))
+        ...styleRefs.slice(0, 2).map(ref => ({ type: 'image_url', image_url: { url: ref } })),
+        coverRef ? { type: 'image_url', image_url: { url: coverRef } } : null,
       ].filter(Boolean);
 
       let cardImage: string | null = null;

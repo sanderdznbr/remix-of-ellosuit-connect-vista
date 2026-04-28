@@ -88,6 +88,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     brandName: trimText(brief?.brandName, 120),
     audience: trimText(brief?.audience, 160),
     tone: trimText(brief?.tone, 120),
+    imageModel: brief?.imageModel,
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
     suggested_content: brief?.suggested_content,

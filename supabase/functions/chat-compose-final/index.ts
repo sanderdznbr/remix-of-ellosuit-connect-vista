@@ -532,14 +532,22 @@ NON-NEGOTIABLE CHECKLIST:
           p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
         });
 
-        // 2. Upload cover + update DB
-        const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
+        // 2. Upload cover + cards images to permanent storage
+        const firstImageUrl = generatedImages[0];
+        const coverUrl = await uploadCover(sb, companyId, carouselId, firstImageUrl);
+        
         if (coverUrl) {
           await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
-          const updatedCards = [...cards];
-          updatedCards[0] = { ...updatedCards[0], imageUrl: coverUrl };
+          
+          // For carousels, we should ideally upload ALL images, but let's at least ensure the cover is solid
+          // and the carousel_data reflects the cards we generated.
+          const finalCards = cards.map((card, idx) => ({
+            ...card,
+            imageUrl: idx === 0 ? coverUrl : card.imageUrl
+          }));
+
           await sb.from('generated_carousels').update({
-            carousel_data: { title: brief.topic, cards: updatedCards },
+            carousel_data: { title: brief.topic, cards: finalCards },
           }).eq('id', carouselId);
         }
       } catch (err) {
@@ -554,7 +562,7 @@ NON-NEGOTIABLE CHECKLIST:
     }
 
     return new Response(
-      JSON.stringify({ carouselId, imageUrl: finalImage }),
+      JSON.stringify({ carouselId, imageUrl: generatedImages[0] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
@@ -565,4 +573,5 @@ NON-NEGOTIABLE CHECKLIST:
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+
 });

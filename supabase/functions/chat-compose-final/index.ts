@@ -33,6 +33,7 @@ interface Brief {
   printUrl?: string | string[];
   audience?: string;
   tone?: string;
+  imageModel?: 'ello-image-1' | 'chat-gpt-2';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 

@@ -1334,10 +1334,10 @@ const LIMITS = {
 const countWords = (s?: string) => (s || '').trim().split(/\s+/).filter(Boolean).length;
 
 const ApproveContentWidget: React.FC<{ 
-  content: Array<{ title?: string; subtitle?: string; body?: string }>; 
-  onApprove: (finalContent: Array<{ title?: string; subtitle?: string; body?: string }>) => void;
+  content: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>; 
+  onApprove: (finalContent: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>) => void;
   onEdit: () => void;
-  onChange: (updated: Array<{ title?: string; subtitle?: string; body?: string }>) => void;
+  onChange: (updated: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>) => void;
   onRequestNew: () => void;
 }> = ({ content, onApprove, onEdit, onChange, onRequestNew }) => {
   const [draft, setDraft] = useState(content);

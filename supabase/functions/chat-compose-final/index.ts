@@ -169,6 +169,7 @@ Deno.serve(async (req) => {
     const colors = brief.brandColors?.length ? `Brand palette: ${brief.brandColors.join(', ')}.` : '';
     const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
     const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
+    const userIdeaLine = brief.userIdea ? `⚠️ USER SPECIFIC IDEA/INSTRUCTION: "${brief.userIdea}". FOLLOW THIS IDEA CLOSELY FOR THE VISUAL COMPOSITION.` : '';
 
     // Face / Logo / Prints references
     const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);

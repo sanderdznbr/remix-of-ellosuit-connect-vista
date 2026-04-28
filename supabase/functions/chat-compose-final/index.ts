@@ -216,9 +216,10 @@ Deno.serve(async (req) => {
       return `Create a premium Instagram ${isCover ? 'cover (card 1)' : `content card #${idx + 1} of ${totalCards}`} about "${brief.topic}".
 Editorial magazine grade. PORTUGUÊS BRASILEIRO.
 
-🚫 ABSOLUTE NO BORDERS / NO FRAMES / NO MARGINS:
+🚫 ABSOLUTE NO BORDERS / NO FRAMES / NO MARGINS / NO CANVAS TEXT:
 - The image MUST be 100% FULL BLEED — fill the entire ${ratio} canvas edge to edge.
 - ABSOLUTELY FORBIDDEN: white borders, white frames, white margins, polaroid frames, photo frames, paper edges, card mockups, any framing element around the artwork.
+- ABSOLUTELY FORBIDDEN: NEVER use white backgrounds with floating text that looks like a "canvas" or a simple text slide. The background MUST be rich, textured, or photographic.
 - The artwork itself IS the entire canvas. NO inner padding/border separating the design from the canvas edge. Background bleeds to all 4 edges.
 
 🎨 VISUAL DNA CONSISTENCY (CRITICAL):

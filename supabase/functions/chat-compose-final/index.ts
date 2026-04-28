@@ -31,6 +31,7 @@ interface Brief {
   logoUrl?: string | string[];
   audience?: string;
   tone?: string;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {

@@ -33,6 +33,7 @@ interface Brief {
   printUrl?: string | string[];
   audience?: string;
   tone?: string;
+  imageModel?: 'ello-image-1' | 'chat-gpt-2';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
@@ -305,11 +306,14 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       while (attempts < 2 && !cardImage) {
         attempts++;
         try {
+          const isGpt2 = brief.imageModel === 'chat-gpt-2';
+          const aiModel = isGpt2 ? 'google/gemini-2.5-flash-image' : 'google/gemini-3-pro-image-preview';
+          
           const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'google/gemini-3-pro-image-preview',
+              model: aiModel,
               messages: [{ role: 'user', content: cardContent }],
               modalities: ['image', 'text'],
             }),

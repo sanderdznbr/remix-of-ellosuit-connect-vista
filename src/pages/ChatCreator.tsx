@@ -50,6 +50,7 @@ interface BriefState {
   printUrl?: string | string[];
   audience?: string;
   tone?: string;
+  imageModel?: 'ello-image-1' | 'chat-gpt-2';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
@@ -130,6 +131,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   brandColors: source.brandColors?.slice(0, 4),
   audience: sanitizeTextForAI(source.audience, 160),
   tone: sanitizeTextForAI(source.tone, 120),
+  imageModel: source.imageModel,
   faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
   logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
   suggested_content: source.suggested_content,

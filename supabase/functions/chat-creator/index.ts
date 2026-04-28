@@ -28,6 +28,7 @@ interface BriefState {
   audience?: string;
   tone?: string;
   ready?: boolean;
+  imageModel?: 'ello-image-1' | 'chat-gpt-2';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
@@ -87,6 +88,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     brandName: trimText(brief?.brandName, 120),
     audience: trimText(brief?.audience, 160),
     tone: trimText(brief?.tone, 120),
+    imageModel: brief?.imageModel,
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
     suggested_content: brief?.suggested_content,
@@ -134,7 +136,13 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 
 
 
-9. Quando o usuário aprovar o texto, mostre o resumo e peça confirmação final (widget "confirm_generate") com ready=true.
+ 9. SELEÇÃO DE MODELO DE IMAGEM (ÚLTIMA ETAPA): Antes de confirmar a geração final, o usuário deve selecionar qual IA de imagem quer usar.
+    - OBRIGATÓRIO: Apresente as opções "Ello image 1" (atual, padrão) e "chat-gpt-2".
+    - Explique brevemente que a "Ello image 1" é otimizada para o nosso design e a "chat-gpt-2" é uma alternativa.
+    - Use as "messages" para perguntar e deixe o usuário responder via texto ou você pode sugerir que ele escolha no próximo passo.
+    - O campo 'imageModel' no 'brief_update' deve ser preenchido com 'ello-image-1' ou 'chat-gpt-2'.
+
+ 10. Quando o usuário aprovar o texto e o modelo de imagem, mostre o resumo e peça confirmação final (widget "confirm_generate") com ready=true.
 
 ⚠️ REGRAS CRÍTICAS:
 - NUNCA marque ready=true sem antes mostrar o widget "confirm_generate" ao usuário.
@@ -195,6 +203,7 @@ function buildTool() {
               brandName: { type: 'string' },
               audience: { type: 'string' },
               tone: { type: 'string' },
+              imageModel: { type: 'string', enum: ['ello-image-1', 'chat-gpt-2'] },
               suggested_content: { 
                 type: 'array', 
                 items: { 

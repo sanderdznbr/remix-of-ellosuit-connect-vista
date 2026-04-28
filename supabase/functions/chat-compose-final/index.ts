@@ -31,6 +31,7 @@ interface Brief {
   logoUrl?: string | string[];
   audience?: string;
   tone?: string;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {
@@ -339,10 +340,18 @@ ${logoLine}
 STYLE GUIDANCE:
 ${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
 
-TYPOGRAPHY (text rendered inside the image):
+TYPOGRAPHY (MANDATORY TEXT CONTENT):
 - Language: PORTUGUÊS BRASILEIRO with perfect spelling.
+${brief.suggested_content && brief.suggested_content.length > 0 ? `
+- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO:
+  ${brief.suggested_content.map((c, i) => `[Card ${i + 1}]
+  Título: ${c.title || ''}
+  Subtítulo: ${c.subtitle || ''}
+  Corpo: ${c.body || ''}`).join('\n')}
+` : `
 - Headline / hook: short, powerful, max 7 words.
 - Optional supporting line: max 12 words.
+`}
 - Place text in a clean safe area; never cover the person's face.
 - Typography must feel editorial, bold, on-brand for the selected style.
 
@@ -419,14 +428,26 @@ NON-NEGOTIABLE CHECKLIST:
     }
 
     // === Persist ===
-    const card = {
-      type: 'cover',
-      title: brief.topic,
-      imageUrl: finalImage,
-      isAiImage: true,
-      layout: 'dark',
-    };
-    const carouselData = { title: brief.topic, cards: [card] };
+    // === Persist ===
+    const cards = brief.suggested_content && brief.suggested_content.length > 0
+      ? brief.suggested_content.map((c, i) => ({
+          type: i === 0 ? 'cover' : 'body',
+          title: c.title,
+          subtitle: c.subtitle,
+          body: c.body,
+          imageUrl: i === 0 ? finalImage : null,
+          isAiImage: i === 0,
+          layout: 'dark',
+        }))
+      : [{
+          type: 'cover',
+          title: brief.topic,
+          imageUrl: finalImage,
+          isAiImage: true,
+          layout: 'dark',
+        }];
+    
+    const carouselData = { title: brief.topic, cards };
 
     // Validate that the marketplace style actually exists before referencing it
     let validStyleId: string | null = null;
@@ -486,7 +507,8 @@ NON-NEGOTIABLE CHECKLIST:
         const coverUrl = await uploadCover(sb, companyId, carouselId, finalImage);
         if (coverUrl) {
           await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
-          const updatedCards = [{ ...card, imageUrl: coverUrl }];
+          const updatedCards = [...cards];
+          updatedCards[0] = { ...updatedCards[0], imageUrl: coverUrl };
           await sb.from('generated_carousels').update({
             carousel_data: { title: brief.topic, cards: updatedCards },
           }).eq('id', carouselId);

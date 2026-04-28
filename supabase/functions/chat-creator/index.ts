@@ -28,6 +28,7 @@ interface BriefState {
   audience?: string;
   tone?: string;
   ready?: boolean;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
 interface SanitizedBriefState extends BriefState {
@@ -38,7 +39,7 @@ interface SanitizedBriefState extends BriefState {
 interface ApiResponse {
   ok: boolean;
   messages?: string[];
-  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'confirm_generate' | 'none';
+  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'none';
   brief_update?: Partial<BriefState>;
   ready?: boolean;
   error?: string;
@@ -88,6 +89,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     tone: trimText(brief?.tone, 120),
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
+    suggested_content: brief?.suggested_content,
   };
 }
 
@@ -116,19 +118,22 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
    - Nunca pergunte os dois ao mesmo tempo
 3. SEMPRE em algum momento ofereça estilos do marketplace (widget "style_picker"). OBRIGATÓRIO.
 4. Se fizer sentido, ofereça personalização: rosto, logo, cores (widget "personalization")
-5. Quando tiver tema + estilo + tipo + formato, mostre o resumo e peça confirmação (widget "confirm_generate") com ready=true.
+5. Sempre antes de gerar, sugira o TEXTO que irá na arte (título, subtítulo, tópicos). Mostre o widget "approve_content". Se for carrossel, sugira o texto de cada slide.
+6. Quando o usuário aprovar o texto, mostre o resumo e peça confirmação final (widget "confirm_generate") com ready=true.
 
 ⚠️ REGRAS CRÍTICAS:
 - NUNCA marque ready=true sem antes mostrar o widget "confirm_generate" ao usuário.
-- Após o usuário responder ao widget de personalização (rosto/logo/cores), SEMPRE mostre em seguida o widget "confirm_generate" com o resumo. NUNCA gere direto.
-- O usuário precisa SEMPRE clicar em "Gerar agora" no resumo final antes de você marcar ready=true.
+- O widget "approve_content" deve vir antes do "confirm_generate".
+- Se o usuário pedir alterações no texto, gere novas sugestões e mostre o widget "approve_content" novamente.
+- O usuário precisa SEMPRE clicar em "Gerar agora" no resumo final (confirm_generate) antes de você marcar ready=true.
 - Quando o usuário disser "Pode gerar!" ou similar (após ver o resumo), aí sim você marca ready=true.
 
 📦 WIDGETS DISPONÍVEIS:
-- "content_type_picker" → escolher entre Post Único ou Carrossel. Se o usuário escolher carrossel, ele deve ser perguntado em seguida quantos slides (campo cardCount).
-- "format_picker" → escolher proporção (Retrato/Quadrado/Stories).
+- "content_type_picker" → escolher entre Post Único ou Carrossel.
+- "format_picker" → escolher proporção.
 - "style_picker" → mostrar estilos do marketplace.
-- "personalization" → escolher rostos/logos/cores. O usuário pode enviar VÁRIOS arquivos ou puxar da biblioteca.
+- "personalization" → escolher rostos/logos/cores.
+- "approve_content" → Sugestão de texto para a arte. O brief_update deve conter o campo 'suggested_content'.
 - "confirm_generate" → resumo final + botão gerar.
 - "none" → sem widget (só mensagem)
 
@@ -156,7 +161,7 @@ function buildTool() {
           },
           widget: {
             type: 'string',
-            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'confirm_generate', 'none'],
+            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'none'],
             description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {
@@ -175,6 +180,18 @@ function buildTool() {
               brandName: { type: 'string' },
               audience: { type: 'string' },
               tone: { type: 'string' },
+              suggested_content: { 
+                type: 'array', 
+                items: { 
+                  type: 'object',
+                  properties: {
+                    title: { type: 'string' },
+                    subtitle: { type: 'string' },
+                    body: { type: 'string' }
+                  }
+                },
+                description: 'Array of slides/cards content. For single post, array of 1. For carousel, array of cardCount.'
+              },
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },

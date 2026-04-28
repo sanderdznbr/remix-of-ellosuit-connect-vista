@@ -18,7 +18,7 @@ const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
-type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'confirm_generate' | 'background_picker' | 'generating_post' | 'final_result' | null;
+type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'generating_post' | 'final_result' | null;
 
 interface BackgroundOption { id: string; label: string; url: string; }
 
@@ -47,6 +47,7 @@ interface BriefState {
   logoUrl?: string | string[];
   audience?: string;
   tone?: string;
+  suggested_content?: Array<{ title?: string; subtitle?: string; body?: string }>;
 }
 
 interface ChatGenerationPrefill {
@@ -128,6 +129,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   tone: sanitizeTextForAI(source.tone, 120),
   faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
   logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
+  suggested_content: source.suggested_content,
 });
 
 const ChatCreator: React.FC = () => {
@@ -529,31 +531,7 @@ const ChatCreator: React.FC = () => {
     const nextBrief = { ...brief, contentType, cardCount: cards };
     setBrief(nextBrief);
 
-    // Carrosséis exigem o fluxo completo do Estúdio (wizard avançado).
-    // O chat-compose-final só gera 1 card, então redirecionamos para o wizard
-    // levando o tópico já capturado pelo chat.
-    if (contentType === 'carousel') {
-      try {
-        localStorage.setItem(CHAT_PREFILL_STORAGE_KEY, JSON.stringify({
-          topic: nextBrief.topic || '',
-          cardCount: cards || 5,
-          styleId: nextBrief.styleId || null,
-          styleName: nextBrief.styleName || null,
-          format: nextBrief.format || 'portrait',
-          contentType: 'carousel',
-          ts: Date.now(),
-        }));
-      } catch {}
-      toast.info('Carrosséis são gerados no Estúdio. Te levando pra lá com o tema preenchido…');
-      const params = new URLSearchParams();
-      if (nextBrief.topic) params.set('topic', nextBrief.topic);
-      params.set('cards', String(cards || 5));
-      params.set('mode', 'carousel');
-      setTimeout(() => navigate(`/?${params.toString()}`), 600);
-      return;
-    }
-
-    const label = 'Quero um post único';
+    const label = contentType === 'carousel' ? `Quero um carrossel com ${cards || 5} slides` : 'Quero um post único';
     sendMessage(label, nextBrief);
   };
 
@@ -605,6 +583,18 @@ const ChatCreator: React.FC = () => {
     }
     if (msg.widget === 'personalization') {
       return <PersonalizationWidget onPick={handlePersonalization} userId={user?.id} />;
+    }
+    if (msg.widget === 'approve_content') {
+      return (
+        <ApproveContentWidget 
+          content={brief.suggested_content || []} 
+          onApprove={() => sendMessage("Amei o texto! Pode seguir.")}
+          onEdit={() => {
+            inputRef.current?.focus();
+            toast.info("Digite as alterações que você deseja.");
+          }}
+        />
+      );
     }
     if (msg.widget === 'confirm_generate') {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} />;
@@ -1199,6 +1189,63 @@ const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ on
 };
 
 // Personalization with inline upload
+const ApproveContentWidget: React.FC<{ 
+  content: Array<{ title?: string; subtitle?: string; body?: string }>; 
+  onApprove: () => void;
+  onEdit: () => void;
+}> = ({ content, onApprove, onEdit }) => {
+  return (
+    <div className="space-y-3 w-full max-w-md">
+      <div className="grid gap-3">
+        {content.map((item, idx) => (
+          <div 
+            key={idx} 
+            className="p-4 rounded-xl border border-white/10 space-y-2 bg-white/5"
+          >
+            {content.length > 1 && (
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-1">
+                Slide {idx + 1}
+              </div>
+            )}
+            {item.title && (
+              <div className="text-sm font-bold text-white leading-tight">
+                {item.title}
+              </div>
+            )}
+            {item.subtitle && (
+              <div className="text-xs text-white/60 font-medium">
+                {item.subtitle}
+              </div>
+            )}
+            {item.body && (
+              <div className="text-[13px] text-white/80 leading-relaxed italic">
+                "{item.body}"
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Button 
+          onClick={onApprove}
+          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-10 gap-2"
+        >
+          <Check className="h-4 w-4" />
+          Aprovar texto
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={onEdit}
+          className="bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-xl h-10 gap-2"
+        >
+          <Wand2 className="h-4 w-4" />
+          Mudar algo
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const PersonalizationWidget: React.FC<{ onPick: (d: { face: boolean; logo: boolean; colors: boolean; faceUrl?: string | string[]; logoUrl?: string | string[]; brandColors?: string[] }) => void; userId?: string }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
@@ -1449,6 +1496,7 @@ const ConfirmWidget: React.FC<{ brief: BriefState; onConfirm: () => void }> = ({
         {brief.styleName && <Row label="Estilo" value={brief.styleName} />}
         {brief.format && <Row label="Formato" value={brief.format === 'portrait' ? 'Retrato 4:5' : brief.format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'} />}
         {brief.contentType && <Row label="Tipo" value={brief.contentType === 'carousel' ? `Carrossel${brief.cardCount ? ` (${brief.cardCount} slides)` : ''}` : 'Post único'} />}
+        {brief.suggested_content && <Row label="Texto" value="Aprovado ✓" />}
       </div>
       <Button onClick={onConfirm} className="w-full h-10" style={{ backgroundColor: PURPLE }}>
         <Sparkles className="h-4 w-4 mr-2" />

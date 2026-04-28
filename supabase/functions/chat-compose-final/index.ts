@@ -386,10 +386,81 @@ NON-NEGOTIABLE CHECKLIST:
 
     const totalCards = brief.suggested_content?.length || 1;
     
-    // IF cardIndex IS PROVIDED: single card mode (from client-side loop)
+    // IF images IS PROVIDED: Finalization mode (saving to DB)
+    if (Array.isArray(images) && images.length > 0) {
+      console.log(`chat-compose-final: finalization mode for ${images.length} images`);
+      const cards = images.map((img, i) => {
+        const text = brief.suggested_content?.[i] || {};
+        return {
+          type: i === 0 ? 'cover' : 'body',
+          title: text.title,
+          subtitle: text.subtitle,
+          body: text.body,
+          imageUrl: img,
+          isAiImage: true,
+          layout: 'dark',
+        };
+      });
+      
+      const carouselData = { title: brief.topic, cards };
+      let validStyleId: string | null = null;
+      if (isUuid(brief.styleId)) {
+        const { data: styleRow } = await sb.from('marketplace_styles').select('id').eq('id', brief.styleId).maybeSingle();
+        if (styleRow?.id) validStyleId = styleRow.id;
+      }
+
+      const { data: inserted, error: insertErr } = await sb
+        .from('generated_carousels')
+        .insert({
+          company_id: companyId,
+          user_id: user.id,
+          title: brief.topic,
+          topic: brief.topic,
+          keywords: [],
+          carousel_data: carouselData,
+          style_config: {
+            source: 'chat-creator',
+            format: brief.format,
+            styleName: brief.styleName,
+            brandColors: brief.brandColors,
+          },
+          card_count: cards.length,
+          marketplace_style_id: validStyleId,
+        })
+        .select('id')
+        .single();
+
+      if (insertErr || !inserted) throw new Error('Falha ao salvar o post.');
+
+      const carouselId = inserted.id;
+      // Background worker to handle storage upload and credits
+      const bgWork = (async () => {
+        try {
+          const creditCost = brief.hasFace ? 5 : 2;
+          await sb.rpc('consume_ai_credits', {
+            p_company_id: companyId,
+            p_agent_id: null,
+            p_amount: creditCost,
+            p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
+          });
+          const coverUrl = await uploadCover(sb, companyId, carouselId, images[0]);
+          if (coverUrl) {
+            await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
+            const finalCards = cards.map((c, idx) => idx === 0 ? { ...c, imageUrl: coverUrl } : c);
+            await sb.from('generated_carousels').update({ carousel_data: { title: brief.topic, cards: finalCards } }).eq('id', carouselId);
+          }
+        } catch (e) { console.error('BG Error:', e); }
+      })();
+
+      // @ts-ignore
+      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(bgWork);
+
+      return new Response(JSON.stringify({ carouselId, imageUrl: images[0] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // IF cardIndex IS PROVIDED: Single card mode (Studio-style loop)
     if (typeof cardIndex === 'number') {
       console.log(`chat-compose-final: single-card mode for card ${cardIndex+1}/${totalCards}`);
-      
       const cardContent = [
         { type: 'text', text: unifiedPromptTemplate(cardIndex) },
         faceData ? { type: 'image_url', image_url: { url: faceData } } : null,
@@ -400,50 +471,6 @@ NON-NEGOTIABLE CHECKLIST:
 
       let cardImage: string | null = null;
       let attempts = 0;
-      const maxAttempts = 2;
-
-      while (attempts < maxAttempts && !cardImage) {
-        attempts++;
-        const startTime = Date.now();
-        try {
-          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'google/gemini-3-pro-image-preview',
-              messages: [{ role: 'user', content: cardContent }],
-              modalities: ['image', 'text'],
-            }),
-          });
-          if (resp.status === 429) {
-            await new Promise(r => setTimeout(r, 4000));
-            continue;
-          }
-          if (!resp.ok) continue;
-          cardImage = await extractImageUrl(resp);
-          console.log(`[Card ${cardIndex+1}] Success in ${Date.now() - startTime}ms`);
-        } catch (e) { console.error(`[Card ${cardIndex+1}] error:`, e); }
-      }
-
-      if (!cardImage) throw new Error(`Falha ao gerar o card ${cardIndex+1}.`);
-      return new Response(JSON.stringify({ imageUrl: cardImage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    // IF cardIndex IS NOT PROVIDED: fallback to internal sequential generation (or single post)
-    const generatedImages: string[] = [];
-    const baseMultimodalContent: any[] = [];
-    if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
-    if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
-    for (const p of additionalPrints.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
-    for (const ref of styleRefs.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
-
-    console.log(`chat-compose-final: internal-loop generation for ${totalCards} cards`);
-
-    for (let i = 0; i < totalCards; i++) {
-      let cardImage: string | null = null;
-      let attempts = 0;
-      const cardContent = [{ type: 'text', text: unifiedPromptTemplate(i) }, ...baseMultimodalContent];
-
       while (attempts < 2 && !cardImage) {
         attempts++;
         try {
@@ -456,13 +483,47 @@ NON-NEGOTIABLE CHECKLIST:
               modalities: ['image', 'text'],
             }),
           });
+          if (resp.status === 429) { await new Promise(r => setTimeout(r, 4000)); continue; }
+          if (!resp.ok) continue;
+          cardImage = await extractImageUrl(resp);
+        } catch (e) {}
+      }
+      if (!cardImage) throw new Error(`Falha no card ${cardIndex+1}`);
+      return new Response(JSON.stringify({ imageUrl: cardImage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // FALLBACK: Internal loop mode (Original single-call mode, still sequential internally)
+    const generatedImages: string[] = [];
+    const baseMultimodalContent: any[] = [];
+    if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
+    if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
+    for (const p of additionalPrints.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
+    for (const ref of styleRefs.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
+
+    console.log(`chat-compose-final: fallback internal loop for ${totalCards} cards`);
+    for (let i = 0; i < totalCards; i++) {
+      let cardImage: string | null = null;
+      let attempts = 0;
+      while (attempts < 2 && !cardImage) {
+        attempts++;
+        try {
+          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-3-pro-image-preview',
+              messages: [{ role: 'user', content: [{ type: 'text', text: unifiedPromptTemplate(i) }, ...baseMultimodalContent] }],
+              modalities: ['image', 'text'],
+            }),
+          });
           if (!resp.ok) continue;
           cardImage = await extractImageUrl(resp);
         } catch (e) {}
       }
       if (cardImage) generatedImages.push(cardImage);
-      else throw new Error(`Falha ao gerar card ${i+1}`);
+      else throw new Error(`Falha no card ${i+1}`);
     }
+
 
 
 

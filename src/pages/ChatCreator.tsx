@@ -1874,6 +1874,12 @@ const ConfirmWidget: React.FC<{
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
 
+  useEffect(() => {
+    if (brief.imageSource === "real" && brief.suggested_content && Object.keys(searchResults).length === 0 && !searching) {
+      handleSearchImages();
+    }
+  }, [brief.imageSource, brief.suggested_content]);
+
   const handleSearchImages = async (cardIdx?: number) => {
     if (!brief.suggested_content || searching) return;
     setSearching(true);

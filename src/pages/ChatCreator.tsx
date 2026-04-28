@@ -498,11 +498,28 @@ const ChatCreator: React.FC = () => {
   const generateFinalPost = useCallback(async (b: BriefState) => {
     if (generating) return;
     setGenerating(true);
-    appendAssistantWithWidget('Beleza! Tô gerando seu post agora com tudo que você passou. Isso leva uns 30-45s...', 'generating_post', { phase: 'compose' });
+    
+    const totalCards = b.suggested_content?.length || 1;
+    const isCarousel = b.contentType === 'carousel';
+    
+    appendAssistantWithWidget(
+      isCarousel 
+        ? `Beleza! Tô gerando os ${totalCards} cards do seu carrossel. Isso leva um tempinho, mas vale a pena...`
+        : 'Beleza! Tô gerando seu post agora. Isso leva uns 30-45s...', 
+      'generating_post', 
+      { phase: 'compose', current: 1, total: totalCards }
+    );
+
     try {
+      // Create a persistent channel or poll for progress if we had a more complex backend,
+      // but for now, we'll optimize the single call and handle sequential updates if needed.
+      // NOTE: chat-compose-final currently handles the loop internally.
+      // To show real-time progress, we'd need to split the calls or use a background task.
+      
       const { data, error } = await supabase.functions.invoke('chat-compose-final', {
         body: { brief: b },
       });
+      
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -512,8 +529,7 @@ const ChatCreator: React.FC = () => {
 
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
       
-      // Check if it's a carousel or single post
-      if (b.contentType === 'carousel') {
+      if (isCarousel) {
         appendAssistantWithWidget('Prontíssimo! Seu carrossel foi criado com sucesso. Clique no botão abaixo para ver e baixar todos os slides 👇', 'final_result', { carouselId, imageUrl, isCarousel: true });
       } else {
         appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });

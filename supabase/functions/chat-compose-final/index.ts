@@ -343,8 +343,33 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       return new Response(JSON.stringify({ imageUrl: cardImage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Fallback: Single post or internal sequential
-    return new Response(JSON.stringify({ error: 'Nenhum modo de geração definido.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Mode 3: Fallback - Single post (cardIndex 0)
+    console.log('chat-compose-final: fallback mode, using cardIndex 0');
+    const cardContent = [
+      { type: 'text', text: unifiedPromptTemplate(0) },
+      faceData ? { type: 'image_url', image_url: { url: faceData } } : null,
+      logoData ? { type: 'image_url', image_url: { url: logoData } } : null,
+      ...additionalPrints.slice(0, 1).map(p => ({ type: 'image_url', image_url: { url: p } })),
+      ...styleRefs.slice(0, 2).map(ref => ({ type: 'image_url', image_url: { url: ref } })),
+      coverRef ? { type: 'image_url', image_url: { url: coverRef } } : null,
+      selectedCardRef ? { type: 'image_url', image_url: { url: selectedCardRef } } : null,
+    ].filter(Boolean);
+
+    const isFast = brief.imageModel === 'ello-fast';
+    const aiModel = isFast ? 'google/gemini-3.1-flash-image-preview' : 'google/gemini-3-pro-image-preview';
+    
+    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: aiModel,
+        messages: [{ role: 'user', content: cardContent }],
+        modalities: ['image', 'text'],
+      }),
+    });
+    const cardImage = await extractImageUrl(resp);
+    if (!cardImage) throw new Error('Falha ao gerar post único no fallback');
+    return new Response(JSON.stringify({ imageUrl: cardImage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e) {
     console.error('Final error:', e);

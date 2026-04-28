@@ -1666,7 +1666,7 @@ const PersonalizationWidget: React.FC<{
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
           {uploading ? 'Enviando...' : 'Confirmar'}
         </Button>
-        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, colors: false })} className="text-xs h-9 text-white/60">
+        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, prints: false, colors: false })} className="text-xs h-9 text-white/60">
           Pular
         </Button>
       </div>

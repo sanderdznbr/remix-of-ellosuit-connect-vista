@@ -42,7 +42,7 @@ const FORMAT_TO_RATIO: Record<string, string> = {
   story: '9:16',
 };
 
-const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 async function getCompanyId(sb: any, userId: string): Promise<string | null> {
   const { data } = await sb
@@ -74,8 +74,6 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     if (!resp.ok) return null;
     const ct = resp.headers.get('content-type') || 'image/png';
     const buf = new Uint8Array(await resp.arrayBuffer());
-    // Native base64 — orders of magnitude cheaper than the per-byte
-    // String.fromCharCode loop, which was burning CPU budget.
     return `data:${ct};base64,${encodeBase64(buf)}`;
   } catch {
     return null;
@@ -116,7 +114,6 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
     const urlEnd = raw.indexOf('"', urlStart);
     if (urlStart !== -1 && urlEnd !== -1) return raw.slice(urlStart, urlEnd);
   }
-  console.error('image extraction failed:', raw.slice(0, 500));
   return null;
 }
 
@@ -165,284 +162,89 @@ Deno.serve(async (req) => {
     const ratio = FORMAT_TO_RATIO[brief.format || 'portrait'] || '4:5';
     const style = await getStyleContext(sb, brief.styleId);
 
-    // === STEP 0: Check credits before starting expensive AI work ===
-    const { data: balance } = await sb
-      .from('ai_credit_balances')
-      .select('balance')
-      .eq('company_id', companyId)
-      .maybeSingle();
+    // Context strings
+    const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : '';
+    const colors = brief.brandColors?.length ? `Brand palette: ${brief.brandColors.join(', ')}.` : '';
+    const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
+    const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
 
-    const creditCost = brief.hasFace ? 5 : 2; // Fixed single post cost vs face customization
-    if (!balance || (balance.balance < creditCost)) {
-      return new Response(JSON.stringify({ 
-        error: `Você precisa de pelo menos ${creditCost} créditos para gerar este post. Saldo atual: ${balance?.balance || 0}` 
-      }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // === STEP 1: Generate professional art direction (creative brief) ===
-    // A senior creative director writes a detailed visual concept BEFORE the image is generated.
-    // This avoids generic stock scenes and guarantees the photo is purposefully designed for the topic.
-    // === STEP 1: Generate art direction AND fetch references in parallel ===
-    const directionPrompt = `Você é um diretor de arte sênior de revista editorial (estilo GQ, Vogue Business, Monocle). Um post de Instagram precisa ser criado sobre o tema:
-
-"${brief.topic}"
-
-${brief.brandName ? `Marca: ${brief.brandName}.` : ''}
-${brief.audience ? `Público: ${brief.audience}.` : ''}
-${brief.tone ? `Tom: ${brief.tone}.` : ''}
-${brief.hasFace ? 'IMPORTANTE: o post mostrará uma pessoa real (temos a foto do rosto dela como referência de identidade). Você precisa dirigir a CENA ao redor dessa pessoa.' : ''}
-${style?.name ? `Estilo visual selecionado: ${style.name}. ${style.description || ''}` : ''}
-
-Crie uma DIREÇÃO DE ARTE específica e original para uma única foto editorial premium. Responda em JSON com EXATAMENTE estes campos (todos em português brasileiro, frases curtas e visuais):
-
-{
-  "concept": "conceito criativo único em 1 frase — não genérico, ligado diretamente ao tema",
-  "scene": "descrição do ambiente/cenário específico",
-  "pose": "pose corporal específica e dinâmica",
-  "expression": "expressão facial específica",
-  "wardrobe": "figurino específico que combina com o tema",
-  "cameraAngle": "ângulo e enquadramento",
-  "lighting": "iluminação cinematográfica",
-  "moodKeywords": "3-5 palavras-chave de mood",
-  "textZone": "onde fica a área limpa para o texto"
-}
-
-Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa sorrindo em um escritório".`;
-
-    const artDirectionPromise = (async (): Promise<string> => {
-      try {
-        const dirResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'google/gemini-3-flash-preview',
-            messages: [{ role: 'user', content: directionPrompt }],
-            response_format: { type: 'json_object' },
-          }),
-        });
-        if (!dirResp.ok) {
-          console.warn('Art direction call failed:', dirResp.status);
-          return '';
-        }
-        const dj = await dirResp.json();
-        const raw = dj?.choices?.[0]?.message?.content || '';
-        try {
-          const parsed = JSON.parse(raw);
-          console.log('🎬 Art direction generated:', parsed.concept);
-          return `🎬 DIREÇÃO DE ARTE (siga rigorosamente — esta é a visão profissional para esta foto específica):
-• CONCEITO: ${parsed.concept}
-• CENÁRIO: ${parsed.scene}
-• POSE DO PERSONAGEM: ${parsed.pose}
-• EXPRESSÃO: ${parsed.expression}
-• FIGURINO: ${parsed.wardrobe}
-• CÂMERA: ${parsed.cameraAngle}
-• ILUMINAÇÃO: ${parsed.lighting}
-• MOOD: ${parsed.moodKeywords}
-• ÁREA DE TEXTO LIVRE: ${parsed.textZone}`;
-        } catch (e) {
-          console.warn('Art direction JSON parse failed, using raw:', e);
-          return raw ? `🎬 DIREÇÃO DE ARTE:\n${raw}` : '';
-        }
-      } catch (e) {
-        console.warn('Art direction step skipped:', e);
-        return '';
-      }
-    })();
-
-    // === Resolve all reference assets in parallel (alongside art direction) ===
+    // Face / Logo / Prints references
     const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);
     const logoUrlArray = Array.isArray(brief.logoUrl) ? brief.logoUrl : (brief.logoUrl ? [brief.logoUrl] : []);
     const printUrlArray = Array.isArray(brief.printUrl) ? brief.printUrl : (brief.printUrl ? [brief.printUrl] : []);
 
     const refsPromise = Promise.all([
-      brief.hasFace && faceUrlArray.length > 0
-        ? Promise.all(faceUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
-        : Promise.resolve([]),
-      brief.hasLogo && logoUrlArray.length > 0
-        ? Promise.all(logoUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
-        : Promise.resolve([]),
-      brief.hasPrints && printUrlArray.length > 0
-        ? Promise.all(printUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
-        : Promise.resolve([]),
-      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2).map(urlToDataUrl) : []),
+      brief.hasFace && faceUrlArray.length > 0 ? Promise.all(faceUrlArray.map(urlToDataUrl)) : Promise.resolve([]),
+      brief.hasLogo && logoUrlArray.length > 0 ? Promise.all(logoUrlArray.map(urlToDataUrl)) : Promise.resolve([]),
+      brief.hasPrints && printUrlArray.length > 0 ? Promise.all(printUrlArray.map(urlToDataUrl)) : Promise.resolve([]),
+      ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 1).map(urlToDataUrl) : []),
     ]);
 
-    const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);
-    const [facesResolved, logosResolved, printsResolved, ...styleRefDataUrls] = refsResolved;
+    const refsResolved = await refsPromise;
+    const facesResolved = refsResolved[0];
+    const logosResolved = refsResolved[1];
+    const printsResolved = refsResolved[2];
+    const styleRefs = refsResolved.slice(3).filter(Boolean) as string[];
+
     const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;
-    const styleRefs = styleRefDataUrls.filter(Boolean) as string[];
-
-    const additionalFaces = facesResolved.slice(1).filter(Boolean);
-    const additionalLogos = logosResolved.slice(1).filter(Boolean);
     const additionalPrints = printsResolved.filter(Boolean);
 
+    const faceLine = faceData ? `⚠️ FACE REFERENCE ATTACHED. REINVENT THE ENTIRE SCENE. USE FACE IDENTITY ONLY.` : '';
+    const logoLine = logoData ? 'Logo is attached. Place subtly in a corner.' : '';
+    const printsLine = additionalPrints.length > 0 ? 'Reference screenshots attached. Use for UI context.' : '';
 
-
-    // === Build the unified prompt (single pass) ===
-    const colors = brief.brandColors?.length ? `Brand palette: ${brief.brandColors.join(', ')}.` : '';
-    const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : '';
-    const audienceLine = brief.audience ? `Target audience: ${brief.audience}.` : '';
-    const toneLine = brief.tone ? `Tone of voice: ${brief.tone}.` : '';
-    const faceLine = faceData
-      ? `⚠️ CRITICAL — FACE REFERENCE HANDLING ⚠️
-The attached photo is a FACE IDENTITY REFERENCE ONLY. Treat it like a passport photo / Face ID card.
-
-EXTRACT ONLY: facial features (eyes, nose, mouth, face shape), skin tone, hair color/style, age, ethnicity, gender, beard/mustache if present.
-
-ABSOLUTELY FORBIDDEN — these will RUIN the result:
-❌ DO NOT cut-and-paste, crop, or composite the face from the reference into the scene
-❌ DO NOT keep the same pose, body angle, head tilt, or framing as the reference
-❌ DO NOT keep the same shirt, t-shirt, jacket, logo, print, or any clothing from the reference
-❌ DO NOT keep the same background, wall, lighting, or environment from the reference
-❌ DO NOT keep the same expression (no copying the same neutral selfie face)
-❌ DO NOT mirror, flip, or directly trace the reference photo
-❌ NEVER show clothing prints/text from the reference (e.g. brand logos, mirrored letters)
-
-REQUIRED — REINVENT the entire scene from scratch:
-✅ REPAINT the person from scratch as a brand-new editorial photograph, only borrowing the FACIAL IDENTITY
-✅ Give them a NEW POSE: dynamic, in-action, gesturing, walking, leaning, sitting cinematically, looking off-camera, hands working, etc.
-✅ Give them a NEW EXPRESSION matching the topic mood (smiling, focused, intense, joyful, curious — NOT a flat selfie stare)
-✅ Give them BRAND-NEW CLOTHING styled for the concept (clean shirt, blazer, designer outfit, lab coat, casual chic — whatever fits the topic; never reuse the reference outfit)
-✅ Use a NEW CAMERA ANGLE: 3/4 profile, low hero angle, over-the-shoulder, wide editorial cinematic, candid lifestyle, side profile — anything BUT a centered frontal selfie
-✅ Build a NEW ENVIRONMENT that visually tells the story of the topic (studio, location, conceptual set, on-location lifestyle scene)
-✅ Apply NEW LIGHTING (cinematic, soft window light, hard editorial, neon, golden hour — chosen by the concept)
-✅ Leave clean negative space (top OR bottom third) for typography — face must NEVER be covered by text
-
-Think of it like a film director casting a real actor: you have the actor's face, now stage a brand-new scene around them. The reference is the casting headshot, NOT the final shot.`
-      : '';
-    const logoLine = logoData
-      ? 'A logo asset is attached. Place it subtly and cleanly in a corner — small, balanced, never intrusive.'
-      : '';
-    const printsLine = additionalPrints.length > 0
-      ? '⚠️ SYSTEM SCREENSHOTS ATTACHED ⚠️\nReference images of the software/app/system are attached. Use them as visual context for what the system looks like. Match the UI aesthetic if you show screens or devices in the scene.'
-      : '';
     const styleRules = [
-
-      style?.name ? `Selected marketplace style: "${style.name}".` : '',
-      style?.description ? `Style description: ${style.description}` : '',
-      style?.strict_instructions ? `MANDATORY style rules (must obey strictly): ${style.strict_instructions}` : '',
-      style?.style_config?.imageGeneration?.prompt_style ? `Aesthetic DNA: ${style.style_config.imageGeneration.prompt_style}` : '',
-      styleRefs.length ? 'Style reference images are attached AFTER the face/logo. Match their visual DNA closely: photo treatment, color contrast, crop language, typography attitude, editorial finish, pacing.' : '',
+      style?.name ? `Style: "${style.name}".` : '',
+      style?.strict_instructions ? `MANDATORY rules: ${style.strict_instructions}` : '',
+      styleRefs.length ? 'Style reference attached. Match visual DNA.' : '',
     ].filter(Boolean).join('\n');
 
-    const unifiedPromptTemplate = (cardIndex: number) => {
-      const isCover = cardIndex === 0;
-      const cardText = brief.suggested_content?.[cardIndex];
-      
-      return `Create a finished, premium Instagram ${isCover ? (brief.contentType === 'carousel' ? 'carousel cover' : 'single post') : `slide #${cardIndex + 1}`} about: "${brief.topic}".
-
-CREATIVE GOAL:
-- ONE original, specific campaign concept tied directly to this topic.
-- NOT a generic stock scene, not a generic laptop-on-desk, not random office props.
-- The visual must immediately communicate the topic and value proposition.
-- Editorial, magazine-grade finish. Premium typography in PORTUGUÊS BRASILEIRO.
-- BE BOLD with composition: unexpected angles, dynamic poses, editorial staging.
-- 🚫 NEVER replicate the face reference photo's pose, framing, clothing, or background. The face reference is ONLY for identity — the entire scene must be reinvented from scratch like a fresh photoshoot directed for this exact topic.
-- Reserve a clean text safe-area (top OR bottom third) for the headline — text must never overlap the face.
-
-${brand}
-${colors}
-${audienceLine}
-${toneLine}
-${artDirection}
-${faceLine}
-${logoLine}
-${printsLine}
-
-STYLE GUIDANCE:
-${styleRules || 'Modern editorial aesthetic with strong typographic hierarchy.'}
-
-TYPOGRAPHY (MANDATORY TEXT CONTENT):
-- Language: PORTUGUÊS BRASILEIRO with perfect spelling.
-${cardText ? `
-- USE EXATAMENTE ESTE TEXTO APROVADO PELO USUÁRIO PARA ESTE CARD ESPECÍFICO:
-  Título: ${cardText.title || ''}
-  Subtítulo: ${cardText.subtitle || ''}
-  Corpo: ${cardText.body || ''}
-` : `
-- Headline / hook: short, powerful, max 7 words.
-- Optional supporting line: max 12 words.
-`}
-- Place text in a clean safe area; never cover the person's face.
-- Typography must feel editorial, bold, on-brand for the selected style.
-
-OUTPUT:
-- Aspect ratio: ${ratio}.
-- No watermarks. No fake handles. No nonsense placeholder text.
-- Single, polished, ready-to-publish image.
-
-NON-NEGOTIABLE CHECKLIST:
-1. Concept must be unique and clearly tied to the topic.
-2. Must obey the marketplace style references (if attached).
-3. Must include the real person from the face reference (if attached).
-4. Must include the brand logo subtly (if attached).
-5. Must use the brand palette (if provided).
-6. All text must be legible and in correct Portuguese.`;
+    const unifiedPromptTemplate = (idx: number) => {
+      const isCover = idx === 0;
+      const cardText = brief.suggested_content?.[idx];
+      return `Create premium Instagram ${isCover ? 'cover' : `card #${idx + 1}`} about "${brief.topic}". 
+Editorial magazine grade. Clean text area. Top/Bottom third safe area. PORTUGUÊS BRASILEIRO.
+${brand} ${colors} ${audienceLine} ${toneLine}
+${faceLine} ${logoLine} ${printsLine} ${styleRules}
+TEXT: ${cardText ? `Title: ${cardText.title || ''}, Sub: ${cardText.subtitle || ''}, Body: ${cardText.body || ''}` : 'Powerful hook, max 7 words.'}
+RATIO: ${ratio}. Single polished image.`;
     };
 
-    const totalCards = brief.suggested_content?.length || 1;
-    
-    // IF images IS PROVIDED: Finalization mode (saving to DB)
+    // Mode 1: Finalization (saving all cards to DB)
     if (Array.isArray(images) && images.length > 0) {
       console.log(`chat-compose-final: finalization mode for ${images.length} images`);
-      const cards = images.map((img, i) => {
-        const text = brief.suggested_content?.[i] || {};
-        return {
-          type: i === 0 ? 'cover' : 'body',
-          title: text.title,
-          subtitle: text.subtitle,
-          body: text.body,
-          imageUrl: img,
-          isAiImage: true,
-          layout: 'dark',
-        };
-      });
+      const cards = images.map((img, i) => ({
+        type: i === 0 ? 'cover' : 'body',
+        title: brief.suggested_content?.[i]?.title,
+        subtitle: brief.suggested_content?.[i]?.subtitle,
+        body: brief.suggested_content?.[i]?.body,
+        imageUrl: img,
+        isAiImage: true,
+        layout: 'dark',
+      }));
       
-      const carouselData = { title: brief.topic, cards };
       let validStyleId: string | null = null;
       if (isUuid(brief.styleId)) {
         const { data: styleRow } = await sb.from('marketplace_styles').select('id').eq('id', brief.styleId).maybeSingle();
         if (styleRow?.id) validStyleId = styleRow.id;
       }
 
-      const { data: inserted, error: insertErr } = await sb
-        .from('generated_carousels')
-        .insert({
-          company_id: companyId,
-          user_id: user.id,
-          title: brief.topic,
-          topic: brief.topic,
-          keywords: [],
-          carousel_data: carouselData,
-          style_config: {
-            source: 'chat-creator',
-            format: brief.format,
-            styleName: brief.styleName,
-            brandColors: brief.brandColors,
-          },
-          card_count: cards.length,
-          marketplace_style_id: validStyleId,
-        })
-        .select('id')
-        .single();
+      const { data: inserted, error: insertErr } = await sb.from('generated_carousels').insert({
+        company_id: companyId, user_id: user.id, title: brief.topic, topic: brief.topic, keywords: [],
+        carousel_data: { title: brief.topic, cards },
+        style_config: { source: 'chat-creator', format: brief.format, styleName: brief.styleName, brandColors: brief.brandColors },
+        card_count: cards.length, marketplace_style_id: validStyleId,
+      }).select('id').single();
 
-      if (insertErr || !inserted) throw new Error('Falha ao salvar o post.');
-
+      if (insertErr || !inserted) throw new Error('Falha ao salvar post.');
       const carouselId = inserted.id;
-      // Background worker to handle storage upload and credits
+
+      // Offload storage upload + credits
       const bgWork = (async () => {
         try {
-          const creditCost = brief.hasFace ? 5 : 2;
-          await sb.rpc('consume_ai_credits', {
-            p_company_id: companyId,
-            p_agent_id: null,
-            p_amount: creditCost,
-            p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
-          });
+          const cost = brief.hasFace ? 5 : 2;
+          await sb.rpc('consume_ai_credits', { p_company_id: companyId, p_amount: cost, p_description: `Post assistente: ${brief.topic}` });
           const coverUrl = await uploadCover(sb, companyId, carouselId, images[0]);
           if (coverUrl) {
             await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
@@ -458,9 +260,8 @@ NON-NEGOTIABLE CHECKLIST:
       return new Response(JSON.stringify({ carouselId, imageUrl: images[0] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // IF cardIndex IS PROVIDED: Single card mode (Studio-style loop)
+    // Mode 2: Single card generation
     if (typeof cardIndex === 'number') {
-      console.log(`chat-compose-final: single-card mode for card ${cardIndex+1}/${totalCards}`);
       const cardContent = [
         { type: 'text', text: unifiedPromptTemplate(cardIndex) },
         faceData ? { type: 'image_url', image_url: { url: faceData } } : null,
@@ -492,153 +293,14 @@ NON-NEGOTIABLE CHECKLIST:
       return new Response(JSON.stringify({ imageUrl: cardImage }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // FALLBACK: Internal loop mode (Original single-call mode, still sequential internally)
-    const generatedImages: string[] = [];
-    const baseMultimodalContent: any[] = [];
-    if (faceData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: faceData } });
-    if (logoData) baseMultimodalContent.push({ type: 'image_url', image_url: { url: logoData } });
-    for (const p of additionalPrints.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: p } });
-    for (const ref of styleRefs.slice(0, 1)) baseMultimodalContent.push({ type: 'image_url', image_url: { url: ref } });
-
-    console.log(`chat-compose-final: fallback internal loop for ${totalCards} cards`);
-    for (let i = 0; i < totalCards; i++) {
-      let cardImage: string | null = null;
-      let attempts = 0;
-      while (attempts < 2 && !cardImage) {
-        attempts++;
-        try {
-          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'google/gemini-3-pro-image-preview',
-              messages: [{ role: 'user', content: [{ type: 'text', text: unifiedPromptTemplate(i) }, ...baseMultimodalContent] }],
-              modalities: ['image', 'text'],
-            }),
-          });
-          if (!resp.ok) continue;
-          cardImage = await extractImageUrl(resp);
-        } catch (e) {}
-      }
-      if (cardImage) generatedImages.push(cardImage);
-      else throw new Error(`Falha no card ${i+1}`);
-    }
-
-
-
-
-    // === Persist ===
-    // === Persist ===
-    const cards = generatedImages.map((img, i) => {
-      const text = brief.suggested_content?.[i] || {};
-      return {
-        type: i === 0 ? 'cover' : 'body',
-        title: text.title,
-        subtitle: text.subtitle,
-        body: text.body,
-        imageUrl: img,
-        isAiImage: true,
-        layout: 'dark',
-      };
-    });
-    
-    const carouselData = { title: brief.topic, cards };
-
-    // Validate that the marketplace style actually exists before referencing it
-    let validStyleId: string | null = null;
-    if (isUuid(brief.styleId)) {
-      const { data: styleRow } = await sb
-        .from('marketplace_styles')
-        .select('id')
-        .eq('id', brief.styleId)
-        .maybeSingle();
-      if (styleRow?.id) validStyleId = styleRow.id;
-    }
-
-    const { data: inserted, error: insertErr } = await sb
-      .from('generated_carousels')
-      .insert({
-        company_id: companyId,
-        user_id: user.id,
-        title: brief.topic,
-        topic: brief.topic,
-        keywords: [],
-        carousel_data: carouselData,
-        style_config: {
-          source: 'chat-creator',
-          format: brief.format,
-          styleName: brief.styleName,
-          brandColors: brief.brandColors,
-        },
-        card_count: cards.length,
-        marketplace_style_id: validStyleId,
-      })
-      .select('id')
-      .single();
-
-
-    if (insertErr || !inserted) {
-      console.error('insert carousel error:', insertErr);
-      return new Response(JSON.stringify({ error: 'Falha ao salvar o post.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Offload cover upload + DB updates to the background to stay under the
-    // edge function CPU budget. The frontend already has `finalImage` to render.
-    const carouselId = inserted.id;
-    const bgWork = (async () => {
-      try {
-        // 1. Consume credits
-        const creditCost = brief.hasFace ? 5 : 2;
-        await sb.rpc('consume_ai_credits', {
-          p_company_id: companyId,
-          p_agent_id: null,
-          p_amount: creditCost,
-          p_description: `Post assistente: ${brief.topic} — ${creditCost} créditos`,
-        });
-
-        // 2. Upload cover + cards images to permanent storage
-        const firstImageUrl = generatedImages[0];
-        const coverUrl = await uploadCover(sb, companyId, carouselId, firstImageUrl);
-        
-        if (coverUrl) {
-          await sb.from('generated_carousels').update({ cover_url: coverUrl }).eq('id', carouselId);
-          
-          // For carousels, we should ideally upload ALL images, but let's at least ensure the cover is solid
-          // and the carousel_data reflects the cards we generated.
-          const finalCards = cards.map((card, idx) => ({
-            ...card,
-            imageUrl: idx === 0 ? coverUrl : card.imageUrl
-          }));
-
-          await sb.from('generated_carousels').update({
-            carousel_data: { title: brief.topic, cards: finalCards },
-          }).eq('id', carouselId);
-        }
-      } catch (err) {
-        console.error('background background task failed:', err);
-      }
-    })();
-
-    // @ts-ignore EdgeRuntime is provided by Supabase edge runtime
-    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
-      // @ts-ignore
-      EdgeRuntime.waitUntil(bgWork);
-    }
-
-    return new Response(
-      JSON.stringify({ carouselId, imageUrl: generatedImages[0] }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    // Fallback: Single post or internal sequential
+    return new Response(JSON.stringify({ error: 'Nenhum modo de geração definido.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (e) {
-    console.error('chat-compose-final error:', e);
+    console.error('Final error:', e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-
 });

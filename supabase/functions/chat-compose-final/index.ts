@@ -267,7 +267,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       const { data: inserted, error: insertErr } = await sb.from('generated_carousels').insert({
         company_id: companyId, user_id: user.id, title: brief.topic, topic: brief.topic, keywords: [],
         carousel_data: { title: brief.topic, cards },
-        style_config: { source: 'chat-creator', format: brief.format, styleName: brief.styleName, brandColors: brief.brandColors },
+        style_config: { source: 'chat-creator', format: brief.format, styleName: brief.styleName, brandColors: brief.brandColors, isFullBleed: true },
         card_count: cards.length, marketplace_style_id: validStyleId,
       }).select('id').single();
 

@@ -1369,7 +1369,7 @@ const ApproveContentWidget: React.FC<{
   const allIssues = draft.flatMap((d, i) => validate(d).map(msg => ({ slide: i + 1, msg })));
   const hasIssues = allIssues.length > 0;
 
-  const renderField = (idx: number, field: 'title' | 'subtitle' | 'body', value: string | undefined, isEditing: boolean) => {
+  const renderField = (idx: number, field: 'title' | 'subtitle' | 'body' | 'searchTerm', value: string | undefined, isEditing: boolean) => {
     const limit = LIMITS[field];
     const words = countWords(value);
     const over = words > limit.max;
@@ -1377,6 +1377,7 @@ const ApproveContentWidget: React.FC<{
       title: 'text-sm font-bold text-white leading-tight',
       subtitle: 'text-xs text-white/60 font-medium',
       body: 'text-[13px] text-white/80 leading-relaxed italic',
+      searchTerm: 'text-[11px] text-violet-400 font-medium bg-violet-400/5 px-2 py-1 rounded-md border border-violet-400/20',
     };
     return (
       <div className="space-y-1">

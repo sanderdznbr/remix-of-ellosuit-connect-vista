@@ -38,7 +38,7 @@ interface SanitizedBriefState extends BriefState {
 interface ApiResponse {
   ok: boolean;
   messages?: string[];
-  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'confirm_generate' | 'none';
+  widget?: 'content_type_picker' | 'format_picker' | 'style_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'none';
   brief_update?: Partial<BriefState>;
   ready?: boolean;
   error?: string;

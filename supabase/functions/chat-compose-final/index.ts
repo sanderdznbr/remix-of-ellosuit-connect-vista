@@ -27,8 +27,8 @@ interface Brief {
   brandColors?: string[];
   hasFace?: boolean;
   hasLogo?: boolean;
-  faceUrl?: string;
-  logoUrl?: string;
+  faceUrl?: string | string[];
+  logoUrl?: string | string[];
   audience?: string;
   tone?: string;
 }
@@ -250,19 +250,28 @@ Seja ESPECÍFICO e VISUAL. Nunca devolva descrições genéricas tipo "pessoa so
     })();
 
     // === Resolve all reference assets in parallel (alongside art direction) ===
+    const faceUrlArray = Array.isArray(brief.faceUrl) ? brief.faceUrl : (brief.faceUrl ? [brief.faceUrl] : []);
+    const logoUrlArray = Array.isArray(brief.logoUrl) ? brief.logoUrl : (brief.logoUrl ? [brief.logoUrl] : []);
+
     const refsPromise = Promise.all([
-      brief.hasFace && brief.faceUrl
-        ? (brief.faceUrl.startsWith('data:') ? Promise.resolve(brief.faceUrl) : urlToDataUrl(brief.faceUrl))
-        : Promise.resolve(null),
-      brief.hasLogo && brief.logoUrl
-        ? (brief.logoUrl.startsWith('data:') ? Promise.resolve(brief.logoUrl) : urlToDataUrl(brief.logoUrl))
-        : Promise.resolve(null),
+      brief.hasFace && faceUrlArray.length > 0
+        ? Promise.all(faceUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
+        : Promise.resolve([]),
+      brief.hasLogo && logoUrlArray.length > 0
+        ? Promise.all(logoUrlArray.map(url => url.startsWith('data:') ? Promise.resolve(url) : urlToDataUrl(url)))
+        : Promise.resolve([]),
       ...(Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 2).map(urlToDataUrl) : []),
     ]);
 
     const [artDirection, refsResolved] = await Promise.all([artDirectionPromise, refsPromise]);
-    const [faceData, logoData, ...styleRefDataUrls] = refsResolved;
+    const [facesResolved, logosResolved, ...styleRefDataUrls] = refsResolved;
+    const faceData = facesResolved?.[0] || null; // Gemini 3 Pro Image handles best with a primary face
+    const logoData = logosResolved?.[0] || null;
     const styleRefs = styleRefDataUrls.filter(Boolean) as string[];
+
+    // If there are multiple face refs, we can add them as context too
+    const additionalFaces = facesResolved.slice(1).filter(Boolean);
+    const additionalLogos = logosResolved.slice(1).filter(Boolean);
 
 
     // === Build the unified prompt (single pass) ===
@@ -353,7 +362,9 @@ NON-NEGOTIABLE CHECKLIST:
     // === Build multimodal payload ===
     const content: any[] = [{ type: 'text', text: unifiedPrompt }];
     if (faceData) content.push({ type: 'image_url', image_url: { url: faceData } });
+    for (const f of additionalFaces) content.push({ type: 'image_url', image_url: { url: f } });
     if (logoData) content.push({ type: 'image_url', image_url: { url: logoData } });
+    for (const l of additionalLogos) content.push({ type: 'image_url', image_url: { url: l } });
     for (const ref of styleRefs) content.push({ type: 'image_url', image_url: { url: ref } });
 
     console.log('chat-compose-final: single-pass generation', {

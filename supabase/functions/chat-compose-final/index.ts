@@ -317,7 +317,11 @@ Think of it like a film director casting a real actor: you have the actor's face
     const logoLine = logoData
       ? 'A logo asset is attached. Place it subtly and cleanly in a corner — small, balanced, never intrusive.'
       : '';
+    const printsLine = additionalPrints.length > 0
+      ? '⚠️ SYSTEM SCREENSHOTS ATTACHED ⚠️\nReference images of the software/app/system are attached. Use them as visual context for what the system looks like. Match the UI aesthetic if you show screens or devices in the scene.'
+      : '';
     const styleRules = [
+
       style?.name ? `Selected marketplace style: "${style.name}".` : '',
       style?.description ? `Style description: ${style.description}` : '',
       style?.strict_instructions ? `MANDATORY style rules (must obey strictly): ${style.strict_instructions}` : '',

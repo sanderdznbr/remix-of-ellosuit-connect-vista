@@ -1754,8 +1754,44 @@ const FinalResultWidget: React.FC<{
 
   return (
     <div className="space-y-2.5 max-w-md">
-      <div className="rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-        <img src={imageUrl} alt="Post gerado" className="w-full aspect-[4/5] object-cover" />
+      <div className="relative group rounded-xl overflow-hidden border border-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+        {isCarousel && slides.length > 0 ? (
+          <div className="relative aspect-[4/5]">
+            <img 
+              src={slides[currentSlide]?.image_url || imageUrl} 
+              alt={`Slide ${currentSlide + 1}`} 
+              className="w-full h-full object-cover transition-opacity duration-300" 
+            />
+            {slides.length > 1 && (
+              <>
+                <button 
+                  onClick={() => setCurrentSlide(prev => (prev > 0 ? prev - 1 : slides.length - 1))}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button 
+                  onClick={() => setCurrentSlide(prev => (prev < slides.length - 1 ? prev + 1 : 0))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-[10px] text-white font-medium">
+                  {currentSlide + 1} / {slides.length}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="relative aspect-[4/5]">
+            <img src={imageUrl} alt="Post gerado" className="w-full h-full object-cover" />
+            {loadingSlides && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

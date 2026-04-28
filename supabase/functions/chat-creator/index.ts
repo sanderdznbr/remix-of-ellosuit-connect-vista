@@ -158,7 +158,7 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 - "personalization" → escolher rostos/logos/cores.
 - "approve_content" → Sugestão de texto para a arte. O brief_update deve conter o campo 'suggested_content'.
 - "confirm_generate" → resumo final + botão gerar.
-- "image_model_picker" → escolher entre Ello image 1 e chat-gpt-2.
+- "image_model_picker" → escolher entre ellocontent pro e ellocontent fast.
 - "none" → sem widget (só mensagem)
 
 A Ello tem livre acesso ao Brave Search para pesquisar imagens reais e contextuais sobre o assunto e usá-las como referência para a IA gerar as artes.

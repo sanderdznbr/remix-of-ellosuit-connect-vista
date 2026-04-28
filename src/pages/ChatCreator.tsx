@@ -826,8 +826,8 @@ const ChatCreator: React.FC = () => {
                       <div className="flex gap-3 max-w-[88%] w-full">
                         <div className="w-8 shrink-0">
                           {showAvatar && (
-                            <div className="h-8 w-8 flex items-center justify-center mt-0.5 relative shrink-0">
-                              <div className="carousel-loader-spinner" style={{ width: 28, height: 28 }} />
+                            <div className="h-8 w-8 flex items-center justify-center relative shrink-0">
+                              <div className="carousel-loader-spinner !static" style={{ width: 32, height: 32 }} />
                             </div>
                           )}
 
@@ -862,7 +862,7 @@ const ChatCreator: React.FC = () => {
             {(loading || generating) && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
                 <div className="h-8 w-8 flex items-center justify-center relative shrink-0">
-                  <div className="carousel-loader-spinner" style={{ width: 28, height: 28 }} />
+                  <div className="carousel-loader-spinner !static" style={{ width: 32, height: 32 }} />
                 </div>
 
                 <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>

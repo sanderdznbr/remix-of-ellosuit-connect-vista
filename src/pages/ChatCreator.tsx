@@ -1989,14 +1989,15 @@ const FinalResultWidget: React.FC<{
         setLoadingSlides(true);
         try {
           const { data, error } = await supabase
-            .from('carousel_slides' as any)
-            .select('image_url')
-            .eq('carousel_id', carouselId)
-            .order('slide_index', { ascending: true });
+            .from('generated_carousels')
+            .select('carousel_data')
+            .eq('id', carouselId)
+            .maybeSingle();
           
           if (error) throw error;
-          if (data && data.length > 0) {
-            setSlides(data as any);
+          const carouselData = data?.carousel_data as any;
+          if (carouselData?.cards && Array.isArray(carouselData.cards)) {
+            setSlides(carouselData.cards.map((c: any) => ({ image_url: c.imageUrl })));
           }
         } catch (err) {
           console.error('Error fetching slides:', err);

@@ -165,6 +165,8 @@ function buildTool() {
               format: { type: 'string', enum: ['portrait', 'square', 'story'] },
               contentType: { type: 'string', enum: ['single', 'carousel'] },
               cardCount: { type: 'number' },
+              visualType: { type: 'string', enum: ['marketplace', 'custom'], description: 'Se o usuário quer usar estilos do marketplace ou subir referências próprias' },
+              customStyleUrls: { type: 'array', items: { type: 'string' }, description: 'URLs das imagens de referência enviadas pelo usuário como DNA visual' },
               styleId: { type: 'string', description: 'UUID of the style. NEVER invent — only use IDs the user picked from the style_picker widget.' },
               styleName: { type: 'string' },
               hasFace: { type: 'boolean' },

@@ -615,11 +615,11 @@ const CarouselGenerator: React.FC = () => {
   const showApprovalStep = hasFaceRefsForGen && imageSettings.generationMode !== 'cloud' && (wizardMode !== 'advanced' || baseImageMode === 'two-step');
 
   const SIMPLE_STEPS = isRealEstateStyle
-    ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...adminModelStep, 'Velocidade'];
+    ? ['Modo', 'Estilo', 'Tema', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...adminModelStep, 'Velocidade']
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', ...(showProductStep && !styleRequiresScreenshots ? ['Produto'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...adminModelStep, 'Velocidade'];
   const ADVANCED_STEPS = isRealEstateStyle
-    ? ['Modo', 'Estilo', 'Tema', 'Formato', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', ...adminModelStep, 'Velocidade']
-    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), 'Formato', ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showBaseImageModeStep ? ['Modo Imagem'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
+    ? ['Modo', 'Estilo', 'Tema', 'Fotos Imóvel', 'Crop Imóvel', 'Info Imóvel', 'Personalização', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), 'Roteiro', ...adminModelStep, 'Velocidade']
+    : ['Modo', 'Estilo', 'Tema', ...(showPesquisaStep ? ['Pesquisa'] : []), ...(showFotosWebStep ? ['Fotos'] : []), ...(styleRequiresScreenshots ? ['Screenshots'] : []), 'Personalização', 'Ideia Visual', ...(showCoresStep ? ['Cores'] : []), ...(showFontesStep ? ['Fontes'] : []), ...(showBaseImageModeStep ? ['Modo Imagem'] : []), ...(showApprovalStep ? ['Imagem Base'] : []), ...(showRoteiroStep ? ['Roteiro'] : []), ...adminModelStep, 'Velocidade'];
   const isArtBasedExtreme = extremeSourceMode === 'art-based' && extremeArtImages.length > 0;
   const EXTREME_STEPS = extremeAnalysis
     ? ['Modo', 'Origem', 'Visão', 'Detalhes', 'Fontes', ...(isArtBasedExtreme ? [] : ['Referências', 'Estilo']), 'Personalização', 'Resumo', ...(contentMode === 'carousel' && cardCount > 1 ? ['Roteiro'] : []), ...adminModelStep]
@@ -634,7 +634,7 @@ const CarouselGenerator: React.FC = () => {
     && bgColor === derivedBrandPalette.bg
     && accentColor === derivedBrandPalette.accent
     && textColor === derivedBrandPalette.text;
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Estilos de Fundo', 'Fontes', ...(generateAiMockup ? ['Screenshots'] : []), ...adminModelStep];
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Estilos de Fundo', 'Fontes', ...(generateAiMockup ? ['Screenshots'] : []), ...adminModelStep];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode

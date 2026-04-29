@@ -19,7 +19,7 @@ const STORAGE_KEY = 'ello_chat_conversations_v1';
 const ACTIVE_KEY = 'ello_chat_active_v1';
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
-type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'image_model_picker' | 'image_source_picker' | 'generating_post' | 'final_result' | null;
+type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'image_model_picker' | 'image_source_picker' | 'face_fusion_picker' | 'generating_post' | 'final_result' | null;
 
 interface BackgroundOption { id: string; label: string; url: string; }
 
@@ -53,6 +53,7 @@ interface BriefState {
   imageModel?: 'ello-pro' | 'ello-fast';
   imageSource?: 'ai' | 'real';
   selectedImages?: string[];
+  faceFusionMode?: 'merge' | 'side_by_side';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
 }
 
@@ -128,6 +129,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   styleName: sanitizeTextForAI(source.styleName, 120),
   hasFace: !!source.hasFace,
   hasLogo: !!source.hasLogo,
+  hasPrints: !!source.hasPrints,
   hasBrandColors: !!source.hasBrandColors,
   brandName: sanitizeTextForAI(source.brandName, 120),
   brandColors: source.brandColors?.slice(0, 4),
@@ -135,6 +137,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   tone: sanitizeTextForAI(source.tone, 120),
   imageModel: source.imageModel,
   imageSource: source.imageSource,
+  faceFusionMode: source.faceFusionMode,
   selectedImages: source.selectedImages,
   faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
   logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
@@ -727,6 +730,48 @@ const ChatCreator: React.FC = () => {
     }
     if (msg.widget === "confirm_generate") {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} />;
+    }
+    if (msg.widget === "face_fusion_picker") {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+          <button
+            onClick={() => {
+              const nextBrief = { ...brief, faceFusionMode: 'merge' as const };
+              setBrief(nextBrief);
+              sendMessage("Quero fundir meu rosto com a pessoa da foto", nextBrief);
+            }}
+            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-600/20 text-violet-400">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold text-white">Fundir Rosto</span>
+            </div>
+            <p className="text-[10px] text-white/50 leading-relaxed">
+              Integra sua identidade na pessoa da foto (Michael Jackson terá o seu rosto).
+            </p>
+          </button>
+          <button
+            onClick={() => {
+              const nextBrief = { ...brief, faceFusionMode: 'side_by_side' as const };
+              setBrief(nextBrief);
+              sendMessage("Quero aparecer ao lado da pessoa da foto", nextBrief);
+            }}
+            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-600/20 text-blue-400">
+                <User className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold text-white">Ao Lado</span>
+            </div>
+            <p className="text-[10px] text-white/50 leading-relaxed">
+              Mantém duas pessoas distintas na cena: você e a personalidade.
+            </p>
+          </button>
+        </div>
+      );
     }
     if (msg.widget === 'generating_post') {
       return <GeneratingWidget 

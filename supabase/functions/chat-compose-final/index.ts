@@ -354,7 +354,9 @@ The final card must look like a designed template from the selected marketplace 
       ? "Reference screenshots attached. Use for UI context."
       : "";
 
-    const styleRules = [
+    const styleRules = isCustomStyle 
+    ? `${styleRefs.length} CUSTOM DNA reference image(s) attached. THESE ARE THE HARD VISUAL TARGET — extract the design system from them: colors, typography, layout grid, spacing, photo treatment, graphic elements, rhythm, hierarchy. Clone the AESTHETIC DNA of these images.`
+    : [
       style?.name ? `Style: "${style.name}".` : "",
       style?.description ? `Style description: ${style.description}` : "",
       style?.strict_instructions

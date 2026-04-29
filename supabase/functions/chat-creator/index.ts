@@ -34,6 +34,7 @@ interface BriefState {
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
   userIdea?: string;
   imageSource?: 'ai' | 'real';
+  faceFusionMode?: 'merge' | 'side_by_side';
 }
 
 interface SanitizedBriefState extends BriefState {
@@ -117,6 +118,7 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
    - SE "Baseado em Estilos": Mostre os estilos disponíveis (widget "style_picker").
 6. PERSONALIZAÇÃO (widget "personalization") — SEMPRE pergunte se a pessoa quer adicionar ROSTO, LOGO ou CORES da marca antes de seguir. É opcional, mas a etapa precisa aparecer.
 6. Escolha IMAGENS (image_source_picker): Ilustrações IA ou Fotos Reais.
+   - SE "Fotos Reais" E o usuário enviou ROSTO em personalização: Pergunte se ele quer fundir o rosto (merge) ou aparecer ao lado da pessoa da foto (side_by_side). Use o widget "face_fusion_picker".
    - SE "Fotos Reais": Explique que precisaremos de termos de busca precisos.
 7. ETAPA DE TEXTO E BUSCA (CRÍTICA):
    - Sugira o texto de cada slide no campo 'suggested_content'.
@@ -154,7 +156,7 @@ function buildTool() {
           },
           widget: {
             type: 'string',
-            enum: ['content_type_picker', 'format_picker', 'visual_type_picker', 'style_uploader', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'none'],
+            enum: ['content_type_picker', 'format_picker', 'visual_type_picker', 'style_uploader', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'face_fusion_picker', 'none'],
             description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {
@@ -191,6 +193,7 @@ function buildTool() {
               },
               userIdea: { type: 'string', description: 'Idéia específica do usuário para o post ou carrossel' },
               imageSource: { type: 'string', enum: ['ai', 'real'], description: 'Se o usuário prefere ilustrações geradas ou fotos reais' },
+              faceFusionMode: { type: 'string', enum: ['merge', 'side_by_side'], description: 'Se deve fundir o rosto com a pessoa da foto ou aparecer ao lado' },
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },

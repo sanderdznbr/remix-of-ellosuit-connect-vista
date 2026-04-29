@@ -42,6 +42,7 @@ interface Brief {
   >;
   userIdea?: string;
   selectedImages?: string[];
+  faceFusionMode?: 'merge' | 'side_by_side';
 }
 
 const FORMAT_TO_RATIO: Record<string, string> = {
@@ -327,10 +328,17 @@ Deno.serve(async (req) => {
     let selectedCardLine = "";
 
     if (faceData && selectedCardRef) {
-      faceLine = `⚠️ DUAL REFERENCE MODE: ATTACHED FACE + ATTACHED REAL PHOTO.
-      STRICT REQUIREMENT: INTEGRATE the identity of the FACE REFERENCE into the subject/character of the REAL PHOTO.
-      The final person must have the specific facial features/identity of the attached Face Reference, but be wearing the clothes, in the pose, and in the environment of the Real Photo subject (e.g. Michael Jackson).
-      It should look like the person from the Face Reference has "become" the character from the Real Photo.`;
+      if (brief.faceFusionMode === 'side_by_side') {
+        faceLine = `⚠️ SIDE-BY-SIDE MODE: ATTACHED FACE + ATTACHED REAL PHOTO.
+        STRICT REQUIREMENT: DO NOT merge the face identity with the subject of the real photo.
+        The final scene must contain TWO distinct people: (1) The person from the attached FACE REFERENCE, and (2) The person/character from the REAL PHOTO (e.g. Michael Jackson).
+        They should be interacting or positioned together in the same scene, both clearly recognizable.`;
+      } else {
+        faceLine = `⚠️ FACE FUSION MODE: ATTACHED FACE + ATTACHED REAL PHOTO.
+        STRICT REQUIREMENT: INTEGRATE the identity of the FACE REFERENCE into the subject/character of the REAL PHOTO.
+        The final person must have the specific facial features/identity of the attached Face Reference, but be wearing the clothes, in the pose, and in the environment of the Real Photo subject (e.g. Michael Jackson).
+        It should look like the person from the Face Reference has "become" the character from the Real Photo.`;
+      }
       
       selectedCardLine = `⚠️ REAL PHOTO (CONTENT REF): Use this as the BASE for the scene, pose, and clothing. Rebuild this scene entirely using the selected style's design system (composition, layout, typography).`;
     } else {

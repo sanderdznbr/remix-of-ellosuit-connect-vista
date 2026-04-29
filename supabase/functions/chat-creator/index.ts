@@ -19,6 +19,8 @@ interface BriefState {
   format?: 'portrait' | 'square' | 'story';
   contentType?: 'single' | 'carousel';
   cardCount?: number;
+  visualType?: 'marketplace' | 'custom';
+  customStyleUrls?: string[];
   styleId?: string | null;
   styleName?: string | null;
   hasFace?: boolean;

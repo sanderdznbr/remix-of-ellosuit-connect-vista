@@ -634,7 +634,7 @@ const CarouselGenerator: React.FC = () => {
     && bgColor === derivedBrandPalette.bg
     && accentColor === derivedBrandPalette.accent
     && textColor === derivedBrandPalette.text;
-  const ANIMATED_STEPS = ['Modo', 'Tema', 'Formato', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Estilos de Fundo', 'Fontes', ...(generateAiMockup ? ['Screenshots'] : []), ...adminModelStep];
+  const ANIMATED_STEPS = ['Modo', 'Tema', 'Animação', 'Personalização', ...(animatedHasBrandColors ? [] : ['Cores']), 'Estilos de Fundo', 'Fontes', ...(generateAiMockup ? ['Screenshots'] : []), ...adminModelStep];
   const WIZARD_STEPS = wizardMode === 'animated' ? ANIMATED_STEPS : wizardMode === 'tweet2' ? TWEET2_STEPS : wizardMode === 'tweet' ? TWEET_STEPS : wizardMode === 'extreme' ? EXTREME_STEPS : wizardMode === 'simple' ? SIMPLE_STEPS : ADVANCED_STEPS;
   
   // Theme colors per wizard mode

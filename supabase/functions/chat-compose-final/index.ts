@@ -319,21 +319,36 @@ Deno.serve(async (req) => {
     const logoData = logosResolved?.[0] || null;
     const additionalPrints = printsResolved.filter(Boolean);
 
-    const faceLine = faceData
-      ? `⚠️ FACE REFERENCE ATTACHED. REINVENT THE ENTIRE SCENE. USE FACE IDENTITY ONLY.`
-      : "";
+    // Dynamic instructions for combining face + web photos
+    let faceLine = "";
+    let selectedCardLine = "";
+
+    if (faceData && selectedCardRef) {
+      faceLine = `⚠️ DUAL REFERENCE MODE: ATTACHED FACE + ATTACHED REAL PHOTO.
+      STRICT REQUIREMENT: INTEGRATE the identity of the FACE REFERENCE into the subject/character of the REAL PHOTO.
+      The final person must have the specific facial features/identity of the attached Face Reference, but be wearing the clothes, in the pose, and in the environment of the Real Photo subject (e.g. Michael Jackson).
+      It should look like the person from the Face Reference has "become" the character from the Real Photo.`;
+      
+      selectedCardLine = `⚠️ REAL PHOTO (CONTENT REF): Use this as the BASE for the scene, pose, and clothing. Rebuild this scene entirely using the selected style's design system (composition, layout, typography).`;
+    } else {
+      faceLine = faceData
+        ? `⚠️ FACE REFERENCE ATTACHED. REINVENT THE ENTIRE SCENE. The main subject must be the person from the face reference.`
+        : "";
+        
+      selectedCardLine = selectedCardRef
+        ? `⚠️ REAL PHOTO ATTACHED — CONTENT REFERENCE ONLY, NOT THE STYLE.
+STRICT PRIORITY ORDER: (1) STYLE REFERENCES control layout/typography/colors/composition, (2) text hierarchy, (3) real photo subject.
+Use the real photo only as raw material for the subject/scene. Rebuild it inside the selected style's composition: crop, mask, cut out, duotone, blend, collage, frame with graphic shapes, overlays, gradients, depth, texture, and editorial typography exactly as the style references suggest.
+FORBIDDEN FAILURE MODE: do not place the real photo full-bleed as a plain background with simple white text on top. If the result looks like a default photo + title overlay, it is wrong.
+The final card must look like a designed template from the selected marketplace style, with intentional text distribution, hierarchy, spacing, and graphic system.`
+        : "";
+    }
+
     const logoLine = logoData
       ? "Logo is attached. Place subtly in a corner."
       : "";
     const printsLine = additionalPrints.length > 0
       ? "Reference screenshots attached. Use for UI context."
-      : "";
-    const selectedCardLine = selectedCardRef
-      ? `⚠️ REAL PHOTO ATTACHED — CONTENT REFERENCE ONLY, NOT THE STYLE.
-STRICT PRIORITY ORDER: (1) STYLE REFERENCES control layout/typography/colors/composition, (2) text hierarchy, (3) real photo subject.
-Use the real photo only as raw material for the subject/scene. Rebuild it inside the selected style's composition: crop, mask, cut out, duotone, blend, collage, frame with graphic shapes, overlays, gradients, depth, texture, and editorial typography exactly as the style references suggest.
-FORBIDDEN FAILURE MODE: do not place the real photo full-bleed as a plain background with simple white text on top. If the result looks like a default photo + title overlay, it is wrong.
-The final card must look like a designed template from the selected marketplace style, with intentional text distribution, hierarchy, spacing, and graphic system.`
       : "";
 
     const styleRules = [

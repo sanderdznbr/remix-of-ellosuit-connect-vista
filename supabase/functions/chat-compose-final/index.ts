@@ -26,6 +26,8 @@ interface Brief {
   styleName?: string | null;
   brandName?: string;
   brandColors?: string[];
+  visualType?: 'marketplace' | 'custom';
+  customStyleUrls?: string[];
   hasFace?: boolean;
   hasLogo?: boolean;
   hasPrints?: boolean;
@@ -281,7 +283,8 @@ Deno.serve(async (req) => {
       : (brief.printUrl ? [brief.printUrl] : []);
 
     // Load matching style references first; real photos are content references, never style references.
-    const stylePreviewSlice = selectStylePreviewUrls(style, currentCardKind);
+    const isCustomStyle = brief.visualType === 'custom' && Array.isArray(brief.customStyleUrls) && brief.customStyleUrls.length > 0;
+    const stylePreviewSlice = isCustomStyle ? brief.customStyleUrls!.slice(0, 4) : selectStylePreviewUrls(style, currentCardKind);
 
     const refsPromise = Promise.all([
       brief.hasFace && faceUrlArray.length > 0
@@ -351,7 +354,9 @@ The final card must look like a designed template from the selected marketplace 
       ? "Reference screenshots attached. Use for UI context."
       : "";
 
-    const styleRules = [
+    const styleRules = isCustomStyle 
+    ? `${styleRefs.length} CUSTOM DNA reference image(s) attached. THESE ARE THE HARD VISUAL TARGET — extract the design system from them: colors, typography, layout grid, spacing, photo treatment, graphic elements, rhythm, hierarchy. Clone the AESTHETIC DNA of these images.`
+    : [
       style?.name ? `Style: "${style.name}".` : "",
       style?.description ? `Style description: ${style.description}` : "",
       style?.strict_instructions

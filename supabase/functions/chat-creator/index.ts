@@ -19,6 +19,8 @@ interface BriefState {
   format?: 'portrait' | 'square' | 'story';
   contentType?: 'single' | 'carousel';
   cardCount?: number;
+  visualType?: 'marketplace' | 'custom';
+  customStyleUrls?: string[];
   styleId?: string | null;
   styleName?: string | null;
   hasFace?: boolean;
@@ -109,8 +111,11 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 1. Defina o TEMA.
 2. Identifique Post Único ou Carrossel (widget "content_type_picker").
 3. SE CARROSSEL: Pergunte obrigatoriamente "Quantos slides você quer?" (campo cardCount).
-4. Escolha FORMATO (format_picker) e ESTILO (style_picker).
-5. PERSONALIZAÇÃO (widget "personalization") — SEMPRE pergunte se a pessoa quer adicionar ROSTO, LOGO ou CORES da marca antes de seguir. É opcional, mas a etapa precisa aparecer.
+4. Escolha FORMATO (format_picker).
+5. ESCOLHA DE DNA VISUAL (visual_type_picker): Pergunte se o visual deve ser "Baseado em Estilos" (marketplace) ou "Inspirado em fotos minhas" (custom).
+   - SE "Inspirado em fotos minhas": Peça para subir as imagens (widget "style_uploader"). Essas imagens serão o DNA visual. Pule a seleção de estilos do marketplace.
+   - SE "Baseado em Estilos": Mostre os estilos disponíveis (widget "style_picker").
+6. PERSONALIZAÇÃO (widget "personalization") — SEMPRE pergunte se a pessoa quer adicionar ROSTO, LOGO ou CORES da marca antes de seguir. É opcional, mas a etapa precisa aparecer.
 6. Escolha IMAGENS (image_source_picker): Ilustrações IA ou Fotos Reais.
    - SE "Fotos Reais": Explique que precisaremos de termos de busca precisos.
 7. ETAPA DE TEXTO E BUSCA (CRÍTICA):
@@ -149,7 +154,7 @@ function buildTool() {
           },
           widget: {
             type: 'string',
-            enum: ['content_type_picker', 'format_picker', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'none'],
+            enum: ['content_type_picker', 'format_picker', 'visual_type_picker', 'style_uploader', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'none'],
             description: 'UI widget to show under the last message. Use "none" if no widget.',
           },
           brief_update: {
@@ -160,6 +165,8 @@ function buildTool() {
               format: { type: 'string', enum: ['portrait', 'square', 'story'] },
               contentType: { type: 'string', enum: ['single', 'carousel'] },
               cardCount: { type: 'number' },
+              visualType: { type: 'string', enum: ['marketplace', 'custom'], description: 'Se o usuário quer usar estilos do marketplace ou subir referências próprias' },
+              customStyleUrls: { type: 'array', items: { type: 'string' }, description: 'URLs das imagens de referência enviadas pelo usuário como DNA visual' },
               styleId: { type: 'string', description: 'UUID of the style. NEVER invent — only use IDs the user picked from the style_picker widget.' },
               styleName: { type: 'string' },
               hasFace: { type: 'boolean' },

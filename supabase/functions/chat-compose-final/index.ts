@@ -283,7 +283,8 @@ Deno.serve(async (req) => {
       : (brief.printUrl ? [brief.printUrl] : []);
 
     // Load matching style references first; real photos are content references, never style references.
-    const stylePreviewSlice = selectStylePreviewUrls(style, currentCardKind);
+    const isCustomStyle = brief.visualType === 'custom' && Array.isArray(brief.customStyleUrls) && brief.customStyleUrls.length > 0;
+    const stylePreviewSlice = isCustomStyle ? brief.customStyleUrls!.slice(0, 4) : selectStylePreviewUrls(style, currentCardKind);
 
     const refsPromise = Promise.all([
       brief.hasFace && faceUrlArray.length > 0

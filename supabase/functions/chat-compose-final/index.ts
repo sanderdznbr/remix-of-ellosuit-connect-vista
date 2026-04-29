@@ -26,6 +26,8 @@ interface Brief {
   styleName?: string | null;
   brandName?: string;
   brandColors?: string[];
+  visualType?: 'marketplace' | 'custom';
+  customStyleUrls?: string[];
   hasFace?: boolean;
   hasLogo?: boolean;
   hasPrints?: boolean;

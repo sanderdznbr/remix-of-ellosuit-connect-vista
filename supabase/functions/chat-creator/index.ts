@@ -266,10 +266,11 @@ Deno.serve(async (req) => {
       const t = await response.text();
       console.error('AI gateway error:', response.status, t);
       
-      // Better error messaging based on the error status
-      let errorMessage = 'A conversa ficou grande demais pra IA processar de uma vez.';
-      if (response.status === 503 || response.status === 504) {
-        errorMessage = 'O serviço de IA está temporariamente instável. Tente novamente em instantes.';
+      let errorMessage = 'Tive um probleminha técnico aqui. Tenta de novo?';
+      if (response.status === 413 || response.status === 431) {
+        errorMessage = 'A conversa ficou grande demais. Vamos começar uma nova?';
+      } else if (response.status >= 500) {
+        errorMessage = 'O serviço de IA está oscilando um pouco. Tente novamente em instantes.';
       }
 
       return jsonResponse({

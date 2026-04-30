@@ -265,11 +265,27 @@ Do not include markdown or extra text.`
       }
 
 
-      // If no images found at all, return error
+      // If no images found at all, return generic placeholders instead of error
       if (images.length === 0) {
-        return new Response(JSON.stringify({ error: 'Nenhuma imagem encontrada. Verifique sua conexão ou entre em contato com o suporte.' }), {
-          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        console.warn('[web-search] No images found, returning placeholders for query:', searchQuery);
+        images = [
+          {
+            id: 'placeholder-1',
+            url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop',
+            thumb: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop',
+            alt: searchQuery,
+            photographer: 'Unsplash',
+            source: 'placeholder',
+          },
+          {
+            id: 'placeholder-2',
+            url: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1000&auto=format&fit=crop',
+            thumb: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=200&auto=format&fit=crop',
+            alt: searchQuery,
+            photographer: 'Unsplash',
+            source: 'placeholder',
+          }
+        ];
       }
 
       return new Response(JSON.stringify({ success: true, images, query: searchQuery }), {

@@ -622,11 +622,23 @@ const ChatCreator: React.FC = () => {
         if (data?.imageUrl) generatedImages.push(data.imageUrl);
       }
 
-      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke('chat-compose-final', {
-        body: { brief: b, images: generatedImages },
-      });
+      let finalizeData = null;
+      let finalizeRetry = 0;
+      while (finalizeRetry < 2 && !finalizeData) {
+        try {
+          const { data, error } = await supabase.functions.invoke('chat-compose-final', {
+            body: { brief: b, images: generatedImages },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          finalizeData = data;
+        } catch (e) {
+          finalizeRetry++;
+          if (finalizeRetry >= 2) throw e;
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
 
-      if (finalizeError) throw finalizeError;
       const carouselId = finalizeData?.carouselId;
       const imageUrl = finalizeData?.imageUrl || generatedImages[0];
 

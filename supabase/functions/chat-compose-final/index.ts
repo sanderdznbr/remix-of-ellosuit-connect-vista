@@ -636,7 +636,6 @@ TEXT TO RENDER ON THIS CARD: ${
 ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished and on-brand.`;
     };
 
-    // Mode 1: Finalization (saving all cards to DB)
     if (Array.isArray(images) && images.length > 0) {
       console.log(
         `chat-compose-final: finalization mode for ${images.length} images`,
@@ -659,28 +658,17 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         if (styleRow?.id) validStyleId = styleRow.id;
       }
 
-      const { data: inserted, error: insertErr } = await sb.from(
-        "generated_carousels",
-      ).insert({
-        company_id: companyId,
-        user_id: user.id,
-        title: brief.topic,
-        topic: brief.topic,
-        keywords: [],
-        carousel_data: { title: brief.topic, cards },
-        style_config: {
-          source: "chat-creator",
-          format: brief.format,
-          styleName: brief.styleName,
-          brandColors: brief.brandColors,
-          isFullBleed: true,
-        },
-        card_count: cards.length,
-        marketplace_style_id: validStyleId,
-      }).select("id").single();
+      const carouselId = existingCarouselId;
+      if (!carouselId) throw new Error("carouselId is required for finalization");
 
-      if (insertErr || !inserted) throw new Error("Falha ao salvar post.");
-      const carouselId = inserted.id;
+      const { error: updateErr } = await sb.from(
+        "generated_carousels",
+      ).update({
+        carousel_data: { title: brief.topic, cards },
+        marketplace_style_id: validStyleId,
+      }).eq("id", carouselId);
+
+      if (updateErr) throw new Error("Falha ao atualizar post.");
 
       // Offload storage upload + credits
       const bgWork = (async () => {

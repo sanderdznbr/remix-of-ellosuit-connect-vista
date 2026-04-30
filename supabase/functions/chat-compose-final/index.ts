@@ -648,17 +648,31 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       ].filter(Boolean);
 
       let cardImage: string | null = null;
-      let attempts = 0;
-      while (attempts < 2 && !cardImage) {
-        attempts++;
-        try {
-          // Use Flash for second attempt if Pro fails (or if already fast)
-          const isFast = brief.imageModel === "ello-fast" || attempts > 1;
-          const aiModel = isFast
-            ? "google/gemini-3.1-flash-image-preview"
-            : "google/gemini-3-pro-image-preview";
+      const attemptPlans = [
+        { model: brief.imageModel === "ello-fast" ? "google/gemini-3.1-flash-image-preview" : "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
+        { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 3000 },
+        {
+          model: "google/gemini-3.1-flash-image-preview",
+          content: [
+            { type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nRECOVERY MODE: generate the finished card without external image references. Keep the same dark premium editorial style, full bleed, no borders.` },
+            faceData ? { type: "image_url", image_url: { url: faceData } } : null,
+            logoData ? { type: "image_url", image_url: { url: logoData } } : null,
+          ].filter(Boolean),
+          waitMs: 3000,
+        },
+        {
+          model: "google/gemini-2.5-flash-image",
+          content: [{ type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nLAST RESORT: no references. Create a clean premium dark editorial Instagram card that renders all requested text clearly. Full bleed, no white border.` }],
+          waitMs: 3000,
+        },
+      ];
 
-          console.log(`chat-compose-final: attempt ${attempts} using ${aiModel}`);
+      for (let attempts = 0; attempts < attemptPlans.length && !cardImage; attempts++) {
+        const plan = attemptPlans[attempts];
+        try {
+          if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
+
+          console.log(`chat-compose-final: card ${cardIndex + 1} attempt ${attempts + 1} using ${plan.model} parts=${plan.content.length}`);
 
           const resp = await fetch(
             "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -669,14 +683,15 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                model: aiModel,
-                messages: [{ role: "user", content: cardContent }],
+                model: plan.model,
+                messages: [{ role: "user", content: plan.content }],
                 modalities: ["image", "text"],
               }),
             },
           );
           if (resp.status === 429) {
-            await new Promise((r) => setTimeout(r, 4000));
+            await resp.text();
+            await new Promise((r) => setTimeout(r, 5000 + attempts * 3000));
             continue;
           }
           if (!resp.ok) {
@@ -686,11 +701,15 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
           }
           cardImage = await extractImageUrl(resp);
         } catch (e) {
-          console.error(`Attempt ${attempts} failed:`, e);
+          console.error(`Card ${cardIndex + 1} attempt ${attempts + 1} failed:`, e);
         }
       }
-      if (!cardImage) throw new Error(`Falha no card ${cardIndex + 1}`);
-      return new Response(JSON.stringify({ imageUrl: cardImage }), {
+      const usedEmergencyFallback = !cardImage;
+      if (!cardImage) {
+        console.error(`Card ${cardIndex + 1}: all AI attempts failed; returning emergency fallback instead of 500.`);
+        cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
+      }
+      return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

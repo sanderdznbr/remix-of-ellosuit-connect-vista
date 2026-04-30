@@ -743,13 +743,14 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         : null,
     ].filter(Boolean);
 
-    const isFast = brief.imageModel === "ello-fast";
-    const aiModel = isFast
-      ? "google/gemini-3.1-flash-image-preview"
-      : "google/gemini-3-pro-image-preview";
-
     let cardImage: string | null = null;
-    try {
+    const fallbackModels = brief.imageModel === "ello-fast"
+      ? ["google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"]
+      : ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
+
+    for (const [idx, aiModel] of fallbackModels.entries()) {
+      try {
+        if (idx > 0) await new Promise((r) => setTimeout(r, 3000));
       const resp = await fetch(
         "https://ai.gateway.lovable.dev/v1/chat/completions",
         {
@@ -770,13 +771,19 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         console.error(`Fallback AI Gateway error (${resp.status}):`, errText);
       } else {
         cardImage = await extractImageUrl(resp);
+        if (cardImage) break;
       }
     } catch (e) {
       console.error("Fallback generation error:", e);
     }
+    }
 
-    if (!cardImage) throw new Error("Falha ao gerar post único no fallback");
-    return new Response(JSON.stringify({ imageUrl: cardImage }), {
+    const usedEmergencyFallback = !cardImage;
+    if (!cardImage) {
+      console.error("Fallback mode: all AI attempts failed; returning emergency fallback instead of 500.");
+      cardImage = emergencyCardDataUrl(brief, 0, ratio);
+    }
+    return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

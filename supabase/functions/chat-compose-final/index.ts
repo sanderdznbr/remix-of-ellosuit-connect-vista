@@ -398,6 +398,48 @@ Deno.serve(async (req) => {
     const payload = await req.json();
     const { action, brief, cardIndex, images, coverImageUrl, carouselId: existingCarouselId } = payload;
 
+    // Action: Initialize background generation
+    if (action === "initialize-background") {
+      const cards = (brief.suggested_content || []).map((c: any, i: number) => ({
+        type: i === 0 ? "cover" : "body",
+        title: c.title,
+        subtitle: c.subtitle,
+        body: c.body,
+        isAiImage: true,
+        layout: "dark",
+      }));
+
+      const { data: inserted, error: insertErr } = await sb.from("generated_carousels").insert({
+        company_id: companyId,
+        user_id: user.id,
+        title: brief.topic,
+        topic: brief.topic,
+        status: 'processing',
+        carousel_data: { title: brief.topic, cards },
+        style_config: {
+          source: "chat-creator",
+          format: brief.format,
+          styleName: brief.styleName,
+          brandColors: brief.brandColors,
+          isFullBleed: true,
+        },
+        card_count: cards.length,
+      }).select("id").single();
+
+      if (insertErr) throw insertErr;
+
+      const tasks = cards.map((_: any, i: number) => ({
+        carousel_id: inserted.id,
+        card_index: i,
+        status: 'pending'
+      }));
+      await sb.from("carousel_tasks").insert(tasks);
+
+      return new Response(JSON.stringify({ carouselId: inserted.id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!brief?.topic) {
       return new Response(JSON.stringify({ error: "topic é obrigatório" }), {
         status: 400,

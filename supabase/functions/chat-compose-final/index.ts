@@ -166,11 +166,11 @@ function estimatedDataUrlBytes(url: string): number {
 async function urlToDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:")) {
-    if (isSupportedDataImage(url)) return url;
     if (estimatedDataUrlBytes(url) > 2 * 1024 * 1024) {
       console.warn("Data image too large for AI reference, skipped:", (estimatedDataUrlBytes(url) / 1024 / 1024).toFixed(2), "MB");
       return null;
     }
+    if (isSupportedDataImage(url)) return url;
     console.warn("Unsupported data image skipped as AI reference:", url.slice(0, 48));
     return null;
   }

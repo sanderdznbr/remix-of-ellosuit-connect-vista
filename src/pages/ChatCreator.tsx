@@ -505,8 +505,8 @@ const ChatCreator: React.FC = () => {
     }]);
   }, []);
 
-  // Single-pass generation: capture everything (style, face, logo, brand, topic)
-  // and send to chat-compose-final which calls Gemini 3 Pro Image once.
+  // Background generation: single-pass call to chat-compose-final to create placeholders,
+  // then client polls carousel_tasks or we just let it run.
   const generateFinalPost = useCallback(async (b: BriefState) => {
     if (generating) return;
     setGenerating(true);
@@ -516,143 +516,91 @@ const ChatCreator: React.FC = () => {
     
     appendAssistantWithWidget(
       isCarousel 
-        ? `Beleza! Tô gerando os ${totalCards} cards do seu carrossel. Isso leva um tempinho, mas vale a pena...`
-        : 'Beleza! Tô gerando seu post agora. Isso leva uns 30-45s...', 
+        ? `Tudo pronto! Iniciei a geração dos ${totalCards} slides em segundo plano. Você pode continuar navegando ou fechar o chat, o progresso será salvo automaticamente! ✨`
+        : 'Show! Iniciando a criação do seu post em segundo plano. Já te aviso quando terminar...', 
       'generating_post', 
       { phase: 'compose', current: 1, total: totalCards }
     );
 
     try {
+      // 1. Initialize in DB and get a carouselId
+      const { data: initData, error: initErr } = await supabase.functions.invoke('chat-compose-final', {
+        body: { action: 'initialize-background', brief: b }
+      });
+
+      if (initErr || !initData?.carouselId) throw new Error(initErr?.message || 'Falha ao iniciar geração');
+      const carouselId = initData.carouselId;
+
+      console.log('Background generation started:', carouselId);
+
+      // 2. We now process cards one by one (this can still run while chat is open)
+      // but if the user closes, the function instances handle the work.
       const generatedImages: string[] = [];
 
-      if (isCarousel) {
-        for (let i = 0; i < totalCards; i++) {
-          const startTime = Date.now();
-          console.log(`[Card ${i+1}/${totalCards}] Inciando geração...`);
+      for (let i = 0; i < totalCards; i++) {
+        setMessages(prev => prev.map(m => 
+          m.widget === 'generating_post' 
+            ? { ...m, widgetData: { ...m.widgetData, current: i + 1 } } 
+            : m
+        ));
 
-          setMessages(prev => prev.map(m => 
-            m.widget === 'generating_post' 
-              ? { ...m, widgetData: { ...m.widgetData, current: i + 1 } } 
-              : m
-          ));
+        let cardImage = null;
+        let retryCount = 0;
+        const maxRetries = 2;
 
-          let cardImage = null;
-          let retryCount = 0;
-          const maxRetries = 2; // Increased retries
+        while (retryCount <= maxRetries && !cardImage) {
+          try {
+            const { data, error } = await supabase.functions.invoke('chat-compose-final', {
+              body: { 
+                brief: {
+                  ...b,
+                  faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
+                  logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
+                  printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
+                  selectedImages: b.selectedImages,
+                }, 
+                cardIndex: i,
+                carouselId: carouselId, // Associate with the created carousel
+                coverImageUrl: i > 0 && generatedImages[0] ? generatedImages[0] : undefined,
+              },
+            });
 
-          while (retryCount <= maxRetries && !cardImage) {
-            try {
-              const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-                body: { 
-                  brief: {
-                    ...b,
-                    faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
-                    logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
-                    printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
-                    selectedImages: b.selectedImages,
-                  }, 
-                  cardIndex: i,
-                  coverImageUrl: i > 0 && generatedImages[0] ? generatedImages[0] : undefined,
-                },
-              });
-
-              if (error) {
-                // Check if it's a memory error or transient error
-                const errorStr = JSON.stringify(error);
-                if (errorStr.includes('504') || errorStr.includes('timeout')) {
-                   console.warn(`[Card ${i+1}] Timeout detectado, tentando novamente...`);
-                }
-                throw error;
-              }
-              if (data?.error) throw new Error(data.error);
-              cardImage = data?.imageUrl;
-            } catch (e: any) {
-              retryCount++;
-              console.error(`[Card ${i+1}] Erro na tentativa ${retryCount}:`, e);
-              if (retryCount > maxRetries) {
-                // If card generation fails even after retries, try a fallback: generate WITHOUT cover ref to save memory
-                console.log(`[Card ${i+1}] Tentando fallback sem coverImageUrl para economizar memória...`);
-                try {
-                  const { data: fallbackData } = await supabase.functions.invoke('chat-compose-final', {
-                    body: { 
-                      brief: {
-                        ...b,
-                        faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
-                        logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
-                        printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
-                        selectedImages: b.selectedImages,
-                      }, 
-                      cardIndex: i,
-                      // Skipping coverImageUrl on last ditch effort
-                    },
-                  });
-                  if (fallbackData?.imageUrl) {
-                    cardImage = fallbackData.imageUrl;
-                    break;
-                  }
-                } catch (fallbackErr) {
-                  console.error(`[Card ${i+1}] Fallback também falhou:`, fallbackErr);
-                }
-                
-                throw e;
-              }
-              // Exponential backoff
-              await new Promise(r => setTimeout(r, 2000 * retryCount));
-            }
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            cardImage = data?.imageUrl;
+          } catch (e: any) {
+            retryCount++;
+            console.error(`[Card ${i+1}] Retry ${retryCount}:`, e);
+            if (retryCount > maxRetries) throw e;
+            await new Promise(r => setTimeout(r, 2000 * retryCount));
           }
-
-          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-          console.log(`[Card ${i+1}/${totalCards}] Sucesso! Tempo: ${duration}s`);
-          generatedImages.push(cardImage);
         }
-      } else {
-        const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-          body: { 
-            brief: {
-              ...b,
-              faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
-              logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
-              printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
-              selectedImages: b.selectedImages,
-            }
-          },
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        if (data?.imageUrl) generatedImages.push(data.imageUrl);
+        generatedImages.push(cardImage);
+        
+        // Update task status in DB for background tracking
+        await supabase.from('carousel_tasks').update({ status: 'completed', image_url: cardImage }).eq('carousel_id', carouselId).eq('card_index', i);
       }
 
-      let finalizeData = null;
-      let finalizeRetry = 0;
-      while (finalizeRetry < 2 && !finalizeData) {
-        try {
-          const { data, error } = await supabase.functions.invoke('chat-compose-final', {
-            body: { brief: b, images: generatedImages },
-          });
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-          finalizeData = data;
-        } catch (e) {
-          finalizeRetry++;
-          if (finalizeRetry >= 2) throw e;
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      }
+      // 3. Finalize
+      const { data: finalizeData, error: finalizeErr } = await supabase.functions.invoke('chat-compose-final', {
+        body: { brief: b, images: generatedImages, carouselId: carouselId },
+      });
 
-      const carouselId = finalizeData?.carouselId;
-      const imageUrl = finalizeData?.imageUrl || generatedImages[0];
-
-      if (!carouselId) throw new Error('Falha ao finalizar carrossel');
+      if (finalizeErr || !finalizeData) throw new Error(finalizeErr?.message || 'Falha ao finalizar carrossel');
 
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
       
-      if (isCarousel) {
-        appendAssistantWithWidget('Prontíssimo! Seu carrossel foi criado com sucesso. Clique no botão abaixo para ver e baixar todos os slides 👇', 'final_result', { carouselId, imageUrl, isCarousel: true });
-      } else {
-        appendAssistantWithWidget('Prontíssimo! Olha como ficou 👇', 'final_result', { carouselId, imageUrl });
-      }
+      const finalMsg = isCarousel 
+        ? 'Prontíssimo! Seu carrossel foi criado com sucesso. Clique no botão abaixo para ver e baixar todos os slides 👇'
+        : 'Prontíssimo! Olha como ficou 👇';
+        
+      appendAssistantWithWidget(finalMsg, 'final_result', { carouselId, imageUrl: generatedImages[0], isCarousel });
+      
+      // Update main status
+      await supabase.from('generated_carousels').update({ status: 'completed' }).eq('id', carouselId);
+
     } catch (err: any) {
-      console.error('compose error:', err);
+      console.error('generation error:', err);
       setMessages(prev => prev.filter(m => m.widget !== 'generating_post'));
       toast.error(err?.message || 'Erro ao gerar o post');
       appendAssistantWithWidget('Tive um problema gerando o post. Quer tentar de novo?', 'confirm_generate');

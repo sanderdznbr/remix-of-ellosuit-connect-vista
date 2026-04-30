@@ -164,7 +164,7 @@ const ChatCreator: React.FC = () => {
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [recording, setRecording] = useState(false);
 

@@ -129,24 +129,56 @@ function selectStylePreviewUrls(
   return [...matching, ...fallback].slice(0, 2);
 }
 
+function inferMimeFromUrl(url: string): string {
+  const clean = url.split("?")[0].split("#")[0].toLowerCase();
+  if (clean.endsWith(".png")) return "image/png";
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "image/jpeg";
+  if (clean.endsWith(".webp")) return "image/webp";
+  if (clean.endsWith(".gif")) return "image/gif";
+  if (clean.endsWith(".heic")) return "image/heic";
+  if (clean.endsWith(".heif")) return "image/heif";
+  return "image/png";
+}
+
+function sniffMimeFromBytes(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null;
+  // PNG: 89 50 4E 47
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return "image/png";
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return "image/jpeg";
+  // GIF: 47 49 46 38
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) return "image/gif";
+  // WebP: RIFF....WEBP
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return "image/webp";
+  return null;
+}
+
 async function urlToDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:")) return url;
   try {
     const resp = await fetch(url);
     if (!resp.ok) return null;
-    const ct = resp.headers.get("content-type") || "image/png";
+    const rawCt = (resp.headers.get("content-type") || "").toLowerCase().split(";")[0].trim();
     const arrayBuffer = await resp.arrayBuffer();
-    
+
     // Memory safety: if the image is too large, it might crash the edge function
-    // Reduced to 2MB to ensure we don't exceed the edge runtime limits when 
-    // multiple images and high-fidelity prompts are used together.
-    if (arrayBuffer.byteLength > 2 * 1024 * 1024) { 
+    if (arrayBuffer.byteLength > 2 * 1024 * 1024) {
       console.warn("Image too large for base64 encoding:", url, (arrayBuffer.byteLength / 1024 / 1024).toFixed(2), "MB");
       return null;
     }
 
-    return `data:${ct};base64,${encodeBase64(new Uint8Array(arrayBuffer))}`;
+    const bytes = new Uint8Array(arrayBuffer);
+    // Resolve a SAFE mime — Gemini rejects application/octet-stream and other generic types.
+    let mime = rawCt;
+    const isValidImageMime = mime.startsWith("image/") &&
+      ["image/png", "image/jpeg", "image/webp", "image/gif", "image/heic", "image/heif"].includes(mime);
+    if (!isValidImageMime) {
+      mime = sniffMimeFromBytes(bytes) || inferMimeFromUrl(url);
+    }
+
+    return `data:${mime};base64,${encodeBase64(bytes)}`;
   } catch (e) {
     console.error("urlToDataUrl error:", e);
     return null;

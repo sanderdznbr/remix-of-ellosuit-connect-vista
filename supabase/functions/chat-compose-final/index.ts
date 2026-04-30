@@ -137,7 +137,13 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     if (!resp.ok) return null;
     const ct = resp.headers.get("content-type") || "image/png";
     const arrayBuffer = await resp.arrayBuffer();
-    // Use a more memory-efficient way to encode if possible, but encodeBase64 is standard in Deno
+    
+    // Memory safety: if the image is too large, it might crash the edge function
+    if (arrayBuffer.byteLength > 8 * 1024 * 1024) { // 8MB limit
+      console.warn("Image too large for base64 encoding:", url);
+      return null;
+    }
+
     return `data:${ct};base64,${encodeBase64(new Uint8Array(arrayBuffer))}`;
   } catch (e) {
     console.error("urlToDataUrl error:", e);

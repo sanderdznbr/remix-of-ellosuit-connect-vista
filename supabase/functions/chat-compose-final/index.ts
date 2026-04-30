@@ -397,6 +397,8 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
     const { action, brief, cardIndex, images, coverImageUrl, carouselId: existingCarouselId } = payload;
+    
+    console.log(`chat-compose-final: action=${action}, cardIndex=${cardIndex}, imagesCount=${images?.length}, existingCarouselId=${existingCarouselId}`);
 
     // Action: Initialize background generation
     if (action === "initialize-background") {

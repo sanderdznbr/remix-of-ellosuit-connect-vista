@@ -1995,31 +1995,50 @@ const PersonalizationWidget: React.FC<{
 
 const ImageModelPickerWidget: React.FC<{ onPick: (model: 'ello-pro' | 'ello-fast') => void }> = ({ onPick }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
       <button
         onClick={() => onPick('ello-pro')}
-        className="flex items-center gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group"
-        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+        className="group relative flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent hover:from-violet-600/10 hover:to-violet-600/5 hover:border-violet-500/50 transition-all duration-300 text-left overflow-hidden shadow-xl"
       >
-        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-white/5 group-hover:bg-white/10 transition-colors">
-          <img src="/logo.png" alt="Ello" className="h-6 w-6 object-contain" />
+        <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+          <img src="/logo.png" alt="" className="h-20 w-20 object-contain grayscale" />
         </div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-white leading-tight">ellocontent pro.</div>
-          <div className="text-[10px] text-white/50 mt-0.5">(gemini 3 pro)</div>
+        
+        <div className="h-12 w-12 rounded-xl bg-violet-600/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-violet-600 transition-all duration-300">
+          <img src="/logo.png" alt="Ello Pro" className="h-7 w-7 object-contain" />
+        </div>
+        
+        <div className="space-y-1.5 relative z-10">
+          <div className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+            ellocontent pro.
+            <div className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+          </div>
+          <p className="text-[10px] text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">
+            Gemini 3 Pro Image para máxima qualidade.
+          </p>
         </div>
       </button>
+
       <button
         onClick={() => onPick('ello-fast')}
-        className="flex items-center gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group"
-        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+        className="group relative flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent hover:from-blue-600/10 hover:to-blue-600/5 hover:border-blue-500/50 transition-all duration-300 text-left overflow-hidden shadow-xl"
       >
-        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-white/5 group-hover:bg-white/10 transition-colors">
-          <img src="/logo.png" alt="Ello" className="h-6 w-6 object-contain opacity-70" />
+        <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+          <img src="/logo.png" alt="" className="h-20 w-20 object-contain grayscale" />
         </div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-white leading-tight">ellocontent fast.</div>
-          <div className="text-[10px] text-white/50 mt-0.5">(gemini fast)</div>
+
+        <div className="h-12 w-12 rounded-xl bg-blue-600/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-600 transition-all duration-300">
+          <img src="/logo.png" alt="Ello Fast" className="h-7 w-7 object-contain" />
+        </div>
+        
+        <div className="space-y-1.5 relative z-10">
+          <div className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+            ellocontent fast.
+            <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+          </div>
+          <p className="text-[10px] text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">
+            Velocidade e eficiência para posts rápidos.
+          </p>
         </div>
       </button>
     </div>

@@ -139,9 +139,9 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     const arrayBuffer = await resp.arrayBuffer();
     
     // Memory safety: if the image is too large, it might crash the edge function
-    // Reduced to 4MB to avoid memory limit exceeded (Deno has a 150-250MB limit usually, 
-    // but multiple base64 strings and the AI call overhead can exceed this)
-    if (arrayBuffer.byteLength > 4 * 1024 * 1024) { 
+    // Reduced to 2MB to ensure we don't exceed the edge runtime limits when 
+    // multiple images and high-fidelity prompts are used together.
+    if (arrayBuffer.byteLength > 2 * 1024 * 1024) { 
       console.warn("Image too large for base64 encoding:", url, (arrayBuffer.byteLength / 1024 / 1024).toFixed(2), "MB");
       return null;
     }
@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
       : [];
 
     const styleRefs: string[] = [];
-    for (const url of stylePreviewSlice.slice(0, 3)) { // Limit to 3 style refs for memory
+    for (const url of stylePreviewSlice.slice(0, 2)) { // Reduced to 2 style refs for better memory safety
       const data = await urlToDataUrl(url);
       if (data) styleRefs.push(data);
     }
@@ -541,7 +541,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
           type: "image_url",
           image_url: { url: p },
         })),
-        ...styleRefs.slice(0, 4).map((ref) => ({
+        ...styleRefs.slice(0, 2).map((ref) => ({
           type: "image_url",
           image_url: { url: ref },
         })),
@@ -556,12 +556,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       while (attempts < 2 && !cardImage) {
         attempts++;
         try {
-          // Both options use Lovable AI Gateway image models with full prompt fidelity, aspect ratio
-          // and multi-image reference support.
-          const isFast = brief.imageModel === "ello-fast";
+          // Use Flash for second attempt if Pro fails (or if already fast)
+          const isFast = brief.imageModel === "ello-fast" || attempts > 1;
           const aiModel = isFast
             ? "google/gemini-3.1-flash-image-preview"
             : "google/gemini-3-pro-image-preview";
+
+          console.log(`chat-compose-final: attempt ${attempts} using ${aiModel}`);
 
           const resp = await fetch(
             "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -582,9 +583,15 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
             await new Promise((r) => setTimeout(r, 4000));
             continue;
           }
-          if (!resp.ok) continue;
+          if (!resp.ok) {
+            const errText = await resp.text();
+            console.error(`AI Gateway error (${resp.status}):`, errText);
+            continue;
+          }
           cardImage = await extractImageUrl(resp);
-        } catch (e) {}
+        } catch (e) {
+          console.error(`Attempt ${attempts} failed:`, e);
+        }
       }
       if (!cardImage) throw new Error(`Falha no card ${cardIndex + 1}`);
       return new Response(JSON.stringify({ imageUrl: cardImage }), {
@@ -602,7 +609,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         type: "image_url",
         image_url: { url: p },
       })),
-      ...styleRefs.slice(0, 4).map((ref) => ({
+      ...styleRefs.slice(0, 2).map((ref) => ({
         type: "image_url",
         image_url: { url: ref },
       })),
@@ -617,22 +624,33 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       ? "google/gemini-3.1-flash-image-preview"
       : "google/gemini-3-pro-image-preview";
 
-    const resp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
+    let cardImage: string | null = null;
+    try {
+      const resp = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: aiModel,
+            messages: [{ role: "user", content: cardContent }],
+            modalities: ["image", "text"],
+          }),
         },
-        body: JSON.stringify({
-          model: aiModel,
-          messages: [{ role: "user", content: cardContent }],
-          modalities: ["image", "text"],
-        }),
-      },
-    );
-    const cardImage = await extractImageUrl(resp);
+      );
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`Fallback AI Gateway error (${resp.status}):`, errText);
+      } else {
+        cardImage = await extractImageUrl(resp);
+      }
+    } catch (e) {
+      console.error("Fallback generation error:", e);
+    }
+
     if (!cardImage) throw new Error("Falha ao gerar post único no fallback");
     return new Response(JSON.stringify({ imageUrl: cardImage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

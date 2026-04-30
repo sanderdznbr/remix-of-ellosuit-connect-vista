@@ -538,7 +538,7 @@ const ChatCreator: React.FC = () => {
 
           let cardImage = null;
           let retryCount = 0;
-          const maxRetries = 1;
+          const maxRetries = 2; // Increased retries
 
           while (retryCount <= maxRetries && !cardImage) {
             try {
@@ -552,19 +552,52 @@ const ChatCreator: React.FC = () => {
                     selectedImages: b.selectedImages,
                   }, 
                   cardIndex: i,
-                  // Send cover (card 0) as visual anchor for cards 2+ to keep DNA consistent
                   coverImageUrl: i > 0 && generatedImages[0] ? generatedImages[0] : undefined,
                 },
               });
 
-              if (error) throw error;
+              if (error) {
+                // Check if it's a memory error or transient error
+                const errorStr = JSON.stringify(error);
+                if (errorStr.includes('504') || errorStr.includes('timeout')) {
+                   console.warn(`[Card ${i+1}] Timeout detectado, tentando novamente...`);
+                }
+                throw error;
+              }
               if (data?.error) throw new Error(data.error);
               cardImage = data?.imageUrl;
             } catch (e: any) {
               retryCount++;
               console.error(`[Card ${i+1}] Erro na tentativa ${retryCount}:`, e);
-              if (retryCount > maxRetries) throw e;
-              await new Promise(r => setTimeout(r, 2000));
+              if (retryCount > maxRetries) {
+                // If card generation fails even after retries, try a fallback: generate WITHOUT cover ref to save memory
+                console.log(`[Card ${i+1}] Tentando fallback sem coverImageUrl para economizar memória...`);
+                try {
+                  const { data: fallbackData } = await supabase.functions.invoke('chat-compose-final', {
+                    body: { 
+                      brief: {
+                        ...b,
+                        faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
+                        logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
+                        printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
+                        selectedImages: b.selectedImages,
+                      }, 
+                      cardIndex: i,
+                      // Skipping coverImageUrl on last ditch effort
+                    },
+                  });
+                  if (fallbackData?.imageUrl) {
+                    cardImage = fallbackData.imageUrl;
+                    break;
+                  }
+                } catch (fallbackErr) {
+                  console.error(`[Card ${i+1}] Fallback também falhou:`, fallbackErr);
+                }
+                
+                throw e;
+              }
+              // Exponential backoff
+              await new Promise(r => setTimeout(r, 2000 * retryCount));
             }
           }
 

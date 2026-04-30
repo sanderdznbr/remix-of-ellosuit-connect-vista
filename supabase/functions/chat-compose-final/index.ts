@@ -139,8 +139,10 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     const arrayBuffer = await resp.arrayBuffer();
     
     // Memory safety: if the image is too large, it might crash the edge function
-    if (arrayBuffer.byteLength > 8 * 1024 * 1024) { // 8MB limit
-      console.warn("Image too large for base64 encoding:", url);
+    // Reduced to 4MB to avoid memory limit exceeded (Deno has a 150-250MB limit usually, 
+    // but multiple base64 strings and the AI call overhead can exceed this)
+    if (arrayBuffer.byteLength > 4 * 1024 * 1024) { 
+      console.warn("Image too large for base64 encoding:", url, (arrayBuffer.byteLength / 1024 / 1024).toFixed(2), "MB");
       return null;
     }
 
@@ -293,37 +295,29 @@ Deno.serve(async (req) => {
     const isCustomStyle = brief.visualType === 'custom' && Array.isArray(brief.customStyleUrls) && brief.customStyleUrls.length > 0;
     const stylePreviewSlice = isCustomStyle ? brief.customStyleUrls!.slice(0, 4) : selectStylePreviewUrls(style, currentCardKind);
 
-    const refsPromise = Promise.all([
-      brief.hasFace && faceUrlArray.length > 0
-        ? Promise.all(faceUrlArray.slice(0, 1).map(urlToDataUrl))
-        : Promise.resolve([]),
-      brief.hasLogo && logoUrlArray.length > 0
-        ? Promise.all(logoUrlArray.slice(0, 1).map(urlToDataUrl))
-        : Promise.resolve([]),
-      brief.hasPrints && printUrlArray.length > 0
-        ? Promise.all(printUrlArray.slice(0, 1).map(urlToDataUrl))
-        : Promise.resolve([]),
-      ...stylePreviewSlice.map(urlToDataUrl),
-      coverImageUrl ? urlToDataUrl(coverImageUrl) : Promise.resolve(null),
-      selectedImageForCard
-        ? (selectedImageForCard.startsWith("data:")
-          ? Promise.resolve(selectedImageForCard)
-          : urlToDataUrl(selectedImageForCard))
-        : Promise.resolve(null),
-    ]);
+    // Memory safety: sequential loading instead of Promise.all to avoid peak memory usage
+    const facesResolved = brief.hasFace && faceUrlArray.length > 0
+      ? await Promise.all(faceUrlArray.slice(0, 1).map(urlToDataUrl))
+      : [];
+    
+    const logosResolved = brief.hasLogo && logoUrlArray.length > 0
+      ? await Promise.all(logoUrlArray.slice(0, 1).map(urlToDataUrl))
+      : [];
+      
+    const printsResolved = brief.hasPrints && printUrlArray.length > 0
+      ? await Promise.all(printUrlArray.slice(0, 1).map(urlToDataUrl))
+      : [];
 
-    const refsResolved = await refsPromise;
-    const facesResolved = refsResolved[0];
-    const logosResolved = refsResolved[1];
-    const printsResolved = refsResolved[2];
-    const styleRefs = refsResolved.slice(3, 3 + stylePreviewSlice.length)
-      .filter(Boolean) as string[];
-    const coverRef = refsResolved[3 + stylePreviewSlice.length] as
-      | string
-      | null;
-    const selectedCardRef = refsResolved[4 + stylePreviewSlice.length] as
-      | string
-      | null;
+    const styleRefs: string[] = [];
+    for (const url of stylePreviewSlice.slice(0, 3)) { // Limit to 3 style refs for memory
+      const data = await urlToDataUrl(url);
+      if (data) styleRefs.push(data);
+    }
+
+    const coverRef = coverImageUrl ? await urlToDataUrl(coverImageUrl) : null;
+    const selectedCardRef = selectedImageForCard 
+      ? (selectedImageForCard.startsWith("data:") ? selectedImageForCard : await urlToDataUrl(selectedImageForCard))
+      : null;
 
     const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;

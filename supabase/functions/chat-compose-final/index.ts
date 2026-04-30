@@ -835,6 +835,9 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
     if (!cardImage) {
       console.error("Fallback mode: all AI attempts failed; returning emergency fallback instead of 500.");
       cardImage = emergencyCardDataUrl(brief, 0, ratio);
+    } else {
+      const carouselId = "temp-" + Date.now();
+      cardImage = await uploadCard(sb, companyId, carouselId, 0, cardImage) || cardImage;
     }
     return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

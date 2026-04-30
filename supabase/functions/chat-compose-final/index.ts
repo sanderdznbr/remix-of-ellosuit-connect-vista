@@ -764,7 +764,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       if (!cardImage) {
         console.error(`Card ${cardIndex + 1}: all AI attempts failed; returning emergency fallback instead of 500.`);
         cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
+      } else {
+        // DEFINITIVE FIX: Upload card to Storage immediately to return a URL instead of a huge Base64.
+        // This prevents payload size issues in the finalization call.
+        const carouselId = "temp-" + Date.now(); // We don't have the final ID yet, but we use a temp one for the path
+        cardImage = await uploadCard(sb, companyId, carouselId, cardIndex, cardImage) || cardImage;
       }
+
       return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

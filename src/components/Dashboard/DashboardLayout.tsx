@@ -37,7 +37,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('sidebar_collapsed') !== 'false'; } catch { return true; }
   });
   const [profileOpen, setProfileOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);

@@ -202,6 +202,42 @@ async function urlToDataUrl(url: string): Promise<string | null> {
   }
 }
 
+async function uploadCard(
+  sb: any,
+  companyId: string,
+  carouselId: string,
+  cardIndex: number,
+  dataUrl: string,
+): Promise<string | null> {
+  if (!dataUrl || !dataUrl.startsWith("data:")) return dataUrl;
+  try {
+    const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i);
+    const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+    const base64 = dataUrl.split(",")[1];
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const extension = mime.split("/")[1] || "jpg";
+    const path = `${companyId}/${carouselId}/card-${cardIndex}.${extension}`;
+    
+    const { error } = await sb.storage.from("generated_posts").upload(
+      path,
+      bytes,
+      {
+        contentType: mime,
+        upsert: true,
+      },
+    );
+    if (error) {
+      console.error("card upload error:", error);
+      return dataUrl; // Fallback to returning dataUrl if upload fails
+    }
+    const { data } = sb.storage.from("generated_posts").getPublicUrl(path);
+    return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : dataUrl;
+  } catch (e) {
+    console.error("uploadCard exception:", e);
+    return dataUrl;
+  }
+}
+
 async function uploadCover(
   sb: any,
   companyId: string,
@@ -210,14 +246,25 @@ async function uploadCover(
 ): Promise<string | null> {
   if (!url) return null;
   try {
-    const resp = await fetch(url);
-    const blob = await resp.blob();
     const path = `${companyId}/${carouselId}/cover.jpg`;
+    let body: any;
+    let contentType = "image/jpeg";
+
+    if (url.startsWith("data:")) {
+      const mimeMatch = url.match(/^data:(image\/[a-z]+);base64,/i);
+      contentType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+      const base64 = url.split(",")[1];
+      body = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    } else {
+      const resp = await fetch(url);
+      body = await resp.blob();
+    }
+
     const { error } = await sb.storage.from("covers").upload(
       path,
-      blob,
+      body,
       {
-        contentType: "image/jpeg",
+        contentType,
         upsert: true,
       },
     );
@@ -717,7 +764,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       if (!cardImage) {
         console.error(`Card ${cardIndex + 1}: all AI attempts failed; returning emergency fallback instead of 500.`);
         cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
+      } else {
+        // DEFINITIVE FIX: Upload card to Storage immediately to return a URL instead of a huge Base64.
+        // This prevents payload size issues in the finalization call.
+        const carouselId = "temp-" + Date.now(); // We don't have the final ID yet, but we use a temp one for the path
+        cardImage = await uploadCard(sb, companyId, carouselId, cardIndex, cardImage) || cardImage;
       }
+
       return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -782,6 +835,9 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
     if (!cardImage) {
       console.error("Fallback mode: all AI attempts failed; returning emergency fallback instead of 500.");
       cardImage = emergencyCardDataUrl(brief, 0, ratio);
+    } else {
+      const carouselId = "temp-" + Date.now();
+      cardImage = await uploadCard(sb, companyId, carouselId, 0, cardImage) || cardImage;
     }
     return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

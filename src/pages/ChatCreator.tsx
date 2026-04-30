@@ -818,6 +818,69 @@ const ChatCreator: React.FC = () => {
         </div>
       );
     }
+    if (msg.widget === 'visual_type_picker') {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+          <button
+            onClick={() => {
+              const nextBrief = { ...brief, visualType: 'marketplace' as const };
+              setBrief(nextBrief);
+              sendMessage("Quero escolher um estilo pronto da galeria", nextBrief);
+            }}
+            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-600/20 text-violet-400">
+                <Palette className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold text-white">Ver Estilos</span>
+            </div>
+            <p className="text-[10px] text-white/50 leading-relaxed">
+              Escolha entre dezenas de estilos profissionais da nossa galeria.
+            </p>
+          </button>
+          <button
+            onClick={() => {
+              const nextBrief = { ...brief, visualType: 'custom' as const };
+              setBrief(nextBrief);
+              sendMessage("Quero subir minhas próprias referências", nextBrief);
+            }}
+            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+          >
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-600/20 text-blue-400">
+                <Upload className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-semibold text-white">Subir Referências</span>
+            </div>
+            <p className="text-[10px] text-white/50 leading-relaxed">
+              Use suas próprias fotos ou prints como inspiração visual.
+            </p>
+          </button>
+        </div>
+      );
+    }
+    if (msg.widget === 'style_uploader') {
+      return (
+        <div className="space-y-3 max-w-md">
+          <div className="p-4 rounded-xl border border-dashed border-white/20 bg-white/5 text-center">
+             <p className="text-xs text-white/60 mb-3">Anexe até 4 fotos que servirão de inspiração visual para o seu post.</p>
+             <PersonalizationWidget 
+               onPick={(data) => {
+                 const nextBrief = { 
+                   ...brief, 
+                   visualType: 'custom' as const,
+                   customStyleUrls: Array.isArray(data.faceUrl) ? data.faceUrl : (data.faceUrl ? [data.faceUrl] : [])
+                 };
+                 setBrief(nextBrief);
+                 sendMessage("Enviei minhas referências visuais", nextBrief);
+               }} 
+               userId={user?.id}
+             />
+          </div>
+        </div>
+      );
+    }
     if (msg.widget === 'generating_post') {
       return <GeneratingWidget 
         phase={msg.widgetData?.phase || 'compose'} 

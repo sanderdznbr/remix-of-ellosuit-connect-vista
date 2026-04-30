@@ -154,9 +154,17 @@ function sniffMimeFromBytes(bytes: Uint8Array): string | null {
   return null;
 }
 
+function isSupportedDataImage(url: string): boolean {
+  return /^data:image\/(png|jpe?g|webp|gif|heic|heif);base64,/i.test(url);
+}
+
 async function urlToDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
-  if (url.startsWith("data:")) return url;
+  if (url.startsWith("data:")) {
+    if (isSupportedDataImage(url)) return url;
+    console.warn("Unsupported data image skipped as AI reference:", url.slice(0, 48));
+    return null;
+  }
   try {
     const resp = await fetch(url);
     if (!resp.ok) return null;
@@ -216,8 +224,43 @@ async function uploadCover(
   }
 }
 
+function findImageInJson(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findImageInJson(item);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const directUrl = obj.url;
+  if (typeof directUrl === "string" && (directUrl.startsWith("data:image/") || directUrl.startsWith("http"))) return directUrl;
+
+  const b64 = obj.b64_json || obj.base64 || obj.data;
+  const mime = String(obj.mime_type || obj.mimeType || "image/png");
+  if (typeof b64 === "string" && b64.length > 100 && /^[A-Za-z0-9+/=]+$/.test(b64.slice(0, 120))) {
+    return `data:${mime.startsWith("image/") ? mime : "image/png"};base64,${b64}`;
+  }
+
+  for (const item of Object.values(obj)) {
+    const found = findImageInJson(item);
+    if (found) return found;
+  }
+  return null;
+}
+
 async function extractImageUrl(resp: Response): Promise<string | null> {
   const raw = await resp.text();
+  try {
+    const parsed = JSON.parse(raw);
+    const fromJson = findImageInJson(parsed);
+    if (fromJson) return fromJson;
+  } catch (_) {
+    // Fall back to raw scanning below.
+  }
+
   const patterns = [
     '"url":"data:image/',
     '"url": "data:image/',
@@ -234,7 +277,28 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
     const urlEnd = raw.indexOf('"', urlStart);
     if (urlStart !== -1 && urlEnd !== -1) return raw.slice(urlStart, urlEnd);
   }
+  console.warn("No image URL found in AI response:", raw.slice(0, 500));
   return null;
+}
+
+function escapeSvgText(value?: string) {
+  return (value || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] || ch));
+}
+
+function emergencyCardDataUrl(brief: Brief, cardIndex = 0, ratio = "4:5") {
+  const [w, h] = ratio === "1:1" ? [1080, 1080] : ratio === "9:16" ? [1080, 1920] : [1080, 1350];
+  const text = brief.suggested_content?.[cardIndex] || {};
+  const title = escapeSvgText(text.title || brief.topic || "Post").slice(0, 72);
+  const subtitle = escapeSvgText(text.subtitle || text.body || "Conteúdo gerado automaticamente").slice(0, 130);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A0A0A"/><stop offset="0.55" stop-color="#14111F"/><stop offset="1" stop-color="#3B1B73"/></linearGradient></defs>
+    <rect width="${w}" height="${h}" fill="url(#g)"/>
+    <rect x="56" y="56" width="${w - 112}" height="${h - 112}" fill="none" stroke="#8B5CF6" stroke-opacity="0.34" stroke-width="3"/>
+    <text x="76" y="${Math.round(h * 0.22)}" fill="#8B5CF6" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">${String(cardIndex + 1).padStart(2, "0")}</text>
+    <foreignObject x="76" y="${Math.round(h * 0.34)}" width="${w - 152}" height="${Math.round(h * 0.34)}"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Arial,Helvetica,sans-serif;color:white;font-size:${ratio === "9:16" ? 78 : 70}px;font-weight:800;line-height:1.02;letter-spacing:0;text-transform:uppercase;">${title}</div></foreignObject>
+    <foreignObject x="76" y="${Math.round(h * 0.72)}" width="${w - 152}" height="${Math.round(h * 0.16)}"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Arial,Helvetica,sans-serif;color:rgba(255,255,255,.78);font-size:34px;font-weight:500;line-height:1.25;letter-spacing:0;">${subtitle}</div></foreignObject>
+  </svg>`;
+  return `data:image/svg+xml;base64,${encodeBase64(new TextEncoder().encode(svg))}`;
 }
 
 Deno.serve(async (req) => {

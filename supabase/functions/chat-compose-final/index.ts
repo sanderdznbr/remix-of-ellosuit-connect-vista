@@ -395,12 +395,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { brief, cardIndex, images, coverImageUrl } = (await req.json()) as {
-      brief: Brief;
-      cardIndex?: number;
-      images?: string[];
-      coverImageUrl?: string;
-    };
+    const payload = await req.json();
+    const { action, brief, cardIndex, images, coverImageUrl, carouselId: existingCarouselId } = payload;
+
     if (!brief?.topic) {
       return new Response(JSON.stringify({ error: "topic é obrigatório" }), {
         status: 400,

@@ -658,17 +658,40 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         if (styleRow?.id) validStyleId = styleRow.id;
       }
 
-      const carouselId = existingCarouselId;
-      if (!carouselId) throw new Error("carouselId is required for finalization");
+      let carouselId = existingCarouselId;
+      
+      // If no carouselId provided (single post flow), create the record now
+      if (!carouselId) {
+        const { data: inserted, error: insertErr } = await sb.from("generated_carousels").insert({
+          company_id: companyId,
+          user_id: user.id,
+          title: brief.topic,
+          topic: brief.topic,
+          status: 'completed',
+          carousel_data: { title: brief.topic, cards },
+          style_config: {
+            source: "chat-creator",
+            format: brief.format,
+            styleName: brief.styleName,
+            brandColors: brief.brandColors,
+            isFullBleed: true,
+          },
+          card_count: cards.length,
+          marketplace_style_id: validStyleId,
+        }).select("id").single();
+        
+        if (insertErr || !inserted) throw new Error("Falha ao salvar post.");
+        carouselId = inserted.id;
+      } else {
+        const { error: updateErr } = await sb.from("generated_carousels").update({
+          carousel_data: { title: brief.topic, cards },
+          marketplace_style_id: validStyleId,
+          status: 'completed',
+        }).eq("id", carouselId);
 
-      const { error: updateErr } = await sb.from(
-        "generated_carousels",
-      ).update({
-        carousel_data: { title: brief.topic, cards },
-        marketplace_style_id: validStyleId,
-      }).eq("id", carouselId);
+        if (updateErr) throw new Error("Falha ao atualizar post.");
+      }
 
-      if (updateErr) throw new Error("Falha ao atualizar post.");
 
       // Offload storage upload + credits
       const bgWork = (async () => {

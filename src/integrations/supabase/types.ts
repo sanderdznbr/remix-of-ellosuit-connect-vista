@@ -1353,6 +1353,47 @@ export type Database = {
           },
         ]
       }
+      carousel_tasks: {
+        Row: {
+          card_index: number
+          carousel_id: string | null
+          created_at: string | null
+          error: string | null
+          id: string
+          image_url: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          card_index: number
+          carousel_id?: string | null
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          card_index?: number
+          carousel_id?: string | null
+          created_at?: string | null
+          error?: string | null
+          id?: string
+          image_url?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carousel_tasks_carousel_id_fkey"
+            columns: ["carousel_id"]
+            isOneToOne: false
+            referencedRelation: "generated_carousels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_executions: {
         Row: {
           completed_at: string | null
@@ -3143,12 +3184,14 @@ export type Database = {
           company_id: string
           cover_url: string | null
           created_at: string
+          error_message: string | null
           generation_config: Json | null
           id: string
           is_starred: boolean
           keywords: string[] | null
           marketplace_style_id: string | null
           post_format: string
+          status: string | null
           style_config: Json | null
           title: string
           topic: string
@@ -3161,12 +3204,14 @@ export type Database = {
           company_id: string
           cover_url?: string | null
           created_at?: string
+          error_message?: string | null
           generation_config?: Json | null
           id?: string
           is_starred?: boolean
           keywords?: string[] | null
           marketplace_style_id?: string | null
           post_format?: string
+          status?: string | null
           style_config?: Json | null
           title: string
           topic: string
@@ -3179,12 +3224,14 @@ export type Database = {
           company_id?: string
           cover_url?: string | null
           created_at?: string
+          error_message?: string | null
           generation_config?: Json | null
           id?: string
           is_starred?: boolean
           keywords?: string[] | null
           marketplace_style_id?: string | null
           post_format?: string
+          status?: string | null
           style_config?: Json | null
           title?: string
           topic?: string

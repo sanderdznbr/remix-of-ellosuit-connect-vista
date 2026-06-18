@@ -818,75 +818,67 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       ].filter(Boolean);
 
       let cardImage: string | null = null;
-      const attemptPlans = [
-        { model: brief.imageModel === "ello-fast" ? "google/gemini-3.1-flash-image-preview" : "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
-        { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 3000 },
-        {
-          model: "google/gemini-3.1-flash-image-preview",
-          content: [
-            { type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nRECOVERY MODE: generate the finished card without external image references. Keep the same dark premium editorial style, full bleed, no borders.` },
-            faceData ? { type: "image_url", image_url: { url: faceData } } : null,
-            logoData ? { type: "image_url", image_url: { url: logoData } } : null,
-            productData ? { type: "image_url", image_url: { url: productData } } : null,
-          ].filter(Boolean),
-          waitMs: 3000,
-        },
-        {
-          model: "google/gemini-2.5-flash-image",
-          content: [{ type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nLAST RESORT: no references. Create a clean premium dark editorial Instagram card that renders all requested text clearly. Full bleed, no white border.` }],
-          waitMs: 3000,
-        },
-      ];
 
-      for (let attempts = 0; attempts < attemptPlans.length && !cardImage; attempts++) {
-        const plan = attemptPlans[attempts];
-        try {
-          if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
+      // PRIMARY: openai/gpt-image-2 via /v1/images/generations (mais estável)
+      console.log(`chat-compose-final: card ${cardIndex + 1} primary attempt using openai/gpt-image-2`);
+      cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
 
-          console.log(`chat-compose-final: card ${cardIndex + 1} attempt ${attempts + 1} using ${plan.model} parts=${plan.content.length}`);
+      // FALLBACK: Gemini image models (caso gpt-image-2 falhe)
+      if (!cardImage) {
+        console.warn(`Card ${cardIndex + 1}: gpt-image-2 failed, falling back to Gemini chain...`);
+        const attemptPlans = [
+          { model: "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
+          { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 3000 },
+          {
+            model: "google/gemini-2.5-flash-image",
+            content: [{ type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nLAST RESORT: no references. Create a clean premium dark editorial Instagram card that renders all requested text clearly. Full bleed, no white border.` }],
+            waitMs: 3000,
+          },
+        ];
 
-          const resp = await fetch(
-            "https://ai.gateway.lovable.dev/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
+        for (let attempts = 0; attempts < attemptPlans.length && !cardImage; attempts++) {
+          const plan = attemptPlans[attempts];
+          try {
+            if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
+            console.log(`chat-compose-final: card ${cardIndex + 1} Gemini attempt ${attempts + 1} using ${plan.model} parts=${plan.content.length}`);
+            const resp = await fetch(
+              "https://ai.gateway.lovable.dev/v1/chat/completions",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: plan.model,
+                  messages: [{ role: "user", content: plan.content }],
+                  modalities: ["image", "text"],
+                }),
               },
-              body: JSON.stringify({
-                model: plan.model,
-                messages: [{ role: "user", content: plan.content }],
-                modalities: ["image", "text"],
-              }),
-            },
-          );
-          if (resp.status === 429) {
-            await resp.text();
-            await new Promise((r) => setTimeout(r, 5000 + attempts * 3000));
-            continue;
+            );
+            if (resp.status === 429) {
+              await resp.text();
+              await new Promise((r) => setTimeout(r, 5000 + attempts * 3000));
+              continue;
+            }
+            if (!resp.ok) {
+              const errText = await resp.text();
+              console.error(`AI Gateway error (${resp.status}):`, errText);
+              continue;
+            }
+            cardImage = await extractImageUrl(resp);
+          } catch (e) {
+            console.error(`Card ${cardIndex + 1} Gemini attempt ${attempts + 1} failed:`, e);
           }
-          if (!resp.ok) {
-            const errText = await resp.text();
-            console.error(`AI Gateway error (${resp.status}):`, errText);
-            continue;
-          }
-          cardImage = await extractImageUrl(resp);
-        } catch (e) {
-          console.error(`Card ${cardIndex + 1} attempt ${attempts + 1} failed:`, e);
         }
       }
-      if (!cardImage) {
-        console.warn(`Card ${cardIndex + 1}: Gemini attempts failed, trying gpt-image-2 fallback...`);
-        cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
-      }
+
       const usedEmergencyFallback = !cardImage;
       if (!cardImage) {
-        console.error(`Card ${cardIndex + 1}: all AI attempts failed (incl. gpt-image-2); returning emergency fallback.`);
+        console.error(`Card ${cardIndex + 1}: all AI attempts failed (gpt-image-2 + Gemini); returning emergency fallback.`);
         cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
       } else {
-        // DEFINITIVE FIX: Upload card to Storage immediately to return a URL instead of a huge Base64.
-        // This prevents payload size issues in the finalization call.
-        const carouselId = "temp-" + Date.now(); // We don't have the final ID yet, but we use a temp one for the path
+        const carouselId = "temp-" + Date.now();
         cardImage = await uploadCard(sb, companyId, carouselId, cardIndex, cardImage) || cardImage;
       }
 

@@ -106,6 +106,7 @@ const resilientInvoke = async (fnName: string, body: Record<string, unknown>) =>
   }
 };
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useCarouselRouteSync } from '@/hooks/useCarouselRouteSync';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1333,46 +1334,34 @@ const CarouselGenerator: React.FC = () => {
     loadHistory();
   }, [user?.id]);
 
-  // Load carousel from route param /carousel/:id
-  const hasManuallyNavigatedAway = useRef(false);
-  useEffect(() => {
-    if (!routeCarouselId || !user) return;
-    if (hasManuallyNavigatedAway.current) return;
-    // Don't reload if we already have this carousel loaded
-    if (currentCarouselId === routeCarouselId) return;
-    const loadFromRoute = async () => {
-      try {
-        const { data } = await supabase.from('generated_carousels').select('*').eq('id', routeCarouselId).single();
-        if (data) {
-          setShowWelcome(false);
-          loadCarousel(data);
-        }
-      } catch (err) { console.error('Failed to load carousel from URL:', err); }
-    };
-    loadFromRoute();
-  }, [routeCarouselId, user]);
+  // Routing: load carousel from /carousel/:id e mantém URL em sincronia.
+  // Toda a lógica (incluindo guard anti-redirect-pra-home enquanto carrega) está em useCarouselRouteSync.
+  // Usamos ref para loadCarousel porque ela é declarada mais abaixo no componente (TDZ).
+  const loadCarouselRef = useRef<((item: any) => Promise<void> | void) | null>(null);
+  const loadCarouselById = useCallback(async (id: string) => {
+    try {
+      const { data } = await supabase.from('generated_carousels').select('*').eq('id', id).single();
+      if (data) {
+        setShowWelcome(false);
+        await loadCarouselRef.current?.(data);
+      }
+    } catch (err) {
+      console.error('Failed to load carousel from URL:', err);
+    }
+  }, []);
 
-  // Update URL when carousel ID changes — only when not on the welcome/dashboard screen
+  useCarouselRouteSync({
+    routeCarouselId,
+    currentCarouselId,
+    showWelcome,
+    user,
+    loadById: loadCarouselById,
+  });
+
+  // Mantém o ref de loadCarousel atualizado (declarado mais abaixo no componente).
   useEffect(() => {
-    if (showWelcome) {
-      // Don't redirect away if the URL has a /carousel/:id that's still being loaded
-      if (routeCarouselId) return;
-      hasManuallyNavigatedAway.current = true;
-      if (window.location.pathname.startsWith('/carousel/')) {
-        navigate('/', { replace: true });
-      }
-      return;
-    }
-    hasManuallyNavigatedAway.current = false;
-    if (currentCarouselId) {
-      // Use replaceState only — don't use navigate to avoid re-renders
-      if (!window.location.pathname.includes(currentCarouselId)) {
-        window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
-      }
-    } else if (window.location.pathname.startsWith('/carousel/') && !routeCarouselId) {
-      navigate('/', { replace: true });
-    }
-  }, [currentCarouselId, showWelcome, routeCarouselId]);
+    loadCarouselRef.current = loadCarousel;
+  });
 
   // ===== CLOUD JOB REALTIME SUBSCRIPTION =====
   useEffect(() => {

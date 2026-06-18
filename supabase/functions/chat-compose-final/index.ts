@@ -791,6 +791,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
             { type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nRECOVERY MODE: generate the finished card without external image references. Keep the same dark premium editorial style, full bleed, no borders.` },
             faceData ? { type: "image_url", image_url: { url: faceData } } : null,
             logoData ? { type: "image_url", image_url: { url: logoData } } : null,
+            productData ? { type: "image_url", image_url: { url: productData } } : null,
           ].filter(Boolean),
           waitMs: 3000,
         },
@@ -860,6 +861,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       { type: "text", text: unifiedPromptTemplate(0) },
       faceData ? { type: "image_url", image_url: { url: faceData } } : null,
       logoData ? { type: "image_url", image_url: { url: logoData } } : null,
+      productData ? { type: "image_url", image_url: { url: productData } } : null,
       ...additionalPrints.slice(0, 1).map((p) => ({
         type: "image_url",
         image_url: { url: p },

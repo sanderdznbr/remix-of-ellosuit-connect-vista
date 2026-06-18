@@ -351,6 +351,42 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
   return null;
 }
 
+// Last-resort fallback using OpenAI gpt-image-2 via /v1/images/generations.
+// Different endpoint and provider — survives Gemini upstream outages.
+async function generateWithGptImage2(prompt: string, ratio: string): Promise<string | null> {
+  try {
+    const size = ratio === "1:1" ? "1024x1024" : ratio === "9:16" ? "1024x1536" : "1024x1536";
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-image-2",
+        prompt: prompt.slice(0, 3500),
+        quality: "low",
+        size,
+        n: 1,
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`gpt-image-2 error (${resp.status}):`, errText.slice(0, 300));
+      return null;
+    }
+    const json = await resp.json();
+    const b64 = json?.data?.[0]?.b64_json;
+    if (typeof b64 === "string" && b64.length > 100) {
+      return `data:image/png;base64,${b64}`;
+    }
+    return null;
+  } catch (e) {
+    console.error("gpt-image-2 exception:", e);
+    return null;
+  }
+}
+
 function escapeSvgText(value?: string) {
   return (value || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] || ch));
 }
@@ -839,9 +875,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
           console.error(`Card ${cardIndex + 1} attempt ${attempts + 1} failed:`, e);
         }
       }
+      if (!cardImage) {
+        console.warn(`Card ${cardIndex + 1}: Gemini attempts failed, trying gpt-image-2 fallback...`);
+        cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
+      }
       const usedEmergencyFallback = !cardImage;
       if (!cardImage) {
-        console.error(`Card ${cardIndex + 1}: all AI attempts failed; returning emergency fallback instead of 500.`);
+        console.error(`Card ${cardIndex + 1}: all AI attempts failed (incl. gpt-image-2); returning emergency fallback.`);
         cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
       } else {
         // DEFINITIVE FIX: Upload card to Storage immediately to return a URL instead of a huge Base64.
@@ -911,9 +951,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
     }
     }
 
+    if (!cardImage) {
+      console.warn("Fallback mode: Gemini failed, trying gpt-image-2...");
+      cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
+    }
     const usedEmergencyFallback = !cardImage;
     if (!cardImage) {
-      console.error("Fallback mode: all AI attempts failed; returning emergency fallback instead of 500.");
+      console.error("Fallback mode: all AI attempts failed (incl. gpt-image-2); returning emergency fallback.");
       cardImage = emergencyCardDataUrl(brief, 0, ratio);
     } else {
       const carouselId = "temp-" + Date.now();

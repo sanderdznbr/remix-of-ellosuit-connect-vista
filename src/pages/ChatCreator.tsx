@@ -287,7 +287,8 @@ const ChatCreator: React.FC = () => {
       if (data?.error && data?.fallback) {
         const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.error];
         const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
-        await appendAIMessages(texts, widget);
+        const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
+        await appendAIMessages(texts, widget, suggestions);
         setLoading(false);
         return;
       }
@@ -312,6 +313,7 @@ const ChatCreator: React.FC = () => {
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
       const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+      const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 
       // or looking idle while the assistant is still "typing" its messages.
@@ -323,7 +325,7 @@ const ChatCreator: React.FC = () => {
         ? 'confirm_generate'
         : widget;
 
-      await appendAIMessages(texts, finalWidget);
+      await appendAIMessages(texts, finalWidget, finalWidget ? undefined : suggestions);
       setLoading(false);
     } catch (err: any) {
       console.error('chat-creator error:', err);

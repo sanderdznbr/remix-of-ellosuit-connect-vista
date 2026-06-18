@@ -704,10 +704,12 @@ const ChatCreator: React.FC = () => {
   const handlePersonalization = (data: { 
     face: boolean; 
     logo: boolean; 
+    product: boolean;
     prints: boolean;
     colors: boolean; 
     faceUrl?: string | string[]; 
     logoUrl?: string | string[]; 
+    productUrl?: string | string[];
     printUrl?: string | string[];
     brandColors?: string[] 
   }) => {
@@ -715,10 +717,12 @@ const ChatCreator: React.FC = () => {
       ...brief,
       hasFace: data.face,
       hasLogo: data.logo,
+      hasProduct: data.product,
       hasPrints: data.prints,
       hasBrandColors: data.colors,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
+      productUrl: data.productUrl,
       printUrl: data.printUrl,
       brandColors: data.brandColors,
     };
@@ -726,10 +730,12 @@ const ChatCreator: React.FC = () => {
     const parts: string[] = [];
     const faceCount = Array.isArray(data.faceUrl) ? data.faceUrl.length : (data.faceUrl ? 1 : 0);
     const logoCount = Array.isArray(data.logoUrl) ? data.logoUrl.length : (data.logoUrl ? 1 : 0);
+    const productCount = Array.isArray(data.productUrl) ? data.productUrl.length : (data.productUrl ? 1 : 0);
     const printCount = Array.isArray(data.printUrl) ? data.printUrl.length : (data.printUrl ? 1 : 0);
     
     if (data.face) parts.push(`rosto${faceCount > 0 ? ` (${faceCount} foto${faceCount > 1 ? 's' : ''})` : ''}`);
     if (data.logo) parts.push(`logo${logoCount > 0 ? ` (${logoCount} foto${logoCount > 1 ? 's' : ''})` : ''}`);
+    if (data.product) parts.push(`produto/embalagem${productCount > 0 ? ` (${productCount} foto${productCount > 1 ? 's' : ''})` : ''}`);
     if (data.prints) parts.push(`prints do sistema${printCount > 0 ? ` (${printCount} print${printCount > 1 ? 's' : ''})` : ''}`);
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';

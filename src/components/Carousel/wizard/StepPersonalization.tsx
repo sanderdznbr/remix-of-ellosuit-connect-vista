@@ -649,12 +649,12 @@ const StepPersonalization: React.FC<Props> = (props) => {
                 <ShoppingBag className="h-4 w-4 text-white/30" />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-white/50">Produto</span>
-                <p className="text-[10px] text-white/20">Mockups e cenas IA</p>
+                <span className="text-xs font-medium text-white/50">Foto do produto ou embalagem</span>
+                <p className="text-[10px] text-white/20">Enviar caixa, rótulo, pote ou objeto como referência</p>
               </div>
               {hasProduct
                 ? <Check className="w-4 h-4 text-white/40" />
-                : <span className="text-[10px] text-white/15">opcional</span>}
+                : <span className="text-[10px] text-white/15">enviar</span>}
             </button>
           )}
 

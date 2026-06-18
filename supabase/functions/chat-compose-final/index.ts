@@ -909,43 +909,44 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
     ].filter(Boolean);
 
     let cardImage: string | null = null;
-    const fallbackModels = brief.imageModel === "ello-fast"
-      ? ["google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"]
-      : ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
 
-    for (const [idx, aiModel] of fallbackModels.entries()) {
-      try {
-        if (idx > 0) await new Promise((r) => setTimeout(r, 3000));
-      const resp = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: aiModel,
-            messages: [{ role: "user", content: cardContent }],
-            modalities: ["image", "text"],
-          }),
-        },
-      );
-      if (!resp.ok) {
-        const errText = await resp.text();
-        console.error(`Fallback AI Gateway error (${resp.status}):`, errText);
-      } else {
-        cardImage = await extractImageUrl(resp);
-        if (cardImage) break;
-      }
-    } catch (e) {
-      console.error("Fallback generation error:", e);
-    }
-    }
+    // PRIMARY: openai/gpt-image-2
+    console.log("chat-compose-final fallback mode: primary attempt using openai/gpt-image-2");
+    cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
 
+    // FALLBACK: Gemini image models
     if (!cardImage) {
-      console.warn("Fallback mode: Gemini failed, trying gpt-image-2...");
-      cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
+      console.warn("Fallback mode: gpt-image-2 failed, trying Gemini chain...");
+      const fallbackModels = ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
+      for (const [idx, aiModel] of fallbackModels.entries()) {
+        try {
+          if (idx > 0) await new Promise((r) => setTimeout(r, 3000));
+          const resp = await fetch(
+            "https://ai.gateway.lovable.dev/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: aiModel,
+                messages: [{ role: "user", content: cardContent }],
+                modalities: ["image", "text"],
+              }),
+            },
+          );
+          if (!resp.ok) {
+            const errText = await resp.text();
+            console.error(`Fallback AI Gateway error (${resp.status}):`, errText);
+          } else {
+            cardImage = await extractImageUrl(resp);
+            if (cardImage) break;
+          }
+        } catch (e) {
+          console.error("Fallback generation error:", e);
+        }
+      }
     }
     const usedEmergencyFallback = !cardImage;
     if (!cardImage) {

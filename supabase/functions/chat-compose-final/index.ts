@@ -875,9 +875,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
           console.error(`Card ${cardIndex + 1} attempt ${attempts + 1} failed:`, e);
         }
       }
+      if (!cardImage) {
+        console.warn(`Card ${cardIndex + 1}: Gemini attempts failed, trying gpt-image-2 fallback...`);
+        cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
+      }
       const usedEmergencyFallback = !cardImage;
       if (!cardImage) {
-        console.error(`Card ${cardIndex + 1}: all AI attempts failed; returning emergency fallback instead of 500.`);
+        console.error(`Card ${cardIndex + 1}: all AI attempts failed (incl. gpt-image-2); returning emergency fallback.`);
         cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
       } else {
         // DEFINITIVE FIX: Upload card to Storage immediately to return a URL instead of a huge Base64.

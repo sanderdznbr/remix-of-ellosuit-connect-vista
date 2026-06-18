@@ -971,6 +971,20 @@ const ChatCreator: React.FC = () => {
                               {renderWidget(msg)}
                             </div>
                           )}
+                          {!msg.widget && msg.suggestions && msg.suggestions.length > 0 && idx === messages.length - 1 && !loading && !generating && (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {msg.suggestions.map((s, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => sendMessage(s)}
+                                  className="px-3 py-1.5 rounded-full text-[13px] text-white/90 border border-white/15 hover:border-violet-400/60 hover:bg-violet-500/10 transition-colors"
+                                  style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (

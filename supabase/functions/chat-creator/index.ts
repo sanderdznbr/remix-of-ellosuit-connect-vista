@@ -274,9 +274,19 @@ Deno.serve(async (req) => {
 
     const briefSummary = `Estado atual coletado: ${JSON.stringify(safeBrief)}`;
 
+    const alreadyProvided: string[] = [];
+    if (safeBrief.faceProvided || safeBrief.hasFace) alreadyProvided.push('ROSTO');
+    if (safeBrief.logoProvided || safeBrief.hasLogo) alreadyProvided.push('LOGO');
+    if (safeBrief.productProvided || safeBrief.hasProduct) alreadyProvided.push('PRODUTO/EMBALAGEM');
+    if (safeBrief.hasBrandColors) alreadyProvided.push('CORES DA MARCA');
+    const providedHint = alreadyProvided.length
+      ? `IMPORTANTE: O usuário JÁ FORNECEU: ${alreadyProvided.join(', ')}. NÃO pergunte sobre esses itens nem peça upload deles novamente. Não reabra o widget "personalization" pra esses itens. Apenas confirme rápido e siga para o próximo passo.`
+      : '';
+
     const aiMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: briefSummary },
+      ...(providedHint ? [{ role: 'system', content: providedHint }] : []),
       ...safeMessages,
     ];
 

@@ -10,14 +10,6 @@ import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
-interface ConversationSummary {
-  id: string;
-  title: string;
-  updatedAt: number;
-}
-
-const STORAGE_KEY = 'ello_chat_conversations_v1';
-const ACTIVE_KEY = 'ello_chat_active_v1';
 const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
 type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'visual_type_picker' | 'style_uploader' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'image_model_picker' | 'image_source_picker' | 'face_fusion_picker' | 'generating_post' | 'final_result' | null;

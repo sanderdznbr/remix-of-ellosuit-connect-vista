@@ -1336,7 +1336,7 @@ const CarouselGenerator: React.FC = () => {
   // Load carousel from route param /carousel/:id
   const hasManuallyNavigatedAway = useRef(false);
   useEffect(() => {
-    if (!routeCarouselId || !user || showWelcome) return;
+    if (!routeCarouselId || !user) return;
     if (hasManuallyNavigatedAway.current) return;
     // Don't reload if we already have this carousel loaded
     if (currentCarouselId === routeCarouselId) return;
@@ -1344,8 +1344,8 @@ const CarouselGenerator: React.FC = () => {
       try {
         const { data } = await supabase.from('generated_carousels').select('*').eq('id', routeCarouselId).single();
         if (data) {
-          loadCarousel(data);
           setShowWelcome(false);
+          loadCarousel(data);
         }
       } catch (err) { console.error('Failed to load carousel from URL:', err); }
     };
@@ -1355,8 +1355,9 @@ const CarouselGenerator: React.FC = () => {
   // Update URL when carousel ID changes — only when not on the welcome/dashboard screen
   useEffect(() => {
     if (showWelcome) {
+      // Don't redirect away if the URL has a /carousel/:id that's still being loaded
+      if (routeCarouselId) return;
       hasManuallyNavigatedAway.current = true;
-      // When returning to dashboard, reset URL to root
       if (window.location.pathname.startsWith('/carousel/')) {
         navigate('/', { replace: true });
       }
@@ -1368,10 +1369,10 @@ const CarouselGenerator: React.FC = () => {
       if (!window.location.pathname.includes(currentCarouselId)) {
         window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
       }
-    } else if (window.location.pathname.startsWith('/carousel/')) {
+    } else if (window.location.pathname.startsWith('/carousel/') && !routeCarouselId) {
       navigate('/', { replace: true });
     }
-  }, [currentCarouselId, showWelcome]);
+  }, [currentCarouselId, showWelcome, routeCarouselId]);
 
   // ===== CLOUD JOB REALTIME SUBSCRIPTION =====
   useEffect(() => {

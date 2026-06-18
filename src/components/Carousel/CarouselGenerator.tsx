@@ -106,6 +106,7 @@ const resilientInvoke = async (fnName: string, body: Record<string, unknown>) =>
   }
 };
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useCarouselRouteSync } from '@/hooks/useCarouselRouteSync';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -834,13 +834,6 @@ const ChatCreator: React.FC = () => {
 
           <div className="flex-1" />
 
-          <button
-            onClick={handleNewChat}
-            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors md:hidden"
-            aria-label="Nova conversa"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
           <div className="w-8" />
         </header>
 

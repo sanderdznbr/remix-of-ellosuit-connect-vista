@@ -351,6 +351,42 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
   return null;
 }
 
+// Last-resort fallback using OpenAI gpt-image-2 via /v1/images/generations.
+// Different endpoint and provider — survives Gemini upstream outages.
+async function generateWithGptImage2(prompt: string, ratio: string): Promise<string | null> {
+  try {
+    const size = ratio === "1:1" ? "1024x1024" : ratio === "9:16" ? "1024x1536" : "1024x1536";
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-image-2",
+        prompt: prompt.slice(0, 3500),
+        quality: "low",
+        size,
+        n: 1,
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`gpt-image-2 error (${resp.status}):`, errText.slice(0, 300));
+      return null;
+    }
+    const json = await resp.json();
+    const b64 = json?.data?.[0]?.b64_json;
+    if (typeof b64 === "string" && b64.length > 100) {
+      return `data:image/png;base64,${b64}`;
+    }
+    return null;
+  } catch (e) {
+    console.error("gpt-image-2 exception:", e);
+    return null;
+  }
+}
+
 function escapeSvgText(value?: string) {
   return (value || "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] || ch));
 }

@@ -300,7 +300,7 @@ const ChatCreator: React.FC = () => {
         role: 'assistant',
         content: texts[i],
         widget: isLast ? widget : null,
-        suggestions: isLast && !widget ? suggestions : undefined,
+        suggestions: isLast && !widget ? getAssistantQuickReplies(suggestions, texts[i]) : undefined,
         timestamp: Date.now(),
       }]);
     }

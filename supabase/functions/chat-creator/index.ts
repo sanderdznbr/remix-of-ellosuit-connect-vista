@@ -340,15 +340,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    return jsonResponse({ ok: true, ...parsed });
+    return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));
   } catch (e) {
     console.error('chat-creator error:', e);
-    return jsonResponse({
+    return jsonResponse(withGuaranteedSuggestions({
       ok: false,
       error: e instanceof Error ? e.message : 'Unknown error',
       fallback: true,
       messages: ['Tive um imprevisto aqui do meu lado.'],
       widget: 'none',
-    });
+    }));
   }
 });

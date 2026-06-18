@@ -1358,6 +1358,11 @@ const CarouselGenerator: React.FC = () => {
     loadById: loadCarouselById,
   });
 
+  // Mantém o ref de loadCarousel atualizado (declarado mais abaixo no componente).
+  useEffect(() => {
+    loadCarouselRef.current = loadCarousel;
+  });
+
   // ===== CLOUD JOB REALTIME SUBSCRIPTION =====
   useEffect(() => {
     if (!cloudJobId) return;

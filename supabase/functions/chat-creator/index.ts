@@ -193,6 +193,11 @@ function buildTool() {
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },
+          suggestions: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Quick-reply chips shown under the assistant message. Provide 3-4 plausible short user-style replies (max 8 words each) ONLY when widget=="none" and you are asking an open question. Leave empty/omit when using any picker widget.',
+          },
         },
         required: ['messages'],
       },

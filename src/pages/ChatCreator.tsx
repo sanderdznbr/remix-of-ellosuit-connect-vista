@@ -43,12 +43,14 @@ interface BriefState {
   styleName?: string | null;
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasProduct?: boolean;
   hasPrints?: boolean;
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  productUrl?: string | string[];
   printUrl?: string | string[];
   audience?: string;
   tone?: string;
@@ -131,6 +133,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   styleName: sanitizeTextForAI(source.styleName, 120),
   hasFace: !!source.hasFace,
   hasLogo: !!source.hasLogo,
+  hasProduct: !!source.hasProduct,
   hasPrints: !!source.hasPrints,
   hasBrandColors: !!source.hasBrandColors,
   brandName: sanitizeTextForAI(source.brandName, 120),
@@ -143,6 +146,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   selectedImages: source.selectedImages,
   faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
   logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
+  productProvided: Array.isArray(source.productUrl) ? source.productUrl.length > 0 : !!source.productUrl,
   suggested_content: source.suggested_content,
 });
 

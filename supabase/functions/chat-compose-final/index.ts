@@ -163,10 +163,24 @@ function estimatedDataUrlBytes(url: string): number {
   return Math.floor((base64.length * 3) / 4);
 }
 
+// Chunked base64 to avoid stack overflows on large images (>~1MB).
+function safeEncodeBase64(bytes: Uint8Array): string {
+  const CHUNK = 32 * 1024;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const chunk = bytes.subarray(i, Math.min(i + CHUNK, bytes.length));
+    binary += String.fromCharCode.apply(null, Array.from(chunk) as any);
+  }
+  return btoa(binary);
+}
+
+// Gemini accepts inline images up to ~20MB; we keep a safe 10MB ceiling.
+const MAX_REF_BYTES = 10 * 1024 * 1024;
+
 async function urlToDataUrl(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith("data:")) {
-    if (estimatedDataUrlBytes(url) > 2 * 1024 * 1024) {
+    if (estimatedDataUrlBytes(url) > MAX_REF_BYTES) {
       console.warn("Data image too large for AI reference, skipped:", (estimatedDataUrlBytes(url) / 1024 / 1024).toFixed(2), "MB");
       return null;
     }
@@ -180,14 +194,12 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     const rawCt = (resp.headers.get("content-type") || "").toLowerCase().split(";")[0].trim();
     const arrayBuffer = await resp.arrayBuffer();
 
-    // Memory safety: if the image is too large, it might crash the edge function
-    if (arrayBuffer.byteLength > 2 * 1024 * 1024) {
-      console.warn("Image too large for base64 encoding:", url, (arrayBuffer.byteLength / 1024 / 1024).toFixed(2), "MB");
+    if (arrayBuffer.byteLength > MAX_REF_BYTES) {
+      console.warn("Image exceeds 10MB hard cap, skipped:", url, (arrayBuffer.byteLength / 1024 / 1024).toFixed(2), "MB");
       return null;
     }
 
     const bytes = new Uint8Array(arrayBuffer);
-    // Resolve a SAFE mime — Gemini rejects application/octet-stream and other generic types.
     let mime = rawCt;
     const isValidImageMime = mime.startsWith("image/") &&
       ["image/png", "image/jpeg", "image/webp", "image/gif", "image/heic", "image/heif"].includes(mime);
@@ -195,7 +207,7 @@ async function urlToDataUrl(url: string): Promise<string | null> {
       mime = sniffMimeFromBytes(bytes) || inferMimeFromUrl(url);
     }
 
-    return `data:${mime};base64,${encodeBase64(bytes)}`;
+    return `data:${mime};base64,${safeEncodeBase64(bytes)}`;
   } catch (e) {
     console.error("urlToDataUrl error:", e);
     return null;

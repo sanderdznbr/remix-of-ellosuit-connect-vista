@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder, Search, Package } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder, Search, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -10,15 +10,7 @@ import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
-interface ConversationSummary {
-  id: string;
-  title: string;
-  updatedAt: number;
-}
 
-const STORAGE_KEY = 'ello_chat_conversations_v1';
-const ACTIVE_KEY = 'ello_chat_active_v1';
-const CHAT_PREFILL_STORAGE_KEY = 'ello_chat_prefill_v1';
 
 type WidgetType = 'style_picker' | 'format_picker' | 'content_type_picker' | 'visual_type_picker' | 'style_uploader' | 'personalization' | 'approve_content' | 'confirm_generate' | 'background_picker' | 'image_model_picker' | 'image_source_picker' | 'face_fusion_picker' | 'generating_post' | 'final_result' | null;
 
@@ -218,40 +210,8 @@ const ChatCreator: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [recording, setRecording] = useState(false);
-
-  // Load conversations index
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setConversations(JSON.parse(raw));
-      const active = localStorage.getItem(ACTIVE_KEY);
-      if (active) setActiveConvId(active);
-    } catch {}
-  }, []);
-
-  // Persist conversation when messages change
-  useEffect(() => {
-    if (!activeConvId || messages.length === 0) return;
-    try {
-      const firstUser = messages.find(m => m.role === 'user');
-      const title = (firstUser?.content || 'Nova conversa').slice(0, 60);
-      localStorage.setItem(`ello_chat_msgs_${activeConvId}`, JSON.stringify({ messages, brief }));
-      setConversations(prev => {
-        const existing = prev.find(c => c.id === activeConvId);
-        const updated = existing
-          ? prev.map(c => c.id === activeConvId ? { ...c, title, updatedAt: Date.now() } : c)
-          : [{ id: activeConvId, title, updatedAt: Date.now() }, ...prev];
-        const sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sorted));
-        return sorted;
-      });
-    } catch {}
-  }, [messages, brief, activeConvId]);
 
   // Load ALL available styles for the picker widget (admin sees all, users see free + purchased)
   useEffect(() => {
@@ -406,26 +366,6 @@ const ChatCreator: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get('prompt') || params.get('topic');
 
-    let convId = localStorage.getItem(ACTIVE_KEY);
-    if (initialPrompt || !convId) {
-      convId = crypto.randomUUID();
-      localStorage.setItem(ACTIVE_KEY, convId);
-      setActiveConvId(convId);
-    } else {
-      setActiveConvId(convId);
-      try {
-        const raw = localStorage.getItem(`ello_chat_msgs_${convId}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed.messages?.length) {
-            setMessages(parsed.messages);
-            if (parsed.brief) setBrief(parsed.brief);
-            return;
-          }
-        }
-      } catch {}
-    }
-
     if (initialPrompt) {
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -451,56 +391,6 @@ const ChatCreator: React.FC = () => {
     }
   }, [location.search, callAI]);
 
-  const handleNewChat = () => {
-    const newId = crypto.randomUUID();
-    localStorage.setItem(ACTIVE_KEY, newId);
-    setActiveConvId(newId);
-    setMessages([{
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Oi! 👋',
-      timestamp: Date.now(),
-    }, {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Me conta o que você quer criar hoje?',
-      timestamp: Date.now(),
-    }]);
-    setBrief({});
-    setInput('');
-    setAttachments([]);
-  };
-
-  const handleSelectConversation = (id: string) => {
-    if (id === activeConvId) return;
-    localStorage.setItem(ACTIVE_KEY, id);
-    setActiveConvId(id);
-    try {
-      const raw = localStorage.getItem(`ello_chat_msgs_${id}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setMessages(parsed.messages || []);
-        setBrief(parsed.brief || {});
-      } else {
-        setMessages([]);
-        setBrief({});
-      }
-    } catch {
-      setMessages([]);
-      setBrief({});
-    }
-  };
-
-  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    localStorage.removeItem(`ello_chat_msgs_${id}`);
-    setConversations(prev => {
-      const next = prev.filter(c => c.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-    if (id === activeConvId) handleNewChat();
-  };
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -944,13 +834,6 @@ const ChatCreator: React.FC = () => {
 
           <div className="flex-1" />
 
-          <button
-            onClick={handleNewChat}
-            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors md:hidden"
-            aria-label="Nova conversa"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
           <div className="w-8" />
         </header>
 

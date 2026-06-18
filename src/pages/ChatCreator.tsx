@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder, Search } from 'lucide-react';
+import { ArrowUp, Sparkles, Loader2, Check, Image as ImageIcon, Layers, Square, RectangleVertical, Smartphone, User, Palette, X, Paperclip, Mic, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight, Upload, ArrowLeft, Download, Wand2, Folder, Search, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -43,12 +43,14 @@ interface BriefState {
   styleName?: string | null;
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasProduct?: boolean;
   hasPrints?: boolean;
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  productUrl?: string | string[];
   printUrl?: string | string[];
   audience?: string;
   tone?: string;
@@ -131,6 +133,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   styleName: sanitizeTextForAI(source.styleName, 120),
   hasFace: !!source.hasFace,
   hasLogo: !!source.hasLogo,
+  hasProduct: !!source.hasProduct,
   hasPrints: !!source.hasPrints,
   hasBrandColors: !!source.hasBrandColors,
   brandName: sanitizeTextForAI(source.brandName, 120),
@@ -143,6 +146,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   selectedImages: source.selectedImages,
   faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
   logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
+  productProvided: Array.isArray(source.productUrl) ? source.productUrl.length > 0 : !!source.productUrl,
   suggested_content: source.suggested_content,
 });
 
@@ -621,6 +625,7 @@ const ChatCreator: React.FC = () => {
                   ...b,
                   faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
                   logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
+                  productUrl: Array.isArray(b.productUrl) ? b.productUrl.slice(0, 1) : b.productUrl,
                   printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
                   selectedImages: b.selectedImages,
                 }, 
@@ -699,10 +704,12 @@ const ChatCreator: React.FC = () => {
   const handlePersonalization = (data: { 
     face: boolean; 
     logo: boolean; 
+    product: boolean;
     prints: boolean;
     colors: boolean; 
     faceUrl?: string | string[]; 
     logoUrl?: string | string[]; 
+    productUrl?: string | string[];
     printUrl?: string | string[];
     brandColors?: string[] 
   }) => {
@@ -710,10 +717,12 @@ const ChatCreator: React.FC = () => {
       ...brief,
       hasFace: data.face,
       hasLogo: data.logo,
+      hasProduct: data.product,
       hasPrints: data.prints,
       hasBrandColors: data.colors,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
+      productUrl: data.productUrl,
       printUrl: data.printUrl,
       brandColors: data.brandColors,
     };
@@ -721,10 +730,12 @@ const ChatCreator: React.FC = () => {
     const parts: string[] = [];
     const faceCount = Array.isArray(data.faceUrl) ? data.faceUrl.length : (data.faceUrl ? 1 : 0);
     const logoCount = Array.isArray(data.logoUrl) ? data.logoUrl.length : (data.logoUrl ? 1 : 0);
+    const productCount = Array.isArray(data.productUrl) ? data.productUrl.length : (data.productUrl ? 1 : 0);
     const printCount = Array.isArray(data.printUrl) ? data.printUrl.length : (data.printUrl ? 1 : 0);
     
     if (data.face) parts.push(`rosto${faceCount > 0 ? ` (${faceCount} foto${faceCount > 1 ? 's' : ''})` : ''}`);
     if (data.logo) parts.push(`logo${logoCount > 0 ? ` (${logoCount} foto${logoCount > 1 ? 's' : ''})` : ''}`);
+    if (data.product) parts.push(`produto/embalagem${productCount > 0 ? ` (${productCount} foto${productCount > 1 ? 's' : ''})` : ''}`);
     if (data.prints) parts.push(`prints do sistema${printCount > 0 ? ` (${printCount} print${printCount > 1 ? 's' : ''})` : ''}`);
     if (data.colors) parts.push('cores da marca' + (data.brandColors?.length ? ` (${data.brandColors.join(', ')})` : ''));
     const label = parts.length ? `Quero usar: ${parts.join(', ')}` : 'Pode seguir sem personalização';
@@ -1699,10 +1710,12 @@ const PersonalizationWidget: React.FC<{
   onPick: (d: { 
     face: boolean; 
     logo: boolean; 
+    product: boolean;
     prints: boolean;
     colors: boolean; 
     faceUrl?: string | string[]; 
     logoUrl?: string | string[]; 
+    productUrl?: string | string[];
     printUrl?: string | string[];
     brandColors?: string[] 
   }) => void; 
@@ -1710,18 +1723,21 @@ const PersonalizationWidget: React.FC<{
 }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
+  const [product, setProduct] = useState(false);
   const [prints, setPrints] = useState(false);
   const [colors, setColors] = useState(false);
   const [faceFiles, setFaceFiles] = useState<{url: string, file?: File}[]>([]);
   const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
+  const [productFiles, setProductFiles] = useState<{url: string, file?: File}[]>([]);
   const [printFiles, setPrintFiles] = useState<{url: string, file?: File}[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
   const [uploading, setUploading] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'prints' | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'product' | 'prints' | null>(null);
 
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const productInputRef = useRef<HTMLInputElement>(null);
 
   const onFaceFilesSelected = (files: FileList | null) => {
     if (!files) return;
@@ -1735,6 +1751,12 @@ const PersonalizationWidget: React.FC<{
     setLogoFiles(prev => [...prev, ...newFiles]);
   };
 
+  const onProductFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
+    setProductFiles(prev => [...prev, ...newFiles]);
+  };
+
   const onPrintFilesSelected = (files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
@@ -1746,15 +1768,18 @@ const PersonalizationWidget: React.FC<{
     try {
       const faceUrls = await Promise.all(faceFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const logoUrls = await Promise.all(logoFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
+      const productUrls = await Promise.all(productFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const printUrls = await Promise.all(printFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
       onPick({
         face,
         logo,
+        product,
         prints,
         colors,
         faceUrl: faceUrls.length > 0 ? (faceUrls.length === 1 ? faceUrls[0] : faceUrls) : undefined,
         logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
+        productUrl: productUrls.length > 0 ? (productUrls.length === 1 ? productUrls[0] : productUrls) : undefined,
         printUrl: printUrls.length > 0 ? (printUrls.length === 1 ? printUrls[0] : printUrls) : undefined,
         brandColors: colors ? brandColors : undefined,
       });
@@ -1891,6 +1916,63 @@ const PersonalizationWidget: React.FC<{
         )}
       </div>
 
+      {/* Produto / Embalagem */}
+      <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: product ? PURPLE : 'rgba(255,255,255,0.1)' }}>
+        <button
+          onClick={() => setProduct(v => !v)}
+          className="w-full flex items-center gap-3 p-3"
+        >
+          <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: product ? PURPLE : 'rgba(255,255,255,0.06)' }}>
+            <Package className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-white">Foto do produto ou embalagem</div>
+            <div className="text-[11px] text-white/50">Caixa, rótulo, pote, roupa ou objeto</div>
+          </div>
+          <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: product ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: product ? PURPLE : 'transparent' }}>
+            {product && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </button>
+        {product && (
+          <div className="px-3 pb-3 space-y-2">
+            <input ref={productInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => onProductFilesSelected(e.target.files)} />
+            {productFiles.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {productFiles.map((f, i) => (
+                  <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group bg-white/5">
+                    <img src={f.url} className="w-full h-full object-contain p-1" alt="Produto preview" />
+                    <button 
+                      onClick={() => setProductFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 h-5 w-5 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => productInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Upload className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Upload</span>
+              </button>
+              <button
+                onClick={() => setGalleryOpen('product')}
+                className="flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed transition-colors hover:bg-white/5"
+                style={{ borderColor: 'rgba(139,92,246,0.4)' }}
+              >
+                <Folder className="h-3.5 w-3.5" style={{ color: PURPLE }} />
+                <span className="text-[11px] font-medium text-white/90">Galeria</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Prints do Sistema */}
       <div className="rounded-xl border transition-all" style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderColor: prints ? PURPLE : 'rgba(255,255,255,0.1)' }}>
         <button
@@ -1957,6 +2039,7 @@ const PersonalizationWidget: React.FC<{
           const newItems = selected.map(s => ({ url: s.url }));
           if (galleryOpen === 'face') setFaceFiles(prev => [...prev, ...newItems]);
           if (galleryOpen === 'logo') setLogoFiles(prev => [...prev, ...newItems]);
+          if (galleryOpen === 'product') setProductFiles(prev => [...prev, ...newItems]);
           if (galleryOpen === 'prints') setPrintFiles(prev => [...prev, ...newItems]);
           setGalleryOpen(null);
         }}
@@ -2015,7 +2098,7 @@ const PersonalizationWidget: React.FC<{
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
           {uploading ? 'Enviando...' : 'Confirmar'}
         </Button>
-        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, prints: false, colors: false })} className="text-xs h-9 text-white/60">
+        <Button size="sm" variant="ghost" disabled={uploading} onClick={() => onPick({ face: false, logo: false, product: false, prints: false, colors: false })} className="text-xs h-9 text-white/60">
           Pular
         </Button>
       </div>

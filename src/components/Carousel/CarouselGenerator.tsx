@@ -2705,7 +2705,6 @@ The image must look like it was shot by a professional photographer or designed 
   };
 
   const loadCarousel = async (item: any) => {
-    loadCarouselRef.current = loadCarousel; // keep ref fresh for useCarouselRouteSync
     // CRITICAL: Set ID FIRST to prevent auto-save from creating a duplicate INSERT
     setCurrentCarouselId(item.id);
     if (item.post_format === 'animated') {

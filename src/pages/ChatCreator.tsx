@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import GalleryPicker from '@/components/Carousel/wizard/GalleryPicker';
 import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
+import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface ConversationSummary {
   id: string;
@@ -1967,11 +1968,11 @@ const ImageModelPickerWidget: React.FC<{ onPick: (model: 'ello-pro' | 'ello-fast
         className="group relative flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent hover:from-violet-600/10 hover:to-violet-600/5 hover:border-violet-500/50 transition-all duration-300 text-left overflow-hidden shadow-xl"
       >
         <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-          <img src="/logo.png" alt="" className="h-20 w-20 object-contain grayscale" />
+          <img src={ellocontentLogo} alt="" className="h-20 w-20 object-contain grayscale" />
         </div>
         
         <div className="h-12 w-12 rounded-xl bg-violet-600/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-violet-600 transition-all duration-300">
-          <img src="/logo.png" alt="Ello Pro" className="h-7 w-7 object-contain" />
+          <img src={ellocontentLogo} alt="Ello Pro" className="h-7 w-7 object-contain" />
         </div>
         
         <div className="space-y-1.5 relative z-10">
@@ -1990,11 +1991,11 @@ const ImageModelPickerWidget: React.FC<{ onPick: (model: 'ello-pro' | 'ello-fast
         className="group relative flex items-center gap-4 p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent hover:from-blue-600/10 hover:to-blue-600/5 hover:border-blue-500/50 transition-all duration-300 text-left overflow-hidden shadow-xl"
       >
         <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-          <img src="/logo.png" alt="" className="h-20 w-20 object-contain grayscale" />
+          <img src={ellocontentLogo} alt="" className="h-20 w-20 object-contain grayscale" />
         </div>
 
         <div className="h-12 w-12 rounded-xl bg-blue-600/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-600 transition-all duration-300">
-          <img src="/logo.png" alt="Ello Fast" className="h-7 w-7 object-contain" />
+          <img src={ellocontentLogo} alt="Ello Fast" className="h-7 w-7 object-contain" />
         </div>
         
         <div className="space-y-1.5 relative z-10">

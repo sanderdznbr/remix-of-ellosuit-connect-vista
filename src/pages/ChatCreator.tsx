@@ -363,8 +363,11 @@ const ChatCreator: React.FC = () => {
       setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
-      const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+      const widget: WidgetType = getValidWidget(data.widget);
       const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
+      const lastText = texts[texts.length - 1]?.toLowerCase() || '';
+      const mentionsTextOptions = /opç|opçõ|sugest|preparei|escolh|aprovar|conteúdo|conteudo/.test(lastText);
+      const hasSuggestedContent = Array.isArray(newBrief.suggested_content) && newBrief.suggested_content.length > 0;
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 
       // or looking idle while the assistant is still "typing" its messages.
@@ -374,7 +377,13 @@ const ChatCreator: React.FC = () => {
       // so the user always has explicit control over when generation starts.
       const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
-        : widget;
+        : (!widget && mentionsTextOptions ? 'approve_content' : widget);
+
+      if (finalWidget === 'approve_content' && !hasSuggestedContent) {
+        const fallbackContent = makeFallbackSuggestedContent(newBrief);
+        newBrief.suggested_content = fallbackContent;
+        setBrief({ ...newBrief });
+      }
 
       await appendAIMessages(texts, finalWidget, finalWidget ? undefined : suggestions);
       setLoading(false);

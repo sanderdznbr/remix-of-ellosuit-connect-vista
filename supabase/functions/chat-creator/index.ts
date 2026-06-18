@@ -25,6 +25,7 @@ interface BriefState {
   styleName?: string | null;
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasProduct?: boolean;
   hasBrandColors?: boolean;
   brandName?: string;
   audience?: string;
@@ -90,6 +91,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     styleName: trimText(brief?.styleName, 120),
     hasFace: !!brief?.hasFace,
     hasLogo: !!brief?.hasLogo,
+    hasProduct: !!brief?.hasProduct,
     hasBrandColors: !!brief?.hasBrandColors,
     brandName: trimText(brief?.brandName, 120),
     audience: trimText(brief?.audience, 160),
@@ -97,6 +99,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     imageModel: brief?.imageModel,
     faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
     logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
+    productProvided: !!(brief as Record<string, unknown> | undefined)?.productUrl,
     suggested_content: brief?.suggested_content,
     userIdea: trimText(brief?.userIdea, 500),
     imageSource: brief?.imageSource,
@@ -170,6 +173,7 @@ function buildTool() {
               styleName: { type: 'string' },
               hasFace: { type: 'boolean' },
               hasLogo: { type: 'boolean' },
+              hasProduct: { type: 'boolean', description: 'True when the user provided a product/package photo reference' },
               hasBrandColors: { type: 'boolean' },
               brandName: { type: 'string' },
               audience: { type: 'string' },

@@ -123,6 +123,8 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 8. Escolha IMAGENS (image_source_picker) e FINALIZAÇÃO.
 
 ⚠️ REGRAS CRÍTICAS:
+- NUNCA pergunte se o usuário tem rosto/logo/produto/cores quando o estado já indicar faceProvided/logoProvided/productProvided/hasBrandColors=true. Trate como JÁ FORNECIDO e siga adiante sem reabrir o widget de personalização para esse item.
+- Se productProvided=true OU hasProduct=true, NUNCA pergunte "você tem foto do produto?" e NUNCA peça upload de produto de novo. Apenas confirme rápido ("Show, já vi as fotos do produto!") e avance.
 - NUNCA diga "Olha o que eu preparei" ou "Aqui estão as sugestões" sem preencher o campo 'suggested_content' e usar o widget 'approve_content' na mesma resposta.
 - Se você sugerir textos, o widget "approve_content" é MANDATÓRIO. Sem ele, o usuário não consegue ver nem aprovar o que você criou.
 - O usuário deve ver os textos e clicar em "Aprovar conteúdo" antes de você seguir para a escolha de imagens.
@@ -272,9 +274,19 @@ Deno.serve(async (req) => {
 
     const briefSummary = `Estado atual coletado: ${JSON.stringify(safeBrief)}`;
 
+    const alreadyProvided: string[] = [];
+    if (safeBrief.faceProvided || safeBrief.hasFace) alreadyProvided.push('ROSTO');
+    if (safeBrief.logoProvided || safeBrief.hasLogo) alreadyProvided.push('LOGO');
+    if (safeBrief.productProvided || safeBrief.hasProduct) alreadyProvided.push('PRODUTO/EMBALAGEM');
+    if (safeBrief.hasBrandColors) alreadyProvided.push('CORES DA MARCA');
+    const providedHint = alreadyProvided.length
+      ? `IMPORTANTE: O usuário JÁ FORNECEU: ${alreadyProvided.join(', ')}. NÃO pergunte sobre esses itens nem peça upload deles novamente. Não reabra o widget "personalization" pra esses itens. Apenas confirme rápido e siga para o próximo passo.`
+      : '';
+
     const aiMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: briefSummary },
+      ...(providedHint ? [{ role: 'system', content: providedHint }] : []),
       ...safeMessages,
     ];
 

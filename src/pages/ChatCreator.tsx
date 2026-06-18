@@ -29,6 +29,7 @@ interface ChatMessage {
   content: string;
   widget?: WidgetType;
   widgetData?: any;
+  suggestions?: string[];
   timestamp: number;
 }
 

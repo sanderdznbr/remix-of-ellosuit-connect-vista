@@ -1334,46 +1334,27 @@ const CarouselGenerator: React.FC = () => {
     loadHistory();
   }, [user?.id]);
 
-  // Load carousel from route param /carousel/:id
-  const hasManuallyNavigatedAway = useRef(false);
-  useEffect(() => {
-    if (!routeCarouselId || !user) return;
-    if (hasManuallyNavigatedAway.current) return;
-    // Don't reload if we already have this carousel loaded
-    if (currentCarouselId === routeCarouselId) return;
-    const loadFromRoute = async () => {
-      try {
-        const { data } = await supabase.from('generated_carousels').select('*').eq('id', routeCarouselId).single();
-        if (data) {
-          setShowWelcome(false);
-          loadCarousel(data);
-        }
-      } catch (err) { console.error('Failed to load carousel from URL:', err); }
-    };
-    loadFromRoute();
-  }, [routeCarouselId, user]);
+  // Routing: load carousel from /carousel/:id e mantém URL em sincronia.
+  // Toda a lógica (incluindo guard anti-redirect-pra-home enquanto carrega) está em useCarouselRouteSync.
+  const loadCarouselById = useCallback(async (id: string) => {
+    try {
+      const { data } = await supabase.from('generated_carousels').select('*').eq('id', id).single();
+      if (data) {
+        setShowWelcome(false);
+        loadCarousel(data);
+      }
+    } catch (err) {
+      console.error('Failed to load carousel from URL:', err);
+    }
+  }, [loadCarousel]);
 
-  // Update URL when carousel ID changes — only when not on the welcome/dashboard screen
-  useEffect(() => {
-    if (showWelcome) {
-      // Don't redirect away if the URL has a /carousel/:id that's still being loaded
-      if (routeCarouselId) return;
-      hasManuallyNavigatedAway.current = true;
-      if (window.location.pathname.startsWith('/carousel/')) {
-        navigate('/', { replace: true });
-      }
-      return;
-    }
-    hasManuallyNavigatedAway.current = false;
-    if (currentCarouselId) {
-      // Use replaceState only — don't use navigate to avoid re-renders
-      if (!window.location.pathname.includes(currentCarouselId)) {
-        window.history.replaceState({}, '', `/carousel/${currentCarouselId}`);
-      }
-    } else if (window.location.pathname.startsWith('/carousel/') && !routeCarouselId) {
-      navigate('/', { replace: true });
-    }
-  }, [currentCarouselId, showWelcome, routeCarouselId]);
+  useCarouselRouteSync({
+    routeCarouselId,
+    currentCarouselId,
+    showWelcome,
+    user,
+    loadById: loadCarouselById,
+  });
 
   // ===== CLOUD JOB REALTIME SUBSCRIPTION =====
   useEffect(() => {

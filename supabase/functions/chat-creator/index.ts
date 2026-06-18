@@ -47,6 +47,7 @@ interface ApiResponse {
   messages?: string[];
   widget?: 'content_type_picker' | 'format_picker' | 'visual_type_picker' | 'style_uploader' | 'style_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'image_model_picker' | 'image_source_picker' | 'face_fusion_picker' | 'none';
   brief_update?: Partial<BriefState>;
+  suggestions?: string[];
   ready?: boolean;
   error?: string;
   fallback?: boolean;

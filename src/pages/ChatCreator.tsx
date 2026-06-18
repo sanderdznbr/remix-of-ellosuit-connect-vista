@@ -178,6 +178,24 @@ const getAssistantQuickReplies = (suggestions: string[] | undefined, content: st
   return normalized.length > 0 ? normalized : getFallbackQuickReplies(content);
 };
 
+const VALID_CHAT_WIDGETS = new Set<string>([
+  'style_picker', 'format_picker', 'content_type_picker', 'visual_type_picker', 'style_uploader',
+  'personalization', 'approve_content', 'confirm_generate', 'background_picker', 'image_model_picker',
+  'image_source_picker', 'face_fusion_picker', 'generating_post', 'final_result',
+]);
+
+const getValidWidget = (value: unknown): WidgetType => (
+  typeof value === 'string' && value !== 'none' && VALID_CHAT_WIDGETS.has(value) ? value as WidgetType : null
+);
+
+const makeFallbackSuggestedContent = (source: BriefState) => {
+  const total = source.contentType === 'carousel' ? Math.max(3, Math.min(source.cardCount || 5, 10)) : 1;
+  const topic = source.topic || source.brandName || 'sua oferta';
+  return Array.from({ length: total }, (_, index) => index === 0
+    ? { title: `Transforme ${topic}`, subtitle: 'Uma ideia clara para chamar atenção', body: 'Mostre o valor principal com uma mensagem simples, visual e direta.' }
+    : { title: `Ponto ${index + 1}`, subtitle: `Benefício ${index}`, body: `Explique um motivo forte para escolher ${topic}.` });
+};
+
 const ChatCreator: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();

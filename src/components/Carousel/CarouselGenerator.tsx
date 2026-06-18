@@ -1336,17 +1336,19 @@ const CarouselGenerator: React.FC = () => {
 
   // Routing: load carousel from /carousel/:id e mantém URL em sincronia.
   // Toda a lógica (incluindo guard anti-redirect-pra-home enquanto carrega) está em useCarouselRouteSync.
+  // Usamos ref para loadCarousel porque ela é declarada mais abaixo no componente (TDZ).
+  const loadCarouselRef = useRef<((item: any) => Promise<void> | void) | null>(null);
   const loadCarouselById = useCallback(async (id: string) => {
     try {
       const { data } = await supabase.from('generated_carousels').select('*').eq('id', id).single();
       if (data) {
         setShowWelcome(false);
-        loadCarousel(data);
+        await loadCarouselRef.current?.(data);
       }
     } catch (err) {
       console.error('Failed to load carousel from URL:', err);
     }
-  }, [loadCarousel]);
+  }, []);
 
   useCarouselRouteSync({
     routeCarouselId,

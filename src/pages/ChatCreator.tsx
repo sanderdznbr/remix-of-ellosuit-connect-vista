@@ -29,6 +29,7 @@ interface ChatMessage {
   content: string;
   widget?: WidgetType;
   widgetData?: any;
+  suggestions?: string[];
   timestamp: number;
 }
 
@@ -256,7 +257,7 @@ const ChatCreator: React.FC = () => {
   }, [messages, loading]);
 
   // Append AI messages with a small delay between each so it feels like typing
-  const appendAIMessages = useCallback(async (texts: string[], widget: WidgetType) => {
+  const appendAIMessages = useCallback(async (texts: string[], widget: WidgetType, suggestions?: string[]) => {
     for (let i = 0; i < texts.length; i++) {
       const isLast = i === texts.length - 1;
       // small "typing" pause between messages
@@ -266,6 +267,7 @@ const ChatCreator: React.FC = () => {
         role: 'assistant',
         content: texts[i],
         widget: isLast ? widget : null,
+        suggestions: isLast && !widget ? suggestions : undefined,
         timestamp: Date.now(),
       }]);
     }
@@ -285,7 +287,8 @@ const ChatCreator: React.FC = () => {
       if (data?.error && data?.fallback) {
         const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.error];
         const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
-        await appendAIMessages(texts, widget);
+        const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
+        await appendAIMessages(texts, widget, suggestions);
         setLoading(false);
         return;
       }
@@ -310,6 +313,7 @@ const ChatCreator: React.FC = () => {
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
       const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+      const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 
       // or looking idle while the assistant is still "typing" its messages.
@@ -321,7 +325,7 @@ const ChatCreator: React.FC = () => {
         ? 'confirm_generate'
         : widget;
 
-      await appendAIMessages(texts, finalWidget);
+      await appendAIMessages(texts, finalWidget, finalWidget ? undefined : suggestions);
       setLoading(false);
     } catch (err: any) {
       console.error('chat-creator error:', err);
@@ -965,6 +969,20 @@ const ChatCreator: React.FC = () => {
                           {msg.widget && (
                             <div className="pt-1">
                               {renderWidget(msg)}
+                            </div>
+                          )}
+                          {!msg.widget && msg.suggestions && msg.suggestions.length > 0 && idx === messages.length - 1 && !loading && !generating && (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                              {msg.suggestions.map((s, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => sendMessage(s)}
+                                  className="px-3 py-1.5 rounded-full text-[13px] text-white/90 border border-white/15 hover:border-violet-400/60 hover:bg-violet-500/10 transition-colors"
+                                  style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                                >
+                                  {s}
+                                </button>
+                              ))}
                             </div>
                           )}
                         </div>

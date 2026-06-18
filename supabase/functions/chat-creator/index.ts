@@ -47,6 +47,7 @@ interface ApiResponse {
   messages?: string[];
   widget?: 'content_type_picker' | 'format_picker' | 'visual_type_picker' | 'style_uploader' | 'style_picker' | 'personalization' | 'approve_content' | 'confirm_generate' | 'image_model_picker' | 'image_source_picker' | 'face_fusion_picker' | 'none';
   brief_update?: Partial<BriefState>;
+  suggestions?: string[];
   ready?: boolean;
   error?: string;
   fallback?: boolean;
@@ -125,7 +126,14 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 - Se o usuário pedir para mudar algo no texto, atualize 'suggested_content' e mostre o widget "approve_content" novamente.
 - CAPACIDADE ESPECIAL: Se o usuário enviar um ROSTO e escolher "Fotos Reais", o sistema vai INTEGRAR o rosto dele na foto (face swap).
 - NUNCA marque ready=true sem o widget "confirm_generate".
-- 'searchTerm' é MANDATÓRIO no suggested_content quando o usuário escolhe Fotos Reais (deve ser em INGLÊS e ultra-específico).`;
+- 'searchTerm' é MANDATÓRIO no suggested_content quando o usuário escolhe Fotos Reais (deve ser em INGLÊS e ultra-específico).
+
+💬 SUGESTÕES DE RESPOSTA RÁPIDA (OBRIGATÓRIO):
+- SEMPRE que você fizer uma pergunta aberta ao usuário (tema, público, tom, marca, nicho, ideia, ajustes de texto, etc) e NÃO estiver usando um widget de escolha (content_type_picker, format_picker, visual_type_picker, personalization, approve_content, confirm_generate, image_model_picker, image_source_picker, face_fusion_picker, style_picker, style_uploader), você DEVE preencher o campo 'suggestions' com 3 a 4 respostas curtas e prontas que o usuário pode clicar.
+- As sugestões devem ser respostas plausíveis, específicas e em primeira pessoa, escritas como o usuário escreveria (ex: "Quero algo divertido e descontraído", "Público feminino 25-40 anos", "Tema: lançamento do meu curso de inglês").
+- Cada sugestão: máximo 8 palavras, sem aspas, sem emojis.
+- Se houver widget (qualquer um da lista acima), NÃO envie suggestions — o widget já é a opção de escolha.
+- O usuário sempre pode digitar livremente; as sugestões são atalhos, não as únicas opções.`;
 
 
 function buildTool() {
@@ -185,6 +193,11 @@ function buildTool() {
             },
           },
           ready: { type: 'boolean', description: 'true when the brief is complete and we should generate' },
+          suggestions: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Quick-reply chips shown under the assistant message. Provide 3-4 plausible short user-style replies (max 8 words each) ONLY when widget=="none" and you are asking an open question. Leave empty/omit when using any picker widget.',
+          },
         },
         required: ['messages'],
       },

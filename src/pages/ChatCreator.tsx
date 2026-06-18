@@ -178,6 +178,24 @@ const getAssistantQuickReplies = (suggestions: string[] | undefined, content: st
   return normalized.length > 0 ? normalized : getFallbackQuickReplies(content);
 };
 
+const VALID_CHAT_WIDGETS = new Set<string>([
+  'style_picker', 'format_picker', 'content_type_picker', 'visual_type_picker', 'style_uploader',
+  'personalization', 'approve_content', 'confirm_generate', 'background_picker', 'image_model_picker',
+  'image_source_picker', 'face_fusion_picker', 'generating_post', 'final_result',
+]);
+
+const getValidWidget = (value: unknown): WidgetType => (
+  typeof value === 'string' && value !== 'none' && VALID_CHAT_WIDGETS.has(value) ? value as WidgetType : null
+);
+
+const makeFallbackSuggestedContent = (source: BriefState) => {
+  const total = source.contentType === 'carousel' ? Math.max(3, Math.min(source.cardCount || 5, 10)) : 1;
+  const topic = source.topic || source.brandName || 'sua oferta';
+  return Array.from({ length: total }, (_, index) => index === 0
+    ? { title: `Transforme ${topic}`, subtitle: 'Uma ideia clara para chamar atenção', body: 'Mostre o valor principal com uma mensagem simples, visual e direta.' }
+    : { title: `Ponto ${index + 1}`, subtitle: `Benefício ${index}`, body: `Explique um motivo forte para escolher ${topic}.` });
+};
+
 const ChatCreator: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -345,8 +363,12 @@ const ChatCreator: React.FC = () => {
       setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
-      const widget: WidgetType = data.widget && data.widget !== 'none' ? data.widget : null;
+      const widget: WidgetType = getValidWidget(data.widget);
       const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
+      const lastText = texts[texts.length - 1]?.toLowerCase() || '';
+      const isSlideCountQuestion = /quantos? slides|número de slides|qtd/.test(lastText);
+      const mentionsTextOptions = !isSlideCountQuestion && /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastText);
+      const hasSuggestedContent = Array.isArray(newBrief.suggested_content) && newBrief.suggested_content.length > 0;
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 
       // or looking idle while the assistant is still "typing" its messages.
@@ -356,7 +378,13 @@ const ChatCreator: React.FC = () => {
       // so the user always has explicit control over when generation starts.
       const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
-        : widget;
+        : (!widget && mentionsTextOptions ? 'approve_content' : widget);
+
+      if (finalWidget === 'approve_content' && !hasSuggestedContent) {
+        const fallbackContent = makeFallbackSuggestedContent(newBrief);
+        newBrief.suggested_content = fallbackContent;
+        setBrief({ ...newBrief });
+      }
 
       await appendAIMessages(texts, finalWidget, finalWidget ? undefined : suggestions);
       setLoading(false);

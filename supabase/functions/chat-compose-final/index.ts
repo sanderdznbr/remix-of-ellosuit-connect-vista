@@ -951,9 +951,13 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
     }
     }
 
+    if (!cardImage) {
+      console.warn("Fallback mode: Gemini failed, trying gpt-image-2...");
+      cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
+    }
     const usedEmergencyFallback = !cardImage;
     if (!cardImage) {
-      console.error("Fallback mode: all AI attempts failed; returning emergency fallback instead of 500.");
+      console.error("Fallback mode: all AI attempts failed (incl. gpt-image-2); returning emergency fallback.");
       cardImage = emergencyCardDataUrl(brief, 0, ratio);
     } else {
       const carouselId = "temp-" + Date.now();

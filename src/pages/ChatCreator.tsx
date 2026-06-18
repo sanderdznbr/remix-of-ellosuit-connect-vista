@@ -257,7 +257,7 @@ const ChatCreator: React.FC = () => {
   }, [messages, loading]);
 
   // Append AI messages with a small delay between each so it feels like typing
-  const appendAIMessages = useCallback(async (texts: string[], widget: WidgetType) => {
+  const appendAIMessages = useCallback(async (texts: string[], widget: WidgetType, suggestions?: string[]) => {
     for (let i = 0; i < texts.length; i++) {
       const isLast = i === texts.length - 1;
       // small "typing" pause between messages
@@ -267,6 +267,7 @@ const ChatCreator: React.FC = () => {
         role: 'assistant',
         content: texts[i],
         widget: isLast ? widget : null,
+        suggestions: isLast && !widget ? suggestions : undefined,
         timestamp: Date.now(),
       }]);
     }

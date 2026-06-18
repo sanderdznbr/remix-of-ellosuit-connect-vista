@@ -366,26 +366,6 @@ const ChatCreator: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const initialPrompt = params.get('prompt') || params.get('topic');
 
-    let convId = localStorage.getItem(ACTIVE_KEY);
-    if (initialPrompt || !convId) {
-      convId = crypto.randomUUID();
-      localStorage.setItem(ACTIVE_KEY, convId);
-      setActiveConvId(convId);
-    } else {
-      setActiveConvId(convId);
-      try {
-        const raw = localStorage.getItem(`ello_chat_msgs_${convId}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed.messages?.length) {
-            setMessages(parsed.messages);
-            if (parsed.brief) setBrief(parsed.brief);
-            return;
-          }
-        }
-      } catch {}
-    }
-
     if (initialPrompt) {
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),

@@ -1710,10 +1710,12 @@ const PersonalizationWidget: React.FC<{
   onPick: (d: { 
     face: boolean; 
     logo: boolean; 
+    product: boolean;
     prints: boolean;
     colors: boolean; 
     faceUrl?: string | string[]; 
     logoUrl?: string | string[]; 
+    productUrl?: string | string[];
     printUrl?: string | string[];
     brandColors?: string[] 
   }) => void; 
@@ -1721,18 +1723,21 @@ const PersonalizationWidget: React.FC<{
 }> = ({ onPick }) => {
   const [face, setFace] = useState(false);
   const [logo, setLogo] = useState(false);
+  const [product, setProduct] = useState(false);
   const [prints, setPrints] = useState(false);
   const [colors, setColors] = useState(false);
   const [faceFiles, setFaceFiles] = useState<{url: string, file?: File}[]>([]);
   const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
+  const [productFiles, setProductFiles] = useState<{url: string, file?: File}[]>([]);
   const [printFiles, setPrintFiles] = useState<{url: string, file?: File}[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
   const [uploading, setUploading] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'prints' | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'product' | 'prints' | null>(null);
 
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const productInputRef = useRef<HTMLInputElement>(null);
 
   const onFaceFilesSelected = (files: FileList | null) => {
     if (!files) return;
@@ -1746,6 +1751,12 @@ const PersonalizationWidget: React.FC<{
     setLogoFiles(prev => [...prev, ...newFiles]);
   };
 
+  const onProductFilesSelected = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
+    setProductFiles(prev => [...prev, ...newFiles]);
+  };
+
   const onPrintFilesSelected = (files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
@@ -1757,15 +1768,18 @@ const PersonalizationWidget: React.FC<{
     try {
       const faceUrls = await Promise.all(faceFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const logoUrls = await Promise.all(logoFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
+      const productUrls = await Promise.all(productFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const printUrls = await Promise.all(printFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
       onPick({
         face,
         logo,
+        product,
         prints,
         colors,
         faceUrl: faceUrls.length > 0 ? (faceUrls.length === 1 ? faceUrls[0] : faceUrls) : undefined,
         logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
+        productUrl: productUrls.length > 0 ? (productUrls.length === 1 ? productUrls[0] : productUrls) : undefined,
         printUrl: printUrls.length > 0 ? (printUrls.length === 1 ? printUrls[0] : printUrls) : undefined,
         brandColors: colors ? brandColors : undefined,
       });

@@ -974,6 +974,9 @@ const ChatCreator: React.FC = () => {
               {messages.map((msg, idx) => {
                 const prev = messages[idx - 1];
                 const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant');
+                const quickReplies = msg.role === 'assistant' && !msg.widget && idx === messages.length - 1 && !loading && !generating
+                  ? getAssistantQuickReplies(msg.suggestions, msg.content)
+                  : [];
                 return (
                   <motion.div
                     key={msg.id}
@@ -1004,9 +1007,9 @@ const ChatCreator: React.FC = () => {
                               {renderWidget(msg)}
                             </div>
                           )}
-                          {!msg.widget && msg.suggestions && msg.suggestions.length > 0 && idx === messages.length - 1 && !loading && !generating && (
+                          {quickReplies.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-2">
-                              {msg.suggestions.map((s, i) => (
+                              {quickReplies.map((s, i) => (
                                 <button
                                   key={i}
                                   onClick={() => sendMessage(s)}

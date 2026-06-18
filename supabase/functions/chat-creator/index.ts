@@ -129,7 +129,8 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 - 'searchTerm' é MANDATÓRIO no suggested_content quando o usuário escolhe Fotos Reais (deve ser em INGLÊS e ultra-específico).
 
 💬 SUGESTÕES DE RESPOSTA RÁPIDA (OBRIGATÓRIO):
-- SEMPRE que você fizer uma pergunta aberta ao usuário (tema, público, tom, marca, nicho, ideia, ajustes de texto, etc) e NÃO estiver usando um widget de escolha (content_type_picker, format_picker, visual_type_picker, personalization, approve_content, confirm_generate, image_model_picker, image_source_picker, face_fusion_picker, style_picker, style_uploader), você DEVE preencher o campo 'suggestions' com 3 a 4 respostas curtas e prontas que o usuário pode clicar.
+- SEMPRE que widget == "none", você DEVE preencher o campo 'suggestions' com 3 a 4 respostas curtas e prontas que o usuário pode clicar. O usuário NUNCA deve depender de digitar para continuar.
+- Mesmo em perguntas abertas sobre tema, público, tom, marca, nicho, ideia ou ajustes de texto, dê opções prontas plausíveis.
 - As sugestões devem ser respostas plausíveis, específicas e em primeira pessoa, escritas como o usuário escreveria (ex: "Quero algo divertido e descontraído", "Público feminino 25-40 anos", "Tema: lançamento do meu curso de inglês").
 - Cada sugestão: máximo 8 palavras, sem aspas, sem emojis.
 - Se houver widget (qualquer um da lista acima), NÃO envie suggestions — o widget já é a opção de escolha.
@@ -202,6 +203,46 @@ function buildTool() {
         required: ['messages'],
       },
     },
+  };
+}
+
+function normalizeSuggestions(suggestions?: unknown) {
+  if (!Array.isArray(suggestions)) return [];
+  const seen = new Set<string>();
+  return suggestions
+    .map((suggestion) => String(suggestion || '').replace(/\s+/g, ' ').trim())
+    .filter((suggestion) => suggestion.length > 0 && suggestion.split(' ').length <= 10)
+    .filter((suggestion) => {
+      const key = suggestion.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 4);
+}
+
+function fallbackSuggestions(content: string) {
+  const text = content.toLowerCase();
+  if (/quantos? slides|número de slides|qtd/.test(text)) return ['3 slides', '5 slides', '7 slides', '10 slides'];
+  if (/ajust|alter|mudar|revis|texto|conteúdo/.test(text)) return ['Aprovar como está', 'Deixar mais direto', 'Mais premium', 'Mais vendedor'];
+  if (/tema|assunto|ideia|sobre o que|criar/.test(text)) return ['Lançamento de produto', 'Promoção da semana', 'Conteúdo educativo', 'Autoridade no nicho'];
+  if (/público|publico|cliente|persona|audiência|audiencia/.test(text)) return ['Mulheres 25 a 40 anos', 'Donos de negócios', 'Profissionais liberais', 'Público jovem'];
+  if (/tom|linguagem|voz|estilo de texto/.test(text)) return ['Profissional e direto', 'Premium e sofisticado', 'Divertido e leve', 'Urgente e vendedor'];
+  if (/marca|nome|empresa|negócio|negocio/.test(text)) return ['Usar minha marca atual', 'Sem marca por enquanto', 'Destacar o produto', 'Marca minimalista'];
+  if (/nicho|segmento|área|area/.test(text)) return ['Moda e beleza', 'Saúde e bem-estar', 'Imobiliário', 'Infoprodutos'];
+  return ['Continuar assim', 'Gerar opção pronta', 'Deixar mais premium', 'Fazer mais direto'];
+}
+
+function withGuaranteedSuggestions(payload: ApiResponse): ApiResponse {
+  const widget = payload.widget && payload.widget !== 'none' ? payload.widget : 'none';
+  if (widget !== 'none') return { ...payload, suggestions: undefined };
+  const messages = Array.isArray(payload.messages) ? payload.messages : [];
+  const lastMessage = messages[messages.length - 1] || '';
+  const suggestions = normalizeSuggestions(payload.suggestions);
+  return {
+    ...payload,
+    widget: 'none',
+    suggestions: suggestions.length > 0 ? suggestions : fallbackSuggestions(lastMessage),
   };
 }
 

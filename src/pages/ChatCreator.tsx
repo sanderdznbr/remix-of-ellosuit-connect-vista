@@ -146,6 +146,38 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   suggested_content: source.suggested_content,
 });
 
+const normalizeQuickReplies = (suggestions?: string[]) => {
+  if (!Array.isArray(suggestions)) return [];
+  const seen = new Set<string>();
+  return suggestions
+    .map((suggestion) => suggestion.replace(/\s+/g, ' ').trim())
+    .filter((suggestion) => suggestion.length > 0 && suggestion.split(' ').length <= 10)
+    .filter((suggestion) => {
+      const key = suggestion.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 4);
+};
+
+const getFallbackQuickReplies = (content: string) => {
+  const text = content.toLowerCase();
+  if (/quantos? slides|número de slides|qtd/.test(text)) return ['3 slides', '5 slides', '7 slides', '10 slides'];
+  if (/ajust|alter|mudar|revis|texto|conteúdo/.test(text)) return ['Aprovar como está', 'Deixar mais direto', 'Mais premium', 'Mais vendedor'];
+  if (/tema|assunto|ideia|sobre o que|criar/.test(text)) return ['Lançamento de produto', 'Promoção da semana', 'Conteúdo educativo', 'Autoridade no nicho'];
+  if (/público|publico|cliente|persona|audiência|audiencia/.test(text)) return ['Mulheres 25 a 40 anos', 'Donos de negócios', 'Profissionais liberais', 'Público jovem'];
+  if (/tom|linguagem|voz|estilo de texto/.test(text)) return ['Profissional e direto', 'Premium e sofisticado', 'Divertido e leve', 'Urgente e vendedor'];
+  if (/marca|nome|empresa|negócio|negocio/.test(text)) return ['Usar minha marca atual', 'Sem marca por enquanto', 'Destacar o produto', 'Marca minimalista'];
+  if (/nicho|segmento|área|area/.test(text)) return ['Moda e beleza', 'Saúde e bem-estar', 'Imobiliário', 'Infoprodutos'];
+  return ['Continuar assim', 'Gerar opção pronta', 'Deixar mais premium', 'Fazer mais direto'];
+};
+
+const getAssistantQuickReplies = (suggestions: string[] | undefined, content: string) => {
+  const normalized = normalizeQuickReplies(suggestions);
+  return normalized.length > 0 ? normalized : getFallbackQuickReplies(content);
+};
+
 const ChatCreator: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();

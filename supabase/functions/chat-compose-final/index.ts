@@ -30,9 +30,11 @@ interface Brief {
   customStyleUrls?: string[];
   hasFace?: boolean;
   hasLogo?: boolean;
+  hasProduct?: boolean;
   hasPrints?: boolean;
   faceUrl?: string | string[];
   logoUrl?: string | string[];
+  productUrl?: string | string[];
   printUrl?: string | string[];
   audience?: string;
   tone?: string;
@@ -492,6 +494,9 @@ Deno.serve(async (req) => {
     const logoUrlArray = Array.isArray(brief.logoUrl)
       ? brief.logoUrl
       : (brief.logoUrl ? [brief.logoUrl] : []);
+    const productUrlArray = Array.isArray(brief.productUrl)
+      ? brief.productUrl
+      : (brief.productUrl ? [brief.productUrl] : []);
     const printUrlArray = Array.isArray(brief.printUrl)
       ? brief.printUrl
       : (brief.printUrl ? [brief.printUrl] : []);
@@ -507,6 +512,10 @@ Deno.serve(async (req) => {
     
     const logosResolved = brief.hasLogo && logoUrlArray.length > 0
       ? await Promise.all(logoUrlArray.slice(0, 1).map(urlToDataUrl))
+      : [];
+
+    const productsResolved = brief.hasProduct && productUrlArray.length > 0
+      ? await Promise.all(productUrlArray.slice(0, 1).map(urlToDataUrl))
       : [];
       
     const printsResolved = brief.hasPrints && printUrlArray.length > 0
@@ -526,6 +535,7 @@ Deno.serve(async (req) => {
 
     const faceData = facesResolved?.[0] || null;
     const logoData = logosResolved?.[0] || null;
+    const productData = productsResolved?.[0] || null;
     const additionalPrints = printsResolved.filter(Boolean);
 
     // Dynamic instructions for combining face + web photos
@@ -562,6 +572,9 @@ The final card must look like a designed template from the selected marketplace 
 
     const logoLine = logoData
       ? "Logo is attached. Place subtly in a corner."
+      : "";
+    const productLine = productData
+      ? "⚠️ PRODUCT/PACKAGING REFERENCE ATTACHED. This is real user content, not style. Show the exact product/package faithfully in the composition with realistic physical scale and proportions. Do not invent a generic product; preserve label, shape, colors, and packaging identity as much as possible."
       : "";
     const printsLine = additionalPrints.length > 0
       ? "Reference screenshots attached. Use for UI context."
@@ -635,7 +648,7 @@ CARD KIND: ${cardKind.toUpperCase()} — ${
 
 ${brand} ${colors} ${audienceLine} ${toneLine}
 ${userIdeaLine}
-${faceLine} ${logoLine} ${printsLine}
+${faceLine} ${logoLine} ${productLine} ${printsLine}
 ${selectedCardLine}
 ${styleRules}
 ${coverRefLine}
@@ -753,6 +766,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         { type: "text", text: unifiedPromptTemplate(cardIndex) },
         faceData ? { type: "image_url", image_url: { url: faceData } } : null,
         logoData ? { type: "image_url", image_url: { url: logoData } } : null,
+        productData ? { type: "image_url", image_url: { url: productData } } : null,
         ...additionalPrints.slice(0, 1).map((p) => ({
           type: "image_url",
           image_url: { url: p },

@@ -223,6 +223,7 @@ function normalizeSuggestions(suggestions?: unknown) {
 
 function fallbackSuggestions(content: string) {
   const text = content.toLowerCase();
+  if (/opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(text)) return ['Aprovar como está', 'Ver nova opção', 'Mais direto', 'Mais vendedor'];
   if (/quantos? slides|número de slides|qtd/.test(text)) return ['3 slides', '5 slides', '7 slides', '10 slides'];
   if (/ajust|alter|mudar|revis|texto|conteúdo/.test(text)) return ['Aprovar como está', 'Deixar mais direto', 'Mais premium', 'Mais vendedor'];
   if (/tema|assunto|ideia|sobre o que|criar/.test(text)) return ['Lançamento de produto', 'Promoção da semana', 'Conteúdo educativo', 'Autoridade no nicho'];
@@ -234,7 +235,8 @@ function fallbackSuggestions(content: string) {
 }
 
 function withGuaranteedSuggestions(payload: ApiResponse): ApiResponse {
-  const widget = payload.widget && payload.widget !== 'none' ? payload.widget : 'none';
+  const allowedWidgets = new Set(['content_type_picker', 'format_picker', 'visual_type_picker', 'style_uploader', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'face_fusion_picker']);
+  const widget = payload.widget && payload.widget !== 'none' && allowedWidgets.has(payload.widget) ? payload.widget : 'none';
   if (widget !== 'none') return { ...payload, suggestions: undefined };
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
   const lastMessage = messages[messages.length - 1] || '';

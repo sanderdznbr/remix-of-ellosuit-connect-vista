@@ -366,7 +366,8 @@ const ChatCreator: React.FC = () => {
       const widget: WidgetType = getValidWidget(data.widget);
       const suggestions: string[] | undefined = Array.isArray(data.suggestions) ? data.suggestions.filter(Boolean).slice(0, 4) : undefined;
       const lastText = texts[texts.length - 1]?.toLowerCase() || '';
-      const mentionsTextOptions = /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastText);
+      const isSlideCountQuestion = /quantos? slides|número de slides|qtd/.test(lastText);
+      const mentionsTextOptions = !isSlideCountQuestion && /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastText);
       const hasSuggestedContent = Array.isArray(newBrief.suggested_content) && newBrief.suggested_content.length > 0;
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 

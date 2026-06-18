@@ -223,8 +223,8 @@ function normalizeSuggestions(suggestions?: unknown) {
 
 function fallbackSuggestions(content: string) {
   const text = content.toLowerCase();
-  if (/opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(text)) return ['Aprovar como está', 'Ver nova opção', 'Mais direto', 'Mais vendedor'];
   if (/quantos? slides|número de slides|qtd/.test(text)) return ['3 slides', '5 slides', '7 slides', '10 slides'];
+  if (/opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(text)) return ['Aprovar como está', 'Ver nova opção', 'Mais direto', 'Mais vendedor'];
   if (/ajust|alter|mudar|revis|texto|conteúdo/.test(text)) return ['Aprovar como está', 'Deixar mais direto', 'Mais premium', 'Mais vendedor'];
   if (/tema|assunto|ideia|sobre o que|criar/.test(text)) return ['Lançamento de produto', 'Promoção da semana', 'Conteúdo educativo', 'Autoridade no nicho'];
   if (/público|publico|cliente|persona|audiência|audiencia/.test(text)) return ['Mulheres 25 a 40 anos', 'Donos de negócios', 'Profissionais liberais', 'Público jovem'];

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import GalleryPicker from '@/components/Carousel/wizard/GalleryPicker';
 import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
+import ellocontentLogo from '@/assets/ellocontent_logo.png';
 
 interface ConversationSummary {
   id: string;

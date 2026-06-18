@@ -391,56 +391,6 @@ const ChatCreator: React.FC = () => {
     }
   }, [location.search, callAI]);
 
-  const handleNewChat = () => {
-    const newId = crypto.randomUUID();
-    localStorage.setItem(ACTIVE_KEY, newId);
-    setActiveConvId(newId);
-    setMessages([{
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Oi! 👋',
-      timestamp: Date.now(),
-    }, {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Me conta o que você quer criar hoje?',
-      timestamp: Date.now(),
-    }]);
-    setBrief({});
-    setInput('');
-    setAttachments([]);
-  };
-
-  const handleSelectConversation = (id: string) => {
-    if (id === activeConvId) return;
-    localStorage.setItem(ACTIVE_KEY, id);
-    setActiveConvId(id);
-    try {
-      const raw = localStorage.getItem(`ello_chat_msgs_${id}`);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setMessages(parsed.messages || []);
-        setBrief(parsed.brief || {});
-      } else {
-        setMessages([]);
-        setBrief({});
-      }
-    } catch {
-      setMessages([]);
-      setBrief({});
-    }
-  };
-
-  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    localStorage.removeItem(`ello_chat_msgs_${id}`);
-    setConversations(prev => {
-      const next = prev.filter(c => c.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-    if (id === activeConvId) handleNewChat();
-  };
 
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

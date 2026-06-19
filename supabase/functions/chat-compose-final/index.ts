@@ -355,7 +355,9 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
 // Different endpoint and provider — survives Gemini upstream outages.
 async function generateWithGptImage2(prompt: string, ratio: string): Promise<string | null> {
   try {
-    const size = ratio === "1:1" ? "1024x1024" : ratio === "9:16" ? "1024x1536" : "1024x1536";
+    // gpt-image-2 supports only 1024x1024, 1024x1536 (2:3), 1536x1024 (3:2).
+    // Map 4:5 -> 1024x1536 as the closest portrait (will need cropping client-side if exact 4:5 required).
+    const size = ratio === "1:1" ? "1024x1024" : ratio === "16:9" || ratio === "3:2" ? "1536x1024" : "1024x1536";
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
       headers: {
@@ -383,6 +385,36 @@ async function generateWithGptImage2(prompt: string, ratio: string): Promise<str
     return null;
   } catch (e) {
     console.error("gpt-image-2 exception:", e);
+    return null;
+  }
+}
+
+// Multimodal generation via Gemini image models (respects attached refs: face, logo, style, cover).
+async function generateWithGemini(
+  model: string,
+  content: Array<Record<string, unknown>>,
+): Promise<string | null> {
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`Gemini ${model} error (${resp.status}):`, errText.slice(0, 300));
+      return null;
+    }
+    return await extractImageUrl(resp);
+  } catch (e) {
+    console.error(`Gemini ${model} exception:`, e);
     return null;
   }
 }
@@ -819,58 +851,25 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
 
       let cardImage: string | null = null;
 
-      // PRIMARY: openai/gpt-image-2 via /v1/images/generations (mais estável)
-      console.log(`chat-compose-final: card ${cardIndex + 1} primary attempt using openai/gpt-image-2`);
-      cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
+      // PRIMARY: Gemini 3 Pro Image (multimodal — respects face/logo/product/style refs and cover anchor).
+      // gpt-image-2 is text-only via /v1/images/generations and silently drops references,
+      // which is why the previous configuration produced flyer-like, off-theme, wrong-ratio cards.
+      const geminiPlans = [
+        { model: "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
+        { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 2000 },
+        { model: "google/gemini-2.5-flash-image", content: cardContent, waitMs: 2000 },
+      ];
+      for (let i = 0; i < geminiPlans.length && !cardImage; i++) {
+        const plan = geminiPlans[i];
+        if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
+        console.log(`chat-compose-final: card ${cardIndex + 1} primary attempt ${i + 1} using ${plan.model} parts=${plan.content.length}`);
+        cardImage = await generateWithGemini(plan.model, plan.content);
+      }
 
-      // FALLBACK: Gemini image models (caso gpt-image-2 falhe)
+      // LAST RESORT: gpt-image-2 (text-only, loses references but stable when Gemini is down).
       if (!cardImage) {
-        console.warn(`Card ${cardIndex + 1}: gpt-image-2 failed, falling back to Gemini chain...`);
-        const attemptPlans = [
-          { model: "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
-          { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 3000 },
-          {
-            model: "google/gemini-2.5-flash-image",
-            content: [{ type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nLAST RESORT: no references. Create a clean premium dark editorial Instagram card that renders all requested text clearly. Full bleed, no white border.` }],
-            waitMs: 3000,
-          },
-        ];
-
-        for (let attempts = 0; attempts < attemptPlans.length && !cardImage; attempts++) {
-          const plan = attemptPlans[attempts];
-          try {
-            if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
-            console.log(`chat-compose-final: card ${cardIndex + 1} Gemini attempt ${attempts + 1} using ${plan.model} parts=${plan.content.length}`);
-            const resp = await fetch(
-              "https://ai.gateway.lovable.dev/v1/chat/completions",
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  model: plan.model,
-                  messages: [{ role: "user", content: plan.content }],
-                  modalities: ["image", "text"],
-                }),
-              },
-            );
-            if (resp.status === 429) {
-              await resp.text();
-              await new Promise((r) => setTimeout(r, 5000 + attempts * 3000));
-              continue;
-            }
-            if (!resp.ok) {
-              const errText = await resp.text();
-              console.error(`AI Gateway error (${resp.status}):`, errText);
-              continue;
-            }
-            cardImage = await extractImageUrl(resp);
-          } catch (e) {
-            console.error(`Card ${cardIndex + 1} Gemini attempt ${attempts + 1} failed:`, e);
-          }
-        }
+        console.warn(`Card ${cardIndex + 1}: all Gemini attempts failed, falling back to gpt-image-2 (text-only, refs dropped).`);
+        cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
       }
 
       const usedEmergencyFallback = !cardImage;
@@ -910,43 +909,19 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
 
     let cardImage: string | null = null;
 
-    // PRIMARY: openai/gpt-image-2
-    console.log("chat-compose-final fallback mode: primary attempt using openai/gpt-image-2");
-    cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
+    // PRIMARY: Gemini image models (multimodal — respect attached refs).
+    const fallbackModels = ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
+    for (const [idx, aiModel] of fallbackModels.entries()) {
+      if (cardImage) break;
+      if (idx > 0) await new Promise((r) => setTimeout(r, 2000));
+      console.log(`chat-compose-final fallback mode: primary attempt ${idx + 1} using ${aiModel}`);
+      cardImage = await generateWithGemini(aiModel, cardContent);
+    }
 
-    // FALLBACK: Gemini image models
+    // LAST RESORT: gpt-image-2 (text-only, drops refs).
     if (!cardImage) {
-      console.warn("Fallback mode: gpt-image-2 failed, trying Gemini chain...");
-      const fallbackModels = ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
-      for (const [idx, aiModel] of fallbackModels.entries()) {
-        try {
-          if (idx > 0) await new Promise((r) => setTimeout(r, 3000));
-          const resp = await fetch(
-            "https://ai.gateway.lovable.dev/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: aiModel,
-                messages: [{ role: "user", content: cardContent }],
-                modalities: ["image", "text"],
-              }),
-            },
-          );
-          if (!resp.ok) {
-            const errText = await resp.text();
-            console.error(`Fallback AI Gateway error (${resp.status}):`, errText);
-          } else {
-            cardImage = await extractImageUrl(resp);
-            if (cardImage) break;
-          }
-        } catch (e) {
-          console.error("Fallback generation error:", e);
-        }
-      }
+      console.warn("Fallback mode: all Gemini attempts failed, falling back to gpt-image-2 (text-only).");
+      cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
     }
     const usedEmergencyFallback = !cardImage;
     if (!cardImage) {

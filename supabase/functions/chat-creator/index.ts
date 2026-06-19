@@ -41,6 +41,7 @@ interface BriefState {
 interface SanitizedBriefState extends BriefState {
   faceProvided?: boolean;
   logoProvided?: boolean;
+  productProvided?: boolean;
 }
 
 interface ApiResponse {
@@ -88,7 +89,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     contentType: brief?.contentType,
     cardCount: typeof brief?.cardCount === 'number' ? brief.cardCount : undefined,
     styleId: brief?.styleId ?? null,
-    styleName: trimText(brief?.styleName, 120),
+    styleName: trimText(brief?.styleName ?? undefined, 120),
     hasFace: !!brief?.hasFace,
     hasLogo: !!brief?.hasLogo,
     hasProduct: !!brief?.hasProduct,

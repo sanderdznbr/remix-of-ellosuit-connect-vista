@@ -670,7 +670,20 @@ The final card must look like a designed template from the selected marketplace 
       ? "Logo is attached. Place subtly in a corner."
       : "";
     const productLine = productData
-      ? "⚠️ PRODUCT/PACKAGING REFERENCE ATTACHED. This is real user content, not style. Show the exact product/package faithfully in the composition with realistic physical scale and proportions. Do not invent a generic product; preserve label, shape, colors, and packaging identity as much as possible."
+      ? `⚠️ PRODUCT/PACKAGING REFERENCE ATTACHED — MANDATORY SCENE COMPOSITION.
+This is REAL user content (the actual product the user sells), not a style reference.
+
+ABSOLUTE RULES:
+1. PRESERVE FIDELITY: Reproduce the EXACT product/package faithfully — same label text, logo, shape, colors, materials, finish, proportions and packaging identity. Do NOT invent a generic product, do NOT redesign the label, do NOT alter brand marks. Treat the attached photo as the ground truth for what the product looks like.
+2. BUILD A SCENE AROUND IT (do NOT ship an isolated catalog/cutout shot): the product MUST be integrated into a believable, lifestyle, contextual composition that fits the post topic. Examples of valid compositions (pick what best fits the topic/audience/style):
+   - A person/model holding, using, applying, pouring or interacting with the product (hands, face partial, lifestyle).
+   - The product placed in a realistic environment (kitchen counter, bathroom shelf, café table, desk, outdoor scene, studio set with props).
+   - The product as the hero of an editorial lifestyle photo with complementary props, fabric, plants, ingredients, accessories.
+   - The product staged with a backdrop, lighting and depth-of-field that matches the chosen visual style.
+3. REALISTIC PHYSICAL SCALE: respect real-world proportions between the product and any hand, face, surface or prop in the scene. A bottle should look like a bottle in someone's hand, not a billboard.
+4. NO FLOATING PRODUCT ON FLAT COLOR unless the chosen style explicitly demands a clean studio look. Default is a contextual, lived-in scene.
+5. The product is the visual anchor — at least 25–60% of the visual weight of the image — and must be perfectly recognizable.
+6. Never replace the attached product with a similar-looking generic one. If something doesn't match the attached photo, it is WRONG.`
       : "";
     const printsLine = additionalPrints.length > 0
       ? "Reference screenshots attached. Use for UI context."

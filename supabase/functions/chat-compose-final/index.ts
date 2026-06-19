@@ -888,55 +888,37 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
 
       let cardImage: string | null = null;
 
-      // PRIMARY: Gemini 3 Pro Image (multimodal — respects face/logo/product/style refs and cover anchor).
-      // gpt-image-2 is text-only via /v1/images/generations and silently drops references,
-      // which is why the previous configuration produced flyer-like, off-theme, wrong-ratio cards.
-      const geminiPlans = [
-        { model: "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
-        { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 2000 },
-        { model: "google/gemini-2.5-flash-image", content: cardContent, waitMs: 2000 },
-      ];
-      for (let i = 0; i < geminiPlans.length && !cardImage; i++) {
-        const plan = geminiPlans[i];
-        if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
-        console.log(`chat-compose-final: card ${cardIndex + 1} primary attempt ${i + 1} using ${plan.model} parts=${plan.content.length}`);
-        cardImage = await generateWithGemini(plan.model, plan.content);
-      }
-
-      // LAST RESORT only when there are no refs/style to preserve.
-      // If refs/style exist, returning a fake success creates the exact bug reported:
-      // attached photo/style/copy ignored and a generic flyer saved as final.
+      // PRIMARY: Gemini 3 Pro Image (multimodal — respeita rosto/logo/produto/estilo/capa).
+      // FALLBACK: Gemini 3.1 Flash Image. Sem mais fallbacks — se ambos falharem, retorna erro.
+      console.log(`chat-compose-final: card ${cardIndex + 1} primary (pro) parts=${cardContent.length}`);
+      cardImage = await generateWithGemini("google/gemini-3-pro-image-preview", cardContent);
       if (!cardImage) {
-        if (referenceCritical) {
-          return aiGenerationFailureResponse(
-            `Não consegui gerar o card ${cardIndex + 1} preservando as referências anexadas. Nenhum fallback text-only foi usado para não ignorar foto/estilo/copy.`,
-            {
-              cardIndex,
-              ratio,
-              styleName: brief.styleName,
-              hasFace: Boolean(faceData),
-              hasLogo: Boolean(logoData),
-              hasProduct: Boolean(productData),
-              styleRefs: styleRefs.length,
-              hasSelectedImage: Boolean(selectedCardRef),
-              hasCoverRef: Boolean(coverRef),
-            },
-          );
-        }
-        console.warn(`Card ${cardIndex + 1}: no critical refs found; using gpt-image-2 text-only fallback.`);
-        cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
+        await new Promise((r) => setTimeout(r, 2000));
+        console.log(`chat-compose-final: card ${cardIndex + 1} fallback (fast) parts=${cardContent.length}`);
+        cardImage = await generateWithGemini("google/gemini-3.1-flash-image-preview", cardContent);
       }
 
-      const usedEmergencyFallback = !cardImage;
       if (!cardImage) {
-        console.error(`Card ${cardIndex + 1}: all AI attempts failed (gpt-image-2 + Gemini); returning emergency fallback.`);
-        cardImage = emergencyCardDataUrl(brief, cardIndex, ratio);
-      } else {
-        const carouselId = "temp-" + Date.now();
-        cardImage = await uploadCard(sb, companyId, carouselId, cardIndex, cardImage) || cardImage;
+        return aiGenerationFailureResponse(
+          `Não foi possível gerar o card ${cardIndex + 1}. Os modelos pro e fast falharam.`,
+          {
+            cardIndex,
+            ratio,
+            styleName: brief.styleName,
+            hasFace: Boolean(faceData),
+            hasLogo: Boolean(logoData),
+            hasProduct: Boolean(productData),
+            styleRefs: styleRefs.length,
+            hasSelectedImage: Boolean(selectedCardRef),
+            hasCoverRef: Boolean(coverRef),
+          },
+        );
       }
 
-      return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
+      const carouselId = "temp-" + Date.now();
+      cardImage = await uploadCard(sb, companyId, carouselId, cardIndex, cardImage) || cardImage;
+
+      return new Response(JSON.stringify({ imageUrl: cardImage, fallback: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

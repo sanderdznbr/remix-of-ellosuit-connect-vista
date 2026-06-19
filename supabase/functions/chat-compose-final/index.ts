@@ -884,7 +884,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         selectedCardRef
           ? { type: "image_url", image_url: { url: selectedCardRef } }
           : null,
-      ].filter(Boolean);
+      ].filter(Boolean) as Array<Record<string, unknown>>;
 
       let cardImage: string | null = null;
 
@@ -960,7 +960,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       selectedCardRef
         ? { type: "image_url", image_url: { url: selectedCardRef } }
         : null,
-    ].filter(Boolean);
+    ].filter(Boolean) as Array<Record<string, unknown>>;
 
     let cardImage: string | null = null;
 

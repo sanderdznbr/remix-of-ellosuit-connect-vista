@@ -480,6 +480,10 @@ const ChatCreator: React.FC = () => {
     
     const totalCards = b.suggested_content?.length || 1;
     const isCarousel = b.contentType === 'carousel';
+      const hasProductReference = hasReferenceValue(b.productUrl) || !!b.hasProduct;
+      const generationBrief = hasProductReference
+        ? { ...b, imageSource: undefined, selectedImages: undefined }
+        : b;
     
     appendAssistantWithWidget(
       isCarousel 
@@ -492,7 +496,7 @@ const ChatCreator: React.FC = () => {
     try {
       // 1. Initialize in DB and get a carouselId
       const { data: initData, error: initErr } = await supabase.functions.invoke('chat-compose-final', {
-        body: { action: 'initialize-background', brief: b }
+        body: { action: 'initialize-background', brief: generationBrief }
       });
 
       if (initErr || !initData?.carouselId) throw new Error(initErr?.message || 'Falha ao iniciar geração');
@@ -520,12 +524,12 @@ const ChatCreator: React.FC = () => {
             const { data, error } = await supabase.functions.invoke('chat-compose-final', {
               body: { 
                 brief: {
-                  ...b,
-                  faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
-                  logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
-                  productUrl: Array.isArray(b.productUrl) ? b.productUrl.slice(0, 1) : b.productUrl,
-                  printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
-                  selectedImages: b.selectedImages,
+                  ...generationBrief,
+                  faceUrl: Array.isArray(generationBrief.faceUrl) ? generationBrief.faceUrl.slice(0, 1) : generationBrief.faceUrl,
+                  logoUrl: Array.isArray(generationBrief.logoUrl) ? generationBrief.logoUrl.slice(0, 1) : generationBrief.logoUrl,
+                  productUrl: Array.isArray(generationBrief.productUrl) ? generationBrief.productUrl.slice(0, 1) : generationBrief.productUrl,
+                  printUrl: Array.isArray(generationBrief.printUrl) ? generationBrief.printUrl.slice(0, 1) : generationBrief.printUrl,
+                  selectedImages: generationBrief.selectedImages,
                 }, 
                 cardIndex: i,
                 carouselId: carouselId, // Associate with the created carousel
@@ -551,7 +555,7 @@ const ChatCreator: React.FC = () => {
 
       // 3. Finalize
       const { data: finalizeData, error: finalizeErr } = await supabase.functions.invoke('chat-compose-final', {
-        body: { brief: b, images: generatedImages, carouselId: carouselId },
+        body: { brief: generationBrief, images: generatedImages, carouselId: carouselId },
       });
 
       if (finalizeErr || !finalizeData) throw new Error(finalizeErr?.message || 'Falha ao finalizar carrossel');

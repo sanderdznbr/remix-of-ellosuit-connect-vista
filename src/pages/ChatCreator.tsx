@@ -98,6 +98,8 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+const hasReferenceValue = (value?: string | string[]) => Array.isArray(value) ? value.filter(Boolean).length > 0 : !!value;
+
 const cloneBrief = (source: BriefState): BriefState => ({
   ...source,
   brandColors: source.brandColors ? [...source.brandColors] : undefined,
@@ -136,9 +138,9 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   imageSource: source.imageSource,
   faceFusionMode: source.faceFusionMode,
   selectedImages: source.selectedImages,
-  faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
-  logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
-  productProvided: Array.isArray(source.productUrl) ? source.productUrl.length > 0 : !!source.productUrl,
+  faceProvided: hasReferenceValue(source.faceUrl),
+  logoProvided: hasReferenceValue(source.logoUrl),
+  productProvided: hasReferenceValue(source.productUrl),
   suggested_content: source.suggested_content,
 });
 

@@ -120,12 +120,12 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 5. DNA VISUAL (visual_type_picker): Marketplace ou Custom.
 6. PERSONALIZAÇÃO (widget "personalization"): ROSTO, LOGO ou CORES.
 7. ETAPA DE TEXTO (CRÍTICA): Sugira o texto de cada slide no campo 'suggested_content' e use SEMPRE o widget "approve_content".
-8. Escolha IMAGENS (image_source_picker) e FINALIZAÇÃO.
+8. Escolha IMAGENS (image_source_picker) e FINALIZAÇÃO — EXCETO quando já houver produto anexado.
 
 ⚠️ REGRAS CRÍTICAS:
 - NUNCA pergunte se o usuário tem rosto/logo/produto/cores quando o estado já indicar faceProvided/logoProvided/productProvided/hasBrandColors=true. Trate como JÁ FORNECIDO e siga adiante sem reabrir o widget de personalização para esse item.
 - Se productProvided=true OU hasProduct=true, NUNCA pergunte "você tem foto do produto?" e NUNCA peça upload de produto de novo. Apenas confirme rápido ("Show, já vi as fotos do produto!") e avance.
-- 🚫 SE productProvided=true OU hasProduct=true: NUNCA mostre o widget "image_source_picker" e NUNCA pergunte se a pessoa quer "ilustrações geradas por IA" ou "fotos reais". Já temos a foto real do produto. Defina automaticamente imageSource='real' no brief_update e siga direto para composição. A IA vai compor uma cena ao redor do produto (alguém segurando, em um ambiente, lifestyle, etc.) usando a foto anexada como referência fiel.
+- 🚫 SE productProvided=true OU hasProduct=true: NUNCA mostre o widget "image_source_picker" e NUNCA pergunte se a pessoa quer "ilustrações geradas por IA" ou "fotos reais". Já temos a foto real do produto. NÃO defina imageSource='real', porque isso dispara busca de foto web no frontend. Siga direto para composição usando a foto anexada como referência fiel do produto/embalagem.
 - NUNCA diga "Olha o que eu preparei" ou "Aqui estão as sugestões" sem preencher o campo 'suggested_content' e usar o widget 'approve_content' na mesma resposta.
 - Se você sugerir textos, o widget "approve_content" é MANDATÓRIO. Sem ele, o usuário não consegue ver nem aprovar o que você criou.
 - O usuário deve ver os textos e clicar em "Aprovar conteúdo" antes de você seguir para a escolha de imagens.
@@ -359,11 +359,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Server-side guard: if product photo is provided, force imageSource='real'
-    // and never let the model show the image_source_picker (we already have the photo).
+    // Server-side guard: if product photo is provided, never let the model show
+    // the image_source_picker and never set imageSource='real' (that means web photo search).
     const productProvided = safeBrief.productProvided || safeBrief.hasProduct;
     if (productProvided) {
-      parsed.brief_update = { ...(parsed.brief_update || {}), imageSource: 'real' };
+      parsed.brief_update = { ...(parsed.brief_update || {}), imageSource: undefined, selectedImages: undefined };
       if (parsed.widget === 'image_source_picker') {
         parsed.widget = 'none';
       }

@@ -971,9 +971,24 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       cardImage = await generateWithGemini(aiModel, cardContent);
     }
 
-    // LAST RESORT: gpt-image-2 (text-only, drops refs).
+    // LAST RESORT only when there are no refs/style to preserve.
     if (!cardImage) {
-      console.warn("Fallback mode: all Gemini attempts failed, falling back to gpt-image-2 (text-only).");
+      if (referenceCritical) {
+        return aiGenerationFailureResponse(
+          "Não consegui gerar o post preservando as referências anexadas. Nenhum fallback text-only foi usado para não ignorar foto/estilo/copy.",
+          {
+            ratio,
+            styleName: brief.styleName,
+            hasFace: Boolean(faceData),
+            hasLogo: Boolean(logoData),
+            hasProduct: Boolean(productData),
+            styleRefs: styleRefs.length,
+            hasSelectedImage: Boolean(selectedCardRef),
+            hasCoverRef: Boolean(coverRef),
+          },
+        );
+      }
+      console.warn("Fallback mode: no critical refs found; using gpt-image-2 text-only fallback.");
       cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
     }
     const usedEmergencyFallback = !cardImage;

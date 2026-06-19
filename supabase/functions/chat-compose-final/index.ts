@@ -851,58 +851,25 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
 
       let cardImage: string | null = null;
 
-      // PRIMARY: openai/gpt-image-2 via /v1/images/generations (mais estável)
-      console.log(`chat-compose-final: card ${cardIndex + 1} primary attempt using openai/gpt-image-2`);
-      cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
+      // PRIMARY: Gemini 3 Pro Image (multimodal — respects face/logo/product/style refs and cover anchor).
+      // gpt-image-2 is text-only via /v1/images/generations and silently drops references,
+      // which is why the previous configuration produced flyer-like, off-theme, wrong-ratio cards.
+      const geminiPlans = [
+        { model: "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
+        { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 2000 },
+        { model: "google/gemini-2.5-flash-image", content: cardContent, waitMs: 2000 },
+      ];
+      for (let i = 0; i < geminiPlans.length && !cardImage; i++) {
+        const plan = geminiPlans[i];
+        if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
+        console.log(`chat-compose-final: card ${cardIndex + 1} primary attempt ${i + 1} using ${plan.model} parts=${plan.content.length}`);
+        cardImage = await generateWithGemini(plan.model, plan.content);
+      }
 
-      // FALLBACK: Gemini image models (caso gpt-image-2 falhe)
+      // LAST RESORT: gpt-image-2 (text-only, loses references but stable when Gemini is down).
       if (!cardImage) {
-        console.warn(`Card ${cardIndex + 1}: gpt-image-2 failed, falling back to Gemini chain...`);
-        const attemptPlans = [
-          { model: "google/gemini-3-pro-image-preview", content: cardContent, waitMs: 0 },
-          { model: "google/gemini-3.1-flash-image-preview", content: cardContent, waitMs: 3000 },
-          {
-            model: "google/gemini-2.5-flash-image",
-            content: [{ type: "text", text: `${unifiedPromptTemplate(cardIndex)}\n\nLAST RESORT: no references. Create a clean premium dark editorial Instagram card that renders all requested text clearly. Full bleed, no white border.` }],
-            waitMs: 3000,
-          },
-        ];
-
-        for (let attempts = 0; attempts < attemptPlans.length && !cardImage; attempts++) {
-          const plan = attemptPlans[attempts];
-          try {
-            if (plan.waitMs) await new Promise((r) => setTimeout(r, plan.waitMs));
-            console.log(`chat-compose-final: card ${cardIndex + 1} Gemini attempt ${attempts + 1} using ${plan.model} parts=${plan.content.length}`);
-            const resp = await fetch(
-              "https://ai.gateway.lovable.dev/v1/chat/completions",
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  model: plan.model,
-                  messages: [{ role: "user", content: plan.content }],
-                  modalities: ["image", "text"],
-                }),
-              },
-            );
-            if (resp.status === 429) {
-              await resp.text();
-              await new Promise((r) => setTimeout(r, 5000 + attempts * 3000));
-              continue;
-            }
-            if (!resp.ok) {
-              const errText = await resp.text();
-              console.error(`AI Gateway error (${resp.status}):`, errText);
-              continue;
-            }
-            cardImage = await extractImageUrl(resp);
-          } catch (e) {
-            console.error(`Card ${cardIndex + 1} Gemini attempt ${attempts + 1} failed:`, e);
-          }
-        }
+        console.warn(`Card ${cardIndex + 1}: all Gemini attempts failed, falling back to gpt-image-2 (text-only, refs dropped).`);
+        cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
       }
 
       const usedEmergencyFallback = !cardImage;

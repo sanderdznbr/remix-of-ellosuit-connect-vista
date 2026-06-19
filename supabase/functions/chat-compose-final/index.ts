@@ -756,14 +756,20 @@ ${selectedCardLine}
 ${styleRules}
 ${coverRefLine}
 
-TEXT TO RENDER ON THIS CARD: ${
+🔒 TEXT RENDERING — STRICT WHITELIST:
+The ONLY text strings allowed to appear visually rendered inside the image are the approved copy strings listed below. Treat every other word in this prompt (including "full bleed", "FULL BLEED", "cover", "card", "editorial", "style", "carousel", "premium", "Instagram", "aspect ratio", "DNA", "${ratio}", brand instructions, etc.) as INVISIBLE INSTRUCTIONS — never render them as visual text, captions, watermarks, labels, stickers, badges, UI chrome, or decorative typography.
+APPROVED COPY TO RENDER (render EXACTLY these strings, nothing else — no extra words, no translations, no paraphrase, no added punctuation, no instructional words):
+${
         cardText
-          ? `${cardText.title ? `Title: "${cardText.title}". ` : ""}${
-            cardText.subtitle ? `Subtitle: "${cardText.subtitle}". ` : ""
-          }${cardText.body ? `Body: "${cardText.body}".` : ""}`
-          : "Powerful hook, max 7 words."
+          ? `${cardText.title ? `• Title: "${cardText.title}"\n` : ""}${
+            cardText.subtitle ? `• Subtitle: "${cardText.subtitle}"\n` : ""
+          }${cardText.body ? `• Body: "${cardText.body}"\n` : ""}`.trim()
+          : "• A single powerful hook (max 7 words) consistent with the topic."
       }
-ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished and on-brand.`;
+If a copy field above is missing, do NOT invent replacement text — leave that area as pure visual design. Any text visible in the final image that is not in the approved list above is a FAILURE.
+
+ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is a layout instruction, NOT text to render). Single polished image, finished and on-brand.`;
+
     };
 
     if (Array.isArray(images) && images.length > 0) {

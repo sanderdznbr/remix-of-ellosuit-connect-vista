@@ -359,6 +359,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Server-side guard: if product photo is provided, force imageSource='real'
+    // and never let the model show the image_source_picker (we already have the photo).
+    const productProvided = safeBrief.productProvided || safeBrief.hasProduct;
+    if (productProvided) {
+      parsed.brief_update = { ...(parsed.brief_update || {}), imageSource: 'real' };
+      if (parsed.widget === 'image_source_picker') {
+        parsed.widget = 'none';
+      }
+    }
+
     return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));
   } catch (e) {
     console.error('chat-creator error:', e);

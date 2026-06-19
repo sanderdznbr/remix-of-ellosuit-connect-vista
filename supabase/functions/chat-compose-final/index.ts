@@ -631,6 +631,15 @@ Deno.serve(async (req) => {
     const logoData = logosResolved?.[0] || null;
     const productData = productsResolved?.[0] || null;
     const additionalPrints = printsResolved.filter(Boolean);
+    const referenceCritical = hasReferenceCriticalContext(brief, {
+      faceData,
+      logoData,
+      productData,
+      additionalPrints,
+      styleRefs,
+      coverRef,
+      selectedCardRef,
+    });
 
     // Dynamic instructions for combining face + web photos
     let faceLine = "";
@@ -892,9 +901,27 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         cardImage = await generateWithGemini(plan.model, plan.content);
       }
 
-      // LAST RESORT: gpt-image-2 (text-only, loses references but stable when Gemini is down).
+      // LAST RESORT only when there are no refs/style to preserve.
+      // If refs/style exist, returning a fake success creates the exact bug reported:
+      // attached photo/style/copy ignored and a generic flyer saved as final.
       if (!cardImage) {
-        console.warn(`Card ${cardIndex + 1}: all Gemini attempts failed, falling back to gpt-image-2 (text-only, refs dropped).`);
+        if (referenceCritical) {
+          return aiGenerationFailureResponse(
+            `Não consegui gerar o card ${cardIndex + 1} preservando as referências anexadas. Nenhum fallback text-only foi usado para não ignorar foto/estilo/copy.`,
+            {
+              cardIndex,
+              ratio,
+              styleName: brief.styleName,
+              hasFace: Boolean(faceData),
+              hasLogo: Boolean(logoData),
+              hasProduct: Boolean(productData),
+              styleRefs: styleRefs.length,
+              hasSelectedImage: Boolean(selectedCardRef),
+              hasCoverRef: Boolean(coverRef),
+            },
+          );
+        }
+        console.warn(`Card ${cardIndex + 1}: no critical refs found; using gpt-image-2 text-only fallback.`);
         cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
       }
 

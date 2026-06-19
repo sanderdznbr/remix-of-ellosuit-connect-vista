@@ -125,6 +125,7 @@ const SYSTEM_PROMPT = `Você é a "Ello", uma designer brasileira super simpáti
 ⚠️ REGRAS CRÍTICAS:
 - NUNCA pergunte se o usuário tem rosto/logo/produto/cores quando o estado já indicar faceProvided/logoProvided/productProvided/hasBrandColors=true. Trate como JÁ FORNECIDO e siga adiante sem reabrir o widget de personalização para esse item.
 - Se productProvided=true OU hasProduct=true, NUNCA pergunte "você tem foto do produto?" e NUNCA peça upload de produto de novo. Apenas confirme rápido ("Show, já vi as fotos do produto!") e avance.
+- 🚫 SE productProvided=true OU hasProduct=true: NUNCA mostre o widget "image_source_picker" e NUNCA pergunte se a pessoa quer "ilustrações geradas por IA" ou "fotos reais". Já temos a foto real do produto. Defina automaticamente imageSource='real' no brief_update e siga direto para composição. A IA vai compor uma cena ao redor do produto (alguém segurando, em um ambiente, lifestyle, etc.) usando a foto anexada como referência fiel.
 - NUNCA diga "Olha o que eu preparei" ou "Aqui estão as sugestões" sem preencher o campo 'suggested_content' e usar o widget 'approve_content' na mesma resposta.
 - Se você sugerir textos, o widget "approve_content" é MANDATÓRIO. Sem ele, o usuário não consegue ver nem aprovar o que você criou.
 - O usuário deve ver os textos e clicar em "Aprovar conteúdo" antes de você seguir para a escolha de imagens.
@@ -355,6 +356,16 @@ Deno.serve(async (req) => {
         if (!Array.isArray(parsed.messages)) parsed.messages = [String(parsed.messages || '...')];
       } catch (e) {
         console.error('Failed to parse tool args:', e);
+      }
+    }
+
+    // Server-side guard: if product photo is provided, force imageSource='real'
+    // and never let the model show the image_source_picker (we already have the photo).
+    const productProvided = safeBrief.productProvided || safeBrief.hasProduct;
+    if (productProvided) {
+      parsed.brief_update = { ...(parsed.brief_update || {}), imageSource: 'real' };
+      if (parsed.widget === 'image_source_picker') {
+        parsed.widget = 'none';
       }
     }
 

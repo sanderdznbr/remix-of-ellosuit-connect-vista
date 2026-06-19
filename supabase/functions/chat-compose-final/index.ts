@@ -17,6 +17,8 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+declare const EdgeRuntime: { waitUntil?: (promise: Promise<unknown>) => void } | undefined;
+
 interface Brief {
   topic?: string;
   format?: "portrait" | "square" | "story";
@@ -351,8 +353,8 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
   return null;
 }
 
-// Last-resort fallback using OpenAI gpt-image-2 via /v1/images/generations.
-// Different endpoint and provider — survives Gemini upstream outages.
+// Text-only fallback using OpenAI gpt-image-2 via /v1/images/generations.
+// IMPORTANT: only safe when there are no visual/style references to preserve.
 async function generateWithGptImage2(prompt: string, ratio: string): Promise<string | null> {
   try {
     // gpt-image-2 supports only 1024x1024, 1024x1536 (2:3), 1536x1024 (3:2).
@@ -395,7 +397,7 @@ async function generateWithGemini(
   content: Array<Record<string, unknown>>,
 ): Promise<string | null> {
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -417,6 +419,32 @@ async function generateWithGemini(
     console.error(`Gemini ${model} exception:`, e);
     return null;
   }
+}
+
+function hasReferenceCriticalContext(
+  brief: Brief,
+  refs: {
+    faceData: string | null;
+    logoData: string | null;
+    productData: string | null;
+    additionalPrints: unknown[];
+    styleRefs: unknown[];
+    coverRef: string | null;
+    selectedCardRef: string | null;
+  },
+): boolean {
+  return Boolean(
+    refs.faceData || refs.logoData || refs.productData || refs.additionalPrints.length ||
+      refs.styleRefs.length || refs.coverRef || refs.selectedCardRef || brief.styleId ||
+      brief.styleName || (brief.customStyleUrls && brief.customStyleUrls.length > 0)
+  );
+}
+
+function aiGenerationFailureResponse(message: string, details: Record<string, unknown>) {
+  console.error(message, details);
+  return new Response(JSON.stringify({ error: message, details, nonRetryable: true }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 function escapeSvgText(value?: string) {
@@ -605,6 +633,15 @@ Deno.serve(async (req) => {
     const logoData = logosResolved?.[0] || null;
     const productData = productsResolved?.[0] || null;
     const additionalPrints = printsResolved.filter(Boolean);
+    const referenceCritical = hasReferenceCriticalContext(brief, {
+      faceData,
+      logoData,
+      productData,
+      additionalPrints,
+      styleRefs,
+      coverRef,
+      selectedCardRef,
+    });
 
     // Dynamic instructions for combining face + web photos
     let faceLine = "";
@@ -847,7 +884,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         selectedCardRef
           ? { type: "image_url", image_url: { url: selectedCardRef } }
           : null,
-      ].filter(Boolean);
+      ].filter(Boolean) as Array<Record<string, unknown>>;
 
       let cardImage: string | null = null;
 
@@ -866,9 +903,27 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
         cardImage = await generateWithGemini(plan.model, plan.content);
       }
 
-      // LAST RESORT: gpt-image-2 (text-only, loses references but stable when Gemini is down).
+      // LAST RESORT only when there are no refs/style to preserve.
+      // If refs/style exist, returning a fake success creates the exact bug reported:
+      // attached photo/style/copy ignored and a generic flyer saved as final.
       if (!cardImage) {
-        console.warn(`Card ${cardIndex + 1}: all Gemini attempts failed, falling back to gpt-image-2 (text-only, refs dropped).`);
+        if (referenceCritical) {
+          return aiGenerationFailureResponse(
+            `Não consegui gerar o card ${cardIndex + 1} preservando as referências anexadas. Nenhum fallback text-only foi usado para não ignorar foto/estilo/copy.`,
+            {
+              cardIndex,
+              ratio,
+              styleName: brief.styleName,
+              hasFace: Boolean(faceData),
+              hasLogo: Boolean(logoData),
+              hasProduct: Boolean(productData),
+              styleRefs: styleRefs.length,
+              hasSelectedImage: Boolean(selectedCardRef),
+              hasCoverRef: Boolean(coverRef),
+            },
+          );
+        }
+        console.warn(`Card ${cardIndex + 1}: no critical refs found; using gpt-image-2 text-only fallback.`);
         cardImage = await generateWithGptImage2(unifiedPromptTemplate(cardIndex), ratio);
       }
 
@@ -905,7 +960,7 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       selectedCardRef
         ? { type: "image_url", image_url: { url: selectedCardRef } }
         : null,
-    ].filter(Boolean);
+    ].filter(Boolean) as Array<Record<string, unknown>>;
 
     let cardImage: string | null = null;
 
@@ -918,9 +973,24 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
       cardImage = await generateWithGemini(aiModel, cardContent);
     }
 
-    // LAST RESORT: gpt-image-2 (text-only, drops refs).
+    // LAST RESORT only when there are no refs/style to preserve.
     if (!cardImage) {
-      console.warn("Fallback mode: all Gemini attempts failed, falling back to gpt-image-2 (text-only).");
+      if (referenceCritical) {
+        return aiGenerationFailureResponse(
+          "Não consegui gerar o post preservando as referências anexadas. Nenhum fallback text-only foi usado para não ignorar foto/estilo/copy.",
+          {
+            ratio,
+            styleName: brief.styleName,
+            hasFace: Boolean(faceData),
+            hasLogo: Boolean(logoData),
+            hasProduct: Boolean(productData),
+            styleRefs: styleRefs.length,
+            hasSelectedImage: Boolean(selectedCardRef),
+            hasCoverRef: Boolean(coverRef),
+          },
+        );
+      }
+      console.warn("Fallback mode: no critical refs found; using gpt-image-2 text-only fallback.");
       cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
     }
     const usedEmergencyFallback = !cardImage;

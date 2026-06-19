@@ -2015,6 +2015,7 @@ const ConfirmWidget: React.FC<{
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
   const lastSearchedContentRef = useRef<string>("");
+  const hasProductReference = hasReferenceValue(brief.productUrl) || !!brief.hasProduct;
 
   useEffect(() => {
     if (brief.suggested_content) {
@@ -2031,14 +2032,14 @@ const ConfirmWidget: React.FC<{
     const contentKey = JSON.stringify(brief.suggested_content || []);
     const alreadySearched = lastSearchedContentRef.current === contentKey;
     
-    if (brief.imageSource === "real" && hasContent && !alreadySearched && !searching) {
+    if (!hasProductReference && brief.imageSource === "real" && hasContent && !alreadySearched && !searching) {
       lastSearchedContentRef.current = contentKey;
       handleSearchImages();
     }
-  }, [brief.imageSource, brief.suggested_content, searching]);
+  }, [hasProductReference, brief.imageSource, brief.suggested_content, searching]);
 
   const handleSearchImages = async (cardIdx?: number) => {
-    if (!brief.suggested_content || searching) return;
+    if (hasProductReference || !brief.suggested_content || searching) return;
     setSearching(true);
     try {
       const cardsToSearch = typeof cardIdx === 'number' 
@@ -2103,7 +2104,7 @@ const ConfirmWidget: React.FC<{
     input.click();
   };
 
-  const isReal = brief.imageSource === 'real';
+  const isReal = !hasProductReference && brief.imageSource === 'real';
 
   return (
     <div className="space-y-4 max-w-md w-full">

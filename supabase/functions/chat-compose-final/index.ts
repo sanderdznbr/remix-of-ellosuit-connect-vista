@@ -633,15 +633,6 @@ Deno.serve(async (req) => {
     const logoData = logosResolved?.[0] || null;
     const productData = productsResolved?.[0] || null;
     const additionalPrints = printsResolved.filter(Boolean);
-    const referenceCritical = hasReferenceCriticalContext(brief, {
-      faceData,
-      logoData,
-      productData,
-      additionalPrints,
-      styleRefs,
-      coverRef,
-      selectedCardRef,
-    });
 
     // Dynamic instructions for combining face + web photos
     let faceLine = "";

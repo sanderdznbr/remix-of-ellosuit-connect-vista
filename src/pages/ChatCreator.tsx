@@ -326,6 +326,10 @@ const ChatCreator: React.FC = () => {
           styleName: currentBrief.styleName ?? briefUpdate.styleName ?? null,
         } : {}),
       };
+      if (hasReferenceValue(newBrief.productUrl) || newBrief.hasProduct) {
+        newBrief.imageSource = undefined;
+        newBrief.selectedImages = undefined;
+      }
       setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
@@ -344,7 +348,9 @@ const ChatCreator: React.FC = () => {
       // so the user always has explicit control over when generation starts.
       const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
-        : (!widget && mentionsTextOptions ? 'approve_content' : widget);
+        : ((hasReferenceValue(newBrief.productUrl) || newBrief.hasProduct) && widget === 'image_source_picker'
+          ? null
+          : (!widget && mentionsTextOptions ? 'approve_content' : widget));
 
       if (finalWidget === 'approve_content' && !hasSuggestedContent) {
         const fallbackContent = makeFallbackSuggestedContent(newBrief);

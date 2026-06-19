@@ -909,43 +909,19 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
 
     let cardImage: string | null = null;
 
-    // PRIMARY: openai/gpt-image-2
-    console.log("chat-compose-final fallback mode: primary attempt using openai/gpt-image-2");
-    cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
+    // PRIMARY: Gemini image models (multimodal — respect attached refs).
+    const fallbackModels = ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
+    for (const [idx, aiModel] of fallbackModels.entries()) {
+      if (cardImage) break;
+      if (idx > 0) await new Promise((r) => setTimeout(r, 2000));
+      console.log(`chat-compose-final fallback mode: primary attempt ${idx + 1} using ${aiModel}`);
+      cardImage = await generateWithGemini(aiModel, cardContent);
+    }
 
-    // FALLBACK: Gemini image models
+    // LAST RESORT: gpt-image-2 (text-only, drops refs).
     if (!cardImage) {
-      console.warn("Fallback mode: gpt-image-2 failed, trying Gemini chain...");
-      const fallbackModels = ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
-      for (const [idx, aiModel] of fallbackModels.entries()) {
-        try {
-          if (idx > 0) await new Promise((r) => setTimeout(r, 3000));
-          const resp = await fetch(
-            "https://ai.gateway.lovable.dev/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: aiModel,
-                messages: [{ role: "user", content: cardContent }],
-                modalities: ["image", "text"],
-              }),
-            },
-          );
-          if (!resp.ok) {
-            const errText = await resp.text();
-            console.error(`Fallback AI Gateway error (${resp.status}):`, errText);
-          } else {
-            cardImage = await extractImageUrl(resp);
-            if (cardImage) break;
-          }
-        } catch (e) {
-          console.error("Fallback generation error:", e);
-        }
-      }
+      console.warn("Fallback mode: all Gemini attempts failed, falling back to gpt-image-2 (text-only).");
+      cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
     }
     const usedEmergencyFallback = !cardImage;
     if (!cardImage) {

@@ -440,8 +440,7 @@ function hasReferenceCriticalContext(
 
 function aiGenerationFailureResponse(message: string, details: Record<string, unknown>) {
   console.error(message, details);
-  return new Response(JSON.stringify({ error: message, details }), {
-    status: 502,
+  return new Response(JSON.stringify({ error: message, details, nonRetryable: true }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

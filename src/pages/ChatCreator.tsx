@@ -98,6 +98,8 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
+const hasReferenceValue = (value?: string | string[]) => Array.isArray(value) ? value.filter(Boolean).length > 0 : !!value;
+
 const cloneBrief = (source: BriefState): BriefState => ({
   ...source,
   brandColors: source.brandColors ? [...source.brandColors] : undefined,
@@ -136,9 +138,9 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   imageSource: source.imageSource,
   faceFusionMode: source.faceFusionMode,
   selectedImages: source.selectedImages,
-  faceProvided: Array.isArray(source.faceUrl) ? source.faceUrl.length > 0 : !!source.faceUrl,
-  logoProvided: Array.isArray(source.logoUrl) ? source.logoUrl.length > 0 : !!source.logoUrl,
-  productProvided: Array.isArray(source.productUrl) ? source.productUrl.length > 0 : !!source.productUrl,
+  faceProvided: hasReferenceValue(source.faceUrl),
+  logoProvided: hasReferenceValue(source.logoUrl),
+  productProvided: hasReferenceValue(source.productUrl),
   suggested_content: source.suggested_content,
 });
 
@@ -324,6 +326,10 @@ const ChatCreator: React.FC = () => {
           styleName: currentBrief.styleName ?? briefUpdate.styleName ?? null,
         } : {}),
       };
+      if (hasReferenceValue(newBrief.productUrl) || newBrief.hasProduct) {
+        newBrief.imageSource = undefined;
+        newBrief.selectedImages = undefined;
+      }
       setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
@@ -342,7 +348,9 @@ const ChatCreator: React.FC = () => {
       // so the user always has explicit control over when generation starts.
       const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
-        : (!widget && mentionsTextOptions ? 'approve_content' : widget);
+        : ((hasReferenceValue(newBrief.productUrl) || newBrief.hasProduct) && widget === 'image_source_picker'
+          ? null
+          : (!widget && mentionsTextOptions ? 'approve_content' : widget));
 
       if (finalWidget === 'approve_content' && !hasSuggestedContent) {
         const fallbackContent = makeFallbackSuggestedContent(newBrief);
@@ -472,6 +480,10 @@ const ChatCreator: React.FC = () => {
     
     const totalCards = b.suggested_content?.length || 1;
     const isCarousel = b.contentType === 'carousel';
+      const hasProductReference = hasReferenceValue(b.productUrl) || !!b.hasProduct;
+      const generationBrief = hasProductReference
+        ? { ...b, imageSource: undefined, selectedImages: undefined }
+        : b;
     
     appendAssistantWithWidget(
       isCarousel 
@@ -484,7 +496,7 @@ const ChatCreator: React.FC = () => {
     try {
       // 1. Initialize in DB and get a carouselId
       const { data: initData, error: initErr } = await supabase.functions.invoke('chat-compose-final', {
-        body: { action: 'initialize-background', brief: b }
+        body: { action: 'initialize-background', brief: generationBrief }
       });
 
       if (initErr || !initData?.carouselId) throw new Error(initErr?.message || 'Falha ao iniciar geração');
@@ -512,12 +524,12 @@ const ChatCreator: React.FC = () => {
             const { data, error } = await supabase.functions.invoke('chat-compose-final', {
               body: { 
                 brief: {
-                  ...b,
-                  faceUrl: Array.isArray(b.faceUrl) ? b.faceUrl.slice(0, 1) : b.faceUrl,
-                  logoUrl: Array.isArray(b.logoUrl) ? b.logoUrl.slice(0, 1) : b.logoUrl,
-                  productUrl: Array.isArray(b.productUrl) ? b.productUrl.slice(0, 1) : b.productUrl,
-                  printUrl: Array.isArray(b.printUrl) ? b.printUrl.slice(0, 1) : b.printUrl,
-                  selectedImages: b.selectedImages,
+                  ...generationBrief,
+                  faceUrl: Array.isArray(generationBrief.faceUrl) ? generationBrief.faceUrl.slice(0, 1) : generationBrief.faceUrl,
+                  logoUrl: Array.isArray(generationBrief.logoUrl) ? generationBrief.logoUrl.slice(0, 1) : generationBrief.logoUrl,
+                  productUrl: Array.isArray(generationBrief.productUrl) ? generationBrief.productUrl.slice(0, 1) : generationBrief.productUrl,
+                  printUrl: Array.isArray(generationBrief.printUrl) ? generationBrief.printUrl.slice(0, 1) : generationBrief.printUrl,
+                  selectedImages: generationBrief.selectedImages,
                 }, 
                 cardIndex: i,
                 carouselId: carouselId, // Associate with the created carousel
@@ -543,7 +555,7 @@ const ChatCreator: React.FC = () => {
 
       // 3. Finalize
       const { data: finalizeData, error: finalizeErr } = await supabase.functions.invoke('chat-compose-final', {
-        body: { brief: b, images: generatedImages, carouselId: carouselId },
+        body: { brief: generationBrief, images: generatedImages, carouselId: carouselId },
       });
 
       if (finalizeErr || !finalizeData) throw new Error(finalizeErr?.message || 'Falha ao finalizar carrossel');
@@ -603,6 +615,7 @@ const ChatCreator: React.FC = () => {
     printUrl?: string | string[];
     brandColors?: string[] 
   }) => {
+    const hasProductReference = data.product && hasReferenceValue(data.productUrl);
     const nextBrief = {
       ...brief,
       hasFace: data.face,
@@ -615,6 +628,8 @@ const ChatCreator: React.FC = () => {
       productUrl: data.productUrl,
       printUrl: data.printUrl,
       brandColors: data.brandColors,
+      imageSource: hasProductReference ? undefined : brief.imageSource,
+      selectedImages: hasProductReference ? undefined : brief.selectedImages,
     };
     setBrief(nextBrief);
     const parts: string[] = [];
@@ -2000,6 +2015,7 @@ const ConfirmWidget: React.FC<{
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [customQueries, setCustomQueries] = useState<Record<number, string>>({});
   const lastSearchedContentRef = useRef<string>("");
+  const hasProductReference = hasReferenceValue(brief.productUrl) || !!brief.hasProduct;
 
   useEffect(() => {
     if (brief.suggested_content) {
@@ -2016,14 +2032,14 @@ const ConfirmWidget: React.FC<{
     const contentKey = JSON.stringify(brief.suggested_content || []);
     const alreadySearched = lastSearchedContentRef.current === contentKey;
     
-    if (brief.imageSource === "real" && hasContent && !alreadySearched && !searching) {
+    if (!hasProductReference && brief.imageSource === "real" && hasContent && !alreadySearched && !searching) {
       lastSearchedContentRef.current = contentKey;
       handleSearchImages();
     }
-  }, [brief.imageSource, brief.suggested_content, searching]);
+  }, [hasProductReference, brief.imageSource, brief.suggested_content, searching]);
 
   const handleSearchImages = async (cardIdx?: number) => {
-    if (!brief.suggested_content || searching) return;
+    if (hasProductReference || !brief.suggested_content || searching) return;
     setSearching(true);
     try {
       const cardsToSearch = typeof cardIdx === 'number' 
@@ -2088,7 +2104,7 @@ const ConfirmWidget: React.FC<{
     input.click();
   };
 
-  const isReal = brief.imageSource === 'real';
+  const isReal = !hasProductReference && brief.imageSource === 'real';
 
   return (
     <div className="space-y-4 max-w-md w-full">

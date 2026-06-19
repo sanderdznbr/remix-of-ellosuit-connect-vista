@@ -605,6 +605,7 @@ const ChatCreator: React.FC = () => {
     printUrl?: string | string[];
     brandColors?: string[] 
   }) => {
+    const hasProductReference = data.product && hasReferenceValue(data.productUrl);
     const nextBrief = {
       ...brief,
       hasFace: data.face,
@@ -617,6 +618,8 @@ const ChatCreator: React.FC = () => {
       productUrl: data.productUrl,
       printUrl: data.printUrl,
       brandColors: data.brandColors,
+      imageSource: hasProductReference ? undefined : brief.imageSource,
+      selectedImages: hasProductReference ? undefined : brief.selectedImages,
     };
     setBrief(nextBrief);
     const parts: string[] = [];

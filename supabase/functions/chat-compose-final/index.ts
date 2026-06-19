@@ -355,7 +355,9 @@ async function extractImageUrl(resp: Response): Promise<string | null> {
 // Different endpoint and provider — survives Gemini upstream outages.
 async function generateWithGptImage2(prompt: string, ratio: string): Promise<string | null> {
   try {
-    const size = ratio === "1:1" ? "1024x1024" : ratio === "9:16" ? "1024x1536" : "1024x1536";
+    // gpt-image-2 supports only 1024x1024, 1024x1536 (2:3), 1536x1024 (3:2).
+    // Map 4:5 -> 1024x1536 as the closest portrait (will need cropping client-side if exact 4:5 required).
+    const size = ratio === "1:1" ? "1024x1024" : ratio === "16:9" || ratio === "3:2" ? "1536x1024" : "1024x1536";
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
       headers: {
@@ -383,6 +385,36 @@ async function generateWithGptImage2(prompt: string, ratio: string): Promise<str
     return null;
   } catch (e) {
     console.error("gpt-image-2 exception:", e);
+    return null;
+  }
+}
+
+// Multimodal generation via Gemini image models (respects attached refs: face, logo, style, cover).
+async function generateWithGemini(
+  model: string,
+  content: Array<Record<string, unknown>>,
+): Promise<string | null> {
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content }],
+        modalities: ["image", "text"],
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`Gemini ${model} error (${resp.status}):`, errText.slice(0, 300));
+      return null;
+    }
+    return await extractImageUrl(resp);
+  } catch (e) {
+    console.error(`Gemini ${model} exception:`, e);
     return null;
   }
 }

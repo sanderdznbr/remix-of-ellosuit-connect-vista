@@ -670,20 +670,14 @@ The final card must look like a designed template from the selected marketplace 
       ? "Logo is attached. Place subtly in a corner."
       : "";
     const productLine = productData
-      ? `⚠️ PRODUCT/PACKAGING REFERENCE ATTACHED — MANDATORY SCENE COMPOSITION.
-This is REAL user content (the actual product the user sells), not a style reference.
+      ? `⚠️ PRODUCT/PACKAGING REFERENCE ATTACHED — USE THIS EXACT PHOTO IN THE COMPOSITION.
+The attached image is the REAL product the user sells. Treat it as ground truth.
 
-ABSOLUTE RULES:
-1. PRESERVE FIDELITY: Reproduce the EXACT product/package faithfully — same label text, logo, shape, colors, materials, finish, proportions and packaging identity. Do NOT invent a generic product, do NOT redesign the label, do NOT alter brand marks. Treat the attached photo as the ground truth for what the product looks like.
-2. BUILD A SCENE AROUND IT (do NOT ship an isolated catalog/cutout shot): the product MUST be integrated into a believable, lifestyle, contextual composition that fits the post topic. Examples of valid compositions (pick what best fits the topic/audience/style):
-   - A person/model holding, using, applying, pouring or interacting with the product (hands, face partial, lifestyle).
-   - The product placed in a realistic environment (kitchen counter, bathroom shelf, café table, desk, outdoor scene, studio set with props).
-   - The product as the hero of an editorial lifestyle photo with complementary props, fabric, plants, ingredients, accessories.
-   - The product staged with a backdrop, lighting and depth-of-field that matches the chosen visual style.
-3. REALISTIC PHYSICAL SCALE: respect real-world proportions between the product and any hand, face, surface or prop in the scene. A bottle should look like a bottle in someone's hand, not a billboard.
-4. NO FLOATING PRODUCT ON FLAT COLOR unless the chosen style explicitly demands a clean studio look. Default is a contextual, lived-in scene.
-5. The product is the visual anchor — at least 25–60% of the visual weight of the image — and must be perfectly recognizable.
-6. Never replace the attached product with a similar-looking generic one. If something doesn't match the attached photo, it is WRONG.`
+RULES:
+1. ABSOLUTE FIDELITY: Do NOT alter, redesign, restyle, repaint, relabel or "improve" the packaging/product in any way. Same label text, same logo, same shape, same colors, same materials, same finish, same proportions. Brand marks, typography on the label and any visible text on the package must be preserved exactly as in the attached photo.
+2. COMPOSE WITH IT: Integrate the product into the post composition in whatever way best fits the topic, style and copy — it can be the hero, part of a scene, held by someone, placed in an environment, on a flat backdrop, etc. Choose the composition that makes the post work; there is no mandatory layout.
+3. REALISTIC PHYSICAL SCALE wherever the product appears (size in relation to hands, surfaces, props, environment).
+4. The product must remain clearly recognizable in the final image — never replace it with a generic look-alike and never distort its identity.`
       : "";
     const printsLine = additionalPrints.length > 0
       ? "Reference screenshots attached. Use for UI context."

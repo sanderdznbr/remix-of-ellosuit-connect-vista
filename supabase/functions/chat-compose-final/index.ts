@@ -946,44 +946,34 @@ ASPECT RATIO: ${ratio} (full bleed, no framing). Single polished image, finished
 
     let cardImage: string | null = null;
 
-    // PRIMARY: Gemini image models (multimodal — respect attached refs).
-    const fallbackModels = ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"];
-    for (const [idx, aiModel] of fallbackModels.entries()) {
-      if (cardImage) break;
-      if (idx > 0) await new Promise((r) => setTimeout(r, 2000));
-      console.log(`chat-compose-final fallback mode: primary attempt ${idx + 1} using ${aiModel}`);
-      cardImage = await generateWithGemini(aiModel, cardContent);
+    // PRIMARY: Gemini 3 Pro Image. FALLBACK: Gemini 3.1 Flash Image. Sem mais fallbacks.
+    console.log("chat-compose-final fallback mode: primary (pro)");
+    cardImage = await generateWithGemini("google/gemini-3-pro-image-preview", cardContent);
+    if (!cardImage) {
+      await new Promise((r) => setTimeout(r, 2000));
+      console.log("chat-compose-final fallback mode: fallback (fast)");
+      cardImage = await generateWithGemini("google/gemini-3.1-flash-image-preview", cardContent);
     }
 
-    // LAST RESORT only when there are no refs/style to preserve.
     if (!cardImage) {
-      if (referenceCritical) {
-        return aiGenerationFailureResponse(
-          "Não consegui gerar o post preservando as referências anexadas. Nenhum fallback text-only foi usado para não ignorar foto/estilo/copy.",
-          {
-            ratio,
-            styleName: brief.styleName,
-            hasFace: Boolean(faceData),
-            hasLogo: Boolean(logoData),
-            hasProduct: Boolean(productData),
-            styleRefs: styleRefs.length,
-            hasSelectedImage: Boolean(selectedCardRef),
-            hasCoverRef: Boolean(coverRef),
-          },
-        );
-      }
-      console.warn("Fallback mode: no critical refs found; using gpt-image-2 text-only fallback.");
-      cardImage = await generateWithGptImage2(unifiedPromptTemplate(0), ratio);
+      return aiGenerationFailureResponse(
+        "Não foi possível gerar o post. Os modelos pro e fast falharam.",
+        {
+          ratio,
+          styleName: brief.styleName,
+          hasFace: Boolean(faceData),
+          hasLogo: Boolean(logoData),
+          hasProduct: Boolean(productData),
+          styleRefs: styleRefs.length,
+          hasSelectedImage: Boolean(selectedCardRef),
+          hasCoverRef: Boolean(coverRef),
+        },
+      );
     }
-    const usedEmergencyFallback = !cardImage;
-    if (!cardImage) {
-      console.error("Fallback mode: all AI attempts failed (incl. gpt-image-2); returning emergency fallback.");
-      cardImage = emergencyCardDataUrl(brief, 0, ratio);
-    } else {
-      const carouselId = "temp-" + Date.now();
-      cardImage = await uploadCard(sb, companyId, carouselId, 0, cardImage) || cardImage;
-    }
-    return new Response(JSON.stringify({ imageUrl: cardImage, fallback: usedEmergencyFallback }), {
+
+    const carouselId = "temp-" + Date.now();
+    cardImage = await uploadCard(sb, companyId, carouselId, 0, cardImage) || cardImage;
+    return new Response(JSON.stringify({ imageUrl: cardImage, fallback: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

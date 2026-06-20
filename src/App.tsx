@@ -109,11 +109,12 @@ const App = () => (
                   <Route path="/precos" element={<Pricing />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
-                  <Route path="/recursos" element={<Recursos />} />
-                  <Route path="/suporte" element={<Suporte />} />
+                  <Route path="/recursos" element={<Navigate to="/ajuda" replace />} />
+                  <Route path="/suporte" element={<Navigate to="/ajuda" replace />} />
                   <Route path="/perfil" element={<Profile />} />
                   <Route path="/perfil/:username" element={<Profile />} />
                   <Route path="/configuracoes" element={<Settings />} />
+
                   <Route path="/post/:postId" element={<PostPublic />} />
                   <Route path="/presentear" element={<Presentear />} />
                   <Route path="/parceiros" element={<Parceiros />} />

@@ -10,6 +10,7 @@ import '@/styles/carousel-loader.css';
 import PromptMentionInput, { PromptMentionRef } from '@/components/Carousel/wizard/PromptMention';
 import OnboardingModal from '@/components/Dashboard/OnboardingModal';
 import QuickTemplates from '@/components/Dashboard/QuickTemplates';
+import LowCreditsBanner from '@/components/Dashboard/LowCreditsBanner';
 
 export type PostFormat = 'portrait' | 'square' | 'story';
 
@@ -305,6 +306,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
       <OnboardingModal />
+      <LowCreditsBanner balance={creditBalance} />
+
 
 
       {/* Background purple glow animation */}

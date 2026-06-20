@@ -154,6 +154,32 @@ const Landing: React.FC = () => {
             Sem precisar cadastrar cartão
           </motion.p>
 
+          {/* Prova social */}
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[12.5px]"
+            style={{ color: INK_DIM }}
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" style={{ color: PURPLE }} />
+              <span><span className="text-white font-semibold">+2.500</span> criadores ativos</span>
+            </div>
+            <div className="w-px h-4" style={{ backgroundColor: HAIRLINE_STRONG }} />
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" style={{ color: PURPLE }} />
+              <span><span className="text-white font-semibold">+180 mil</span> posts gerados</span>
+            </div>
+            <div className="w-px h-4" style={{ backgroundColor: HAIRLINE_STRONG }} />
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Star key={i} className="w-3.5 h-3.5 fill-current" style={{ color: '#FBBF24' }} />
+              ))}
+              <span className="ml-1"><span className="text-white font-semibold">4.9</span>/5 avaliação</span>
+            </div>
+          </motion.div>
+
+
           {/* Hero visual — ellocontent purple orb (signature) */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}

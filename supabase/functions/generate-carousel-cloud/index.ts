@@ -608,8 +608,15 @@ QUALIDADE ANTI-IA OBRIGATÓRIA: Cores COESAS sem saturação exagerada. Tipograf
 REGRAS: ZERO smartphones, ZERO iPhones, ZERO frames de aparelho, ZERO laptops. NÃO renderize nenhuma logo ou marca. O carrossel inteiro deve parecer um editorial premium com VARIEDADE visual entre slides — nunca repetição de mockups.`);
         }
       } else if (hasProductImages) {
-        parts.push('OBRIGATÓRIO: Use as imagens de PRODUTO/SCREENSHOT fornecidas como referência visual. Coloque o screenshot/app dentro de um mockup de dispositivo realista. O screenshot DEVE aparecer na tela do dispositivo de forma realista e integrada à composição.');
+        parts.push(`OBRIGATÓRIO — RE-RENDERIZAÇÃO FOTORREALISTA DO PRODUTO FÍSICO: A imagem de referência é o PRODUTO REAL do cliente (embalagem, frasco, garrafa, caixa, rótulo). Você DEVE:
+1. RE-RENDERIZAR o produto inteiro do zero como uma fotografia de estúdio profissional — NÃO recorte, NÃO cole, NÃO faça colagem da foto original.
+2. Tenha CONTROLE TOTAL sobre: iluminação cinematográfica (key/fill/rim light), reflexos na superfície, refração e transparência do vidro/líquido, sombras realistas no chão, profundidade de campo, materiais (vidro, plástico, metal, papel, tinta).
+3. Reposicione o produto em ângulo editorial coerente com a composição (3/4, frontal, isométrico, contra-plongée — escolha o melhor para o card).
+4. 🚫 PRESERVAÇÃO ABSOLUTA DE INFORMAÇÕES — INVIOLÁVEL: TODOS os textos, logos, marca, nome do produto, ingredientes, volume/peso, selos, códigos, percentuais e qualquer informação impressa no rótulo/embalagem devem permanecer LEGÍVEIS, NÍTIDOS, com a MESMA tipografia, MESMAS cores e MESMA disposição da imagem de referência. NÃO invente texto novo, NÃO traduza, NÃO altere posição de elementos do rótulo, NÃO mude cores da marca.
+5. Mantenha 100% fiel: formato da embalagem, cor do líquido/conteúdo, proporções, tampa, válvula, rótulo. A única coisa que muda é a CENA ao redor (luz, fundo, ângulo, ambientação) — o produto em si é o mesmo.
+6. Resultado: o cliente deve reconhecer o produto dele instantaneamente, mas numa fotografia visivelmente superior à original.`);
       }
+
       imgPrompt = parts.join(' ');
     } else {
       imgPrompt = `${cleanTopic}: ${card.imagePrompt || card.title || card.bodyTop || ''}`;

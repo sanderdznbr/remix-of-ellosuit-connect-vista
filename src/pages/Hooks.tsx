@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Copy, Check, Search, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import { routeFromTab } from '@/utils/dashboard-routes';
 
 interface Hook {
   text: string;

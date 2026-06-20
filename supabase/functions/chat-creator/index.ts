@@ -84,6 +84,7 @@ function sanitizeMessages(messages: InMessage[] = []) {
 }
 
 function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
+  const rawBrief = brief as Record<string, unknown> | undefined;
   return {
     topic: trimText(brief?.topic, 320),
     format: brief?.format,
@@ -101,9 +102,9 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     audience: trimText(brief?.audience, 160),
     tone: trimText(brief?.tone, 120),
     imageModel: brief?.imageModel,
-    faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
-    logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
-    productProvided: !!(brief as Record<string, unknown> | undefined)?.productUrl,
+    faceProvided: !!(rawBrief?.faceProvided || rawBrief?.faceUrl),
+    logoProvided: !!(rawBrief?.logoProvided || rawBrief?.logoUrl),
+    productProvided: !!(rawBrief?.productProvided || rawBrief?.productUrl),
     suggested_content: brief?.suggested_content,
     userIdea: trimText(brief?.userIdea, 500),
     imageSource: brief?.imageSource,

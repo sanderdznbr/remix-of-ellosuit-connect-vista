@@ -36,6 +36,7 @@ interface BriefState {
   userIdea?: string;
   imageSource?: 'ai' | 'real';
   faceFusionMode?: 'merge' | 'side_by_side';
+  personalizationDone?: boolean;
 }
 
 interface SanitizedBriefState extends BriefState {
@@ -88,6 +89,8 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     format: brief?.format,
     contentType: brief?.contentType,
     cardCount: typeof brief?.cardCount === 'number' ? brief.cardCount : undefined,
+    visualType: brief?.visualType,
+    customStyleUrls: brief?.customStyleUrls?.slice(0, 4),
     styleId: brief?.styleId ?? null,
     styleName: trimText(brief?.styleName ?? undefined, 120),
     hasFace: !!brief?.hasFace,
@@ -104,6 +107,7 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     suggested_content: brief?.suggested_content,
     userIdea: trimText(brief?.userIdea, 500),
     imageSource: brief?.imageSource,
+    personalizationDone: !!brief?.personalizationDone,
   };
 }
 
@@ -283,6 +287,31 @@ function nicheClarificationResponse(userMessage: string): ApiResponse {
     brief_update: { userIdea: trimText(userMessage, 500) },
     suggestions: ['Moda e beleza', 'Saúde e bem-estar', 'Imobiliário', 'Infoprodutos'],
   };
+}
+
+function hasPersonalizationAnswer(brief: SanitizedBriefState) {
+  return !!brief.personalizationDone || !!brief.hasFace || !!brief.hasLogo || !!brief.hasProduct || !!brief.hasBrandColors || !!brief.faceProvided || !!brief.logoProvided || !!brief.productProvided;
+}
+
+function getNextRequiredFlowWidget(brief: SanitizedBriefState): ApiResponse['widget'] {
+  if (!brief.contentType) return 'content_type_picker';
+  if (brief.contentType === 'carousel' && !brief.cardCount) return 'content_type_picker';
+  if (!brief.format) return 'format_picker';
+  if (!brief.visualType) return 'visual_type_picker';
+  if (brief.visualType === 'marketplace' && !brief.styleId) return 'style_picker';
+  if (brief.visualType === 'custom' && (!brief.customStyleUrls || brief.customStyleUrls.length === 0)) return 'style_uploader';
+  if (!hasPersonalizationAnswer(brief)) return 'personalization';
+  return 'none';
+}
+
+function getFlowGuardMessage(widget: ApiResponse['widget']) {
+  if (widget === 'content_type_picker') return 'Entendi a ideia. Antes de criar o texto, escolha se vai ser post único ou carrossel.';
+  if (widget === 'format_picker') return 'Perfeito. Agora escolha o formato do post antes de eu escrever o conteúdo.';
+  if (widget === 'visual_type_picker') return 'Show. Agora defina o DNA visual antes da etapa de texto.';
+  if (widget === 'style_picker') return 'Beleza. Escolha um estilo da galeria antes de eu montar o texto final.';
+  if (widget === 'style_uploader') return 'Beleza. Envie suas referências visuais antes de eu montar o texto final.';
+  if (widget === 'personalization') return 'Quase lá. Antes do texto final, me diga se vamos usar rosto, logo, produto ou cores da marca.';
+  return 'Vamos seguir o fluxo certinho antes de criar o conteúdo final.';
 }
 
 function withGuaranteedSuggestions(payload: ApiResponse): ApiResponse {

@@ -370,7 +370,6 @@ const ChatCreator: React.FC = () => {
         newBrief.imageSource = undefined;
         newBrief.selectedImages = undefined;
       }
-      setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
       const widget: WidgetType = getValidWidget(data.widget);
@@ -378,7 +377,13 @@ const ChatCreator: React.FC = () => {
       const lastText = texts[texts.length - 1]?.toLowerCase() || '';
       const isSlideCountQuestion = /quantos? slides|número de slides|qtd/.test(lastText);
       const mentionsTextOptions = !isSlideCountQuestion && /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastText);
+      const nextRequiredWidget = getNextRequiredFlowWidget(newBrief);
+      const attemptedEarlyContent = widget === 'approve_content' || Array.isArray(newBrief.suggested_content);
+      if (nextRequiredWidget && attemptedEarlyContent) {
+        delete newBrief.suggested_content;
+      }
       const hasSuggestedContent = Array.isArray(newBrief.suggested_content) && newBrief.suggested_content.length > 0;
+      setBrief(newBrief);
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 
       // or looking idle while the assistant is still "typing" its messages.
@@ -386,7 +391,9 @@ const ChatCreator: React.FC = () => {
 
       // If model says ready but didn't show the confirm widget, force-show it
       // so the user always has explicit control over when generation starts.
-      const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
+      const finalWidget: WidgetType = nextRequiredWidget && (attemptedEarlyContent || widget === 'approve_content')
+        ? nextRequiredWidget
+        : data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
         : ((hasReferenceValue(newBrief.productUrl) || newBrief.hasProduct) && widget === 'image_source_picker'
           ? null
@@ -398,7 +405,11 @@ const ChatCreator: React.FC = () => {
         setBrief({ ...newBrief });
       }
 
-      await appendAIMessages(texts, finalWidget, finalWidget ? undefined : suggestions);
+      const finalTexts = nextRequiredWidget && attemptedEarlyContent
+        ? [getFlowGuardMessage(nextRequiredWidget)]
+        : texts;
+
+      await appendAIMessages(finalTexts, finalWidget, finalWidget ? undefined : suggestions);
       setLoading(false);
     } catch (err: any) {
       console.error('chat-creator error:', err);

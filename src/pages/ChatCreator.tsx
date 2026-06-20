@@ -675,6 +675,7 @@ const ChatCreator: React.FC = () => {
       hasProduct: data.product,
       hasPrints: data.prints,
       hasBrandColors: data.colors,
+      personalizationDone: true,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
       productUrl: data.productUrl,

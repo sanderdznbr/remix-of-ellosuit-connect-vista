@@ -54,7 +54,8 @@ const Analytics: React.FC = () => {
 
         const styleCounts: Record<string, number> = {};
         rows.forEach((r: any) => {
-          if (r.style_name) styleCounts[r.style_name] = (styleCounts[r.style_name] || 0) + 1;
+          const name = r?.style_config?.name || r?.style_config?.style_name;
+          if (name) styleCounts[name] = (styleCounts[name] || 0) + 1;
         });
         const topStyle = Object.entries(styleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 

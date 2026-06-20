@@ -685,6 +685,11 @@ function LoggedInPricing() {
                 </div>
               </div>
 
+              {/* Trial banner — only for users without active subscription */}
+              {!isActive && companyId && (
+                <TrialBanner hasActiveSubscription={!!isActive} companyId={companyId} />
+              )}
+
               {/* Billing toggle */}
               <BillingToggle isAnnual={isAnnual} onChange={setIsAnnual} />
 

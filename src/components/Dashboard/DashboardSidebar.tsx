@@ -231,6 +231,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           </div>
         ) : (
           <>
+            <div className="pt-2 pb-1"><TrialStatusBadge /></div>
             {(() => {
               const balance = displayBalance ?? 0;
               const planNameLower = planName.toLowerCase();

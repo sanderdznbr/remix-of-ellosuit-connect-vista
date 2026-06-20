@@ -516,7 +516,18 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           </div>
         </motion.div>
 
+        {/* Templates rápidos (só quando input vazio) */}
+        {!isUserTyping && mentionedPrompts.length === 0 && (
+          <QuickTemplates
+            onSelect={(prompt) => {
+              setInputValue(prompt);
+              setTimeout(() => navigate(`/criar?prompt=${encodeURIComponent(prompt)}`), 150);
+            }}
+          />
+        )}
+
       </motion.div>
+
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
       <AnimatePresence>

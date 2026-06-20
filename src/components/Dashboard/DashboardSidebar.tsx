@@ -4,7 +4,7 @@ import {
   Home, Star, Settings, LogOut, ChevronDown, User, CreditCard,
   LayoutGrid, Sparkles, PenTool, Palette, Users, Handshake, Shield,
   HelpCircle, PanelLeftClose, PanelLeftOpen, TrendingUp, MessageCircle,
-  Wrench,
+  Wrench, Calendar, Zap, BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';

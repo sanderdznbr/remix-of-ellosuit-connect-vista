@@ -391,7 +391,7 @@ const ChatCreator: React.FC = () => {
 
       // If model says ready but didn't show the confirm widget, force-show it
       // so the user always has explicit control over when generation starts.
-      const finalWidget: WidgetType = nextRequiredWidget && (attemptedEarlyContent || widget === 'approve_content')
+      const finalWidget: WidgetType = nextRequiredWidget && attemptedEarlyContent
         ? nextRequiredWidget
         : data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'

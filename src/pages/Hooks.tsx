@@ -146,6 +146,7 @@ const Hooks: React.FC = () => {
           {filtered.length === 0 && <p className="col-span-full text-center text-sm text-white/40 py-12">Nenhum hook encontrado.</p>}
         </div>
       </main>
+      </div>
     </div>
   );
 };

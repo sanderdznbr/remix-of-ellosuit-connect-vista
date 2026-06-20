@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
+import TrialStatusBadge from './TrialStatusBadge';
 
 interface DashboardSidebarProps {
   activeTab: string;

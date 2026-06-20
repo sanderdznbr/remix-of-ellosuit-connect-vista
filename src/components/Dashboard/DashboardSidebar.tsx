@@ -153,6 +153,14 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <NavItem active={activeTab === 'prompts'} onClick={() => onTabChange('prompts')} icon={PenTool} label="Meus prompts" />
         </div>
 
+        {/* PLANEJAR */}
+        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+          <SectionLabel>Planejar</SectionLabel>
+          <NavItem active={location.pathname === '/calendario'} onClick={() => navigate('/calendario')} icon={Calendar} label="Calendário" />
+          <NavItem active={location.pathname === '/hooks'} onClick={() => navigate('/hooks')} icon={Zap} label="Hooks" />
+          <NavItem active={location.pathname === '/insights'} onClick={() => navigate('/insights')} icon={BarChart3} label="Insights" />
+        </div>
+
         {/* DESCOBRIR */}
         <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
           <SectionLabel>Descobrir</SectionLabel>

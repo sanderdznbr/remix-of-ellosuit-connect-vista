@@ -96,7 +96,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         className="flex-1 min-w-0 min-h-0 overflow-y-auto"
         style={{
           backgroundColor: '#0a0a0f',
-          ...(isMobile ? { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' } : {}),
+          ...(isMobile ? { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' } : {}),
         }}
       >
         {children}
@@ -148,7 +148,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             WebkitOverflowScrolling: 'touch' as any,
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
-            ...(isMobile && !isHome ? { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' } : {}),
+            ...(isMobile ? { paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))', ...(isHome ? {} : { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }) } : {}),
           }}
         >
           {content}

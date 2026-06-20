@@ -31,6 +31,8 @@ interface BriefState {
   format?: 'portrait' | 'square' | 'story';
   contentType?: 'single' | 'carousel';
   cardCount?: number;
+  visualType?: 'marketplace' | 'custom';
+  customStyleUrls?: string[];
   styleId?: string | null;
   styleName?: string | null;
   hasFace?: boolean;
@@ -51,6 +53,7 @@ interface BriefState {
   selectedImages?: string[];
   faceFusionMode?: 'merge' | 'side_by_side';
   suggested_content?: Array<{ title?: string; subtitle?: string; body?: string; searchTerm?: string }>;
+  personalizationDone?: boolean;
 }
 
 interface ChatGenerationPrefill {
@@ -123,6 +126,8 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   format: source.format,
   contentType: source.contentType,
   cardCount: typeof source.cardCount === 'number' ? source.cardCount : undefined,
+  visualType: source.visualType,
+  customStyleUrls: source.customStyleUrls?.slice(0, 4),
   styleId: isUuid(source.styleId) ? source.styleId : null,
   styleName: sanitizeTextForAI(source.styleName, 120),
   hasFace: !!source.hasFace,
@@ -142,6 +147,7 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   logoProvided: hasReferenceValue(source.logoUrl),
   productProvided: hasReferenceValue(source.productUrl),
   suggested_content: source.suggested_content,
+  personalizationDone: !!source.personalizationDone,
 });
 
 const normalizeQuickReplies = (suggestions?: string[]) => {
@@ -192,6 +198,40 @@ const makeFallbackSuggestedContent = (source: BriefState) => {
   return Array.from({ length: total }, (_, index) => index === 0
     ? { title: `Transforme ${topic}`, subtitle: 'Uma ideia clara para chamar atenção', body: 'Mostre o valor principal com uma mensagem simples, visual e direta.' }
     : { title: `Ponto ${index + 1}`, subtitle: `Benefício ${index}`, body: `Explique um motivo forte para escolher ${topic}.` });
+};
+
+const hasPersonalizationAnswer = (source: BriefState) => (
+  !!source.personalizationDone ||
+  !!source.hasFace ||
+  !!source.hasLogo ||
+  !!source.hasProduct ||
+  !!source.hasPrints ||
+  !!source.hasBrandColors ||
+  hasReferenceValue(source.faceUrl) ||
+  hasReferenceValue(source.logoUrl) ||
+  hasReferenceValue(source.productUrl) ||
+  hasReferenceValue(source.printUrl)
+);
+
+const getNextRequiredFlowWidget = (source: BriefState): WidgetType => {
+  if (!source.contentType) return 'content_type_picker';
+  if (source.contentType === 'carousel' && !source.cardCount) return 'content_type_picker';
+  if (!source.format) return 'format_picker';
+  if (!source.visualType) return 'visual_type_picker';
+  if (source.visualType === 'marketplace' && !source.styleId) return 'style_picker';
+  if (source.visualType === 'custom' && (!source.customStyleUrls || source.customStyleUrls.length === 0)) return 'style_uploader';
+  if (!hasPersonalizationAnswer(source)) return 'personalization';
+  return null;
+};
+
+const getFlowGuardMessage = (widget: WidgetType) => {
+  if (widget === 'content_type_picker') return 'Entendi a ideia. Antes de criar o texto, escolha se vai ser post único ou carrossel.';
+  if (widget === 'format_picker') return 'Perfeito. Agora escolha o formato do post antes de eu escrever o conteúdo.';
+  if (widget === 'visual_type_picker') return 'Show. Agora defina o DNA visual antes da etapa de texto.';
+  if (widget === 'style_picker') return 'Beleza. Escolha um estilo da galeria antes de eu montar o texto final.';
+  if (widget === 'style_uploader') return 'Beleza. Envie suas referências visuais antes de eu montar o texto final.';
+  if (widget === 'personalization') return 'Quase lá. Antes do texto final, me diga se vamos usar rosto, logo, produto ou cores da marca.';
+  return 'Vamos seguir o fluxo certinho antes de criar o conteúdo final.';
 };
 
 const ChatCreator: React.FC = () => {
@@ -330,7 +370,6 @@ const ChatCreator: React.FC = () => {
         newBrief.imageSource = undefined;
         newBrief.selectedImages = undefined;
       }
-      setBrief(newBrief);
 
       const texts: string[] = Array.isArray(data.messages) ? data.messages.filter(Boolean) : [data.message || '...'];
       const widget: WidgetType = getValidWidget(data.widget);
@@ -338,7 +377,14 @@ const ChatCreator: React.FC = () => {
       const lastText = texts[texts.length - 1]?.toLowerCase() || '';
       const isSlideCountQuestion = /quantos? slides|número de slides|qtd/.test(lastText);
       const mentionsTextOptions = !isSlideCountQuestion && /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastText);
+      const nextRequiredWidget = getNextRequiredFlowWidget(newBrief);
+      const attemptedEarlyContent = widget === 'approve_content' || Array.isArray(newBrief.suggested_content);
+      const blockedEarlyText = !!nextRequiredWidget && (attemptedEarlyContent || mentionsTextOptions || !!data.ready);
+      if (nextRequiredWidget && attemptedEarlyContent) {
+        delete newBrief.suggested_content;
+      }
       const hasSuggestedContent = Array.isArray(newBrief.suggested_content) && newBrief.suggested_content.length > 0;
+      setBrief(newBrief);
 
       // We keep loading=true until all messages are appended to avoid the UI "flickering" 
       // or looking idle while the assistant is still "typing" its messages.
@@ -346,7 +392,9 @@ const ChatCreator: React.FC = () => {
 
       // If model says ready but didn't show the confirm widget, force-show it
       // so the user always has explicit control over when generation starts.
-      const finalWidget: WidgetType = data.ready && widget !== 'confirm_generate'
+      const finalWidget: WidgetType = blockedEarlyText
+        ? nextRequiredWidget
+        : data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
         : ((hasReferenceValue(newBrief.productUrl) || newBrief.hasProduct) && widget === 'image_source_picker'
           ? null
@@ -358,7 +406,11 @@ const ChatCreator: React.FC = () => {
         setBrief({ ...newBrief });
       }
 
-      await appendAIMessages(texts, finalWidget, finalWidget ? undefined : suggestions);
+      const finalTexts = blockedEarlyText
+        ? [getFlowGuardMessage(nextRequiredWidget)]
+        : texts;
+
+      await appendAIMessages(finalTexts, finalWidget, finalWidget ? undefined : suggestions);
       setLoading(false);
     } catch (err: any) {
       console.error('chat-creator error:', err);
@@ -623,6 +675,7 @@ const ChatCreator: React.FC = () => {
       hasProduct: data.product,
       hasPrints: data.prints,
       hasBrandColors: data.colors,
+      personalizationDone: true,
       faceUrl: data.faceUrl,
       logoUrl: data.logoUrl,
       productUrl: data.productUrl,

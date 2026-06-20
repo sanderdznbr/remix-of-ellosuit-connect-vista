@@ -36,6 +36,7 @@ interface BriefState {
   userIdea?: string;
   imageSource?: 'ai' | 'real';
   faceFusionMode?: 'merge' | 'side_by_side';
+  personalizationDone?: boolean;
 }
 
 interface SanitizedBriefState extends BriefState {
@@ -83,11 +84,14 @@ function sanitizeMessages(messages: InMessage[] = []) {
 }
 
 function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
+  const rawBrief = brief as Record<string, unknown> | undefined;
   return {
     topic: trimText(brief?.topic, 320),
     format: brief?.format,
     contentType: brief?.contentType,
     cardCount: typeof brief?.cardCount === 'number' ? brief.cardCount : undefined,
+    visualType: brief?.visualType,
+    customStyleUrls: brief?.customStyleUrls?.slice(0, 4),
     styleId: brief?.styleId ?? null,
     styleName: trimText(brief?.styleName ?? undefined, 120),
     hasFace: !!brief?.hasFace,
@@ -98,12 +102,13 @@ function sanitizeBrief(brief?: BriefState): SanitizedBriefState {
     audience: trimText(brief?.audience, 160),
     tone: trimText(brief?.tone, 120),
     imageModel: brief?.imageModel,
-    faceProvided: !!(brief as Record<string, unknown> | undefined)?.faceUrl,
-    logoProvided: !!(brief as Record<string, unknown> | undefined)?.logoUrl,
-    productProvided: !!(brief as Record<string, unknown> | undefined)?.productUrl,
+    faceProvided: !!(rawBrief?.faceProvided || rawBrief?.faceUrl),
+    logoProvided: !!(rawBrief?.logoProvided || rawBrief?.logoUrl),
+    productProvided: !!(rawBrief?.productProvided || rawBrief?.productUrl),
     suggested_content: brief?.suggested_content,
     userIdea: trimText(brief?.userIdea, 500),
     imageSource: brief?.imageSource,
+    personalizationDone: !!brief?.personalizationDone,
   };
 }
 
@@ -285,6 +290,31 @@ function nicheClarificationResponse(userMessage: string): ApiResponse {
   };
 }
 
+function hasPersonalizationAnswer(brief: SanitizedBriefState) {
+  return !!brief.personalizationDone || !!brief.hasFace || !!brief.hasLogo || !!brief.hasProduct || !!brief.hasBrandColors || !!brief.faceProvided || !!brief.logoProvided || !!brief.productProvided;
+}
+
+function getNextRequiredFlowWidget(brief: SanitizedBriefState): ApiResponse['widget'] {
+  if (!brief.contentType) return 'content_type_picker';
+  if (brief.contentType === 'carousel' && !brief.cardCount) return 'content_type_picker';
+  if (!brief.format) return 'format_picker';
+  if (!brief.visualType) return 'visual_type_picker';
+  if (brief.visualType === 'marketplace' && !brief.styleId) return 'style_picker';
+  if (brief.visualType === 'custom' && (!brief.customStyleUrls || brief.customStyleUrls.length === 0)) return 'style_uploader';
+  if (!hasPersonalizationAnswer(brief)) return 'personalization';
+  return 'none';
+}
+
+function getFlowGuardMessage(widget: ApiResponse['widget']) {
+  if (widget === 'content_type_picker') return 'Entendi a ideia. Antes de criar o texto, escolha se vai ser post único ou carrossel.';
+  if (widget === 'format_picker') return 'Perfeito. Agora escolha o formato do post antes de eu escrever o conteúdo.';
+  if (widget === 'visual_type_picker') return 'Show. Agora defina o DNA visual antes da etapa de texto.';
+  if (widget === 'style_picker') return 'Beleza. Escolha um estilo da galeria antes de eu montar o texto final.';
+  if (widget === 'style_uploader') return 'Beleza. Envie suas referências visuais antes de eu montar o texto final.';
+  if (widget === 'personalization') return 'Quase lá. Antes do texto final, me diga se vamos usar rosto, logo, produto ou cores da marca.';
+  return 'Vamos seguir o fluxo certinho antes de criar o conteúdo final.';
+}
+
 function withGuaranteedSuggestions(payload: ApiResponse): ApiResponse {
   const allowedWidgets = new Set(['content_type_picker', 'format_picker', 'visual_type_picker', 'style_uploader', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'face_fusion_picker']);
   const widget = payload.widget && payload.widget !== 'none' && allowedWidgets.has(payload.widget) ? payload.widget : 'none';
@@ -416,6 +446,20 @@ Deno.serve(async (req) => {
       if (parsed.widget === 'image_source_picker') {
         parsed.widget = 'none';
       }
+    }
+
+    const mergedBrief = sanitizeBrief({ ...safeBrief, ...(parsed.brief_update || {}) });
+    const nextRequiredWidget = getNextRequiredFlowWidget(mergedBrief);
+    const parsedMessages = Array.isArray(parsed.messages) ? parsed.messages : [];
+    const lastParsedMessage = String(parsedMessages[parsedMessages.length - 1] || '').toLowerCase();
+    const mentionsTextOptions = /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastParsedMessage);
+    const attemptedEarlyContent = parsed.widget === 'approve_content' || Array.isArray(parsed.brief_update?.suggested_content) || !!parsed.ready || mentionsTextOptions;
+    if (nextRequiredWidget !== 'none' && attemptedEarlyContent) {
+      parsed.messages = [getFlowGuardMessage(nextRequiredWidget)];
+      parsed.widget = nextRequiredWidget;
+      parsed.ready = false;
+      parsed.brief_update = { ...(parsed.brief_update || {}) };
+      delete parsed.brief_update.suggested_content;
     }
 
     return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));

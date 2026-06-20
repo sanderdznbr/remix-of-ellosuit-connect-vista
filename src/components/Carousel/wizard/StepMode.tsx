@@ -35,7 +35,7 @@ const modes = [
   {
     key: 'extreme' as const,
     icon: Sparkles,
-    label: 'Extreme',
+    label: 'Editorial',
     steps: 'IA criativa · Design único',
     desc: 'Descreva o que imagina e a IA cria um design exclusivo pra você',
     badge: 'NOVO',

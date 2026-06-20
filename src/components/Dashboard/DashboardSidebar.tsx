@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, Star, Settings, LogOut, ChevronDown, ChevronRight, ChevronLeft, User, CreditCard, X, Camera, Brush, Shield, Users, Handshake, Clock, FileText, Eraser, Globe, Instagram, Wrench, HelpCircle, BookOpen, MessageCircle, PanelLeftClose, PanelLeftOpen, TrendingUp, LayoutGrid, Sparkles, PenTool, Palette, CircleHelp } from 'lucide-react';
+import {
+  Home, Star, Settings, LogOut, ChevronDown, User, CreditCard,
+  LayoutGrid, Sparkles, PenTool, Palette, Users, Handshake, Shield,
+  HelpCircle, PanelLeftClose, PanelLeftOpen, TrendingUp, MessageCircle,
+  Wrench,
+} from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
@@ -15,41 +19,29 @@ interface DashboardSidebarProps {
   onToggleCollapse?: () => void;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, onSearch, onLoadCarousel, collapsed = false, onToggleCollapse }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, collapsed = false, onToggleCollapse }) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [displayBalance, setDisplayBalance] = useState<number | null>(null);
   const [monthlyCredits, setMonthlyCredits] = useState<number>(0);
   const [planName, setPlanName] = useState<string>('free');
-  const [ferramentasOpen, setFerramentasOpen] = useState(false);
-  const [comunidadeOpen, setComunidadeOpen] = useState(false);
-  const [parceirosOpen, setParceirosOpen] = useState(false);
-  const [ajudaOpen, setAjudaOpen] = useState(false);
   const [isAffiliate, setIsAffiliate] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const prevBalanceRef = useRef<number | null>(null);
 
-  // Fetch recent projects + credit balance
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
       const { data: cu } = await supabase.from('company_users').select('company_id').eq('user_id', user.id).limit(1).maybeSingle();
       if (!cu) return;
-      const [{ data: carousels }, { data: credits }, { data: elloSub }, { data: affiliateData }] = await Promise.all([
-        supabase.from('generated_carousels').select('id, title, topic').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(5),
+      const [{ data: credits }, { data: elloSub }, { data: affiliateData }] = await Promise.all([
         supabase.from('ai_credit_balances').select('balance').eq('company_id', cu.company_id).maybeSingle(),
         supabase.from('ellocontent_subscriptions').select('plan_name, monthly_credits, status').eq('company_id', cu.company_id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('affiliate_partners').select('id').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
       ]);
-      setRecentProjects(carousels || []);
-      const newBalance = credits?.balance ?? 0;
-      setCreditBalance(newBalance);
+      setCreditBalance(credits?.balance ?? 0);
       setIsAffiliate(!!affiliateData);
       if (elloSub && (elloSub.status === 'active' || elloSub.status === 'trialing')) {
         setMonthlyCredits(elloSub.monthly_credits || 0);
@@ -59,18 +51,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   }, [user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Re-fetch when window regains focus (e.g. returning from checkout)
   useEffect(() => {
     const onFocus = () => fetchData();
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [fetchData]);
-
-  // Also re-fetch on route changes (returning from /checkout, /precos, etc.)
   useEffect(() => { fetchData(); }, [location.pathname, fetchData]);
 
-  // Animate credit count when balance changes
   useEffect(() => {
     if (creditBalance === null) return;
     const prev = prevBalanceRef.current;
@@ -79,17 +66,11 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       prevBalanceRef.current = creditBalance;
       return;
     }
-    // Animate from prev to creditBalance
-    const start = prev;
-    const end = creditBalance;
-    const duration = 1200;
+    const start = prev, end = creditBalance, duration = 1200;
     const startTime = performance.now();
     prevBalanceRef.current = creditBalance;
-
     const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
+      const progress = Math.min((now - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       setDisplayBalance(Math.round(start + (end - start) * eased));
       if (progress < 1) requestAnimationFrame(animate);
@@ -98,316 +79,124 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   }, [creditBalance]);
 
   const email = user?.email || '';
-  const username = email.split('@')[0] || 'user';
+  const isAdmin = email === 'admin@gmail.com';
+  const handleSignOut = async () => { await signOut(); navigate('/'); };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
+  // Nav item helper
+  const NavItem = ({ active, onClick, icon: Icon, label, accent }: { active: boolean; onClick: () => void; icon: any; label: string; accent?: boolean }) => (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+        active ? 'text-white bg-white/[0.04]' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+      }`}
+      title={collapsed ? label : undefined}
+    >
+      <Icon className="w-4 h-4 shrink-0" style={accent && active ? { color: '#a78bfa' } : undefined} />
+      {!collapsed && label}
+    </button>
+  );
 
-  const handleSearchClick = () => {
-    setSearchOpen(true);
-    setTimeout(() => searchInputRef.current?.focus(), 100);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    onSearch?.(value);
-  };
-
-  const closeSearch = () => {
-    setSearchOpen(false);
-    setSearchQuery('');
-    onSearch?.('');
-  };
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    !collapsed ? <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5 mt-5">{children}</p> : <div className="mt-4 mx-3 border-t border-white/[0.04]" />
+  );
 
   return (
     <aside className={`relative ${collapsed ? 'w-[60px]' : 'w-[240px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`} style={{ backgroundColor: '#09090d', borderColor: 'rgba(255,255,255,0.04)' }}>
-      {/* Purple ambient glow background */}
+      {/* Purple ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[400px] h-[250px] opacity-[0.18]" style={{ background: 'radial-gradient(ellipse at center, #7C3AED 0%, #4C1D95 40%, transparent 70%)', filter: 'blur(50px)' }} />
-        <div className="absolute top-1/3 -right-10 w-[150px] h-[150px] opacity-[0.06]" style={{ background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)', filter: 'blur(40px)' }} />
       </div>
-      {/* Scrollable nav area */}
+
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
-      {/* Logo + collapse toggle */}
-      <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-4 pb-3`}>
-        <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0" />
-        {!collapsed && onToggleCollapse && (
-          <button onClick={onToggleCollapse} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Recolher sidebar">
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Nav */}
-      <nav className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
-        <button
-          onClick={() => { onTabChange('home'); closeSearch(); }}
-          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-            activeTab === 'home' && !searchOpen
-              ? 'text-white'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-          title={collapsed ? 'Home' : undefined}
-        >
-          <Home className="w-4 h-4 shrink-0" />
-          {!collapsed && 'Home'}
-        </button>
-
-      </nav>
-
-      {/* Projects section */}
-      <div className={`${collapsed ? 'px-1.5' : 'px-2'} mt-5`}>
-        {!collapsed && <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5">Projetos</p>}
-        <div className="flex items-center">
-          <button
-            onClick={() => { onTabChange('projects'); closeSearch(); }}
-            className={`flex-1 flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'projects' || activeTab === 'starred'
-                ? 'text-white'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-            title={collapsed ? 'Conteúdos' : undefined}
-          >
-            <LayoutGrid className="w-4 h-4 shrink-0" />
-            {!collapsed && 'Conteúdos'}
-          </button>
-          {!collapsed && (activeTab === 'projects' || activeTab === 'starred') && (
-            <button
-              onClick={() => { onTabChange(activeTab === 'starred' ? 'projects' : 'starred'); closeSearch(); }}
-              className="p-1.5 rounded-md cursor-pointer transition-colors mr-1"
-              title={activeTab === 'starred' ? 'Mostrando favoritos' : 'Ver favoritos'}
-            >
-              <Star className="w-3.5 h-3.5" style={{ color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.25)' }} fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
+        {/* Logo + collapse */}
+        <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-4 pb-3`}>
+          <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0" />
+          {!collapsed && onToggleCollapse && (
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Recolher">
+              <PanelLeftClose className="w-4 h-4" />
             </button>
           )}
         </div>
-        <button
-          onClick={() => { onTabChange('gallery'); closeSearch(); }}
-          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeTab === 'gallery'
-              ? 'text-white'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-          title={collapsed ? 'Galeria' : undefined}
-        >
-          <Sparkles className="w-4 h-4 shrink-0" />
-          {!collapsed && 'Galeria'}
-        </button>
-        <button
-          onClick={() => { onTabChange('prompts'); closeSearch(); }}
-          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeTab === 'prompts'
-              ? 'text-white'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-          title={collapsed ? 'Prompts' : undefined}
-        >
-          <PenTool className="w-4 h-4 shrink-0" />
-          {!collapsed && 'Prompts'}
-        </button>
-        <button
-          onClick={() => { onTabChange('marketplace'); closeSearch(); }}
-          className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-            activeTab === 'marketplace'
-              ? 'text-white'
-              : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-          }`}
-          title={collapsed ? 'Estilos' : undefined}
-        >
-          <Palette className="w-4 h-4 shrink-0" />
-          {!collapsed && 'Estilos'}
-        </button>
 
-        {/* Trends — admin only */}
-        {email === 'admin@gmail.com' && (
-          <button
-            onClick={() => { onTabChange('trends'); closeSearch(); }}
-            className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-              activeTab === 'trends'
-                ? 'text-white'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-            }`}
-            title={collapsed ? 'Trends' : undefined}
-          >
-            <TrendingUp className="w-4 h-4 shrink-0" style={{ color: activeTab === 'trends' ? '#a78bfa' : undefined }} />
-            {!collapsed && 'Trends'}
-          </button>
+        {/* CRIAR */}
+        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+          <SectionLabel>Criar</SectionLabel>
+          <NavItem active={activeTab === 'home'} onClick={() => onTabChange('home')} icon={Home} label="Início" />
+          <NavItem active={location.pathname === '/criar'} onClick={() => navigate('/criar')} icon={MessageCircle} label="Chat IA" accent />
+        </div>
+
+        {/* BIBLIOTECA */}
+        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+          <SectionLabel>Biblioteca</SectionLabel>
+          <div className="flex items-center">
+            <button
+              onClick={() => onTabChange('projects')}
+              className={`flex-1 flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                activeTab === 'projects' || activeTab === 'starred' ? 'text-white bg-white/[0.04]' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+              }`}
+              title={collapsed ? 'Meus posts' : undefined}
+            >
+              <LayoutGrid className="w-4 h-4 shrink-0" />
+              {!collapsed && 'Meus posts'}
+            </button>
+            {!collapsed && (activeTab === 'projects' || activeTab === 'starred') && (
+              <button
+                onClick={() => onTabChange(activeTab === 'starred' ? 'projects' : 'starred')}
+                className="p-1.5 rounded-md cursor-pointer transition-colors mr-1"
+                title={activeTab === 'starred' ? 'Mostrando favoritos' : 'Ver favoritos'}
+              >
+                <Star className="w-3.5 h-3.5" style={{ color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.25)' }} fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
+              </button>
+            )}
+          </div>
+          <NavItem active={activeTab === 'gallery'} onClick={() => onTabChange('gallery')} icon={Sparkles} label="Galeria de marca" />
+          <NavItem active={activeTab === 'prompts'} onClick={() => onTabChange('prompts')} icon={PenTool} label="Meus prompts" />
+        </div>
+
+        {/* DESCOBRIR */}
+        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+          <SectionLabel>Descobrir</SectionLabel>
+          <NavItem active={activeTab === 'marketplace'} onClick={() => onTabChange('marketplace')} icon={Palette} label="Estilos" />
+          <NavItem active={location.pathname === '/comunidade'} onClick={() => navigate('/comunidade')} icon={Users} label="Comunidade" />
+          {isAdmin && (
+            <NavItem active={activeTab === 'trends'} onClick={() => onTabChange('trends')} icon={TrendingUp} label="Tendências" accent />
+          )}
+        </div>
+
+        {/* FERRAMENTAS (admin) */}
+        {isAdmin && (
+          <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+            <SectionLabel>Ferramentas</SectionLabel>
+            <NavItem active={activeTab === 'logo-remover' || activeTab === 'logo-history' || activeTab === 'behance-import' || activeTab === 'instagram-import' || activeTab === 'face-generator'} onClick={() => onTabChange('logo-remover')} icon={Wrench} label="Ferramentas" />
+          </div>
         )}
+
+        {/* PARCEIROS (apenas afiliado/admin) */}
+        {(isAffiliate || isAdmin) && (
+          <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+            <SectionLabel>Parceiros</SectionLabel>
+            {isAffiliate && (
+              <NavItem active={location.pathname === '/area/parceiros'} onClick={() => navigate('/area/parceiros')} icon={Handshake} label="Afiliados" />
+            )}
+            {isAdmin && (
+              <NavItem active={location.pathname === '/admin'} onClick={() => navigate('/admin')} icon={Shield} label="Admin" />
+            )}
+          </div>
+        )}
+
+        {/* AJUDA */}
+        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5 mb-4`}>
+          <SectionLabel>Ajuda</SectionLabel>
+          <NavItem active={location.pathname === '/ajuda'} onClick={() => navigate('/ajuda')} icon={HelpCircle} label="Central de ajuda" />
+        </div>
       </div>
 
-      {/* Ferramentas section — collapsible */}
-      {!collapsed && email === 'admin@gmail.com' && (
-        <div className="px-2 mt-5">
-          <button
-            onClick={() => setFerramentasOpen(!ferramentasOpen)}
-            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-          >
-            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Ferramentas</span>
-            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${ferramentasOpen ? 'rotate-90' : ''}`} />
-          </button>
-          {ferramentasOpen && (
-            <div className="mt-1 space-y-0.5">
-              {[
-                { tab: 'logo-remover', icon: Eraser, label: 'Remover Logo' },
-                { tab: 'logo-history', icon: Clock, label: 'Histórico Remoções' },
-                { tab: 'behance-import', icon: Globe, label: 'Importar do Behance' },
-                { tab: 'instagram-import', icon: Instagram, label: 'Importar do Instagram' },
-                { tab: 'face-generator', icon: Camera, label: 'Gerador de Rosto' },
-              ].map(({ tab, icon: Icon, label }) => (
-                <button
-                  key={tab}
-                  onClick={() => { onTabChange(tab); closeSearch(); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                    activeTab === tab
-                      ? 'text-white'
-                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Comunidade section — collapsible */}
-      {!collapsed && (
-        <div className="px-2 mt-5">
-          <button
-            onClick={() => setComunidadeOpen(!comunidadeOpen)}
-            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-          >
-            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Comunidade</span>
-            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${comunidadeOpen ? 'rotate-90' : ''}`} />
-          </button>
-          {comunidadeOpen && (
-            <div className="mt-1 space-y-0.5">
-              <button
-                onClick={() => { navigate('/comunidade'); closeSearch(); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  location.pathname === '/comunidade'
-                    ? 'text-white'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                Explorar
-              </button>
-              <button
-                onClick={() => { navigate('/perfil'); closeSearch(); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  location.pathname === '/perfil' && !location.pathname.includes('/perfil/')
-                    ? 'text-white'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
-              >
-                <User className="w-4 h-4" />
-                Meu Perfil
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Collapsed: icon-only shortcuts for comunidade */}
-      {collapsed && (
-        <div className="px-1.5 mt-5 space-y-0.5">
-          <button onClick={() => { navigate('/comunidade'); closeSearch(); }}
-            className={`w-full flex items-center justify-center py-2 rounded-lg transition-colors cursor-pointer ${location.pathname === '/comunidade' ? 'text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}
-            title="Comunidade">
-            <Users className="w-4 h-4" />
-          </button>
-          <button onClick={() => { navigate('/ajuda'); closeSearch(); }}
-            className={`w-full flex items-center justify-center py-2 rounded-lg transition-colors cursor-pointer ${location.pathname === '/ajuda' ? 'text-white' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}
-            title="Ajuda">
-            <BookOpen className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Parceiros section — only for affiliates or admin */}
-      {!collapsed && (isAffiliate || email === 'admin@gmail.com') && (
-        <div className="px-2 mt-5">
-          <button
-            onClick={() => setParceirosOpen(!parceirosOpen)}
-            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-          >
-            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Parceiros</span>
-            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${parceirosOpen ? 'rotate-90' : ''}`} />
-          </button>
-          {parceirosOpen && (
-            <div className="mt-1 space-y-0.5">
-              <button
-                onClick={() => { navigate('/area/parceiros'); closeSearch(); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  location.pathname === '/area/parceiros'
-                    ? 'text-white'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
-              >
-                <Handshake className="w-4 h-4" />
-                Afiliados
-              </button>
-              {email === 'admin@gmail.com' && (
-                <button
-                  onClick={() => { navigate('/admin'); closeSearch(); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                    location.pathname === '/admin'
-                      ? 'text-white'
-                      : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <Shield className="w-4 h-4" />
-                  Painel Admin
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Ajuda section — collapsible */}
-      {!collapsed && (
-        <div className="px-2 mt-5">
-          <button
-            onClick={() => setAjudaOpen(!ajudaOpen)}
-            className="w-full flex items-center justify-between px-3 py-1 cursor-pointer group"
-          >
-            <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">Ajuda</span>
-            <ChevronRight className={`w-3 h-3 text-white/20 transition-transform duration-200 ${ajudaOpen ? 'rotate-90' : ''}`} />
-          </button>
-          {ajudaOpen && (
-            <div className="mt-1 space-y-0.5">
-              <button
-                onClick={() => { navigate('/ajuda'); closeSearch(); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                  location.pathname === '/ajuda'
-                    ? 'text-white'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
-              >
-                <CircleHelp className="w-4 h-4" />
-                Dúvidas & Créditos
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      </div>{/* end scrollable nav area */}
-
-
-      {/* Bottom: Profile — fixed at bottom */}
+      {/* Bottom: Profile */}
       <div className="shrink-0 border-t border-white/[0.04] relative z-10">
-        {/* Collapsed: expand button + compact profile */}
         {collapsed ? (
           <div className="flex flex-col items-center py-3 gap-2">
             {onToggleCollapse && (
-              <button onClick={onToggleCollapse} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Expandir sidebar">
+              <button onClick={onToggleCollapse} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Expandir">
                 <PanelLeftOpen className="w-4 h-4" />
               </button>
             )}
@@ -420,27 +209,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                   <p className="text-sm text-white/70 font-medium truncate">{email}</p>
                 </div>
                 <div className="py-1">
-                  <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                    <User className="w-4 h-4" /> Perfil
-                  </button>
-                  <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                    <Settings className="w-4 h-4" /> Configurações
-                  </button>
-                  <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                    <CreditCard className="w-4 h-4" /> Plano & Créditos
-                  </button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><User className="w-4 h-4" /> Perfil</button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><Settings className="w-4 h-4" /> Configurações</button>
+                  <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><CreditCard className="w-4 h-4" /> Plano & Créditos</button>
                 </div>
                 <div className="border-t border-white/[0.06] py-1">
-                  <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
-                    <LogOut className="w-4 h-4" /> Sair
-                  </button>
+                  <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"><LogOut className="w-4 h-4" /> Sair</button>
                 </div>
               </div>
             )}
           </div>
         ) : (
           <>
-            {/* Credits with gradient bar and plan marker */}
             {(() => {
               const balance = displayBalance ?? 0;
               const planNameLower = planName.toLowerCase();
@@ -450,15 +230,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               const balancePct = Math.min(100, (balance / maxBar) * 100);
               const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
               const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
-
               return (
                 <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${planColor}20`, color: planColor }}>
-                        {planLabel}
-                      </span>
-                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${planColor}20`, color: planColor }}>{planLabel}</span>
                     <span className="text-white/70 text-xs font-medium">{Math.floor(balance)} restantes</span>
                   </div>
                   <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
@@ -466,23 +241,20 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                       <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer-credit 2s ease-in-out infinite' }} />
                     </div>
                     {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
-                      <div className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full" style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.5)' }} title={`${monthlyCredits} créditos mensais`} />
+                      <div className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full" style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.5)' }} />
                     )}
                     <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
                   </div>
                   {monthlyCredits > 0 && (
                     <div className="flex items-center justify-between mt-1.5">
                       <span className="text-[10px] text-white/25">{monthlyCredits} mensais</span>
-                      {bonusCredits > 0 && (
-                        <span className="text-[10px]" style={{ color: `${planColor}99` }}>+{Math.floor(bonusCredits)} bônus</span>
-                      )}
+                      {bonusCredits > 0 && <span className="text-[10px]" style={{ color: `${planColor}99` }}>+{Math.floor(bonusCredits)} bônus</span>}
                     </div>
                   )}
                 </div>
               );
             })()}
 
-            {/* Profile button */}
             <div className="relative px-2 pb-3">
               <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer">
                 <p className="text-sm text-white/50 font-medium truncate">{email}</p>
@@ -494,25 +266,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                     <p className="text-sm text-white/70 font-medium truncate">{email}</p>
                   </div>
                   <div className="py-1">
-                    <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                      <User className="w-4 h-4" /> Perfil
-                    </button>
-                    <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                      <Settings className="w-4 h-4" /> Configurações
-                    </button>
-                    <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                      <CreditCard className="w-4 h-4" /> Plano & Créditos
-                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><User className="w-4 h-4" /> Perfil</button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><Settings className="w-4 h-4" /> Configurações</button>
+                    <button onClick={() => { setShowProfileMenu(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"><CreditCard className="w-4 h-4" /> Plano & Créditos</button>
                   </div>
                   <div className="border-t border-white/[0.06] py-1">
-                    <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer">
-                      <LogOut className="w-4 h-4" /> Sair
-                    </button>
+                    <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"><LogOut className="w-4 h-4" /> Sair</button>
                   </div>
                 </div>
               )}
             </div>
-            {/* Powered by ellosuit */}
             <div className="px-4 pb-3 pt-1 flex justify-center">
               <a href="https://www.ellosuit.online" target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/20 hover:text-white/40 transition-colors">
                 Powered by <span className="font-semibold">ellosuit</span>

@@ -11,6 +11,9 @@ import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanne
 import ErrorBoundary from "@/components/ErrorBoundary";
 import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
+import { Navigate } from "react-router-dom";
+
+
 
 // Lazy-loaded pages — each becomes a separate chunk
 const PublicCarouselGenerator = lazy(() => import('./pages/PublicCarouselGenerator'));
@@ -21,8 +24,6 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const MarketplaceStyleDetail = lazy(() => import('./pages/MarketplaceStyleDetail'));
-const Recursos = lazy(() => import('./pages/Recursos'));
-const Suporte = lazy(() => import('./pages/Suporte'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const PostPublic = lazy(() => import('./pages/PostPublic'));
@@ -106,11 +107,12 @@ const App = () => (
                   <Route path="/precos" element={<Pricing />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/marketplace/:id" element={<MarketplaceStyleDetail />} />
-                  <Route path="/recursos" element={<Recursos />} />
-                  <Route path="/suporte" element={<Suporte />} />
+                  <Route path="/recursos" element={<Navigate to="/ajuda" replace />} />
+                  <Route path="/suporte" element={<Navigate to="/ajuda" replace />} />
                   <Route path="/perfil" element={<Profile />} />
                   <Route path="/perfil/:username" element={<Profile />} />
                   <Route path="/configuracoes" element={<Settings />} />
+
                   <Route path="/post/:postId" element={<PostPublic />} />
                   <Route path="/presentear" element={<Presentear />} />
                   <Route path="/parceiros" element={<Parceiros />} />

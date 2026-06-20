@@ -464,6 +464,63 @@ Deno.serve(async (req) => {
       delete parsed.brief_update.suggested_content;
     }
 
+    // 🔢 Slide-count enforcement: when carousel and AI returned wrong count, retry once.
+    const expectedCount = mergedBrief.contentType === 'carousel'
+      ? (mergedBrief.cardCount && mergedBrief.cardCount > 0 ? mergedBrief.cardCount : null)
+      : (mergedBrief.contentType === 'single' ? 1 : null);
+    const incomingSlides = Array.isArray(parsed.brief_update?.suggested_content) ? parsed.brief_update.suggested_content : null;
+    if (
+      nextRequiredWidget === 'none' &&
+      expectedCount &&
+      incomingSlides &&
+      incomingSlides.length !== expectedCount
+    ) {
+      const retryMessages = [
+        ...aiMessages,
+        {
+          role: 'system',
+          content: `❌ Você gerou ${incomingSlides.length} slide(s) mas o usuário pediu EXATAMENTE ${expectedCount}. Refaça agora preenchendo 'suggested_content' com EXATAMENTE ${expectedCount} objetos (cada um com title, subtitle, body coerentes em narrativa contínua: ${expectedCount === 1 ? 'post único' : 'capa → desenvolvimento → CTA'}). Use widget "approve_content".`,
+        },
+      ];
+      try {
+        const retry = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'google/gemini-3-flash-preview',
+            messages: retryMessages,
+            tools: [buildTool()],
+            tool_choice: { type: 'function', function: { name: 'respond' } },
+          }),
+        });
+        if (retry.ok) {
+          const retryData = await retry.json();
+          const retryCall = retryData.choices?.[0]?.message?.tool_calls?.[0];
+          if (retryCall?.function?.arguments) {
+            const retryParsed = JSON.parse(retryCall.function.arguments);
+            const retrySlides = Array.isArray(retryParsed.brief_update?.suggested_content) ? retryParsed.brief_update.suggested_content : null;
+            if (retrySlides && retrySlides.length === expectedCount) {
+              parsed = retryParsed;
+              if (!Array.isArray(parsed.messages)) parsed.messages = [String(parsed.messages || '...')];
+            }
+          }
+        }
+      } catch (retryErr) {
+        console.error('Slide-count retry failed:', retryErr);
+      }
+
+      // Final safety net: pad or trim to expected count so the user never sees a broken carousel.
+      const finalSlides = Array.isArray(parsed.brief_update?.suggested_content) ? [...parsed.brief_update.suggested_content] : [];
+      if (finalSlides.length > expectedCount) {
+        parsed.brief_update.suggested_content = finalSlides.slice(0, expectedCount);
+      } else if (finalSlides.length > 0 && finalSlides.length < expectedCount) {
+        while (finalSlides.length < expectedCount) {
+          finalSlides.push({ title: `Slide ${finalSlides.length + 1}`, subtitle: '', body: '' });
+        }
+        parsed.brief_update = { ...(parsed.brief_update || {}), suggested_content: finalSlides };
+      }
+    }
+
     return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));
   } catch (e) {
     console.error('chat-creator error:', e);

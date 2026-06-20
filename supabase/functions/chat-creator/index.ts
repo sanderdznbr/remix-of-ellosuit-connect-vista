@@ -317,6 +317,11 @@ Deno.serve(async (req) => {
     const safeMessages = sanitizeMessages(messages || []);
     const safeBrief = sanitizeBrief(brief);
 
+    if (shouldAskForNicheFirst(safeMessages, safeBrief)) {
+      const lastUserMessage = [...safeMessages].reverse().find((message) => message.role === 'user')?.content || '';
+      return jsonResponse(withGuaranteedSuggestions(nicheClarificationResponse(lastUserMessage)));
+    }
+
     const briefSummary = `Estado atual coletado: ${JSON.stringify(safeBrief)}`;
 
     const alreadyProvided: string[] = [];

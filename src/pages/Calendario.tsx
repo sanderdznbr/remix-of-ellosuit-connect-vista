@@ -200,6 +200,7 @@ const Calendario: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

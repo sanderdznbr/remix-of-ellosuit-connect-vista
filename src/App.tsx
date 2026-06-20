@@ -125,6 +125,9 @@ const App = () => (
                   <Route path="/ajuda" element={<Ajuda />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/criar" element={<ChatCreator />} />
+                  <Route path="/calendario" element={<Calendario />} />
+                  <Route path="/hooks" element={<Hooks />} />
+                  <Route path="/insights" element={<Analytics />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

@@ -11,6 +11,9 @@ import { SubscriptionBlockedBanner } from "@/components/SubscriptionBlockedBanne
 import ErrorBoundary from "@/components/ErrorBoundary";
 import '@/styles/carousel-loader.css';
 import { useAffiliateTracking } from "@/hooks/useAffiliateTracking";
+import { Navigate } from "react-router-dom";
+
+
 
 // Lazy-loaded pages — each becomes a separate chunk
 const PublicCarouselGenerator = lazy(() => import('./pages/PublicCarouselGenerator'));

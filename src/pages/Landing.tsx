@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Minus, Sparkles, Palette, User, Zap, AtSign, FolderOpen, Check } from 'lucide-react';
+import { Plus, Minus, Sparkles, Palette, User, Zap, AtSign, FolderOpen, Check, Users, Star, TrendingUp } from 'lucide-react';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import { supabase } from '@/integrations/supabase/client';
 import '@/styles/carousel-loader.css';
+
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -32,9 +34,28 @@ const Landing: React.FC = () => {
   const navigate = useNavigate();
   const [annual, setAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [showcaseStyles, setShowcaseStyles] = useState<Array<{ id: string; name: string; preview_images: string[]; category: string }>>([]);
 
   const goCreate = () => navigate('/gerador-de-carrosseis');
   const goPlans = () => navigate('/precos');
+
+  // Fetch real marketplace styles for the gallery section
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('marketplace_styles')
+          .select('id, name, preview_images, category, is_featured, sort_order')
+          .eq('is_active', true)
+          .order('is_featured', { ascending: false })
+          .order('sort_order', { ascending: true })
+          .limit(6);
+        setShowcaseStyles((data || []).filter((s: any) => s.preview_images?.length));
+      } catch {}
+    })();
+  }, []);
+
+
 
   const painPoints = [
     'Passa horas criando um post e no final não fica satisfeito com o resultado',

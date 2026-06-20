@@ -18,7 +18,7 @@ import InstagramImporter from './InstagramImporter';
 import TrendsPanel, { type TrendData } from './TrendsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard } from 'lucide-react';
+import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard, Home, LayoutGrid, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { tabFromPath, routeFromTab } from '@/utils/dashboard-routes';
 import ellocontentLogo from '@/assets/ellocontent2.svg';
@@ -275,9 +275,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
         {/* Content */}
         {renderContent()}
+
+        {/* Bottom nav (mobile) */}
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t backdrop-blur-xl"
+          style={{
+            backgroundColor: 'rgba(9,9,13,0.92)',
+            borderColor: 'rgba(255,255,255,0.06)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
+        >
+          {[
+            { key: 'home', label: 'Início', icon: Home, onClick: () => handleTabChange('home'), active: activeTab === 'home' && location.pathname !== '/criar' },
+            { key: 'criar', label: 'Chat IA', icon: MessageCircle, onClick: () => navigate('/criar'), active: location.pathname === '/criar' },
+            { key: 'projects', label: 'Posts', icon: LayoutGrid, onClick: () => handleTabChange('projects'), active: activeTab === 'projects' || activeTab === 'starred' },
+            { key: 'profile', label: 'Perfil', icon: User, onClick: () => navigate('/perfil'), active: location.pathname.startsWith('/perfil') },
+          ].map(item => (
+            <button
+              key={item.key}
+              onClick={item.onClick}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer transition-colors"
+              style={{ color: item.active ? '#a78bfa' : 'rgba(255,255,255,0.5)' }}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
     );
   }
+
 
   const toggleSidebarCollapse = () => {
     setSidebarCollapsed(prev => {

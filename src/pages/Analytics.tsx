@@ -24,7 +24,7 @@ const Analytics: React.FC = () => {
       try {
         const { data } = await supabase
           .from('generated_carousels')
-          .select('id, created_at, style_name')
+          .select('id, created_at, style_config, title')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(500);

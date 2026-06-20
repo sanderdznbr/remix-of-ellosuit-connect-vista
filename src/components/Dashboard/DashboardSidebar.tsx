@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import faviconIcon from '@/assets/favicon.png';
+import TrialStatusBadge from './TrialStatusBadge';
 
 interface DashboardSidebarProps {
   activeTab: string;
@@ -203,6 +204,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       <div className="shrink-0 border-t border-white/[0.04] relative z-10">
         {collapsed ? (
           <div className="flex flex-col items-center py-3 gap-2">
+            <TrialStatusBadge collapsed />
             {onToggleCollapse && (
               <button onClick={onToggleCollapse} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Expandir">
                 <PanelLeftOpen className="w-4 h-4" />
@@ -229,6 +231,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           </div>
         ) : (
           <>
+            <div className="pt-2 pb-1"><TrialStatusBadge /></div>
             {(() => {
               const balance = displayBalance ?? 0;
               const planNameLower = planName.toLowerCase();

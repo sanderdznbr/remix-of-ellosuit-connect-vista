@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import '@/styles/carousel-loader.css';
 import PromptMentionInput, { PromptMentionRef } from '@/components/Carousel/wizard/PromptMention';
+import OnboardingModal from '@/components/Dashboard/OnboardingModal';
+import QuickTemplates from '@/components/Dashboard/QuickTemplates';
 
 export type PostFormat = 'portrait' | 'square' | 'story';
 
@@ -302,6 +304,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
+      <OnboardingModal />
+
 
       {/* Background purple glow animation */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

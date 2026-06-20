@@ -447,6 +447,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    const mergedBrief = sanitizeBrief({ ...safeBrief, ...(parsed.brief_update || {}) });
+    const nextRequiredWidget = getNextRequiredFlowWidget(mergedBrief);
+    const parsedMessages = Array.isArray(parsed.messages) ? parsed.messages : [];
+    const lastParsedMessage = String(parsedMessages[parsedMessages.length - 1] || '').toLowerCase();
+    const mentionsTextOptions = /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastParsedMessage);
+    const attemptedEarlyContent = parsed.widget === 'approve_content' || Array.isArray(parsed.brief_update?.suggested_content) || !!parsed.ready || mentionsTextOptions;
+    if (nextRequiredWidget !== 'none' && attemptedEarlyContent) {
+      parsed.messages = [getFlowGuardMessage(nextRequiredWidget)];
+      parsed.widget = nextRequiredWidget;
+      parsed.ready = false;
+      parsed.brief_update = { ...(parsed.brief_update || {}) };
+      delete parsed.brief_update.suggested_content;
+    }
+
     return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));
   } catch (e) {
     console.error('chat-creator error:', e);

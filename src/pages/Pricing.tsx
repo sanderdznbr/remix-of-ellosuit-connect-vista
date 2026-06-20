@@ -8,6 +8,7 @@ import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { routeFromTab } from '@/utils/dashboard-routes';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
+import TrialBanner from '@/components/TrialBanner';
 
 // Prices: annual = billed yearly (per month), monthly = billed monthly
 const PLAN_CONFIG: Record<string, {
@@ -683,6 +684,11 @@ function LoggedInPricing() {
                   </div>
                 </div>
               </div>
+
+              {/* Trial banner — only for users without active subscription */}
+              {!isActive && companyId && (
+                <TrialBanner hasActiveSubscription={!!isActive} companyId={companyId} />
+              )}
 
               {/* Billing toggle */}
               <BillingToggle isAnnual={isAnnual} onChange={setIsAnnual} />

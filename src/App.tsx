@@ -36,6 +36,9 @@ const Ajuda = lazy(() => import('./pages/Ajuda'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
 const ChatCreator = lazy(() => import('./pages/ChatCreator'));
+const Calendario = lazy(() => import('./pages/Calendario'));
+const Hooks = lazy(() => import('./pages/Hooks'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 
 const queryClient = new QueryClient({
   defaultOptions: {

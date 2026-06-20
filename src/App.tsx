@@ -24,8 +24,6 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const MarketplaceStyleDetail = lazy(() => import('./pages/MarketplaceStyleDetail'));
-const Recursos = lazy(() => import('./pages/Recursos'));
-const Suporte = lazy(() => import('./pages/Suporte'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const PostPublic = lazy(() => import('./pages/PostPublic'));

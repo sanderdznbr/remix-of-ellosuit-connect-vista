@@ -379,6 +379,7 @@ const ChatCreator: React.FC = () => {
       const mentionsTextOptions = !isSlideCountQuestion && /opç|sugest|preparei|aprovar|conteúdo|conteudo|texto|copy|legenda|roteiro|cards?|slides?/.test(lastText);
       const nextRequiredWidget = getNextRequiredFlowWidget(newBrief);
       const attemptedEarlyContent = widget === 'approve_content' || Array.isArray(newBrief.suggested_content);
+      const blockedEarlyText = !!nextRequiredWidget && (attemptedEarlyContent || mentionsTextOptions || !!data.ready);
       if (nextRequiredWidget && attemptedEarlyContent) {
         delete newBrief.suggested_content;
       }
@@ -391,7 +392,7 @@ const ChatCreator: React.FC = () => {
 
       // If model says ready but didn't show the confirm widget, force-show it
       // so the user always has explicit control over when generation starts.
-      const finalWidget: WidgetType = nextRequiredWidget && attemptedEarlyContent
+      const finalWidget: WidgetType = blockedEarlyText
         ? nextRequiredWidget
         : data.ready && widget !== 'confirm_generate'
         ? 'confirm_generate'
@@ -405,7 +406,7 @@ const ChatCreator: React.FC = () => {
         setBrief({ ...newBrief });
       }
 
-      const finalTexts = nextRequiredWidget && attemptedEarlyContent
+      const finalTexts = blockedEarlyText
         ? [getFlowGuardMessage(nextRequiredWidget)]
         : texts;
 

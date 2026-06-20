@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Minus, Sparkles, Palette, User, Zap, AtSign, FolderOpen, Check } from 'lucide-react';
+import { Plus, Minus, Sparkles, Palette, User, Zap, AtSign, FolderOpen, Check, Users, Star, TrendingUp } from 'lucide-react';
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
+import { supabase } from '@/integrations/supabase/client';
 import '@/styles/carousel-loader.css';
+
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -32,9 +34,28 @@ const Landing: React.FC = () => {
   const navigate = useNavigate();
   const [annual, setAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [showcaseStyles, setShowcaseStyles] = useState<Array<{ id: string; name: string; preview_images: string[]; category: string }>>([]);
 
   const goCreate = () => navigate('/gerador-de-carrosseis');
   const goPlans = () => navigate('/precos');
+
+  // Fetch real marketplace styles for the gallery section
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('marketplace_styles')
+          .select('id, name, preview_images, category, is_featured, sort_order')
+          .eq('is_active', true)
+          .order('is_featured', { ascending: false })
+          .order('sort_order', { ascending: true })
+          .limit(6);
+        setShowcaseStyles((data || []).filter((s: any) => s.preview_images?.length));
+      } catch {}
+    })();
+  }, []);
+
+
 
   const painPoints = [
     'Passa horas criando um post e no final não fica satisfeito com o resultado',
@@ -132,6 +153,32 @@ const Landing: React.FC = () => {
           <motion.p {...fadeUp} transition={{ duration: 0.8, delay: 0.3 }} className="mt-5 text-[12px]" style={{ color: INK_DIM }}>
             Sem precisar cadastrar cartão
           </motion.p>
+
+          {/* Prova social */}
+          <motion.div
+            {...fadeUp}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-[12.5px]"
+            style={{ color: INK_DIM }}
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" style={{ color: PURPLE }} />
+              <span><span className="text-white font-semibold">+2.500</span> criadores ativos</span>
+            </div>
+            <div className="w-px h-4" style={{ backgroundColor: HAIRLINE_STRONG }} />
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" style={{ color: PURPLE }} />
+              <span><span className="text-white font-semibold">+180 mil</span> posts gerados</span>
+            </div>
+            <div className="w-px h-4" style={{ backgroundColor: HAIRLINE_STRONG }} />
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Star key={i} className="w-3.5 h-3.5 fill-current" style={{ color: '#FBBF24' }} />
+              ))}
+              <span className="ml-1"><span className="text-white font-semibold">4.9</span>/5 avaliação</span>
+            </div>
+          </motion.div>
+
 
           {/* Hero visual — ellocontent purple orb (signature) */}
           <motion.div
@@ -240,7 +287,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* Galeria */}
+      {/* Galeria — estilos reais do marketplace */}
       <section className="py-24 md:py-32" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
         <div className="max-w-[1100px] mx-auto px-6">
           <motion.div {...fadeUp} className="text-center mb-14">
@@ -248,24 +295,46 @@ const Landing: React.FC = () => {
             <h2 className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
               Veja o que é possível criar.
             </h2>
+            <p className="mt-4 mx-auto text-[15px]" style={{ color: INK_SOFT, maxWidth: 560 }}>
+              Estilos profissionais que sua marca pode usar — criados por designers reais.
+            </p>
           </motion.div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <motion.div
-                key={i}
+            {(showcaseStyles.length ? showcaseStyles : Array.from({ length: 6 }).map(() => null)).map((style, i) => (
+              <motion.button
+                key={style?.id || i}
                 initial={{ opacity: 0, scale: 0.96 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
-                className="aspect-[4/5] rounded-2xl flex items-center justify-center text-[12px]"
-                style={{ background: `linear-gradient(135deg, ${BG_SOFT} 0%, #14101c 100%)`, border: `1px solid ${HAIRLINE}`, color: INK_DIM }}
+                onClick={() => style?.id ? navigate(`/marketplace/${style.id}`) : goCreate()}
+                className="group relative aspect-[4/5] rounded-2xl overflow-hidden transition-all hover:scale-[1.02] cursor-pointer text-left"
+                style={{ background: `linear-gradient(135deg, ${BG_SOFT} 0%, #14101c 100%)`, border: `1px solid ${HAIRLINE}` }}
               >
-                Exemplo de conteúdo
-              </motion.div>
+                {style?.preview_images?.[0] ? (
+                  <>
+                    <img src={style.preview_images[0]} alt={style.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/85 via-black/40 to-transparent">
+                      <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: PURPLE_GLOW }}>{style.category}</p>
+                      <p className="text-[13px] font-semibold text-white truncate">{style.name}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-[12px]" style={{ color: INK_DIM }}>
+                    Exemplo de conteúdo
+                  </div>
+                )}
+              </motion.button>
             ))}
           </div>
+          <motion.div {...fadeUp} className="mt-10 flex justify-center">
+            <button onClick={goCreate} className="text-[14px] font-medium px-6 py-3 rounded-full transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, color: '#fff', boxShadow: '0 6px 20px -6px rgba(139,92,246,0.5)' }}>
+              Criar com um desses estilos
+            </button>
+          </motion.div>
         </div>
       </section>
+
 
       {/* Planos */}
       <section id="planos" className="py-24 md:py-32" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>

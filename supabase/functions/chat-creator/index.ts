@@ -246,6 +246,45 @@ function fallbackSuggestions(content: string) {
   return ['Continuar assim', 'Gerar opção pronta', 'Deixar mais premium', 'Fazer mais direto'];
 }
 
+function hasGenericPlaceholder(text?: string) {
+  if (!text) return false;
+  return /\b(meu|minha|meus|minhas)\s+(nicho|segmento|mercado|área|area|negócio|negocio|empresa|marca|produto|serviço|servico|cliente|público|publico)\b/i.test(text);
+}
+
+function hasConcreteCreativeContext(brief: SanitizedBriefState, messages: InMessage[]) {
+  const concreteBrief = [brief.topic, brief.brandName, brief.audience]
+    .some((value) => value && value.length > 3 && !hasGenericPlaceholder(value));
+
+  if (concreteBrief || brief.hasProduct || brief.productProvided) return true;
+
+  return messages.some((message) => {
+    if (message.role !== 'user') return false;
+    const text = message.content.toLowerCase();
+    if (hasGenericPlaceholder(text)) return false;
+    return /\b(sou|tenho|vendo|trabalho com|meu nicho é|minha área é|segmento é|atendo|público|publico)\b/i.test(text)
+      && text.length >= 18;
+  });
+}
+
+function shouldAskForNicheFirst(messages: InMessage[], brief: SanitizedBriefState) {
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
+  if (!lastUserMessage || !hasGenericPlaceholder(lastUserMessage)) return false;
+  return !hasConcreteCreativeContext(brief, messages.slice(0, -1));
+}
+
+function nicheClarificationResponse(userMessage: string): ApiResponse {
+  return {
+    ok: true,
+    messages: [
+      'Show, eu faço sim — mas antes preciso entender seu nicho pra não criar algo genérico.',
+      'Qual é o seu nicho, produto ou serviço principal?',
+    ],
+    widget: 'none',
+    brief_update: { userIdea: trimText(userMessage, 500) },
+    suggestions: ['Moda e beleza', 'Saúde e bem-estar', 'Imobiliário', 'Infoprodutos'],
+  };
+}
+
 function withGuaranteedSuggestions(payload: ApiResponse): ApiResponse {
   const allowedWidgets = new Set(['content_type_picker', 'format_picker', 'visual_type_picker', 'style_uploader', 'style_picker', 'personalization', 'approve_content', 'confirm_generate', 'image_model_picker', 'image_source_picker', 'face_fusion_picker']);
   const widget = payload.widget && payload.widget !== 'none' && allowedWidgets.has(payload.widget) ? payload.widget : 'none';
@@ -277,6 +316,11 @@ Deno.serve(async (req) => {
     const { messages, brief } = await req.json() as { messages: InMessage[]; brief: BriefState };
     const safeMessages = sanitizeMessages(messages || []);
     const safeBrief = sanitizeBrief(brief);
+
+    if (shouldAskForNicheFirst(safeMessages, safeBrief)) {
+      const lastUserMessage = [...safeMessages].reverse().find((message) => message.role === 'user')?.content || '';
+      return jsonResponse(withGuaranteedSuggestions(nicheClarificationResponse(lastUserMessage)));
+    }
 
     const briefSummary = `Estado atual coletado: ${JSON.stringify(safeBrief)}`;
 

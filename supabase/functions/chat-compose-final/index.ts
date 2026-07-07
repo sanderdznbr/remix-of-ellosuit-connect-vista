@@ -997,14 +997,10 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
 
     let cardImage: string | null = null;
 
-    // PRIMARY: Gemini 3 Pro Image. FALLBACK: Gemini 3.1 Flash Image. Sem mais fallbacks.
-    console.log("chat-compose-final fallback mode: primary (pro)");
-    cardImage = await generateWithGemini("google/gemini-3-pro-image-preview", cardContent);
-    if (!cardImage) {
-      await new Promise((r) => setTimeout(r, 2000));
-      console.log("chat-compose-final fallback mode: fallback (fast)");
-      cardImage = await generateWithGemini("google/gemini-3.1-flash-image-preview", cardContent);
-    }
+    // Race Pro + Flash para nunca ultrapassar o timeout de 150s do Edge.
+    console.log("chat-compose-final fallback mode: race(pro+flash)");
+    cardImage = await generateImageWithFailover(cardContent);
+
 
     if (!cardImage) {
       return aiGenerationFailureResponse(

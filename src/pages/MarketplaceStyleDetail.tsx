@@ -8,7 +8,7 @@ import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import { routeFromTab } from '@/utils/dashboard-routes';
 import CommunityPosts from '@/components/Marketplace/CommunityPosts';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, X } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 interface MarketplaceStyle {
   id: string;

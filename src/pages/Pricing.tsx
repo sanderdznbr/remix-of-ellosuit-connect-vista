@@ -462,9 +462,8 @@ function LoggedInPricing() {
   const planLabel = planConfig?.label || 'Sem plano';
   const maxCredits = planConfig?.credits || 0;
 
-  const handleTabChange = (tab: string) => {
-    navigate(routeFromTab(tab));
-  };
+
+
 
   const handleRedeemCode = async () => {
     if (!redeemCode.trim() || !user || !companyId) return;

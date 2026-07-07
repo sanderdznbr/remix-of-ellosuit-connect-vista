@@ -133,7 +133,7 @@ const Analytics: React.FC = () => {
         )}
       </main>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

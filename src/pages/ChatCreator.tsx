@@ -2973,6 +2973,13 @@ const FinalResultWidget: React.FC<{
                 </div>
               </button>
             </div>
+
+            <button
+              onClick={() => setShowAfterDownload(false)}
+              className="w-full h-9 rounded-full text-[12px] font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}

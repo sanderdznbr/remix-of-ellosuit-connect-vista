@@ -610,6 +610,13 @@ Prefira frases curtas, verbos fortes e ZERO enrolação. NUNCA gere textos maior
       }
     }
 
+    // 🔒 Server-side final safety net: enforce per-style character limits on every slide.
+    if (Array.isArray(parsed.brief_update?.suggested_content) && parsed.brief_update.suggested_content.length > 0) {
+      parsed.brief_update.suggested_content = enforceLimitsOnSlides(parsed.brief_update.suggested_content, effectiveLimits);
+    }
+
+
+
     return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));
   } catch (e) {
     console.error('chat-creator error:', e);

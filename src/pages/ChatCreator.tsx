@@ -42,6 +42,8 @@ interface BriefState {
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
+  brandNeutralTones?: string[];
+
   faceUrl?: string | string[];
   logoUrl?: string | string[];
   productUrl?: string | string[];

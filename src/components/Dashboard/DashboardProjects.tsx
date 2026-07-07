@@ -462,41 +462,43 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     <Star className="w-3 h-3" fill="#facc15" />
                   </div>
                 )}
-                {/* Hover overlay */}
-                <div
-                  className="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 80%)',
-                  }}
-                >
-                  <div className="flex flex-col gap-0.5 px-3 pb-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span className="text-[11px]">Editar</span>
-                    </button>
-                    <button
-                      onClick={(e) => openPublishDialog(e, item)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                      disabled={publishingId === item.id}
-                    >
-                      {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-                      <span className="text-[11px]">Compartilhar</span>
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(e, item.id)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
-                      style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="text-[11px]">{deleteConfirmId === item.id ? 'Confirmar' : 'Excluir'}</span>
-                    </button>
+                {/* Hover overlay (hidden in selection mode) */}
+                {!selectionMode && (
+                  <div
+                    className="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    style={{
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 80%)',
+                    }}
+                  >
+                    <div className="flex flex-col gap-0.5 px-3 pb-3">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Editar</span>
+                      </button>
+                      <button
+                        onClick={(e) => openPublishDialog(e, item)}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                        disabled={publishingId === item.id}
+                      >
+                        {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                        <span className="text-[11px]">Compartilhar</span>
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(e, item.id)}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">{deleteConfirmId === item.id ? 'Confirmar' : 'Excluir'}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}

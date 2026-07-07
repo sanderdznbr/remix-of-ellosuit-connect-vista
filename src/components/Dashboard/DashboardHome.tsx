@@ -579,6 +579,24 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 )}
               </div>
             )}
+            {showMenu && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => menuScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => menuScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <AnimatePresence initial={false}>

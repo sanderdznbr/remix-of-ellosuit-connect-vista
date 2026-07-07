@@ -466,24 +466,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                     <SlidersHorizontal className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {(() => {
-                  const hasText = !!inputValue.trim();
-                  return (
-                    <button
-                      onClick={handleSubmit}
-                      disabled={!hasText || isGenerating}
-                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer"
-                      style={{
-                        backgroundColor: hasText ? '#ffffff' : 'rgba(255,255,255,0.08)',
-                        opacity: hasText ? 1 : 0.6,
-                        boxShadow: hasText ? '0 0 12px rgba(255,255,255,0.35)' : 'none',
-                      }}
-                      title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
-                    >
-                      <ArrowUp className="w-4 h-4" style={{ color: hasText ? '#0a0a0f' : '#ffffff' }} />
-                    </button>
-                  );
-                })()}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!inputValue.trim() || isGenerating}
+                  className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    opacity: inputValue.trim() ? 1 : 0.35,
+                    boxShadow: inputValue.trim() ? '0 0 14px rgba(255,255,255,0.45)' : 'none',
+                    border: 'none',
+                  }}
+                  title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
+                >
+                  <ArrowUp className="w-4 h-4" style={{ color: '#0a0a0f' }} />
+                </button>
               </div>
             </div>
           </div>

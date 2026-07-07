@@ -98,6 +98,52 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     });
   };
 
+  // Enable mouse drag-to-scroll on menu strip (desktop)
+  useEffect(() => {
+    const el = menuScrollRef.current;
+    if (!el || !showMenu) return;
+    let isDown = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = 0;
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      isDown = true; moved = 0;
+      startX = e.clientX; startScroll = el.scrollLeft;
+      el.setPointerCapture(e.pointerId);
+      el.style.cursor = 'grabbing';
+    };
+    const move = (e: PointerEvent) => {
+      if (!isDown) return;
+      const dx = e.clientX - startX;
+      moved = Math.abs(dx);
+      el.scrollLeft = startScroll - dx;
+    };
+    const up = (e: PointerEvent) => {
+      if (!isDown) return;
+      isDown = false;
+      el.style.cursor = '';
+      if (moved > 5) {
+        // Suppress the click that follows a drag
+        const stopClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
+        el.addEventListener('click', stopClick, { capture: true, once: true });
+      }
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    el.style.cursor = 'grab';
+    return () => {
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+      el.style.cursor = '';
+    };
+  }, [showMenu]);
+
   // Rotate greeting text every 15 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -802,16 +848,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
                         )}
                         <div className="relative z-[1] flex flex-col items-center gap-2 pb-4 pt-4">
-                          {!photo && (
-                            <div
-                              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
-                              style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
-                            >
-                              <it.icon className="w-5 h-5" strokeWidth={1.6} style={{ color: '#c4b5fd' }} />
-                            </div>
-                          )}
                           <span className="text-[13px] font-medium text-white/90 transition-colors" style={photo ? { textShadow: '0 1px 6px rgba(0,0,0,0.7)' } : undefined}>{it.label}</span>
                         </div>
+
                       </div>
                     );
                   })}

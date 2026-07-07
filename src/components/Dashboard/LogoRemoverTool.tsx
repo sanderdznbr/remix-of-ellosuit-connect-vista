@@ -981,32 +981,34 @@ Return ONLY the JSON array, no other text.`
       {/* Lightbox */}
       {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
 
-      {/* Header */}
-      <div className="shrink-0 px-6 pt-6 pb-4 flex items-start justify-between gap-4">
+      {/* Hero */}
+      <div className="shrink-0 max-w-5xl mx-auto w-full px-4 sm:px-8 pt-8 sm:pt-14 pb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>
-            Remover Logos
-          </h1>
-          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <Wand2 className="w-3.5 h-3.5" />
+            Ferramenta IA
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">Remover logos</h1>
+          <p className="text-white/40 text-base max-w-xl">
             {phase === 'upload' && (items.length === 0
-              ? 'Carregue até 15 imagens e marque manualmente as áreas com logo'
-              : `${items.length} imagem${items.length !== 1 ? 'ns' : ''} selecionada${items.length !== 1 ? 's' : ''} — clique em Avançar para marcar as logos`
+              ? 'Carregue até 15 imagens e marque manualmente as áreas com logo.'
+              : `${items.length} imagem${items.length !== 1 ? 'ns' : ''} selecionada${items.length !== 1 ? 's' : ''} — avance para marcar as logos.`
             )}
-            {phase === 'mode-select' && 'Escolha como deseja identificar as logos'}
+            {phase === 'mode-select' && 'Escolha como deseja identificar as logos.'}
             {phase === 'auto-detecting' && `Detectando logos automaticamente... ${autoDetectProgress.current}/${autoDetectProgress.total}`}
             {phase === 'selecting' && (removalMode === 'auto'
-              ? `Confirme as áreas detectadas — imagem ${selectionIndex + 1} de ${items.length}`
-              : `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}`
+              ? `Confirme as áreas detectadas — imagem ${selectionIndex + 1} de ${items.length}.`
+              : `Marque as áreas com logo — imagem ${selectionIndex + 1} de ${items.length}.`
             )}
-            {phase === 'processing' && `Removendo logos com IA... ${doneCount}/${items.length} concluída${doneCount !== 1 ? 's' : ''}`}
-            {phase === 'done' && `Concluído! ${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} processada${withResultCount !== 1 ? 's' : ''} sem logos`}
+            {phase === 'processing' && `Removendo logos com IA... ${doneCount}/${items.length} concluída${doneCount !== 1 ? 's' : ''}.`}
+            {phase === 'done' && `Concluído! ${withResultCount} imagem${withResultCount !== 1 ? 'ns' : ''} processada${withResultCount !== 1 ? 's' : ''} sem logos.`}
           </p>
         </div>
         {phase !== 'upload' && (
           <button
             onClick={reset}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer shrink-0"
-            style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer shrink-0 border border-white/[0.06] hover:border-white/[0.12]"
+            style={{ backgroundColor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.6)' }}
           >
             <RotateCcw className="w-3.5 h-3.5" /> Recomeçar
           </button>
@@ -1014,7 +1016,7 @@ Return ONLY the JSON array, no other text.`
       </div>
 
       {/* Main area */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto max-w-5xl mx-auto w-full px-4 sm:px-8 pb-14">
 
         {phase === 'upload' && items.length === 0 && (
           <div

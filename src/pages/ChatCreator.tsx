@@ -1046,7 +1046,8 @@ const ChatCreator: React.FC = () => {
                             className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap border border-white/[0.06]"
                             style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                           >
-                            {msg.content}
+                            <TypewriterText id={msg.id} text={msg.content} />
+
                           </div>
                           {msg.widget && (
                             <div className="pt-1">

@@ -250,15 +250,22 @@ const PromptGallery: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4 shrink-0 flex items-center justify-between">
+      {/* Hero */}
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-8 pt-8 sm:pt-14 pb-6 shrink-0 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold text-white/90">Prompts</h1>
-          <p className="text-xs text-white/25 mt-0.5">Use <span className="text-purple-400/70">@</span> no wizard para mencionar</p>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <Sparkles className="w-3.5 h-3.5" />
+            Prompts salvos
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">Meus prompts</h1>
+          <p className="text-white/40 text-base max-w-xl">
+            Contextos reutilizáveis para suas marcas. Use <span className="text-purple-400">@</span> no wizard para mencionar.
+          </p>
         </div>
         <button
           onClick={openNewPrompt}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/50 hover:text-white border border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.04] transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-white transition-all cursor-pointer"
+          style={{ backgroundColor: '#8B5CF6' }}
         >
           <Plus className="w-3.5 h-3.5" /> Novo
         </button>

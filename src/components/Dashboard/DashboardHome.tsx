@@ -802,16 +802,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
                         )}
                         <div className="relative z-[1] flex flex-col items-center gap-2 pb-4 pt-4">
-                          {!photo && (
-                            <div
-                              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
-                              style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
-                            >
-                              <it.icon className="w-5 h-5" strokeWidth={1.6} style={{ color: '#c4b5fd' }} />
-                            </div>
-                          )}
                           <span className="text-[13px] font-medium text-white/90 transition-colors" style={photo ? { textShadow: '0 1px 6px rgba(0,0,0,0.7)' } : undefined}>{it.label}</span>
                         </div>
+
                       </div>
                     );
                   })}

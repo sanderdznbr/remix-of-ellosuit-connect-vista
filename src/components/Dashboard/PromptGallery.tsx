@@ -503,7 +503,7 @@ const PromptGallery: React.FC = () => {
       </AnimatePresence>
 
       {/* Prompt list */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto max-w-5xl mx-auto w-full px-4 sm:px-8 pb-14">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 animate-spin text-white/15" />

@@ -322,8 +322,44 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
               <List className="w-4 h-4" />
             </button>
           </div>
+
+          <button
+            onClick={() => selectionMode ? exitSelection() : setSelectionMode(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-colors cursor-pointer"
+            style={{
+              backgroundColor: selectionMode ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${selectionMode ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              color: selectionMode ? '#C4B5FD' : 'rgba(255,255,255,0.6)',
+            }}
+          >
+            {selectionMode ? <X className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
+            {selectionMode ? 'Cancelar' : 'Selecionar'}
+          </button>
         </motion.div>
       </div>
+
+      {/* Selection action bar */}
+      {selectionMode && (
+        <div className="px-4 md:px-8 pb-2">
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl"
+            style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)' }}
+          >
+            <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {selectedIds.size === 0 ? 'Toque nos posts para selecionar' : `${selectedIds.size} selecionado${selectedIds.size > 1 ? 's' : ''}`}
+            </span>
+            <button
+              onClick={openStyleDialog}
+              disabled={selectedIds.size === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#8B5CF6', color: '#fff' }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Criar estilo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="px-4 md:px-8 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))' }}>

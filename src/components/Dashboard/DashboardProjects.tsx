@@ -581,6 +581,83 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Style Dialog */}
+      <Dialog open={styleDialogOpen} onOpenChange={(open) => { if (!open && !creatingStyle) setStyleDialogOpen(false); }}>
+        <DialogContent className="sm:max-w-md" style={{ backgroundColor: '#0f0f16', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2" style={{ color: '#fff' }}>
+              <Sparkles className="w-4 h-4" style={{ color: '#A78BFA' }} />
+              Criar estilo a partir da seleção
+            </DialogTitle>
+            <DialogDescription style={{ color: 'rgba(255,255,255,0.5)' }}>
+              {selectedIds.size} post{selectedIds.size > 1 ? 's' : ''} selecionado{selectedIds.size > 1 ? 's' : ''}. A IA vai analisar as artes e gerar automaticamente os prompts. Só você verá esse estilo.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Cover picker */}
+          <div>
+            <label className="text-[11px] font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.5)' }}>Capa</label>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {carousels.filter(c => selectedIds.has(c.id)).slice(0, 8).map(c => {
+                const url = c.cover_url && !String(c.cover_url).startsWith('data:') ? c.cover_url : null;
+                if (!url) return null;
+                const active = styleCoverUrl === url;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setStyleCoverUrl(url)}
+                    className="shrink-0 h-16 w-14 rounded-md overflow-hidden transition-all"
+                    style={{ outline: active ? '2px solid #8B5CF6' : '1px solid rgba(255,255,255,0.08)', outlineOffset: active ? '-2px' : undefined }}
+                  >
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.5)' }}>Nome</label>
+            <input
+              type="text"
+              value={styleName}
+              onChange={(e) => setStyleName(e.target.value)}
+              maxLength={80}
+              placeholder="Ex: Editorial Minimal Roxo"
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.5)' }}>Descrição (opcional)</label>
+            <Textarea
+              value={styleDescription}
+              onChange={(e) => setStyleDescription(e.target.value)}
+              maxLength={500}
+              placeholder="O que caracteriza esse estilo..."
+              rows={3}
+              className="resize-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setStyleDialogOpen(false)} disabled={creatingStyle} style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmCreateStyle}
+              disabled={creatingStyle || !styleName.trim()}
+              className="gap-2"
+              style={{ backgroundColor: '#8B5CF6', color: '#fff' }}
+            >
+              {creatingStyle ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando...</> : <><Sparkles className="w-4 h-4" /> Criar estilo</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

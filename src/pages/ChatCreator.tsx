@@ -739,6 +739,8 @@ const ChatCreator: React.FC = () => {
       productUrl: data.productUrl,
       printUrl: data.printUrl,
       brandColors: data.brandColors,
+      brandNeutralTones: data.brandNeutralTones,
+
       imageSource: hasProductReference ? undefined : brief.imageSource,
       selectedImages: hasProductReference ? undefined : brief.selectedImages,
     };

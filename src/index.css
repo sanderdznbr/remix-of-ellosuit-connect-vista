@@ -563,8 +563,10 @@ body[data-scroll-locked] {
 .saber-border {
   position: relative;
   isolation: isolate;
-  --saber-angle: 0deg;
+  --saber-corner: 18px;
+  --saber-beam-width: clamp(64px, 18%, 104px);
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.1) 50%, rgba(232, 121, 249, 0.14));
+  overflow: visible;
 }
 
 .saber-border > * {
@@ -576,24 +578,23 @@ body[data-scroll-locked] {
 .saber-border::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--saber-angle),
-    transparent 0deg,
-    transparent 255deg,
-    rgba(96, 165, 250, 0.18) 286deg,
-    rgba(167, 139, 250, 0.78) 312deg,
-    rgba(255, 255, 255, 0.92) 330deg,
-    rgba(232, 121, 249, 0.76) 348deg,
-    transparent 360deg
+  top: 0;
+  left: 50%;
+  width: var(--saber-beam-width);
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(96, 165, 250, 0.18) 12%,
+    rgba(167, 139, 250, 0.78) 38%,
+    rgba(255, 255, 255, 0.92) 52%,
+    rgba(232, 121, 249, 0.76) 66%,
+    transparent 100%
   );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
   pointer-events: none;
+  transform: translate3d(-50%, -50%, 0) rotate(0deg);
+  transform-origin: 50% 50%;
   animation: saber-orbit 3.2s linear infinite;
 }
 
@@ -602,26 +603,59 @@ body[data-scroll-locked] {
 }
 
 .saber-border::after {
-  inset: -2px;
-  padding: 3px;
-  filter: blur(5px);
+  width: calc(var(--saber-beam-width) * 1.2);
+  height: 8px;
+  filter: blur(6px);
   opacity: 0.28;
   z-index: 0;
 }
 
-@property --saber-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 @keyframes saber-orbit {
-  to { --saber-angle: 360deg; }
-}
-
-@supports not (background: conic-gradient(from 0deg, red, blue)) {
-  .saber-border::before,
-  .saber-border::after { display: none; }
+  0% {
+    top: 0;
+    left: 50%;
+    transform: translate3d(-50%, -50%, 0) rotate(0deg);
+  }
+  18% {
+    top: 0;
+    left: calc(100% - var(--saber-corner));
+    transform: translate3d(-50%, -50%, 0) rotate(0deg);
+  }
+  23% {
+    top: var(--saber-corner);
+    left: 100%;
+    transform: translate3d(-50%, -50%, 0) rotate(90deg);
+  }
+  31% {
+    top: calc(100% - var(--saber-corner));
+    left: 100%;
+    transform: translate3d(-50%, -50%, 0) rotate(90deg);
+  }
+  36% {
+    top: 100%;
+    left: calc(100% - var(--saber-corner));
+    transform: translate3d(-50%, -50%, 0) rotate(180deg);
+  }
+  68% {
+    top: 100%;
+    left: var(--saber-corner);
+    transform: translate3d(-50%, -50%, 0) rotate(180deg);
+  }
+  73% {
+    top: calc(100% - var(--saber-corner));
+    left: 0;
+    transform: translate3d(-50%, -50%, 0) rotate(270deg);
+  }
+  82% {
+    top: var(--saber-corner);
+    left: 0;
+    transform: translate3d(-50%, -50%, 0) rotate(270deg);
+  }
+  100% {
+    top: 0;
+    left: 50%;
+    transform: translate3d(-50%, -50%, 0) rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

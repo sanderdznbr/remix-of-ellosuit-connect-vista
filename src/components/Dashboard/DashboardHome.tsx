@@ -427,6 +427,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           transition={{ delay: 0.5, duration: 0.4 }}
         >
           <div className="saber-border relative w-full rounded-2xl p-[1.5px]">
+            <svg className="saber-stroke" aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <rect className="saber-stroke-track" x="1" y="1" width="98" height="98" rx="7" ry="7" pathLength="100" />
+              <rect className="saber-stroke-glow" x="1" y="1" width="98" height="98" rx="7" ry="7" pathLength="100" />
+              <rect className="saber-stroke-beam" x="1" y="1" width="98" height="98" rx="7" ry="7" pathLength="100" />
+              <rect className="saber-stroke-core" x="1" y="1" width="98" height="98" rx="7" ry="7" pathLength="100" />
+            </svg>
             <div
               className="relative w-full rounded-2xl overflow-visible"
               style={{

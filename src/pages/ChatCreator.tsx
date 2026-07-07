@@ -2707,13 +2707,14 @@ const FinalResultWidget: React.FC<{
   onRegenerate?: () => void;
   canRegenerate?: boolean;
 }> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated, onRegenerate, canRegenerate }) => {
-
+  const navigate = useNavigate();
   const [slides, setSlides] = React.useState<{ image_url: string }[]>([]);
   const [loadingSlides, setLoadingSlides] = React.useState(false);
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [showAdjust, setShowAdjust] = React.useState(false);
   const [adjustText, setAdjustText] = React.useState('');
   const [adjusting, setAdjusting] = React.useState(false);
+  const [showAfterDownload, setShowAfterDownload] = React.useState(false);
 
   useEffect(() => {
     if (carouselId) {

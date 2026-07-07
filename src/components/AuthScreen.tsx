@@ -127,116 +127,77 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* ─── LEFT: Brand / Image ─── */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden border-r border-white/[0.06] bg-[#0d0d12]">
-        {heroImage ? (
-          <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover contrast-[1.1] brightness-[1.05]" />
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+      {/* Ambient purple glow at bottom — signature */}
+      <div
+        className="absolute inset-x-0 bottom-0 pointer-events-none"
+        style={{
+          height: '55%',
+          background: 'radial-gradient(ellipse 900px 500px at 50% 100%, rgba(139,92,246,0.22), transparent 70%)',
+        }}
+      />
+      {/* Subtle top gradient line */}
+      <div className="absolute inset-x-0 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)' }} />
+
+      {/* Top nav */}
+      <motion.nav
+        className="relative z-10 flex items-center justify-between px-6 md:px-10 py-5"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15, duration: 0.5 }}
+      >
+        <img src={ellocontentLogo} alt="elloContent" className="h-5 cursor-pointer" onClick={() => navigate('/')} />
+        {mode === 'signin' ? (
+          <button
+            onClick={() => navigate('/register')}
+            className="text-white/70 hover:text-white text-[13px] font-medium px-4 py-1.5 rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.04] transition-all"
+          >
+            Cadastre-se
+          </button>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-white/20 text-xs uppercase tracking-[0.2em] select-none">
-            Image placeholder
-          </div>
+          <button
+            onClick={switchMode}
+            className="text-white/70 hover:text-white text-[13px] font-medium px-4 py-1.5 rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.04] transition-all"
+          >
+            Entrar
+          </button>
         )}
-        {/* Soft vignette for legibility of overlay text */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,10,15,0.3) 0%, rgba(10,10,15,0) 30%, rgba(10,10,15,0) 60%, rgba(10,10,15,0.85) 100%)' }} />
+      </motion.nav>
 
-        {/* Logo top */}
+      {/* Centered form */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pb-16">
         <motion.div
-          className="absolute top-8 left-8 z-10"
-          initial={{ opacity: 0, y: -8 }}
+          className="w-full max-w-[380px] space-y-8"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
+          transition={{ delay: 0.35, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          <img src={ellocontentLogo} alt="elloContent" className="h-6 cursor-pointer" onClick={() => navigate('/')} />
-        </motion.div>
-
-        {/* Tagline */}
-        <motion.div
-          className="absolute bottom-12 left-12 right-12 z-10"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <motion.h2
-            className="text-white text-5xl xl:text-6xl 2xl:text-7xl font-semibold leading-[1.05] tracking-tight mb-5"
-            initial={{ opacity: 0, y: 30, filter: 'blur(8px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ delay: 0.6, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <motion.span
-              className="block"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          {/* Title */}
+          <div className="text-center space-y-2">
+            <motion.h1
+              className="text-white font-semibold tracking-tight"
+              style={{ fontSize: 34, letterSpacing: '-0.03em', lineHeight: 1.1 }}
+              initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0)' }}
+              transition={{ delay: 0.45, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              Crie posts que
-            </motion.span>
-            <motion.span
-              className="block text-white/50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.95, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            >
-              conectam, em segundos.
-            </motion.span>
-          </motion.h2>
-        </motion.div>
-      </div>
-
-      {/* ─── RIGHT: Form ─── */}
-      <div className="w-full lg:w-1/2 flex flex-col relative">
-        {/* Mobile-only logo on top of right side (lg hidden case never reached because mobile uses MobileAuthScreen) */}
-        <motion.nav
-          className="flex items-center justify-between px-6 lg:px-10 py-5"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <img src={ellocontentLogo} alt="elloContent" className="h-5 cursor-pointer lg:invisible" onClick={() => navigate('/')} />
-          {mode === 'signin' ? (
-            <button
-              onClick={() => navigate('/register')}
-              className="text-white/80 text-sm font-medium px-4 py-1.5 rounded-full border border-white/15 hover:bg-white/5 hover:border-white/30 transition-all cursor-pointer"
-            >
-              Cadastre-se
-            </button>
-          ) : (
-            <button
-              onClick={switchMode}
-              className="text-white/80 text-sm font-medium px-4 py-1.5 rounded-full border border-white/15 hover:bg-white/5 hover:border-white/30 transition-all cursor-pointer"
-            >
-              Entrar
-            </button>
-          )}
-        </motion.nav>
-
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-10">
-          <motion.div
-            className="w-full max-w-[360px] space-y-7"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-          >
-            {/* Title */}
-            <div className="space-y-1.5">
-              <h1 className="text-[28px] font-semibold text-white tracking-tight leading-tight">
-                {mode === 'signin' ? 'Bem-vindo de volta' : 'Crie sua conta'}
-              </h1>
-              <p className="text-sm text-white/40">
-                {mode === 'signin' ? 'Entre na sua conta para continuar' : 'Comece agora, é gratuito'}
-              </p>
-            </div>
+              {mode === 'signin' ? 'Bem-vindo de volta' : 'Crie sua conta'}
+            </motion.h1>
+            <p className="text-[13.5px] text-white/45">
+              {mode === 'signin' ? 'Entre na sua conta para continuar' : 'Comece agora, é gratuito'}
+            </p>
+          </div>
 
           {error && (
-            <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">
+            <Alert variant="destructive" className="bg-red-500/[0.08] border-red-500/25 rounded-2xl">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-red-300">{error}</AlertDescription>
+              <AlertDescription className="text-red-300 text-[13px]">{error}</AlertDescription>
             </Alert>
           )}
           {success && (
-            <Alert className="bg-green-500/10 border-green-500/30">
+            <Alert className="bg-green-500/[0.08] border-green-500/25 rounded-2xl">
               <AlertCircle className="h-4 w-4 text-green-400" />
-              <AlertDescription className="text-green-300">{success}</AlertDescription>
+              <AlertDescription className="text-green-300 text-[13px]">{success}</AlertDescription>
             </Alert>
           )}
 
@@ -247,7 +208,7 @@ const AuthScreen = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
+                className="h-12 bg-white/[0.04] border-white/[0.08] text-white text-[14px] placeholder:text-white/30 rounded-xl focus-visible:ring-1 focus-visible:ring-purple-500/60 focus-visible:border-purple-500/40 transition-colors"
                 required
               />
               <div className="relative">
@@ -256,31 +217,31 @@ const AuthScreen = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Senha"
-                  className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl pr-11 focus-visible:ring-purple-500/50"
+                  className="h-12 bg-white/[0.04] border-white/[0.08] text-white text-[14px] placeholder:text-white/30 rounded-xl pr-11 focus-visible:ring-1 focus-visible:ring-purple-500/60 focus-visible:border-purple-500/40 transition-colors"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/35 hover:text-white/70 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="h-3.5 w-3.5 rounded border-white/20 accent-purple-500"
                   />
-                  <span className="text-xs text-white/40">Manter conectado</span>
+                  <span className="text-[12px] text-white/45 group-hover:text-white/70 transition-colors">Manter conectado</span>
                 </label>
                 <button
                   type="button"
-                  className="text-xs text-purple-400 hover:text-purple-300 hover:underline"
+                  className="text-[12px] text-white/45 hover:text-white transition-colors"
                   onClick={() => navigate('/forgot-password')}
                 >
                   Esqueci minha senha
@@ -289,11 +250,14 @@ const AuthScreen = () => {
 
               <Button
                 type="submit"
-                className="w-full h-10 rounded-full text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: '#7B50DC' }}
+                className="w-full h-12 mt-2 rounded-xl text-[14px] font-medium transition-all duration-200 hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(180deg, #A78BFA 0%, #7B50DC 100%)',
+                  boxShadow: '0 8px 24px -8px rgba(139,92,246,0.5)',
+                }}
                 disabled={isLoading}
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continuar'}
               </Button>
             </form>
           ) : (
@@ -302,14 +266,14 @@ const AuthScreen = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Nome de usuário"
-                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
+                className="h-12 bg-white/[0.04] border-white/[0.08] text-white text-[14px] placeholder:text-white/30 rounded-xl focus-visible:ring-1 focus-visible:ring-purple-500/60 focus-visible:border-purple-500/40 transition-colors"
                 required
               />
               <Input
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Nome da empresa"
-                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
+                className="h-12 bg-white/[0.04] border-white/[0.08] text-white text-[14px] placeholder:text-white/30 rounded-xl focus-visible:ring-1 focus-visible:ring-purple-500/60 focus-visible:border-purple-500/40 transition-colors"
                 required
               />
               <Input
@@ -317,7 +281,7 @@ const AuthScreen = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
-                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl focus-visible:ring-purple-500/50"
+                className="h-12 bg-white/[0.04] border-white/[0.08] text-white text-[14px] placeholder:text-white/30 rounded-xl focus-visible:ring-1 focus-visible:ring-purple-500/60 focus-visible:border-purple-500/40 transition-colors"
                 required
               />
               <div className="relative">
@@ -326,22 +290,25 @@ const AuthScreen = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Senha (mín. 6 caracteres)"
-                  className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl pr-11 focus-visible:ring-purple-500/50"
+                  className="h-12 bg-white/[0.04] border-white/[0.08] text-white text-[14px] placeholder:text-white/30 rounded-xl pr-11 focus-visible:ring-1 focus-visible:ring-purple-500/60 focus-visible:border-purple-500/40 transition-colors"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/35 hover:text-white/70 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               <Button
                 type="submit"
-                className="w-full h-10 rounded-full text-sm font-medium transition-all duration-200"
-                style={{ backgroundColor: '#7B50DC' }}
+                className="w-full h-12 mt-2 rounded-xl text-[14px] font-medium transition-all duration-200 hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(180deg, #A78BFA 0%, #7B50DC 100%)',
+                  boxShadow: '0 8px 24px -8px rgba(139,92,246,0.5)',
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar Conta'}
@@ -349,16 +316,13 @@ const AuthScreen = () => {
             </form>
           )}
 
-          {/* Divider */}
-
-          {/* Toggle mode */}
-          <p className="text-center text-xs text-white/30 pt-2">
+          <p className="text-center text-[12.5px] text-white/35">
             {mode === 'signin' ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}{' '}
             {mode === 'signin' ? (
               <button
                 type="button"
                 onClick={() => navigate('/register')}
-                className="text-purple-400 font-medium hover:underline"
+                className="text-white/80 hover:text-white font-medium transition-colors"
               >
                 Cadastre-se
               </button>
@@ -366,27 +330,25 @@ const AuthScreen = () => {
               <button
                 type="button"
                 onClick={switchMode}
-                className="text-purple-400 font-medium hover:underline"
+                className="text-white/80 hover:text-white font-medium transition-colors"
               >
                 Entrar
               </button>
             )}
-            </p>
+          </p>
 
-            {/* Coming Soon Popup */}
-            {showComingSoon && (
-              <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
-                🚀 Disponível em breve no lançamento!
-              </div>
-            )}
-
-            {/* Legal links */}
-            <div className="flex justify-center gap-4 text-xs text-white/20 pt-2">
-              <a href="https://www.ellosuit.online/privacy" className="underline hover:text-white/40 transition-colors">Política de Privacidade</a>
-              <span>•</span>
-              <a href="https://www.ellosuit.online/terms" className="underline hover:text-white/40 transition-colors">Termos de Uso</a>
+          {showComingSoon && (
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full shadow-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+              🚀 Disponível em breve no lançamento!
             </div>
-          </motion.div>
+          )}
+        </motion.div>
+
+        {/* Footer legal — Apple-style, fixed bottom */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4 text-[11px] text-white/25">
+          <a href="https://www.ellosuit.online/privacy" className="hover:text-white/50 transition-colors">Política de Privacidade</a>
+          <span>·</span>
+          <a href="https://www.ellosuit.online/terms" className="hover:text-white/50 transition-colors">Termos de Uso</a>
         </div>
       </div>
     </div>

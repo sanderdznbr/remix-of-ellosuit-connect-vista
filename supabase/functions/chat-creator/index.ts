@@ -442,12 +442,24 @@ Deno.serve(async (req) => {
       ? `IMPORTANTE: O usuário JÁ FORNECEU: ${alreadyProvided.join(', ')}. NÃO pergunte sobre esses itens nem peça upload deles novamente. Não reabra o widget "personalization" pra esses itens. Apenas confirme rápido e siga para o próximo passo.`
       : '';
 
+    // Load per-style character limits and inject as hard rules so the AI never
+    // writes copy that visually overflows the selected template.
+    const styleTextLimits = await fetchStyleTextLimits(safeBrief.styleId, safeBrief.styleName);
+    const effectiveLimits = styleTextLimits || DEFAULT_TEXT_LIMITS;
+    const limitsHint = `⚠️ LIMITES DE CARACTERES INVIOLÁVEIS DO ESTILO SELECIONADO — cada campo do 'suggested_content' NÃO PODE ULTRAPASSAR estes limites (contando espaços e pontuação). Se ultrapassar, o design QUEBRA:
+- Capa (slide 1): title MÁX ${effectiveLimits.cover_title_max_chars} caracteres, subtitle MÁX ${effectiveLimits.cover_subtitle_max_chars} caracteres.
+- Slides de conteúdo (2..N-1): body MÁX ${effectiveLimits.content_body_top_max_chars} caracteres, subtitle MÁX ${effectiveLimits.cover_subtitle_max_chars} caracteres.
+- CTA (último slide se carrossel): title MÁX ${effectiveLimits.cta_title_max_chars} caracteres, body MÁX ${effectiveLimits.cta_body_max_chars} caracteres.
+Prefira frases curtas, verbos fortes e ZERO enrolação. NUNCA gere textos maiores esperando "encurtar depois" — já escreva dentro do limite.`;
+
     const aiMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: briefSummary },
+      { role: 'system', content: limitsHint },
       ...(providedHint ? [{ role: 'system', content: providedHint }] : []),
       ...safeMessages,
     ];
+
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

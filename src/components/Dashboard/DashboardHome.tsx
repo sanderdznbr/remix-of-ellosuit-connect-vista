@@ -468,25 +468,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           </div>
         </motion.div>
 
-        {/* Templates rápidos (só quando input vazio) */}
-        {!isUserTyping && mentionedPrompts.length === 0 && (
-          <QuickTemplates
-            onSelect={(prompt) => {
-              setInputValue(prompt);
-              
-              // foca no input para o usuário continuar digitando/editando
-              setTimeout(() => {
-                const el = document.querySelector<HTMLTextAreaElement>('textarea[data-dashboard-input]')
-                  || document.querySelector<HTMLTextAreaElement>('textarea');
-                el?.focus();
-                if (el) {
-                  const len = el.value.length;
-                  el.setSelectionRange(len, len);
-                }
-              }, 50);
-            }}
-          />
-        )}
+        {/* Templates rápidos removidos a pedido do usuário */}
+
 
       </motion.div>
 

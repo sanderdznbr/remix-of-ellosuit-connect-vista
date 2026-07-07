@@ -28,6 +28,8 @@ interface Brief {
   styleName?: string | null;
   brandName?: string;
   brandColors?: string[];
+  brandNeutralTones?: string[];
+
   visualType?: 'marketplace' | 'custom';
   customStyleUrls?: string[];
   hasFace?: boolean;

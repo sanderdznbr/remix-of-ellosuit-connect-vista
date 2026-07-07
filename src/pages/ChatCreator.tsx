@@ -959,14 +959,16 @@ const ChatCreator: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+    <div className="h-screen flex overflow-hidden relative" style={{ backgroundColor: '#07070b' }}>
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(139,92,246,0.10), transparent 70%)' }} />
       {/* Main column */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 py-3 border-b border-white/5 backdrop-blur-md sticky top-0 z-20" style={{ backgroundColor: 'rgba(10,10,10,0.85)' }}>
+        <header className="flex items-center justify-between px-4 py-3 sticky top-0 z-20" style={{ backgroundColor: 'rgba(7,7,11,0.6)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
           <button
             onClick={() => navigate('/')}
-            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors"
             aria-label="Voltar para home"
           >
             <ArrowLeft className="h-4 w-4" />

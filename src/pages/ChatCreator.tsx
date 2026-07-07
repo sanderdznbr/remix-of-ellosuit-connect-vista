@@ -959,14 +959,16 @@ const ChatCreator: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+    <div className="h-screen flex overflow-hidden relative" style={{ backgroundColor: '#07070b' }}>
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(139,92,246,0.10), transparent 70%)' }} />
       {/* Main column */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 py-3 border-b border-white/5 backdrop-blur-md sticky top-0 z-20" style={{ backgroundColor: 'rgba(10,10,10,0.85)' }}>
+        <header className="flex items-center justify-between px-4 py-3 sticky top-0 z-20" style={{ backgroundColor: 'rgba(7,7,11,0.6)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
           <button
             onClick={() => navigate('/')}
-            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center justify-center h-8 w-8 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.04] transition-colors"
             aria-label="Voltar para home"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -1007,8 +1009,8 @@ const ChatCreator: React.FC = () => {
                         </div>
                         <div className="space-y-2 flex-1 min-w-0">
                           <div
-                            className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                            className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap border border-white/[0.06]"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                           >
                             {msg.content}
                           </div>
@@ -1068,7 +1070,7 @@ const ChatCreator: React.FC = () => {
         </div>
 
         {/* Input */}
-        <div className="px-4 pb-6 pt-2 sticky bottom-0" style={{ background: 'linear-gradient(to top, #0A0A0A 70%, transparent)' }}>
+        <div className="px-4 pb-6 pt-4 sticky bottom-0" style={{ background: 'linear-gradient(to top, #07070b 60%, rgba(7,7,11,0.6) 90%, transparent)' }}>
           <div className="max-w-2xl mx-auto space-y-2">
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -1087,7 +1089,10 @@ const ChatCreator: React.FC = () => {
                 ))}
               </div>
             )}
-            <div className="flex items-end gap-2 rounded-2xl px-2 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div
+              className="flex items-end gap-2 rounded-2xl px-2 py-2 transition-shadow focus-within:shadow-[0_0_0_1px_rgba(139,92,246,0.4),0_0_40px_-8px_rgba(139,92,246,0.55)]"
+              style={{ backgroundColor: 'rgba(15,15,22,0.9)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 0 0 1px rgba(139,92,246,0.15), 0 0 30px -10px rgba(139,92,246,0.35)' }}
+            >
               <input
                 ref={fileInputRef}
                 type="file"

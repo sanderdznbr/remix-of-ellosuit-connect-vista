@@ -962,6 +962,24 @@ export type Database = {
           },
         ]
       }
+      autopilot_runtime_config: {
+        Row: {
+          id: number
+          service_role_key: string
+          supabase_url: string
+        }
+        Insert: {
+          id?: number
+          service_role_key: string
+          supabase_url: string
+        }
+        Update: {
+          id?: number
+          service_role_key?: string
+          supabase_url?: string
+        }
+        Relationships: []
+      }
       availability_schedules: {
         Row: {
           company_id: string
@@ -1516,6 +1534,106 @@ export type Database = {
           },
         ]
       }
+      chatbot_builder_sessions: {
+        Row: {
+          company_id: string
+          created_at: string
+          edges: Json
+          flow_name: string
+          id: string
+          is_active: boolean
+          messages: Json
+          nodes: Json
+          published_flow_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          edges?: Json
+          flow_name?: string
+          id?: string
+          is_active?: boolean
+          messages?: Json
+          nodes?: Json
+          published_flow_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          edges?: Json
+          flow_name?: string
+          id?: string
+          is_active?: boolean
+          messages?: Json
+          nodes?: Json
+          published_flow_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_builder_sessions_published_flow_id_fkey"
+            columns: ["published_flow_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_connections: {
+        Row: {
+          company_id: string
+          config: Json
+          created_at: string
+          created_by: string
+          credentials: Json
+          id: string
+          is_active: boolean
+          name: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          config?: Json
+          created_at?: string
+          created_by: string
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          config?: Json
+          created_at?: string
+          created_by?: string
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_executions: {
         Row: {
           company_id: string | null
@@ -1588,6 +1706,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           nodes: Json
+          settings: Json
           trigger_config: Json | null
           updated_at: string
         }
@@ -1602,6 +1721,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           nodes?: Json
+          settings?: Json
           trigger_config?: Json | null
           updated_at?: string
         }
@@ -1616,6 +1736,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           nodes?: Json
+          settings?: Json
           trigger_config?: Json | null
           updated_at?: string
         }
@@ -2205,6 +2326,60 @@ export type Database = {
           },
         ]
       }
+      conversation_events: {
+        Row: {
+          actor_id: string | null
+          actor_name: string | null
+          actor_type: string
+          company_id: string
+          conversation_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          reason: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_type?: string
+          company_id: string
+          conversation_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_type?: string
+          company_id?: string
+          conversation_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_labels: {
         Row: {
           color: string
@@ -2336,6 +2511,423 @@ export type Database = {
           plan_months?: number | null
           plan_type?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      crm_autopilot_configs: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          allow_audio: boolean
+          auto_configure: boolean
+          avg_msgs_per_turn: number
+          company_id: string
+          confidence_threshold: number
+          created_at: string
+          id: string
+          is_active: boolean
+          last_self_config_at: string | null
+          learned_prompt: string | null
+          learning_enabled: boolean
+          max_chars: number
+          max_msgs_per_hour_per_contact: number
+          metadata: Json
+          objective: string | null
+          parent_fallback_behavior: string
+          parent_phone: string | null
+          parent_session_id: string | null
+          parent_timeout_minutes: number
+          personality: string | null
+          send_hour_end: number
+          send_hour_start: number
+          tone_preset: string | null
+          updated_at: string
+          voice_id: string | null
+          voice_preview_url: string | null
+          voice_status: string | null
+          writing_style_summary: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          allow_audio?: boolean
+          auto_configure?: boolean
+          avg_msgs_per_turn?: number
+          company_id: string
+          confidence_threshold?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_self_config_at?: string | null
+          learned_prompt?: string | null
+          learning_enabled?: boolean
+          max_chars?: number
+          max_msgs_per_hour_per_contact?: number
+          metadata?: Json
+          objective?: string | null
+          parent_fallback_behavior?: string
+          parent_phone?: string | null
+          parent_session_id?: string | null
+          parent_timeout_minutes?: number
+          personality?: string | null
+          send_hour_end?: number
+          send_hour_start?: number
+          tone_preset?: string | null
+          updated_at?: string
+          voice_id?: string | null
+          voice_preview_url?: string | null
+          voice_status?: string | null
+          writing_style_summary?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          allow_audio?: boolean
+          auto_configure?: boolean
+          avg_msgs_per_turn?: number
+          company_id?: string
+          confidence_threshold?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_self_config_at?: string | null
+          learned_prompt?: string | null
+          learning_enabled?: boolean
+          max_chars?: number
+          max_msgs_per_hour_per_contact?: number
+          metadata?: Json
+          objective?: string | null
+          parent_fallback_behavior?: string
+          parent_phone?: string | null
+          parent_session_id?: string | null
+          parent_timeout_minutes?: number
+          personality?: string | null
+          send_hour_end?: number
+          send_hour_start?: number
+          tone_preset?: string | null
+          updated_at?: string
+          voice_id?: string | null
+          voice_preview_url?: string | null
+          voice_status?: string | null
+          writing_style_summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_autopilot_configs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_autopilot_configs_parent_session_id_fkey"
+            columns: ["parent_session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_autopilot_events: {
+        Row: {
+          company_id: string
+          conversation_id: string | null
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          company_id: string
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          company_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_autopilot_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_autopilot_pending_escalations: {
+        Row: {
+          answered_at: string | null
+          company_id: string
+          conversation_id: string
+          created_at: string
+          customer_phone: string | null
+          final_answer_sent: string | null
+          id: string
+          metadata: Json
+          original_customer_message: string | null
+          parent_answer: string | null
+          parent_message_id: string | null
+          question_sent: string
+          session_id: string | null
+          status: string
+          timeout_at: string | null
+        }
+        Insert: {
+          answered_at?: string | null
+          company_id: string
+          conversation_id: string
+          created_at?: string
+          customer_phone?: string | null
+          final_answer_sent?: string | null
+          id?: string
+          metadata?: Json
+          original_customer_message?: string | null
+          parent_answer?: string | null
+          parent_message_id?: string | null
+          question_sent: string
+          session_id?: string | null
+          status?: string
+          timeout_at?: string | null
+        }
+        Update: {
+          answered_at?: string | null
+          company_id?: string
+          conversation_id?: string
+          created_at?: string
+          customer_phone?: string | null
+          final_answer_sent?: string | null
+          id?: string
+          metadata?: Json
+          original_customer_message?: string | null
+          parent_answer?: string | null
+          parent_message_id?: string | null
+          question_sent?: string
+          session_id?: string | null
+          status?: string
+          timeout_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_autopilot_pending_escalations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_autopilot_style_corpus: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          message_id: string | null
+          metadata: Json
+          source: string
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json
+          source?: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          metadata?: Json
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_autopilot_style_corpus_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_autopilot_voice_samples: {
+        Row: {
+          company_id: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          message_id: string | null
+          metadata: Json
+          storage_path: string
+          used_for_cloning: boolean
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json
+          storage_path: string
+          used_for_cloning?: boolean
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json
+          storage_path?: string
+          used_for_cloning?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_autopilot_voice_samples_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_followups: {
+        Row: {
+          ai_model: string | null
+          approved_at: string | null
+          approved_by: string | null
+          auto_cancel_if_replied: boolean
+          canceled_at: string | null
+          canceled_reason: string | null
+          company_id: string
+          conversation_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          last_error: string | null
+          message: string
+          metadata: Json
+          reason: string | null
+          respect_business_hours: boolean
+          scheduled_for: string | null
+          sent_at: string | null
+          session_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_model?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_cancel_if_replied?: boolean
+          canceled_at?: string | null
+          canceled_reason?: string | null
+          company_id: string
+          conversation_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          message: string
+          metadata?: Json
+          reason?: string | null
+          respect_business_hours?: boolean
+          scheduled_for?: string | null
+          sent_at?: string | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_model?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_cancel_if_replied?: boolean
+          canceled_at?: string | null
+          canceled_reason?: string | null
+          company_id?: string
+          conversation_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          last_error?: string | null
+          message?: string
+          metadata?: Json
+          reason?: string | null
+          respect_business_hours?: boolean
+          scheduled_for?: string | null
+          sent_at?: string | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_followups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_followups_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_followups_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_satisfaction_analyses: {
+        Row: {
+          analyzed_conversations: number
+          company_id: string
+          created_at: string
+          data: Json
+          generated_at: string
+          id: string
+        }
+        Insert: {
+          analyzed_conversations?: number
+          company_id: string
+          created_at?: string
+          data?: Json
+          generated_at?: string
+          id?: string
+        }
+        Update: {
+          analyzed_conversations?: number
+          company_id?: string
+          created_at?: string
+          data?: Json
+          generated_at?: string
+          id?: string
         }
         Relationships: []
       }
@@ -5657,12 +6249,12 @@ export type Database = {
         Row: {
           company_name: string
           created_at: string
-          document: string
+          document: string | null
           email: string
           email_marketing_config: string | null
           full_name: string
           id: string
-          phone: string
+          phone: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -5674,12 +6266,12 @@ export type Database = {
         Insert: {
           company_name: string
           created_at?: string
-          document: string
+          document?: string | null
           email: string
           email_marketing_config?: string | null
           full_name: string
           id?: string
-          phone: string
+          phone?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -5691,12 +6283,12 @@ export type Database = {
         Update: {
           company_name?: string
           created_at?: string
-          document?: string
+          document?: string | null
           email?: string
           email_marketing_config?: string | null
           full_name?: string
           id?: string
-          phone?: string
+          phone?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -7264,6 +7856,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_card_labels: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_dashboard_kpis: {
         Row: {
           created_at: string
@@ -7661,6 +8280,9 @@ export type Database = {
           assigned_agent_id: string | null
           assigned_to: string | null
           assigned_user_id: string | null
+          autopilot_paused: boolean
+          autopilot_paused_at: string | null
+          autopilot_paused_scope: string | null
           company_id: string
           contact_id: string | null
           contact_lid: string | null
@@ -7670,13 +8292,21 @@ export type Database = {
           created_at: string
           group_description: string | null
           group_participants: Json | null
+          human_takeover: boolean
+          human_takeover_at: string | null
+          human_takeover_reason: string | null
           id: string
           integration_id: string | null
           is_archived: boolean | null
           is_pinned: boolean | null
           labels: string[] | null
+          last_human_interaction_at: string | null
+          last_human_interaction_message_id: string | null
           last_message: string | null
           last_message_at: string | null
+          lead_score_data: Json | null
+          lead_score_sig: string | null
+          lead_score_updated_at: string | null
           notes: string | null
           pipeline_stage: string | null
           profile_picture: string | null
@@ -7696,6 +8326,9 @@ export type Database = {
           assigned_agent_id?: string | null
           assigned_to?: string | null
           assigned_user_id?: string | null
+          autopilot_paused?: boolean
+          autopilot_paused_at?: string | null
+          autopilot_paused_scope?: string | null
           company_id: string
           contact_id?: string | null
           contact_lid?: string | null
@@ -7705,13 +8338,21 @@ export type Database = {
           created_at?: string
           group_description?: string | null
           group_participants?: Json | null
+          human_takeover?: boolean
+          human_takeover_at?: string | null
+          human_takeover_reason?: string | null
           id?: string
           integration_id?: string | null
           is_archived?: boolean | null
           is_pinned?: boolean | null
           labels?: string[] | null
+          last_human_interaction_at?: string | null
+          last_human_interaction_message_id?: string | null
           last_message?: string | null
           last_message_at?: string | null
+          lead_score_data?: Json | null
+          lead_score_sig?: string | null
+          lead_score_updated_at?: string | null
           notes?: string | null
           pipeline_stage?: string | null
           profile_picture?: string | null
@@ -7731,6 +8372,9 @@ export type Database = {
           assigned_agent_id?: string | null
           assigned_to?: string | null
           assigned_user_id?: string | null
+          autopilot_paused?: boolean
+          autopilot_paused_at?: string | null
+          autopilot_paused_scope?: string | null
           company_id?: string
           contact_id?: string | null
           contact_lid?: string | null
@@ -7740,13 +8384,21 @@ export type Database = {
           created_at?: string
           group_description?: string | null
           group_participants?: Json | null
+          human_takeover?: boolean
+          human_takeover_at?: string | null
+          human_takeover_reason?: string | null
           id?: string
           integration_id?: string | null
           is_archived?: boolean | null
           is_pinned?: boolean | null
           labels?: string[] | null
+          last_human_interaction_at?: string | null
+          last_human_interaction_message_id?: string | null
           last_message?: string | null
           last_message_at?: string | null
+          lead_score_data?: Json | null
+          lead_score_sig?: string | null
+          lead_score_updated_at?: string | null
           notes?: string | null
           pipeline_stage?: string | null
           profile_picture?: string | null
@@ -8275,10 +8927,12 @@ export type Database = {
         Row: {
           assigned_user_id: string | null
           attachments: string[] | null
+          automation_buttons: Json | null
           checklist: Json | null
           column_id: string
           comments: Json | null
           company_id: string
+          cover_url: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -8295,10 +8949,12 @@ export type Database = {
         Insert: {
           assigned_user_id?: string | null
           attachments?: string[] | null
+          automation_buttons?: Json | null
           checklist?: Json | null
           column_id: string
           comments?: Json | null
           company_id: string
+          cover_url?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -8315,10 +8971,12 @@ export type Database = {
         Update: {
           assigned_user_id?: string | null
           attachments?: string[] | null
+          automation_buttons?: Json | null
           checklist?: Json | null
           column_id?: string
           comments?: Json | null
           company_id?: string
+          cover_url?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -8808,6 +9466,8 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      autopilot_fallback_scan: { Args: never; Returns: undefined }
+      autopilot_proactive_scan: { Args: never; Returns: undefined }
       check_credit_expiration: { Args: never; Returns: undefined }
       check_user_exists: { Args: { identifier: string }; Returns: boolean }
       cleanup_all_inactive_whatsapp_sessions: {

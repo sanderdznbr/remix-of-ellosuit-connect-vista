@@ -855,25 +855,27 @@ const ChatCreator: React.FC = () => {
       return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} isGenerating={generating} />;
     }
     if (msg.widget === "face_fusion_picker") {
+      const cardCls = "group relative flex items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left";
+      const iconCls = "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors";
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full">
           <button
             onClick={() => {
               const nextBrief = { ...brief, faceFusionMode: 'merge' as const };
               setBrief(nextBrief);
               sendMessage("Quero fundir meu rosto com a pessoa da foto", nextBrief);
             }}
-            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+            className={cardCls}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-600/20 text-violet-400">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-semibold text-white">Fundir Rosto</span>
+            <div className={iconCls}>
+              <Sparkles className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
             </div>
-            <p className="text-[10px] text-white/50 leading-relaxed">
-              Integra sua identidade na pessoa da foto (Michael Jackson terá o seu rosto).
-            </p>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-white/90">Fundir Rosto</div>
+              <p className="text-[11px] text-white/40 mt-0.5 leading-snug">
+                Integra sua identidade na pessoa da foto.
+              </p>
+            </div>
           </button>
           <button
             onClick={() => {
@@ -881,41 +883,43 @@ const ChatCreator: React.FC = () => {
               setBrief(nextBrief);
               sendMessage("Quero aparecer ao lado da pessoa da foto", nextBrief);
             }}
-            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+            className={cardCls}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-600/20 text-blue-400">
-                <User className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-semibold text-white">Ao Lado</span>
+            <div className={iconCls}>
+              <User className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
             </div>
-            <p className="text-[10px] text-white/50 leading-relaxed">
-              Mantém duas pessoas distintas na cena: você e a personalidade.
-            </p>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-white/90">Ao Lado</div>
+              <p className="text-[11px] text-white/40 mt-0.5 leading-snug">
+                Duas pessoas distintas: você e a personalidade.
+              </p>
+            </div>
           </button>
         </div>
       );
     }
     if (msg.widget === 'visual_type_picker') {
+      const cardCls = "group relative flex items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left";
+      const iconCls = "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors";
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full">
           <button
             onClick={() => {
               const nextBrief = { ...brief, visualType: 'marketplace' as const };
               setBrief(nextBrief);
               sendMessage("Quero escolher um estilo pronto da galeria", nextBrief);
             }}
-            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+            className={cardCls}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-violet-600/20 text-violet-400">
-                <Palette className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-semibold text-white">Ver Estilos</span>
+            <div className={iconCls}>
+              <Palette className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
             </div>
-            <p className="text-[10px] text-white/50 leading-relaxed">
-              Escolha entre dezenas de estilos profissionais da nossa galeria.
-            </p>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-white/90">Ver Estilos</div>
+              <p className="text-[11px] text-white/40 mt-0.5 leading-snug">
+                Dezenas de estilos profissionais prontos.
+              </p>
+            </div>
           </button>
           <button
             onClick={() => {
@@ -923,21 +927,22 @@ const ChatCreator: React.FC = () => {
               setBrief(nextBrief);
               sendMessage("Quero subir minhas próprias referências", nextBrief);
             }}
-            className="flex flex-col gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left group bg-white/[0.03]"
+            className={cardCls}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-blue-600/20 text-blue-400">
-                <Upload className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-semibold text-white">Subir Referências</span>
+            <div className={iconCls}>
+              <Upload className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
             </div>
-            <p className="text-[10px] text-white/50 leading-relaxed">
-              Use suas próprias fotos ou prints como inspiração visual.
-            </p>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-white/90">Subir Referências</div>
+              <p className="text-[11px] text-white/40 mt-0.5 leading-snug">
+                Use suas próprias fotos ou prints como inspiração.
+              </p>
+            </div>
           </button>
         </div>
       );
     }
+
     if (msg.widget === 'style_uploader') {
       return (
         <div className="space-y-3 max-w-md">

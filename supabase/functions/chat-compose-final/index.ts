@@ -395,6 +395,7 @@ async function generateWithGptImage2(prompt: string, ratio: string): Promise<str
 async function generateWithGemini(
   model: string,
   content: Array<Record<string, unknown>>,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
@@ -408,6 +409,7 @@ async function generateWithGemini(
         messages: [{ role: "user", content }],
         modalities: ["image", "text"],
       }),
+      signal,
     });
     if (!resp.ok) {
       const errText = await resp.text();
@@ -415,11 +417,59 @@ async function generateWithGemini(
       return null;
     }
     return await extractImageUrl(resp);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      console.log(`Gemini ${model} aborted (winner already returned).`);
+      return null;
+    }
     console.error(`Gemini ${model} exception:`, e);
     return null;
   }
 }
+
+// Delayed parallel race: start Pro immediately, start Flash after 35s if Pro
+// hasn't returned. First non-null image wins; the loser is aborted. This keeps
+// worst-case latency under Supabase Edge's 150s idle timeout, while still
+// preferring Pro quality when it's fast enough.
+async function generateImageWithFailover(
+  content: Array<Record<string, unknown>>,
+): Promise<string | null> {
+  const PRO = "google/gemini-3-pro-image-preview";
+  const FLASH = "google/gemini-3.1-flash-image-preview";
+  const FLASH_DELAY_MS = 35_000;
+
+  const proCtrl = new AbortController();
+  const flashCtrl = new AbortController();
+
+  const proP = generateWithGemini(PRO, content, proCtrl.signal);
+  const flashP: Promise<string | null> = new Promise((resolve) => {
+    const t = setTimeout(() => {
+      resolve(generateWithGemini(FLASH, content, flashCtrl.signal));
+    }, FLASH_DELAY_MS);
+    // If aborted before flash even starts, resolve null.
+    flashCtrl.signal.addEventListener('abort', () => { clearTimeout(t); resolve(null); });
+  });
+
+  return new Promise<string | null>((resolve) => {
+    let done = false;
+    const finish = (v: string | null, winner: 'pro' | 'flash' | 'both-null') => {
+      if (done) return;
+      done = true;
+      if (winner === 'pro') flashCtrl.abort();
+      else if (winner === 'flash') proCtrl.abort();
+      resolve(v);
+    };
+    proP.then((v) => { if (v) finish(v, 'pro'); }).catch(() => {});
+    flashP.then((v) => { if (v) finish(v, 'flash'); }).catch(() => {});
+    // Resolve null only after BOTH finish with null.
+    Promise.allSettled([proP, flashP]).then(([p, f]) => {
+      const pv = p.status === 'fulfilled' ? p.value : null;
+      const fv = f.status === 'fulfilled' ? f.value : null;
+      finish(pv || fv, pv ? 'pro' : (fv ? 'flash' : 'both-null'));
+    });
+  });
+}
+
 
 function hasReferenceCriticalContext(
   brief: Brief,

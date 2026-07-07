@@ -98,59 +98,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     });
   };
 
-  // Enable mouse drag-to-scroll on menu strip (desktop)
-  useEffect(() => {
-    const el = menuScrollRef.current;
-    if (!el || !showMenu) return;
-    let startX = 0;
-    let startScroll = 0;
-    let dragging = false;
-    let armed = false;
-    const THRESHOLD = 6;
-
-    const onMove = (e: PointerEvent) => {
-      if (!armed) return;
-      const dx = e.clientX - startX;
-      if (!dragging && Math.abs(dx) < THRESHOLD) return;
-      dragging = true;
-      el.style.cursor = 'grabbing';
-      el.scrollLeft = startScroll - dx;
-    };
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
-      armed = false;
-      el.style.cursor = 'grab';
-      if (dragging) {
-        // Swallow the click that follows the drag
-        const stopClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
-        window.addEventListener('click', stopClick, { capture: true, once: true });
-      }
-      dragging = false;
-    };
-    const onDown = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return;
-      // Don't hijack clicks on interactive children
-      const t = e.target as HTMLElement | null;
-      if (t && t.closest('label, input, button, a')) return;
-      armed = true;
-      startX = e.clientX;
-      startScroll = el.scrollLeft;
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onUp);
-    };
-    el.addEventListener('pointerdown', onDown);
-    el.style.cursor = 'grab';
-    return () => {
-      el.removeEventListener('pointerdown', onDown);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
-      el.style.cursor = '';
-    };
-  }, [showMenu]);
 
   // Rotate greeting text every 15 seconds
   useEffect(() => {

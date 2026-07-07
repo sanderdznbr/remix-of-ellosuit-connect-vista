@@ -490,8 +490,8 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       <AnimatePresence>
         {(recentCarousels.length > 0 || activeJobs.length > 0) && (
       <motion.div
-        className="relative z-[1] px-4 md:px-8 shrink-0"
-        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
+        className="relative z-[1] px-3 md:px-3 shrink-0"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
@@ -499,7 +499,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         layout
       >
 
-        <div className="max-w-[1200px] mx-auto">
+        <div className={isMobile ? 'max-w-[1200px] mx-auto' : (showRecent ? 'max-w-[1200px]' : '')}>
           <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
               <button

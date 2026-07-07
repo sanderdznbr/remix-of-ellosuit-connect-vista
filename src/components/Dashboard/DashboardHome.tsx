@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal, Menu as MenuIcon, Compass, MessagesSquare, FolderDot, Aperture, FeatherIcon, CalendarRange, Flame, LineChart, Shapes, UsersRound, LifeBuoy } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';

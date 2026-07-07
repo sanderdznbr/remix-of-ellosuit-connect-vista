@@ -2757,6 +2757,7 @@ const FinalResultWidget: React.FC<{
       a.remove();
       URL.revokeObjectURL(url);
       toast.success('Imagem baixada');
+      setShowAfterDownload(true);
     } catch {
       toast.error('Não foi possível baixar');
     }

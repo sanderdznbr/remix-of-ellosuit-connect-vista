@@ -2822,15 +2822,34 @@ const FinalResultWidget: React.FC<{
             Ajustar
           </button>
         </div>
-        
-        <button
-          onClick={handleDownload}
-          className="w-full inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white/70 transition-colors"
-        >
-          <Download className="h-3.5 w-3.5" />
-          {isCarousel ? 'Baixar todos os slides' : 'Baixar imagem'}
-        </button>
+
+        <div className="grid grid-cols-2 gap-2">
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              disabled={!canRegenerate}
+              title="Cria uma nova versão usando exatamente as mesmas configurações (estilo, cores, referências, textos)"
+              className="inline-flex items-center justify-center gap-2 h-10 rounded-full border text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: 'rgba(139,92,246,0.12)',
+                borderColor: 'rgba(139,92,246,0.4)',
+                color: '#C4B5FD',
+              }}
+            >
+              {canRegenerate ? <Sparkles className="h-3.5 w-3.5" /> : <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Recriar nova versão
+            </button>
+          )}
+          <button
+            onClick={handleDownload}
+            className={`inline-flex items-center justify-center gap-2 h-10 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs font-medium text-white/70 transition-colors ${onRegenerate ? '' : 'col-span-2'}`}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {isCarousel ? 'Baixar todos' : 'Baixar imagem'}
+          </button>
+        </div>
       </div>
+
 
       {showAdjust && (
         <div className="space-y-2 rounded-2xl border border-white/10 p-3" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>

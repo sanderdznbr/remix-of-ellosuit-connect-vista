@@ -414,79 +414,62 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.4 }}
         >
-          <div
-            className="relative w-full rounded-2xl overflow-visible"
-            style={{
-              backgroundColor: 'rgba(20, 20, 28, 0.5)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              boxShadow: '0 4px 30px rgba(0,0,0,0.3)',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            <div className="relative">
-              <PromptMentionInput
-                ref={mentionRef}
-                value={inputValue}
-                onChange={setInputValue}
-                mentionedPrompts={mentionedPrompts}
-                onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
-                onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
-                className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px] text-left"
-              />
-              {!isUserTyping && mentionedPrompts.length === 0 && (
-                <div
-                  className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0 text-left"
-                  style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}
-                >
-                  {animatedPlaceholder}
-                  <span className="inline-block w-[2px] h-[1em] ml-0.5 animate-pulse align-middle" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-between px-3 pb-3">
-              <div className="flex items-center gap-1">
-
-              <button
-                onClick={handleAdvancedMode}
-                disabled={isGenerating}
-                className="w-7 h-7 rounded-md flex items-center justify-center transition-all cursor-pointer text-white/30 hover:text-white/70 hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Modo avançado (wizard com etapas)"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-              </button>
+          <div className="saber-border relative w-full rounded-2xl p-[1.5px] overflow-hidden">
+            <div
+              className="relative w-full rounded-2xl overflow-visible"
+              style={{
+                backgroundColor: 'rgba(8, 8, 12, 0.92)',
+                boxShadow: '0 4px 30px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.03)',
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              <div className="relative">
+                <PromptMentionInput
+                  ref={mentionRef}
+                  value={inputValue}
+                  onChange={setInputValue}
+                  mentionedPrompts={mentionedPrompts}
+                  onMentionAdd={(p) => setMentionedPrompts(prev => [...prev, p])}
+                  onMentionRemove={(id) => setMentionedPrompts(prev => prev.filter(m => m.id !== id))}
+                  className="w-full bg-transparent text-white/90 text-sm md:text-base px-4 py-4 pr-14 resize-none outline-none relative z-10 min-h-[84px] text-left"
+                />
+                {!isUserTyping && mentionedPrompts.length === 0 && (
+                  <div
+                    className="absolute top-0 left-0 px-4 py-4 pr-14 text-sm md:text-base pointer-events-none z-0 text-left"
+                    style={{ fontFamily: "'Inter', sans-serif", color: 'rgba(255,255,255,0.25)' }}
+                  >
+                    {animatedPlaceholder}
+                    <span className="inline-block w-[2px] h-[1em] ml-0.5 animate-pulse align-middle" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }} />
+                  </div>
+                )}
               </div>
-              <button
-                onClick={handleSubmit}
-                disabled={!inputValue.trim() || isGenerating}
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
-                style={{ backgroundColor: inputValue.trim() && !isGenerating ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
-                title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
-              >
-                <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() && !isGenerating ? '#0a0a0f' : '#ffffff' }} />
-              </button>
+              <div className="flex items-center justify-between px-3 pb-3">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleAdvancedMode}
+                    disabled={isGenerating}
+                    className="w-7 h-7 rounded-md flex items-center justify-center transition-all cursor-pointer text-white/30 hover:text-white/70 hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Modo avançado (wizard com etapas)"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!inputValue.trim() || isGenerating}
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: inputValue.trim() && !isGenerating ? '#ffffff' : 'rgba(255,255,255,0.08)' }}
+                  title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
+                >
+                  <ArrowUp className="w-4 h-4" style={{ color: inputValue.trim() && !isGenerating ? '#0a0a0f' : '#ffffff' }} />
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Templates rápidos (só quando input vazio) */}
-        {!isUserTyping && mentionedPrompts.length === 0 && (
-          <QuickTemplates
-            onSelect={(prompt) => {
-              setInputValue(prompt);
-              
-              // foca no input para o usuário continuar digitando/editando
-              setTimeout(() => {
-                const el = document.querySelector<HTMLTextAreaElement>('textarea[data-dashboard-input]')
-                  || document.querySelector<HTMLTextAreaElement>('textarea');
-                el?.focus();
-                if (el) {
-                  const len = el.value.length;
-                  el.setSelectionRange(len, len);
-                }
-              }, 50);
-            }}
-          />
-        )}
+        {/* Templates rápidos removidos a pedido do usuário */}
+
 
       </motion.div>
 

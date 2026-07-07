@@ -556,3 +556,48 @@ body[data-scroll-locked] {
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Saber glow border — continuous rotating conic gradient */
+@property --saber-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.saber-border {
+  position: relative;
+  background: conic-gradient(
+    from var(--saber-angle),
+    rgba(139, 92, 246, 0.9) 0deg,
+    rgba(167, 139, 250, 0.4) 60deg,
+    rgba(255, 255, 255, 0.05) 140deg,
+    rgba(255, 255, 255, 0.05) 220deg,
+    rgba(96, 165, 250, 0.5) 300deg,
+    rgba(139, 92, 246, 0.9) 360deg
+  );
+  animation: saber-rotate 4s linear infinite;
+}
+.saber-border::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--saber-angle),
+    rgba(139, 92, 246, 0.35) 0deg,
+    transparent 90deg,
+    transparent 270deg,
+    rgba(96, 165, 250, 0.25) 360deg
+  );
+  filter: blur(20px);
+  z-index: -1;
+  animation: saber-rotate 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes saber-rotate {
+  to { --saber-angle: 360deg; }
+}
+/* Fallback for browsers without @property support */
+@supports not (background: conic-gradient(from 0deg, red, blue)) {
+  .saber-border { background: linear-gradient(135deg, rgba(139,92,246,0.6), rgba(96,165,250,0.4)); animation: none; }
+  .saber-border::before { display: none; }
+}

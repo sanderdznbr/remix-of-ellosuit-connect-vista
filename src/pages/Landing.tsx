@@ -32,7 +32,7 @@ const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter'
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const [annual, setAnnual] = useState(true);
+  
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [showcaseStyles, setShowcaseStyles] = useState<Array<{ id: string; name: string; preview_images: string[]; category: string }>>([]);
   const [recentPosts, setRecentPosts] = useState<Array<{ id: string; title: string; cover_url: string }>>([]);

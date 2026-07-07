@@ -102,44 +102,52 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   useEffect(() => {
     const el = menuScrollRef.current;
     if (!el || !showMenu) return;
-    let isDown = false;
     let startX = 0;
     let startScroll = 0;
-    let moved = 0;
-    const down = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
-      isDown = true; moved = 0;
-      startX = e.clientX; startScroll = el.scrollLeft;
-      el.setPointerCapture(e.pointerId);
-      el.style.cursor = 'grabbing';
-    };
-    const move = (e: PointerEvent) => {
-      if (!isDown) return;
+    let dragging = false;
+    let armed = false;
+    const THRESHOLD = 6;
+
+    const onMove = (e: PointerEvent) => {
+      if (!armed) return;
       const dx = e.clientX - startX;
-      moved = Math.abs(dx);
+      if (!dragging && Math.abs(dx) < THRESHOLD) return;
+      dragging = true;
+      el.style.cursor = 'grabbing';
       el.scrollLeft = startScroll - dx;
     };
-    const up = (e: PointerEvent) => {
-      if (!isDown) return;
-      isDown = false;
-      el.style.cursor = '';
-      if (moved > 5) {
-        // Suppress the click that follows a drag
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      armed = false;
+      el.style.cursor = 'grab';
+      if (dragging) {
+        // Swallow the click that follows the drag
         const stopClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
-        el.addEventListener('click', stopClick, { capture: true, once: true });
+        window.addEventListener('click', stopClick, { capture: true, once: true });
       }
-      try { el.releasePointerCapture(e.pointerId); } catch {}
+      dragging = false;
     };
-    el.addEventListener('pointerdown', down);
-    el.addEventListener('pointermove', move);
-    el.addEventListener('pointerup', up);
-    el.addEventListener('pointercancel', up);
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      // Don't hijack clicks on interactive children
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest('label, input, button, a')) return;
+      armed = true;
+      startX = e.clientX;
+      startScroll = el.scrollLeft;
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    };
+    el.addEventListener('pointerdown', onDown);
     el.style.cursor = 'grab';
     return () => {
-      el.removeEventListener('pointerdown', down);
-      el.removeEventListener('pointermove', move);
-      el.removeEventListener('pointerup', up);
-      el.removeEventListener('pointercancel', up);
+      el.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       el.style.cursor = '';
     };
   }, [showMenu]);

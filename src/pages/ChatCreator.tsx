@@ -1184,7 +1184,7 @@ const ChatCreator: React.FC = () => {
           </div>
         </div>
 
-        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } } .ello-scroll::-webkit-scrollbar { display: none; } .ello-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } } @keyframes ello-caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } } .ello-scroll::-webkit-scrollbar { display: none; } .ello-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
       </div>
     </div>
   );

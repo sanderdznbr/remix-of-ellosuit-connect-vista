@@ -89,6 +89,40 @@ const FORMAT_OPTIONS = [
 ] as const;
 
 const PURPLE = '#8B5CF6';
+
+// Typewriter effect for assistant messages — reveals characters progressively.
+// Only animates once per message id (tracked via module-level Set).
+const _typedIds = new Set<string>();
+const TypewriterText: React.FC<{ id: string; text: string; speed?: number }> = ({ id, text, speed = 14 }) => {
+  const [count, setCount] = React.useState(() => (_typedIds.has(id) ? text.length : 0));
+  const done = count >= text.length;
+  React.useEffect(() => {
+    if (_typedIds.has(id)) { setCount(text.length); return; }
+    let i = 0;
+    const tick = () => {
+      i = Math.min(text.length, i + Math.max(1, Math.round(text.length / 80)));
+      setCount(i);
+      if (i < text.length) {
+        timer = window.setTimeout(tick, speed);
+      } else {
+        _typedIds.add(id);
+      }
+    };
+    let timer = window.setTimeout(tick, speed);
+    return () => window.clearTimeout(timer);
+  }, [id, text, speed]);
+  return (
+    <>
+      {text.slice(0, count)}
+      {!done && (
+        <span
+          className="inline-block w-[2px] h-[1em] align-[-2px] ml-[1px]"
+          style={{ backgroundColor: 'rgba(167,139,250,0.9)', animation: 'ello-caret-blink 1s steps(2) infinite' }}
+        />
+      )}
+    </>
+  );
+};
 const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const MAX_AI_HISTORY_MESSAGES = 12;
 const MAX_AI_MESSAGE_LENGTH = 1200;

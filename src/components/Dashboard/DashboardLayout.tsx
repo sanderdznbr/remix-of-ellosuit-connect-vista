@@ -307,17 +307,51 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
   }
 
 
-  const toggleSidebarCollapse = () => {
-    setSidebarCollapsed(prev => {
-      const next = !prev;
-      try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
-      return next;
-    });
-  };
-
   return (
-    <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-      <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebarCollapse} />
+    <div className="flex h-screen w-full relative" style={{ backgroundColor: '#0a0a0f' }}>
+      {/* Hamburger trigger (desktop) */}
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 z-40 p-2.5 rounded-lg border border-white/[0.08] bg-[#111116]/80 backdrop-blur hover:bg-white/[0.06] transition-colors cursor-pointer"
+          aria-label="Abrir menu"
+        >
+          <Menu className="w-5 h-5 text-white/70" />
+        </button>
+      )}
+
+      {/* Sidebar drawer overlay (desktop) */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-black/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setSidebarOpen(false)}
+            />
+            <motion.div
+              className="fixed top-0 left-0 h-full w-[280px] z-50 overflow-y-auto"
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="absolute top-4 right-3 p-1.5 text-white/40 hover:text-white cursor-pointer z-10"
+                aria-label="Fechar menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {renderContent()}
     </div>
   );

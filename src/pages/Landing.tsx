@@ -491,77 +491,116 @@ const Landing: React.FC = () => {
       </section>
 
 
-      {/* Planos */}
-      <section id="planos" className="py-24 md:py-32" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
-        <div className="max-w-[1200px] mx-auto px-6">
-          <motion.div {...fadeUp} className="text-center mb-12">
-            <Eyebrow>Planos</Eyebrow>
-            <h2 className="font-semibold tracking-tight mb-8" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
-              Planos e Preços.
+      {/* Preço por post — âncora barata */}
+      <section id="planos" className="py-24 md:py-32 relative overflow-hidden" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 700px 400px at 50% 0%, rgba(139,92,246,0.14), transparent 70%)' }} />
+        <div className="relative max-w-[1100px] mx-auto px-6">
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <Eyebrow>Menos que um café</Eyebrow>
+            <h2 className="font-semibold tracking-tight mb-5" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+              A partir de{' '}
+              <span style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, ${PURPLE_GLOW} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                R$ 1,00 por post.
+              </span>
             </h2>
-            <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: SURFACE }}>
-              <button onClick={() => setAnnual(false)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: !annual ? INK : 'transparent', color: !annual ? BG : INK_SOFT }}>Mensal</button>
-              <button onClick={() => setAnnual(true)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: annual ? INK : 'transparent', color: annual ? BG : INK_SOFT }}>
-                Anual <span className="opacity-60 ml-1">−29%</span>
-              </button>
+            <p className="mx-auto text-[16px]" style={{ color: INK_SOFT, maxWidth: 620 }}>
+              Sem contratar designer, sem pagar agência. Um post pronto pelo preço de um pão na padaria.
+            </p>
+          </motion.div>
+
+          {/* Comparador emocional */}
+          <motion.div {...fadeUp} className="mx-auto mb-12 flex flex-wrap items-center justify-center gap-3 text-[13.5px]" style={{ color: INK_SOFT }}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+              <span className="line-through opacity-60">Designer freelancer</span>
+              <span className="font-semibold text-white">R$ 80–200 / post</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+              <span className="line-through opacity-60">Agência</span>
+              <span className="font-semibold text-white">R$ 2.000+ / mês</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ background: 'rgba(139,92,246,0.12)', border: `1px solid rgba(139,92,246,0.45)` }}>
+              <Sparkles className="w-3.5 h-3.5" style={{ color: PURPLE_GLOW }} />
+              <span className="font-semibold" style={{ color: '#fff' }}>Ellocontent</span>
+              <span className="font-semibold" style={{ color: PURPLE_GLOW }}>a partir de R$ 1 / post</span>
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {plans.map((p, i) => (
-              <motion.div
-                key={p.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.06 }}
-                className="relative p-7 rounded-3xl flex flex-col"
-                style={{
-                  background: p.popular
-                    ? `linear-gradient(180deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.04) 100%)`
-                    : SURFACE,
-                  border: `1px solid ${p.popular ? 'rgba(139,92,246,0.4)' : HAIRLINE}`,
-                  boxShadow: p.popular ? '0 20px 60px -20px rgba(139,92,246,0.35)' : 'none',
-                }}
-              >
-                {p.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 12px -2px rgba(139,92,246,0.5)' }}>Mais popular</div>
-                )}
-                <h3 className="text-[19px] font-semibold mb-1 tracking-tight" style={{ color: '#fff', letterSpacing: '-0.01em' }}>{p.name}</h3>
-                <p className="text-[12.5px] mb-6 min-h-[3.2em]" style={{ color: INK_SOFT }}>{p.desc}</p>
-                <div className="mb-6">
-                  {p.custom ? (
-                    <div className="text-[26px] font-semibold tracking-tight">Sob consulta</div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[36px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>R${(annual ? p.yearly! : p.monthly!).toFixed(2).replace('.', ',')}</span>
-                      <span className="text-[12px]" style={{ color: INK_DIM }}>/mês</span>
-                    </div>
-                  )}
-                  <p className="text-[12px] mt-1" style={{ color: INK_DIM }}>{p.credits}</p>
-                </div>
-                <button
-                  onClick={p.custom ? () => navigate('/suporte') : goPlans}
-                  className="w-full py-2.5 rounded-full text-[13px] font-medium mb-6 transition-all hover:scale-[1.02]"
+          {/* Cards por tipo de post */}
+          <div className="grid md:grid-cols-3 gap-4 max-w-[980px] mx-auto">
+            {[
+              {
+                tag: 'Post simples',
+                price: '1,00',
+                unit: 'por post',
+                desc: 'Post estático pronto para publicar. Texto + design + imagem.',
+                icon: Sparkles,
+                popular: false,
+              },
+              {
+                tag: 'Post avançado',
+                price: '2,00',
+                unit: 'por post',
+                desc: 'Com seu rosto, seu produto ou sua logo. Total controle da marca.',
+                icon: User,
+                popular: true,
+              },
+              {
+                tag: 'Carrossel completo',
+                price: '~7,00',
+                unit: '6 cards',
+                desc: 'Carrossel narrativo de até 6 cards com capa, desenvolvimento e CTA.',
+                icon: Palette,
+                popular: false,
+              },
+            ].map((item, i) => {
+              const Ic = item.icon;
+              return (
+                <motion.div
+                  key={item.tag}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className="relative p-7 rounded-3xl"
                   style={{
-                    background: p.popular ? `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)` : INK,
-                    color: p.popular ? '#fff' : BG,
-                    boxShadow: p.popular ? '0 4px 16px -4px rgba(139,92,246,0.5)' : 'none',
+                    background: item.popular
+                      ? `linear-gradient(180deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.03) 100%)`
+                      : SURFACE,
+                    border: `1px solid ${item.popular ? 'rgba(139,92,246,0.45)' : HAIRLINE}`,
+                    boxShadow: item.popular ? '0 24px 60px -20px rgba(139,92,246,0.4)' : 'none',
                   }}
                 >
-                  {p.custom ? 'Falar com vendas' : 'Assinar'}
-                </button>
-                <ul className="space-y-2.5 text-[13px]" style={{ color: 'rgba(245,245,247,0.75)' }}>
-                  {p.features.map((f, j) => (
-                    <li key={j} className="flex gap-2">
-                      <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: PURPLE }} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
+                  {item.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 12px -2px rgba(139,92,246,0.5)' }}>
+                      Mais escolhido
+                    </div>
+                  )}
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5" style={{ background: `linear-gradient(135deg, rgba(139,92,246,0.18), rgba(139,92,246,0.05))`, border: `1px solid rgba(139,92,246,0.25)` }}>
+                    <Ic className="w-5 h-5" style={{ color: PURPLE }} />
+                  </div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-3" style={{ color: PURPLE }}>{item.tag}</p>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="text-[16px] font-medium" style={{ color: INK_DIM }}>R$</span>
+                    <span className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 56, lineHeight: 1, letterSpacing: '-0.03em' }}>{item.price}</span>
+                  </div>
+                  <p className="text-[12px] mb-5" style={{ color: INK_DIM }}>{item.unit}</p>
+                  <p className="text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{item.desc}</p>
+                </motion.div>
+              );
+            })}
           </div>
+
+          <motion.div {...fadeUp} className="mt-12 flex flex-col items-center gap-3">
+            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3.5 rounded-full transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 8px 24px -8px rgba(139,92,246,0.55)' }}>
+              Criar meu primeiro post grátis
+            </button>
+            <button onClick={goPlans} className="text-[13px] transition-colors hover:text-white" style={{ color: INK_DIM }}>
+              Ver planos com desconto por volume →
+            </button>
+            <p className="text-[11.5px] mt-1" style={{ color: INK_DIM }}>
+              Preços aproximados baseados nos planos mensais · sem fidelidade · cancele quando quiser
+            </p>
+          </motion.div>
         </div>
       </section>
 

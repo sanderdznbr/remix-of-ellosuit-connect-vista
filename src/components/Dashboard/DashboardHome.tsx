@@ -80,23 +80,11 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
   const [showRecent, setShowRecent] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const menuScrollRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
-  const [menuPhotos, setMenuPhotos] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem('menu_photos_v1') || '{}'); } catch { return {}; }
-  });
-  const setMenuPhoto = (path: string, dataUrl: string | null) => {
-    setMenuPhotos(prev => {
-      const next = { ...prev };
-      if (dataUrl) next[path] = dataUrl; else delete next[path];
-      try { localStorage.setItem('menu_photos_v1', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
+
 
 
   // Rotate greeting text every 15 seconds

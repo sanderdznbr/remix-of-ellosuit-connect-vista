@@ -573,13 +573,16 @@ Deno.serve(async (req) => {
         layout: "dark",
       }));
 
+      const safeTitle = (brief.topic && String(brief.topic).trim())
+        || (cards[0] as any)?.title
+        || 'Post sem título';
       const { data: inserted, error: insertErr } = await sb.from("generated_carousels").insert({
         company_id: companyId,
         user_id: user.id,
-        title: brief.topic,
-        topic: brief.topic,
+        title: safeTitle,
+        topic: brief.topic || safeTitle,
         status: 'processing',
-        carousel_data: { title: brief.topic, cards },
+        carousel_data: { title: safeTitle, cards },
         style_config: {
           source: "chat-creator",
           format: brief.format,

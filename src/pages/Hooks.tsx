@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Copy, Check, Search, Zap } from 'lucide-react';
+import { Copy, Check, Search, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { routeFromTab } from '@/utils/dashboard-routes';
+import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 interface Hook {
   text: string;
@@ -81,14 +80,10 @@ const Hooks: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full text-white" style={{ backgroundColor: '#0a0a0f' }}>
-      <div className="hidden md:block">
-        <DashboardSidebar activeTab="hooks" onTabChange={(t) => navigate(routeFromTab(t))} onSearch={() => {}} />
-      </div>
-      <div className="flex-1 overflow-y-auto">
+    <DashboardLayout>
+      <div className="text-white" style={{ backgroundColor: '#0a0a0f' }}>
       <header className="sticky top-0 z-10 border-b border-white/[0.06] backdrop-blur" style={{ backgroundColor: 'rgba(10,10,15,0.85)' }}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="md:hidden p-2 rounded-lg hover:bg-white/[0.06] text-white/60 hover:text-white"><Home className="w-4 h-4" /></button>
           <Zap className="w-5 h-5 text-purple-400" />
           <h1 className="text-lg font-semibold">Banco de hooks</h1>
         </div>
@@ -147,7 +142,7 @@ const Hooks: React.FC = () => {
         </div>
       </main>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

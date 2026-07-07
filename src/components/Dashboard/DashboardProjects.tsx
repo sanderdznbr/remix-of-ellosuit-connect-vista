@@ -31,6 +31,63 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishCaption, setPublishCaption] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
 
+  // Selection & create-style state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [styleName, setStyleName] = useState('');
+  const [styleDescription, setStyleDescription] = useState('');
+  const [styleCoverUrl, setStyleCoverUrl] = useState<string | null>(null);
+  const [creatingStyle, setCreatingStyle] = useState(false);
+
+  const toggleSelected = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const openStyleDialog = () => {
+    if (selectedIds.size === 0) return;
+    const first = carousels.find(c => selectedIds.has(c.id));
+    setStyleName(first?.title || first?.topic || 'Meu estilo');
+    setStyleDescription('');
+    setStyleCoverUrl(first?.cover_url || null);
+    setStyleDialogOpen(true);
+  };
+
+  const confirmCreateStyle = async () => {
+    if (!styleName.trim() || selectedIds.size === 0) return;
+    setCreatingStyle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-style-from-posts', {
+        body: {
+          carouselIds: Array.from(selectedIds),
+          name: styleName.trim(),
+          description: styleDescription.trim() || null,
+          coverUrl: styleCoverUrl,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success('Estilo criado! Disponível só pra você em Estilos.');
+      setStyleDialogOpen(false);
+      exitSelection();
+    } catch (err: any) {
+      toast.error('Erro ao criar estilo: ' + (err?.message || 'tente novamente'));
+    } finally {
+      setCreatingStyle(false);
+    }
+  };
+
   const recoverCover = async (itemId: string, companyId: string) => {
     try {
       // Fetch only the first card image lazily (avoid loading full carousel_data in listing)

@@ -309,17 +309,28 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   return (
     <div className="flex h-screen w-full relative" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Hamburger trigger (desktop) */}
+      {/* Left-edge hover hit zone — moving mouse to the far left opens the sidebar */}
+      {!sidebarOpen && (
+        <div
+          className="fixed top-0 left-0 h-full w-[6px] z-30"
+          onMouseEnter={() => setSidebarOpen(true)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Hamburger trigger (desktop) — hover to open */}
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
-          className="fixed top-5 left-5 z-40 p-1.5 text-white/50 hover:text-white transition-colors cursor-pointer"
+          onMouseEnter={() => setSidebarOpen(true)}
+          className="group fixed top-4 left-4 z-40 flex items-center justify-center w-9 h-9 rounded-xl border border-white/[0.06] hover:border-white/[0.12] backdrop-blur-md transition-all cursor-pointer"
+          style={{ backgroundColor: 'rgba(15,15,20,0.7)' }}
           aria-label="Abrir menu"
         >
-          <div className="w-5 h-4 flex flex-col justify-between">
-            <span className="block w-full h-[1.5px] bg-current rounded-full" />
-            <span className="block w-3.5 h-[1.5px] bg-current rounded-full" />
-            <span className="block w-full h-[1.5px] bg-current rounded-full" />
+          <div className="w-[18px] h-[11px] flex flex-col justify-between">
+            <span className="block h-[1.5px] rounded-full bg-white/60 group-hover:bg-white transition-all" style={{ width: '100%' }} />
+            <span className="block h-[1.5px] rounded-full bg-white/60 group-hover:bg-white transition-all group-hover:w-full" style={{ width: '70%' }} />
+            <span className="block h-[1.5px] rounded-full bg-white/60 group-hover:bg-white transition-all" style={{ width: '100%' }} />
           </div>
         </button>
       )}
@@ -346,10 +357,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
               <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="absolute top-4 right-3 p-1.5 text-white/40 hover:text-white cursor-pointer z-10"
+                className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer z-10"
                 aria-label="Fechar menu"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" strokeWidth={1.8} />
               </button>
             </motion.div>
           </>
@@ -359,6 +370,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
       {renderContent()}
     </div>
   );
+
 };
 
 export default DashboardLayout;

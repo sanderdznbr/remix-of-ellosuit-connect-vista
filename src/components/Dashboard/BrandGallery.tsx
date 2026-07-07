@@ -530,7 +530,7 @@ const BrandGallery: React.FC = () => {
       </div>
 
       {/* Actions bar */}
-      <div className="px-6 pb-4 flex gap-2 shrink-0">
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-8 pb-4 flex gap-2 shrink-0 flex-wrap">
         <button onClick={() => setShowNewFolder(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all cursor-pointer">
           <FolderPlus className="w-4 h-4" /> Nova pasta

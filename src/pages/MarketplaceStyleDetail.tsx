@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { ArrowLeft, ShoppingBag, Check, Sparkles, Crown, CreditCard, Coins } from 'lucide-react';
-import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { routeFromTab } from '@/utils/dashboard-routes';
+
+
 import CommunityPosts from '@/components/Marketplace/CommunityPosts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Home } from 'lucide-react';

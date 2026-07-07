@@ -98,6 +98,52 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
     });
   };
 
+  // Enable mouse drag-to-scroll on menu strip (desktop)
+  useEffect(() => {
+    const el = menuScrollRef.current;
+    if (!el || !showMenu) return;
+    let isDown = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = 0;
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      isDown = true; moved = 0;
+      startX = e.clientX; startScroll = el.scrollLeft;
+      el.setPointerCapture(e.pointerId);
+      el.style.cursor = 'grabbing';
+    };
+    const move = (e: PointerEvent) => {
+      if (!isDown) return;
+      const dx = e.clientX - startX;
+      moved = Math.abs(dx);
+      el.scrollLeft = startScroll - dx;
+    };
+    const up = (e: PointerEvent) => {
+      if (!isDown) return;
+      isDown = false;
+      el.style.cursor = '';
+      if (moved > 5) {
+        // Suppress the click that follows a drag
+        const stopClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
+        el.addEventListener('click', stopClick, { capture: true, once: true });
+      }
+      try { el.releasePointerCapture(e.pointerId); } catch {}
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    el.style.cursor = 'grab';
+    return () => {
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+      el.style.cursor = '';
+    };
+  }, [showMenu]);
+
   // Rotate greeting text every 15 seconds
   useEffect(() => {
     const interval = setInterval(() => {

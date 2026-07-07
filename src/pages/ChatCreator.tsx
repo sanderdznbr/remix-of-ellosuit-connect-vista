@@ -2665,7 +2665,10 @@ const FinalResultWidget: React.FC<{
   isCarousel?: boolean;
   onOpen: (id: string) => void;
   onImageUpdated?: (newUrl: string) => void;
-}> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated }) => {
+  onRegenerate?: () => void;
+  canRegenerate?: boolean;
+}> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated, onRegenerate, canRegenerate }) => {
+
   const [slides, setSlides] = React.useState<{ image_url: string }[]>([]);
   const [loadingSlides, setLoadingSlides] = React.useState(false);
   const [currentSlide, setCurrentSlide] = React.useState(0);

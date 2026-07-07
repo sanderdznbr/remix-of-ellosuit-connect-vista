@@ -2,12 +2,89 @@
 // Adaptive conversational AI that guides the user from idea to a generated post.
 // Uses Lovable AI Gateway (Gemini) with tool-calling for structured output.
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Default fallback limits (mirrors generate-carousel defaults).
+const DEFAULT_TEXT_LIMITS = {
+  cover_title_max_chars: 40,
+  cover_subtitle_max_chars: 60,
+  content_body_top_max_chars: 150,
+  content_body_bottom_max_chars: 100,
+  cta_title_max_chars: 30,
+  cta_body_max_chars: 50,
+};
+
+type TextLimits = typeof DEFAULT_TEXT_LIMITS;
+
+const isUuid = (v?: string | null) =>
+  !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+async function fetchStyleTextLimits(styleId?: string | null, styleName?: string | null): Promise<TextLimits | null> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return null;
+    const sb = createClient(SUPABASE_URL, SERVICE_KEY);
+    let query = sb.from('marketplace_styles').select('style_config').limit(1);
+    if (isUuid(styleId)) {
+      query = query.eq('id', styleId);
+    } else if (styleName && styleName.trim()) {
+      query = query.ilike('name', styleName.trim());
+    } else {
+      return null;
+    }
+    const { data } = await query.maybeSingle();
+    const cfg: any = data?.style_config || {};
+    const tl = cfg.text_limits || cfg.textLimits || cfg?.imageGeneration?.text_limits || null;
+    if (!tl) return null;
+    return {
+      cover_title_max_chars: Number(tl.cover_title_max_chars ?? tl.title_max_chars ?? DEFAULT_TEXT_LIMITS.cover_title_max_chars),
+      cover_subtitle_max_chars: Number(tl.cover_subtitle_max_chars ?? tl.subtitle_max_chars ?? DEFAULT_TEXT_LIMITS.cover_subtitle_max_chars),
+      content_body_top_max_chars: Number(tl.content_body_top_max_chars ?? tl.body_max_chars ?? DEFAULT_TEXT_LIMITS.content_body_top_max_chars),
+      content_body_bottom_max_chars: Number(tl.content_body_bottom_max_chars ?? DEFAULT_TEXT_LIMITS.content_body_bottom_max_chars),
+      cta_title_max_chars: Number(tl.cta_title_max_chars ?? DEFAULT_TEXT_LIMITS.cta_title_max_chars),
+      cta_body_max_chars: Number(tl.cta_body_max_chars ?? DEFAULT_TEXT_LIMITS.cta_body_max_chars),
+    };
+  } catch (e) {
+    console.error('fetchStyleTextLimits error:', e);
+    return null;
+  }
+}
+
+// Hard truncation on a word boundary when possible.
+function hardTrim(value: string | undefined, max: number): string | undefined {
+  if (!value) return value;
+  const clean = value.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trim();
+}
+
+function enforceLimitsOnSlides(slides: any[], limits: TextLimits) {
+  if (!Array.isArray(slides) || slides.length === 0) return slides;
+  return slides.map((s, i) => {
+    const isCover = i === 0;
+    const isCta = i === slides.length - 1 && slides.length > 1;
+    const titleMax = isCover ? limits.cover_title_max_chars : (isCta ? limits.cta_title_max_chars : limits.cover_title_max_chars);
+    const subMax = limits.cover_subtitle_max_chars;
+    const bodyMax = isCta ? limits.cta_body_max_chars : limits.content_body_top_max_chars;
+    return {
+      ...s,
+      title: hardTrim(s?.title, titleMax),
+      subtitle: hardTrim(s?.subtitle, subMax),
+      body: hardTrim(s?.body, bodyMax),
+    };
+  });
+}
+
 
 interface InMessage {
   role: 'user' | 'assistant' | 'system';

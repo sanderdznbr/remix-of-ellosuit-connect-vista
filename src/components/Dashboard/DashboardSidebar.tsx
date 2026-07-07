@@ -2,7 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Settings, LogOut, ChevronDown, User, CreditCard,
-  Sparkles, PanelLeftClose, PanelLeftOpen, Star,
+  PanelLeftClose, PanelLeftOpen, Star,
+  Compass, MessagesSquare, FolderDot, Aperture, FeatherIcon,
+  CalendarRange, Flame, LineChart, Shapes, UsersRound,
+  Radar, Wand2, Handshake, ShieldCheck, LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';

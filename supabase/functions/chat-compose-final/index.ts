@@ -942,15 +942,12 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
 
       let cardImage: string | null = null;
 
-      // PRIMARY: Gemini 3 Pro Image (multimodal — respeita rosto/logo/produto/estilo/capa).
-      // FALLBACK: Gemini 3.1 Flash Image. Sem mais fallbacks — se ambos falharem, retorna erro.
-      console.log(`chat-compose-final: card ${cardIndex + 1} primary (pro) parts=${cardContent.length}`);
-      cardImage = await generateWithGemini("google/gemini-3-pro-image-preview", cardContent);
-      if (!cardImage) {
-        await new Promise((r) => setTimeout(r, 2000));
-        console.log(`chat-compose-final: card ${cardIndex + 1} fallback (fast) parts=${cardContent.length}`);
-        cardImage = await generateWithGemini("google/gemini-3.1-flash-image-preview", cardContent);
-      }
+      // Delayed parallel race: Pro imediato + Flash após 35s como paraquedas.
+      // Isso mantém a qualidade Pro quando ela é rápida, mas evita o timeout
+      // de 150s do Edge quando o Pro trava.
+      console.log(`chat-compose-final: card ${cardIndex + 1} race(pro+flash) parts=${cardContent.length}`);
+      cardImage = await generateImageWithFailover(cardContent);
+
 
       if (!cardImage) {
         return aiGenerationFailureResponse(

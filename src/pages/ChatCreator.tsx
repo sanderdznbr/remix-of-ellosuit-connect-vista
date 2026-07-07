@@ -1070,7 +1070,7 @@ const ChatCreator: React.FC = () => {
         </div>
 
         {/* Input */}
-        <div className="px-4 pb-6 pt-2 sticky bottom-0" style={{ background: 'linear-gradient(to top, #0A0A0A 70%, transparent)' }}>
+        <div className="px-4 pb-6 pt-4 sticky bottom-0" style={{ background: 'linear-gradient(to top, #07070b 60%, rgba(7,7,11,0.6) 90%, transparent)' }}>
           <div className="max-w-2xl mx-auto space-y-2">
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -1089,7 +1089,10 @@ const ChatCreator: React.FC = () => {
                 ))}
               </div>
             )}
-            <div className="flex items-end gap-2 rounded-2xl px-2 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div
+              className="flex items-end gap-2 rounded-2xl px-2 py-2 transition-shadow focus-within:shadow-[0_0_0_1px_rgba(139,92,246,0.4),0_0_40px_-8px_rgba(139,92,246,0.55)]"
+              style={{ backgroundColor: 'rgba(15,15,22,0.9)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 0 0 1px rgba(139,92,246,0.15), 0 0 30px -10px rgba(139,92,246,0.35)' }}
+            >
               <input
                 ref={fileInputRef}
                 type="file"

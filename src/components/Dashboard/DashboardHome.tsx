@@ -80,6 +80,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
   const [showRecent, setShowRecent] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);

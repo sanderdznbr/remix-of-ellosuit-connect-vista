@@ -226,13 +226,47 @@ Do not include markdown or extra text.`
 
       let images: any[] = [];
 
-      // Helper: filter out small/bad images
+      // Helper: filter out small/bad images and known watermarked stock-photo sources
       const MIN_WIDTH = 600;
       const MIN_HEIGHT = 400;
-      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i, /infographic/i, /chart/i, /diagram/i];
+      const BAD_URL_PATTERNS = [/logo/i, /icon/i, /favicon/i, /badge/i, /banner.*ad/i, /\.gif$/i, /\.svg$/i, /thumbnail/i, /infographic/i, /chart/i, /diagram/i, /watermark/i, /\bwm\b/i, /_wm[._]/i];
+      // Known paid stock agencies that overlay watermarks on preview images
+      const WATERMARKED_STOCK_DOMAINS = [
+        'dreamstime.com', 'thumbs.dreamstime.com',
+        'shutterstock.com', 'image.shutterstock.com',
+        'gettyimages.com', 'media.gettyimages.com',
+        'istockphoto.com', 'media.istockphoto.com',
+        'alamy.com', 'c8.alamy.com',
+        '123rf.com',
+        'depositphotos.com', 'st.depositphotos.com',
+        'adobestock.com', 'stock.adobe.com', 'as1.ftcdn.net', 'as2.ftcdn.net',
+        'fotolia.com',
+        'canstockphoto.com',
+        'bigstockphoto.com', 'static2.bigstockphoto.com',
+        'agefotostock.com',
+        'imago-images.com', 'imago-images.de',
+        'newscom.com', 'l7.alamy.com',
+        'zumapress.com',
+        'photoshelter.com',
+        'stocksy.com',
+        'crestock.com',
+        'mostphotos.com',
+        'pond5.com',
+        'featurepics.com',
+        'clipdealer.com',
+        'stocklib.com',
+        'panthermedia.net',
+      ];
+      const WATERMARK_ALT_PATTERNS = /(watermark|stock photo|royalty[- ]free|editorial use|dreamstime|shutterstock|getty|alamy|istock|depositphotos|adobe stock|123rf|bigstock)/i;
+      const hostOf = (u: string) => { try { return new URL(u).hostname.toLowerCase(); } catch { return ''; } };
       const isGoodImage = (img: any) => {
         if (!img.url) return false;
         if (BAD_URL_PATTERNS.some(p => p.test(img.url))) return false;
+        const host = hostOf(img.url);
+        if (host && WATERMARKED_STOCK_DOMAINS.some(d => host === d || host.endsWith('.' + d) || host.includes(d))) return false;
+        const src = String(img.source || '').toLowerCase();
+        if (WATERMARKED_STOCK_DOMAINS.some(d => src.includes(d.split('.')[0]))) return false;
+        if (img.alt && WATERMARK_ALT_PATTERNS.test(String(img.alt))) return false;
         if (img.width && img.width < MIN_WIDTH) return false;
         if (img.height && img.height < MIN_HEIGHT) return false;
         return true;
@@ -243,26 +277,29 @@ Do not include markdown or extra text.`
       if (BRAVE_API_KEY) {
         console.log('[web-search] Trying Brave Search first for:', searchQuery);
         try {
-          const photoQuery = searchQuery;
-          const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(photoQuery)}&count=50&safesearch=strict&size=Large`;
+          // Append negative operators to reduce watermarked stock-photo results at source
+          const negatives = '-watermark -dreamstime -shutterstock -gettyimages -alamy -istock -depositphotos -123rf -adobestock -bigstock -fotolia';
+          const photoQuery = `${searchQuery} ${negatives}`;
+          const braveUrl = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(photoQuery)}&count=80&safesearch=strict&size=Large`;
           const braveRes = await fetch(braveUrl, { headers: { 'X-Subscription-Token': BRAVE_API_KEY } });
           if (braveRes.ok) {
             const braveData = await braveRes.json();
-            const braveImages = (braveData.results || []).slice(0, 50).map((item: any, idx: number) => ({
+            const braveImages = (braveData.results || []).slice(0, 80).map((item: any, idx: number) => ({
               id: `brave-${idx}`,
               url: item.properties?.url || item.thumbnail?.src,
               thumb: item.thumbnail?.src || item.properties?.url,
               alt: item.title || searchQuery,
               photographer: item.source || 'Google',
-              source: 'brave',
+              source: item.source || 'brave',
               width: item.properties?.width,
               height: item.properties?.height,
             })).filter(isGoodImage);
             images = [...images, ...braveImages];
-            console.log('[web-search] Brave returned', braveImages.length, 'quality images');
+            console.log('[web-search] Brave returned', braveImages.length, 'quality (non-watermarked) images');
           }
         } catch (e) { console.error('[web-search] Brave exception:', e); }
       }
+
 
 
       // If no images found at all, return generic placeholders instead of error

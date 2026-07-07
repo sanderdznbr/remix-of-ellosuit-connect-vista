@@ -1009,8 +1009,8 @@ const ChatCreator: React.FC = () => {
                         </div>
                         <div className="space-y-2 flex-1 min-w-0">
                           <div
-                            className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                            className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap border border-white/[0.06]"
+                            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                           >
                             {msg.content}
                           </div>

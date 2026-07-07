@@ -2467,37 +2467,70 @@ const ConfirmWidget: React.FC<{
                     </Button>
                   </div>
                   
-                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide">
-                    {selected && !options.includes(selected) && (
-                      <div 
-                        className="relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/30 snap-start"
-                      >
-                        <img src={selected} className="h-full w-full object-cover" />
-                        <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
-                          <Check className="h-3 w-3 text-white" />
-                        </div>
-                      </div>
-                    )}
-                    {options.map((url, optIdx) => (
-                      <button
-                        key={optIdx}
-                        onClick={() => handleSelectImage(i, url)}
-                        className={`relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-start ${selected === url ? 'border-violet-500 scale-[1.02] shadow-lg shadow-violet-500/30' : 'border-white/10 opacity-80 hover:opacity-100 hover:border-white/30'}`}
-                      >
-                        <img src={url} className="h-full w-full object-cover" />
-                        {selected === url && (
+                  <div className="relative group/slider">
+                    <div
+                      id={`photo-slider-${i}`}
+                      className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide scroll-smooth"
+                    >
+                      {selected && !options.includes(selected) && (
+                        <div 
+                          className="relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/30 snap-start"
+                        >
+                          <img src={selected} className="h-full w-full object-cover" />
                           <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
                             <Check className="h-3 w-3 text-white" />
                           </div>
-                        )}
-                      </button>
-                    ))}
-                    {options.length === 0 && !selected && (
-                      <div className="w-full aspect-[4/1.2] bg-white/[0.03] border border-dashed border-white/10 rounded-xl flex items-center justify-center">
-                        <span className="text-[11px] text-white/30 italic">Digite um termo e clique na lupa para ver fotos</span>
-                      </div>
+                        </div>
+                      )}
+                      {options.map((url, optIdx) => (
+                        <button
+                          key={optIdx}
+                          onClick={() => handleSelectImage(i, url)}
+                          className={`relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-start ${selected === url ? 'border-violet-500 scale-[1.02] shadow-lg shadow-violet-500/30' : 'border-white/10 opacity-80 hover:opacity-100 hover:border-white/30'}`}
+                        >
+                          <img src={url} className="h-full w-full object-cover" />
+                          {selected === url && (
+                            <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                      {options.length === 0 && !selected && (
+                        <div className="w-full aspect-[4/1.2] bg-white/[0.03] border border-dashed border-white/10 rounded-xl flex items-center justify-center">
+                          <span className="text-[11px] text-white/30 italic">Digite um termo e clique na lupa para ver fotos</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {options.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(`photo-slider-${i}`);
+                            if (el) el.scrollBy({ left: -240, behavior: 'smooth' });
+                          }}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 h-9 w-9 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover/slider:opacity-100 hover:bg-violet-600 transition-all shadow-lg"
+                          aria-label="Foto anterior"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(`photo-slider-${i}`);
+                            if (el) el.scrollBy({ left: 240, behavior: 'smooth' });
+                          }}
+                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 z-10 h-9 w-9 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover/slider:opacity-100 hover:bg-violet-600 transition-all shadow-lg"
+                          aria-label="Próxima foto"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                   </div>
+
 
                 </div>
               );

@@ -426,7 +426,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.4 }}
         >
-          <div className="saber-border relative w-full rounded-2xl p-[1.5px] overflow-hidden">
+          <div className="saber-border relative w-full rounded-2xl p-[1.5px]">
             <div
               className="relative w-full rounded-2xl overflow-visible"
               style={{

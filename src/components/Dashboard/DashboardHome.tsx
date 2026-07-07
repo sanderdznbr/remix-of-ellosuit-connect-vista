@@ -524,7 +524,17 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           <QuickTemplates
             onSelect={(prompt) => {
               setInputValue(prompt);
-              setTimeout(() => navigate(`/criar?prompt=${encodeURIComponent(prompt)}`), 150);
+              
+              // foca no input para o usuário continuar digitando/editando
+              setTimeout(() => {
+                const el = document.querySelector<HTMLTextAreaElement>('textarea[data-dashboard-input]')
+                  || document.querySelector<HTMLTextAreaElement>('textarea');
+                el?.focus();
+                if (el) {
+                  const len = el.value.length;
+                  el.setSelectionRange(len, len);
+                }
+              }, 50);
             }}
           />
         )}

@@ -142,7 +142,7 @@ const Hooks: React.FC = () => {
         </div>
       </main>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

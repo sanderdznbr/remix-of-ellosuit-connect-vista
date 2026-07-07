@@ -721,7 +721,9 @@ const ChatCreator: React.FC = () => {
     logoUrl?: string | string[]; 
     productUrl?: string | string[];
     printUrl?: string | string[];
-    brandColors?: string[] 
+    brandColors?: string[];
+    brandNeutralTones?: string[];
+
   }) => {
     const hasProductReference = data.product && hasReferenceValue(data.productUrl);
     const nextBrief = {

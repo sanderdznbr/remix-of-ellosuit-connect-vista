@@ -1868,7 +1868,7 @@ const PersonalizationWidget: React.FC<{
             <User className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-medium text-white">Foto do rosto</div>
+            <div className="text-[13px] font-medium text-white/90">Foto do rosto</div>
             <div className="text-[11px] text-white/50">Apareça nas artes (pode subir várias)</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: face ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: face ? PURPLE : 'transparent' }}>
@@ -1927,7 +1927,7 @@ const PersonalizationWidget: React.FC<{
             <ImageIcon className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-medium text-white">Logo da marca</div>
+            <div className="text-[13px] font-medium text-white/90">Logo da marca</div>
             <div className="text-[11px] text-white/50">PNG com fundo transparente</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: logo ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: logo ? PURPLE : 'transparent' }}>
@@ -1986,7 +1986,7 @@ const PersonalizationWidget: React.FC<{
             <Package className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-medium text-white">Foto do produto ou embalagem</div>
+            <div className="text-[13px] font-medium text-white/90">Foto do produto ou embalagem</div>
             <div className="text-[11px] text-white/50">Caixa, rótulo, pote, roupa ou objeto</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: product ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: product ? PURPLE : 'transparent' }}>
@@ -2043,7 +2043,7 @@ const PersonalizationWidget: React.FC<{
             <Smartphone className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-medium text-white">Prints / Screenshots</div>
+            <div className="text-[13px] font-medium text-white/90">Prints / Screenshots</div>
             <div className="text-[11px] text-white/50">Fotos das telas do seu sistema</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: prints ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: prints ? PURPLE : 'transparent' }}>
@@ -2116,7 +2116,7 @@ const PersonalizationWidget: React.FC<{
             <Palette className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-sm font-medium text-white">Cores da marca</div>
+            <div className="text-[13px] font-medium text-white/90">Cores da marca</div>
             <div className="text-[11px] text-white/50">
               {extractingPalette ? 'Extraindo cores da logo…' : (brandColors.length > 0 ? `${brandColors.length} tom${brandColors.length > 1 ? 's' : ''} detectado${brandColors.length > 1 ? 's' : ''}` : 'Envie um logo ou adicione manualmente')}
             </div>

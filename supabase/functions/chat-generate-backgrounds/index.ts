@@ -17,6 +17,8 @@ interface Brief {
   hasFace?: boolean;
   hasLogo?: boolean;
   brandColors?: string[];
+  brandNeutralTones?: string[];
+
   audience?: string;
   tone?: string;
 }

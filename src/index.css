@@ -557,19 +557,10 @@ body[data-scroll-locked] {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ========================================================================== 
-   Saber glow border — beam sweeps continuously along the full input stroke
-   ========================================================================== */
-@property --saber-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 .saber-border {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.1) 50%, rgba(232, 121, 249, 0.14));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(59, 130, 246, 0.08) 52%, rgba(232, 121, 249, 0.12));
 }
 
 .saber-border > * {
@@ -577,56 +568,63 @@ body[data-scroll-locked] {
   z-index: 1;
 }
 
-.saber-border::before,
-.saber-border::after {
-  content: '';
+.saber-stroke {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--saber-angle) at 50% 50%,
-    transparent 0deg,
-    transparent 250deg,
-    rgba(96, 165, 250, 0.25) 285deg,
-    rgba(167, 139, 250, 0.85) 315deg,
-    rgba(255, 255, 255, 0.95) 335deg,
-    rgba(232, 121, 249, 0.85) 350deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
-  animation: saber-sweep 3.6s linear infinite;
-}
-
-.saber-border::before {
   z-index: 2;
 }
 
-.saber-border::after {
-  inset: -2px;
-  padding: 3px;
-  filter: blur(5px);
-  opacity: 0.3;
-  z-index: 0;
+.saber-stroke rect {
+  fill: none;
+  vector-effect: non-scaling-stroke;
 }
 
-@keyframes saber-sweep {
-  to { --saber-angle: 360deg; }
+.saber-stroke-track {
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 1.5;
 }
 
-/* Fallback for browsers without @property: animate a rotated wrapper via mask */
-@supports not (background: conic-gradient(from 0deg, red, blue)) {
-  .saber-border::before,
-  .saber-border::after { display: none; }
+.saber-stroke-glow,
+.saber-stroke-beam,
+.saber-stroke-core {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 13 87;
+  stroke-dashoffset: 0;
+  animation: saber-stroke-run 2.8s linear infinite;
+}
+
+.saber-stroke-glow {
+  stroke: rgba(167, 139, 250, 0.48);
+  stroke-width: 8;
+  filter: blur(6px);
+  opacity: 0.45;
+}
+
+.saber-stroke-beam {
+  stroke: rgba(167, 139, 250, 0.9);
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 5px rgba(167, 139, 250, 0.55));
+}
+
+.saber-stroke-core {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 1.15;
+  stroke-dasharray: 5 95;
+}
+
+@keyframes saber-stroke-run {
+  to { stroke-dashoffset: -100; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .saber-border::before,
-  .saber-border::after { animation: none; }
+  .saber-stroke-glow,
+  .saber-stroke-beam,
+  .saber-stroke-core { animation: none; }
 }
 
 

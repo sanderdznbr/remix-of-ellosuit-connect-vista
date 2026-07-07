@@ -2079,28 +2079,110 @@ const PersonalizationWidget: React.FC<{
         </button>
         {colors && (
           <div className="px-3 pb-3 space-y-3">
-            <div className="flex flex-wrap gap-2">
+            {brandColors.length > 0 && (
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] uppercase tracking-widest text-white/40 font-semibold">
+                  Paleta ({brandColors.length}/6) — arraste com as setas
+                </div>
+                <button
+                  onClick={clearColors}
+                  className="text-[10px] text-white/40 hover:text-white/80 uppercase tracking-wider"
+                >
+                  Limpar
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
               {brandColors.map((c, i) => (
-                <div key={i} className="flex items-center gap-1.5 rounded-lg p-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                  <input
-                    type="color"
-                    value={c}
-                    onChange={(e) => updateColor(i, e.target.value)}
-                    className="h-8 w-8 rounded cursor-pointer border border-white/10"
-                    style={{ backgroundColor: c }}
-                  />
-                  <span className="text-[11px] font-mono text-white/70 uppercase">{c}</span>
-                  <button onClick={() => removeColor(i)} className="text-white/40 hover:text-white p-0.5">
-                    <X className="h-3 w-3" />
+                <div
+                  key={i}
+                  className="flex items-center gap-2 rounded-lg p-2 transition-all"
+                  style={{
+                    backgroundColor: i === 0 ? 'rgba(139,92,246,0.10)' : 'rgba(255,255,255,0.04)',
+                    border: i === 0 ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  {/* swatch */}
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={c}
+                      onChange={(e) => updateColor(i, e.target.value)}
+                      className="h-9 w-9 rounded-md cursor-pointer border border-white/10 shadow-inner"
+                      style={{ backgroundColor: c }}
+                      title="Editar cor"
+                    />
+                  </div>
+
+                  {/* label + dominant badge */}
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-white/80 uppercase">{c}</span>
+                    {i === 0 ? (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: PURPLE, color: '#fff' }}
+                      >
+                        Dominante
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => makeDominant(i)}
+                        className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                        title="Tornar dominante"
+                      >
+                        Tornar dominante
+                      </button>
+                    )}
+                  </div>
+
+                  {/* reorder */}
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => moveColor(i, -1)}
+                      disabled={i === 0}
+                      className="h-6 w-6 rounded flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                      title="Mover para cima"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => moveColor(i, 1)}
+                      disabled={i === brandColors.length - 1}
+                      className="h-6 w-6 rounded flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                      title="Mover para baixo"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* remove */}
+                  <button
+                    onClick={() => removeColor(i)}
+                    className="h-6 w-6 rounded flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Remover cor"
+                  >
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
+
               {brandColors.length < 6 && (
-                <button onClick={addColor} className="h-11 px-3 rounded-lg border border-dashed border-white/20 text-xs text-white/60 hover:text-white hover:border-white/40 transition-colors">
-                  + cor
+                <button
+                  onClick={addColor}
+                  className="w-full h-9 rounded-lg border border-dashed border-white/15 text-[11px] text-white/50 hover:text-white hover:border-white/40 hover:bg-white/[0.03] transition-colors"
+                >
+                  + adicionar cor
                 </button>
               )}
+
+              {brandColors.length === 0 && (
+                <div className="text-[11px] text-white/40 italic text-center py-2">
+                  Envie um logo acima para extrair a paleta automaticamente.
+                </div>
+              )}
             </div>
+
 
             {brandColors.length === 1 && (
               <div className="rounded-lg p-2.5 space-y-2" style={{ backgroundColor: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.18)' }}>

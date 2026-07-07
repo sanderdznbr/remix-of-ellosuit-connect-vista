@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +30,63 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
   const [publishCaption, setPublishCaption] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
+
+  // Selection & create-style state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [styleDialogOpen, setStyleDialogOpen] = useState(false);
+  const [styleName, setStyleName] = useState('');
+  const [styleDescription, setStyleDescription] = useState('');
+  const [styleCoverUrl, setStyleCoverUrl] = useState<string | null>(null);
+  const [creatingStyle, setCreatingStyle] = useState(false);
+
+  const toggleSelected = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const openStyleDialog = () => {
+    if (selectedIds.size === 0) return;
+    const first = carousels.find(c => selectedIds.has(c.id));
+    setStyleName(first?.title || first?.topic || 'Meu estilo');
+    setStyleDescription('');
+    setStyleCoverUrl(first?.cover_url || null);
+    setStyleDialogOpen(true);
+  };
+
+  const confirmCreateStyle = async () => {
+    if (!styleName.trim() || selectedIds.size === 0) return;
+    setCreatingStyle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-style-from-posts', {
+        body: {
+          carouselIds: Array.from(selectedIds),
+          name: styleName.trim(),
+          description: styleDescription.trim() || null,
+          coverUrl: styleCoverUrl,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success('Estilo criado! Disponível só pra você em Estilos.');
+      setStyleDialogOpen(false);
+      exitSelection();
+    } catch (err: any) {
+      toast.error('Erro ao criar estilo: ' + (err?.message || 'tente novamente'));
+    } finally {
+      setCreatingStyle(false);
+    }
+  };
 
   const recoverCover = async (itemId: string, companyId: string) => {
     try {
@@ -265,8 +322,44 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
               <List className="w-4 h-4" />
             </button>
           </div>
+
+          <button
+            onClick={() => selectionMode ? exitSelection() : setSelectionMode(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-colors cursor-pointer"
+            style={{
+              backgroundColor: selectionMode ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.06)',
+              border: `1px solid ${selectionMode ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              color: selectionMode ? '#C4B5FD' : 'rgba(255,255,255,0.6)',
+            }}
+          >
+            {selectionMode ? <X className="w-3.5 h-3.5" /> : <CheckSquare className="w-3.5 h-3.5" />}
+            {selectionMode ? 'Cancelar' : 'Selecionar'}
+          </button>
         </motion.div>
       </div>
+
+      {/* Selection action bar */}
+      {selectionMode && (
+        <div className="px-4 md:px-8 pb-2">
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl"
+            style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)' }}
+          >
+            <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {selectedIds.size === 0 ? 'Toque nos posts para selecionar' : `${selectedIds.size} selecionado${selectedIds.size > 1 ? 's' : ''}`}
+            </span>
+            <button
+              onClick={openStyleDialog}
+              disabled={selectedIds.size === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#8B5CF6', color: '#fff' }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Criar estilo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="px-4 md:px-8 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom, 2rem))' }}>
@@ -330,14 +423,17 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
               );
             }
 
+            const isSelected = selectedIds.has(item.id);
             return (
               <div
                 key={item.id}
                 className="rounded-lg overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[3/4]"
                 style={{
                   background: 'rgba(255,255,255,0.03)',
+                  outline: selectionMode && isSelected ? '2px solid #8B5CF6' : undefined,
+                  outlineOffset: selectionMode && isSelected ? '-2px' : undefined,
                 }}
-                onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
+                onClick={(e) => selectionMode ? toggleSelected(e, item.id) : (onLoadCarousel ? onLoadCarousel(item) : onStartCarousel())}
               >
                 {cover && (
                   <img
@@ -348,47 +444,61 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 )}
+                {/* Selection checkbox */}
+                {selectionMode && (
+                  <div
+                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-md flex items-center justify-center z-10"
+                    style={{
+                      backgroundColor: isSelected ? '#8B5CF6' : 'rgba(0,0,0,0.55)',
+                      border: `1.5px solid ${isSelected ? '#8B5CF6' : 'rgba(255,255,255,0.5)'}`,
+                    }}
+                  >
+                    {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                )}
                 {/* Starred indicator (visible when not hovering) */}
-                {item.is_starred && (
+                {item.is_starred && !selectionMode && (
                   <div className="absolute top-1.5 left-1.5 p-0.5 group-hover:opacity-0 transition-opacity" style={{ color: '#facc15' }}>
                     <Star className="w-3 h-3" fill="#facc15" />
                   </div>
                 )}
-                {/* Hover overlay */}
-                <div
-                  className="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 80%)',
-                  }}
-                >
-                  <div className="flex flex-col gap-0.5 px-3 pb-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span className="text-[11px]">Editar</span>
-                    </button>
-                    <button
-                      onClick={(e) => openPublishDialog(e, item)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
-                      style={{ color: 'rgba(255,255,255,0.8)' }}
-                      disabled={publishingId === item.id}
-                    >
-                      {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-                      <span className="text-[11px]">Compartilhar</span>
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(e, item.id)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
-                      style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="text-[11px]">{deleteConfirmId === item.id ? 'Confirmar' : 'Excluir'}</span>
-                    </button>
+                {/* Hover overlay (hidden in selection mode) */}
+                {!selectionMode && (
+                  <div
+                    className="absolute inset-0 flex flex-col justify-end opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    style={{
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, transparent 80%)',
+                    }}
+                  >
+                    <div className="flex flex-col gap-0.5 px-3 pb-3">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onLoadCarousel ? onLoadCarousel(item) : onStartCarousel(); }}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Editar</span>
+                      </button>
+                      <button
+                        onClick={(e) => openPublishDialog(e, item)}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                        disabled={publishingId === item.id}
+                      >
+                        {publishingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                        <span className="text-[11px]">Compartilhar</span>
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(e, item.id)}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">{deleteConfirmId === item.id ? 'Confirmar' : 'Excluir'}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
@@ -467,6 +577,83 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
             >
               {publishingId === publishDialogItem?.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
               Publicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Style Dialog */}
+      <Dialog open={styleDialogOpen} onOpenChange={(open) => { if (!open && !creatingStyle) setStyleDialogOpen(false); }}>
+        <DialogContent className="sm:max-w-md" style={{ backgroundColor: '#0f0f16', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2" style={{ color: '#fff' }}>
+              <Sparkles className="w-4 h-4" style={{ color: '#A78BFA' }} />
+              Criar estilo a partir da seleção
+            </DialogTitle>
+            <DialogDescription style={{ color: 'rgba(255,255,255,0.5)' }}>
+              {selectedIds.size} post{selectedIds.size > 1 ? 's' : ''} selecionado{selectedIds.size > 1 ? 's' : ''}. A IA vai analisar as artes e gerar automaticamente os prompts. Só você verá esse estilo.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Cover picker */}
+          <div>
+            <label className="text-[11px] font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.5)' }}>Capa</label>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {carousels.filter(c => selectedIds.has(c.id)).slice(0, 8).map(c => {
+                const url = c.cover_url && !String(c.cover_url).startsWith('data:') ? c.cover_url : null;
+                if (!url) return null;
+                const active = styleCoverUrl === url;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setStyleCoverUrl(url)}
+                    className="shrink-0 h-16 w-14 rounded-md overflow-hidden transition-all"
+                    style={{ outline: active ? '2px solid #8B5CF6' : '1px solid rgba(255,255,255,0.08)', outlineOffset: active ? '-2px' : undefined }}
+                  >
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.5)' }}>Nome</label>
+            <input
+              type="text"
+              value={styleName}
+              onChange={(e) => setStyleName(e.target.value)}
+              maxLength={80}
+              placeholder="Ex: Editorial Minimal Roxo"
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium mb-1.5 block" style={{ color: 'rgba(255,255,255,0.5)' }}>Descrição (opcional)</label>
+            <Textarea
+              value={styleDescription}
+              onChange={(e) => setStyleDescription(e.target.value)}
+              maxLength={500}
+              placeholder="O que caracteriza esse estilo..."
+              rows={3}
+              className="resize-none"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff' }}
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setStyleDialogOpen(false)} disabled={creatingStyle} style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmCreateStyle}
+              disabled={creatingStyle || !styleName.trim()}
+              className="gap-2"
+              style={{ backgroundColor: '#8B5CF6', color: '#fff' }}
+            >
+              {creatingStyle ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando...</> : <><Sparkles className="w-4 h-4" /> Criar estilo</>}
             </Button>
           </DialogFooter>
         </DialogContent>

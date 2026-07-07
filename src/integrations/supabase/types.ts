@@ -4739,7 +4739,9 @@ export type Database = {
           is_active: boolean
           is_featured: boolean
           is_free: boolean
+          is_private: boolean
           name: string
+          owner_id: string | null
           preview_classifications: Json | null
           preview_images: string[]
           price_brl: number
@@ -4758,7 +4760,9 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           is_free?: boolean
+          is_private?: boolean
           name: string
+          owner_id?: string | null
           preview_classifications?: Json | null
           preview_images?: string[]
           price_brl?: number
@@ -4777,7 +4781,9 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           is_free?: boolean
+          is_private?: boolean
           name?: string
+          owner_id?: string | null
           preview_classifications?: Json | null
           preview_images?: string[]
           price_brl?: number

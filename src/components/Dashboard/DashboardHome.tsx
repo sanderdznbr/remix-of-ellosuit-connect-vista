@@ -505,7 +505,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { setShowRecent(prev => !prev); setShowMenu(false); }}
+                onClick={() => setShowRecent(prev => !prev)}
                 className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
                 style={{
                   backgroundColor: 'rgba(8, 8, 12, 0.92)',

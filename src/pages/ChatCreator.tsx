@@ -286,10 +286,16 @@ const getValidWidget = (value: unknown): WidgetType => (
 
 const makeFallbackSuggestedContent = (source: BriefState) => {
   const total = source.contentType === 'carousel' ? Math.max(3, Math.min(source.cardCount || 5, 10)) : 1;
-  const topic = source.topic || source.brandName || 'sua oferta';
-  return Array.from({ length: total }, (_, index) => index === 0
-    ? { title: `Transforme ${topic}`, subtitle: 'Uma ideia clara para chamar atenção', body: 'Mostre o valor principal com uma mensagem simples, visual e direta.' }
-    : { title: `Ponto ${index + 1}`, subtitle: `Benefício ${index}`, body: `Explique um motivo forte para escolher ${topic}.` });
+  // NUNCA ecoar o prompt/tópico bruto no texto final — geramos hooks genéricos
+  // profissionais que funcionam para qualquer nicho sem parecer template.
+  const hooks = [
+    { title: 'O erro que trava seu crescimento', subtitle: 'A virada que ninguém te contou', body: 'Descubra o método simples que separa quem cresce de quem estagna.' },
+    { title: 'Pare de fazer do jeito difícil', subtitle: 'Existe um caminho mais inteligente', body: 'Economize tempo e energia com uma abordagem que realmente entrega resultado.' },
+    { title: 'A verdade que ninguém fala', subtitle: 'O bastidor do que funciona de verdade', body: 'Uma leitura honesta sobre o que muda o jogo — sem enrolação.' },
+    { title: 'O detalhe que muda tudo', subtitle: 'Pequeno ajuste, resultado enorme', body: 'Um ponto simples que a maioria ignora e faz toda a diferença.' },
+    { title: 'Faça isso hoje', subtitle: 'Um passo prático pra começar agora', body: 'Ação direta que você aplica em minutos e sente o efeito na hora.' },
+  ];
+  return Array.from({ length: total }, (_, index) => hooks[index % hooks.length]);
 };
 
 const hasPersonalizationAnswer = (source: BriefState) => (

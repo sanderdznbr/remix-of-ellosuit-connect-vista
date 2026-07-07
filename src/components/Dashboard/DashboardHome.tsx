@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal, Menu as MenuIcon, Compass, MessagesSquare, FolderDot, Aperture, FeatherIcon, CalendarRange, Flame, LineChart, Shapes, UsersRound, LifeBuoy } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -80,6 +80,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [activeJobs, setActiveJobs] = useState<ActiveJob[]>([]);
   const [showRecent, setShowRecent] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -488,7 +489,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
       <AnimatePresence>
-        {(recentCarousels.length > 0 || activeJobs.length > 0) && (
+        {(true) && (
       <motion.div
         className="relative z-[1] px-4 md:px-8 shrink-0"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
@@ -501,9 +502,9 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
         <div className={isMobile ? 'max-w-[1200px] mx-auto' : ''}>
           <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-center' : 'justify-between'}`}>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowRecent(prev => !prev)}
+                onClick={() => { setShowRecent(prev => !prev); setShowMenu(false); }}
                 className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
                 style={{
                   backgroundColor: 'rgba(8, 8, 12, 0.92)',
@@ -517,6 +518,20 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 <motion.div animate={{ rotate: showRecent ? 0 : 180 }} transition={{ duration: 0.3 }}>
                   <ChevronUp className="w-3.5 h-3.5" />
                 </motion.div>
+              </button>
+              <button
+                onClick={() => { setShowMenu(prev => !prev); setShowRecent(false); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
+                style={{
+                  backgroundColor: 'rgba(8, 8, 12, 0.92)',
+                  border: '1px solid rgba(255,255,255,0.04)',
+                  color: 'rgba(255,255,255,0.5)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02)',
+                }}
+                title={showMenu ? 'Ocultar menu' : 'Mostrar menu'}
+              >
+                <MenuIcon className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">Menu</span>
               </button>
             </div>
             {showRecent && (
@@ -673,6 +688,55 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 </div>
               );
             })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence initial={false}>
+            {showMenu && (
+              <motion.div
+                className="-mr-4 md:-mr-8"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {[
+                    { icon: Compass, label: 'Início', path: '/' },
+                    { icon: MessagesSquare, label: 'Chat IA', path: '/criar' },
+                    { icon: FolderDot, label: 'Meus posts', path: '/projetos' },
+                    { icon: Aperture, label: 'Galeria de marca', path: '/galeria' },
+                    { icon: FeatherIcon, label: 'Meus prompts', path: '/prompts' },
+                    { icon: CalendarRange, label: 'Calendário', path: '/calendario' },
+                    { icon: Flame, label: 'Hooks', path: '/hooks' },
+                    { icon: LineChart, label: 'Insights', path: '/insights' },
+                    { icon: Shapes, label: 'Estilos', path: '/marketplace' },
+                    { icon: UsersRound, label: 'Comunidade', path: '/comunidade' },
+                    { icon: LifeBuoy, label: 'Ajuda', path: '/ajuda' },
+                  ].map((it) => (
+                    <button
+                      key={it.path}
+                      onClick={() => navigate(it.path)}
+                      className="group rounded-xl shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                      style={{
+                        width: '160px',
+                        height: '200px',
+                        background: 'linear-gradient(160deg, rgba(139,92,246,0.06) 0%, rgba(15,15,20,0.9) 60%)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                        style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
+                      >
+                        <it.icon className="w-5 h-5" strokeWidth={1.6} style={{ color: '#c4b5fd' }} />
+                      </div>
+                      <span className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">{it.label}</span>
+                    </button>
+                  ))}
                 </div>
               </motion.div>
             )}

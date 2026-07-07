@@ -476,16 +476,20 @@ const BrandGallery: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div className="px-6 pt-6 pb-2 shrink-0">
-        <div className="flex items-center gap-3 mb-1">
+      {/* Hero */}
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-8 pt-8 sm:pt-14 pb-4 shrink-0">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+          <HardDrive className="w-3.5 h-3.5" />
+          Galeria de marca
+        </div>
+        <div className="flex items-center gap-3 mb-3">
           {folderPath.length > 0 && (
             <button onClick={navigateBack}
               className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 transition-colors cursor-pointer">
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <h1 className="text-xl font-bold text-white">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             {currentFolder ? currentFolder.name : 'Galeria de Marca'}
           </h1>
           {hasSelection && (
@@ -515,7 +519,7 @@ const BrandGallery: React.FC = () => {
           </div>
         )}
 
-        <p className="text-sm text-white/30">
+        <p className="text-white/40 text-base">
           {currentFolder
             ? `${currentFolders.length} subpasta(s) · ${currentFiles.length} arquivo(s)`
             : `${currentFolders.length} pasta(s) · ${files.length} arquivo(s)`}
@@ -526,7 +530,7 @@ const BrandGallery: React.FC = () => {
       </div>
 
       {/* Actions bar */}
-      <div className="px-6 pb-4 flex gap-2 shrink-0">
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-8 pb-4 flex gap-2 shrink-0 flex-wrap">
         <button onClick={() => setShowNewFolder(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white/70 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-all cursor-pointer">
           <FolderPlus className="w-4 h-4" /> Nova pasta
@@ -581,7 +585,7 @@ const BrandGallery: React.FC = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6"
+      <div className="flex-1 overflow-y-auto max-w-5xl mx-auto w-full px-4 sm:px-8 pb-14"
         onContextMenu={handleBackgroundContextMenu}
         onClick={handleBackgroundClick}
       >

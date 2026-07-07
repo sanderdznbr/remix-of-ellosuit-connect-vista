@@ -798,23 +798,26 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
 
   // === TRENDS DASHBOARD ===
   return (
-    <div className="flex-1 px-4 md:px-8 py-6 max-w-5xl mx-auto w-full">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between mb-5">
+    <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-14 text-white">
+      {/* Hero */}
+      <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-lg font-semibold text-white">Trends</h1>
-          <p className="text-[11px] text-white/25 mt-0.5">
-            {config.niche} · {new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <TrendingUp className="w-3.5 h-3.5" />
+            Tendências do dia
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">Trends</h1>
+          <p className="text-white/40 text-base max-w-xl">
+            Ideias de conteúdo baseadas em notícias e tendências reais de {config.niche || 'seu nicho'}.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Discrete auto-daily indicator */}
           <div className="flex items-center gap-1.5 mr-1">
             <Switch checked={autoDaily} onCheckedChange={toggleAutoDaily} disabled={togglingAuto} className="scale-75" />
-            <span className="text-[10px] text-white/20">Auto</span>
+            <span className="text-[10px] text-white/30">Auto</span>
           </div>
           <button onClick={() => { setShowSetup(true); setSetupStep(0); }}
-            className="p-2 rounded-xl text-white/20 hover:text-white/40 hover:bg-white/[0.03] transition-colors cursor-pointer" title="Configurar">
+            className="p-2 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors cursor-pointer" title="Configurar">
             <Settings2 className="w-4 h-4" />
           </button>
           <button onClick={generateTrends} disabled={generating}

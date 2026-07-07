@@ -2302,8 +2302,9 @@ const ConfirmWidget: React.FC<{
   const isReal = !hasProductReference && brief.imageSource === 'real';
 
   return (
-    <div className="space-y-4 max-w-md w-full">
+    <div className={`space-y-4 w-full ${isReal ? 'max-w-2xl' : 'max-w-md'}`}>
       <div className="rounded-xl p-3 space-y-1.5" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+
         {brief.topic && <Row label="Tema" value={brief.topic} />}
         {brief.styleName && <Row label="Estilo" value={brief.styleName} />}
         {brief.format && <Row label="Formato" value={brief.format === 'portrait' ? 'Retrato 4:5' : brief.format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'} />}

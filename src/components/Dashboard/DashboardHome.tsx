@@ -499,7 +499,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
         layout
       >
 
-        <div className={isMobile ? 'max-w-[1200px] mx-auto' : (showRecent ? 'max-w-[1200px]' : '')}>
+        <div className={isMobile ? 'max-w-[1200px] mx-auto' : ''}>
           <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
               <button

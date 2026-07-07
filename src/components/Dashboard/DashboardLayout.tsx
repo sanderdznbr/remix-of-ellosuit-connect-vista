@@ -148,9 +148,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             WebkitOverflowScrolling: 'touch' as any,
             overscrollBehavior: 'contain',
             touchAction: 'pan-y',
-            ...(isMobile
-              ? { paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))', ...(isHome ? {} : { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }) }
-              : (isHome ? {} : { paddingTop: '4rem' })),
+            ...(isMobile ? { paddingBottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))', ...(isHome ? {} : { paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }) } : {}),
           }}
         >
           {content}

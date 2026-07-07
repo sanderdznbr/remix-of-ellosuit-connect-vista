@@ -27,9 +27,8 @@ const AuthScreen = () => {
   const [username, setUsername] = useState('');
   const [companyName, setCompanyName] = useState('');
   
-  const { user, loading: authLoading, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const getReturnPath = () => {
     return '/';

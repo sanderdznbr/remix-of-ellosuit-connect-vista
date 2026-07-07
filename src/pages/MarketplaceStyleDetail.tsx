@@ -34,8 +34,8 @@ const MarketplaceStyleDetail: React.FC = () => {
   const [owned, setOwned] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState('marketplace');
+
+
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {

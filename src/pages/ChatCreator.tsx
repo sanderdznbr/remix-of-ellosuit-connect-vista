@@ -943,8 +943,18 @@ const ChatCreator: React.FC = () => {
             ? { ...m, widgetData: { ...m.widgetData, imageUrl: newUrl } }
             : m));
         }}
+        onRegenerate={() => {
+          const briefToUse = pendingGenerationBrief || brief;
+          if (!briefToUse) {
+            toast.error('Não encontrei a configuração original para recriar.');
+            return;
+          }
+          generateFinalPost(cloneBrief(briefToUse));
+        }}
+        canRegenerate={!generating}
       />;
     }
+
     return null;
   };
 

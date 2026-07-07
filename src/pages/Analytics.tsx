@@ -77,15 +77,21 @@ const Analytics: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="text-white" style={{ backgroundColor: '#0a0a0f' }}>
-      <header className="sticky top-0 z-10 border-b border-white/[0.06] backdrop-blur" style={{ backgroundColor: 'rgba(10,10,15,0.85)' }}>
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <BarChart3 className="w-5 h-5 text-purple-400" />
-          <h1 className="text-lg font-semibold">Insights</h1>
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8 sm:py-14 text-white">
+        {/* Hero */}
+        <div className="mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <BarChart3 className="w-3.5 h-3.5" />
+            Análise de conteúdo
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">
+            Insights
+          </h1>
+          <p className="text-white/40 text-base max-w-xl">
+            Acompanhe seu ritmo de criação e descubra seu estilo mais usado.
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
         {!user ? (
           <p className="text-sm text-white/50">Faça login para ver seus insights.</p>
         ) : loading ? (
@@ -99,8 +105,8 @@ const Analytics: React.FC = () => {
               <Card icon={<Sparkles className="w-4 h-4" />} label="Estilo favorito" value={stats.topStyle || '—'} color="#F59E0B" small />
             </div>
 
-            <div className="rounded-2xl border border-white/[0.06] p-5" style={{ backgroundColor: '#0f0f15' }}>
-              <h2 className="text-sm font-medium text-white/80 mb-4">Atividade dos últimos 7 dias</h2>
+            <div className="rounded-2xl border border-white/[0.06] p-5" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-4">Atividade dos últimos 7 dias</h2>
               <div className="flex items-end gap-2 h-40">
                 {stats.byDay.map((d, i) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-2">
@@ -123,15 +129,14 @@ const Analytics: React.FC = () => {
             </div>
 
             <div className="mt-6 p-4 rounded-xl border border-purple-500/20 bg-purple-500/[0.04]">
-              <p className="text-xs text-white/60">
-                💡 Quanto mais consistente seu volume semanal, melhor o alcance. Use o{' '}
+              <p className="text-xs text-white/60 leading-relaxed">
+                Quanto mais consistente seu volume semanal, melhor o alcance. Use o{' '}
                 <button onClick={() => navigate('/calendario')} className="text-purple-300 hover:underline">calendário editorial</button>{' '}
-                pra planejar antes.
+                para planejar antes.
               </p>
             </div>
           </>
         )}
-      </main>
       </div>
     </DashboardLayout>
   );

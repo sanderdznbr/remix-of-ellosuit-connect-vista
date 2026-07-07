@@ -1869,7 +1869,7 @@ const PersonalizationWidget: React.FC<{
           </div>
           <div className="flex-1 text-left">
             <div className="text-[13px] font-medium text-white/90">Foto do rosto</div>
-            <div className="text-[11px] text-white/50">Apareça nas artes (pode subir várias)</div>
+            <div className="text-[11px] text-white/40 mt-0.5">Apareça nas artes (pode subir várias)</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: face ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: face ? PURPLE : 'transparent' }}>
             {face && <Check className="h-3 w-3 text-white" />}
@@ -1928,7 +1928,7 @@ const PersonalizationWidget: React.FC<{
           </div>
           <div className="flex-1 text-left">
             <div className="text-[13px] font-medium text-white/90">Logo da marca</div>
-            <div className="text-[11px] text-white/50">PNG com fundo transparente</div>
+            <div className="text-[11px] text-white/40 mt-0.5">PNG com fundo transparente</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: logo ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: logo ? PURPLE : 'transparent' }}>
             {logo && <Check className="h-3 w-3 text-white" />}
@@ -1987,7 +1987,7 @@ const PersonalizationWidget: React.FC<{
           </div>
           <div className="flex-1 text-left">
             <div className="text-[13px] font-medium text-white/90">Foto do produto ou embalagem</div>
-            <div className="text-[11px] text-white/50">Caixa, rótulo, pote, roupa ou objeto</div>
+            <div className="text-[11px] text-white/40 mt-0.5">Caixa, rótulo, pote, roupa ou objeto</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: product ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: product ? PURPLE : 'transparent' }}>
             {product && <Check className="h-3 w-3 text-white" />}
@@ -2044,7 +2044,7 @@ const PersonalizationWidget: React.FC<{
           </div>
           <div className="flex-1 text-left">
             <div className="text-[13px] font-medium text-white/90">Prints / Screenshots</div>
-            <div className="text-[11px] text-white/50">Fotos das telas do seu sistema</div>
+            <div className="text-[11px] text-white/40 mt-0.5">Fotos das telas do seu sistema</div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: prints ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: prints ? PURPLE : 'transparent' }}>
             {prints && <Check className="h-3 w-3 text-white" />}

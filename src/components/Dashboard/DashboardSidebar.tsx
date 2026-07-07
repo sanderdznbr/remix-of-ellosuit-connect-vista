@@ -258,8 +258,6 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         </div>
       </div>
 
-      </div>
-
       {/* Bottom: Profile */}
       <div className="shrink-0 border-t border-white/[0.03] relative z-10" style={{ background: 'rgba(0,0,0,0.25)' }}>
         {collapsed ? (

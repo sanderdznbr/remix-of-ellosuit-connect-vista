@@ -524,7 +524,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
           <QuickTemplates
             onSelect={(prompt) => {
               setInputValue(prompt);
-              setIsUserTyping(true);
+              
               // foca no input para o usuário continuar digitando/editando
               setTimeout(() => {
                 const el = document.querySelector<HTMLTextAreaElement>('textarea[data-dashboard-input]')

@@ -490,7 +490,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
       <AnimatePresence>
         {(recentCarousels.length > 0 || activeJobs.length > 0) && (
       <motion.div
-        className="relative z-[1] px-3 md:px-3 shrink-0"
+        className="relative z-[1] px-4 md:px-8 shrink-0"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

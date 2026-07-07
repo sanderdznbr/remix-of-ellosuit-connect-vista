@@ -60,6 +60,30 @@ const FORMAT_TO_RATIO: Record<string, string> = {
 const isUuid = (value?: string | null) =>
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+function cleanText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getSafeBriefTitle(brief?: Brief | null): string {
+  const firstCard = Array.isArray(brief?.suggested_content)
+    ? brief?.suggested_content?.[0]
+    : null;
+  return cleanText(brief?.topic) ||
+    cleanText(firstCard?.title) ||
+    cleanText(firstCard?.subtitle) ||
+    cleanText(firstCard?.body) ||
+    "Post sem título";
+}
+
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (e && typeof e === "object") {
+    const record = e as Record<string, unknown>;
+    return cleanText(record.message) || cleanText(record.error) || "Erro inesperado";
+  }
+  return "Erro inesperado";
+}
+
 async function getCompanyId(sb: any, userId: string): Promise<string | null> {
   const { data } = await sb
     .from("company_users")
@@ -573,14 +597,12 @@ Deno.serve(async (req) => {
         layout: "dark",
       }));
 
-      const safeTitle = (brief.topic && String(brief.topic).trim())
-        || (cards[0] as any)?.title
-        || 'Post sem título';
+      const safeTitle = getSafeBriefTitle(brief);
       const { data: inserted, error: insertErr } = await sb.from("generated_carousels").insert({
         company_id: companyId,
         user_id: user.id,
         title: safeTitle,
-        topic: brief.topic || safeTitle,
+        topic: cleanText(brief.topic) || safeTitle,
         status: 'processing',
         carousel_data: { title: safeTitle, cards },
         style_config: {
@@ -607,7 +629,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!brief?.topic) {
+    const safeTopic = getSafeBriefTitle(brief);
+
+    if (!brief) {
       return new Response(JSON.stringify({ error: "topic é obrigatório" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -767,7 +791,7 @@ RULES:
       const cardKind = inferCardKind(cardText, idx);
       return `Create a premium Instagram ${
         isCover ? "cover (card 1)" : `content card #${idx + 1} of ${totalCards}`
-      } about "${brief.topic}".
+      } about "${safeTopic}".
 Editorial magazine grade. PORTUGUÊS BRASILEIRO.
 BE CREATIVE AND VARIED: Use diverse visual metaphors, different angles, and distinct compositions for each card to avoid repetition.
 CARD KIND: ${cardKind.toUpperCase()} — ${
@@ -854,14 +878,12 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
       
       // If no carouselId provided (single post flow), create the record now
       if (!carouselId) {
-        const safeTitle2 = (brief.topic && String(brief.topic).trim())
-          || (cards[0] as any)?.title
-          || 'Post sem título';
+        const safeTitle2 = getSafeBriefTitle(brief);
         const { data: inserted, error: insertErr } = await sb.from("generated_carousels").insert({
           company_id: companyId,
           user_id: user.id,
           title: safeTitle2,
-          topic: brief.topic || safeTitle2,
+          topic: cleanText(brief.topic) || safeTitle2,
           status: 'completed',
           carousel_data: { title: safeTitle2, cards },
           style_config: {
@@ -879,7 +901,7 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
         carouselId = inserted.id;
       } else {
         const { error: updateErr } = await sb.from("generated_carousels").update({
-          carousel_data: { title: brief.topic, cards },
+          carousel_data: { title: safeTopic, cards },
           marketplace_style_id: validStyleId,
           status: 'completed',
         }).eq("id", carouselId);
@@ -895,7 +917,7 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
           await sb.rpc("consume_ai_credits", {
             p_company_id: companyId,
             p_amount: cost,
-            p_description: `Post assistente: ${brief.topic}`,
+            p_description: `Post assistente: ${safeTopic}`,
           });
           const coverUrl = await uploadCover(
             sb,
@@ -910,7 +932,7 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
               idx === 0 ? { ...c, imageUrl: coverUrl } : c
             );
             await sb.from("generated_carousels").update({
-              carousel_data: { title: brief.topic, cards: finalCards },
+              carousel_data: { title: safeTopic, cards: finalCards },
             }).eq("id", carouselId);
           }
         } catch (e) {
@@ -1036,7 +1058,7 @@ ASPECT RATIO: ${ratio} — fill the canvas edge to edge with no framing (this is
     console.error("Final error:", e);
     return new Response(
       JSON.stringify({
-        error: e instanceof Error ? e.message : "Unknown error",
+        error: getErrorMessage(e),
       }),
       {
         status: 500,

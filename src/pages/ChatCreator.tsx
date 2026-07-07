@@ -1674,7 +1674,9 @@ const PersonalizationWidget: React.FC<{
     logoUrl?: string | string[]; 
     productUrl?: string | string[];
     printUrl?: string | string[];
-    brandColors?: string[] 
+    brandColors?: string[];
+    brandNeutralTones?: string[];
+
   }) => void; 
   userId?: string 
 }> = ({ onPick }) => {

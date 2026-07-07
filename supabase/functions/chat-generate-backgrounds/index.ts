@@ -134,8 +134,9 @@ Deno.serve(async (req) => {
     const styleReferenceUrls = Array.isArray(style?.preview_images) ? style.preview_images.slice(0, 3) : [];
     const styleReferenceDataUrls = (await Promise.all(styleReferenceUrls.map(urlToDataUrl))).filter(Boolean) as string[];
     const palette = brief?.brandColors?.length
-      ? `Use a color palette inspired by: ${brief.brandColors.join(', ')}.`
+      ? `MANDATORY brand color palette (use EXACTLY these hex values, dominant first): ${brief.brandColors.join(', ')}.${brief?.brandNeutralTones?.length ? ` Neutral/support tones: ${brief.brandNeutralTones.join(', ')}.` : ''} Do NOT drift to purple/violet/blue defaults.`
       : 'Use a modern, editorial color palette.';
+
     const styleHint = [
       brief?.styleName ? `Visual reference style: "${brief.styleName}".` : '',
       style?.description ? `Style description: ${style.description}` : '',

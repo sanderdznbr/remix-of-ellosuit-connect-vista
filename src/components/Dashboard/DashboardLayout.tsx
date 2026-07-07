@@ -243,11 +243,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
                   <button onClick={() => { setProfileOpen(false); navigate('/perfil'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                     <User className="w-4 h-4" /> Perfil
                   </button>
+                  <button onClick={() => { setProfileOpen(false); navigate('/comunidade'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <Users className="w-4 h-4" /> Comunidade
+                  </button>
+                  <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <CreditCard className="w-4 h-4" /> Assinatura
+                  </button>
+                  <button onClick={() => { setProfileOpen(false); navigate('/projetos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <History className="w-4 h-4" /> Histórico
+                  </button>
                   <button onClick={() => { setProfileOpen(false); navigate('/configuracoes'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
                     <Settings className="w-4 h-4" /> Configurações
                   </button>
-                  <button onClick={() => { setProfileOpen(false); navigate('/precos'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-                    <CreditCard className="w-4 h-4" /> Plano & Créditos
+                  <button onClick={() => { setProfileOpen(false); navigate('/ajuda'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
+                    <MessageCircle className="w-4 h-4" /> Ajuda
                   </button>
                 </div>
                 <div className="border-t border-white/[0.06] py-1">

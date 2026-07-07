@@ -2,7 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Settings, LogOut, ChevronDown, User, CreditCard,
-  Sparkles, PanelLeftClose, PanelLeftOpen, Star,
+  PanelLeftClose, PanelLeftOpen, Star,
+  Compass, MessagesSquare, FolderDot, Aperture, FeatherIcon,
+  CalendarRange, Flame, LineChart, Shapes, UsersRound,
+  Radar, Wand2, Handshake, ShieldCheck, LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,31 +84,36 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const isAdmin = email === 'admin@gmail.com';
   const handleSignOut = async () => { await signOut(); navigate('/'); };
 
-  // Elegant nav item: text-only with a thin left accent bar for active state
+  // Elegant nav item with refined icon
   const NavItem = ({
     active,
     onClick,
     label,
-    dot,
+    icon: Icon,
     trailing,
   }: {
     active: boolean;
     onClick: () => void;
     label: string;
-    dot?: boolean;
+    icon: any;
     trailing?: React.ReactNode;
   }) => {
     if (collapsed) {
       return (
         <button
           onClick={onClick}
-          className="w-full flex items-center justify-center py-2 group cursor-pointer"
+          className="relative w-full flex items-center justify-center py-2.5 group cursor-pointer"
           title={label}
         >
           <span
-            className={`w-1 h-5 rounded-full transition-all ${
-              active ? 'bg-[#a78bfa]' : 'bg-white/[0.06] group-hover:bg-white/20'
+            className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-full transition-all ${
+              active ? 'h-5 bg-[#a78bfa]' : 'h-0 bg-transparent'
             }`}
+          />
+          <Icon
+            className="w-[18px] h-[18px] transition-colors"
+            strokeWidth={1.6}
+            style={{ color: active ? '#e9e5ff' : 'rgba(255,255,255,0.4)' }}
           />
         </button>
       );
@@ -113,24 +121,20 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     return (
       <button
         onClick={onClick}
-        className={`relative w-full flex items-center gap-2 pl-4 pr-3 py-[7px] text-[13px] tracking-tight transition-all cursor-pointer group ${
-          active
-            ? 'text-white'
-            : 'text-white/45 hover:text-white/85'
+        className={`relative w-full flex items-center gap-3 pl-5 pr-3 py-2.5 text-[14px] tracking-tight transition-all cursor-pointer group ${
+          active ? 'text-white' : 'text-white/50 hover:text-white/90'
         }`}
       >
         <span
           className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-full transition-all ${
-            active ? 'h-4 bg-[#a78bfa]' : 'h-0 bg-transparent group-hover:h-3 group-hover:bg-white/20'
+            active ? 'h-5 bg-[#a78bfa]' : 'h-0 bg-transparent group-hover:h-3.5 group-hover:bg-white/20'
           }`}
         />
-        {dot && (
-          <span
-            className={`w-[5px] h-[5px] rounded-full transition-colors ${
-              active ? 'bg-[#a78bfa]' : 'bg-white/20 group-hover:bg-white/40'
-            }`}
-          />
-        )}
+        <Icon
+          className="w-[17px] h-[17px] shrink-0 transition-colors"
+          strokeWidth={1.6}
+          style={active ? { color: '#c4b5fd' } : undefined}
+        />
         <span className="flex-1 text-left font-normal">{label}</span>
         {trailing}
       </button>
@@ -139,7 +143,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
     !collapsed ? (
-      <p className="px-4 text-[10px] font-medium text-white/25 uppercase tracking-[0.14em] mb-1 mt-6">{children}</p>
+      <p className="px-5 text-[10px] font-medium text-white/25 uppercase tracking-[0.16em] mb-1.5 mt-6">{children}</p>
     ) : (
       <div className="mt-5 mx-3 border-t border-white/[0.04]" />
     )
@@ -147,7 +151,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
   return (
     <aside
-      className={`relative ${collapsed ? 'w-[56px]' : 'w-[236px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`}
+      className={`relative ${collapsed ? 'w-[64px]' : 'w-[264px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`}
       style={{
         background: 'linear-gradient(180deg, #050507 0%, #07070b 100%)',
         borderColor: 'rgba(255,255,255,0.03)',
@@ -158,8 +162,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 sidebar-scroll" style={{ WebkitOverflowScrolling: 'touch' as any }}>
         {/* Logo + collapse */}
-        <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-5 pb-4`}>
-          <img src={faviconIcon} alt="Logo" className="h-7 w-7 shrink-0 opacity-90" />
+        <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'} pt-5 pb-4`}>
+          <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0 opacity-95" />
           {!collapsed && onToggleCollapse && (
             <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Recolher">
               <PanelLeftClose className="w-[15px] h-[15px]" />
@@ -170,12 +174,12 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         {/* CRIAR */}
         <div className="space-y-px">
           <SectionLabel>Criar</SectionLabel>
-          <NavItem active={activeTab === 'home'} onClick={() => onTabChange('home')} label="Início" />
+          <NavItem active={activeTab === 'home'} onClick={() => onTabChange('home')} label="Início" icon={Compass} />
           <NavItem
             active={location.pathname === '/criar'}
             onClick={() => navigate('/criar')}
             label="Chat IA"
-            trailing={!collapsed ? <Sparkles className="w-3 h-3 text-[#a78bfa]/70" /> : undefined}
+            icon={MessagesSquare}
           />
         </div>
 
@@ -186,6 +190,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             active={activeTab === 'projects' || activeTab === 'starred'}
             onClick={() => onTabChange('projects')}
             label="Meus posts"
+            icon={FolderDot}
             trailing={
               !collapsed && (activeTab === 'projects' || activeTab === 'starred') ? (
                 <button
@@ -193,30 +198,30 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                   className="p-0.5 rounded transition-colors cursor-pointer"
                   title={activeTab === 'starred' ? 'Mostrando favoritos' : 'Ver favoritos'}
                 >
-                  <Star className="w-3 h-3" style={{ color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.3)' }} fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
+                  <Star className="w-3.5 h-3.5" style={{ color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.3)' }} fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
                 </button>
               ) : undefined
             }
           />
-          <NavItem active={activeTab === 'gallery'} onClick={() => onTabChange('gallery')} label="Galeria de marca" />
-          <NavItem active={activeTab === 'prompts'} onClick={() => onTabChange('prompts')} label="Meus prompts" />
+          <NavItem active={activeTab === 'gallery'} onClick={() => onTabChange('gallery')} label="Galeria de marca" icon={Aperture} />
+          <NavItem active={activeTab === 'prompts'} onClick={() => onTabChange('prompts')} label="Meus prompts" icon={FeatherIcon} />
         </div>
 
         {/* PLANEJAR */}
         <div className="space-y-px">
           <SectionLabel>Planejar</SectionLabel>
-          <NavItem active={location.pathname === '/calendario'} onClick={() => navigate('/calendario')} label="Calendário" />
-          <NavItem active={location.pathname === '/hooks'} onClick={() => navigate('/hooks')} label="Hooks" />
-          <NavItem active={location.pathname === '/insights'} onClick={() => navigate('/insights')} label="Insights" />
+          <NavItem active={location.pathname === '/calendario'} onClick={() => navigate('/calendario')} label="Calendário" icon={CalendarRange} />
+          <NavItem active={location.pathname === '/hooks'} onClick={() => navigate('/hooks')} label="Hooks" icon={Flame} />
+          <NavItem active={location.pathname === '/insights'} onClick={() => navigate('/insights')} label="Insights" icon={LineChart} />
         </div>
 
         {/* DESCOBRIR */}
         <div className="space-y-px">
           <SectionLabel>Descobrir</SectionLabel>
-          <NavItem active={activeTab === 'marketplace'} onClick={() => onTabChange('marketplace')} label="Estilos" />
-          <NavItem active={location.pathname === '/comunidade'} onClick={() => navigate('/comunidade')} label="Comunidade" />
+          <NavItem active={activeTab === 'marketplace'} onClick={() => onTabChange('marketplace')} label="Estilos" icon={Shapes} />
+          <NavItem active={location.pathname === '/comunidade'} onClick={() => navigate('/comunidade')} label="Comunidade" icon={UsersRound} />
           {isAdmin && (
-            <NavItem active={activeTab === 'trends'} onClick={() => onTabChange('trends')} label="Tendências" />
+            <NavItem active={activeTab === 'trends'} onClick={() => onTabChange('trends')} label="Tendências" icon={Radar} />
           )}
         </div>
 
@@ -228,6 +233,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               active={['logo-remover','logo-history','behance-import','instagram-import','face-generator'].includes(activeTab)}
               onClick={() => onTabChange('logo-remover')}
               label="Ferramentas"
+              icon={Wand2}
             />
           </div>
         )}
@@ -237,10 +243,10 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <div className="space-y-px">
             <SectionLabel>Parceiros</SectionLabel>
             {isAffiliate && (
-              <NavItem active={location.pathname === '/area/parceiros'} onClick={() => navigate('/area/parceiros')} label="Afiliados" />
+              <NavItem active={location.pathname === '/area/parceiros'} onClick={() => navigate('/area/parceiros')} label="Afiliados" icon={Handshake} />
             )}
             {isAdmin && (
-              <NavItem active={location.pathname === '/admin'} onClick={() => navigate('/admin')} label="Admin" />
+              <NavItem active={location.pathname === '/admin'} onClick={() => navigate('/admin')} label="Admin" icon={ShieldCheck} />
             )}
           </div>
         )}
@@ -248,7 +254,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         {/* AJUDA */}
         <div className="space-y-px mb-5">
           <SectionLabel>Ajuda</SectionLabel>
-          <NavItem active={location.pathname === '/ajuda'} onClick={() => navigate('/ajuda')} label="Central de ajuda" />
+          <NavItem active={location.pathname === '/ajuda'} onClick={() => navigate('/ajuda')} label="Central de ajuda" icon={LifeBuoy} />
         </div>
       </div>
 

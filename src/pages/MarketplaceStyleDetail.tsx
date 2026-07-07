@@ -159,11 +159,8 @@ const MarketplaceStyleDetail: React.FC = () => {
     }
   };
 
-  const handleTabChange = (tab: string) => {
-    setSidebarTab(tab);
-    setSidebarOpen(false);
-    navigate(routeFromTab(tab));
-  };
+
+
 
   const content = (
     <div className="flex-1 h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>

@@ -323,15 +323,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
         <button
           onClick={() => setSidebarOpen(true)}
           onMouseEnter={() => setSidebarOpen(true)}
-          className="group fixed top-4 left-4 z-40 flex items-center justify-center w-9 h-9 rounded-xl border border-white/[0.06] hover:border-white/[0.12] backdrop-blur-md transition-all cursor-pointer"
-          style={{ backgroundColor: 'rgba(15,15,20,0.7)' }}
+          className="fixed top-4 left-4 z-40 p-2 text-white/50 hover:text-white transition-colors cursor-pointer"
           aria-label="Abrir menu"
         >
-          <div className="w-[18px] h-[11px] flex flex-col justify-between">
-            <span className="block h-[1.5px] rounded-full bg-white/60 group-hover:bg-white transition-all" style={{ width: '100%' }} />
-            <span className="block h-[1.5px] rounded-full bg-white/60 group-hover:bg-white transition-all group-hover:w-full" style={{ width: '70%' }} />
-            <span className="block h-[1.5px] rounded-full bg-white/60 group-hover:bg-white transition-all" style={{ width: '100%' }} />
-          </div>
+          <Menu className="w-5 h-5" strokeWidth={1.8} />
         </button>
       )}
 

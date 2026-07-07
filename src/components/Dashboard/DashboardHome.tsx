@@ -469,12 +469,15 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 <button
                   onClick={handleSubmit}
                   disabled={!inputValue.trim() || isGenerating}
-                  className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer"
+                  data-home-send-button
+                  className="relative z-[5] w-9 h-9 shrink-0 overflow-hidden rounded-full flex items-center justify-center cursor-pointer transition-opacity"
                   style={{
+                    background: '#ffffff',
                     backgroundColor: '#ffffff',
                     opacity: inputValue.trim() ? 1 : 0.35,
                     boxShadow: inputValue.trim() ? '0 0 14px rgba(255,255,255,0.45)' : 'none',
                     border: 'none',
+                    color: '#0a0a0f',
                   }}
                   title={isGenerating ? 'Aguarde o post atual terminar' : undefined}
                 >

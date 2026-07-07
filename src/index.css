@@ -572,6 +572,21 @@ body[data-scroll-locked] {
   z-index: 1;
 }
 
+.saber-border [data-home-send-button],
+.dark .saber-border [data-home-send-button] {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #0a0a0f !important;
+  position: relative;
+  z-index: 5;
+}
+
+.saber-border [data-home-send-button] svg,
+.dark .saber-border [data-home-send-button] svg {
+  color: #0a0a0f !important;
+  stroke: #0a0a0f !important;
+}
+
 .saber-border::before,
 .saber-border::after {
   content: '';

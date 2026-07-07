@@ -42,6 +42,8 @@ interface BriefState {
   hasBrandColors?: boolean;
   brandName?: string;
   brandColors?: string[];
+  brandNeutralTones?: string[];
+
   faceUrl?: string | string[];
   logoUrl?: string | string[];
   productUrl?: string | string[];
@@ -103,6 +105,60 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
 
 const hasReferenceValue = (value?: string | string[]) => Array.isArray(value) ? value.filter(Boolean).length > 0 : !!value;
 
+// Extract dominant palette from an image (data URL or blob URL) using canvas quantization.
+const extractPaletteFromImage = (src: string, maxColors = 4): Promise<string[]> => new Promise((resolve) => {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const size = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve([]);
+        ctx.drawImage(img, 0, 0, size, size);
+        const { data } = ctx.getImageData(0, 0, size, size);
+        const buckets = new Map<string, { r: number; g: number; b: number; n: number }>();
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3];
+          if (a < 128) continue;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          // skip near-white / near-black (usually background/text neutrals)
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          if (max > 240 && min > 240) continue;
+          if (max < 20) continue;
+          // quantize
+          const key = `${r >> 5}-${g >> 5}-${b >> 5}`;
+          const cur = buckets.get(key);
+          if (cur) { cur.r += r; cur.g += g; cur.b += b; cur.n += 1; }
+          else buckets.set(key, { r, g, b, n: 1 });
+        }
+        const sorted = Array.from(buckets.values()).sort((a, b) => b.n - a.n);
+        const hexes: string[] = [];
+        const seen = new Set<string>();
+        for (const c of sorted) {
+          const r = Math.round(c.r / c.n), g = Math.round(c.g / c.n), b = Math.round(c.b / c.n);
+          const hex = `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`.toLowerCase();
+          // dedup near-similar
+          let dup = false;
+          for (const s of seen) {
+            const sr = parseInt(s.slice(1, 3), 16), sg = parseInt(s.slice(3, 5), 16), sb = parseInt(s.slice(5, 7), 16);
+            if (Math.abs(sr - r) + Math.abs(sg - g) + Math.abs(sb - b) < 60) { dup = true; break; }
+          }
+          if (dup) continue;
+          seen.add(hex); hexes.push(hex);
+          if (hexes.length >= maxColors) break;
+        }
+        resolve(hexes);
+      } catch { resolve([]); }
+    };
+    img.onerror = () => resolve([]);
+    img.src = src;
+  } catch { resolve([]); }
+});
+
+
 const cloneBrief = (source: BriefState): BriefState => ({
   ...source,
   brandColors: source.brandColors ? [...source.brandColors] : undefined,
@@ -136,7 +192,9 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   hasPrints: !!source.hasPrints,
   hasBrandColors: !!source.hasBrandColors,
   brandName: sanitizeTextForAI(source.brandName, 120),
-  brandColors: source.brandColors?.slice(0, 4),
+  brandColors: source.brandColors?.slice(0, 6),
+  brandNeutralTones: source.brandNeutralTones?.slice(0, 3),
+
   audience: sanitizeTextForAI(source.audience, 160),
   tone: sanitizeTextForAI(source.tone, 120),
   imageModel: source.imageModel,
@@ -665,7 +723,9 @@ const ChatCreator: React.FC = () => {
     logoUrl?: string | string[]; 
     productUrl?: string | string[];
     printUrl?: string | string[];
-    brandColors?: string[] 
+    brandColors?: string[];
+    brandNeutralTones?: string[];
+
   }) => {
     const hasProductReference = data.product && hasReferenceValue(data.productUrl);
     const nextBrief = {
@@ -681,6 +741,8 @@ const ChatCreator: React.FC = () => {
       productUrl: data.productUrl,
       printUrl: data.printUrl,
       brandColors: data.brandColors,
+      brandNeutralTones: data.brandNeutralTones,
+
       imageSource: hasProductReference ? undefined : brief.imageSource,
       selectedImages: hasProductReference ? undefined : brief.selectedImages,
     };
@@ -1616,7 +1678,9 @@ const PersonalizationWidget: React.FC<{
     logoUrl?: string | string[]; 
     productUrl?: string | string[];
     printUrl?: string | string[];
-    brandColors?: string[] 
+    brandColors?: string[];
+    brandNeutralTones?: string[];
+
   }) => void; 
   userId?: string 
 }> = ({ onPick }) => {
@@ -1629,8 +1693,11 @@ const PersonalizationWidget: React.FC<{
   const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
   const [productFiles, setProductFiles] = useState<{url: string, file?: File}[]>([]);
   const [printFiles, setPrintFiles] = useState<{url: string, file?: File}[]>([]);
-  const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [neutralTone, setNeutralTone] = useState<'white' | 'black' | 'both' | 'other'>('both');
+  const [neutralOtherColor, setNeutralOtherColor] = useState<string>('#F5F5F5');
   const [uploading, setUploading] = useState(false);
+  const [extractingPalette, setExtractingPalette] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'product' | 'prints' | null>(null);
 
 
@@ -1644,11 +1711,29 @@ const PersonalizationWidget: React.FC<{
     setFaceFiles(prev => [...prev, ...newFiles]);
   };
 
-  const onLogoFilesSelected = (files: FileList | null) => {
+  const onLogoFilesSelected = async (files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
     setLogoFiles(prev => [...prev, ...newFiles]);
+    // Auto-extract brand palette from the first logo uploaded and enable "brand colors"
+    try {
+      setExtractingPalette(true);
+      const first = newFiles[0];
+      if (first) {
+        const palette = await extractPaletteFromImage(first.url, 4);
+        if (palette.length > 0) {
+          setBrandColors(palette);
+          setColors(true);
+          toast.success(`Cores da marca extraídas: ${palette.length} tom${palette.length > 1 ? 's' : ''}`);
+        }
+      }
+    } catch (e) {
+      console.warn('Palette extraction failed', e);
+    } finally {
+      setExtractingPalette(false);
+    }
   };
+
 
   const onProductFilesSelected = (files: FileList | null) => {
     if (!files) return;
@@ -1670,6 +1755,17 @@ const PersonalizationWidget: React.FC<{
       const productUrls = await Promise.all(productFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const printUrls = await Promise.all(printFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
+      // Build final brand palette: if only one dominant color, expand with the chosen neutral tone(s)
+      let finalBrandColors: string[] | undefined = colors && brandColors.length > 0 ? [...brandColors] : undefined;
+      let neutralTones: string[] | undefined;
+      if (colors && brandColors.length === 1) {
+        if (neutralTone === 'white') neutralTones = ['#FFFFFF'];
+        else if (neutralTone === 'black') neutralTones = ['#000000'];
+        else if (neutralTone === 'both') neutralTones = ['#FFFFFF', '#000000'];
+        else if (neutralTone === 'other') neutralTones = [neutralOtherColor];
+        if (finalBrandColors && neutralTones) finalBrandColors = [...finalBrandColors, ...neutralTones];
+      }
+
       onPick({
         face,
         logo,
@@ -1680,8 +1776,10 @@ const PersonalizationWidget: React.FC<{
         logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
         productUrl: productUrls.length > 0 ? (productUrls.length === 1 ? productUrls[0] : productUrls) : undefined,
         printUrl: printUrls.length > 0 ? (printUrls.length === 1 ? printUrls[0] : printUrls) : undefined,
-        brandColors: colors ? brandColors : undefined,
+        brandColors: finalBrandColors,
+        brandNeutralTones: neutralTones,
       });
+
     } catch (err) {
       console.error('Inline media encode error:', err);
       toast.error('Não consegui ler as imagens enviadas. Tente novamente.');
@@ -1956,14 +2054,16 @@ const PersonalizationWidget: React.FC<{
           </div>
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-white">Cores da marca</div>
-            <div className="text-[11px] text-white/50">Use suas cores na arte</div>
+            <div className="text-[11px] text-white/50">
+              {extractingPalette ? 'Extraindo cores da logo…' : (brandColors.length > 0 ? `${brandColors.length} tom${brandColors.length > 1 ? 's' : ''} detectado${brandColors.length > 1 ? 's' : ''}` : 'Envie um logo ou adicione manualmente')}
+            </div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: colors ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: colors ? PURPLE : 'transparent' }}>
             {colors && <Check className="h-3 w-3 text-white" />}
           </div>
         </button>
         {colors && (
-          <div className="px-3 pb-3 space-y-2">
+          <div className="px-3 pb-3 space-y-3">
             <div className="flex flex-wrap gap-2">
               {brandColors.map((c, i) => (
                 <div key={i} className="flex items-center gap-1.5 rounded-lg p-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
@@ -1975,22 +2075,64 @@ const PersonalizationWidget: React.FC<{
                     style={{ backgroundColor: c }}
                   />
                   <span className="text-[11px] font-mono text-white/70 uppercase">{c}</span>
-                  {brandColors.length > 1 && (
-                    <button onClick={() => removeColor(i)} className="text-white/40 hover:text-white p-0.5">
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
+                  <button onClick={() => removeColor(i)} className="text-white/40 hover:text-white p-0.5">
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ))}
-              {brandColors.length < 4 && (
+              {brandColors.length < 6 && (
                 <button onClick={addColor} className="h-11 px-3 rounded-lg border border-dashed border-white/20 text-xs text-white/60 hover:text-white hover:border-white/40 transition-colors">
                   + cor
                 </button>
               )}
             </div>
+
+            {brandColors.length === 1 && (
+              <div className="rounded-lg p-2.5 space-y-2" style={{ backgroundColor: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.18)' }}>
+                <div className="text-[11px] text-white/70">
+                  Você enviou <span className="font-semibold text-white">1 cor</span>. Qual subtom acompanha essa cor no post?
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    { id: 'white', label: 'Branco' },
+                    { id: 'black', label: 'Preto' },
+                    { id: 'both', label: 'Ambos' },
+                    { id: 'other', label: 'Outra cor' },
+                  ] as const).map(opt => {
+                    const active = neutralTone === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setNeutralTone(opt.id)}
+                        className="text-[11px] px-2.5 py-1 rounded-md border transition-all"
+                        style={{
+                          borderColor: active ? PURPLE : 'rgba(255,255,255,0.12)',
+                          backgroundColor: active ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.03)',
+                          color: active ? '#fff' : 'rgba(255,255,255,0.7)',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {neutralTone === 'other' && (
+                  <div className="flex items-center gap-1.5 rounded-lg p-1.5 w-fit" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <input
+                      type="color"
+                      value={neutralOtherColor}
+                      onChange={(e) => setNeutralOtherColor(e.target.value)}
+                      className="h-8 w-8 rounded cursor-pointer border border-white/10"
+                    />
+                    <span className="text-[11px] font-mono text-white/70 uppercase">{neutralOtherColor}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
+
 
       <div className="flex gap-2 pt-1">
         <Button size="sm" disabled={uploading} onClick={handleConfirm} className="text-xs h-9 px-4" style={{ backgroundColor: PURPLE }}>
@@ -2160,8 +2302,9 @@ const ConfirmWidget: React.FC<{
   const isReal = !hasProductReference && brief.imageSource === 'real';
 
   return (
-    <div className="space-y-4 max-w-md w-full">
+    <div className={`space-y-4 w-full ${isReal ? 'max-w-2xl' : 'max-w-md'}`}>
       <div className="rounded-xl p-3 space-y-1.5" style={{ backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+
         {brief.topic && <Row label="Tema" value={brief.topic} />}
         {brief.styleName && <Row label="Estilo" value={brief.styleName} />}
         {brief.format && <Row label="Formato" value={brief.format === 'portrait' ? 'Retrato 4:5' : brief.format === 'square' ? 'Quadrado 1:1' : 'Stories 9:16'} />}
@@ -2227,14 +2370,14 @@ const ConfirmWidget: React.FC<{
                     </Button>
                   </div>
                   
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide">
                     {selected && !options.includes(selected) && (
                       <div 
-                        className="relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/20"
+                        className="relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/30 snap-start"
                       >
                         <img src={selected} className="h-full w-full object-cover" />
-                        <div className="absolute top-1 right-1 bg-violet-500 rounded-full p-0.5">
-                          <Check className="h-2.5 w-2.5 text-white" />
+                        <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
+                          <Check className="h-3 w-3 text-white" />
                         </div>
                       </div>
                     )}
@@ -2242,22 +2385,23 @@ const ConfirmWidget: React.FC<{
                       <button
                         key={optIdx}
                         onClick={() => handleSelectImage(i, url)}
-                        className={`relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${selected === url ? 'border-violet-500 scale-105' : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/20'}`}
+                        className={`relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-start ${selected === url ? 'border-violet-500 scale-[1.02] shadow-lg shadow-violet-500/30' : 'border-white/10 opacity-80 hover:opacity-100 hover:border-white/30'}`}
                       >
                         <img src={url} className="h-full w-full object-cover" />
                         {selected === url && (
-                          <div className="absolute top-1 right-1 bg-violet-500 rounded-full p-0.5">
-                            <Check className="h-2.5 w-2.5 text-white" />
+                          <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
+                            <Check className="h-3 w-3 text-white" />
                           </div>
                         )}
                       </button>
                     ))}
                     {options.length === 0 && !selected && (
-                      <div className="h-20 flex-1 bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center">
-                        <span className="text-[10px] text-white/20 italic">Digite um termo e clique na lupa</span>
+                      <div className="w-full aspect-[4/1.2] bg-white/[0.03] border border-dashed border-white/10 rounded-xl flex items-center justify-center">
+                        <span className="text-[11px] text-white/30 italic">Digite um termo e clique na lupa para ver fotos</span>
                       </div>
                     )}
                   </div>
+
                 </div>
               );
             })}

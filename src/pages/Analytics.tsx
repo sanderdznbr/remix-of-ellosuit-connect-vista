@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, BarChart3, TrendingUp, Image as ImageIcon, Sparkles, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, Image as ImageIcon, Sparkles, Calendar } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { routeFromTab } from '@/utils/dashboard-routes';
+import DashboardLayout from '@/components/Dashboard/DashboardLayout';
 
 interface Stats {
   total: number;

@@ -2310,7 +2310,8 @@ const ConfirmWidget: React.FC<{
   brief: BriefState; 
   onConfirm: () => void;
   onImageUpdate?: (images: string[]) => void;
-}> = ({ brief, onConfirm, onImageUpdate }) => {
+  isGenerating?: boolean;
+}> = ({ brief, onConfirm, onImageUpdate, isGenerating }) => {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Record<number, string[]>>({});
   const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);

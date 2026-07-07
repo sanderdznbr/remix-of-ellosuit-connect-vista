@@ -32,7 +32,7 @@ const FONT_STACK = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter'
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const [annual, setAnnual] = useState(true);
+  
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [showcaseStyles, setShowcaseStyles] = useState<Array<{ id: string; name: string; preview_images: string[]; category: string }>>([]);
   const [recentPosts, setRecentPosts] = useState<Array<{ id: string; title: string; cover_url: string }>>([]);
@@ -56,22 +56,53 @@ const Landing: React.FC = () => {
     })();
   }, []);
 
-  // Fetch real recent generated posts (public — only those tied to a marketplace style)
+  // Fetch + curate best recent generated posts (public — those tied to a marketplace style)
   useEffect(() => {
     (async () => {
       try {
         const { data } = await supabase
           .from('generated_carousels')
-          .select('id, title, cover_url')
+          .select('id, title, cover_url, marketplace_style_id, user_id, card_count, created_at')
           .not('cover_url', 'is', null)
           .not('marketplace_style_id', 'is', null)
           .eq('status', 'completed')
           .order('created_at', { ascending: false })
-          .limit(24);
-        setRecentPosts((data || []).filter((p: any) => p.cover_url));
+          .limit(120);
+
+        const raw = (data || []).filter((p: any) => p.cover_url);
+
+        // Curadoria:
+        // 1) exige título descritivo (>= 12 chars, sem "sem título")
+        // 2) prefere carrossel (card_count >= 3) para covers mais completas
+        // 3) dedupe por título normalizado (evita "BPC-157" 6x)
+        // 4) diversifica autores — no máximo 2 posts do mesmo user_id
+        // 5) prefere estilos distintos — no máximo 3 posts do mesmo marketplace_style_id
+        const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 60);
+        const seenTitle = new Set<string>();
+        const perUser: Record<string, number> = {};
+        const perStyle: Record<string, number> = {};
+        const curated: any[] = [];
+        for (const p of raw) {
+          const t = (p.title || '').trim();
+          if (t.length < 12) continue;
+          if (/sem\s*t[ií]tulo|untitled|teste|test\b/i.test(t)) continue;
+          const key = norm(t);
+          if (seenTitle.has(key)) continue;
+          const u = p.user_id || 'x';
+          const s = p.marketplace_style_id || 'x';
+          if ((perUser[u] || 0) >= 2) continue;
+          if ((perStyle[s] || 0) >= 3) continue;
+          seenTitle.add(key);
+          perUser[u] = (perUser[u] || 0) + 1;
+          perStyle[s] = (perStyle[s] || 0) + 1;
+          curated.push(p);
+          if (curated.length >= 20) break;
+        }
+        setRecentPosts(curated);
       } catch {}
     })();
   }, []);
+
 
 
 
@@ -97,12 +128,8 @@ const Landing: React.FC = () => {
     { icon: FolderOpen, tag: 'Galeria de Marca', title: 'Tudo da sua marca em um só lugar', desc: 'Armazene sua logo, fotos suas e imagens dos seus produtos direto na plataforma. Na hora de criar, está tudo ali, sem precisar ficar procurando arquivo em pasta nenhuma.' },
   ];
 
-  const plans = [
-    { name: 'Starter', desc: 'Ideal para quem está começando a criar conteúdo com IA.', monthly: 69.90, yearly: 49.90, credits: '50 créditos/mês', features: ['50 créditos mensais', '~7 carrosséis simples de 6 cards', '~25 posts estáticos simples', 'Modo Simples — rápido e direto', 'ElloIA Flash', 'Galeria de marca — 1GB', '3 prompts salvos', 'Templates gratuitos', 'Exportação PNG, JPG e ZIP', 'Suporte por e-mail'] },
-    { name: 'Pro', desc: 'Para criadores que publicam conteúdo visual com frequência.', monthly: 129.90, yearly: 92.90, credits: '100 créditos/mês', popular: true, features: ['100 créditos mensais', '~14 carrosséis simples ou ~7 avançados', '~50 posts simples ou ~33 avançados', 'Modo Avançado — controle total', 'ElloIA Pro', 'ElloIA Pro + Rosto Pessoal', 'Carrossel contínuo panorâmico', 'Galeria de marca — 5GB', 'Prompts ilimitados', 'Compra de templates premium', 'Exportação PNG, JPG, ZIP e WebP', 'Suporte prioritário'] },
-    { name: 'Growth', desc: 'Para quem produz com consistência e quer sempre o melhor resultado.', monthly: 219.90, yearly: 156.90, credits: '200 créditos/mês', features: ['200 créditos mensais', '~28 carrosséis simples ou ~15 avançados', '~100 posts simples ou ~66 avançados', 'Modo Extreme — designs virais do mercado', 'Galeria de marca — 10GB', 'Carrossel com animação (em breve)', 'Geração de fotos realistas com IA (em breve)', 'Acesso a ferramentas exclusivas', 'Suporte via chat'] },
-    { name: 'Enterprise', desc: 'Para empresas, franquias e agências que precisam de escala e personalização total.', custom: true, credits: 'Volume e créditos sob medida', features: ['Créditos sob medida', 'Usuários ilimitados na conta', 'Múltiplos workspaces', 'Galeria de marca por workspace', 'Templates personalizados', 'Controle de acesso por papéis', 'Painel de gestão', 'Histórico com auditoria', 'Suporte dedicado com SLA', 'Onboarding e treinamento', 'API de integração e SSO'] },
-  ];
+
+
 
   const faqs = [
     { q: 'Preciso saber usar design ou ter conhecimento técnico?', a: 'Não. O Ellocontent foi feito para qualquer pessoa. Você descreve o que quer falar e a IA cuida do resto: roteiro, imagens e design.' },
@@ -460,77 +487,116 @@ const Landing: React.FC = () => {
       </section>
 
 
-      {/* Planos */}
-      <section id="planos" className="py-24 md:py-32" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
-        <div className="max-w-[1200px] mx-auto px-6">
-          <motion.div {...fadeUp} className="text-center mb-12">
-            <Eyebrow>Planos</Eyebrow>
-            <h2 className="font-semibold tracking-tight mb-8" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
-              Planos e Preços.
+      {/* Preço por post — âncora barata */}
+      <section id="planos" className="py-24 md:py-32 relative overflow-hidden" style={{ backgroundColor: BG_SOFT, borderTop: `1px solid ${HAIRLINE}` }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 700px 400px at 50% 0%, rgba(139,92,246,0.14), transparent 70%)' }} />
+        <div className="relative max-w-[1100px] mx-auto px-6">
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <Eyebrow>Menos que um café</Eyebrow>
+            <h2 className="font-semibold tracking-tight mb-5" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+              A partir de{' '}
+              <span style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, ${PURPLE_GLOW} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                R$ 1,00 por post.
+              </span>
             </h2>
-            <div className="inline-flex items-center gap-1 p-1 rounded-full" style={{ border: `1px solid ${HAIRLINE_STRONG}`, backgroundColor: SURFACE }}>
-              <button onClick={() => setAnnual(false)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: !annual ? INK : 'transparent', color: !annual ? BG : INK_SOFT }}>Mensal</button>
-              <button onClick={() => setAnnual(true)} className="px-5 py-2 rounded-full text-[13px] font-medium transition-all" style={{ backgroundColor: annual ? INK : 'transparent', color: annual ? BG : INK_SOFT }}>
-                Anual <span className="opacity-60 ml-1">−29%</span>
-              </button>
+            <p className="mx-auto text-[16px]" style={{ color: INK_SOFT, maxWidth: 620 }}>
+              Sem contratar designer, sem pagar agência. Um post pronto pelo preço de um pão na padaria.
+            </p>
+          </motion.div>
+
+          {/* Comparador emocional */}
+          <motion.div {...fadeUp} className="mx-auto mb-12 flex flex-wrap items-center justify-center gap-3 text-[13.5px]" style={{ color: INK_SOFT }}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+              <span className="line-through opacity-60">Designer freelancer</span>
+              <span className="font-semibold text-white">R$ 80–200 / post</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: SURFACE, border: `1px solid ${HAIRLINE}` }}>
+              <span className="line-through opacity-60">Agência</span>
+              <span className="font-semibold text-white">R$ 2.000+ / mês</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ background: 'rgba(139,92,246,0.12)', border: `1px solid rgba(139,92,246,0.45)` }}>
+              <Sparkles className="w-3.5 h-3.5" style={{ color: PURPLE_GLOW }} />
+              <span className="font-semibold" style={{ color: '#fff' }}>Ellocontent</span>
+              <span className="font-semibold" style={{ color: PURPLE_GLOW }}>a partir de R$ 1 / post</span>
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {plans.map((p, i) => (
-              <motion.div
-                key={p.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.06 }}
-                className="relative p-7 rounded-3xl flex flex-col"
-                style={{
-                  background: p.popular
-                    ? `linear-gradient(180deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.04) 100%)`
-                    : SURFACE,
-                  border: `1px solid ${p.popular ? 'rgba(139,92,246,0.4)' : HAIRLINE}`,
-                  boxShadow: p.popular ? '0 20px 60px -20px rgba(139,92,246,0.35)' : 'none',
-                }}
-              >
-                {p.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 12px -2px rgba(139,92,246,0.5)' }}>Mais popular</div>
-                )}
-                <h3 className="text-[19px] font-semibold mb-1 tracking-tight" style={{ color: '#fff', letterSpacing: '-0.01em' }}>{p.name}</h3>
-                <p className="text-[12.5px] mb-6 min-h-[3.2em]" style={{ color: INK_SOFT }}>{p.desc}</p>
-                <div className="mb-6">
-                  {p.custom ? (
-                    <div className="text-[26px] font-semibold tracking-tight">Sob consulta</div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[36px] font-semibold tracking-tight" style={{ letterSpacing: '-0.025em' }}>R${(annual ? p.yearly! : p.monthly!).toFixed(2).replace('.', ',')}</span>
-                      <span className="text-[12px]" style={{ color: INK_DIM }}>/mês</span>
-                    </div>
-                  )}
-                  <p className="text-[12px] mt-1" style={{ color: INK_DIM }}>{p.credits}</p>
-                </div>
-                <button
-                  onClick={p.custom ? () => navigate('/suporte') : goPlans}
-                  className="w-full py-2.5 rounded-full text-[13px] font-medium mb-6 transition-all hover:scale-[1.02]"
+          {/* Cards por tipo de post */}
+          <div className="grid md:grid-cols-3 gap-4 max-w-[980px] mx-auto">
+            {[
+              {
+                tag: 'Post simples',
+                price: '1,00',
+                unit: 'por post',
+                desc: 'Post estático pronto para publicar. Texto + design + imagem.',
+                icon: Sparkles,
+                popular: false,
+              },
+              {
+                tag: 'Post avançado',
+                price: '2,00',
+                unit: 'por post',
+                desc: 'Com seu rosto, seu produto ou sua logo. Total controle da marca.',
+                icon: User,
+                popular: true,
+              },
+              {
+                tag: 'Carrossel completo',
+                price: '~7,00',
+                unit: '6 cards',
+                desc: 'Carrossel narrativo de até 6 cards com capa, desenvolvimento e CTA.',
+                icon: Palette,
+                popular: false,
+              },
+            ].map((item, i) => {
+              const Ic = item.icon;
+              return (
+                <motion.div
+                  key={item.tag}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className="relative p-7 rounded-3xl"
                   style={{
-                    background: p.popular ? `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)` : INK,
-                    color: p.popular ? '#fff' : BG,
-                    boxShadow: p.popular ? '0 4px 16px -4px rgba(139,92,246,0.5)' : 'none',
+                    background: item.popular
+                      ? `linear-gradient(180deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.03) 100%)`
+                      : SURFACE,
+                    border: `1px solid ${item.popular ? 'rgba(139,92,246,0.45)' : HAIRLINE}`,
+                    boxShadow: item.popular ? '0 24px 60px -20px rgba(139,92,246,0.4)' : 'none',
                   }}
                 >
-                  {p.custom ? 'Falar com vendas' : 'Assinar'}
-                </button>
-                <ul className="space-y-2.5 text-[13px]" style={{ color: 'rgba(245,245,247,0.75)' }}>
-                  {p.features.map((f, j) => (
-                    <li key={j} className="flex gap-2">
-                      <Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: PURPLE }} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
+                  {item.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 4px 12px -2px rgba(139,92,246,0.5)' }}>
+                      Mais escolhido
+                    </div>
+                  )}
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5" style={{ background: `linear-gradient(135deg, rgba(139,92,246,0.18), rgba(139,92,246,0.05))`, border: `1px solid rgba(139,92,246,0.25)` }}>
+                    <Ic className="w-5 h-5" style={{ color: PURPLE }} />
+                  </div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.15em] mb-3" style={{ color: PURPLE }}>{item.tag}</p>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="text-[16px] font-medium" style={{ color: INK_DIM }}>R$</span>
+                    <span className="font-semibold tracking-tight" style={{ color: '#fff', fontSize: 56, lineHeight: 1, letterSpacing: '-0.03em' }}>{item.price}</span>
+                  </div>
+                  <p className="text-[12px] mb-5" style={{ color: INK_DIM }}>{item.unit}</p>
+                  <p className="text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{item.desc}</p>
+                </motion.div>
+              );
+            })}
           </div>
+
+          <motion.div {...fadeUp} className="mt-12 flex flex-col items-center gap-3">
+            <button onClick={goCreate} className="text-white text-[15px] font-medium px-7 py-3.5 rounded-full transition-all hover:scale-[1.02]" style={{ background: `linear-gradient(180deg, ${PURPLE} 0%, ${PURPLE_DEEP} 100%)`, boxShadow: '0 8px 24px -8px rgba(139,92,246,0.55)' }}>
+              Criar meu primeiro post grátis
+            </button>
+            <button onClick={goPlans} className="text-[13px] transition-colors hover:text-white" style={{ color: INK_DIM }}>
+              Ver planos com desconto por volume →
+            </button>
+            <p className="text-[11.5px] mt-1" style={{ color: INK_DIM }}>
+              Preços aproximados baseados nos planos mensais · sem fidelidade · cancele quando quiser
+            </p>
+          </motion.div>
         </div>
       </section>
 

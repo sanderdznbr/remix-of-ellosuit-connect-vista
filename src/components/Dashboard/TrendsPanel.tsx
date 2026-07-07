@@ -829,24 +829,28 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-4 mb-5 border-b border-white/[0.06] pb-px">
-        <button onClick={() => setActiveTab('today')}
-          className="text-xs font-medium pb-2.5 transition-all cursor-pointer border-b-2"
-          style={{
-            borderColor: activeTab === 'today' ? '#8B5CF6' : 'transparent',
-            color: activeTab === 'today' ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
-          }}>
-          Hoje ({todayTrends.length})
-        </button>
-        <button onClick={() => { setActiveTab('older'); setOlderPage(0); }}
-          className="text-xs font-medium pb-2.5 transition-all cursor-pointer border-b-2"
-          style={{
-            borderColor: activeTab === 'older' ? '#8B5CF6' : 'transparent',
-            color: activeTab === 'older' ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
-          }}>
-          Anteriores ({olderTrends.length})
-        </button>
+      {/* Tabs (pill style) */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none">
+        {([
+          { key: 'today', label: `Hoje (${todayTrends.length})` },
+          { key: 'older', label: `Anteriores (${olderTrends.length})` },
+        ] as const).map((t) => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => { setActiveTab(t.key); if (t.key === 'older') setOlderPage(0); }}
+              className="text-xs px-3.5 py-1.5 rounded-full border whitespace-nowrap transition-colors"
+              style={{
+                borderColor: active ? '#8B5CF6' : 'rgba(255,255,255,0.08)',
+                color: active ? '#8B5CF6' : 'rgba(255,255,255,0.6)',
+                backgroundColor: active ? 'rgba(139,92,246,0.12)' : 'transparent',
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Active Tab Content */}

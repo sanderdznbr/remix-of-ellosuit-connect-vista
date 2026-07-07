@@ -585,22 +585,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   <ChevronUp className="w-3.5 h-3.5" />
                 </motion.div>
               </button>
-              {!isMobile && (
-                <button
-                  onClick={() => { setShowMenu(prev => !prev); setShowRecent(false); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
-                  style={{
-                    backgroundColor: 'rgba(8, 8, 12, 0.92)',
-                    border: '1px solid rgba(255,255,255,0.04)',
-                    color: 'rgba(255,255,255,0.5)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02)',
-                  }}
-                  title={showMenu ? 'Ocultar menu' : 'Mostrar menu'}
-                >
-                  <MenuIcon className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium">Menu</span>
-                </button>
-              )}
             </div>
             {showRecent && (
               <div className="flex items-center gap-2">

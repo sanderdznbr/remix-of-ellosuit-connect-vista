@@ -89,6 +89,40 @@ const FORMAT_OPTIONS = [
 ] as const;
 
 const PURPLE = '#8B5CF6';
+
+// Typewriter effect for assistant messages — reveals characters progressively.
+// Only animates once per message id (tracked via module-level Set).
+const _typedIds = new Set<string>();
+const TypewriterText: React.FC<{ id: string; text: string; speed?: number }> = ({ id, text, speed = 14 }) => {
+  const [count, setCount] = React.useState(() => (_typedIds.has(id) ? text.length : 0));
+  const done = count >= text.length;
+  React.useEffect(() => {
+    if (_typedIds.has(id)) { setCount(text.length); return; }
+    let i = 0;
+    const tick = () => {
+      i = Math.min(text.length, i + Math.max(1, Math.round(text.length / 80)));
+      setCount(i);
+      if (i < text.length) {
+        timer = window.setTimeout(tick, speed);
+      } else {
+        _typedIds.add(id);
+      }
+    };
+    let timer = window.setTimeout(tick, speed);
+    return () => window.clearTimeout(timer);
+  }, [id, text, speed]);
+  return (
+    <>
+      {text.slice(0, count)}
+      {!done && (
+        <span
+          className="inline-block w-[2px] h-[1em] align-[-2px] ml-[1px]"
+          style={{ backgroundColor: 'rgba(167,139,250,0.9)', animation: 'ello-caret-blink 1s steps(2) infinite' }}
+        />
+      )}
+    </>
+  );
+};
 const isUuid = (value?: string | null) => !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 const MAX_AI_HISTORY_MESSAGES = 12;
 const MAX_AI_MESSAGE_LENGTH = 1200;
@@ -1012,7 +1046,8 @@ const ChatCreator: React.FC = () => {
                             className="inline-block px-4 py-2.5 rounded-2xl text-[15px] text-white/95 leading-relaxed whitespace-pre-wrap border border-white/[0.06]"
                             style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                           >
-                            {msg.content}
+                            <TypewriterText id={msg.id} text={msg.content} />
+
                           </div>
                           {msg.widget && (
                             <div className="pt-1">
@@ -1149,7 +1184,7 @@ const ChatCreator: React.FC = () => {
           </div>
         </div>
 
-        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } } .ello-scroll::-webkit-scrollbar { display: none; } .ello-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+        <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } } @keyframes ello-caret-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } } .ello-scroll::-webkit-scrollbar { display: none; } .ello-scroll { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
       </div>
     </div>
   );

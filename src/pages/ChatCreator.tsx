@@ -103,6 +103,60 @@ const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
 
 const hasReferenceValue = (value?: string | string[]) => Array.isArray(value) ? value.filter(Boolean).length > 0 : !!value;
 
+// Extract dominant palette from an image (data URL or blob URL) using canvas quantization.
+const extractPaletteFromImage = (src: string, maxColors = 4): Promise<string[]> => new Promise((resolve) => {
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const size = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve([]);
+        ctx.drawImage(img, 0, 0, size, size);
+        const { data } = ctx.getImageData(0, 0, size, size);
+        const buckets = new Map<string, { r: number; g: number; b: number; n: number }>();
+        for (let i = 0; i < data.length; i += 4) {
+          const a = data[i + 3];
+          if (a < 128) continue;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          // skip near-white / near-black (usually background/text neutrals)
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          if (max > 240 && min > 240) continue;
+          if (max < 20) continue;
+          // quantize
+          const key = `${r >> 5}-${g >> 5}-${b >> 5}`;
+          const cur = buckets.get(key);
+          if (cur) { cur.r += r; cur.g += g; cur.b += b; cur.n += 1; }
+          else buckets.set(key, { r, g, b, n: 1 });
+        }
+        const sorted = Array.from(buckets.values()).sort((a, b) => b.n - a.n);
+        const hexes: string[] = [];
+        const seen = new Set<string>();
+        for (const c of sorted) {
+          const r = Math.round(c.r / c.n), g = Math.round(c.g / c.n), b = Math.round(c.b / c.n);
+          const hex = `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`.toLowerCase();
+          // dedup near-similar
+          let dup = false;
+          for (const s of seen) {
+            const sr = parseInt(s.slice(1, 3), 16), sg = parseInt(s.slice(3, 5), 16), sb = parseInt(s.slice(5, 7), 16);
+            if (Math.abs(sr - r) + Math.abs(sg - g) + Math.abs(sb - b) < 60) { dup = true; break; }
+          }
+          if (dup) continue;
+          seen.add(hex); hexes.push(hex);
+          if (hexes.length >= maxColors) break;
+        }
+        resolve(hexes);
+      } catch { resolve([]); }
+    };
+    img.onerror = () => resolve([]);
+    img.src = src;
+  } catch { resolve([]); }
+});
+
+
 const cloneBrief = (source: BriefState): BriefState => ({
   ...source,
   brandColors: source.brandColors ? [...source.brandColors] : undefined,

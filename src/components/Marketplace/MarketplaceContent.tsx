@@ -260,26 +260,34 @@ const MarketplaceContent: React.FC = () => {
 
   return (
     <div className="flex-1 h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
-      <div className={`max-w-7xl mx-auto ${isMobile ? 'px-4 py-5' : 'px-6 py-6'}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+      <div className="max-w-5xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-14 text-white">
+        {/* Hero — Estilos em destaque */}
+        <div className="mb-10 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-lg font-bold text-white/90">Estilos</h1>
-            <p className="text-[11px] text-white/25 mt-0.5">Escolha uma identidade visual para seu post</p>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+              <Sparkles className="w-3.5 h-3.5" />
+              Marketplace de estilos
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight">
+              Estilos
+            </h1>
+            <p className="text-white/40 text-base max-w-xl">
+              Escolha uma identidade visual pronta para o seu post. Curadoria de designs prontos para usar.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] w-48">
-              <Search className="w-3.5 h-3.5 text-white/20" />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] w-56">
+              <Search className="w-3.5 h-3.5 text-white/30" />
               <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                className="flex-1 bg-transparent text-xs text-white/70 placeholder:text-white/15 outline-none" />
+                placeholder="Buscar estilo..."
+                className="flex-1 bg-transparent text-xs text-white/80 placeholder:text-white/25 outline-none" />
             </div>
           </div>
         </div>
 
         {/* Admin bar */}
         {isAdmin && (
-          <div className="mb-5 flex items-center justify-between px-3 py-2 rounded-lg border border-yellow-500/20 bg-yellow-500/[0.03]">
+          <div className="mb-6 flex items-center justify-between px-3 py-2 rounded-xl border border-yellow-500/20 bg-yellow-500/[0.03]">
             <div className="flex items-center gap-2">
               <Star className="w-3.5 h-3.5 text-yellow-400" />
               <span className="text-[10px] font-bold text-yellow-300">Admin</span>

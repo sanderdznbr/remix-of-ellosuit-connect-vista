@@ -334,19 +334,25 @@ function CommunityContent() {
   useEffect(() => { loadPosts(); }, [loadPosts]);
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-4">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-center justify-between">
+    <div className="max-w-5xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-14 text-white">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">Comunidade</h1>
-          <p className="text-white/30 text-xs">Descubra e inspire-se com criações de outros usuários</p>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <Heart className="w-3.5 h-3.5" />
+            Feed da comunidade
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">Comunidade</h1>
+          <p className="text-white/40 text-base max-w-xl">
+            Descubra e inspire-se com criações de outros usuários. Compartilhe seus próprios posts.
+          </p>
         </div>
         {user && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105"
-            style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all cursor-pointer shrink-0"
+            style={{ backgroundColor: '#8B5CF6' }}
           >
-            <Plus className="w-4 h-4" /> Criar Post
+            <Plus className="w-4 h-4" /> Criar post
           </button>
         )}
       </motion.div>

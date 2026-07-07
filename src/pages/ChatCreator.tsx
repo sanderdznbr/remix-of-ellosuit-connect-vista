@@ -1683,8 +1683,11 @@ const PersonalizationWidget: React.FC<{
   const [logoFiles, setLogoFiles] = useState<{url: string, file?: File}[]>([]);
   const [productFiles, setProductFiles] = useState<{url: string, file?: File}[]>([]);
   const [printFiles, setPrintFiles] = useState<{url: string, file?: File}[]>([]);
-  const [brandColors, setBrandColors] = useState<string[]>(['#8B5CF6']);
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [neutralTone, setNeutralTone] = useState<'white' | 'black' | 'both' | 'other'>('both');
+  const [neutralOtherColor, setNeutralOtherColor] = useState<string>('#F5F5F5');
   const [uploading, setUploading] = useState(false);
+  const [extractingPalette, setExtractingPalette] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState<'face' | 'logo' | 'product' | 'prints' | null>(null);
 
 
@@ -1698,11 +1701,29 @@ const PersonalizationWidget: React.FC<{
     setFaceFiles(prev => [...prev, ...newFiles]);
   };
 
-  const onLogoFilesSelected = (files: FileList | null) => {
+  const onLogoFilesSelected = async (files: FileList | null) => {
     if (!files) return;
     const newFiles = Array.from(files).map(f => ({ url: URL.createObjectURL(f), file: f }));
     setLogoFiles(prev => [...prev, ...newFiles]);
+    // Auto-extract brand palette from the first logo uploaded and enable "brand colors"
+    try {
+      setExtractingPalette(true);
+      const first = newFiles[0];
+      if (first) {
+        const palette = await extractPaletteFromImage(first.url, 4);
+        if (palette.length > 0) {
+          setBrandColors(palette);
+          setColors(true);
+          toast.success(`Cores da marca extraídas: ${palette.length} tom${palette.length > 1 ? 's' : ''}`);
+        }
+      }
+    } catch (e) {
+      console.warn('Palette extraction failed', e);
+    } finally {
+      setExtractingPalette(false);
+    }
   };
+
 
   const onProductFilesSelected = (files: FileList | null) => {
     if (!files) return;

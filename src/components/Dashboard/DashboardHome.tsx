@@ -84,7 +84,19 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const [greetingIndex, setGreetingIndex] = useState(() => Math.floor(Math.random() * GREETINGS.length));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const menuScrollRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
+  const [menuPhotos, setMenuPhotos] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('menu_photos_v1') || '{}'); } catch { return {}; }
+  });
+  const setMenuPhoto = (path: string, dataUrl: string | null) => {
+    setMenuPhotos(prev => {
+      const next = { ...prev };
+      if (dataUrl) next[path] = dataUrl; else delete next[path];
+      try { localStorage.setItem('menu_photos_v1', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   // Rotate greeting text every 15 seconds
   useEffect(() => {
@@ -519,20 +531,22 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                   <ChevronUp className="w-3.5 h-3.5" />
                 </motion.div>
               </button>
-              <button
-                onClick={() => { setShowMenu(prev => !prev); setShowRecent(false); }}
-                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
-                style={{
-                  backgroundColor: 'rgba(8, 8, 12, 0.92)',
-                  border: '1px solid rgba(255,255,255,0.04)',
-                  color: 'rgba(255,255,255,0.5)',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02)',
-                }}
-                title={showMenu ? 'Ocultar menu' : 'Mostrar menu'}
-              >
-                <MenuIcon className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium">Menu</span>
-              </button>
+              {!isMobile && (
+                <button
+                  onClick={() => { setShowMenu(prev => !prev); setShowRecent(false); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
+                  style={{
+                    backgroundColor: 'rgba(8, 8, 12, 0.92)',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    color: 'rgba(255,255,255,0.5)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02)',
+                  }}
+                  title={showMenu ? 'Ocultar menu' : 'Mostrar menu'}
+                >
+                  <MenuIcon className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium">Menu</span>
+                </button>
+              )}
             </div>
             {showRecent && (
               <div className="flex items-center gap-2">
@@ -563,6 +577,24 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                     Ver todos →
                   </button>
                 )}
+              </div>
+            )}
+            {showMenu && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => menuScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => menuScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
@@ -703,7 +735,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                 transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                 style={{ overflow: 'hidden' }}
               >
-                <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <div ref={menuScrollRef} className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {[
                     { icon: Compass, label: 'Início', path: '/' },
                     { icon: MessagesSquare, label: 'Chat IA', path: '/criar' },
@@ -716,27 +748,74 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
                     { icon: Shapes, label: 'Estilos', path: '/marketplace' },
                     { icon: UsersRound, label: 'Comunidade', path: '/comunidade' },
                     { icon: LifeBuoy, label: 'Ajuda', path: '/ajuda' },
-                  ].map((it) => (
-                    <button
-                      key={it.path}
-                      onClick={() => navigate(it.path)}
-                      className="group rounded-xl shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
-                      style={{
-                        width: '160px',
-                        height: '200px',
-                        background: 'linear-gradient(160deg, rgba(139,92,246,0.06) 0%, rgba(15,15,20,0.9) 60%)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                      }}
-                    >
+                  ].map((it) => {
+                    const photo = menuPhotos[it.path];
+                    return (
                       <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
-                        style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
+                        key={it.path}
+                        onClick={() => navigate(it.path)}
+                        className="group relative rounded-xl shrink-0 overflow-hidden flex flex-col items-center justify-end transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                        style={{
+                          width: '160px',
+                          height: '200px',
+                          background: photo ? undefined : 'linear-gradient(160deg, rgba(139,92,246,0.06) 0%, rgba(15,15,20,0.9) 60%)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                        }}
                       >
-                        <it.icon className="w-5 h-5" strokeWidth={1.6} style={{ color: '#c4b5fd' }} />
+                        {photo && (
+                          <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        )}
+                        {/* Upload / remove control */}
+                        <label
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ backgroundColor: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }}
+                          title={photo ? 'Trocar foto' : 'Adicionar foto'}
+                        >
+                          <span className="text-[14px] leading-none">＋</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              const r = new FileReader();
+                              r.onload = () => setMenuPhoto(it.path, String(r.result));
+                              r.readAsDataURL(f);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                        {photo && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setMenuPhoto(it.path, null); }}
+                            className="absolute top-2 left-2 z-10 w-7 h-7 rounded-full items-center justify-center hidden group-hover:flex"
+                            style={{ backgroundColor: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }}
+                            title="Remover foto"
+                          >
+                            <span className="text-[12px] leading-none">×</span>
+                          </button>
+                        )}
+                        {/* Gradient overlay for label legibility when photo present */}
+                        {photo && (
+                          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
+                        )}
+                        <div className="relative z-[1] flex flex-col items-center gap-2 pb-4 pt-4">
+                          {!photo && (
+                            <div
+                              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                              style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
+                            >
+                              <it.icon className="w-5 h-5" strokeWidth={1.6} style={{ color: '#c4b5fd' }} />
+                            </div>
+                          )}
+                          <span className="text-[13px] font-medium text-white/90 transition-colors" style={photo ? { textShadow: '0 1px 6px rgba(0,0,0,0.7)' } : undefined}>{it.label}</span>
+                        </div>
                       </div>
-                      <span className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">{it.label}</span>
-                    </button>
-                  ))}
+                    );
+                  })}
+
                 </div>
               </motion.div>
             )}

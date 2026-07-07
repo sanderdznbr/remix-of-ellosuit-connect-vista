@@ -2,12 +2,89 @@
 // Adaptive conversational AI that guides the user from idea to a generated post.
 // Uses Lovable AI Gateway (Gemini) with tool-calling for structured output.
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Default fallback limits (mirrors generate-carousel defaults).
+const DEFAULT_TEXT_LIMITS = {
+  cover_title_max_chars: 40,
+  cover_subtitle_max_chars: 60,
+  content_body_top_max_chars: 150,
+  content_body_bottom_max_chars: 100,
+  cta_title_max_chars: 30,
+  cta_body_max_chars: 50,
+};
+
+type TextLimits = typeof DEFAULT_TEXT_LIMITS;
+
+const isUuid = (v?: string | null) =>
+  !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+async function fetchStyleTextLimits(styleId?: string | null, styleName?: string | null): Promise<TextLimits | null> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return null;
+    const sb = createClient(SUPABASE_URL, SERVICE_KEY);
+    let query = sb.from('marketplace_styles').select('style_config').limit(1);
+    if (isUuid(styleId)) {
+      query = query.eq('id', styleId);
+    } else if (styleName && styleName.trim()) {
+      query = query.ilike('name', styleName.trim());
+    } else {
+      return null;
+    }
+    const { data } = await query.maybeSingle();
+    const cfg: any = data?.style_config || {};
+    const tl = cfg.text_limits || cfg.textLimits || cfg?.imageGeneration?.text_limits || null;
+    if (!tl) return null;
+    return {
+      cover_title_max_chars: Number(tl.cover_title_max_chars ?? tl.title_max_chars ?? DEFAULT_TEXT_LIMITS.cover_title_max_chars),
+      cover_subtitle_max_chars: Number(tl.cover_subtitle_max_chars ?? tl.subtitle_max_chars ?? DEFAULT_TEXT_LIMITS.cover_subtitle_max_chars),
+      content_body_top_max_chars: Number(tl.content_body_top_max_chars ?? tl.body_max_chars ?? DEFAULT_TEXT_LIMITS.content_body_top_max_chars),
+      content_body_bottom_max_chars: Number(tl.content_body_bottom_max_chars ?? DEFAULT_TEXT_LIMITS.content_body_bottom_max_chars),
+      cta_title_max_chars: Number(tl.cta_title_max_chars ?? DEFAULT_TEXT_LIMITS.cta_title_max_chars),
+      cta_body_max_chars: Number(tl.cta_body_max_chars ?? DEFAULT_TEXT_LIMITS.cta_body_max_chars),
+    };
+  } catch (e) {
+    console.error('fetchStyleTextLimits error:', e);
+    return null;
+  }
+}
+
+// Hard truncation on a word boundary when possible.
+function hardTrim(value: string | undefined, max: number): string | undefined {
+  if (!value) return value;
+  const clean = value.replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trim();
+}
+
+function enforceLimitsOnSlides(slides: any[], limits: TextLimits) {
+  if (!Array.isArray(slides) || slides.length === 0) return slides;
+  return slides.map((s, i) => {
+    const isCover = i === 0;
+    const isCta = i === slides.length - 1 && slides.length > 1;
+    const titleMax = isCover ? limits.cover_title_max_chars : (isCta ? limits.cta_title_max_chars : limits.cover_title_max_chars);
+    const subMax = limits.cover_subtitle_max_chars;
+    const bodyMax = isCta ? limits.cta_body_max_chars : limits.content_body_top_max_chars;
+    return {
+      ...s,
+      title: hardTrim(s?.title, titleMax),
+      subtitle: hardTrim(s?.subtitle, subMax),
+      body: hardTrim(s?.body, bodyMax),
+    };
+  });
+}
+
 
 interface InMessage {
   role: 'user' | 'assistant' | 'system';
@@ -365,12 +442,24 @@ Deno.serve(async (req) => {
       ? `IMPORTANTE: O usuário JÁ FORNECEU: ${alreadyProvided.join(', ')}. NÃO pergunte sobre esses itens nem peça upload deles novamente. Não reabra o widget "personalization" pra esses itens. Apenas confirme rápido e siga para o próximo passo.`
       : '';
 
+    // Load per-style character limits and inject as hard rules so the AI never
+    // writes copy that visually overflows the selected template.
+    const styleTextLimits = await fetchStyleTextLimits(safeBrief.styleId, safeBrief.styleName);
+    const effectiveLimits = styleTextLimits || DEFAULT_TEXT_LIMITS;
+    const limitsHint = `⚠️ LIMITES DE CARACTERES INVIOLÁVEIS DO ESTILO SELECIONADO — cada campo do 'suggested_content' NÃO PODE ULTRAPASSAR estes limites (contando espaços e pontuação). Se ultrapassar, o design QUEBRA:
+- Capa (slide 1): title MÁX ${effectiveLimits.cover_title_max_chars} caracteres, subtitle MÁX ${effectiveLimits.cover_subtitle_max_chars} caracteres.
+- Slides de conteúdo (2..N-1): body MÁX ${effectiveLimits.content_body_top_max_chars} caracteres, subtitle MÁX ${effectiveLimits.cover_subtitle_max_chars} caracteres.
+- CTA (último slide se carrossel): title MÁX ${effectiveLimits.cta_title_max_chars} caracteres, body MÁX ${effectiveLimits.cta_body_max_chars} caracteres.
+Prefira frases curtas, verbos fortes e ZERO enrolação. NUNCA gere textos maiores esperando "encurtar depois" — já escreva dentro do limite.`;
+
     const aiMessages = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: briefSummary },
+      { role: 'system', content: limitsHint },
       ...(providedHint ? [{ role: 'system', content: providedHint }] : []),
       ...safeMessages,
     ];
+
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -520,6 +609,13 @@ Deno.serve(async (req) => {
         parsed.brief_update = { ...(parsed.brief_update || {}), suggested_content: finalSlides };
       }
     }
+
+    // 🔒 Server-side final safety net: enforce per-style character limits on every slide.
+    if (Array.isArray(parsed.brief_update?.suggested_content) && parsed.brief_update.suggested_content.length > 0) {
+      parsed.brief_update.suggested_content = enforceLimitsOnSlides(parsed.brief_update.suggested_content, effectiveLimits);
+    }
+
+
 
     return jsonResponse(withGuaranteedSuggestions({ ok: true, ...parsed }));
   } catch (e) {

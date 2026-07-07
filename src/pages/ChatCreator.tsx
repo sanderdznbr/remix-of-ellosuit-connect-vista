@@ -2370,14 +2370,14 @@ const ConfirmWidget: React.FC<{
                     </Button>
                   </div>
                   
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide">
                     {selected && !options.includes(selected) && (
                       <div 
-                        className="relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/20"
+                        className="relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 border-violet-500 shadow-lg shadow-violet-500/30 snap-start"
                       >
                         <img src={selected} className="h-full w-full object-cover" />
-                        <div className="absolute top-1 right-1 bg-violet-500 rounded-full p-0.5">
-                          <Check className="h-2.5 w-2.5 text-white" />
+                        <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
+                          <Check className="h-3 w-3 text-white" />
                         </div>
                       </div>
                     )}
@@ -2385,22 +2385,23 @@ const ConfirmWidget: React.FC<{
                       <button
                         key={optIdx}
                         onClick={() => handleSelectImage(i, url)}
-                        className={`relative h-20 w-20 shrink-0 rounded-lg overflow-hidden border-2 transition-all ${selected === url ? 'border-violet-500 scale-105' : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/20'}`}
+                        className={`relative w-56 aspect-[4/3] shrink-0 rounded-xl overflow-hidden border-2 transition-all snap-start ${selected === url ? 'border-violet-500 scale-[1.02] shadow-lg shadow-violet-500/30' : 'border-white/10 opacity-80 hover:opacity-100 hover:border-white/30'}`}
                       >
                         <img src={url} className="h-full w-full object-cover" />
                         {selected === url && (
-                          <div className="absolute top-1 right-1 bg-violet-500 rounded-full p-0.5">
-                            <Check className="h-2.5 w-2.5 text-white" />
+                          <div className="absolute top-1.5 right-1.5 bg-violet-500 rounded-full p-1">
+                            <Check className="h-3 w-3 text-white" />
                           </div>
                         )}
                       </button>
                     ))}
                     {options.length === 0 && !selected && (
-                      <div className="h-20 flex-1 bg-white/5 border border-dashed border-white/10 rounded-lg flex items-center justify-center">
-                        <span className="text-[10px] text-white/20 italic">Digite um termo e clique na lupa</span>
+                      <div className="w-full aspect-[4/1.2] bg-white/[0.03] border border-dashed border-white/10 rounded-xl flex items-center justify-center">
+                        <span className="text-[11px] text-white/30 italic">Digite um termo e clique na lupa para ver fotos</span>
                       </div>
                     )}
                   </div>
+
                 </div>
               );
             })}

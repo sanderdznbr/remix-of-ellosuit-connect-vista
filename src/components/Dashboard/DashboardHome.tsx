@@ -692,6 +692,55 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               </motion.div>
             )}
           </AnimatePresence>
+
+          <AnimatePresence initial={false}>
+            {showMenu && (
+              <motion.div
+                className="-mr-4 md:-mr-8"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-8 scrollbar-hide touch-pan-x" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {[
+                    { icon: Compass, label: 'Início', path: '/' },
+                    { icon: MessagesSquare, label: 'Chat IA', path: '/criar' },
+                    { icon: FolderDot, label: 'Meus posts', path: '/projetos' },
+                    { icon: Aperture, label: 'Galeria de marca', path: '/galeria' },
+                    { icon: FeatherIcon, label: 'Meus prompts', path: '/prompts' },
+                    { icon: CalendarRange, label: 'Calendário', path: '/calendario' },
+                    { icon: Flame, label: 'Hooks', path: '/hooks' },
+                    { icon: LineChart, label: 'Insights', path: '/insights' },
+                    { icon: Shapes, label: 'Estilos', path: '/marketplace' },
+                    { icon: UsersRound, label: 'Comunidade', path: '/comunidade' },
+                    { icon: LifeBuoy, label: 'Ajuda', path: '/ajuda' },
+                  ].map((it) => (
+                    <button
+                      key={it.path}
+                      onClick={() => navigate(it.path)}
+                      className="group rounded-xl shrink-0 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+                      style={{
+                        width: '160px',
+                        height: '200px',
+                        background: 'linear-gradient(160deg, rgba(139,92,246,0.06) 0%, rgba(15,15,20,0.9) 60%)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110"
+                        style={{ backgroundColor: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}
+                      >
+                        <it.icon className="w-5 h-5" strokeWidth={1.6} style={{ color: '#c4b5fd' }} />
+                      </div>
+                      <span className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">{it.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
         )}

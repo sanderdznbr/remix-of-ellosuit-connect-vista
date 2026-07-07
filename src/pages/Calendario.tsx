@@ -196,7 +196,7 @@ const Calendario: React.FC = () => {
         </div>
       )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

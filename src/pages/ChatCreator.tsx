@@ -1745,6 +1745,17 @@ const PersonalizationWidget: React.FC<{
       const productUrls = await Promise.all(productFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
       const printUrls = await Promise.all(printFiles.map(f => f.file ? fileToDataUrl(f.file) : Promise.resolve(f.url)));
 
+      // Build final brand palette: if only one dominant color, expand with the chosen neutral tone(s)
+      let finalBrandColors: string[] | undefined = colors && brandColors.length > 0 ? [...brandColors] : undefined;
+      let neutralTones: string[] | undefined;
+      if (colors && brandColors.length === 1) {
+        if (neutralTone === 'white') neutralTones = ['#FFFFFF'];
+        else if (neutralTone === 'black') neutralTones = ['#000000'];
+        else if (neutralTone === 'both') neutralTones = ['#FFFFFF', '#000000'];
+        else if (neutralTone === 'other') neutralTones = [neutralOtherColor];
+        if (finalBrandColors && neutralTones) finalBrandColors = [...finalBrandColors, ...neutralTones];
+      }
+
       onPick({
         face,
         logo,
@@ -1755,8 +1766,10 @@ const PersonalizationWidget: React.FC<{
         logoUrl: logoUrls.length > 0 ? (logoUrls.length === 1 ? logoUrls[0] : logoUrls) : undefined,
         productUrl: productUrls.length > 0 ? (productUrls.length === 1 ? productUrls[0] : productUrls) : undefined,
         printUrl: printUrls.length > 0 ? (printUrls.length === 1 ? printUrls[0] : printUrls) : undefined,
-        brandColors: colors ? brandColors : undefined,
+        brandColors: finalBrandColors,
+        brandNeutralTones: neutralTones,
       });
+
     } catch (err) {
       console.error('Inline media encode error:', err);
       toast.error('Não consegui ler as imagens enviadas. Tente novamente.');

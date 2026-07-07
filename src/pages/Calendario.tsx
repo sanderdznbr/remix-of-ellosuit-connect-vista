@@ -80,30 +80,37 @@ const Calendario: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="text-white" style={{ backgroundColor: '#0a0a0f' }}>
-      <header className="sticky top-0 z-10 border-b border-white/[0.06] backdrop-blur" style={{ backgroundColor: 'rgba(10,10,15,0.85)' }}>
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-          <CalendarIcon className="w-5 h-5 text-purple-400" />
-          <h1 className="text-lg font-semibold">Calendário editorial</h1>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60"><ChevronLeft className="w-4 h-4" /></button>
-            <span className="text-base font-medium capitalize min-w-[180px] text-center">{monthLabel}</span>
-            <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60"><ChevronRight className="w-4 h-4" /></button>
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8 sm:py-14 text-white">
+        {/* Hero */}
+        <div className="mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <CalendarIcon className="w-3.5 h-3.5" />
+            Planejamento
           </div>
-          <button onClick={() => setCursor(new Date())} className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04]">Hoje</button>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">
+            Calendário editorial
+          </h1>
+          <p className="text-white/40 text-base max-w-xl">
+            Organize suas publicações e mantenha uma cadência consistente durante o mês.
+          </p>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-[11px] text-white/40 mb-1">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-sm font-medium capitalize min-w-[180px] text-center text-white/80">{monthLabel}</span>
+            <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 transition-colors"><ChevronRight className="w-4 h-4" /></button>
+          </div>
+          <button onClick={() => setCursor(new Date())} className="text-xs px-3 py-1.5 rounded-full border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors">Hoje</button>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/30 mb-2">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
             <div key={d} className="px-2 py-1">{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {grid.map((c, i) => {
             const isToday = c.date === todayStr;
             const dayItems = c.date ? itemsByDate[c.date] || [] : [];
@@ -112,15 +119,15 @@ const Calendario: React.FC = () => {
                 key={i}
                 disabled={!c.date}
                 onClick={() => c.date && setModalDate(c.date)}
-                className={`min-h-[90px] rounded-lg border p-2 text-left transition-colors ${
+                className={`min-h-[96px] rounded-xl border p-2 text-left transition-colors ${
                   c.date ? 'border-white/[0.06] hover:bg-white/[0.04]' : 'border-transparent opacity-30'
                 } ${isToday ? 'ring-1 ring-purple-500/60' : ''}`}
-                style={{ backgroundColor: c.date ? '#0f0f15' : 'transparent' }}
+                style={{ backgroundColor: c.date ? 'rgba(255,255,255,0.02)' : 'transparent' }}
               >
-                {c.day && <div className="text-xs text-white/60 mb-1">{c.day}</div>}
+                {c.day && <div className="text-xs font-medium text-white/70 mb-1.5">{c.day}</div>}
                 <div className="space-y-1">
                   {dayItems.slice(0, 3).map((it) => (
-                    <div key={it.id} className="text-[10px] truncate px-1.5 py-0.5 rounded" style={{ backgroundColor: `${TYPE_COLORS[it.type]}25`, color: TYPE_COLORS[it.type] }}>
+                    <div key={it.id} className="text-[10px] truncate px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${TYPE_COLORS[it.type]}25`, color: TYPE_COLORS[it.type] }}>
                       {it.title}
                     </div>
                   ))}
@@ -130,7 +137,6 @@ const Calendario: React.FC = () => {
             );
           })}
         </div>
-      </main>
 
       {modalDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setModalDate(null)}>

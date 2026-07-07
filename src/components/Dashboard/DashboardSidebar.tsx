@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Star, Settings, LogOut, ChevronDown, User, CreditCard,
-  LayoutGrid, Sparkles, PenTool, Palette, Users, Handshake, Shield,
-  HelpCircle, PanelLeftClose, PanelLeftOpen, TrendingUp, MessageCircle,
-  Wrench, Calendar, Zap, BarChart3,
+  Settings, LogOut, ChevronDown, User, CreditCard,
+  Sparkles, PanelLeftClose, PanelLeftOpen, Star,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,138 +81,192 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   const isAdmin = email === 'admin@gmail.com';
   const handleSignOut = async () => { await signOut(); navigate('/'); };
 
-  // Nav item helper
-  const NavItem = ({ active, onClick, icon: Icon, label, accent }: { active: boolean; onClick: () => void; icon: any; label: string; accent?: boolean }) => (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-        active ? 'text-white bg-white/[0.04]' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-      }`}
-      title={collapsed ? label : undefined}
-    >
-      <Icon className="w-4 h-4 shrink-0" style={accent && active ? { color: '#a78bfa' } : undefined} />
-      {!collapsed && label}
-    </button>
-  );
+  // Elegant nav item: text-only with a thin left accent bar for active state
+  const NavItem = ({
+    active,
+    onClick,
+    label,
+    dot,
+    trailing,
+  }: {
+    active: boolean;
+    onClick: () => void;
+    label: string;
+    dot?: boolean;
+    trailing?: React.ReactNode;
+  }) => {
+    if (collapsed) {
+      return (
+        <button
+          onClick={onClick}
+          className="w-full flex items-center justify-center py-2 group cursor-pointer"
+          title={label}
+        >
+          <span
+            className={`w-1 h-5 rounded-full transition-all ${
+              active ? 'bg-[#a78bfa]' : 'bg-white/[0.06] group-hover:bg-white/20'
+            }`}
+          />
+        </button>
+      );
+    }
+    return (
+      <button
+        onClick={onClick}
+        className={`relative w-full flex items-center gap-2 pl-4 pr-3 py-[7px] text-[13px] tracking-tight transition-all cursor-pointer group ${
+          active
+            ? 'text-white'
+            : 'text-white/45 hover:text-white/85'
+        }`}
+      >
+        <span
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-full transition-all ${
+            active ? 'h-4 bg-[#a78bfa]' : 'h-0 bg-transparent group-hover:h-3 group-hover:bg-white/20'
+          }`}
+        />
+        {dot && (
+          <span
+            className={`w-[5px] h-[5px] rounded-full transition-colors ${
+              active ? 'bg-[#a78bfa]' : 'bg-white/20 group-hover:bg-white/40'
+            }`}
+          />
+        )}
+        <span className="flex-1 text-left font-normal">{label}</span>
+        {trailing}
+      </button>
+    );
+  };
 
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    !collapsed ? <p className="px-3 text-[11px] font-medium text-white/30 uppercase tracking-wider mb-1.5 mt-5">{children}</p> : <div className="mt-4 mx-3 border-t border-white/[0.04]" />
+    !collapsed ? (
+      <p className="px-4 text-[10px] font-medium text-white/25 uppercase tracking-[0.14em] mb-1 mt-6">{children}</p>
+    ) : (
+      <div className="mt-5 mx-3 border-t border-white/[0.04]" />
+    )
   );
 
   return (
-    <aside className={`relative ${collapsed ? 'w-[60px]' : 'w-[240px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`} style={{ backgroundColor: '#09090d', borderColor: 'rgba(255,255,255,0.04)' }}>
-      {/* Purple ambient glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[400px] h-[250px] opacity-[0.18]" style={{ background: 'radial-gradient(ellipse at center, #7C3AED 0%, #4C1D95 40%, transparent 70%)', filter: 'blur(50px)' }} />
-      </div>
+    <aside
+      className={`relative ${collapsed ? 'w-[56px]' : 'w-[236px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`}
+      style={{
+        background: 'linear-gradient(180deg, #050507 0%, #07070b 100%)',
+        borderColor: 'rgba(255,255,255,0.03)',
+      }}
+    >
+      {/* Very subtle top vignette */}
+      <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at top, rgba(139,92,246,0.05) 0%, transparent 70%)' }} />
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10" style={{ WebkitOverflowScrolling: 'touch' as any }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain relative z-10 sidebar-scroll" style={{ WebkitOverflowScrolling: 'touch' as any }}>
         {/* Logo + collapse */}
-        <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-4 pb-3`}>
-          <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0" />
+        <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} pt-5 pb-4`}>
+          <img src={faviconIcon} alt="Logo" className="h-7 w-7 shrink-0 opacity-90" />
           {!collapsed && onToggleCollapse && (
-            <button onClick={onToggleCollapse} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Recolher">
-              <PanelLeftClose className="w-4 h-4" />
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Recolher">
+              <PanelLeftClose className="w-[15px] h-[15px]" />
             </button>
           )}
         </div>
 
         {/* CRIAR */}
-        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+        <div className="space-y-px">
           <SectionLabel>Criar</SectionLabel>
-          <NavItem active={activeTab === 'home'} onClick={() => onTabChange('home')} icon={Home} label="Início" />
-          <NavItem active={location.pathname === '/criar'} onClick={() => navigate('/criar')} icon={MessageCircle} label="Chat IA" accent />
+          <NavItem active={activeTab === 'home'} onClick={() => onTabChange('home')} label="Início" />
+          <NavItem
+            active={location.pathname === '/criar'}
+            onClick={() => navigate('/criar')}
+            label="Chat IA"
+            trailing={!collapsed ? <Sparkles className="w-3 h-3 text-[#a78bfa]/70" /> : undefined}
+          />
         </div>
 
         {/* BIBLIOTECA */}
-        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+        <div className="space-y-px">
           <SectionLabel>Biblioteca</SectionLabel>
-          <div className="flex items-center">
-            <button
-              onClick={() => onTabChange('projects')}
-              className={`flex-1 flex items-center ${collapsed ? 'justify-center' : ''} gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                activeTab === 'projects' || activeTab === 'starred' ? 'text-white bg-white/[0.04]' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-              title={collapsed ? 'Meus posts' : undefined}
-            >
-              <LayoutGrid className="w-4 h-4 shrink-0" />
-              {!collapsed && 'Meus posts'}
-            </button>
-            {!collapsed && (activeTab === 'projects' || activeTab === 'starred') && (
-              <button
-                onClick={() => onTabChange(activeTab === 'starred' ? 'projects' : 'starred')}
-                className="p-1.5 rounded-md cursor-pointer transition-colors mr-1"
-                title={activeTab === 'starred' ? 'Mostrando favoritos' : 'Ver favoritos'}
-              >
-                <Star className="w-3.5 h-3.5" style={{ color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.25)' }} fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
-              </button>
-            )}
-          </div>
-          <NavItem active={activeTab === 'gallery'} onClick={() => onTabChange('gallery')} icon={Sparkles} label="Galeria de marca" />
-          <NavItem active={activeTab === 'prompts'} onClick={() => onTabChange('prompts')} icon={PenTool} label="Meus prompts" />
+          <NavItem
+            active={activeTab === 'projects' || activeTab === 'starred'}
+            onClick={() => onTabChange('projects')}
+            label="Meus posts"
+            trailing={
+              !collapsed && (activeTab === 'projects' || activeTab === 'starred') ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onTabChange(activeTab === 'starred' ? 'projects' : 'starred'); }}
+                  className="p-0.5 rounded transition-colors cursor-pointer"
+                  title={activeTab === 'starred' ? 'Mostrando favoritos' : 'Ver favoritos'}
+                >
+                  <Star className="w-3 h-3" style={{ color: activeTab === 'starred' ? '#a78bfa' : 'rgba(255,255,255,0.3)' }} fill={activeTab === 'starred' ? '#a78bfa' : 'none'} />
+                </button>
+              ) : undefined
+            }
+          />
+          <NavItem active={activeTab === 'gallery'} onClick={() => onTabChange('gallery')} label="Galeria de marca" />
+          <NavItem active={activeTab === 'prompts'} onClick={() => onTabChange('prompts')} label="Meus prompts" />
         </div>
 
         {/* PLANEJAR */}
-        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+        <div className="space-y-px">
           <SectionLabel>Planejar</SectionLabel>
-          <NavItem active={location.pathname === '/calendario'} onClick={() => navigate('/calendario')} icon={Calendar} label="Calendário" />
-          <NavItem active={location.pathname === '/hooks'} onClick={() => navigate('/hooks')} icon={Zap} label="Hooks" />
-          <NavItem active={location.pathname === '/insights'} onClick={() => navigate('/insights')} icon={BarChart3} label="Insights" />
+          <NavItem active={location.pathname === '/calendario'} onClick={() => navigate('/calendario')} label="Calendário" />
+          <NavItem active={location.pathname === '/hooks'} onClick={() => navigate('/hooks')} label="Hooks" />
+          <NavItem active={location.pathname === '/insights'} onClick={() => navigate('/insights')} label="Insights" />
         </div>
 
         {/* DESCOBRIR */}
-        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+        <div className="space-y-px">
           <SectionLabel>Descobrir</SectionLabel>
-          <NavItem active={activeTab === 'marketplace'} onClick={() => onTabChange('marketplace')} icon={Palette} label="Estilos" />
-          <NavItem active={location.pathname === '/comunidade'} onClick={() => navigate('/comunidade')} icon={Users} label="Comunidade" />
+          <NavItem active={activeTab === 'marketplace'} onClick={() => onTabChange('marketplace')} label="Estilos" />
+          <NavItem active={location.pathname === '/comunidade'} onClick={() => navigate('/comunidade')} label="Comunidade" />
           {isAdmin && (
-            <NavItem active={activeTab === 'trends'} onClick={() => onTabChange('trends')} icon={TrendingUp} label="Tendências" accent />
+            <NavItem active={activeTab === 'trends'} onClick={() => onTabChange('trends')} label="Tendências" />
           )}
         </div>
 
         {/* FERRAMENTAS (admin) */}
         {isAdmin && (
-          <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+          <div className="space-y-px">
             <SectionLabel>Ferramentas</SectionLabel>
-            <NavItem active={activeTab === 'logo-remover' || activeTab === 'logo-history' || activeTab === 'behance-import' || activeTab === 'instagram-import' || activeTab === 'face-generator'} onClick={() => onTabChange('logo-remover')} icon={Wrench} label="Ferramentas" />
+            <NavItem
+              active={['logo-remover','logo-history','behance-import','instagram-import','face-generator'].includes(activeTab)}
+              onClick={() => onTabChange('logo-remover')}
+              label="Ferramentas"
+            />
           </div>
         )}
 
         {/* PARCEIROS (apenas afiliado/admin) */}
         {(isAffiliate || isAdmin) && (
-          <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5`}>
+          <div className="space-y-px">
             <SectionLabel>Parceiros</SectionLabel>
             {isAffiliate && (
-              <NavItem active={location.pathname === '/area/parceiros'} onClick={() => navigate('/area/parceiros')} icon={Handshake} label="Afiliados" />
+              <NavItem active={location.pathname === '/area/parceiros'} onClick={() => navigate('/area/parceiros')} label="Afiliados" />
             )}
             {isAdmin && (
-              <NavItem active={location.pathname === '/admin'} onClick={() => navigate('/admin')} icon={Shield} label="Admin" />
+              <NavItem active={location.pathname === '/admin'} onClick={() => navigate('/admin')} label="Admin" />
             )}
           </div>
         )}
 
         {/* AJUDA */}
-        <div className={`${collapsed ? 'px-1.5' : 'px-2'} space-y-0.5 mb-4`}>
+        <div className="space-y-px mb-5">
           <SectionLabel>Ajuda</SectionLabel>
-          <NavItem active={location.pathname === '/ajuda'} onClick={() => navigate('/ajuda')} icon={HelpCircle} label="Central de ajuda" />
+          <NavItem active={location.pathname === '/ajuda'} onClick={() => navigate('/ajuda')} label="Central de ajuda" />
         </div>
       </div>
 
       {/* Bottom: Profile */}
-      <div className="shrink-0 border-t border-white/[0.04] relative z-10">
+      <div className="shrink-0 border-t border-white/[0.03] relative z-10" style={{ background: 'rgba(0,0,0,0.25)' }}>
         {collapsed ? (
           <div className="flex flex-col items-center py-3 gap-2">
             <TrialStatusBadge collapsed />
             {onToggleCollapse && (
-              <button onClick={onToggleCollapse} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/25 hover:text-white/50 transition-colors cursor-pointer" title="Expandir">
-                <PanelLeftOpen className="w-4 h-4" />
+              <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-white/[0.05] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Expandir">
+                <PanelLeftOpen className="w-[15px] h-[15px]" />
               </button>
             )}
-            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/60 transition-colors cursor-pointer" title={email}>
-              <User className="w-4 h-4" />
+            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="p-2 rounded-md hover:bg-white/[0.05] text-white/40 hover:text-white/70 transition-colors cursor-pointer" title={email}>
+              <User className="w-[15px] h-[15px]" />
             </button>
             {showProfileMenu && (
-              <div className="absolute bottom-full left-1 mb-1 w-56 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0d0d12' }}>
+              <div className="absolute bottom-full left-1 mb-1 w-56 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0a0a0e' }}>
                 <div className="px-4 py-3 border-b border-white/[0.06]">
                   <p className="text-sm text-white/70 font-medium truncate">{email}</p>
                 </div>
@@ -242,17 +294,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               const monthlyMarkerPct = monthlyCredits > 0 ? Math.min(100, (monthlyCredits / maxBar) * 100) : 0;
               const bonusCredits = monthlyCredits > 0 ? Math.max(0, balance - monthlyCredits) : 0;
               return (
-                <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.04] transition-colors" onClick={() => navigate('/precos')}>
+                <div className="px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors" onClick={() => navigate('/precos')}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md" style={{ backgroundColor: `${planColor}20`, color: planColor }}>{planLabel}</span>
-                    <span className="text-white/70 text-xs font-medium">{Math.floor(balance)} restantes</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${planColor}18`, color: planColor }}>{planLabel}</span>
+                    <span className="text-white/60 text-[11px] font-medium tabular-nums">{Math.floor(balance)} restantes</span>
                   </div>
-                  <div className="relative w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-                    <div className="h-full rounded-full transition-all duration-700 relative overflow-hidden" style={{ width: `${balancePct}%`, background: `linear-gradient(90deg, #7C3AED, #8B5CF6, #A78BFA)` }}>
-                      <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer-credit 2s ease-in-out infinite' }} />
+                  <div className="relative w-full h-[3px] rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <div className="h-full rounded-full transition-all duration-700 relative overflow-hidden" style={{ width: `${balancePct}%`, background: `linear-gradient(90deg, #6D28D9, #8B5CF6, #A78BFA)` }}>
+                      <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer-credit 2s ease-in-out infinite' }} />
                     </div>
                     {monthlyMarkerPct > 0 && monthlyMarkerPct < 100 && (
-                      <div className="absolute top-[-3px] bottom-[-3px] w-[2px] rounded-full" style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+                      <div className="absolute top-[-2px] bottom-[-2px] w-[1.5px] rounded-full" style={{ left: `${monthlyMarkerPct}%`, backgroundColor: 'rgba(255,255,255,0.4)' }} />
                     )}
                     <style>{`@keyframes shimmer-credit { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
                   </div>
@@ -266,13 +318,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
               );
             })()}
 
-            <div className="relative px-2 pb-3">
-              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer">
-                <p className="text-sm text-white/50 font-medium truncate">{email}</p>
-                <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
+            <div className="relative px-2 pb-2">
+              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-white/[0.03] transition-colors cursor-pointer">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-semibold text-white/80" style={{ background: 'linear-gradient(135deg, #7C3AED, #4C1D95)' }}>
+                    {email.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="text-[12px] text-white/60 font-normal truncate">{email}</p>
+                </div>
+                <ChevronDown className={`w-3 h-3 text-white/25 transition-transform shrink-0 ${showProfileMenu ? 'rotate-180' : ''}`} />
               </button>
               {showProfileMenu && (
-                <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0d0d12' }}>
+                <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-white/[0.06] shadow-2xl overflow-hidden z-50" style={{ backgroundColor: '#0a0a0e' }}>
                   <div className="px-4 py-3 border-b border-white/[0.06]">
                     <p className="text-sm text-white/70 font-medium truncate">{email}</p>
                   </div>
@@ -287,8 +344,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
                 </div>
               )}
             </div>
-            <div className="px-4 pb-3 pt-1 flex justify-center">
-              <a href="https://www.ellosuit.online" target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/20 hover:text-white/40 transition-colors">
+            <div className="px-4 pb-3 flex justify-center">
+              <a href="https://www.ellosuit.online" target="_blank" rel="noopener noreferrer" className="text-[9px] text-white/15 hover:text-white/35 transition-colors tracking-wide">
                 Powered by <span className="font-semibold">ellosuit</span>
               </a>
             </div>

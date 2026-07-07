@@ -580,11 +580,6 @@ function CheckoutContent() {
 
 export default function Checkout() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  const handleTabChange = (tab: string) => {
-    navigate(routeFromTab(tab));
-  };
 
   if (loading) {
     return (
@@ -598,10 +593,8 @@ export default function Checkout() {
 
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-      <div className="hidden md:block">
-        <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
-      </div>
       <CheckoutContent />
     </div>
   );
 }
+

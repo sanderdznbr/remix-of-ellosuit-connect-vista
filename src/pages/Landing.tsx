@@ -35,6 +35,7 @@ const Landing: React.FC = () => {
   const [annual, setAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [showcaseStyles, setShowcaseStyles] = useState<Array<{ id: string; name: string; preview_images: string[]; category: string }>>([]);
+  const [recentPosts, setRecentPosts] = useState<Array<{ id: string; title: string; cover_url: string }>>([]);
 
   const goCreate = () => navigate('/gerador-de-carrosseis');
   const goPlans = () => navigate('/precos');
@@ -54,6 +55,25 @@ const Landing: React.FC = () => {
       } catch {}
     })();
   }, []);
+
+  // Fetch real recent generated posts (public — only those tied to a marketplace style)
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('generated_carousels')
+          .select('id, title, cover_url')
+          .not('cover_url', 'is', null)
+          .not('marketplace_style_id', 'is', null)
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+          .limit(24);
+        setRecentPosts((data || []).filter((p: any) => p.cover_url));
+      } catch {}
+    })();
+  }, []);
+
+
 
 
 

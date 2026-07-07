@@ -60,6 +60,30 @@ const FORMAT_TO_RATIO: Record<string, string> = {
 const isUuid = (value?: string | null) =>
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+function cleanText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getSafeBriefTitle(brief?: Brief | null): string {
+  const firstCard = Array.isArray(brief?.suggested_content)
+    ? brief?.suggested_content?.[0]
+    : null;
+  return cleanText(brief?.topic) ||
+    cleanText(firstCard?.title) ||
+    cleanText(firstCard?.subtitle) ||
+    cleanText(firstCard?.body) ||
+    "Post sem título";
+}
+
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (e && typeof e === "object") {
+    const record = e as Record<string, unknown>;
+    return cleanText(record.message) || cleanText(record.error) || "Erro inesperado";
+  }
+  return "Erro inesperado";
+}
+
 async function getCompanyId(sb: any, userId: string): Promise<string | null> {
   const { data } = await sb
     .from("company_users")

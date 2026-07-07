@@ -298,7 +298,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
             { key: 'home', label: 'Início', icon: Home, onClick: () => handleTabChange('home'), active: activeTab === 'home' && location.pathname !== '/criar' },
             { key: 'criar', label: 'Chat IA', icon: MessageCircle, onClick: () => navigate('/criar'), active: location.pathname === '/criar' },
             { key: 'projects', label: 'Posts', icon: LayoutGrid, onClick: () => handleTabChange('projects'), active: activeTab === 'projects' || activeTab === 'starred' },
-            { key: 'profile', label: 'Perfil', icon: User, onClick: () => navigate('/perfil'), active: location.pathname.startsWith('/perfil') },
+            { key: 'settings', label: 'Configurações', icon: Settings, onClick: () => setProfileOpen(v => !v), active: profileOpen },
           ].map(item => (
             <button
               key={item.key}

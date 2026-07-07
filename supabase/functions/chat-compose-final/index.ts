@@ -621,8 +621,9 @@ Deno.serve(async (req) => {
     // Context strings
     const brand = brief.brandName ? `Brand name: "${brief.brandName}".` : "";
     const colors = brief.brandColors?.length
-      ? `Brand palette: ${brief.brandColors.join(", ")}.`
+      ? `🎨 MANDATORY BRAND PALETTE (use EXACTLY these HEX colors — do NOT invent purple/violet/blue defaults, do NOT drift): ${brief.brandColors.join(", ")}. Primary/dominant color: ${brief.brandColors[0]}. Use it for backgrounds, accents, shapes and typography highlights. ${brief.brandNeutralTones?.length ? `Neutral/support tones (for text legibility, backgrounds and negative space): ${brief.brandNeutralTones.join(", ")}.` : ""} ANY color outside this palette is forbidden unless it's a real photo or a face.`
       : "";
+
     const audienceLine = brief.audience
       ? `Target audience: ${brief.audience}.`
       : "";

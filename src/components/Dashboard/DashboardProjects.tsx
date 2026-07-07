@@ -423,14 +423,17 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
               );
             }
 
+            const isSelected = selectedIds.has(item.id);
             return (
               <div
                 key={item.id}
                 className="rounded-lg overflow-hidden relative group transition-all hover:scale-[1.02] cursor-pointer aspect-[3/4]"
                 style={{
                   background: 'rgba(255,255,255,0.03)',
+                  outline: selectionMode && isSelected ? '2px solid #8B5CF6' : undefined,
+                  outlineOffset: selectionMode && isSelected ? '-2px' : undefined,
                 }}
-                onClick={() => onLoadCarousel ? onLoadCarousel(item) : onStartCarousel()}
+                onClick={(e) => selectionMode ? toggleSelected(e, item.id) : (onLoadCarousel ? onLoadCarousel(item) : onStartCarousel())}
               >
                 {cover && (
                   <img
@@ -441,8 +444,20 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 )}
+                {/* Selection checkbox */}
+                {selectionMode && (
+                  <div
+                    className="absolute top-1.5 right-1.5 h-6 w-6 rounded-md flex items-center justify-center z-10"
+                    style={{
+                      backgroundColor: isSelected ? '#8B5CF6' : 'rgba(0,0,0,0.55)',
+                      border: `1.5px solid ${isSelected ? '#8B5CF6' : 'rgba(255,255,255,0.5)'}`,
+                    }}
+                  >
+                    {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                )}
                 {/* Starred indicator (visible when not hovering) */}
-                {item.is_starred && (
+                {item.is_starred && !selectionMode && (
                   <div className="absolute top-1.5 left-1.5 p-0.5 group-hover:opacity-0 transition-opacity" style={{ color: '#facc15' }}>
                     <Star className="w-3 h-3" fill="#facc15" />
                   </div>

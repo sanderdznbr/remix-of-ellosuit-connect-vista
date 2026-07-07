@@ -492,12 +492,12 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowRecent(prev => !prev)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl"
+                className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.4)',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)',
+                  backgroundColor: 'rgba(8, 8, 12, 0.92)',
+                  border: '1px solid rgba(255,255,255,0.04)',
+                  color: 'rgba(255,255,255,0.5)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02)',
                 }}
                 title={showRecent ? 'Ocultar recentes' : 'Mostrar recentes'}
               >

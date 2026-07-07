@@ -2707,13 +2707,14 @@ const FinalResultWidget: React.FC<{
   onRegenerate?: () => void;
   canRegenerate?: boolean;
 }> = ({ carouselId, imageUrl, isCarousel, onOpen, onImageUpdated, onRegenerate, canRegenerate }) => {
-
+  const navigate = useNavigate();
   const [slides, setSlides] = React.useState<{ image_url: string }[]>([]);
   const [loadingSlides, setLoadingSlides] = React.useState(false);
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [showAdjust, setShowAdjust] = React.useState(false);
   const [adjustText, setAdjustText] = React.useState('');
   const [adjusting, setAdjusting] = React.useState(false);
+  const [showAfterDownload, setShowAfterDownload] = React.useState(false);
 
   useEffect(() => {
     if (carouselId) {
@@ -2756,6 +2757,7 @@ const FinalResultWidget: React.FC<{
       a.remove();
       URL.revokeObjectURL(url);
       toast.success('Imagem baixada');
+      setShowAfterDownload(true);
     } catch {
       toast.error('Não foi possível baixar');
     }
@@ -2911,6 +2913,67 @@ const FinalResultWidget: React.FC<{
               <><Sparkles className="h-4 w-4 mr-2" /> Aplicar ajuste</>
             )}
           </Button>
+        </div>
+      )}
+
+      {showAfterDownload && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(4,4,8,0.72)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setShowAfterDownload(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm rounded-2xl border p-6 space-y-5"
+            style={{
+              backgroundColor: '#0f0f16',
+              borderColor: 'rgba(255,255,255,0.08)',
+              boxShadow: '0 20px 60px -20px rgba(139,92,246,0.35), 0 0 0 1px rgba(139,92,246,0.15)',
+            }}
+          >
+            <button
+              onClick={() => setShowAfterDownload(false)}
+              className="absolute top-3 right-3 h-7 w-7 rounded-full flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="space-y-1.5 text-center pt-1">
+              <div className="mx-auto h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
+                <Check className="h-5 w-5" style={{ color: '#A78BFA' }} />
+              </div>
+              <div className="text-[15px] font-medium text-white/90">Download concluído</div>
+              <div className="text-[12px] text-white/40 leading-snug">O que você quer fazer agora?</div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => { setShowAfterDownload(false); navigate('/criar'); setTimeout(() => window.location.reload(), 50); }}
+                className="group flex items-center gap-3 p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-violet-400/30 transition-all text-left"
+              >
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:bg-violet-500/10 group-hover:border-violet-400/30 transition-colors">
+                  <Plus className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-white/90">Criar novo post</div>
+                  <div className="text-[11px] text-white/40 mt-0.5 leading-snug">Começar do zero no /criar</div>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowAfterDownload(false); navigate('/'); }}
+                className="group flex items-center gap-3 p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left"
+              >
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] transition-colors">
+                  <ArrowLeft className="h-4 w-4 text-white/70" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-white/90">Voltar pra home</div>
+                  <div className="text-[11px] text-white/40 mt-0.5 leading-snug">Ir para o dashboard</div>
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -18,7 +18,7 @@ import InstagramImporter from './InstagramImporter';
 import TrendsPanel, { type TrendData } from './TrendsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard, Home, LayoutGrid, MessageCircle } from 'lucide-react';
+import { Menu, X, User, ChevronDown, LogOut, Settings, CreditCard, Home, LayoutGrid, MessageCircle, Users, History } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { tabFromPath, routeFromTab } from '@/utils/dashboard-routes';
 import ellocontentLogo from '@/assets/ellocontent2.svg';

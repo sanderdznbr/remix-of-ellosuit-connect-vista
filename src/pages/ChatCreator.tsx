@@ -2054,14 +2054,16 @@ const PersonalizationWidget: React.FC<{
           </div>
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-white">Cores da marca</div>
-            <div className="text-[11px] text-white/50">Use suas cores na arte</div>
+            <div className="text-[11px] text-white/50">
+              {extractingPalette ? 'Extraindo cores da logo…' : (brandColors.length > 0 ? `${brandColors.length} tom${brandColors.length > 1 ? 's' : ''} detectado${brandColors.length > 1 ? 's' : ''}` : 'Envie um logo ou adicione manualmente')}
+            </div>
           </div>
           <div className="h-5 w-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: colors ? PURPLE : 'rgba(255,255,255,0.2)', backgroundColor: colors ? PURPLE : 'transparent' }}>
             {colors && <Check className="h-3 w-3 text-white" />}
           </div>
         </button>
         {colors && (
-          <div className="px-3 pb-3 space-y-2">
+          <div className="px-3 pb-3 space-y-3">
             <div className="flex flex-wrap gap-2">
               {brandColors.map((c, i) => (
                 <div key={i} className="flex items-center gap-1.5 rounded-lg p-1.5" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
@@ -2073,22 +2075,64 @@ const PersonalizationWidget: React.FC<{
                     style={{ backgroundColor: c }}
                   />
                   <span className="text-[11px] font-mono text-white/70 uppercase">{c}</span>
-                  {brandColors.length > 1 && (
-                    <button onClick={() => removeColor(i)} className="text-white/40 hover:text-white p-0.5">
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
+                  <button onClick={() => removeColor(i)} className="text-white/40 hover:text-white p-0.5">
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ))}
-              {brandColors.length < 4 && (
+              {brandColors.length < 6 && (
                 <button onClick={addColor} className="h-11 px-3 rounded-lg border border-dashed border-white/20 text-xs text-white/60 hover:text-white hover:border-white/40 transition-colors">
                   + cor
                 </button>
               )}
             </div>
+
+            {brandColors.length === 1 && (
+              <div className="rounded-lg p-2.5 space-y-2" style={{ backgroundColor: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.18)' }}>
+                <div className="text-[11px] text-white/70">
+                  Você enviou <span className="font-semibold text-white">1 cor</span>. Qual subtom acompanha essa cor no post?
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    { id: 'white', label: 'Branco' },
+                    { id: 'black', label: 'Preto' },
+                    { id: 'both', label: 'Ambos' },
+                    { id: 'other', label: 'Outra cor' },
+                  ] as const).map(opt => {
+                    const active = neutralTone === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setNeutralTone(opt.id)}
+                        className="text-[11px] px-2.5 py-1 rounded-md border transition-all"
+                        style={{
+                          borderColor: active ? PURPLE : 'rgba(255,255,255,0.12)',
+                          backgroundColor: active ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.03)',
+                          color: active ? '#fff' : 'rgba(255,255,255,0.7)',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {neutralTone === 'other' && (
+                  <div className="flex items-center gap-1.5 rounded-lg p-1.5 w-fit" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <input
+                      type="color"
+                      value={neutralOtherColor}
+                      onChange={(e) => setNeutralOtherColor(e.target.value)}
+                      className="h-8 w-8 rounded cursor-pointer border border-white/10"
+                    />
+                    <span className="text-[11px] font-mono text-white/70 uppercase">{neutralOtherColor}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
+
 
       <div className="flex gap-2 pt-1">
         <Button size="sm" disabled={uploading} onClick={handleConfirm} className="text-xs h-9 px-4" style={{ backgroundColor: PURPLE }}>

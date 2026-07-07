@@ -557,16 +557,56 @@ body[data-scroll-locked] {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ========================================================================== 
-   Saber glow border — beam physically rotating around the input stroke
+/* ==========================================================================
+   Saber glow border — rotating conic stroke (shiny-button style)
    ========================================================================== */
+@property --saber-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .saber-border {
   position: relative;
   isolation: isolate;
-  --saber-corner: 18px;
-  --saber-beam-width: clamp(64px, 18%, 104px);
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.18), rgba(59, 130, 246, 0.1) 50%, rgba(232, 121, 249, 0.14));
-  overflow: visible;
+  background:
+    linear-gradient(hsl(var(--background)), hsl(var(--background))) padding-box,
+    conic-gradient(
+      from var(--saber-angle),
+      rgba(139, 92, 246, 0.15) 0deg,
+      rgba(167, 139, 250, 0.95) 40deg,
+      rgba(255, 255, 255, 1) 60deg,
+      rgba(232, 121, 249, 0.95) 80deg,
+      rgba(139, 92, 246, 0.15) 120deg,
+      rgba(139, 92, 246, 0.15) 360deg
+    ) border-box;
+  border: 1.5px solid transparent;
+  animation: saber-spin 3.2s linear infinite;
+}
+
+.saber-border::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--saber-angle),
+    transparent 0deg,
+    rgba(167, 139, 250, 0.7) 40deg,
+    rgba(255, 255, 255, 0.9) 60deg,
+    rgba(232, 121, 249, 0.7) 80deg,
+    transparent 120deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  filter: blur(6px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: -1;
+  animation: saber-spin 3.2s linear infinite;
 }
 
 .saber-border > * {
@@ -574,92 +614,12 @@ body[data-scroll-locked] {
   z-index: 1;
 }
 
-.saber-border::before,
-.saber-border::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: var(--saber-beam-width);
-  height: 2px;
-  border-radius: 9999px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(96, 165, 250, 0.18) 12%,
-    rgba(167, 139, 250, 0.78) 38%,
-    rgba(255, 255, 255, 0.92) 52%,
-    rgba(232, 121, 249, 0.76) 66%,
-    transparent 100%
-  );
-  pointer-events: none;
-  transform: translate3d(-50%, -50%, 0) rotate(0deg);
-  transform-origin: 50% 50%;
-  animation: saber-orbit 3.2s linear infinite;
-}
-
-.saber-border::before {
-  z-index: 2;
-}
-
-.saber-border::after {
-  width: calc(var(--saber-beam-width) * 1.2);
-  height: 8px;
-  filter: blur(6px);
-  opacity: 0.28;
-  z-index: 0;
-}
-
-@keyframes saber-orbit {
-  0% {
-    top: 0;
-    left: 50%;
-    transform: translate3d(-50%, -50%, 0) rotate(0deg);
-  }
-  18% {
-    top: 0;
-    left: calc(100% - var(--saber-corner));
-    transform: translate3d(-50%, -50%, 0) rotate(0deg);
-  }
-  23% {
-    top: var(--saber-corner);
-    left: 100%;
-    transform: translate3d(-50%, -50%, 0) rotate(90deg);
-  }
-  31% {
-    top: calc(100% - var(--saber-corner));
-    left: 100%;
-    transform: translate3d(-50%, -50%, 0) rotate(90deg);
-  }
-  36% {
-    top: 100%;
-    left: calc(100% - var(--saber-corner));
-    transform: translate3d(-50%, -50%, 0) rotate(180deg);
-  }
-  68% {
-    top: 100%;
-    left: var(--saber-corner);
-    transform: translate3d(-50%, -50%, 0) rotate(180deg);
-  }
-  73% {
-    top: calc(100% - var(--saber-corner));
-    left: 0;
-    transform: translate3d(-50%, -50%, 0) rotate(270deg);
-  }
-  82% {
-    top: var(--saber-corner);
-    left: 0;
-    transform: translate3d(-50%, -50%, 0) rotate(270deg);
-  }
-  100% {
-    top: 0;
-    left: 50%;
-    transform: translate3d(-50%, -50%, 0) rotate(360deg);
-  }
+@keyframes saber-spin {
+  to { --saber-angle: 360deg; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .saber-border::before,
+  .saber-border,
   .saber-border::after { animation: none; }
 }
 

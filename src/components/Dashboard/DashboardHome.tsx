@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal, Menu as MenuIcon, Compass, MessagesSquare, FolderDot, Aperture, FeatherIcon, CalendarRange, Flame, LineChart, Shapes, UsersRound, LifeBuoy } from 'lucide-react';
+import { ArrowUp, ChevronLeft, ChevronRight, Loader2, Trash2, Sparkles, Instagram, ChevronDown, ChevronUp, Square, RectangleVertical, Smartphone, Film, SlidersHorizontal } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,8 +84,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<PromptMentionRef>(null);
-
-
 
   // Rotate greeting text every 15 seconds
   useEffect(() => {
@@ -490,7 +488,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
       {/* Recent projects — pinned to bottom with horizontal slider */}
       <AnimatePresence>
-        {(true) && (
+        {(recentCarousels.length > 0 || activeJobs.length > 0) && (
       <motion.div
         className="relative z-[1] px-4 md:px-8 shrink-0"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
@@ -503,7 +501,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
 
         <div className={isMobile ? 'max-w-[1200px] mx-auto' : ''}>
           <div className={`flex items-center mb-4 ${isMobile && !showRecent ? 'justify-center' : 'justify-between'}`}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowRecent(prev => !prev)}
                 className="flex items-center gap-2 px-4 py-2 rounded-full transition-all cursor-pointer backdrop-blur-xl hover:bg-white/[0.03]"
@@ -679,7 +677,6 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
               </motion.div>
             )}
           </AnimatePresence>
-
         </div>
       </motion.div>
         )}

@@ -4,11 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { ArrowLeft, ShoppingBag, Check, Sparkles, Crown, CreditCard, Coins } from 'lucide-react';
-
-
+import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import { routeFromTab } from '@/utils/dashboard-routes';
 import CommunityPosts from '@/components/Marketplace/CommunityPosts';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Home } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 interface MarketplaceStyle {
   id: string;
@@ -34,8 +34,8 @@ const MarketplaceStyleDetail: React.FC = () => {
   const [owned, setOwned] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
-
-
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('marketplace');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
@@ -159,8 +159,11 @@ const MarketplaceStyleDetail: React.FC = () => {
     }
   };
 
-
-
+  const handleTabChange = (tab: string) => {
+    setSidebarTab(tab);
+    setSidebarOpen(false);
+    navigate(routeFromTab(tab));
+  };
 
   const content = (
     <div className="flex-1 h-full overflow-y-auto" style={{ backgroundColor: '#0a0a0f' }}>
@@ -379,12 +382,23 @@ const MarketplaceStyleDetail: React.FC = () => {
     return (
       <div className="flex flex-col h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
         <header className="flex items-center justify-between px-4 h-14 shrink-0" style={{ backgroundColor: '#0a0a0f' }}>
-          <button onClick={() => navigate('/')} className="p-1.5 text-white/70 cursor-pointer">
-            <Home className="w-5 h-5" />
+          <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-white/70 cursor-pointer">
+            <Menu className="w-5 h-5" />
           </button>
           <span className="text-white/70 text-sm font-medium">Marketplace</span>
           <div className="w-8" />
         </header>
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
+            <div className="relative w-[280px] h-full animate-in slide-in-from-left duration-200">
+              <DashboardSidebar activeTab={sidebarTab} onTabChange={handleTabChange} onSearch={() => {}} />
+              <button onClick={() => setSidebarOpen(false)} className="absolute top-3 right-3 p-1 text-white/40 hover:text-white cursor-pointer z-10">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex-1 min-h-0">{content}</div>
       </div>
     );
@@ -392,10 +406,10 @@ const MarketplaceStyleDetail: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
+      <DashboardSidebar activeTab={sidebarTab} onTabChange={handleTabChange} onSearch={() => {}} />
       {content}
     </div>
   );
 };
-
 
 export default MarketplaceStyleDetail;

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Home, BarChart3, TrendingUp, Image as ImageIcon, Sparkles, Calendar } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-
-
+import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
+import { routeFromTab } from '@/utils/dashboard-routes';
 
 interface Stats {
   total: number;
@@ -78,15 +78,13 @@ const Analytics: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full text-white" style={{ backgroundColor: '#0a0a0f' }}>
+      <div className="hidden md:block">
+        <DashboardSidebar activeTab="insights" onTabChange={(t) => navigate(routeFromTab(t))} onSearch={() => {}} />
+      </div>
       <div className="flex-1 overflow-y-auto">
-
       <header className="sticky top-0 z-10 border-b border-white/[0.06] backdrop-blur" style={{ backgroundColor: 'rgba(10,10,15,0.85)' }}>
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer">
-            <Home className="w-3.5 h-3.5" />
-            <span className="text-xs font-medium">Início</span>
-          </button>
-          <div className="w-px h-5 bg-white/10 mx-1" />
+          <button onClick={() => navigate('/')} className="md:hidden p-2 rounded-lg hover:bg-white/[0.06] text-white/60 hover:text-white"><Home className="w-4 h-4" /></button>
           <BarChart3 className="w-5 h-5 text-purple-400" />
           <h1 className="text-lg font-semibold">Insights</h1>
         </div>

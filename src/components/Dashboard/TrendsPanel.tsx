@@ -695,8 +695,8 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
     return (
       <motion.div key={trend.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.03, duration: 0.35 }}
-        className="group rounded-2xl border border-white/[0.06] hover:border-purple-500/20 transition-all duration-300 relative overflow-hidden flex flex-col"
-        style={{ backgroundColor: 'rgba(255,255,255,0.015)' }}>
+        className="group rounded-xl border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 relative overflow-hidden flex flex-col"
+        style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
         
         {/* News thumbnail */}
         {imageUrl && (
@@ -710,7 +710,7 @@ const TrendsPanel: React.FC<TrendsPanelProps> = ({ onCreateFromTrend }) => {
         {/* Top accent bar (only when no image) */}
         {!imageUrl && <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, ${catStyle.text}40, transparent)` }} />}
         
-        <div className="p-5 flex-1 flex flex-col">
+        <div className="p-4 flex-1 flex flex-col">
           {/* Badges row */}
           <div className="flex items-center gap-1.5 mb-3 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"

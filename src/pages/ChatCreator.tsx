@@ -192,7 +192,9 @@ const sanitizeBriefForAI = (source: BriefState) => ({
   hasPrints: !!source.hasPrints,
   hasBrandColors: !!source.hasBrandColors,
   brandName: sanitizeTextForAI(source.brandName, 120),
-  brandColors: source.brandColors?.slice(0, 4),
+  brandColors: source.brandColors?.slice(0, 6),
+  brandNeutralTones: source.brandNeutralTones?.slice(0, 3),
+
   audience: sanitizeTextForAI(source.audience, 160),
   tone: sanitizeTextForAI(source.tone, 120),
   imageModel: source.imageModel,

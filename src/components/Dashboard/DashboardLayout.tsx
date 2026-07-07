@@ -309,59 +309,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   return (
     <div className="flex h-screen w-full relative" style={{ backgroundColor: '#0a0a0f' }}>
-      {/* Left-edge hover hit zone — moving mouse to the far left opens the sidebar */}
-      {!sidebarOpen && (
-        <div
-          className="fixed top-0 left-0 h-full w-[6px] z-30"
-          onMouseEnter={() => setSidebarOpen(true)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Hamburger trigger (desktop) — hover to open */}
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          onMouseEnter={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 z-40 p-2 text-white/50 hover:text-white transition-colors cursor-pointer"
-          aria-label="Abrir menu"
-        >
-          <Menu className="w-5 h-5" strokeWidth={1.8} />
-        </button>
-      )}
-
-      {/* Sidebar drawer overlay (desktop) */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-black/50"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setSidebarOpen(false)}
-            />
-            <motion.div
-              className="fixed top-0 left-0 h-full w-[280px] z-50 overflow-y-auto"
-              initial={{ x: -300 }}
-              animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-            >
-              <DashboardSidebar activeTab={activeTab} onTabChange={handleTabChange} onSearch={handleSearch} onLoadCarousel={onLoadCarousel} />
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer z-10"
-                aria-label="Fechar menu"
-              >
-                <X className="w-4 h-4" strokeWidth={1.8} />
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
+      <DashboardSidebar
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onSearch={handleSearch}
+        onLoadCarousel={onLoadCarousel}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => {
+          const next = !sidebarCollapsed;
+          setSidebarCollapsed(next);
+          try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
+        }}
+      />
       {renderContent()}
     </div>
   );

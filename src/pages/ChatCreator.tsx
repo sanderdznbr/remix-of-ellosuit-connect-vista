@@ -1471,32 +1471,26 @@ const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', 
     );
   }
 
+  const cardCls = "group relative flex items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left";
+  const iconCls = "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors";
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md">
-      <button
-        onClick={() => onPick('single')}
-        className="flex items-start gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left"
-        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
-      >
-        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-          <ImageIcon className="h-5 w-5" style={{ color: PURPLE }} />
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full">
+      <button onClick={() => onPick('single')} className={cardCls}>
+        <div className={iconCls}>
+          <ImageIcon className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-white">Post único</div>
-          <div className="text-[11px] text-white/50 mt-0.5">Uma única arte impactante</div>
+          <div className="text-[13px] font-medium text-white/90">Post único</div>
+          <div className="text-[11px] text-white/40 mt-0.5 leading-snug">Uma única arte impactante</div>
         </div>
       </button>
-      <button
-        onClick={() => setCarouselCards(5)}
-        className="flex items-start gap-3 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all text-left"
-        style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
-      >
-        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-          <Layers className="h-5 w-5" style={{ color: PURPLE }} />
+      <button onClick={() => setCarouselCards(5)} className={cardCls}>
+        <div className={iconCls}>
+          <Layers className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-white">Carrossel</div>
-          <div className="text-[11px] text-white/50 mt-0.5">Vários slides pra contar uma história</div>
+          <div className="text-[13px] font-medium text-white/90">Carrossel</div>
+          <div className="text-[11px] text-white/40 mt-0.5 leading-snug">Vários slides pra contar uma história</div>
         </div>
       </button>
     </div>
@@ -1505,22 +1499,21 @@ const ContentTypePickerWidget: React.FC<{ onPick: (type: 'single' | 'carousel', 
 
 const FormatPickerWidget: React.FC<{ onPick: (format: string) => void }> = ({ onPick }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-md">
+    <div className="grid grid-cols-3 gap-2 max-w-md w-full">
       {FORMAT_OPTIONS.map(f => {
         const Icon = f.icon;
         return (
           <button
             key={f.value}
             onClick={() => onPick(f.value)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border border-white/10 hover:border-white/40 hover:bg-white/5 transition-all"
-            style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+            className="group relative flex flex-col items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left"
           >
-            <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.15)' }}>
-              <Icon className="h-5 w-5" style={{ color: PURPLE }} />
+            <div className="h-9 w-9 rounded-xl flex items-center justify-center border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors">
+              <Icon className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
             </div>
-            <div className="text-center">
-              <div className="text-sm font-semibold text-white">{f.label}</div>
-              <div className="text-[10px] text-white/50">{f.sub}</div>
+            <div className="min-w-0">
+              <div className="text-[13px] font-medium text-white/90 leading-none">{f.label}</div>
+              <div className="text-[10px] text-white/40 mt-1.5 tracking-wide">{f.sub}</div>
             </div>
           </button>
         );
@@ -2920,50 +2913,30 @@ const FinalResultWidget: React.FC<{
 };
 
 const ImageSourcePickerWidget: React.FC<{ onPick: (source: 'ai' | 'real') => void }> = ({ onPick }) => {
+  const cardCls = "group relative flex items-start gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all text-left";
+  const iconCls = "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.06] bg-white/[0.03] group-hover:border-violet-400/30 group-hover:bg-violet-500/10 transition-colors";
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <button
-        onClick={() => onPick('ai')}
-        className="group relative flex flex-col gap-4 p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent hover:from-violet-600/10 hover:to-violet-600/5 hover:border-violet-500/50 transition-all duration-300 text-left overflow-hidden shadow-xl"
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-          <Sparkles className="h-20 w-20 text-violet-400 rotate-12" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full">
+      <button onClick={() => onPick('ai')} className={cardCls}>
+        <div className={iconCls}>
+          <Wand2 className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
         </div>
-        
-        <div className="h-12 w-12 rounded-xl bg-violet-600/20 flex items-center justify-center text-violet-400 group-hover:scale-110 group-hover:bg-violet-600 group-hover:text-white transition-all duration-300">
-          <Wand2 className="h-6 w-6" />
-        </div>
-        
-        <div className="space-y-1.5 relative z-10">
-          <div className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-            Ilustrações IA
-            <div className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
-          </div>
-          <p className="text-[11px] text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">
-            Artes artísticas criadas do zero com inteligência artificial generativa.
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium text-white/90">Ilustrações IA</div>
+          <p className="text-[11px] text-white/40 mt-0.5 leading-snug">
+            Artes criadas do zero com IA generativa.
           </p>
         </div>
       </button>
 
-      <button
-        onClick={() => onPick('real')}
-        className="group relative flex flex-col gap-4 p-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent hover:from-blue-600/10 hover:to-blue-600/5 hover:border-blue-500/50 transition-all duration-300 text-left overflow-hidden shadow-xl"
-      >
-        <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-          <ImageIcon className="h-20 w-20 text-blue-400 -rotate-12" />
+      <button onClick={() => onPick('real')} className={cardCls}>
+        <div className={iconCls}>
+          <ImageIcon className="h-4 w-4 text-white/70 group-hover:text-violet-300 transition-colors" />
         </div>
-
-        <div className="h-12 w-12 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-          <ImageIcon className="h-6 w-6" />
-        </div>
-        
-        <div className="space-y-1.5 relative z-10">
-          <div className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-            Fotos Reais
-            <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-          </div>
-          <p className="text-[11px] text-white/50 leading-relaxed group-hover:text-white/70 transition-colors">
-            Imagens autênticas, fotos de estoque ou arquivos que você enviar.
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium text-white/90">Fotos Reais</div>
+          <p className="text-[11px] text-white/40 mt-0.5 leading-snug">
+            Imagens autênticas, estoque ou seus arquivos.
           </p>
         </div>
       </button>

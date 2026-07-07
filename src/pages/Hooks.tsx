@@ -81,33 +81,39 @@ const Hooks: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="text-white" style={{ backgroundColor: '#0a0a0f' }}>
-      <header className="sticky top-0 z-10 border-b border-white/[0.06] backdrop-blur" style={{ backgroundColor: 'rgba(10,10,15,0.85)' }}>
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Zap className="w-5 h-5 text-purple-400" />
-          <h1 className="text-lg font-semibold">Banco de hooks</h1>
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8 sm:py-14 text-white">
+        {/* Hero */}
+        <div className="mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-5" style={{ backgroundColor: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+            <Zap className="w-3.5 h-3.5" />
+            Biblioteca de hooks
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">
+            Banco de hooks
+          </h1>
+          <p className="text-white/40 text-base max-w-xl">
+            Frases prontas para abrir posts e prender a atenção. Copie ou envie direto para o Chat IA.
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        <p className="text-sm text-white/50 mb-4">Frases prontas pra abrir posts e prender a atenção. Clique para copiar ou enviar direto pro Chat IA.</p>
-
-        <div className="relative mb-3">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar hook..."
-            className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/40"
+            className="w-full pl-10 pr-3 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/40 transition-colors"
           />
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+        {/* Categories */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none">
           {CATEGORIES.map((c) => (
             <button
               key={c}
               onClick={() => setCat(c)}
-              className="text-xs px-3 py-1.5 rounded-full border whitespace-nowrap capitalize transition-colors"
+              className="text-xs px-3.5 py-1.5 rounded-full border whitespace-nowrap capitalize transition-colors"
               style={{
                 borderColor: cat === c ? (CAT_COLORS[c] || '#8B5CF6') : 'rgba(255,255,255,0.08)',
                 color: cat === c ? (CAT_COLORS[c] || '#8B5CF6') : 'rgba(255,255,255,0.6)',
@@ -119,20 +125,21 @@ const Hooks: React.FC = () => {
           ))}
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-2">
+        {/* Grid */}
+        <div className="grid sm:grid-cols-2 gap-3">
           {filtered.map((h, idx) => (
-            <div key={idx} className="group p-4 rounded-xl border border-white/[0.06] hover:border-white/[0.12] transition-colors" style={{ backgroundColor: '#0f0f15' }}>
+            <div key={idx} className="group p-4 rounded-xl border border-white/[0.06] hover:border-white/[0.12] transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
               <div className="flex items-start justify-between gap-3 mb-3">
-                <p className="text-sm text-white/90 leading-relaxed flex-1">{h.text}</p>
-                <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: `${CAT_COLORS[h.category]}20`, color: CAT_COLORS[h.category] }}>
+                <p className="text-sm text-white/85 leading-relaxed flex-1">{h.text}</p>
+                <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: `${CAT_COLORS[h.category]}20`, color: CAT_COLORS[h.category] }}>
                   {h.category}
                 </span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => copy(h.text, idx)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/70">
+                <button onClick={() => copy(h.text, idx)} className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/70 transition-colors">
                   {copiedIdx === idx ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />} Copiar
                 </button>
-                <button onClick={() => useInChat(h.text)} className="flex-1 text-xs py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300">
+                <button onClick={() => useInChat(h.text)} className="flex-1 text-xs py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 transition-colors">
                   Usar no chat
                 </button>
               </div>
@@ -140,7 +147,6 @@ const Hooks: React.FC = () => {
           ))}
           {filtered.length === 0 && <p className="col-span-full text-center text-sm text-white/40 py-12">Nenhum hook encontrado.</p>}
         </div>
-      </main>
       </div>
     </DashboardLayout>
   );

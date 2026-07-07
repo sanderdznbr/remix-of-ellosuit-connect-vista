@@ -818,7 +818,7 @@ const ChatCreator: React.FC = () => {
       }} />;
     }
     if (msg.widget === "confirm_generate") {
-      return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} />;
+      return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} isGenerating={generating} />;
     }
     if (msg.widget === "face_fusion_picker") {
       return (
@@ -2310,7 +2310,8 @@ const ConfirmWidget: React.FC<{
   brief: BriefState; 
   onConfirm: () => void;
   onImageUpdate?: (images: string[]) => void;
-}> = ({ brief, onConfirm, onImageUpdate }) => {
+  isGenerating?: boolean;
+}> = ({ brief, onConfirm, onImageUpdate, isGenerating }) => {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<Record<number, string[]>>({});
   const [selectedImages, setSelectedImages] = useState<string[]>(brief.selectedImages || []);
@@ -2551,14 +2552,14 @@ const ConfirmWidget: React.FC<{
 
       <Button 
         onClick={onConfirm} 
-        disabled={isReal && (brief.suggested_content?.length || 1) !== selectedImages.filter(Boolean).length}
-        className="w-full h-11 rounded-xl text-sm font-bold shadow-lg shadow-violet-500/20" 
+        disabled={isGenerating || (isReal && (brief.suggested_content?.length || 1) !== selectedImages.filter(Boolean).length)}
+        className="w-full h-11 rounded-xl text-sm font-bold shadow-lg shadow-violet-500/20 disabled:opacity-60 disabled:cursor-not-allowed" 
         style={{ backgroundColor: PURPLE }}
       >
-        <Sparkles className="h-4 w-4 mr-2" />
-        {isReal ? 'Gerar com fotos selecionadas' : 'Gerar post agora'}
+        {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+        {isGenerating ? 'Gerando post...' : (isReal ? 'Gerar com fotos selecionadas' : 'Gerar post agora')}
       </Button>
-      {isReal && (brief.suggested_content?.length || 1) !== selectedImages.filter(Boolean).length && (
+      {!isGenerating && isReal && (brief.suggested_content?.length || 1) !== selectedImages.filter(Boolean).length && (
         <p className="text-[10px] text-center text-white/30 italic">Selecione uma foto para cada card para continuar</p>
       )}
     </div>

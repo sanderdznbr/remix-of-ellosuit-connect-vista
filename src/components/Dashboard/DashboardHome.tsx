@@ -445,58 +445,7 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
             </div>
             <div className="flex items-center justify-between px-3 pb-3">
               <div className="flex items-center gap-1">
-              <div className="relative">
-                <button
-                  onClick={() => setFormatDropdownOpen(!formatDropdownOpen)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
-                  style={{ color: 'rgba(255,255,255,0.35)' }}
-                  title="Formato do post"
-                >
-                  <Instagram className="w-4 h-4" />
-                  <span className="text-[11px]">{POST_FORMAT_OPTIONS.find(f => f.value === postFormat)?.label}</span>
-                  <ChevronDown className="w-3 h-3" />
-                </button>
-                <AnimatePresence>
-                  {formatDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setFormatDropdownOpen(false)} />
-                      <motion.div
-                        className="absolute bottom-full left-0 mb-2 w-56 rounded-xl overflow-hidden z-40"
-                        style={{ backgroundColor: '#1a1a24', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
-                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        {POST_FORMAT_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          const isActive = postFormat === opt.value;
-                          const isDisabled = !!(opt as any).disabled;
-                          return (
-                            <button
-                              key={opt.value}
-                              onClick={() => { if (!isDisabled) { setPostFormat(opt.value as PostFormat); setFormatDropdownOpen(false); } }}
-                              className={`w-full flex items-center gap-3 px-3.5 py-2.5 transition-colors ${isDisabled ? 'opacity-40 cursor-default' : 'cursor-pointer'}`}
-                              style={{
-                                backgroundColor: isActive ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
-                                color: isActive ? '#a78bfa' : 'rgba(255,255,255,0.5)',
-                              }}
-                            >
-                              <Icon className="w-4 h-4 shrink-0" />
-                              <div className="text-left flex items-center gap-2">
-                                <div>
-                                  <p className="text-xs font-medium" style={{ color: isDisabled ? 'rgba(255,255,255,0.3)' : isActive ? '#c4b5fd' : 'rgba(255,255,255,0.7)' }}>{opt.label}</p>
-                                  <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{opt.sublabel}</p>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
+
               <button
                 onClick={handleAdvancedMode}
                 disabled={isGenerating}

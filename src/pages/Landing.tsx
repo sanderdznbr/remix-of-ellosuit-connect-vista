@@ -56,22 +56,53 @@ const Landing: React.FC = () => {
     })();
   }, []);
 
-  // Fetch real recent generated posts (public — only those tied to a marketplace style)
+  // Fetch + curate best recent generated posts (public — those tied to a marketplace style)
   useEffect(() => {
     (async () => {
       try {
         const { data } = await supabase
           .from('generated_carousels')
-          .select('id, title, cover_url')
+          .select('id, title, cover_url, marketplace_style_id, user_id, card_count, created_at')
           .not('cover_url', 'is', null)
           .not('marketplace_style_id', 'is', null)
           .eq('status', 'completed')
           .order('created_at', { ascending: false })
-          .limit(24);
-        setRecentPosts((data || []).filter((p: any) => p.cover_url));
+          .limit(120);
+
+        const raw = (data || []).filter((p: any) => p.cover_url);
+
+        // Curadoria:
+        // 1) exige título descritivo (>= 12 chars, sem "sem título")
+        // 2) prefere carrossel (card_count >= 3) para covers mais completas
+        // 3) dedupe por título normalizado (evita "BPC-157" 6x)
+        // 4) diversifica autores — no máximo 2 posts do mesmo user_id
+        // 5) prefere estilos distintos — no máximo 3 posts do mesmo marketplace_style_id
+        const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 60);
+        const seenTitle = new Set<string>();
+        const perUser: Record<string, number> = {};
+        const perStyle: Record<string, number> = {};
+        const curated: any[] = [];
+        for (const p of raw) {
+          const t = (p.title || '').trim();
+          if (t.length < 12) continue;
+          if (/sem\s*t[ií]tulo|untitled|teste|test\b/i.test(t)) continue;
+          const key = norm(t);
+          if (seenTitle.has(key)) continue;
+          const u = p.user_id || 'x';
+          const s = p.marketplace_style_id || 'x';
+          if ((perUser[u] || 0) >= 2) continue;
+          if ((perStyle[s] || 0) >= 3) continue;
+          seenTitle.add(key);
+          perUser[u] = (perUser[u] || 0) + 1;
+          perStyle[s] = (perStyle[s] || 0) + 1;
+          curated.push(p);
+          if (curated.length >= 20) break;
+        }
+        setRecentPosts(curated);
       } catch {}
     })();
   }, []);
+
 
 
 

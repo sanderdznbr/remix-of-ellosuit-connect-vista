@@ -304,74 +304,86 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onStartCarousel, onLoadCa
   };
 
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden" style={{ backgroundColor: '#0a0a0f', minHeight: 0 }}>
+    <div
+      className="flex-1 flex flex-col relative overflow-hidden"
+      style={{
+        background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #0a0813 0%, #050509 55%, #030305 100%)',
+        minHeight: 0,
+      }}
+    >
       <OnboardingModal />
       <LowCreditsBanner balance={creditBalance} />
 
-
-
-      {/* Background purple glow animation */}
+      {/* Layered dark background — subtle grid + soft violet aurora + film grain */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Subtle dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.15]"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)',
+            backgroundSize: '32px 32px',
+            maskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 80%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 80%)',
+          }}
+        />
+
+        {/* Soft violet aurora — main */}
         <motion.div
           className="absolute rounded-full"
           style={{
-            width: '700px',
-            height: '700px',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(88,28,135,0.18) 40%, transparent 70%)',
-            top: '5%',
+            width: '780px',
+            height: '780px',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.22) 0%, rgba(88,28,135,0.10) 40%, transparent 70%)',
+            top: '-10%',
             left: '50%',
             transform: 'translateX(-50%)',
-            filter: 'blur(80px)',
-          }}
-          animate={{
-            scale: [1, 1.08, 1],
-            opacity: [0.6, 0.85, 0.6],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        <motion.div
-          className="absolute rounded-full"
-          style={{
-            width: '400px',
-            height: '400px',
-            background: 'radial-gradient(circle, rgba(124,58,237,0.25) 0%, transparent 70%)',
-            top: '20%',
-            left: '30%',
-            filter: 'blur(100px)',
-          }}
-          animate={{
-            x: [0, 30, 0],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        <motion.div
-          className="absolute rounded-full"
-          style={{
-            width: '350px',
-            height: '350px',
-            background: 'radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%)',
-            top: '10%',
-            right: '15%',
             filter: 'blur(90px)',
           }}
-          animate={{
-            x: [0, -20, 0],
-            scale: [1, 1.1, 1],
-            opacity: [0.25, 0.45, 0.25],
+          animate={{ scale: [1, 1.08, 1], opacity: [0.55, 0.8, 0.55] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        {/* Cool blue accent — left */}
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            width: '420px',
+            height: '420px',
+            background: 'radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)',
+            top: '30%',
+            left: '5%',
+            filter: 'blur(110px)',
           }}
-          transition={{
-            duration: 7,
-            repeat: Infinity,
-            ease: 'easeInOut',
+          animate={{ x: [0, 30, 0], opacity: [0.4, 0.65, 0.4] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        {/* Warm violet accent — right */}
+        <motion.div
+          className="absolute rounded-full"
+          style={{
+            width: '380px',
+            height: '380px',
+            background: 'radial-gradient(circle, rgba(168,85,247,0.16) 0%, transparent 70%)',
+            top: '20%',
+            right: '8%',
+            filter: 'blur(100px)',
+          }}
+          animate={{ x: [0, -25, 0], scale: [1, 1.12, 1], opacity: [0.3, 0.55, 0.3] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        {/* Deep bottom vignette to anchor the input */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-1/2"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }}
+        />
+
+        {/* Film grain overlay for texture */}
+        <div
+          className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
+          style={{
+            backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>\")",
           }}
         />
       </div>

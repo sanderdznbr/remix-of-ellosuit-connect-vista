@@ -8512,7 +8512,7 @@ export type Database = {
           recipient_phone: string | null
           sender_name: string | null
           sender_phone: string | null
-          session_id: string
+          session_id: string | null
           status: string
           timestamp: string
           wa_message_id: string | null
@@ -8540,7 +8540,7 @@ export type Database = {
           recipient_phone?: string | null
           sender_name?: string | null
           sender_phone?: string | null
-          session_id: string
+          session_id?: string | null
           status?: string
           timestamp?: string
           wa_message_id?: string | null
@@ -8568,7 +8568,7 @@ export type Database = {
           recipient_phone?: string | null
           sender_name?: string | null
           sender_phone?: string | null
-          session_id?: string
+          session_id?: string | null
           status?: string
           timestamp?: string
           wa_message_id?: string | null

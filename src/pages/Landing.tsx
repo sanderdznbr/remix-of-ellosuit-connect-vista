@@ -180,29 +180,99 @@ const Landing: React.FC = () => {
           </motion.div>
 
 
-          {/* Hero visual — ellocontent purple orb (signature) */}
+          {/* Hero visual — signature orb + floating style cards */}
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-24 mx-auto rounded-[32px] overflow-hidden relative"
-            style={{
-              maxWidth: 1000,
-              aspectRatio: '16/10',
-              background: `radial-gradient(ellipse at 50% 120%, rgba(139,92,246,0.25), transparent 60%), linear-gradient(180deg, ${BG_SOFT} 0%, #0c0814 100%)`,
-              border: `1px solid ${HAIRLINE_STRONG}`,
-              boxShadow: '0 60px 140px -30px rgba(139,92,246,0.4), 0 0 0 1px rgba(139,92,246,0.06) inset',
-            }}
+            className="mt-24 mx-auto relative"
+            style={{ maxWidth: 1100, height: 'clamp(420px, 55vw, 620px)' }}
           >
-            {/* Video placeholder — replace with <video> when asset is ready */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              {/* TODO: <video src="/path-to-video.mp4" autoPlay muted loop playsInline className="w-full h-full object-cover" /> */}
-              <div className="flex flex-col items-center gap-3" style={{ color: INK_DIM }}>
-                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(139,92,246,0.12)', border: `1px solid ${HAIRLINE_STRONG}` }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill={PURPLE}/></svg>
+            {/* Ambient stage */}
+            <div
+              className="absolute inset-0 rounded-[36px] overflow-hidden"
+              style={{
+                background: `radial-gradient(ellipse at 50% 100%, rgba(139,92,246,0.35), transparent 65%), linear-gradient(180deg, ${BG_SOFT} 0%, #0c0814 100%)`,
+                border: `1px solid ${HAIRLINE_STRONG}`,
+                boxShadow: '0 80px 180px -40px rgba(139,92,246,0.5), 0 0 0 1px rgba(139,92,246,0.08) inset',
+              }}
+            >
+              {/* subtle grid */}
+              <div
+                className="absolute inset-0 opacity-[0.08]"
+                style={{
+                  backgroundImage: `linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)`,
+                  backgroundSize: '56px 56px',
+                  maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+                  WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+                }}
+              />
+
+              {/* Signature orb */}
+              <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ bottom: '-38%', filter: 'blur(4px)' }}>
+                <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 80%, 900px)', height: 'clamp(500px, 80%, 900px)' }}>
+                  <div className="carousel-loader-spinner" />
                 </div>
-                <span className="text-[12px] font-medium">Vídeo em breve</span>
               </div>
+
+              {/* Floating showcase cards (real marketplace styles) */}
+              {(showcaseStyles.slice(0, 5).length ? showcaseStyles.slice(0, 5) : Array.from({ length: 5 }).map(() => null)).map((style, i) => {
+                const positions = [
+                  { top: '10%', left: '6%', rotate: -8, w: 150, delay: 0.6 },
+                  { top: '18%', right: '8%', rotate: 7, w: 160, delay: 0.75 },
+                  { top: '48%', left: '2%', rotate: -4, w: 130, delay: 0.9 },
+                  { top: '52%', right: '3%', rotate: 5, w: 140, delay: 1.05 },
+                  { top: '4%', left: '50%', translateX: '-50%', rotate: 0, w: 170, delay: 0.5 },
+                ];
+                const p = positions[i];
+                return (
+                  <motion.div
+                    key={style?.id || `ph-${i}`}
+                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.9, delay: p.delay, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute rounded-2xl overflow-hidden hidden md:block"
+                    style={{
+                      top: p.top,
+                      left: p.left as any,
+                      right: p.right as any,
+                      width: p.w,
+                      aspectRatio: '4/5',
+                      transform: `translateX(${p.translateX || '0'}) rotate(${p.rotate}deg)`,
+                      border: `1px solid ${HAIRLINE_STRONG}`,
+                      boxShadow: '0 30px 60px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.15) inset',
+                      background: `linear-gradient(135deg, #1a1424 0%, #0f0a18 100%)`,
+                    }}
+                  >
+                    {style?.preview_images?.[0] ? (
+                      <img src={style.preview_images[0]} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-widest" style={{ color: INK_DIM }}>
+                        {['Cover', 'Bento', 'Editorial', 'Minimal', 'Serif'][i]}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+
+              {/* Center glow badge */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1, delay: 1.2 }}
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md"
+                style={{
+                  background: 'rgba(20,15,30,0.7)',
+                  border: `1px solid rgba(196,181,253,0.35)`,
+                  boxShadow: '0 8px 32px -8px rgba(139,92,246,0.6)',
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PURPLE_GLOW, boxShadow: `0 0 12px ${PURPLE}` }} />
+                <span className="text-[12px] font-medium tracking-wide" style={{ color: '#fff' }}>Gerando com IA…</span>
+              </motion.div>
+
+              {/* Top vignette */}
+              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: `linear-gradient(180deg, ${BG_SOFT} 0%, transparent 100%)` }} />
             </div>
           </motion.div>
         </div>

@@ -818,7 +818,7 @@ const ChatCreator: React.FC = () => {
       }} />;
     }
     if (msg.widget === "confirm_generate") {
-      return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} />;
+      return <ConfirmWidget brief={brief} onConfirm={handleConfirm} onImageUpdate={(imgs) => setBrief(prev => ({ ...prev, selectedImages: imgs }))} isGenerating={generating} />;
     }
     if (msg.widget === "face_fusion_picker") {
       return (

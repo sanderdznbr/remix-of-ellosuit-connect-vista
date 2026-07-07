@@ -5,8 +5,8 @@ import { ArrowLeft, CreditCard, QrCode, Check, Loader2, Sparkles, Zap, Lock, Cop
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { getAffiliateRef } from '@/hooks/useAffiliateTracking';
-import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { routeFromTab } from '@/utils/dashboard-routes';
+
+
 import { toast } from '@/hooks/use-toast';
 
 const PLANS: Record<string, { name: string; annualPrice: number; monthlyPrice: number; credits: number; extraPrice: string; features: string[]; icon: typeof Star }> = {
@@ -580,11 +580,6 @@ function CheckoutContent() {
 
 export default function Checkout() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  const handleTabChange = (tab: string) => {
-    navigate(routeFromTab(tab));
-  };
 
   if (loading) {
     return (
@@ -598,10 +593,8 @@ export default function Checkout() {
 
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-      <div className="hidden md:block">
-        <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
-      </div>
       <CheckoutContent />
     </div>
   );
 }
+

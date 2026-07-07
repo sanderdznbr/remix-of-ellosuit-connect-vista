@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronDown, X, Zap, Loader2, Gift, Copy, Ticket } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { routeFromTab } from '@/utils/dashboard-routes';
+
+
 import ellocontentLogo from '@/assets/ellocontent_logo.png';
 import { toast } from 'sonner';
 import TrialBanner from '@/components/TrialBanner';
@@ -462,9 +462,8 @@ function LoggedInPricing() {
   const planLabel = planConfig?.label || 'Sem plano';
   const maxCredits = planConfig?.credits || 0;
 
-  const handleTabChange = (tab: string) => {
-    navigate(routeFromTab(tab));
-  };
+
+
 
   const handleRedeemCode = async () => {
     if (!redeemCode.trim() || !user || !companyId) return;
@@ -581,10 +580,8 @@ function LoggedInPricing() {
 
   return (
     <div className="flex h-screen w-full" style={{ backgroundColor: '#0a0a0f' }}>
-      <div className="hidden md:block">
-        <DashboardSidebar activeTab="pricing" onTabChange={handleTabChange} onSearch={() => {}} />
-      </div>
       <div className="flex-1 overflow-y-auto">
+
         {/* Mobile header */}
         <div className="md:hidden flex items-center justify-between px-4 pt-4 pb-2">
           <button onClick={() => navigate('/')} className="text-white/40 text-sm cursor-pointer">← Voltar</button>

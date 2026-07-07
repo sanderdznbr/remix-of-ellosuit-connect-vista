@@ -1792,6 +1792,21 @@ const PersonalizationWidget: React.FC<{
 
   const updateColor = (i: number, v: string) => setBrandColors(prev => prev.map((c, idx) => idx === i ? v : c));
   const removeColor = (i: number) => setBrandColors(prev => prev.filter((_, idx) => idx !== i));
+  const moveColor = (i: number, dir: -1 | 1) => setBrandColors(prev => {
+    const j = i + dir;
+    if (j < 0 || j >= prev.length) return prev;
+    const next = [...prev];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+  const makeDominant = (i: number) => setBrandColors(prev => {
+    if (i === 0) return prev;
+    const next = [...prev];
+    const [picked] = next.splice(i, 1);
+    return [picked, ...next];
+  });
+  const clearColors = () => setBrandColors([]);
+
 
   return (
     <div className="space-y-3 max-w-md">

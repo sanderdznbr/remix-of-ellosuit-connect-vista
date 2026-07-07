@@ -1181,9 +1181,9 @@ const ChatCreator: React.FC = () => {
                 onClick={() => sendMessage(input)}
                 disabled={(!input.trim() && attachments.length === 0) || loading || generating}
                 className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
-                style={{ backgroundColor: (input.trim() || attachments.length > 0) ? PURPLE : 'rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: (input.trim() || attachments.length > 0) ? '#ffffff' : 'rgba(255,255,255,0.1)' }}
               >
-                {loading ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <ArrowUp className="h-4 w-4 text-white" />}
+                {loading ? <Loader2 className={`h-4 w-4 animate-spin ${(input.trim() || attachments.length > 0) ? 'text-black' : 'text-white'}`} /> : <ArrowUp className={`h-4 w-4 ${(input.trim() || attachments.length > 0) ? 'text-black' : 'text-white'}`} />}
               </button>
             </div>
           </div>

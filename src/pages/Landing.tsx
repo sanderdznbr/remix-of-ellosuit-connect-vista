@@ -200,100 +200,103 @@ const Landing: React.FC = () => {
           </motion.div>
 
 
-          {/* Hero visual — signature orb + floating style cards */}
+          {/* Hero visual — live marquee of real recent posts */}
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-24 mx-auto relative"
-            style={{ maxWidth: 1100, height: 'clamp(420px, 55vw, 620px)' }}
+            className="mt-20 md:mt-24 relative"
           >
-            {/* Ambient stage */}
+            {/* Ambient purple glow behind marquee */}
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[80%] pointer-events-none" style={{ background: 'radial-gradient(ellipse 900px 300px at 50% 50%, rgba(139,92,246,0.28), transparent 70%)' }} />
+
+            {/* Live badge */}
+            <div className="relative flex justify-center mb-6">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md" style={{ background: 'rgba(20,15,30,0.7)', border: `1px solid rgba(196,181,253,0.35)` }}>
+                <span className="relative flex w-2 h-2">
+                  <span className="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping" style={{ backgroundColor: PURPLE }} />
+                  <span className="relative inline-flex w-2 h-2 rounded-full" style={{ backgroundColor: PURPLE_GLOW, boxShadow: `0 0 10px ${PURPLE}` }} />
+                </span>
+                <span className="text-[11px] font-medium tracking-wide" style={{ color: '#fff' }}>Feito ao vivo por criadores agora</span>
+              </div>
+            </div>
+
+            {/* Marquee row 1 — left */}
             <div
-              className="absolute inset-0 rounded-[36px] overflow-hidden"
+              className="relative overflow-hidden py-3"
               style={{
-                background: `radial-gradient(ellipse at 50% 100%, rgba(139,92,246,0.35), transparent 65%), linear-gradient(180deg, ${BG_SOFT} 0%, #0c0814 100%)`,
-                border: `1px solid ${HAIRLINE_STRONG}`,
-                boxShadow: '0 80px 180px -40px rgba(139,92,246,0.5), 0 0 0 1px rgba(139,92,246,0.08) inset',
+                maskImage: 'linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%)',
               }}
             >
-              {/* subtle grid */}
-              <div
-                className="absolute inset-0 opacity-[0.08]"
-                style={{
-                  backgroundImage: `linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)`,
-                  backgroundSize: '56px 56px',
-                  maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-                  WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-                }}
-              />
-
-              {/* Signature orb */}
-              <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none" style={{ bottom: '-38%', filter: 'blur(4px)' }}>
-                <div className="carousel-loader-wrapper" style={{ width: 'clamp(500px, 80%, 900px)', height: 'clamp(500px, 80%, 900px)' }}>
-                  <div className="carousel-loader-spinner" />
-                </div>
+              <div className="flex gap-5 marquee-track-left" style={{ width: 'max-content' }}>
+                {(() => {
+                  const pool = recentPosts.length ? recentPosts : Array.from({ length: 10 }).map((_, i) => ({ id: `ph1-${i}`, title: '', cover_url: '' }));
+                  const doubled = [...pool, ...pool];
+                  return doubled.map((p, i) => (
+                    <div
+                      key={`r1-${p.id}-${i}`}
+                      className="shrink-0 rounded-2xl overflow-hidden relative"
+                      style={{
+                        width: 220,
+                        aspectRatio: '4/5',
+                        border: `1px solid ${HAIRLINE_STRONG}`,
+                        boxShadow: '0 20px 50px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1) inset',
+                        background: `linear-gradient(135deg, #1a1424 0%, #0f0a18 100%)`,
+                      }}
+                    >
+                      {p.cover_url ? (
+                        <img src={p.cover_url} alt={p.title || ''} className="w-full h-full object-cover" loading="lazy" />
+                      ) : null}
+                    </div>
+                  ));
+                })()}
               </div>
-
-              {/* Floating showcase cards (real marketplace styles) */}
-              {(showcaseStyles.slice(0, 5).length ? showcaseStyles.slice(0, 5) : Array.from({ length: 5 }).map(() => null)).map((style, i) => {
-                const positions = [
-                  { top: '10%', left: '6%', rotate: -8, w: 150, delay: 0.6 },
-                  { top: '18%', right: '8%', rotate: 7, w: 160, delay: 0.75 },
-                  { top: '48%', left: '2%', rotate: -4, w: 130, delay: 0.9 },
-                  { top: '52%', right: '3%', rotate: 5, w: 140, delay: 1.05 },
-                  { top: '4%', left: '50%', translateX: '-50%', rotate: 0, w: 170, delay: 0.5 },
-                ];
-                const p = positions[i];
-                return (
-                  <motion.div
-                    key={style?.id || `ph-${i}`}
-                    initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.9, delay: p.delay, ease: [0.22, 1, 0.36, 1] }}
-                    className="absolute rounded-2xl overflow-hidden hidden md:block"
-                    style={{
-                      top: p.top,
-                      left: p.left as any,
-                      right: p.right as any,
-                      width: p.w,
-                      aspectRatio: '4/5',
-                      transform: `translateX(${p.translateX || '0'}) rotate(${p.rotate}deg)`,
-                      border: `1px solid ${HAIRLINE_STRONG}`,
-                      boxShadow: '0 30px 60px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.15) inset',
-                      background: `linear-gradient(135deg, #1a1424 0%, #0f0a18 100%)`,
-                    }}
-                  >
-                    {style?.preview_images?.[0] ? (
-                      <img src={style.preview_images[0]} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-widest" style={{ color: INK_DIM }}>
-                        {['Cover', 'Bento', 'Editorial', 'Minimal', 'Serif'][i]}
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-
-              {/* Center glow badge */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, delay: 1.2 }}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md"
-                style={{
-                  background: 'rgba(20,15,30,0.7)',
-                  border: `1px solid rgba(196,181,253,0.35)`,
-                  boxShadow: '0 8px 32px -8px rgba(139,92,246,0.6)',
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PURPLE_GLOW, boxShadow: `0 0 12px ${PURPLE}` }} />
-                <span className="text-[12px] font-medium tracking-wide" style={{ color: '#fff' }}>Gerando com IA…</span>
-              </motion.div>
-
-              {/* Top vignette */}
-              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: `linear-gradient(180deg, ${BG_SOFT} 0%, transparent 100%)` }} />
             </div>
+
+            {/* Marquee row 2 — right (reverse) */}
+            <div
+              className="relative overflow-hidden py-3 mt-2"
+              style={{
+                maskImage: 'linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%)',
+              }}
+            >
+              <div className="flex gap-5 marquee-track-right" style={{ width: 'max-content' }}>
+                {(() => {
+                  const pool = recentPosts.length ? [...recentPosts].reverse() : Array.from({ length: 10 }).map((_, i) => ({ id: `ph2-${i}`, title: '', cover_url: '' }));
+                  const doubled = [...pool, ...pool];
+                  return doubled.map((p, i) => (
+                    <div
+                      key={`r2-${p.id}-${i}`}
+                      className="shrink-0 rounded-2xl overflow-hidden relative"
+                      style={{
+                        width: 200,
+                        aspectRatio: '1/1',
+                        border: `1px solid ${HAIRLINE_STRONG}`,
+                        boxShadow: '0 20px 50px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.1) inset',
+                        background: `linear-gradient(135deg, #1a1424 0%, #0f0a18 100%)`,
+                      }}
+                    >
+                      {p.cover_url ? (
+                        <img src={p.cover_url} alt={p.title || ''} className="w-full h-full object-cover" loading="lazy" />
+                      ) : null}
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {/* CSS keyframes for marquees */}
+            <style>{`
+              @keyframes marqueeLeft { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+              @keyframes marqueeRight { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+              .marquee-track-left  { animation: marqueeLeft 60s linear infinite; }
+              .marquee-track-right { animation: marqueeRight 75s linear infinite; }
+              @media (prefers-reduced-motion: reduce) {
+                .marquee-track-left, .marquee-track-right { animation: none; }
+              }
+            `}</style>
           </motion.div>
         </div>
       </section>

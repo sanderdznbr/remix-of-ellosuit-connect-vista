@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Home, Calendar as CalendarIcon } from 'lucide-react';
-import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
-import { routeFromTab } from '@/utils/dashboard-routes';
+
+
 
 interface PlanItem {
   id: string;

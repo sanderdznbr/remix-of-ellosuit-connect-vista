@@ -309,9 +309,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
 
   return (
     <div className="flex h-screen w-full relative" style={{ backgroundColor: '#0a0a0f' }}>
+      {activeTab !== 'home' && (
+        <button
+          onClick={() => navigate('/')}
+          className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3.5 py-2 rounded-full backdrop-blur-xl border transition-colors cursor-pointer hover:text-white"
+          style={{
+            backgroundColor: 'rgba(8,8,12,0.92)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.6)',
+          }}
+          aria-label="Voltar para Início"
+        >
+          <Home className="w-4 h-4" />
+          <span className="text-xs font-medium">Início</span>
+        </button>
+      )}
       {renderContent()}
     </div>
   );
+
 
 };
 

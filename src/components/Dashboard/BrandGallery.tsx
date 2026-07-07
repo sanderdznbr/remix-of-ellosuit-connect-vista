@@ -585,7 +585,7 @@ const BrandGallery: React.FC = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6"
+      <div className="flex-1 overflow-y-auto max-w-5xl mx-auto w-full px-4 sm:px-8 pb-14"
         onContextMenu={handleBackgroundContextMenu}
         onClick={handleBackgroundClick}
       >

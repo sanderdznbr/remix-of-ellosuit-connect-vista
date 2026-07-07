@@ -310,15 +310,46 @@ const Landing: React.FC = () => {
       </section>
 
       {/* Como funciona */}
-      <section id="como-funciona" className="py-24 md:py-36" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-        <div className="max-w-[820px] mx-auto px-6 text-center">
-          <Eyebrow>Como funciona</Eyebrow>
-          <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-8" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
-            Simples assim.
-          </motion.h2>
-          <motion.p {...fadeUp} className="leading-relaxed" style={{ fontSize: 'clamp(17px, 1.6vw, 21px)', color: INK_SOFT }}>
-            Você digita o que quer falar, pode ser uma ideia, um tema ou até um texto pronto. A IA entende, cria o roteiro, gera as imagens e monta o design. Com poucos cliques você tem um conteúdo pronto para baixar e postar. Sem complicação, sem curva de aprendizado e <span style={{ color: INK }}>100% editável</span> do jeito que você quiser.
-          </motion.p>
+      <section id="como-funciona" className="py-24 md:py-36 relative overflow-hidden" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 700px 300px at 50% 0%, rgba(139,92,246,0.10), transparent 70%)' }} />
+        <div className="relative max-w-[1100px] mx-auto px-6">
+          <div className="text-center max-w-[820px] mx-auto mb-16">
+            <Eyebrow>Como funciona</Eyebrow>
+            <motion.h2 {...fadeUp} className="font-semibold tracking-tight mb-6" style={{ color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, letterSpacing: '-0.025em' }}>
+              Simples assim.
+            </motion.h2>
+            <motion.p {...fadeUp} className="leading-relaxed" style={{ fontSize: 'clamp(16px, 1.4vw, 19px)', color: INK_SOFT }}>
+              Você digita o que quer falar. A IA entende, cria o roteiro, gera as imagens e monta o design. Em poucos cliques, um conteúdo pronto para postar — <span style={{ color: INK }}>100% editável</span>.
+            </motion.p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { n: '01', t: 'Descreva o tema', d: 'Fale sobre o que você quer postar. Uma ideia, um lançamento, uma dica. A IA entende o contexto do seu negócio.' },
+              { n: '02', t: 'Escolha o estilo', d: 'Selecione um visual profissional criado por designers de verdade. Sua marca, suas cores, seu rosto se quiser.' },
+              { n: '03', t: 'Publique em minutos', d: 'Recebe o conteúdo pronto — texto e imagem — e ajusta o que quiser. Baixa e posta direto nas suas redes.' },
+            ].map((s, i) => (
+              <motion.div
+                key={s.n}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.1 }}
+                className="relative p-8 rounded-3xl overflow-hidden"
+                style={{
+                  background: `linear-gradient(180deg, rgba(139,92,246,0.06) 0%, ${SURFACE} 100%)`,
+                  border: `1px solid ${HAIRLINE}`,
+                }}
+              >
+                <div className="absolute -top-6 -right-4 text-[120px] font-bold leading-none select-none" style={{ color: 'rgba(139,92,246,0.08)', letterSpacing: '-0.05em' }}>{s.n}</div>
+                <div className="relative">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] mb-4" style={{ color: PURPLE }}>Passo {s.n}</div>
+                  <h3 className="text-[22px] font-semibold mb-3 tracking-tight" style={{ color: '#fff', letterSpacing: '-0.015em' }}>{s.t}</h3>
+                  <p className="text-[14px] leading-relaxed" style={{ color: INK_SOFT }}>{s.d}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 

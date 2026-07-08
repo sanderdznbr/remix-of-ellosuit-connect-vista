@@ -5434,10 +5434,14 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         })
         .filter(Boolean) || [];
 
+      const instructionBlock = userInstruction
+        ? `\n\n[INSTRUÇÃO OBRIGATÓRIA DO USUÁRIO PARA O NOVO CARD — SIGA À RISCA]: ${userInstruction}${attachedImageUrls && attachedImageUrls.length > 0 ? `\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem ser usadas como base visual/contextual do card]` : ''}`
+        : (attachedImageUrls && attachedImageUrls.length > 0 ? `\n\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem guiar o novo card]` : '');
+
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: userInstruction ? `${topic.trim()}\n\n[Instrução do usuário para o novo card]: ${userInstruction}` : topic.trim(),
+          topic: `${topic.trim()}${instructionBlock}`,
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: (currentData?.cards.length || 7) + 1,
           imageCardIndices: [(currentData?.cards.length || 0)],
@@ -5446,6 +5450,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           regenerateCardIndex: currentData?.cards.length || 0,
           existingCardSummaries,
           textSizeHint: addCardModal.textSize,
+          ...(userInstruction ? { userInstruction, cardInstruction: userInstruction, forceUserInstruction: true } : {}),
+          ...(attachedImageUrls && attachedImageUrls.length > 0 ? { attachedImageUrls, referenceImageUrls: attachedImageUrls } : {}),
         },
       });
 
@@ -12396,8 +12402,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         generating={addCardModal.generatingAutoText}
         autoText={addCardModal.autoText}
         generate={generateAddCardAutoText}
-        onApprove={(text) => addOneMoreCard(addCardModal.cardType, text)}
-        onManualCreate={(text) => addOneMoreCard(addCardModal.cardType, text)}
+        onApprove={(text, atts) => {
+          if (atts && atts.length > 0) {
+            const newRefs: ReferenceImage[] = atts.map((url, i) => ({ url, thumb: url, label: `Anexo card ${i + 1}`, source: 'upload' as const, category: 'general' as const }));
+            setReferenceImages(prev => [...prev, ...newRefs]);
+          }
+          addOneMoreCard(addCardModal.cardType, text);
+        }}
+        onManualCreate={(text, atts) => {
+          if (atts && atts.length > 0) {
+            const newRefs: ReferenceImage[] = atts.map((url, i) => ({ url, thumb: url, label: `Anexo card ${i + 1}`, source: 'upload' as const, category: 'general' as const }));
+            setReferenceImages(prev => [...prev, ...newRefs]);
+          }
+          addOneMoreCard(addCardModal.cardType, text);
+        }}
         themeRgb={modeTheme.rgb}
         themeRgb2={modeTheme.rgb2}
         themeHex={modeTheme.hex}

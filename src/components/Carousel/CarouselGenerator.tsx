@@ -10271,7 +10271,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           </button>
                         )}
                         {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                          <button onClick={() => setShowAddCardMenu(true)}
+                          <button onClick={() => setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' })}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
                             <Plus className="h-4 w-4 text-white/60" />
                             Adicionar card

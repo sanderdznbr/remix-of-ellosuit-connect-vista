@@ -10089,8 +10089,9 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 )}
 
 
-                {/* ===== POST CONTENT (card gallery) ===== */}
-                <div className="flex flex-col items-center flex-1 md:max-w-[520px]">
+                {/* ===== POST CONTENT (card gallery) — centered ===== */}
+                <div className="flex flex-col items-center justify-center flex-1 md:min-h-[calc(100vh-6rem)] md:max-w-none w-full">
+
 
                 {/* Main card — single large view with swipe */}
                 <div

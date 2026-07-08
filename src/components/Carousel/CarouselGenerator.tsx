@@ -117,9 +117,10 @@ import {
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
   Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Redo2, Instagram,
-  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move, Minus,
+  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move, Minus, RefreshCw,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { CleanRegenOverlay } from './CleanRegenOverlay';
 import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
 import StepWebSearchResult from './wizard/StepWebSearchResult';
@@ -10145,12 +10146,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     )}
                     {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
-                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                        <div className="carousel-loader-wrapper" style={{ width: 60, height: 60 }}>
-                          <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 60, height: 60 }} />
-                        </div>
-                        <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
-                      </div>
+                      <CleanRegenOverlay
+                        compact
+                        themeHex={themeHex}
+                        label={regeneratingFace === activeCardIndex ? 'Regenerando rosto' : 'Regenerando card'}
+                        avgSeconds={regeneratingFace === activeCardIndex ? 12 : 18}
+                      />
                     )}
                     <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
                       <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -10290,7 +10291,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
                             disabled={regeneratingAll || regeneratingCard !== null}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
-                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
+                            <RefreshCw className={`h-4 w-4 text-emerald-400 ${regeneratingAll ? 'animate-spin' : ''}`} />
                             Regenerar todas
                           </button>
                         )}
@@ -11015,12 +11016,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                       {/* Regenerating overlay on mockup */}
                       {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                          <div className="carousel-loader-wrapper" style={{ width: 100, height: 100 }}>
-                            <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 100, height: 100 }} />
-                          </div>
-                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...'}</p>
-                        </div>
+                        <CleanRegenOverlay
+                          themeHex={themeHex}
+                          label={
+                            regeneratingFace === activeCardIndex
+                              ? 'Regenerando rosto'
+                              : regenAllProgress
+                                ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}`
+                                : 'Regenerando card'
+                          }
+                          avgSeconds={regeneratingFace === activeCardIndex ? 12 : 18}
+                        />
                       )}
                       {/* Guest lock overlay */}
                       {isCardLocked(activeCardIndex) && (

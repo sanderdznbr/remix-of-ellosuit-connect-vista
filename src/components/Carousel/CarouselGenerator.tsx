@@ -118,7 +118,6 @@ import {
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
   Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Redo2, Instagram,
   Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move,
-  Minus, Maximize2,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -551,9 +550,6 @@ const CarouselGenerator: React.FC = () => {
   const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
-  const [previewZoom, setPreviewZoom] = useState(1);
-  const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
-  const previewPanRef = useRef<{ dragging: boolean; startX: number; startY: number; baseX: number; baseY: number }>({ dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const [showStylePreview, setShowStylePreview] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
@@ -9886,17 +9882,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col md:flex-row md:items-stretch md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0', background: !isMobileView ? 'radial-gradient(ellipse 80% 60% at 50% 40%, #050509 0%, #030305 60%, #010102 100%)' : undefined }}>
+              <div className="w-full flex flex-col md:flex-row md:items-stretch md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+                {!isMobileView && (
+                  <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none" style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 40%, #060610 0%, #030308 55%, #000000 100%)' }} />
+                )}
 
                 {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
                 {!isMobileView && (
                   <div
                     className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
                     style={{
-                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
-                      backdropFilter: 'blur(24px)',
-                      WebkitBackdropFilter: 'blur(24px)',
+                      backdropFilter: 'blur(32px) saturate(140%)',
+                      WebkitBackdropFilter: 'blur(32px) saturate(140%)',
                       boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
                     }}
                   >
@@ -10093,50 +10092,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     const cardDisplayH = baseW * (cardH / cardW);
                     return (
                   <div
-                    className="relative"
+                    className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
                     style={{
                       width: cardDisplayW,
                       height: cardDisplayH,
-                      transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
-                      transition: previewPanRef.current.dragging ? 'none' : 'transform 200ms ease',
-                      cursor: previewZoom > 1 ? (previewPanRef.current.dragging ? 'grabbing' : 'grab') : 'pointer',
-                    }}
-                    onWheel={(e) => {
-                      if (!isDesk) return;
-                      e.preventDefault();
-                      const delta = -e.deltaY * 0.0015;
-                      setPreviewZoom(z => Math.max(1, Math.min(4, +(z + delta).toFixed(2))));
-                    }}
-                    onMouseDown={(e) => {
-                      if (previewZoom <= 1) return;
-                      previewPanRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, baseX: previewPan.x, baseY: previewPan.y };
-                    }}
-                    onMouseMove={(e) => {
-                      const s = previewPanRef.current;
-                      if (!s.dragging) return;
-                      setPreviewPan({ x: s.baseX + (e.clientX - s.startX), y: s.baseY + (e.clientY - s.startY) });
-                    }}
-                    onMouseUp={() => { previewPanRef.current.dragging = false; }}
-                    onMouseLeave={() => { previewPanRef.current.dragging = false; }}
-                  >
-                  <div
-                    className="relative rounded-2xl overflow-hidden shadow-2xl group w-full h-full"
-                    style={{
                       boxShadow: `0 40px 100px -25px rgba(0,0,0,0.75), 0 0 80px -20px rgba(${themeRgb},0.28)`,
-                      cursor: previewZoom > 1 ? 'inherit' : 'pointer',
                     }}
                     onClick={() => {
-                      if (previewZoom > 1) return;
                       if (!isCardLocked(activeCardIndex)) {
                         setShowCardActionSheet(true);
                       }
                     }}
                   >
-                    <div style={{ 
-                      width: previewW, 
-                      height: previewH, 
-                      transform: `scale(${cardDisplayW / previewW})`, 
-                      transformOrigin: 'top left' 
+                    <div style={{
+                      width: previewW,
+                      height: previewH,
+                      transform: `scale(${cardDisplayW / previewW})`,
+                      transformOrigin: 'top left'
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                     </div>
@@ -10154,13 +10126,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
                       </div>
                     )}
-                    {/* Edit hint */}
                     <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
                       <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <Pencil className="w-3.5 h-3.5 text-white/80" />
                       </div>
                     </div>
-                  </div>
                   </div>
                     );
                   })()}
@@ -10221,10 +10191,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div
                     className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
                     style={{
-                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
-                      backdropFilter: 'blur(24px)',
-                      WebkitBackdropFilter: 'blur(24px)',
+                      backdropFilter: 'blur(32px) saturate(140%)',
+                      WebkitBackdropFilter: 'blur(32px) saturate(140%)',
                       boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
                     }}
                   >
@@ -10286,32 +10256,39 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                       <div className="mx-4 h-px bg-white/[0.05] my-2" />
 
-                      {/* ZOOM controls */}
+                      {/* MAIS AÇÕES */}
                       <div className="px-5 pt-1 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Zoom</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Mais ações</span>
                       </div>
-                      <div className="px-4 pb-4">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setPreviewZoom(z => Math.max(1, +(z - 0.25).toFixed(2)))}
-                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
-                            <Minus className="h-3.5 w-3.5" />
-                          </button>
-                          <div className="flex-1 text-center text-[12px] font-mono text-white/70 tabular-nums">
-                            {Math.round(previewZoom * 100)}%
-                          </div>
-                          <button onClick={() => setPreviewZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}
-                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <button onClick={() => { setPreviewZoom(1); setPreviewPan({ x: 0, y: 0 }); }}
-                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] transition-all">
-                          <Maximize2 className="h-3 w-3" />
-                          Ajustar à tela
+                      <div className="px-3 pb-3 space-y-0.5">
+                        <button
+                          onClick={() => {
+                            const card = carouselData.cards[activeCardIndex];
+                            if (!card) return;
+                            const newCard = JSON.parse(JSON.stringify(card));
+                            const newCards = [...carouselData.cards];
+                            newCards.splice(activeCardIndex + 1, 0, newCard);
+                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                            setActiveCardIndex(activeCardIndex + 1);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Layers className="h-4 w-4 text-sky-400" />
+                          Duplicar card
                         </button>
-                        <p className="text-[10px] text-white/30 mt-2 leading-relaxed">
-                          Use a rolagem sobre o post para zoom, ou arraste para mover quando ampliado.
-                        </p>
+                        {postCaption && (
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                            <Copy className="h-4 w-4 text-amber-400" />
+                            Copiar legenda
+                          </button>
+                        )}
+                        <button
+                          onClick={() => resetWizardState()}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Plus className="h-4 w-4 text-white/50" />
+                          Novo carrossel
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -11383,8 +11360,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="fixed bottom-0 left-0 right-0 z-40"
                 style={{
                   backgroundColor: 'rgba(10,10,15,0.97)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
+                  backdropFilter: 'blur(32px) saturate(140%)',
+                  WebkitBackdropFilter: 'blur(32px) saturate(140%)',
                   borderTop: '1px solid rgba(255,255,255,0.06)',
                   paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
                 }}>

@@ -123,32 +123,6 @@ const Calendario: React.FC = () => {
           </p>
         </div>
 
-        {/* Upcoming holidays banner */}
-        {upcomingHolidays.length > 0 && (
-          <div className="mb-6 rounded-2xl border border-amber-500/20 p-4" style={{ backgroundColor: 'rgba(245,158,11,0.05)' }}>
-            <div className="flex items-center gap-2 mb-2.5 text-amber-300">
-              <Star className="w-3.5 h-3.5" />
-              <span className="text-[11px] uppercase tracking-wider font-semibold">Próximas datas comemorativas</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {upcomingHolidays.map((h) => (
-                <button
-                  key={h.date}
-                  onClick={() => {
-                    const d = new Date(h.date + 'T00:00:00');
-                    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-                    setModalDate(h.date);
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border border-white/[0.08] hover:bg-white/[0.04] transition-colors"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: HOLIDAY_TYPE_COLOR[h.type] }} />
-                  <span className="text-white/80">{h.name}</span>
-                  <span className="text-white/40">{new Date(h.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">

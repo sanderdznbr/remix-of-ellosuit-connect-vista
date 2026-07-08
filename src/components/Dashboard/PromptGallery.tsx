@@ -161,9 +161,10 @@ const PromptGallery: React.FC = () => {
   };
 
   const handleAddModalMedia = (files: FileList) => {
+    const effectiveType = selectedMediaType === 'custom' && customCategory.trim() ? customCategory.trim() : selectedMediaType;
     const newMedia = Array.from(files).map(file => ({
       file,
-      type: selectedMediaType,
+      type: effectiveType,
       preview: URL.createObjectURL(file),
     }));
     setModalMedia(prev => [...prev, ...newMedia]);

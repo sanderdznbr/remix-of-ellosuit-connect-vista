@@ -206,7 +206,7 @@ const PromptGallery: React.FC = () => {
       if (editingId) {
         await supabase.from('saved_prompts').update({
           title: title.trim(),
-          content: content.trim(),
+          content: composeContent(),
           avatar_url: avatarUrl || null,
         } as any).eq('id', editingId);
         // Upload any new modal media

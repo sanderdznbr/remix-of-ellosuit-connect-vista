@@ -5421,7 +5421,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
 
   // ===== ADD +1 CARD TO EXISTING CAROUSEL =====
   // ===== GENERATE TEXT PREVIEW FOR NEW CARD =====
-  const generateAddCardAutoText = async () => {
+  const generateAddCardAutoText = async (userInstruction?: string, attachedImageUrls?: string[]) => {
     setAddCardModal(prev => ({ ...prev, generatingAutoText: true, autoText: null }));
     try {
       const currentData = carouselDataRef.current;

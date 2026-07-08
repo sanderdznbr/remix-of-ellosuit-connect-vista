@@ -131,52 +131,26 @@ export const AddCardChatModal = ({
           />
 
           {/* Header */}
-          <div className="relative flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-            <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb2},0.7))`, boxShadow: `0 0 24px rgba(${themeRgb},0.5)` }}>
-                <Sparkles className="h-4 w-4 text-white" />
-                <span className="absolute inset-0 rounded-full animate-ping" style={{ backgroundColor: `rgba(${themeRgb},0.3)` }} />
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">Assistente de card</p>
-                <p className="text-white font-semibold text-[15px] leading-tight">Novo card — vamos conversar</p>
-              </div>
+          <div className="relative flex items-center justify-between px-6 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Novo card</p>
+              <p className="text-white font-semibold text-[16px] leading-tight mt-1">Vamos conversar</p>
             </div>
-            <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors">
-              <X className="h-4 w-4 text-white/50" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => send(true)}
+                disabled={generating}
+                className="px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40 hover:bg-white/[0.05]"
+                style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                Criar automaticamente
+              </button>
+              <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors">
+                <X className="h-4 w-4 text-white/50" />
+              </button>
+            </div>
           </div>
 
-          {/* Quick controls */}
-          <div className="px-5 py-3 flex items-center gap-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/30">Tamanho</span>
-            <div className="flex gap-1">
-              {(['short', 'medium', 'long'] as const).map(v => (
-                <button
-                  key={v}
-                  onClick={() => onTextSizeChange(v)}
-                  className="px-3 py-1 rounded-full text-[11px] font-medium transition-all"
-                  style={{
-                    backgroundColor: textSize === v ? `rgba(${themeRgb},0.18)` : 'rgba(255,255,255,0.03)',
-                    color: textSize === v ? themeHex : 'rgba(255,255,255,0.5)',
-                    border: `1px solid ${textSize === v ? `rgba(${themeRgb},0.4)` : 'rgba(255,255,255,0.06)'}`,
-                  }}
-                >
-                  {v === 'short' ? 'Curto' : v === 'medium' ? 'Médio' : 'Longo'}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1" />
-            <button
-              onClick={() => send(true)}
-              disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all disabled:opacity-40"
-              style={{ background: `linear-gradient(135deg, rgba(${themeRgb},0.25), rgba(${themeRgb2},0.15))`, border: `1px solid rgba(${themeRgb},0.35)`, color: themeHex }}
-            >
-              <Zap className="h-3 w-3" />
-              Criar automaticamente
-            </button>
-          </div>
 
           {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6 space-y-4">

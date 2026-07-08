@@ -10215,9 +10215,105 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </p>
                 </div>
 
-                {/* Right spacer to visually center the post against the left sidebar */}
+                {/* ===== DESKTOP RIGHT SIDEBAR — projeto + zoom ===== */}
                 {!isMobileView && (
-                  <div aria-hidden className="hidden md:block w-[300px] flex-shrink-0" />
+                  <div
+                    className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                      boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Projeto</span>
+                        <span className="text-[13px] font-medium text-white/85 mt-0.5">Ações e legenda</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
+                      <div className="px-3 pb-2 space-y-0.5">
+                        <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/80 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <FileText className="h-4 w-4 text-purple-400" />
+                          Legenda
+                        </button>
+                        <button onClick={() => setShowFullScreenStylePicker(true)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Palette className="h-4 w-4 text-violet-400" />
+                          Mudar estilo
+                        </button>
+                        <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Repeat2 className="h-4 w-4 text-emerald-400" />
+                          Recriar carrossel
+                        </button>
+                        {carouselData.cards.length >= 2 && !isGuest && (
+                          <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
+                            disabled={regeneratingAll || regeneratingCard !== null}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
+                            Regenerar todas
+                          </button>
+                        )}
+                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                          <button onClick={() => setShowAddCardMenu(true)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                            <Plus className="h-4 w-4 text-white/60" />
+                            Adicionar card
+                          </button>
+                        )}
+                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                          <>
+                            <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
+                              disabled={repositioningLogo}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                              {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4 text-cyan-400" />}
+                              Reposicionar logo
+                            </button>
+                            {showLogoRepositionPanel && (
+                              <div className="px-2 pb-3 pt-1">
+                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="mx-4 h-px bg-white/[0.05] my-2" />
+
+                      {/* ZOOM controls */}
+                      <div className="px-5 pt-1 pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Zoom</span>
+                      </div>
+                      <div className="px-4 pb-4">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setPreviewZoom(z => Math.max(1, +(z - 0.25).toFixed(2)))}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="flex-1 text-center text-[12px] font-mono text-white/70 tabular-nums">
+                            {Math.round(previewZoom * 100)}%
+                          </div>
+                          <button onClick={() => setPreviewZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <button onClick={() => { setPreviewZoom(1); setPreviewPan({ x: 0, y: 0 }); }}
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] transition-all">
+                          <Maximize2 className="h-3 w-3" />
+                          Ajustar à tela
+                        </button>
+                        <p className="text-[10px] text-white/30 mt-2 leading-relaxed">
+                          Use a rolagem sobre o post para zoom, ou arraste para mover quando ampliado.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

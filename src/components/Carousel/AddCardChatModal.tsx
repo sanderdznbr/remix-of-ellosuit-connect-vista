@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Paperclip, Wand2, Loader2, RotateCcw, Sparkles, Image as ImageIcon, Type, Zap } from 'lucide-react';
+import { X, Send, Paperclip, Loader2, RotateCcw, Type } from 'lucide-react';
 
 type ChatMsg =
   | { id: string; role: 'assistant'; kind: 'text'; content: string }

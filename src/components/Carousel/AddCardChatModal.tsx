@@ -212,10 +212,8 @@ export const AddCardChatModal = ({
                 Pensando...
               </div>
             )}
-                </div>
-              </div>
-            )}
           </div>
+
 
           {/* Attachments preview */}
           {attachments.length > 0 && (

@@ -10051,15 +10051,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         )}
                       </div>
 
-                      <div className="mx-4 h-px bg-white/[0.05] my-1" />
-
-                      <div className="px-3 py-3">
-                        <button onClick={() => resetWizardState()}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] hover:border-white/[0.12] transition-all">
-                          <Plus className="h-3.5 w-3.5" />
-                          Novo carrossel
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}

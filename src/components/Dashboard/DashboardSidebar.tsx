@@ -21,7 +21,9 @@ interface DashboardSidebarProps {
   onToggleCollapse?: () => void;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, collapsed = false, onToggleCollapse }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, collapsed: collapsedProp = false, onToggleCollapse }) => {
+  const [hovered, setHovered] = useState(false);
+  const collapsed = collapsedProp && !hovered;
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -151,12 +153,17 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
 
   return (
     <aside
-      className={`relative ${collapsed ? 'w-[64px]' : 'w-[264px]'} h-screen flex flex-col shrink-0 overflow-hidden transition-all duration-300 border-r`}
-      style={{
-        background: 'linear-gradient(180deg, #050507 0%, #07070b 100%)',
-        borderColor: 'rgba(255,255,255,0.03)',
-      }}
+      onMouseEnter={() => collapsedProp && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`relative ${collapsedProp ? 'w-[64px]' : 'w-[264px]'} h-screen shrink-0 transition-all duration-300`}
     >
+      <div
+        className={`${collapsed ? 'w-[64px]' : 'w-[264px]'} h-screen flex flex-col overflow-hidden transition-all duration-300 border-r absolute top-0 left-0 z-40 ${collapsedProp && hovered ? 'shadow-2xl shadow-black/50' : ''}`}
+        style={{
+          background: 'linear-gradient(180deg, #050507 0%, #07070b 100%)',
+          borderColor: 'rgba(255,255,255,0.03)',
+        }}
+      >
       {/* Very subtle top vignette */}
       <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse at top, rgba(139,92,246,0.05) 0%, transparent 70%)' }} />
 
@@ -357,6 +364,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
             </div>
           </>
         )}
+      </div>
       </div>
     </aside>
   );

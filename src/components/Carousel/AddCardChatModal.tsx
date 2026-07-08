@@ -29,6 +29,7 @@ export const AddCardChatModal = ({
   open, onClose, cardType, textSize, onTextSizeChange, generating, autoText,
   generate, onApprove, onManualCreate, themeRgb, themeRgb2, themeHex,
 }: Props) => {
+  const [mode, setMode] = useState<'auto' | 'chat'>('chat');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -36,21 +37,31 @@ export const AddCardChatModal = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const greetingFor = (m: 'auto' | 'chat'): ChatMsg => ({
+    id: uid(),
+    role: 'assistant',
+    kind: 'text',
+    content: m === 'auto'
+      ? `Modo **Criar automaticamente** ativo. Vou decidir sozinho o ângulo, título e corpo do próximo card ${cardType === 'composed' ? 'composto' : 'sólido'}. Se quiser, anexe uma imagem antes de clicar em **Gerar agora** — mas nenhum texto é obrigatório.`
+      : `Modo **Conduzir por chat** ativo. Me diga exatamente o que quer no card ${cardType === 'composed' ? 'composto' : 'sólido'}: tema, tom, referência, screenshot, print de produto. Eu sigo sua instrução à risca.`,
+  });
+
   // Reset & greet when opened
   useEffect(() => {
     if (open) {
-      setMessages([
-        {
-          id: uid(),
-          role: 'assistant',
-          kind: 'text',
-          content: `Vamos criar seu novo card ${cardType === 'composed' ? 'composto' : 'sólido'}. Me diga o que quer trazer nele — pode digitar um tema, colar uma referência, anexar imagem/screenshot ou clicar em **Criar automaticamente** que eu decido.`,
-        },
-      ]);
+      setMode('chat');
+      setMessages([greetingFor('chat')]);
       setInput('');
       setAttachments([]);
     }
   }, [open, cardType]);
+
+  // Swap greeting when mode changes while open
+  useEffect(() => {
+    if (!open) return;
+    setMessages([greetingFor(mode)]);
+    setInput('');
+  }, [mode]);
 
   // Push AI suggestion when autoText arrives
   useEffect(() => {

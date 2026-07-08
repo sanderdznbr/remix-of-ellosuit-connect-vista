@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare } from 'lucide-react';
+import { Search, Plus, Clock, Star, Grid3X3, List, Trash2, Share2, Loader2, Pencil, Check, Sparkles, X, CheckSquare, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +30,38 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
   const [publishDialogItem, setPublishDialogItem] = useState<any | null>(null);
   const [publishCaption, setPublishCaption] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
+  const [scheduleItem, setScheduleItem] = useState<any | null>(null);
+  const [scheduleDate, setScheduleDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  const openScheduleDialog = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setScheduleItem(item);
+    setScheduleDate(new Date().toISOString().slice(0, 10));
+  };
+
+  const confirmSchedule = () => {
+    if (!scheduleItem || !scheduleDate) return;
+    try {
+      const raw = localStorage.getItem('editorial_calendar_posts_v1');
+      const existing = raw ? JSON.parse(raw) : [];
+      const cover = scheduleItem.cover_url || scheduleItem.carousel_data?.cards?.[0]?.imageUrl || null;
+      const next = [
+        ...existing.filter((p: any) => p.carouselId !== scheduleItem.id),
+        {
+          id: crypto.randomUUID(),
+          date: scheduleDate,
+          carouselId: scheduleItem.id,
+          title: scheduleItem.title || scheduleItem.topic || 'Post',
+          cover,
+        },
+      ];
+      localStorage.setItem('editorial_calendar_posts_v1', JSON.stringify(next));
+      toast.success('Post vinculado ao calendário!');
+      setScheduleItem(null);
+    } catch {
+      toast.error('Erro ao vincular ao calendário');
+    }
+  };
 
   // Selection & create-style state
   const [selectionMode, setSelectionMode] = useState(false);

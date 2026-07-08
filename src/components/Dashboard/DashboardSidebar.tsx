@@ -157,12 +157,16 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
       {collapsedProp && (
         <div
           className={`fixed inset-0 z-30 pointer-events-none transition-all duration-300 ${hovered ? 'opacity-100 backdrop-blur-md bg-black/30' : 'opacity-0 backdrop-blur-0 bg-black/0'}`}
+          aria-hidden="true"
         />
       )}
     <aside
       onMouseEnter={() => collapsedProp && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`relative ${collapsedProp ? 'w-[64px]' : 'w-[264px]'} h-screen shrink-0 transition-all duration-300`}
+      aria-label="Navegação principal"
+      aria-expanded={!collapsed}
+      data-state={collapsed ? 'collapsed' : 'expanded'}
     >
       <div
         className={`${collapsed ? 'w-[64px]' : 'w-[264px]'} h-screen flex flex-col overflow-hidden transition-all duration-300 border-r absolute top-0 left-0 z-40 ${collapsedProp && hovered ? 'shadow-2xl shadow-black/50' : ''}`}

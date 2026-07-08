@@ -10086,9 +10086,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     </div>
                   </div>
-
-                  </div>
                 )}
+
 
                 {/* ===== POST CONTENT (card gallery) ===== */}
                 <div className="flex flex-col items-center flex-1 md:max-w-[520px]">

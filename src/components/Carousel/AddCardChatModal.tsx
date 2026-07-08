@@ -192,7 +192,7 @@ export const AddCardChatModal = ({
                   Conduzir por chat
                 </button>
                 <button
-                  onClick={() => setMode('auto')}
+                  onClick={() => changeMode('auto')}
                   disabled={generating}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40"
                   style={mode === 'auto'

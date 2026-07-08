@@ -10256,7 +10256,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
                           <Repeat2 className="h-4 w-4 text-emerald-400" />
-                          Recriar carrossel
+                          {carouselData.cards.length === 1 ? 'Recriar postagem' : 'Recriar carrossel'}
                         </button>
                         {carouselData.cards.length >= 2 && !isGuest && (
                           <button onClick={() => { setContinuousMode(false); regenerateAll(); }}

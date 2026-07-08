@@ -5436,7 +5436,7 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: topic.trim(),
+          topic: userInstruction ? `${topic.trim()}\n\n[Instrução do usuário para o novo card]: ${userInstruction}` : topic.trim(),
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: (currentData?.cards.length || 7) + 1,
           imageCardIndices: [(currentData?.cards.length || 0)],

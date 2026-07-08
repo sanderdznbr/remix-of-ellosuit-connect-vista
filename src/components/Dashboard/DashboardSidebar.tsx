@@ -125,7 +125,8 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
     return (
       <button
         onClick={onClick}
-        className={`relative w-full flex items-center gap-3 pl-5 pr-3 py-2.5 text-[14px] tracking-tight transition-all cursor-pointer group ${
+        aria-current={active ? 'page' : undefined}
+        className={`relative w-full flex items-center gap-3 pl-5 pr-3 py-2.5 text-[14px] tracking-tight transition-all cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ${
           active ? 'text-white' : 'text-white/50 hover:text-white/90'
         }`}
       >

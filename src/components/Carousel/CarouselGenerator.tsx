@@ -117,7 +117,8 @@ import {
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
   Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Redo2, Instagram,
-  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move
+  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move,
+  Minus, Maximize2,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -550,6 +551,9 @@ const CarouselGenerator: React.FC = () => {
   const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
+  const previewPanRef = useRef<{ dragging: boolean; startX: number; startY: number; baseX: number; baseY: number }>({ dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const [showStylePreview, setShowStylePreview] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);
@@ -9882,7 +9886,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col md:flex-row md:items-start md:justify-between md:gap-6 items-center relative md:min-h-[calc(100vh-6rem)] md:px-6" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+              <div className="w-full flex flex-col md:flex-row md:items-stretch md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0', background: !isMobileView ? 'radial-gradient(ellipse 80% 60% at 50% 40%, #050509 0%, #030305 60%, #010102 100%)' : undefined }}>
 
                 {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
                 {!isMobileView && (
@@ -10023,60 +10027,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         </>
                       )}
 
-                      {/* PROJETO */}
-                      <div className="flex items-center px-5 pt-2 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Projeto</span>
-                      </div>
-                      <div className="px-3 pb-2 space-y-0.5">
-                        <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <Repeat2 className="h-4 w-4 text-emerald-400" />
-                          Recriar carrossel
-                        </button>
-                        {carouselData.cards.length >= 2 && !isGuest && (
-                          <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
-                            disabled={regeneratingAll || regeneratingCard !== null}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
-                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
-                            Regenerar todas
-                          </button>
-                        )}
-                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
-                          <button onClick={() => setShowAddCardMenu(true)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                            <Plus className="h-4 w-4 text-white/60" />
-                            Adicionar card
-                          </button>
-                        )}
-                        <button onClick={() => setShowFullScreenStylePicker(true)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <Palette className="h-4 w-4 text-violet-400" />
-                          Mudar estilo
-                        </button>
-                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
-                          <>
-                            <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
-                              disabled={repositioningLogo}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
-                              {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4 text-cyan-400" />}
-                              Reposicionar logo
-                            </button>
-                            {showLogoRepositionPanel && (
-                              <div className="px-2 pb-3 pt-1">
-                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
-                              </div>
-                            )}
-                          </>
-                        )}
-                        <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
-                          <FileText className="h-4 w-4 text-white/60" />
-                          Legenda
-                        </button>
-                      </div>
-
-                      <div className="mx-4 h-px bg-white/[0.05] my-1" />
-
                       <div className="px-3 py-3">
                         <button onClick={() => resetWizardState()}
                           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] hover:border-white/[0.12] transition-all">
@@ -10136,20 +10086,47 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
                     const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
                     const isDesk = vw >= 768;
-                    const maxByH = isDesk ? Math.min(vh - 200, 720) : 420;
-                    const maxByW = isDesk ? Math.min(vw - 760, 560) : vw - 80;
+                    const maxByH = isDesk ? Math.min(vh - 160, 820) : 420;
+                    const maxByW = isDesk ? Math.min(vw - 700, 640) : vw - 80;
                     const baseW = Math.max(320, Math.min(maxByW, maxByH * (cardW / cardH)));
                     const cardDisplayW = baseW;
                     const cardDisplayH = baseW * (cardH / cardW);
                     return (
                   <div
-                    className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
-                    style={{ 
+                    className="relative"
+                    style={{
                       width: cardDisplayW,
                       height: cardDisplayH,
-                      boxShadow: `0 30px 80px -20px rgba(0,0,0,0.6), 0 0 60px -15px rgba(${themeRgb},0.22)`,
+                      transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
+                      transition: previewPanRef.current.dragging ? 'none' : 'transform 200ms ease',
+                      cursor: previewZoom > 1 ? (previewPanRef.current.dragging ? 'grabbing' : 'grab') : 'pointer',
+                    }}
+                    onWheel={(e) => {
+                      if (!isDesk) return;
+                      e.preventDefault();
+                      const delta = -e.deltaY * 0.0015;
+                      setPreviewZoom(z => Math.max(1, Math.min(4, +(z + delta).toFixed(2))));
+                    }}
+                    onMouseDown={(e) => {
+                      if (previewZoom <= 1) return;
+                      previewPanRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, baseX: previewPan.x, baseY: previewPan.y };
+                    }}
+                    onMouseMove={(e) => {
+                      const s = previewPanRef.current;
+                      if (!s.dragging) return;
+                      setPreviewPan({ x: s.baseX + (e.clientX - s.startX), y: s.baseY + (e.clientY - s.startY) });
+                    }}
+                    onMouseUp={() => { previewPanRef.current.dragging = false; }}
+                    onMouseLeave={() => { previewPanRef.current.dragging = false; }}
+                  >
+                  <div
+                    className="relative rounded-2xl overflow-hidden shadow-2xl group w-full h-full"
+                    style={{
+                      boxShadow: `0 40px 100px -25px rgba(0,0,0,0.75), 0 0 80px -20px rgba(${themeRgb},0.28)`,
+                      cursor: previewZoom > 1 ? 'inherit' : 'pointer',
                     }}
                     onClick={() => {
+                      if (previewZoom > 1) return;
                       if (!isCardLocked(activeCardIndex)) {
                         setShowCardActionSheet(true);
                       }
@@ -10177,12 +10154,13 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
                       </div>
                     )}
-                    {/* Edit hint: pencil icon on mobile, text on desktop hover */}
+                    {/* Edit hint */}
                     <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
                       <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <Pencil className="w-3.5 h-3.5 text-white/80" />
                       </div>
                     </div>
+                  </div>
                   </div>
                     );
                   })()}
@@ -10238,9 +10216,105 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 </p>
                 </div>
 
-                {/* Right spacer to visually center the post against the left sidebar */}
+                {/* ===== DESKTOP RIGHT SIDEBAR — projeto + zoom ===== */}
                 {!isMobileView && (
-                  <div aria-hidden className="hidden md:block w-[300px] flex-shrink-0" />
+                  <div
+                    className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
+                    style={{
+                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                      boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+                    }}
+                  >
+                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Projeto</span>
+                        <span className="text-[13px] font-medium text-white/85 mt-0.5">Ações e legenda</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
+                      <div className="px-3 pb-2 space-y-0.5">
+                        <button onClick={() => { if (!postCaption) { openCaptionConfigDialog(); } else { setShowCaptionPanel(true); } }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/80 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <FileText className="h-4 w-4 text-purple-400" />
+                          Legenda
+                        </button>
+                        <button onClick={() => setShowFullScreenStylePicker(true)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Palette className="h-4 w-4 text-violet-400" />
+                          Mudar estilo
+                        </button>
+                        <button onClick={() => { setStyleChangeSource('recreate'); setShowStylePanel(true); }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Repeat2 className="h-4 w-4 text-emerald-400" />
+                          Recriar carrossel
+                        </button>
+                        {carouselData.cards.length >= 2 && !isGuest && (
+                          <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
+                            disabled={regeneratingAll || regeneratingCard !== null}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
+                            Regenerar todas
+                          </button>
+                        )}
+                        {!activeMarketplaceStyle?.imageGeneration?.prompt_style && !isGuest && (
+                          <button onClick={() => setShowAddCardMenu(true)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                            <Plus className="h-4 w-4 text-white/60" />
+                            Adicionar card
+                          </button>
+                        )}
+                        {logoUrl && carouselData.cards.some(c => c.imageUrlRaw) && !isGuest && (
+                          <>
+                            <button onClick={() => setShowLogoRepositionPanel(prev => !prev)}
+                              disabled={repositioningLogo}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
+                              {repositioningLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Move className="h-4 w-4 text-cyan-400" />}
+                              Reposicionar logo
+                            </button>
+                            {showLogoRepositionPanel && (
+                              <div className="px-2 pb-3 pt-1">
+                                <LogoPositionPicker logoPosition={logoPosition} setLogoPosition={(pos) => repositionLogo(pos)} />
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="mx-4 h-px bg-white/[0.05] my-2" />
+
+                      {/* ZOOM controls */}
+                      <div className="px-5 pt-1 pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Zoom</span>
+                      </div>
+                      <div className="px-4 pb-4">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setPreviewZoom(z => Math.max(1, +(z - 0.25).toFixed(2)))}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="flex-1 text-center text-[12px] font-mono text-white/70 tabular-nums">
+                            {Math.round(previewZoom * 100)}%
+                          </div>
+                          <button onClick={() => setPreviewZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}
+                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <button onClick={() => { setPreviewZoom(1); setPreviewPan({ x: 0, y: 0 }); }}
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] transition-all">
+                          <Maximize2 className="h-3 w-3" />
+                          Ajustar à tela
+                        </button>
+                        <p className="text-[10px] text-white/30 mt-2 leading-relaxed">
+                          Use a rolagem sobre o post para zoom, ou arraste para mover quando ampliado.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

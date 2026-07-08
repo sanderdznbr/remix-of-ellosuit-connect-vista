@@ -10237,6 +10237,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   {activeCardIndex + 1} <span className="text-white/20">/</span> {carouselData.cards.length}
                 </p>
                 </div>
+
+                {/* Right spacer to visually center the post against the left sidebar */}
+                {!isMobileView && (
+                  <div aria-hidden className="hidden md:block w-[300px] flex-shrink-0" />
+                )}
               </div>
             )}
 

@@ -181,7 +181,7 @@ export const AddCardChatModal = ({
               {/* Mode selector */}
               <div className="flex items-center p-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <button
-                  onClick={() => setMode('chat')}
+                  onClick={() => changeMode('chat')}
                   disabled={generating}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40"
                   style={mode === 'chat'

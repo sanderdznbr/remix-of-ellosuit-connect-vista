@@ -551,9 +551,6 @@ const CarouselGenerator: React.FC = () => {
   const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
-  const [previewZoom, setPreviewZoom] = useState(1);
-  const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
-  const previewPanRef = useRef<{ dragging: boolean; startX: number; startY: number; baseX: number; baseY: number }>({ dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const [showStylePreview, setShowStylePreview] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
   const [showTweetTextEditor, setShowTweetTextEditor] = useState(false);

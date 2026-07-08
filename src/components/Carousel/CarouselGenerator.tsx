@@ -9912,27 +9912,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     </div>
 
-                    {/* Hero Export CTA */}
-                    <div className="px-4 pb-4">
-                      <button
-                        onClick={isGuest ? () => setShowGuestPaywall(true) : () => setShowExportMenu(true)}
-                        disabled={exporting}
-                        className="group relative flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl text-[14px] font-semibold text-white transition-all disabled:opacity-50 w-full overflow-hidden"
-                        style={{
-                          background: `linear-gradient(135deg, rgba(${themeRgb},0.9), rgba(${themeRgb},0.65))`,
-                          boxShadow: `0 8px 24px -8px rgba(${themeRgb},0.55), inset 0 1px 0 rgba(255,255,255,0.15)`,
-                        }}
-                      >
-                        <span
-                          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ background: `linear-gradient(135deg, rgba(${themeRgb},1), rgba(${themeRgb},0.75))` }}
-                        />
-                        <span className="relative flex items-center gap-2.5">
-                          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : isGuest ? <Lock className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-                          {isGuest ? 'Assine para baixar' : 'Exportar post'}
-                        </span>
-                      </button>
-                    </div>
 
                     <div className="flex-1 min-h-0 overflow-y-auto sidebar-scroll">
                       {/* CARD ATUAL */}

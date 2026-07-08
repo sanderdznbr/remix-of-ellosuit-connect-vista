@@ -117,7 +117,7 @@ import {
   ArrowLeft, Sparkles, Download, Plus, Trash2, Image as ImageIcon, 
   Search, Edit3, Loader2, X, Upload, Wand2, Type, Palette, Globe, Paperclip, SlidersHorizontal,
   Save, History, Clock, RotateCcw, ChevronLeft, ChevronRight, Check, ExternalLink, FileText, Copy, Lock, Menu, Home, User, Users, MoreHorizontal, Image, UserCheck, Pencil, Folder, Smartphone, Layers, Undo2, Redo2, Instagram,
-  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move,
+  Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move, Minus,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toast as sonnerToast } from 'sonner';
@@ -549,6 +549,8 @@ const CarouselGenerator: React.FC = () => {
   const [showMobileMoreActions, setShowMobileMoreActions] = useState(false);
   const [resultViewMode, setResultViewMode] = useState<'basic' | 'advanced'>('basic');
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
+  const [fullscreenZoom, setFullscreenZoom] = useState(1);
+  const [fullscreenPan, setFullscreenPan] = useState({ x: 0, y: 0 });
   const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
   const [showStylePreview, setShowStylePreview] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);
@@ -10348,75 +10350,76 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               </div>
             )}
 
-            {/* ===== Card Action Bottom Sheet (basic mode) ===== */}
+            {/* ===== Fullscreen Card Viewer (with zoom) ===== */}
             <AnimatePresence>
-              {showCardActionSheet && resultViewMode === 'basic' && (
-                <>
-                  <motion.div
-                    key="card-action-overlay"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/60 z-[70]"
-                    onClick={() => setShowCardActionSheet(false)}
-                  />
-                  <motion.div
-                    key="card-action-sheet"
-                    initial={{ opacity: 0, scale: 0.92 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.92 }}
-                    transition={{ duration: 0.2 }}
-                    className="fixed inset-0 z-[71] flex items-center justify-center px-6"
-                    onClick={(e) => { if (e.target === e.currentTarget) setShowCardActionSheet(false); }}
+              {showCardActionSheet && (
+                <motion.div
+                  key="card-fullscreen-viewer"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-[80] bg-black/95 flex items-center justify-center overflow-hidden"
+                  onClick={() => { setShowCardActionSheet(false); setFullscreenZoom(1); setFullscreenPan({ x: 0, y: 0 }); }}
+                  onWheel={(e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+                    setFullscreenZoom(z => Math.min(5, Math.max(0.5, z + delta)));
+                  }}
+                >
+                  {/* Close */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowCardActionSheet(false); setFullscreenZoom(1); setFullscreenPan({ x: 0, y: 0 }); }}
+                    className="absolute top-4 right-4 z-10 h-11 w-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                    aria-label="Fechar"
                   >
-                    <div className="w-full max-w-xs rounded-2xl overflow-hidden"
-                      style={{ backgroundColor: '#111118', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div className="px-4 pt-4 pb-1">
-                        <p className="text-xs font-semibold text-white/60 mb-2">Card {activeCardIndex + 1}</p>
-                      </div>
-                      <div className="flex flex-col px-3 pb-3 gap-0.5">
-                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                          <button onClick={() => { setShowCardActionSheet(false); setRegenDialogCard(activeCardIndex); }}
-                            disabled={regeneratingCard !== null}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40">
-                            <RotateCcw className="h-4 w-4 text-orange-400" />
-                            <div className="text-left">
-                              <p className="text-[13px] text-white/80 font-medium">Regenerar imagem</p>
-                              <p className="text-[10px] text-white/30">Gerar nova imagem com IA</p>
-                            </div>
-                          </button>
-                        )}
-                        {!isGuest && carouselData.cards[activeCardIndex]?.imageUrl && (
-                          <button onClick={() => { setShowCardActionSheet(false); setCorrectionCardIndex(activeCardIndex); }}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <Pencil className="h-4 w-4 text-amber-400" />
-                            <div className="text-left">
-                              <p className="text-[13px] text-white/80 font-medium">Corrigir imagem</p>
-                              <p className="text-[10px] text-white/30">Editar áreas específicas</p>
-                            </div>
-                          </button>
-                        )}
-                        {!isGuest && carouselData.cards.length > 1 && (
-                          <button onClick={() => {
-                            setShowCardActionSheet(false);
-                            const newCards = carouselData.cards.filter((_, idx) => idx !== activeCardIndex);
-                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
-                            if (activeCardIndex >= newCards.length) setActiveCardIndex(newCards.length - 1);
-                          }}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/[0.06] transition-colors">
-                            <Trash2 className="h-4 w-4 text-red-400/60" />
-                            <div className="text-left">
-                              <p className="text-[13px] text-red-400/70 font-medium">Excluir card</p>
-                              <p className="text-[10px] text-white/20">Remove este card do carrossel</p>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                    <X className="h-5 w-5" />
+                  </button>
+
+                  {/* Zoom controls */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-2 py-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFullscreenZoom(z => Math.max(0.5, z - 0.25)); }}
+                      className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                      aria-label="Diminuir zoom"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFullscreenZoom(1); setFullscreenPan({ x: 0, y: 0 }); }}
+                      className="px-3 h-9 rounded-full text-xs text-white/90 font-medium min-w-[60px]"
+                    >
+                      {Math.round(fullscreenZoom * 100)}%
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFullscreenZoom(z => Math.min(5, z + 0.25)); }}
+                      className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                      aria-label="Aumentar zoom"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Card content */}
+                  <motion.div
+                    drag={fullscreenZoom > 1}
+                    dragMomentum={false}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: previewW,
+                      height: previewH,
+                      transform: `scale(${Math.min((window.innerHeight * 0.85) / previewH, (window.innerWidth * 0.9) / previewW) * fullscreenZoom})`,
+                      transformOrigin: 'center center',
+                      cursor: fullscreenZoom > 1 ? 'grab' : 'default',
+                    }}
+                  >
+                    {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                   </motion.div>
-                </>
+                </motion.div>
               )}
             </AnimatePresence>
+
+
 
             {/* ===== Mobile Tools Popup (basic mode) — centered modal ===== */}
             <AnimatePresence>

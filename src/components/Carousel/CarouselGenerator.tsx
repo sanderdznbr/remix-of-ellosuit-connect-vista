@@ -10216,7 +10216,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {/* ===== DESKTOP RIGHT SIDEBAR — projeto + zoom ===== */}
                 {!isMobileView && (
                   <div
-                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden self-center max-h-[calc(100vh-8rem)]"
+                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden max-h-[calc(100vh-8rem)]"
                     style={{
                       background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',

@@ -139,20 +139,39 @@ export const AddCardChatModal = ({
 
 
           {/* Header */}
-          <div className="relative flex items-center justify-between px-6 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-            <div>
+          <div className="relative flex items-center justify-between px-6 py-4 border-b gap-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/35">Novo card</p>
-              <p className="text-white font-semibold text-[16px] leading-tight mt-1">Vamos conversar</p>
+              <p className="text-white font-semibold text-[16px] leading-tight mt-1 truncate">
+                {mode === 'auto' ? 'Deixa comigo' : 'Vamos conversar'}
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => send(true)}
-                disabled={generating}
-                className="px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40 hover:bg-white/[0.05]"
-                style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
-              >
-                Criar automaticamente
-              </button>
+              {/* Mode selector */}
+              <div className="flex items-center p-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <button
+                  onClick={() => setMode('chat')}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40"
+                  style={mode === 'chat'
+                    ? { backgroundColor: `rgba(${themeRgb},0.9)`, color: '#fff', boxShadow: `0 2px 10px -2px rgba(${themeRgb},0.5)` }
+                    : { color: 'rgba(255,255,255,0.55)' }}
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  Conduzir por chat
+                </button>
+                <button
+                  onClick={() => setMode('auto')}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all disabled:opacity-40"
+                  style={mode === 'auto'
+                    ? { backgroundColor: `rgba(${themeRgb},0.9)`, color: '#fff', boxShadow: `0 2px 10px -2px rgba(${themeRgb},0.5)` }
+                    : { color: 'rgba(255,255,255,0.55)' }}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Automático
+                </button>
+              </div>
               <button onClick={onClose} className="h-9 w-9 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors">
                 <X className="h-4 w-4 text-white/50" />
               </button>

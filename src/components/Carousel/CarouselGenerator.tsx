@@ -10176,20 +10176,40 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   {carouselData.cards.map((card, i) => {
                     const thumbW = 48;
                     const thumbH = thumbW * (cardH / cardW);
+                    const isDragging = dragCardIndex === i;
+                    const isDragOver = dragOverCardIndex === i && dragCardIndex !== null && dragCardIndex !== i;
                     return (
                       <button
                         key={i}
+                        draggable={!isCardLocked(i)}
+                        onDragStart={(e) => { setDragCardIndex(i); e.dataTransfer.effectAllowed = 'move'; }}
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (dragOverCardIndex !== i) setDragOverCardIndex(i); }}
+                        onDragLeave={() => { if (dragOverCardIndex === i) setDragOverCardIndex(null); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragCardIndex === null || dragCardIndex === i) { setDragCardIndex(null); setDragOverCardIndex(null); return; }
+                          const newCards = [...carouselData.cards];
+                          const [moved] = newCards.splice(dragCardIndex, 1);
+                          newCards.splice(i, 0, moved);
+                          setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                          const newActive = activeCardIndex === dragCardIndex ? i : activeCardIndex;
+                          setActiveCardIndex(newActive);
+                          setDragCardIndex(null);
+                          setDragOverCardIndex(null);
+                        }}
+                        onDragEnd={() => { setDragCardIndex(null); setDragOverCardIndex(null); }}
                         onClick={() => setActiveCardIndex(i)}
-                        className="flex-shrink-0 rounded-lg overflow-hidden transition-all relative"
+                        className="flex-shrink-0 rounded-lg overflow-hidden transition-all relative cursor-grab active:cursor-grabbing"
                         style={{
                           width: thumbW,
                           height: thumbH,
-                          opacity: i === activeCardIndex ? 1 : 0.4,
-                          border: i === activeCardIndex ? `2px solid ${themeHex}` : '2px solid transparent',
+                          opacity: isDragging ? 0.3 : (i === activeCardIndex ? 1 : 0.4),
+                          border: isDragOver ? `2px solid ${themeHex}` : (i === activeCardIndex ? `2px solid ${themeHex}` : '2px solid transparent'),
                           transform: i === activeCardIndex ? 'scale(1.1)' : 'scale(1)',
+                          boxShadow: isDragOver ? `0 0 0 2px rgba(${themeRgb},0.5)` : undefined,
                         }}
                       >
-                        <div style={{ width: previewW, height: previewH, transform: `scale(${thumbW / previewW})`, transformOrigin: 'top left' }}>
+                        <div style={{ width: previewW, height: previewH, transform: `scale(${thumbW / previewW})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
                           {renderCardPreview(card, i, false)}
                         </div>
                         {isCardLocked(i) && (

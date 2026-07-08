@@ -730,8 +730,9 @@ Responda APENAS em JSON válido:
     },
     {
       "type": "content",
-      "bodyTop": "Parágrafo principal com **trechos destacados** em negrito...",
-      "bodyBottom": "Segundo parágrafo complementar...",
+      "title": "(opcional) título curto",
+      "bodyTop": "(opcional) parágrafo com **destaques**",
+      "bodyBottom": "(opcional, use só quando complementar de verdade)",
       "imagePrompt": "descrição visual para imagem do card",
       "searchTerms": ["termo de busca"],
       "needsImage": true

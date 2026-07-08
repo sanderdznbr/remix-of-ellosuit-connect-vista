@@ -10026,6 +10026,63 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         </>
                       )}
 
+                      {/* CARDS list (vertical thumbnails) */}
+                      {carouselData.cards.length > 1 && (
+                        <>
+                          <div className="flex items-center justify-between px-5 pt-2 pb-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Cards</span>
+                            <span className="text-[10px] text-white/40">{carouselData.cards.length} slides</span>
+                          </div>
+                          <div className="px-3 pb-2 grid grid-cols-3 gap-2">
+                            {carouselData.cards.map((card, i) => {
+                              const tW = 68;
+                              const tH = tW * (cardH / cardW);
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => setActiveCardIndex(i)}
+                                  className="relative rounded-lg overflow-hidden transition-all group/thumb"
+                                  style={{
+                                    width: tW,
+                                    height: tH,
+                                    border: i === activeCardIndex ? `2px solid ${themeHex}` : '1px solid rgba(255,255,255,0.08)',
+                                    boxShadow: i === activeCardIndex ? `0 0 16px -4px rgba(${themeRgb},0.4)` : 'none',
+                                  }}>
+                                  <div style={{ width: previewW, height: previewH, transform: `scale(${tW / previewW})`, transformOrigin: 'top left' }}>
+                                    {renderCardPreview(card, i, false)}
+                                  </div>
+                                  <div className="absolute top-1 left-1 px-1 py-0.5 rounded text-[9px] font-semibold bg-black/70 text-white/80">{i + 1}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mx-4 h-px bg-white/[0.05] my-1" />
+                        </>
+                      )}
+
+                      {/* INFO do projeto */}
+                      <div className="px-5 pt-2 pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Info</span>
+                      </div>
+                      <div className="px-5 pb-3 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-white/40">Formato</span>
+                          <span className="text-white/70 font-mono">{cardW}×{cardH}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-white/40">Cards</span>
+                          <span className="text-white/70 font-mono">{carouselData.cards.length}</span>
+                        </div>
+                        {activeMarketplaceStyle?.name && (
+                          <div className="flex items-center justify-between text-[11px] gap-2">
+                            <span className="text-white/40 shrink-0">Estilo</span>
+                            <span className="text-white/70 truncate" title={activeMarketplaceStyle.name}>{activeMarketplaceStyle.name}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mx-4 h-px bg-white/[0.05] my-1" />
+
                       <div className="px-3 py-3">
                         <button onClick={() => resetWizardState()}
                           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium text-white/45 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] hover:border-white/[0.12] transition-all">

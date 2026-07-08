@@ -12402,8 +12402,20 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         generating={addCardModal.generatingAutoText}
         autoText={addCardModal.autoText}
         generate={generateAddCardAutoText}
-        onApprove={(text) => addOneMoreCard(addCardModal.cardType, text)}
-        onManualCreate={(text) => addOneMoreCard(addCardModal.cardType, text)}
+        onApprove={(text, atts) => {
+          if (atts && atts.length > 0) {
+            const newRefs: ReferenceImage[] = atts.map((url, i) => ({ url, thumb: url, label: `Anexo card ${i + 1}`, source: 'upload' as const, category: 'general' as const }));
+            setReferenceImages(prev => [...prev, ...newRefs]);
+          }
+          addOneMoreCard(addCardModal.cardType, text);
+        }}
+        onManualCreate={(text, atts) => {
+          if (atts && atts.length > 0) {
+            const newRefs: ReferenceImage[] = atts.map((url, i) => ({ url, thumb: url, label: `Anexo card ${i + 1}`, source: 'upload' as const, category: 'general' as const }));
+            setReferenceImages(prev => [...prev, ...newRefs]);
+          }
+          addOneMoreCard(addCardModal.cardType, text);
+        }}
         themeRgb={modeTheme.rgb}
         themeRgb2={modeTheme.rgb2}
         themeHex={modeTheme.hex}

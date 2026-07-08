@@ -282,7 +282,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           <div className="flex flex-col items-center py-3 gap-2">
             <TrialStatusBadge collapsed />
             {onToggleCollapse && (
-              <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-white/[0.05] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Expandir">
+              <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-white/[0.05] text-white/25 hover:text-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20" title="Expandir" aria-label="Expandir sidebar" aria-expanded={false} aria-controls="dashboard-sidebar-nav">
                 <PanelLeftOpen className="w-[15px] h-[15px]" />
               </button>
             )}

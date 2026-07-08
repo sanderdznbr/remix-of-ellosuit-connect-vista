@@ -10290,7 +10290,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                           <button onClick={() => { setContinuousMode(false); regenerateAll(); }}
                             disabled={regeneratingAll || regeneratingCard !== null}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all disabled:opacity-40">
-                            <img src={toolRegenAllIcon} alt="" className="w-5 h-5 object-contain" loading="lazy" />
+                            <RefreshCw className={`h-4 w-4 text-emerald-400 ${regeneratingAll ? 'animate-spin' : ''}`} />
                             Regenerar todas
                           </button>
                         )}

@@ -10257,32 +10257,39 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
                       <div className="mx-4 h-px bg-white/[0.05] my-2" />
 
-                      {/* ZOOM controls */}
+                      {/* MAIS AÇÕES */}
                       <div className="px-5 pt-1 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Zoom</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">Mais ações</span>
                       </div>
-                      <div className="px-4 pb-4">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setPreviewZoom(z => Math.max(1, +(z - 0.25).toFixed(2)))}
-                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
-                            <Minus className="h-3.5 w-3.5" />
-                          </button>
-                          <div className="flex-1 text-center text-[12px] font-mono text-white/70 tabular-nums">
-                            {Math.round(previewZoom * 100)}%
-                          </div>
-                          <button onClick={() => setPreviewZoom(z => Math.min(4, +(z + 0.25).toFixed(2)))}
-                            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/[0.06] transition-all">
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <button onClick={() => { setPreviewZoom(1); setPreviewPan({ x: 0, y: 0 }); }}
-                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.04] border border-white/[0.05] transition-all">
-                          <Maximize2 className="h-3 w-3" />
-                          Ajustar à tela
+                      <div className="px-3 pb-3 space-y-0.5">
+                        <button
+                          onClick={() => {
+                            const card = carouselData.cards[activeCardIndex];
+                            if (!card) return;
+                            const newCard = JSON.parse(JSON.stringify(card));
+                            const newCards = [...carouselData.cards];
+                            newCards.splice(activeCardIndex + 1, 0, newCard);
+                            setCarouselData(prev => prev ? { ...prev, cards: newCards } : prev);
+                            setActiveCardIndex(activeCardIndex + 1);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Layers className="h-4 w-4 text-sky-400" />
+                          Duplicar card
                         </button>
-                        <p className="text-[10px] text-white/30 mt-2 leading-relaxed">
-                          Use a rolagem sobre o post para zoom, ou arraste para mover quando ampliado.
-                        </p>
+                        {postCaption && (
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(postCaption); toast({ title: 'Legenda copiada!' }); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/75 hover:text-white hover:bg-white/[0.05] transition-all">
+                            <Copy className="h-4 w-4 text-amber-400" />
+                            Copiar legenda
+                          </button>
+                        )}
+                        <button
+                          onClick={() => resetWizardState()}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-all">
+                          <Plus className="h-4 w-4 text-white/50" />
+                          Novo carrossel
+                        </button>
                       </div>
                     </div>
                   </div>

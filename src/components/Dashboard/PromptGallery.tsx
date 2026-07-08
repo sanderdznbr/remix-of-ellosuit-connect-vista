@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Loader2, Pencil, X, MessageSquareText, Image as ImageIcon, ChevronDown, Upload, Monitor, User, Palette, Sparkles, HelpCircle, Camera, Package } from 'lucide-react';
+import { Plus, Trash2, Loader2, Pencil, X, MessageSquareText, Image as ImageIcon, ChevronDown, Upload, Monitor, User, Palette, Sparkles, HelpCircle, Camera, Package, Building2, Users, Mic2, Globe, Tag, Info, Paperclip } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';

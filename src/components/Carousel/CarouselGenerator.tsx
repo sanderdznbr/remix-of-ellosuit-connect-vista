@@ -9882,7 +9882,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
 
             {/* ===== BASIC MODE: split layout on desktop, gallery on mobile ===== */}
             {resultViewMode === 'basic' && (
-              <div className="w-full flex flex-col md:flex-row md:items-stretch md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
+              <div className="w-full flex flex-col md:flex-row md:items-center md:justify-between md:gap-5 items-center relative md:min-h-[calc(100vh-6rem)] md:px-5" style={{ paddingBottom: isMobileView ? 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' : '0' }}>
                 {!isMobileView && (
                   <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none" style={{ background: 'radial-gradient(ellipse 90% 70% at 50% 40%, #060610 0%, #030308 55%, #000000 100%)' }} />
                 )}
@@ -9890,7 +9890,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {/* ===== DESKTOP SIDEBAR — always visible on md+ ===== */}
                 {!isMobileView && (
                   <div
-                    className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
+                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden self-center max-h-[calc(100vh-8rem)]"
                     style={{
                       background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
@@ -10246,7 +10246,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                 {/* ===== DESKTOP RIGHT SIDEBAR — projeto + zoom ===== */}
                 {!isMobileView && (
                   <div
-                    className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
+                    className="hidden md:flex flex-col w-[280px] flex-shrink-0 rounded-[20px] overflow-hidden self-center max-h-[calc(100vh-8rem)]"
                     style={{
                       background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',

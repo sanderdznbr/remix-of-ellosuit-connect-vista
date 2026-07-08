@@ -241,7 +241,7 @@ const PromptGallery: React.FC = () => {
   const handleEdit = (p: SavedPrompt) => {
     setEditingId(p.id);
     setTitle(p.title);
-    setContent(p.content);
+    setContent(parseContent(p.content || ''));
     setAvatarUrl(p.avatar_url || '');
     setModalMedia([]);
     setShowModal(true);

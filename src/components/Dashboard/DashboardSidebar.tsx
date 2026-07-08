@@ -365,6 +365,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
           </>
         )}
       </div>
+      </div>
     </aside>
   );
 };

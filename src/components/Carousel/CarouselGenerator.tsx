@@ -5434,10 +5434,14 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
         })
         .filter(Boolean) || [];
 
+      const instructionBlock = userInstruction
+        ? `\n\n[INSTRUÇÃO OBRIGATÓRIA DO USUÁRIO PARA O NOVO CARD — SIGA À RISCA]: ${userInstruction}${attachedImageUrls && attachedImageUrls.length > 0 ? `\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem ser usadas como base visual/contextual do card]` : ''}`
+        : (attachedImageUrls && attachedImageUrls.length > 0 ? `\n\n[O usuário anexou ${attachedImageUrls.length} imagem(ns) de referência que devem guiar o novo card]` : '');
+
       const { data, error } = await supabase.functions.invoke('generate-carousel', {
         body: {
           action: 'generate-content',
-          topic: userInstruction ? `${topic.trim()}\n\n[Instrução do usuário para o novo card]: ${userInstruction}` : topic.trim(),
+          topic: `${topic.trim()}${instructionBlock}`,
           keywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
           cardCount: (currentData?.cards.length || 7) + 1,
           imageCardIndices: [(currentData?.cards.length || 0)],
@@ -5446,6 +5450,8 @@ Mantenha total fidelidade facial — o rosto deve ser idêntico à referência.`
           regenerateCardIndex: currentData?.cards.length || 0,
           existingCardSummaries,
           textSizeHint: addCardModal.textSize,
+          ...(userInstruction ? { userInstruction, cardInstruction: userInstruction, forceUserInstruction: true } : {}),
+          ...(attachedImageUrls && attachedImageUrls.length > 0 ? { attachedImageUrls, referenceImageUrls: attachedImageUrls } : {}),
         },
       });
 

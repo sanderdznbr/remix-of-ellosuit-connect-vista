@@ -10132,12 +10132,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   )}
 
                   {/* Card display */}
+                  {(() => {
+                    const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+                    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+                    const isDesk = vw >= 768;
+                    const maxByH = isDesk ? Math.min(vh - 200, 720) : 420;
+                    const maxByW = isDesk ? Math.min(vw - 760, 560) : vw - 80;
+                    const baseW = Math.max(320, Math.min(maxByW, maxByH * (cardW / cardH)));
+                    const cardDisplayW = baseW;
+                    const cardDisplayH = baseW * (cardH / cardW);
+                    return (
                   <div
                     className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
                     style={{ 
-                      width: Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420),
-                      height: Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420) * (cardH / cardW),
-                      boxShadow: `0 20px 60px -15px rgba(0,0,0,0.5), 0 0 40px -10px rgba(${themeRgb},0.15)`,
+                      width: cardDisplayW,
+                      height: cardDisplayH,
+                      boxShadow: `0 30px 80px -20px rgba(0,0,0,0.6), 0 0 60px -15px rgba(${themeRgb},0.22)`,
                     }}
                     onClick={() => {
                       if (!isCardLocked(activeCardIndex)) {
@@ -10148,7 +10158,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     <div style={{ 
                       width: previewW, 
                       height: previewH, 
-                      transform: `scale(${Math.min(typeof window !== 'undefined' ? window.innerWidth - 80 : 340, 420) / previewW})`, 
+                      transform: `scale(${cardDisplayW / previewW})`, 
                       transformOrigin: 'top left' 
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}

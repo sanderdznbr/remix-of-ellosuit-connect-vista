@@ -9471,15 +9471,6 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <Home className="w-5 h-5 text-white/60" />
                 </button>
               </div>
-              <button
-                onClick={() => { if (isGuest) { setShowGuestPaywall(true); } else { setShowExportMenu(true); } }}
-                disabled={exporting}
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: `linear-gradient(135deg, ${themeHex}, ${themeHexDark})` }}
-              >
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Salvar Post
-              </button>
             </div>
             )}
             {/* Subtle background glow effects */}

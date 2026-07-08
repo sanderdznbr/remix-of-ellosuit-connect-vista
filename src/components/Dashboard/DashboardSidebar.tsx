@@ -21,7 +21,9 @@ interface DashboardSidebarProps {
   onToggleCollapse?: () => void;
 }
 
-const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, collapsed = false, onToggleCollapse }) => {
+const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabChange, collapsed: collapsedProp = false, onToggleCollapse }) => {
+  const [hovered, setHovered] = useState(false);
+  const collapsed = collapsedProp && !hovered;
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

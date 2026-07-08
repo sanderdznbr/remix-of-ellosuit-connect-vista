@@ -11016,12 +11016,17 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                       {/* Regenerating overlay on mockup */}
                       {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                          <div className="carousel-loader-wrapper" style={{ width: 100, height: 100 }}>
-                            <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 100, height: 100 }} />
-                          </div>
-                          <p className="text-white/80 text-xs font-medium mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : regenAllProgress ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}...` : 'Regenerando...'}</p>
-                        </div>
+                        <CleanRegenOverlay
+                          themeHex={themeHex}
+                          label={
+                            regeneratingFace === activeCardIndex
+                              ? 'Regenerando rosto'
+                              : regenAllProgress
+                                ? `Gerando ${regenAllProgress.current} de ${regenAllProgress.total}`
+                                : 'Regenerando card'
+                          }
+                          avgSeconds={regeneratingFace === activeCardIndex ? 12 : 18}
+                        />
                       )}
                       {/* Guest lock overlay */}
                       {isCardLocked(activeCardIndex) && (

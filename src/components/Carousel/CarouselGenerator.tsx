@@ -12387,163 +12387,22 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
         })()}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {addCardModal.open && (
-          <motion.div
-            key="add-card-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}>
-            <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="relative rounded-2xl overflow-hidden shadow-2xl w-[380px] max-w-[95vw]"
-              style={{ backgroundColor: 'rgba(20,20,28,0.95)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)' }}
-              onClick={(e) => e.stopPropagation()}>
-              
-              <div className="px-5 pt-4 pb-3 flex items-start justify-between">
-                <div>
-                  <p className="text-white/50 text-[11px] font-medium uppercase tracking-wider">
-                    Novo Card {addCardModal.cardType === 'composed' ? 'Composto' : 'Sólido'}
-                  </p>
-                  <p className="text-white text-sm font-semibold mt-1">
-                    {addCardModal.step === 'text-mode' ? 'Como definir o texto?' : addCardModal.step === 'manual' ? 'Texto do card' : 'Texto gerado pela IA'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}
-                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors mt-0.5 shrink-0"
-                >
-                  <X className="h-4 w-4 text-white/40" />
-                </button>
-              </div>
+      <AddCardChatModal
+        open={addCardModal.open}
+        onClose={() => { setAddCardModal(prev => ({ ...prev, open: false })); setPendingAddCardStyle(null); }}
+        cardType={addCardModal.cardType}
+        textSize={addCardModal.textSize}
+        onTextSizeChange={(v) => setAddCardModal(prev => ({ ...prev, textSize: v }))}
+        generating={addCardModal.generatingAutoText}
+        autoText={addCardModal.autoText}
+        generate={generateAddCardAutoText}
+        onApprove={(text) => addOneMoreCard(addCardModal.cardType, text)}
+        onManualCreate={(text) => addOneMoreCard(addCardModal.cardType, text)}
+        themeRgb={modeTheme.rgb}
+        themeRgb2={modeTheme.rgb2}
+        themeHex={modeTheme.hex}
+      />
 
-              {/* Step: text-mode selection */}
-              {addCardModal.step === 'text-mode' && (
-                <div className="flex flex-col px-3 pb-4 gap-3">
-                  {/* Text size selector */}
-                  <div className="px-1">
-                    <p className="text-[11px] text-white/40 uppercase tracking-wider mb-2">Tamanho do texto</p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {([
-                        { value: 'short', label: 'Curto', desc: '~15 palavras' },
-                        { value: 'medium', label: 'Médio', desc: '~30 palavras' },
-                        { value: 'long', label: 'Longo', desc: '~50 palavras' },
-                      ] as const).map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setAddCardModal(prev => ({ ...prev, textSize: opt.value }))}
-                          className="flex flex-col items-center py-2.5 px-2 rounded-xl border transition-all"
-                          style={{
-                            borderColor: addCardModal.textSize === opt.value ? `rgba(${modeTheme.rgb},0.5)` : 'rgba(255,255,255,0.08)',
-                            backgroundColor: addCardModal.textSize === opt.value ? `rgba(${modeTheme.rgb},0.12)` : 'rgba(255,255,255,0.02)',
-                          }}
-                        >
-                          <span className="text-[13px] font-medium text-white/80">{opt.label}</span>
-                          <span className="text-[10px] text-white/30 mt-0.5">{opt.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => { generateAddCardAutoText(); }}
-                    disabled={addCardModal.generatingAutoText}
-                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all border"
-                    style={{ borderColor: `rgba(${modeTheme.rgb},0.2)`, backgroundColor: `rgba(${modeTheme.rgb},0.06)` }}>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: `rgba(${modeTheme.rgb},0.15)` }}>
-                      {addCardModal.generatingAutoText ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: modeTheme.hex }} /> : <Wand2 className="h-4 w-4" style={{ color: modeTheme.hex }} />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white/90">Texto automático</p>
-                      <p className="text-[11px] text-white/40">A IA sugere o conteúdo para aprovação</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setAddCardModal(prev => ({ ...prev, step: 'manual' }))}
-                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all border"
-                    style={{ borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
-                      <Type className="h-4 w-4 text-white/60" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white/90">Texto manual</p>
-                      <p className="text-[11px] text-white/40">Você define título e corpo</p>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              {/* Step: manual text input */}
-              {addCardModal.step === 'manual' && (
-                <div className="px-4 pb-4 space-y-3">
-                  <div>
-                    <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1 block">Título</label>
-                    <input
-                      value={addCardModal.manualText.title}
-                      onChange={(e) => setAddCardModal(prev => ({ ...prev, manualText: { ...prev.manualText, title: e.target.value } }))}
-                      placeholder="Título do card..."
-                      className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-lg outline-none focus:border-white/15 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] text-white/40 uppercase tracking-wider mb-1 block">Corpo</label>
-                    <textarea
-                      value={addCardModal.manualText.body}
-                      onChange={(e) => setAddCardModal(prev => ({ ...prev, manualText: { ...prev.manualText, body: e.target.value } }))}
-                      placeholder="Conteúdo do card..."
-                      className="w-full bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder-white/20 text-sm px-3 py-2.5 rounded-lg resize-none outline-none focus:border-white/15 transition-colors min-h-[80px]"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={() => setAddCardModal(prev => ({ ...prev, step: 'text-mode' }))}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors">
-                      Voltar
-                    </button>
-                    <button
-                      onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.manualText)}
-                      disabled={!addCardModal.manualText.title.trim() && !addCardModal.manualText.body.trim()}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors disabled:opacity-40"
-                      style={{ background: `linear-gradient(135deg, rgba(${modeTheme.rgb},0.9), rgba(${modeTheme.rgb2},0.9))` }}>
-                      Gerar card
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Step: auto text preview */}
-              {addCardModal.step === 'auto-preview' && addCardModal.autoText && (
-                <div className="px-4 pb-4 space-y-3">
-                  <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <p className="text-sm font-semibold text-white/90">{addCardModal.autoText.title}</p>
-                    {addCardModal.autoText.body && <p className="text-xs text-white/50 leading-relaxed">{addCardModal.autoText.body}</p>}
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={() => generateAddCardAutoText()}
-                      disabled={addCardModal.generatingAutoText}
-                      className="flex items-center justify-center gap-1.5 flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/50 border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-40">
-                      {addCardModal.generatingAutoText ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                      Gerar outro
-                    </button>
-                    <button
-                      onClick={() => addOneMoreCard(addCardModal.cardType, addCardModal.autoText!)}
-                      className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors"
-                      style={{ background: `linear-gradient(135deg, rgba(${modeTheme.rgb},0.9), rgba(${modeTheme.rgb2},0.9))` }}>
-                      Aprovar e gerar
-                    </button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <GalleryPicker
         open={faceGalleryOpen}
         onClose={() => setFaceGalleryOpen(false)}

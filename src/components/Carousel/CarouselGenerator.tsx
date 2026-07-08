@@ -10146,12 +10146,12 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </div>
                     )}
                     {(regeneratingCard === activeCardIndex || regeneratingFace === activeCardIndex) && (
-                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-                        <div className="carousel-loader-wrapper" style={{ width: 60, height: 60 }}>
-                          <div className={`carousel-loader-spinner carousel-loader-spinner--${modeTheme.tailwind}`} style={{ width: 60, height: 60 }} />
-                        </div>
-                        <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
-                      </div>
+                      <CleanRegenOverlay
+                        compact
+                        themeHex={themeHex}
+                        label={regeneratingFace === activeCardIndex ? 'Regenerando rosto' : 'Regenerando card'}
+                        avgSeconds={regeneratingFace === activeCardIndex ? 12 : 18}
+                      />
                     )}
                     <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
                       <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">

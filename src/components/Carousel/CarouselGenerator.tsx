@@ -10194,6 +10194,24 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                       </button>
                     );
                   })}
+                  {!isGuest && !activeMarketplaceStyle?.imageGeneration?.prompt_style && (() => {
+                    const thumbW = 48;
+                    const thumbH = thumbW * (cardH / cardW);
+                    return (
+                      <button
+                        onClick={() => setShowAddCardMenu(true)}
+                        className="flex-shrink-0 rounded-lg flex items-center justify-center transition-all hover:bg-white/[0.06]"
+                        style={{
+                          width: thumbW,
+                          height: thumbH,
+                          border: `2px dashed rgba(255,255,255,0.2)`,
+                        }}
+                        aria-label="Adicionar card"
+                      >
+                        <Plus className="w-4 h-4 text-white/50" />
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Card counter */}

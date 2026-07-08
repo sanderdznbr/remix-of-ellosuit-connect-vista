@@ -183,7 +183,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
         <div className={`flex items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-5'} pt-5 pb-4`}>
           <img src={faviconIcon} alt="Logo" className="h-8 w-8 shrink-0 opacity-95" />
           {!collapsed && onToggleCollapse && (
-            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/25 hover:text-white/60 transition-colors cursor-pointer" title="Recolher">
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-white/[0.04] text-white/25 hover:text-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20" title="Recolher" aria-label="Recolher sidebar" aria-expanded={true} aria-controls="dashboard-sidebar-nav">
               <PanelLeftClose className="w-[15px] h-[15px]" />
             </button>
           )}

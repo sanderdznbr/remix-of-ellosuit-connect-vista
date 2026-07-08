@@ -10203,7 +10203,7 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     const thumbH = thumbW * (cardH / cardW);
                     return (
                       <button
-                        onClick={() => setShowAddCardMenu(true)}
+                        onClick={() => setAddCardModal({ open: true, cardType: 'composed', step: 'text-mode', autoText: null, manualText: { title: '', body: '' }, generatingAutoText: false, textSize: 'short' })}
                         className="flex-shrink-0 rounded-lg flex items-center justify-center transition-all hover:bg-white/[0.06]"
                         style={{
                           width: thumbW,

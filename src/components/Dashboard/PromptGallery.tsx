@@ -45,6 +45,16 @@ const PromptGallery: React.FC = () => {
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [uploadingMediaFor, setUploadingMediaFor] = useState<string | null>(null);
   const [selectedMediaType, setSelectedMediaType] = useState('screenshot');
+  const [customCategory, setCustomCategory] = useState('');
+  // Brand meta
+  const [brandAbout, setBrandAbout] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
+  const [toneOfVoice, setToneOfVoice] = useState('');
+  const [website, setWebsite] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [colorInput, setColorInput] = useState('#8B5CF6');
+  const [activeTab, setActiveTab] = useState<'identity' | 'context' | 'brand' | 'colors' | 'files'>('identity');
   // For modal media uploads (before prompt is saved)
   const [modalMedia, setModalMedia] = useState<{ file: File; type: string; preview: string }[]>([]);
   const [uploadingModalMedia, setUploadingModalMedia] = useState(false);

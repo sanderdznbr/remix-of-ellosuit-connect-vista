@@ -521,6 +521,14 @@ const DashboardProjects: React.FC<DashboardProjectsProps> = ({ onStartCarousel, 
                         <span className="text-[11px]">Compartilhar</span>
                       </button>
                       <button
+                        onClick={(e) => openScheduleDialog(e, item)}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Mover para calendário</span>
+                      </button>
+                      <button
                         onClick={(e) => handleDelete(e, item.id)}
                         className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer hover:bg-white/10"
                         style={{ color: deleteConfirmId === item.id ? '#ef4444' : 'rgba(255,255,255,0.8)' }}

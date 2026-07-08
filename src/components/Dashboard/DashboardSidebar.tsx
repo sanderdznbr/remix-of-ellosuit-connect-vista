@@ -152,6 +152,13 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ activeTab, onTabCha
   );
 
   return (
+    <>
+      {/* Backdrop blur when hover-expanded */}
+      {collapsedProp && (
+        <div
+          className={`fixed inset-0 z-30 pointer-events-none transition-all duration-300 ${hovered ? 'opacity-100 backdrop-blur-md bg-black/30' : 'opacity-0 backdrop-blur-0 bg-black/0'}`}
+        />
+      )}
     <aside
       onMouseEnter={() => collapsedProp && setHovered(true)}
       onMouseLeave={() => setHovered(false)}

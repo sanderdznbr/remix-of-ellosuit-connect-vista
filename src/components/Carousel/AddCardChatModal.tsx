@@ -25,17 +25,33 @@ interface Props {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+const STORAGE_KEY = 'addCardChatModal:v1';
+type Persisted = { mode: 'auto' | 'chat'; messages: ChatMsg[] };
+const loadPersisted = (): Persisted | null => {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Persisted;
+    if (!p || (p.mode !== 'auto' && p.mode !== 'chat') || !Array.isArray(p.messages)) return null;
+    return p;
+  } catch { return null; }
+};
+const savePersisted = (p: Persisted) => {
+  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+};
+
 export const AddCardChatModal = ({
   open, onClose, cardType, textSize, onTextSizeChange, generating, autoText,
   generate, onApprove, onManualCreate, themeRgb, themeRgb2, themeHex,
 }: Props) => {
-  const [mode, setMode] = useState<'auto' | 'chat'>('chat');
+  const [mode, setMode] = useState<'auto' | 'chat'>(() => loadPersisted()?.mode ?? 'chat');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hydratedRef = useRef(false);
 
   const greetingFor = (m: 'auto' | 'chat'): ChatMsg => ({
     id: uid(),
@@ -46,22 +62,37 @@ export const AddCardChatModal = ({
       : `Modo **Conduzir por chat** ativo. Me diga exatamente o que quer no card ${cardType === 'composed' ? 'composto' : 'sólido'}: tema, tom, referência, screenshot, print de produto. Eu sigo sua instrução à risca.`,
   });
 
-  // Reset & greet when opened
+  // Restore persisted history on open; only greet fresh if nothing saved.
   useEffect(() => {
     if (open) {
-      setMode('chat');
-      setMessages([greetingFor('chat')]);
+      const p = loadPersisted();
+      if (p && p.messages.length > 0) {
+        setMode(p.mode);
+        setMessages(p.messages);
+      } else {
+        setMessages([greetingFor(mode)]);
+      }
       setInput('');
       setAttachments([]);
+      hydratedRef.current = true;
+    } else {
+      hydratedRef.current = false;
     }
   }, [open, cardType]);
 
-  // Swap greeting when mode changes while open
-  useEffect(() => {
-    if (!open) return;
-    setMessages([greetingFor(mode)]);
+  // Swap greeting only on explicit user mode change while open (not on hydration).
+  const changeMode = (next: 'auto' | 'chat') => {
+    if (next === mode) return;
+    setMode(next);
+    setMessages([greetingFor(next)]);
     setInput('');
-  }, [mode]);
+  };
+
+  // Persist mode + messages whenever they change while open.
+  useEffect(() => {
+    if (!open || !hydratedRef.current) return;
+    savePersisted({ mode, messages });
+  }, [mode, messages, open]);
 
   // Push AI suggestion when autoText arrives
   useEffect(() => {

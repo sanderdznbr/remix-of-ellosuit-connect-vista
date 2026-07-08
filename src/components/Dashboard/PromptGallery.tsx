@@ -93,6 +93,30 @@ const PromptGallery: React.FC = () => {
 
   useEffect(() => { fetchPrompts(); }, [fetchPrompts]);
 
+  const BRAND_META_RE = /\n?<!-- __brandmeta__:(.*?) -->\s*$/s;
+
+  const composeContent = () => {
+    const meta = { brandAbout, targetAudience, toneOfVoice, website, keywords, brandColors };
+    return `${content.trim()}\n\n<!-- __brandmeta__:${JSON.stringify(meta)} -->`;
+  };
+
+  const parseContent = (raw: string) => {
+    const m = raw.match(BRAND_META_RE);
+    if (m) {
+      try {
+        const meta = JSON.parse(m[1]);
+        setBrandAbout(meta.brandAbout || '');
+        setTargetAudience(meta.targetAudience || '');
+        setToneOfVoice(meta.toneOfVoice || '');
+        setWebsite(meta.website || '');
+        setKeywords(meta.keywords || '');
+        setBrandColors(Array.isArray(meta.brandColors) ? meta.brandColors : []);
+      } catch {}
+      return raw.replace(BRAND_META_RE, '').trim();
+    }
+    return raw;
+  };
+
   const resetForm = () => {
     setTitle('');
     setContent('');
@@ -102,7 +126,17 @@ const PromptGallery: React.FC = () => {
     setModalMedia([]);
     setShowTips(false);
     setSelectedMediaType('screenshot');
+    setCustomCategory('');
+    setBrandAbout('');
+    setTargetAudience('');
+    setToneOfVoice('');
+    setWebsite('');
+    setKeywords('');
+    setBrandColors([]);
+    setColorInput('#8B5CF6');
+    setActiveTab('identity');
   };
+
 
   const openNewPrompt = () => {
     resetForm();

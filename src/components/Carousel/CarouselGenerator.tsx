@@ -10093,50 +10093,23 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                     const cardDisplayH = baseW * (cardH / cardW);
                     return (
                   <div
-                    className="relative"
+                    className="relative rounded-2xl overflow-hidden shadow-2xl cursor-pointer group"
                     style={{
                       width: cardDisplayW,
                       height: cardDisplayH,
-                      transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
-                      transition: previewPanRef.current.dragging ? 'none' : 'transform 200ms ease',
-                      cursor: previewZoom > 1 ? (previewPanRef.current.dragging ? 'grabbing' : 'grab') : 'pointer',
-                    }}
-                    onWheel={(e) => {
-                      if (!isDesk) return;
-                      e.preventDefault();
-                      const delta = -e.deltaY * 0.0015;
-                      setPreviewZoom(z => Math.max(1, Math.min(4, +(z + delta).toFixed(2))));
-                    }}
-                    onMouseDown={(e) => {
-                      if (previewZoom <= 1) return;
-                      previewPanRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, baseX: previewPan.x, baseY: previewPan.y };
-                    }}
-                    onMouseMove={(e) => {
-                      const s = previewPanRef.current;
-                      if (!s.dragging) return;
-                      setPreviewPan({ x: s.baseX + (e.clientX - s.startX), y: s.baseY + (e.clientY - s.startY) });
-                    }}
-                    onMouseUp={() => { previewPanRef.current.dragging = false; }}
-                    onMouseLeave={() => { previewPanRef.current.dragging = false; }}
-                  >
-                  <div
-                    className="relative rounded-2xl overflow-hidden shadow-2xl group w-full h-full"
-                    style={{
                       boxShadow: `0 40px 100px -25px rgba(0,0,0,0.75), 0 0 80px -20px rgba(${themeRgb},0.28)`,
-                      cursor: previewZoom > 1 ? 'inherit' : 'pointer',
                     }}
                     onClick={() => {
-                      if (previewZoom > 1) return;
                       if (!isCardLocked(activeCardIndex)) {
                         setShowCardActionSheet(true);
                       }
                     }}
                   >
-                    <div style={{ 
-                      width: previewW, 
-                      height: previewH, 
-                      transform: `scale(${cardDisplayW / previewW})`, 
-                      transformOrigin: 'top left' 
+                    <div style={{
+                      width: previewW,
+                      height: previewH,
+                      transform: `scale(${cardDisplayW / previewW})`,
+                      transformOrigin: 'top left'
                     }}>
                       {renderCardPreview(carouselData.cards[activeCardIndex], activeCardIndex, false)}
                     </div>
@@ -10154,13 +10127,11 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                         <p className="text-white/70 text-[10px] mt-2">{regeneratingFace === activeCardIndex ? 'Regenerando rosto...' : 'Regenerando...'}</p>
                       </div>
                     )}
-                    {/* Edit hint */}
                     <div className="absolute bottom-3 right-3 z-10 pointer-events-none">
                       <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <Pencil className="w-3.5 h-3.5 text-white/80" />
                       </div>
                     </div>
-                  </div>
                   </div>
                     );
                   })()}

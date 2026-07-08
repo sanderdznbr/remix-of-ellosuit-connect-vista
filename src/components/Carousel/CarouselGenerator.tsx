@@ -551,6 +551,8 @@ const CarouselGenerator: React.FC = () => {
   const [showCardActionSheet, setShowCardActionSheet] = useState(false);
   const [fullscreenZoom, setFullscreenZoom] = useState(1);
   const [fullscreenPan, setFullscreenPan] = useState({ x: 0, y: 0 });
+  const [dragCardIndex, setDragCardIndex] = useState<number | null>(null);
+  const [dragOverCardIndex, setDragOverCardIndex] = useState<number | null>(null);
   const [showMobileToolsSheet, setShowMobileToolsSheet] = useState(false);
   const [showStylePreview, setShowStylePreview] = useState(false);
   const [showTweetEngagementEditor, setShowTweetEngagementEditor] = useState(false);

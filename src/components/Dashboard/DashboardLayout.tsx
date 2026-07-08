@@ -140,10 +140,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ onStartCarousel, onLo
     })();
     const isHome = activeTab === 'home';
     return (
-      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden" style={{ backgroundColor: '#0a0a0f' }}>
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative" style={{ backgroundColor: '#0a0a0f' }}>
+        {!isHome && (
+          <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #0a0813 0%, #050509 55%, #030305 100%)' }} />
+            <div className="absolute" style={{ top: '15%', left: '50%', transform: 'translateX(-50%)', width: '70%', height: '55%', background: 'radial-gradient(circle, rgba(139,92,246,0.18) 0%, rgba(88,28,135,0.08) 40%, transparent 70%)', filter: 'blur(60px)' }} />
+            <div className="absolute" style={{ top: '55%', left: '10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(168,85,247,0.10) 0%, transparent 70%)', filter: 'blur(80px)' }} />
+            <div className="absolute" style={{ top: '10%', right: '5%', width: '35%', height: '35%', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', filter: 'blur(80px)' }} />
+          </div>
+        )}
         <ExpiringCreditsBanner />
         <div
-          className="flex-1 min-h-0 overflow-y-auto flex flex-col"
+          className="flex-1 min-h-0 overflow-y-auto flex flex-col relative z-10"
           style={{
             WebkitOverflowScrolling: 'touch' as any,
             overscrollBehavior: 'contain',

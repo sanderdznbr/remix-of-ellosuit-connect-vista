@@ -9893,10 +9893,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div
                     className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
                     style={{
-                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
-                      backdropFilter: 'blur(24px)',
-                      WebkitBackdropFilter: 'blur(24px)',
+                      backdropFilter: 'blur(32px) saturate(140%)',
+                      WebkitBackdropFilter: 'blur(32px) saturate(140%)',
                       boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
                     }}
                   >
@@ -10192,10 +10192,10 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
                   <div
                     className="hidden md:flex flex-col w-[300px] flex-shrink-0 rounded-[20px] overflow-hidden sticky top-20 max-h-[85vh]"
                     style={{
-                      background: 'linear-gradient(180deg, rgba(20,20,28,0.85) 0%, rgba(14,14,20,0.9) 100%)',
+                      background: 'linear-gradient(180deg, rgba(8,8,12,0.55) 0%, rgba(4,4,8,0.65) 100%)',
                       border: '1px solid rgba(255,255,255,0.06)',
-                      backdropFilter: 'blur(24px)',
-                      WebkitBackdropFilter: 'blur(24px)',
+                      backdropFilter: 'blur(32px) saturate(140%)',
+                      WebkitBackdropFilter: 'blur(32px) saturate(140%)',
                       boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
                     }}
                   >
@@ -11361,8 +11361,8 @@ O fundo preto será mesclado com a foto real do imóvel via composição "screen
               <div className="fixed bottom-0 left-0 right-0 z-40"
                 style={{
                   backgroundColor: 'rgba(10,10,15,0.97)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
+                  backdropFilter: 'blur(32px) saturate(140%)',
+                  WebkitBackdropFilter: 'blur(32px) saturate(140%)',
                   borderTop: '1px solid rgba(255,255,255,0.06)',
                   paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))',
                 }}>

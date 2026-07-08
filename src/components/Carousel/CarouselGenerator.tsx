@@ -120,6 +120,7 @@ import {
   Heart, MessageCircle, Eye, Bookmark, Repeat2, ImagePlus, ImageMinus, BarChart3, Move, Minus, RefreshCw,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { CleanRegenOverlay } from './CleanRegenOverlay';
 import { toast as sonnerToast } from 'sonner';
 import StepTopic from './wizard/StepTopic';
 import StepWebSearchResult from './wizard/StepWebSearchResult';
